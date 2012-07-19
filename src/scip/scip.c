@@ -157,6 +157,7 @@ SCIP_RETCODE checkStage(
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
       
       if( !init )
       {
@@ -180,6 +181,7 @@ SCIP_RETCODE checkStage(
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
 
       if( !problem )
       {
@@ -202,6 +204,7 @@ SCIP_RETCODE checkStage(
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
 
       if( !transforming )
       {
@@ -224,6 +227,7 @@ SCIP_RETCODE checkStage(
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
 
       if( !transformed )
       {
@@ -246,6 +250,7 @@ SCIP_RETCODE checkStage(
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
 
       if( !initpresolve )
       {
@@ -268,6 +273,7 @@ SCIP_RETCODE checkStage(
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
 
       if( !presolving )
       {
@@ -290,6 +296,7 @@ SCIP_RETCODE checkStage(
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
 
       if( !exitpresolve )
       {
@@ -312,6 +319,7 @@ SCIP_RETCODE checkStage(
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
 
       if( !presolved )
       {
@@ -352,6 +360,7 @@ SCIP_RETCODE checkStage(
       assert(scip->pricestore != NULL);
       assert(scip->sepastore != NULL);
       assert(scip->cutpool != NULL);
+      assert(scip->delayedcutpool != NULL);
 
       if( !solving )
       {
@@ -374,6 +383,7 @@ SCIP_RETCODE checkStage(
       assert(scip->pricestore != NULL);
       assert(scip->sepastore != NULL);
       assert(scip->cutpool != NULL);
+      assert(scip->delayedcutpool != NULL);
 
       if( !solved )
       {
@@ -406,6 +416,7 @@ SCIP_RETCODE checkStage(
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
+      assert(scip->delayedcutpool == NULL);
 
       if( !freetrans )
       {
@@ -648,6 +659,7 @@ SCIP_RETCODE SCIPcreate(
    (*scip)->pricestore = NULL;
    (*scip)->sepastore = NULL;
    (*scip)->cutpool = NULL;
+   (*scip)->delayedcutpool = NULL;
 
    SCIP_CALL( SCIPnlpInclude((*scip)->set, SCIPblkmem(*scip)) );
 
@@ -2254,6 +2266,7 @@ SCIP_RETCODE SCIPcopyCuts(
       return SCIP_OKAY;
    }
 
+   /* convert cut from global cut pool */
    cuts = SCIPgetPoolCuts(sourcescip);
    ncuts = SCIPgetNPoolCuts(sourcescip);
 
@@ -11771,6 +11784,7 @@ SCIP_RETCODE initSolve(
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
+   SCIP_CALL( SCIPcutpoolCreate(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, FALSE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
 
    /* update dual bound of the root node if a valid dual bound is at hand */
@@ -11891,6 +11905,7 @@ SCIP_RETCODE freeSolve(
 
    /* clear all row references in internal data structures */
    SCIP_CALL( SCIPcutpoolClear(scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPcutpoolClear(scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
 
    /* we have to clear the tree prior to the problem deinitialization, because the rows stored in the forks and
     * subroots have to be released
@@ -11902,6 +11917,7 @@ SCIP_RETCODE freeSolve(
 
    /* free solution process data structures */
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
@@ -12313,7 +12329,7 @@ SCIP_RETCODE SCIPsolve(
          /* continue solution process */
          SCIP_CALL( SCIPsolveCIP(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->mem, scip->origprob, scip->transprob,
                scip->primal, scip->tree, scip->lp, scip->relaxation, scip->pricestore, scip->sepastore,
-               scip->cutpool, scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue, &restart) );
+               scip->cutpool, scip->delayedcutpool, scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue, &restart) );
 
          /* detect, whether problem is solved */
          if( SCIPtreeGetNNodes(scip->tree) == 0 && SCIPtreeGetCurrentNode(scip->tree) == NULL )
@@ -25778,6 +25794,92 @@ SCIP_RETCODE SCIPseparateCutpool(
    SCIP_CALL( SCIPcutpoolSeparate(cutpool, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter,
          scip->lp, scip->sepastore, (SCIPtreeGetCurrentDepth(scip->tree) == 0), result) );
    return SCIP_OKAY;
+}
+
+/** if not already existing, adds row to delayed global cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPaddDelayedPoolCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< cutting plane to add */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddDelayedPoolCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPcutpoolAddRow(scip->delayedcutpool, scip->mem->probmem, scip->set, row) );
+
+   return SCIP_OKAY;
+}
+
+/** removes the row from the delayed global cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPdelDelayedPoolCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< cutting plane to add */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPdelDelayedPoolCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPcutpoolDelRow(scip->delayedcutpool, scip->mem->probmem, scip->set, scip->stat, scip->lp, row) );
+
+   return SCIP_OKAY;
+}
+
+/** gets current cuts in the delayed global cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
+ */
+SCIP_CUT** SCIPgetDelayedPoolCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDelayedPoolCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPcutpoolGetCuts(scip->delayedcutpool);
+}
+
+/** gets current number of rows in the delayed global cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
+ */
+int SCIPgetNDelayedPoolCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedPoolCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPcutpoolGetNCuts(scip->delayedcutpool);
+}
+
+/** gets the delayed global cut pool used by SCIP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
+ */
+SCIP_CUTPOOL* SCIPgetDelayedGlobalCutpool(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDelayedGlobalCutpool", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->delayedcutpool;
 }
 
 /** separates the given primal solution or the current LP solution by calling the separators and constraint handlers'
