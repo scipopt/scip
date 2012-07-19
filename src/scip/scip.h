@@ -13031,6 +13031,68 @@ SCIP_RETCODE SCIPseparateCutpool(
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    );
 
+/** if not already existing, adds row to the delayed global cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPaddDelayedPoolCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< cutting plane to add */
+   );
+
+/** removes the row from the delayed global cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPdelDelayedPoolCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< cutting plane to add */
+   );
+
+/** gets current cuts in the delayed global cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_CUT** SCIPgetDelayedPoolCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets current number of rows in the delayed global cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+int SCIPgetNDelayedPoolCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the delayed global cut pool used by SCIP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_CUTPOOL* SCIPgetDelayedGlobalCutpool(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** separates the given primal solution or the current LP solution by calling the separators and constraint handlers'
  *  separation methods;
  *  the generated cuts are stored in the separation storage and can be accessed with the methods SCIPgetCuts() and
