@@ -1904,6 +1904,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          rowpnt = matrix->rowmatind + matrix->rowmatbeg[rowidx];
          rowend = rowpnt + matrix->rowmatcnt[rowidx];
 
+         if( matrix->rowmatcnt[rowidx] == 1 )
+            continue;
+
          nconfill = 0;
          nintfill = 0;
          nbinfill = 0;
