@@ -1904,6 +1904,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          rowpnt = matrix->rowmatind + matrix->rowmatbeg[rowidx];
          rowend = rowpnt + matrix->rowmatcnt[rowidx];
 
+         if( matrix->rowmatcnt[rowidx] == 1 )
+            continue;
+
          nconfill = 0;
          nintfill = 0;
          nbinfill = 0;
@@ -1918,7 +1921,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                   varidx = *rowpnt;
 
                   /* higher variable types dominate smaller ones: bin <- int <- impl <- cont
-                   * we search only for dominance relations between the same variable type
+                   * we search only for dominance relations between the same variable type.
+                   *
+                   * additionally we secure with this approach, that we only compare
+                   * variables which occur minimum in one row together.
                    */
                   if( SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_CONTINUOUS )
                   {
@@ -1989,6 +1995,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                SCIP_CALL( findDominancePairs(scip, matrix, binsearchcols, nbinfill, TRUE,
                      varstofix, &npossiblefixings, &ndomrelations, &ncliquepreventions, &nboundpreventions) );
             }
+
             for( v = 0; v < nbinfill; ++v )
             {
                varsprocessed[binsearchcols[v]] = TRUE;
