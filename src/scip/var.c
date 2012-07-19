@@ -782,7 +782,7 @@ SCIP_RETCODE SCIPboundchgUndo(
             var->lbchginfos[var->nlbchginfos].oldbound) );
 
       /* in case all bound changes are removed the local bound should match the global bound */
-      assert(var->nlbchginfos > 0 || SCIPsetIsEQ(set, var->locdom.lb, var->glbdom.lb));
+      assert(var->nlbchginfos > 0 || SCIPsetIsFeasEQ(set, var->locdom.lb, var->glbdom.lb));
 
       break;
 
@@ -803,7 +803,7 @@ SCIP_RETCODE SCIPboundchgUndo(
             var->ubchginfos[var->nubchginfos].oldbound) );
 
       /* in case all bound changes are removed the local bound should match the global bound */
-      assert(var->nubchginfos > 0 || SCIPsetIsEQ(set, var->locdom.ub, var->glbdom.ub));
+      assert(var->nubchginfos > 0 || SCIPsetIsFeasEQ(set, var->locdom.ub, var->glbdom.ub));
 
       break;
 
