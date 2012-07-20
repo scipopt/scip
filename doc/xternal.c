@@ -401,8 +401,8 @@
  * Compiling SCIP directly can be done as follows:
  *
  * -# unpack the tarball <code>tar xvf scip-x.y.z.tgz</code>
- * -# change into the directory <code>cd scip-x.y.z</code>
- * -# start compiling SCIP <code>make</code>
+ * -# change to the directory <code>cd scip-x.y.z</code>
+ * -# start compiling SCIP by typing <code>make</code>
  * -# (optional) install the header, libraries, and binary <code>make install INSTALLDIR="/usr/local/</code>
  *
  * During your first compilation you will be asked for some soft-link targets,
@@ -695,35 +695,66 @@
  * do NOT support creating the doxygen documentation and readline-usage under windows.
  *
  *
- * @section RUN How to run SCIP after successful compiling SCIP
+ * @section RUN How to run SCIP after successfully compiling SCIP
  *
- * To run the program enter <code>bin/scip.\$(OSTYPE).\$(ARCH).\$(COMP).\$(OPT).\$(LPS)</code>
- * (e.g. <code>bin/scip.linux.x86_64.gnu.opt.spx</code>) or just <code>bin/scip</code> for the last compiled version.
+ * To run the program, enter <code>bin/scip</code> for the last compiled version. If you have more than one compiled
+ * binary (i. e., one in debug and one in optimized mode) and wish to specify the binary, type
+ * <code>bin/scip.\$(OSTYPE).\$(ARCH).\$(COMP).\$(OPT).\$(LPS)</code>
+ * (e.g. <code>bin/scip.linux.x86_64.gnu.opt.spx</code>).
  *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page START How to start a new project
  *
- * If you want to use SCIP to write your own branch-and-cut or branch-and-cut-and-price code, below
- * you find some hints of how to start a new project.
+ * Once you succeeded installing SCIP together with an LP-solver on your system,
+ * you have a powerful tool for solving MIPs, MIQCPs,
+ * MINLPs, etc... at hand. SCIP can also be customized to the type of problems you
+ * are working on by additional plugins.
+ * Instructions on how to write a new plugin and include it in SCIP can be found in the corresponding
+ * <b> How to add ... </b> pages of the \ref OTHERDOCU.
  *
+ * SCIP can also be used for writing your own branch-and-cut or branch-and-cut-and-price code. SCIP already
+ * provides a number of existing code examples which we suggest as both reference and starting point
+ * for these kinds of projects.
+ * Below, you find some hints of how to start such a project.
+ *
+ * The example should be chosen
+ *     depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose
+ *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project.
+ *
+ *    We suggest the use one of the following examples:
+ *     - The <code>VRP</code>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
+ *       and in <b>C++</b>.
+ *     - The <code>Coloring</code> and the <code>Binpacking</code>-example are
+ *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
+ *     - The <code>TSP</code>-example is a <b>branch-and-cut</b>-code in <b>C++</b>.
+ *     - The <code>LOP</code>-example is a <b>branch-and-cut</b>-code in <b>C</b>.
+
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
- *   directory). Depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose
- *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project
- *   we suggest the use one of the following examples as starting point:
- *     - <code>VRP</code> should be used if your focus is <b>branch-and-cut-and-price</b>
- *       (column generation) and you want to use <b>C++</b>.
- *     - <code>Coloring</code> or <code>Binpacking</code> should be used if your focus is
- *       <b>branch-and-cut-and-price</b> (column generation) and you want to use <b>C</b>.
- *     - <code>TSP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C++</b>.
- *     - <code>LOP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C</b>.
- * - Edit the makefile according to your needs - in particular:
- *    - include a correct path to the SCIP root at the top (<code>SCIPDIR</code>)
- *    - you should rename the targets name (<code>MAINNAME</code>)
- *    - and you should adjust the source file names (<code>MAINOBJ</code>).
+ *   directory). For instance, type
+ *   \verbatim
+ *    > cp -r examples/Coloring/ ../SCIPProject/ ; cd ../SCIPProject
+ *   \endverbatim
+ *
+ *   from the SCIP root directory for copying the content of the <code>Coloring</code>-example into a fresh
+ *   directory named SCIPProject in the parent directory of the SCIP root directory and jumping to
+ *   the new SCIPProject directory rightafter.
+ *
+ *  - Open the <code>Makefile</code>  via
+ *    \verbatim
+ *     > kate
+ *    \endverbatim
+ *
+ *    and edit the following variables at the top to have a compilable code:
+ *
+ *    - specify a correct path to the SCIP root (<code>SCIPDIR</code>)
+ *    - rename the targets name (<code>MAINNAME</code>)
+ *    - adjust the source file names (<code>MAINOBJ</code>).
+ *
  * - Once you have edited the makefile, you can use all the flags that can be used in SCIP to
  *   compile your code, see \ref MAKE.
+ *
  *
  */
 
