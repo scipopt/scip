@@ -72,7 +72,7 @@ void debugRowPrint(
    /* print row name */
    if( row->name != NULL && row->name[0] != '\0' )
    {
-      SCIPdebugMessage("%s: ", row->name);
+      SCIPdebugPrintf("%s: ", row->name);
    }
 
    /* print left hand side */
@@ -118,7 +118,7 @@ void debugColPrint(
    assert(col->var != NULL);
 
    /* print bounds */
-   SCIPdebugMessage("(obj: %.15g) [%.15g,%.15g], ", col->obj, col->lb, col->ub);
+   SCIPdebugPrintf("(obj: %.15g) [%.15g,%.15g], ", col->obj, col->lb, col->ub);
 
    /* print coefficients */
    if( col->len == 0 )
@@ -7074,7 +7074,7 @@ SCIP_RETCODE lpFlushAddRows(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &val, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &name, naddrows) );
-   
+
    /* fill temporary memory with row data */
    nnonz = 0;
    for( pos = 0, r = lp->nlpirows; r < lp->nrows; ++pos, ++r )
@@ -12296,11 +12296,11 @@ SCIP_RETCODE lpAlgorithm(
    success = FALSE;
    if( lptimelimit > 0.0 )
       SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
-   
+
    if( lptimelimit <= 0.0 || !success )
    {
       SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
-      *lperror = FALSE;
+      *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
       *timelimit = TRUE;
       return SCIP_OKAY;
    }

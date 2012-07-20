@@ -21,7 +21,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include <ctype.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -34,8 +33,10 @@
 #include "scip/misc.h"
 #include "scip/intervalarith.h"
 
+#ifndef NDEBUG
 #include "scip/struct_misc.h"
-
+#include "scip/var.h"
+#endif
 
 /*
  * GML graphical printing methods
@@ -211,6 +212,117 @@ void SCIPgmlWriteCosing(
    assert(file != NULL);
 
    fprintf(file, "]\n");
+}
+
+
+/*
+ * Sparse solution
+ */
+
+/** creates a sparse solution */
+SCIP_RETCODE SCIPsparseSolCreate(
+   SCIP_SPARSESOL**      sparsesol,          /**< pointer to store the created sparse solution */
+   SCIP_VAR**            vars,               /**< variables in the sparse solution, must not contain continuous
+					      *   variables
+					      */
+   int                   nvars,              /**< number of variables to store, size of the lower and upper bound
+					      *   arrays
+					      */
+   SCIP_Bool             cleared             /**< should the lower and upper bound arrays be cleared (entries set to
+					      *	  0)
+					      */
+   )
+{
+   assert(sparsesol != NULL);
+   assert(vars != NULL);
+   assert(nvars > 0);
+
+   SCIP_ALLOC( BMSallocMemory(sparsesol) );
+
+#ifndef NDEBUG
+   {
+      int v;
+
+      for( v = nvars - 1; v >= 0; --v )
+      {
+	 assert(vars[v] != NULL);
+	 assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS);
+      }
+   }
+#endif
+
+   /* copy variables */
+   SCIP_ALLOC( BMSduplicateMemoryArray(&((*sparsesol)->vars), vars, nvars) );
+
+   /* create bound arrays */
+   if( cleared )
+   {
+      SCIP_ALLOC( BMSallocClearMemoryArray(&((*sparsesol)->lbvalues), nvars) );
+      SCIP_ALLOC( BMSallocClearMemoryArray(&((*sparsesol)->ubvalues), nvars) );
+   }
+   else
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&((*sparsesol)->lbvalues), nvars) );
+      SCIP_ALLOC( BMSallocMemoryArray(&((*sparsesol)->ubvalues), nvars) );
+   }
+
+   (*sparsesol)->nvars = nvars;
+
+   return SCIP_OKAY;
+}
+
+/** frees priority queue, but not the data elements themselves */
+void SCIPsparseSolFree(
+   SCIP_SPARSESOL**      sparsesol           /**< pointer to a sparse solution */
+   )
+{
+   assert(sparsesol != NULL);
+   assert(*sparsesol != NULL);
+
+   BMSfreeMemoryArray(&((*sparsesol)->vars));
+   BMSfreeMemoryArray(&((*sparsesol)->ubvalues));
+   BMSfreeMemoryArray(&((*sparsesol)->lbvalues));
+   BMSfreeMemory(sparsesol);
+}
+
+/** returns the variables stored in the given sparse solution */
+SCIP_VAR** SCIPsparseSolGetVars(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   )
+{
+   assert(sparsesol != NULL);
+
+   return sparsesol->vars;
+}
+
+/** returns the number of variables stored in the given sparse solution */
+int SCIPsparseSolGetNVars(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   )
+{
+   assert(sparsesol != NULL);
+
+   return sparsesol->nvars;
+}
+
+/** returns the lower bound array for all variables for a given sparse solution */
+SCIP_Longint* SCIPsparseSolGetLbs(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   )
+{
+   assert(sparsesol != NULL);
+
+   return sparsesol->lbvalues;
+}
+
+/** returns the upper bound array for all variables for a given sparse solution */
+SCIP_Longint* SCIPsparseSolGetUbs(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   )
+{
+   assert(sparsesol != NULL);
+
+   return sparsesol->ubvalues;
 }
 
 
@@ -5232,22 +5344,16 @@ void SCIPbtnodeFree(
  * However, we want to have them in the library anyways, so we have to undef the defines.
  */
 
-#undef SCIPbtnodeIsLeaf
 #undef SCIPbtnodeGetData
 #undef SCIPbtnodeGetKey
 #undef SCIPbtnodeGetParent
 #undef SCIPbtnodeGetLeftchild
 #undef SCIPbtnodeGetRightchild
-
-/** returns whether the node is a leaf */
-SCIP_Bool SCIPbtnodeIsLeaf(
-   SCIP_BTNODE*          node                /**< node */
-   )
-{
-   assert(node != NULL);
-
-   return (node->left == NULL && node->right == NULL);
-}
+#undef SCIPbtnodeGetSibling
+#undef SCIPbtnodeIsRoot
+#undef SCIPbtnodeIsLeaf
+#undef SCIPbtnodeIsLeftchild
+#undef SCIPbtnodeIsRightchild
 
 /** returns the user data pointer stored in that node */
 void* SCIPbtnodeGetData(
@@ -5287,6 +5393,82 @@ SCIP_BTNODE* SCIPbtnodeGetRightchild(
    assert(node != NULL);
 
    return node->right;
+}
+
+/** returns the sibling of the node or NULL if does not exist */
+SCIP_BTNODE* SCIPbtnodeGetSibling(
+   SCIP_BTNODE*          node                /**< node */
+   )
+{
+   SCIP_BTNODE* parent;
+
+   parent = SCIPbtnodeGetParent(node);
+
+   if( parent == NULL )
+      return NULL;
+
+   if( SCIPbtnodeGetLeftchild(parent) == node )
+      return SCIPbtnodeGetRightchild(parent);
+
+   assert(SCIPbtnodeGetRightchild(parent) == node);
+
+   return SCIPbtnodeGetLeftchild(parent);
+}
+
+/** returns whether the node is a root node */
+SCIP_Bool SCIPbtnodeIsRoot(
+   SCIP_BTNODE*          node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return (node->parent == NULL);
+}
+
+/** returns whether the node is a leaf */
+SCIP_Bool SCIPbtnodeIsLeaf(
+   SCIP_BTNODE*          node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return (node->left == NULL && node->right == NULL);
+}
+
+/** returns TRUE if the given node is left child */
+SCIP_Bool SCIPbtnodeIsLeftchild(
+   SCIP_BTNODE*          node                /**< node */
+   )
+{
+   SCIP_BTNODE* parent;
+
+   if( SCIPbtnodeIsRoot(node) )
+      return FALSE;
+
+   parent = SCIPbtnodeGetParent(node);
+
+   if( SCIPbtnodeGetLeftchild(parent) == node )
+      return TRUE;
+
+   return FALSE;
+}
+
+/** returns TRUE if the given node is right child */
+SCIP_Bool SCIPbtnodeIsRightchild(
+   SCIP_BTNODE*          node                /**< node */
+   )
+{
+   SCIP_BTNODE* parent;
+
+   if( SCIPbtnodeIsRoot(node) )
+      return FALSE;
+
+   parent = SCIPbtnodeGetParent(node);
+
+   if( SCIPbtnodeGetRightchild(parent) == node )
+      return TRUE;
+
+   return FALSE;
 }
 
 /** sets the give node data
@@ -6207,22 +6389,53 @@ void SCIPswapPointers(
    *pointer2 = tmp;
 }
 
+/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
+void SCIPpermuteIntArray(
+   int*                  array,              /**< array to be shuffled */
+   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
+   int                   end,                /**< last index that should be subject to shuffling (array size for whole
+					      *   array)
+					      */
+   unsigned int*         randseed            /**< seed value for the random generator */
+   )
+{
+   int tmp;
+   int i;
+
+   /* loop backwards through all elements and always swap the current last element to a random position */
+   while( end > begin+1 )
+   {
+      --end;
+
+      /* get a random position into which the last entry should be shuffled */
+      i = SCIPgetRandomInt(begin, end, randseed);
+
+      /* swap the last element and the random element */
+      tmp = array[i];
+      array[i] = array[end];
+      array[end] = tmp;
+   }
+}
+
+
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm */
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end,                /**< last index that should be subject to shuffling (array size for whole array) */
+   int                   end,                /**< last index that should be subject to shuffling (array size for whole
+					      *   array)
+					      */
    unsigned int*         randseed            /**< seed value for the random generator */
-   ) 
+   )
 {
+   void* tmp;
+   int i;
+
    /* loop backwards through all elements and always swap the current last element to a random position */
-   while( end > begin+1 ) 
+   while( end > begin+1 )
    {
-      int i;
-      void* tmp;
-      
       end--;
-      
+
       /* get a random position into which the last entry should be shuffled */
       i = SCIPgetRandomInt(begin, end, randseed);
 
@@ -6411,6 +6624,31 @@ int SCIPsnprintf(
       n = len-1;
    }
    return n;
+}
+
+/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to str */
+SCIP_Bool SCIPstrToIntValue(
+   const char*           str,                /**< string to search */
+   int*                  value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   )
+{
+   assert(str != NULL);
+   assert(value != NULL);
+   assert(endptr != NULL);
+
+   *value = strtol(str, endptr, 10);
+
+   if( *endptr != str && *endptr != NULL )
+   {
+      SCIPdebugMessage("parsed integer value <%d>\n", *value);
+      return TRUE;
+   }
+   *endptr = (char*)str;
+
+   SCIPdebugMessage("failed parsing integer value <%s>\n", str);
+
+   return FALSE;
 }
 
 /** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to str */

@@ -164,6 +164,18 @@ fi
 EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
 echo > $EVALFILE
 
+
+#define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
+CLUSTERQUEUE=$QUEUE
+
+if test $CLUSTERQUEUE = "low"
+then
+    CLUSTERQUEUE="mip-low,gas-low"
+elif test $CLUSTERQUEUE = "opt"
+then
+    CLUSTERQUEUE="mip-low,gas-low,traffic-low"
+fi
+
 # counter to define file names for a test set uniquely
 COUNT=0
 
@@ -187,6 +199,10 @@ do
       # 1900 jobs) to submit the next job.
       if test "$NOWAITCLUSTER" != "1"
       then
+	  if test  "$QUEUETYPE" != "qsub"
+	  then
+	      echo "waitcluster does not work on slurm cluster"
+	  fi
 	  ./waitcluster.sh 1600 $QUEUE 200
       fi
 
@@ -227,7 +243,6 @@ do
       echo set limits memory $MEMLIMIT       >> $TMPFILE
       echo set lp advanced threads $THREADS  >> $TMPFILE
       echo set timing clocktype 1            >> $TMPFILE
-      echo set display verblevel 4           >> $TMPFILE
       echo set display freq $DISPFREQ        >> $TMPFILE
       echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
       echo set save $SETFILE                 >> $TMPFILE
@@ -246,23 +261,13 @@ do
       export FILENAME=$i
       export CLIENTTMPDIR=$CLIENTTMPDIR
 
-      if test $QUEUE = "low"
-      then
-	  QUEUE="mip-low,gas-low"
-      fi
-
-      if test $QUEUE = "opt"
-      then
-	  QUEUE="mip-low,gas-low,traffic-low"
-      fi
-
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $QUEUE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
+	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
       else
           # -V to copy all environment variables
-	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null runcluster.sh
       fi
   else
       echo "input file "$SCIPPATH/$i" not found!"

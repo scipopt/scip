@@ -30,6 +30,12 @@
 extern "C" {
 #endif
 
+/** Sparse solution data structure
+ *
+ *  - \ref SparseSol "List of all available methods"
+ */
+typedef struct SCIP_SparseSol SCIP_SPARSESOL;
+
 /** Priority queue data structure
  *
  *  - \ref PriorityQueue "List of all available methods"

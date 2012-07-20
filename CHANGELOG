@@ -5,6 +5,11 @@ SCIP version NEXT
 SCIP version 3.0.0
 ==================
 
+datastructure:
+- new data structure for binary trees (SCIP_BT and SCIP_BTNODE in pub_misc.h)
+- renamed data structure SCIP_STAIRMAP to SCIP_PROFILE
+- renamed data structure SPARSESOLUTION to SCIP_SPARSESOL and moved it from cons_countsols.h to struct_misc.h
+
 interface
 - new method SCIPisConflictAnalysisApplicable() which return FALSE is the conflict will not runs; can be used
   to avoid unnecessary initialization of the conflict analysis
@@ -100,10 +105,8 @@ interface
   explaining/resolving this relaxed bound is sufficient
 - new method SCIPbranchVarHole() which branches a variable w.r.t. a given domain hole
 - default integer comparer SCIPsortCompInt() (see pub_misc.h)
-- data structure for binary trees (SCIP_BT and SCIP_BTNODE in pub_misc.h)
 - renamed SCIPstairmap*Core() to SCIPstairmap*Stair()
 - tcliqueMaxClique has an additional parameter to store the number of used branch-and-bound nodes
-- renamed data structure SCIP_STAIRMAP to SCIP_PROFILE
 - new methods SCIPfixParam() and SCIPunfixParam() to fix and unfix a parameter, respectively;
   the fixing status of a parameter can be requested by SCIPparamIsFixed();
   in the interactive shell, this can be done with 'fix' (instead of 'set'), e.g., "fix heuristics rens freq TRUE";
@@ -135,7 +138,7 @@ interface
 - new function SCIPconshdlrIncNAppliedCuts() in cons.h to increase the number of applied cuts (used by sepastore.c)
 - new LPI method SCIPlpiGetObjsen() to query objective sense
 - new method SCIPgetVarImplRedcost() which returns the implied reduced costs
-- new methods SCIPvarGetBestRootSol(), SCIPvarGetBestRootRedcost(), SCIPvarGetBestRootLPobjval() which return the best
+- new methods SCIPvarGetBestRootSol(), SCIPvarGetBestRootRedcost(), SCIPvarGetBestRootLPObjval() which return the best
   combination for a variable w.r.t. root solution value, root LP objective value, and root reduced cost
 - removed method SCIPvarGetRootRedcost() replaced by SCIPvarGetBestRootRedcost()
 - SCIPprintCons() does not print termination symbol ";\n" anymore; if wanted, use SCIPinfoMessage() to print ";\n" manually
@@ -148,6 +151,9 @@ interface
 - new parameter in SCIPcopy() to indicate whether the message handler from the source SCIP should be passed to the
   target SCIP (only the pointer is copied and the usage counter of the message handler is increased), in multi theaded
   enviroment this parameter needs to be set to FALSE
+- new method for SCIP_SPARSESOL usage, SCIPsparseSolCreate(), SCIPsparseSolFree(), SCIPsparseSolGetVars(),
+  SCIPsparseSolGetNVars(), SCIPsparseSolGetLbs(), SCIPsparseSolGetUbs() in (pub_)misc.{c,h}
+- renamed SCIPgetCountedSparseSolutions() to SCIPgetCountedSparseSols() in cons_countsols.{c,h}
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -180,6 +186,12 @@ performance improvements:
 - revised reduced cost propagator
 - increased performance in SCIPcliqueAddVar(), adding a variable to a clique
 - tighten primal and dual feasibility tolerances independently if they are not reached in LP solving
+- when all nonlinearities have been fixed and the number of nonfixed variables is 1 in cons_nonlinear/cons_quadratic/
+  cons_bivariate, handle it by a bound change instead of adding a linear constraint
+- removed 'targetscip' parameter from SCIPconvertCutsToConss(), now this function can only convert cuts on one instance,
+  otherwise use SCIPcopyCuts()
+- added 'ncutsadded' parameter to SCIPcopyCuts() to be able to store the number of copied/converted cuts
+- new method SCIPpermuteIntArray() in pub_misc.h and misc.c for permuting an integer array
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
@@ -236,6 +248,10 @@ fixed bugs:
 - fixed several bugs writing an mps file in the reader_mps.c, e.g. writing fixed variables which are not (yet) removed
   and writing integer variables even with an objective value of 0, if they only exist in non-linear constraints
 - fixed bug in sepa_clique.c, could not handle only empty cliques, that were not removed
+- all plugins that solve sub-SCIPs now do not stop the whole solution process if there has been an error
+- fixed assert with LPI=none (need to count rows/cols in lpi_none)
+- do not run heur_shiftandpropagate if there is no LP
+- fixed count of propagations in cons_indicator and only try to propagate if variables are not yet fixed
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines

@@ -246,6 +246,9 @@ public:
       if ( probname != NULL )
          SOPLEX_TRY_ABORT( setProbname(probname) );
 
+      m_lpifeastol = SPxSolver::feastol();
+      m_lpiopttol = SPxSolver::opttol();
+
 #ifdef WITH_LPSCHECK
       int cpxstat;
       m_cpxenv = CPXopenCPLEX(&cpxstat);
@@ -892,10 +895,10 @@ public:
          }
       }
 
-      /* unsimplification not designed for infeasible basis */
-      if( (SPxSolver::getBasisStatus() == SPxBasis::INFEASIBLE || m_stat == SPxSolver::INFEASIBLE) && simplifier != NULL )
+      /* unsimplification only stable for optimal basis */
+      if( m_stat != SPxSolver::OPTIMAL && simplifier != NULL )
       {
-         SCIPdebugMessage("presolved LP infeasible - reloading and solving original LP\n");
+         SCIPdebugMessage("presolved LP not optimal - reloading and solving original LP\n");
 
          delete simplifier;
          simplifier = NULL;

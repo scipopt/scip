@@ -273,7 +273,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( sepadata->copycuts )
    {
       /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, FALSE) );
+      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, FALSE, NULL) );
    }
 
    for( i = 0; i < nvars; i++ )

@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a and constraint
+/** creates and captures an and constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
@@ -76,7 +76,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */

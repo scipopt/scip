@@ -105,7 +105,8 @@ struct SCIP_ConsData
    unsigned int          iscurvchecked:1;    /**< is nonlinear function checked on convexity or concavity ? */
    unsigned int          isremovedfixingslin:1; /**< did we removed fixed/aggr/multiaggr variables in linear part? */
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds of linear variables in this constraint? */
-   unsigned int          ispresolved:1;      /**< did we checked for possibilities of upgrading or implicit integer variables ? */
+   unsigned int          ispresolved:1;      /**< did we checked for possibilities of upgrading or implicit integer variables? */
+   unsigned int          forcebackprop:1;    /**< should we force to run the backward propagation on our subgraph in the exprgraph? */
 
    SCIP_Real             minlinactivity;     /**< sum of minimal activities of all linear terms with finite minimal activity */
    SCIP_Real             maxlinactivity;     /**< sum of maximal activities of all linear terms with finite maximal activity */
@@ -163,8 +164,8 @@ struct SCIP_ConshdlrData
    unsigned int          isremovedfixings:1; /**< have fixed variables been removed in the expression graph? */
    unsigned int          ispropagated:1;     /**< have current bounds of linear variables in constraints and variables in expression graph been propagated? */
    unsigned int          isreformulated:1;   /**< has expression graph been reformulated? */
+   unsigned int          sepanlp:1;          /**< has a linearization in the NLP relaxation been added? */
    int                   naddedreformconss;  /**< number of constraints added via reformulation */
-   SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
    SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
    int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
 };
@@ -3312,6 +3313,12 @@ SCIP_RETCODE reformulate(
       if( consdata->exprgraphnode == NULL )
          continue;
 
+      /* after reformulation, force a round of backpropagation in expression graph for all constraints,
+       * since new variables (nlreform*) may now be used in existing constraints and we want domain restrictions
+       * of operators propagated for these variables
+       */
+      consdata->forcebackprop = TRUE;
+
       curv = SCIPexprgraphGetNodeCurvature(consdata->exprgraphnode);
 
       /* if nothing concave, then continue */
@@ -3532,12 +3539,12 @@ SCIP_RETCODE computeViolation(
          var = SCIPexprtreeGetVars(consdata->exprtrees[i])[0];
          varval = SCIPgetSolVal(scip, sol, var);
 
-         /* project onto global box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
+         /* project onto local box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
          if( sol == NULL )
          {
-            assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbGlobal(var)));
-            assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbGlobal(var)));
-            varval = MAX(SCIPvarGetLbGlobal(var), MIN(SCIPvarGetUbGlobal(var), varval));
+            assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
+            assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
+            varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
          }
 
          SCIP_CALL( SCIPexprintEval(exprint, consdata->exprtrees[i], &varval, &val) );
@@ -3554,12 +3561,12 @@ SCIP_RETCODE computeViolation(
             var = SCIPexprtreeGetVars(consdata->exprtrees[i])[j];
             varval = SCIPgetSolVal(scip, sol, var);
 
-            /* project onto global box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
+            /* project onto local box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
             if( sol == NULL )
             {
-               assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbGlobal(var)));
-               assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbGlobal(var)));
-               varval = MAX(SCIPvarGetLbGlobal(var), MIN(SCIPvarGetUbGlobal(var), varval));
+               assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
+               assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
+               varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
             }
 
             x[j] = varval;
@@ -3926,7 +3933,7 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
 
    if( SCIPisEQ(scip, xlb, xub) )
    {
-      assert(SCIPisEQ(scip, vallb, valub));
+      assert(SCIPisFeasEQ(scip, vallb, valub));
       slope = 0.0;
       constant = 0.5 * (vallb+valub);
    }
@@ -5368,7 +5375,9 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
-   SCIP_Bool*            addedcons           /**< buffer to store whether a linear constraint was added */
+   SCIP_Bool*            addedcons,          /**< buffer to store whether a linear constraint was added */
+   SCIP_Bool*            reduceddom,         /**< whether a domain has been reduced */
+   SCIP_Bool*            infeasible          /**< whether we detected infeasibility */
    )
 {
    SCIP_CONS*          cons;
@@ -5382,8 +5391,12 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
    assert(addedcons != NULL);
+   assert(reduceddom != NULL);
+   assert(infeasible != NULL);
 
    *addedcons = FALSE;
+   *reduceddom = FALSE;
+   *infeasible = FALSE;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5413,30 +5426,98 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
             rhs -= SCIPintervalGetInf(nonlinactivity);
       }
 
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, SCIPconsGetName(conss[c]),
-            consdata->nlinvars, consdata->linvars, consdata->lincoefs,
-            lhs, rhs,
-            SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]),
-            SCIPconsIsChecked(conss[c]), SCIPconsIsPropagated(conss[c]),  TRUE,
-            SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
-            SCIPconsIsStickingAtNode(conss[c])) );
-
-      SCIPdebugMessage("replace violated nonlinear constraint <%s> by linear constraint after all nonlinear vars have been fixed\n", SCIPconsGetName(conss[c]) );
-      SCIPdebugPrintCons(scip, conss[c], NULL);
-      SCIPdebugPrintCons(scip, cons, NULL);
-
-      SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
-
-      if( checkresult != SCIP_INFEASIBLE )
+      /* check if we have a bound change */
+      if ( consdata->nlinvars == 1 )
       {
-         SCIPdebugMessage("linear constraint is feasible, thus do not add\n");
+         SCIP_Bool tightened;
+         SCIP_Real coef;
+
+         coef = *consdata->lincoefs;
+         SCIPdebugMessage("Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef, SCIPvarGetName(*consdata->linvars), rhs);
+
+         /* possibly correct lhs/rhs */
+         assert( ! SCIPisZero(scip, coef) );
+         if ( coef >= 0.0 )
+         {
+            if ( ! SCIPisInfinity(scip, -lhs) )
+               lhs /= coef;
+            if ( ! SCIPisInfinity(scip, rhs) )
+               rhs /= coef;
+         }
+         else
+         {
+            SCIP_Real h;
+            h = rhs;
+            if ( ! SCIPisInfinity(scip, -lhs) )
+               rhs = lhs/coef;
+            else
+               rhs = SCIPinfinity(scip);
+
+            if ( ! SCIPisInfinity(scip, h) )
+               lhs = h/coef;
+            else
+               lhs = -SCIPinfinity(scip);
+         }
+         SCIPdebugMessage("Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(*consdata->linvars), rhs);
+
+         if ( ! SCIPisInfinity(scip, -lhs) )
+         {
+            SCIP_CALL( SCIPtightenVarLb(scip, *consdata->linvars, lhs, TRUE, infeasible, &tightened) );
+            if ( *infeasible )
+            {
+               SCIPdebugMessage("Lower bound leads to infeasibility.\n");
+               return SCIP_OKAY;
+            }
+            if ( tightened )
+            {
+               SCIPdebugMessage("Lower bound changed.\n");
+               *reduceddom = TRUE;
+               return SCIP_OKAY;
+            }
+         }
+
+         if ( ! SCIPisInfinity(scip, rhs) )
+         {
+            SCIP_CALL( SCIPtightenVarUb(scip, *consdata->linvars, rhs, TRUE, infeasible, &tightened) );
+            if ( *infeasible )
+            {
+               SCIPdebugMessage("Upper bound leads to infeasibility.\n");
+               return SCIP_OKAY;
+            }
+            if ( tightened )
+            {
+               SCIPdebugMessage("Upper bound changed.\n");
+               *reduceddom = TRUE;
+               return SCIP_OKAY;
+            }
+         }
       }
       else
       {
-         SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
-         *addedcons = TRUE;
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, SCIPconsGetName(conss[c]),
+               consdata->nlinvars, consdata->linvars, consdata->lincoefs, lhs, rhs,
+               SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]),
+               SCIPconsIsChecked(conss[c]), SCIPconsIsPropagated(conss[c]),  TRUE,
+               SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
+               SCIPconsIsStickingAtNode(conss[c])) );
+
+         SCIPdebugMessage("replace violated nonlinear constraint <%s> by linear constraint after all nonlinear vars have been fixed\n", SCIPconsGetName(conss[c]) );
+         SCIPdebugPrintCons(scip, conss[c], NULL);
+         SCIPdebugPrintCons(scip, cons, NULL);
+
+         SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
+
+         if( checkresult != SCIP_INFEASIBLE )
+         {
+            SCIPdebugMessage("linear constraint is feasible, thus do not add\n");
+         }
+         else
+         {
+            SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
+            *addedcons = TRUE;
+         }
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
    }
 
@@ -5899,7 +5980,10 @@ SCIP_RETCODE propagateConstraintSides(
 
       SCIPintervalSetRoundingMode(roundmode);
 
-      SCIPexprgraphTightenNodeBounds(conshdlrdata->exprgraph, consdata->exprgraphnode, bounds, BOUNDTIGHTENING_MINSTRENGTH, &cutoff);
+      /* if we want the expression graph to propagate the bounds in any case, we set minstrength to a negative value */
+      SCIPexprgraphTightenNodeBounds(conshdlrdata->exprgraph, consdata->exprgraphnode, bounds,
+         consdata->forcebackprop ? -1.0 : BOUNDTIGHTENING_MINSTRENGTH, &cutoff);
+      consdata->forcebackprop = FALSE; /* do this only once */
 
       if( cutoff )
       {
@@ -6856,7 +6940,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
     * if there is something convex, then linearizing in the solution of the NLP relaxation can be very useful
     */
    if( SCIPgetDepth(scip) == 0 && !conshdlrdata->sepanlp &&
-      (SCIPgetNContVars(scip) >= conshdlrdata->sepanlpmincont * SCIPgetNVars(scip) || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) &&
+      (SCIPgetNContVars(scip) >= conshdlrdata->sepanlpmincont * SCIPgetNVars(scip) || (SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY && conshdlrdata->sepanlpmincont <= 1.0)) &&
       SCIPisNLPConstructed(scip) && SCIPgetNNlpis(scip) > 0 )
    {
       SCIP_CONSDATA* consdata;
@@ -7131,15 +7215,21 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
       {
          /* fallback 3: all nonlinear variables in all violated constraints seem to be fixed -> replace by linear constraints */
          SCIP_Bool addedcons;
+         SCIP_Bool reduceddom;
+         SCIP_Bool infeasible;
 
          SCIPdebugMessage("All nonlinear variables seem to be fixed. Replace remaining violated nonlinear constraints by linear constraints.\n");
-         SCIP_CALL( replaceViolatedByLinearConstraints(scip, conss, nconss, &addedcons) );
-         /* if the linear constraints are actually feasible, then adding them and returning SCIP_CONSADDED confuses SCIP when it enforces the new constraints again and nothing resolves the infeasiblity that we declare here
-          * thus, we only add them if considered violated, and otherwise claim the solution is feasible (but print a warning) */
-         if( addedcons )
-         {
+         SCIP_CALL( replaceViolatedByLinearConstraints(scip, conss, nconss, &addedcons, &reduceddom, &infeasible) );
+         /* if the linear constraints are actually feasible, then adding them and returning SCIP_CONSADDED confuses SCIP
+          * when it enforces the new constraints again and nothing resolves the infeasiblity that we declare here thus,
+          * we only add them if considered violated, and otherwise claim the solution is feasible (but print a
+          * warning) */
+         if ( infeasible )
+            *result = SCIP_CUTOFF;
+         else if ( addedcons )
             *result = SCIP_CONSADDED;
-         }
+         else if ( reduceddom )
+            *result = SCIP_REDUCEDDOM;
          else
          {
             *result = SCIP_FEASIBLE;
@@ -7150,7 +7240,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
       }
       else
       {
-         SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n", SCIPvarGetName(brvar), SCIPgetSolVal(scip, NULL, brvar));
+         SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n",
+            SCIPvarGetName(brvar), SCIPgetSolVal(scip, NULL, brvar));
          nnotify = 1;
       }
    }
@@ -7674,11 +7765,21 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
 
       /* remember that we should run reformulation again */
       conshdlrdata->isreformulated = FALSE;
+
+      /* remember that we should force backward propagation on our subgraph propagating the next time,
+       * so possible domain restrictions are propagated into variable bounds
+       */
+      consdata->forcebackprop = TRUE;
    }
    else if( consdata->exprgraphnode != NULL )
    {
       /* if constraint already comes with node in expression graph, then also remember that we should run reformulation again */
       conshdlrdata->isreformulated = FALSE;
+
+      /* remember that we should force backward propagation on our subgraph propagating the next time,
+       * so possible domain restrictions are propagated into variable bounds
+       */
+      consdata->forcebackprop = TRUE;
    }
 
    return SCIP_OKAY;

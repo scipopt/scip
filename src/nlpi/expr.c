@@ -8654,6 +8654,10 @@ void exprgraphNodePropagateBounds(
    if( !node->enabled )
       return;
 
+   /* tell children that they should propagate their bounds even if not tightened */
+   if( (node->boundstatus & SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTFORCE) == SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTFORCE )
+      minstrength = -1.0;
+
    /* we will do something, so reset boundstatus to "tightened-by-parent, but not recently" */
    node->boundstatus = SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENT;
 
@@ -12770,7 +12774,7 @@ void SCIPexprgraphTightenNodeBounds(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
    SCIP_EXPRGRAPHNODE*   node,               /**< node in expression graph with no parents */
    SCIP_INTERVAL         nodebounds,         /**< new bounds for node */
-   SCIP_Real             minstrength,        /**< minimal required relative bound strengthening in a node to trigger a propagation into children nodes */
+   SCIP_Real             minstrength,        /**< minimal required relative bound strengthening in a node to trigger a propagation into children nodes (set to negative value if propagation should always be triggered) */
    SCIP_Bool*            cutoff              /**< buffer to store whether a node's bounds were propagated to an empty interval */
    )
 {
@@ -12804,12 +12808,17 @@ void SCIPexprgraphTightenNodeBounds(
       return;
    }
 
-   /* if bounds are considerably improved or tightening leads to an empty interval,
-    * mark that node have recently tightened bounds
+   /* if minstrength is negative, always mark that node has recently tightened bounds,
+    * if bounds are considerably improved or tightening leads to an empty interval,
+    * mark that node has recently tightened bounds
     * if bounds are only slightly improved, set the status to tightened by parent,
-    * so next propagateVarBound round will reset the bounds */
-   if( isLbBetter(minstrength, nodebounds.inf, node->bounds.inf, node->bounds.sup) ||
-      (isUbBetter(minstrength, nodebounds.sup, node->bounds.inf, node->bounds.sup)) )
+    * so next propagateVarBound round will reset the bounds
+    */
+   if( minstrength < 0.0 )
+      node->boundstatus |= SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTFORCE;
+   else if(
+      isLbBetter(minstrength, nodebounds.inf, node->bounds.inf, node->bounds.sup) ||
+      isUbBetter(minstrength, nodebounds.sup, node->bounds.inf, node->bounds.sup) )
       node->boundstatus |= SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTRECENT;
    else if( nodebounds.inf > node->bounds.inf || nodebounds.sup < node->bounds.sup )
       node->boundstatus |= SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENT;

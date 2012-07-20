@@ -34,15 +34,6 @@
 extern "C" {
 #endif
 
-/** data structure for sparse solutions */ 
-struct SparseSolution
-{
-   SCIP_Longint*         lbvalues;           /**< array of lower bounds */
-   SCIP_Longint*         ubvalues;           /**< array of upper bounds */
-};
-typedef struct SparseSolution SPARSESOLUTION;
-
-
 /** dialog execution method for the count command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve);
@@ -50,7 +41,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve);
 /** dialog execution method for the count command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount);
-   
+
 /** execution method of dialog for writing all solutions */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions);
@@ -108,11 +99,11 @@ SCIP_Longint SCIPgetNCountedFeasSubtrees(
  *        type. See for more details about that \ref COLLECTALLFEASEBLES.
  */
 extern
-void SCIPgetCountedSparseSolutions(
+void SCIPgetCountedSparseSols(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< pointer to variable array defining to variable order */
    int*                  nvars,              /**< number of variables */
-   SPARSESOLUTION***     sols,               /**< pointer to the solutions */
+   SCIP_SPARSESOL***     sols,               /**< pointer to the solutions */
    int*                  nsols               /**< pointer to number of solutions */
    );
 

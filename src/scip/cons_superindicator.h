@@ -18,6 +18,13 @@
  * @brief  constraint handler for indicator constraints over arbitrary constraint types
  * @author Ambros Gleixner
  * @author Frederic Pythoud
+ *
+ * Superindicator constraints are constraints of the form
+ * \f[
+ *    x_i = 1 \Rightarrow C(x)
+ * \f]
+ * where \f$ x_i \f$ is a binary variable and \f$ C(\dot) \f$ a constraint.  The superindicator constraint is satisfied
+ * if and only if x_i is zero or C is satisfied.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

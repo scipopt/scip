@@ -17,6 +17,17 @@
  * @ingroup FILEREADERS
  * @brief  file reader for variable fixings
  * @author Tobias Achterberg
+ *
+ * This reader allows to read a file containing fixation values for variables of the current problem. Each line of the
+ * file should have format
+ *
+ *    <variable name> <value to fix>
+ *
+ * Note that only a subset of the variables may need to appear in the file. Lines with unknown variable names are
+ * ignored. The writing functionality is currently not supported.
+ *
+ * @Note The format is equal to the (not xml) solution format of SCIP.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

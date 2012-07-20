@@ -101,7 +101,7 @@ SCIP_RETCODE SCIPcreateConsAbspower(
 
 /** creates and captures an absolute power constraint
  *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
- *  method SCIPcreateConsAbspower(); all flags can be set via SCIPconsSetFLAGNAME-methods in pub_cons.h
+ *  method SCIPcreateConsAbspower(); all flags can be set via SCIPconsSetFLAGNAME-methods in scip.h
  *
  *  @see SCIPcreateConsAbspower() for information about the basic constraint flag configuration
  *

@@ -117,7 +117,7 @@ SCIP_RETCODE setupProbingSCIP(
    if( copycuts )
    {
       /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-      SCIP_CALL( SCIPcopyCuts(scip, *probingscip, *varmapfw, NULL, FALSE) );
+      SCIP_CALL( SCIPcopyCuts(scip, *probingscip, *varmapfw, NULL, FALSE, NULL) );
    }
 
    return SCIP_OKAY;
@@ -690,11 +690,27 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
          /* disable expensive presolving */
          SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
-         SCIP_CALL( SCIPsolve(probingscip) );
+         retcode = SCIPsolve(probingscip);
+
+         /* errors in solving the subproblem should not kill the overall solving process;
+          * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
+         if( retcode != SCIP_OKAY )
+         {
+#ifndef NDEBUG
+            SCIP_CALL( retcode );
+#endif
+            SCIPwarningMessage(scip, "Error while solving subproblem in feaspump heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+
+            /* free hash map and copied SCIP */
+            SCIPhashmapFree(&varmapfw);
+            SCIP_CALL( SCIPfree(&probingscip) );
+            return SCIP_OKAY;
+         }
+
          if( SCIPgetStage(probingscip) != SCIP_STAGE_SOLVING)
          {
             SCIP_STATUS probingstatus = SCIPgetStatus(probingscip);
-            
+
             if( probingstatus == SCIP_STATUS_OPTIMAL )
             {
                assert( SCIPgetNSols(probingscip) > 0 );
@@ -702,7 +718,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                if( success )
                   *result = SCIP_FOUNDSOL;
             }
-            
+
             /* free hash map and copied SCIP */
             SCIPhashmapFree(&varmapfw);
             SCIP_CALL( SCIPfree(&probingscip) );

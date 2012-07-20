@@ -18,6 +18,12 @@
  * @brief  constraint handler for disjunction constraints
  * @author Stefan Heinz
  * @author Michael Winkler
+ *
+ * A disjunction constraint \f$ C \f$ is a constraint of the form
+ * \f[
+ *   C = C_1 \vee \dots \vee C_n
+ * \f]
+ *  where all the \f$ C_i \f$ are individual constraints themselves.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -61,7 +67,7 @@ SCIP_RETCODE SCIPcreateConsDisjunction(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic             /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    );
 

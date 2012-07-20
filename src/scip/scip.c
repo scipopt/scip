@@ -451,6 +451,9 @@ SCIP_Real getDualbound(
 {
    SCIP_Real lowerbound;
 
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
+      return -SCIPinfinity(scip) * scip->transprob->objsense;
+
    lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
 
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
@@ -475,6 +478,9 @@ SCIP_Real getLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
+      return -SCIPinfinity(scip);
+
    return SCIPtreeGetLowerbound(scip->tree, scip->set);
 }
 
@@ -1886,13 +1892,42 @@ SCIP_RETCODE SCIPcopyConss(
 }
 
 
-/** convert all active cuts from cutpool of sourcescip to linear constraints in targetscip, sourcescip and targetscip
- *  could be the same
+/** convert all active cuts from cutpool to linear constraints
+ *
+ *  @note Do not change the source SCIP environment during the copying process
+ */
+SCIP_RETCODE SCIPconvertCutsToConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   int*                  ncutsadded          /**< pointer to store number of added cuts, or NULL */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   /* check stages for the SCIP data structure */
+   SCIP_CALL( checkStage(scip, "SCIPconvertCutsToConss", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+
+   /* if we do not have any cuts, nothing can be converted */
+   if( scip->set->stage < SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   /* create out of all active cuts in cutpool linear constraints in targetscip */
+   SCIP_CALL( SCIPcopyCuts(scip, scip, varmap, consmap, global, ncutsadded) );
+
+   return SCIP_OKAY;
+}
+
+/** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  */
-SCIP_RETCODE SCIPconvertCutsToConss(
+SCIP_RETCODE SCIPcopyCuts(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
@@ -1900,21 +1935,23 @@ SCIP_RETCODE SCIPconvertCutsToConss(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   int*                  ncutsadded          /**< pointer to store number of added cuts */
+   int*                  ncutsadded          /**< pointer to store number of copied cuts, or NULL */
    )
 {
    SCIP_CUT** cuts;
    int ncuts;
+   int nlocalcutsadded;
    int c;
 
+
    assert(sourcescip != NULL);
-   assert(sourcescip->set != NULL);
    assert(targetscip != NULL);
-   assert(ncutsadded != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPconvertCutsToConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPconvertCutsToConss", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyCuts", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyCuts", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+
+   nlocalcutsadded = 0;
 
    /* if we do not have any cuts, nothing can be converted */
    if( sourcescip->set->stage < SCIP_STAGE_SOLVING )
@@ -1988,43 +2025,14 @@ SCIP_RETCODE SCIPconvertCutsToConss(
          /* free temporary memory */
          SCIPfreeBufferArray(targetscip, &vars);
 
-         ++(*ncutsadded);
+         ++nlocalcutsadded;
       }
    }
 
-   return SCIP_OKAY;
-}
+   SCIPdebugMessage("Converted %d active cuts to constraints.\n", nlocalcutsadded);
 
-/** copies all active cuts from cutpool of sourcescip to constraints in targetscip 
- *
- *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
- *  @note Do not change the source SCIP environment during the copying process
- */
-SCIP_RETCODE SCIPcopyCuts(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
-   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL */
-   SCIP_Bool             global              /**< create a global or a local copy? */
-   )
-{
-   int ncutsadded;
-
-   assert(sourcescip != NULL);
-   assert(targetscip != NULL);
-
-   /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyCuts", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPcopyCuts", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   ncutsadded = 0;
-
-   /* create out of all active cuts in cutpool linear constraints in targetscip */
-   SCIP_CALL( SCIPconvertCutsToConss(sourcescip, targetscip, varmap, consmap, global, &ncutsadded) );
-
-   SCIPdebugMessage("Converted %d active cuts to constraints.\n", ncutsadded);
+   if( ncutsadded != NULL )
+      *ncutsadded = nlocalcutsadded;
 
    return SCIP_OKAY;
 }
@@ -3557,7 +3565,7 @@ SCIP_RETCODE SCIPsetConshdlrFree(
 SCIP_RETCODE SCIPsetConshdlrInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSINIT    ((*consinit))   /**< initialize constraint handler */
+   SCIP_DECL_CONSINIT    ((*consinit))       /**< initialize constraint handler */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetConshdlrInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -11495,7 +11503,7 @@ void SCIPfreeParseVarsPolynomialData(
    if( nmonomials == 0 )
       return;
 
-   for( i = 0; i < nmonomials; ++i )
+   for( i = nmonomials - 1; i >= 0; --i )
    {
       SCIPfreeBufferArrayNull(scip, &(*monomialvars)[i]);
       SCIPfreeBufferArrayNull(scip, &(*monomialexps)[i]);
@@ -15088,8 +15096,13 @@ SCIP_RETCODE tightenBounds(
 
       /* we adjust variable bounds to integers first, since otherwise a later bound tightening with a fractional old
        * bound may give an assert because SCIP expects non-continuous variables to have non-fractional bounds
+       *
+       * we adjust bounds with a fractionality within [eps,feastol] only if the resulting bound change is a bound
+       * tightening, because relaxing bounds may not be allowed
        */
-      if( !SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)) )
+      if( !SCIPisFeasIntegral(scip, SCIPvarGetLbGlobal(var)) ||
+         (!SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)) && SCIPvarGetLbGlobal(var) < SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)))
+        )
       {
          SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)), TRUE, infeasible, &tightened) );
          if( *infeasible )
@@ -15097,7 +15110,9 @@ SCIP_RETCODE tightenBounds(
 
          assert(tightened);
       }
-      if( !SCIPisIntegral(scip, SCIPvarGetUbGlobal(var)) )
+      if( !SCIPisFeasIntegral(scip, SCIPvarGetUbGlobal(var)) ||
+         (!SCIPisIntegral(scip, SCIPvarGetUbGlobal(var)) && SCIPvarGetUbGlobal(var) > SCIPfeasFloor(scip, SCIPvarGetUbGlobal(var)))
+        )
       {
          SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, SCIPfeasFloor(scip, SCIPvarGetUbGlobal(var)), TRUE, infeasible, &tightened) );
          if( *infeasible )
@@ -24119,7 +24134,7 @@ SCIP_Real SCIPgetDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return getDualbound(scip);
 }
@@ -24129,7 +24144,7 @@ SCIP_Real SCIPgetLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return getLowerbound(scip);
 }
@@ -24139,7 +24154,7 @@ SCIP_Real SCIPgetDualboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDualboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDualboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
       return getPrimalbound(scip);
@@ -24152,7 +24167,12 @@ SCIP_Real SCIPgetLowerboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLowerboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLowerboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
+   {
+      return getLowerbound(scip);
+   }
 
    return SCIPnodeGetLowerbound(scip->tree->root);
 }
@@ -25526,6 +25546,19 @@ SCIP_RETCODE SCIPprintStatistics(
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
+   {
+      printTimingStatistics(scip, file);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
+      SCIPprobPrintStatistics(scip->origprob, scip->messagehdlr, file);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
+      SCIPprobPrintStatistics(scip->transprob, scip->messagehdlr, file);
+      printPresolverStatistics(scip, file);
+      printConstraintStatistics(scip, file);
+      printConstraintTimingStatistics(scip, file);
+      printPropagatorStatistics(scip, file);
+      printConflictStatistics(scip, file);
+      return SCIP_OKAY;
+   }
    case SCIP_STAGE_PRESOLVED:
    {
       printTimingStatistics(scip, file);
@@ -25538,6 +25571,8 @@ SCIP_RETCODE SCIPprintStatistics(
       printConstraintTimingStatistics(scip, file);
       printPropagatorStatistics(scip, file);
       printConflictStatistics(scip, file);
+      printHeuristicStatistics(scip, file);
+      printSolutionStatistics(scip, file);
       return SCIP_OKAY;
    }
    case SCIP_STAGE_SOLVING:

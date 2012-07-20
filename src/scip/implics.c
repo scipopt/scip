@@ -426,7 +426,18 @@ void checkImplics(
       assert(nimpls == 0 || types != NULL);
       assert(nimpls == 0 || bounds != NULL);
 
-      for( i = 0; i < nbinimpls; ++i )
+      if( nbinimpls > 0 )
+      {
+         /* in case of implication we cannot use SCIPvarIsBinary() to check for binaries since the implication are
+          * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
+          * SCIP_VARTYPE_BINARY) and second all others;
+          */
+         assert(SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY);
+         assert((types[0] == SCIP_BOUNDTYPE_LOWER) == (bounds[0] > 0.5));
+         assert(SCIPsetIsFeasZero(set, bounds[0]) || SCIPsetIsFeasEQ(set, bounds[0], 1.0));
+      }
+
+      for( i = 1; i < nbinimpls; ++i )
       {
          int cmp;
 
@@ -436,10 +447,7 @@ void checkImplics(
           */
          assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY);
          assert((types[i] == SCIP_BOUNDTYPE_LOWER) == (bounds[i] > 0.5));
-         assert(SCIPsetIsFeasEQ(set, bounds[i], 0.0) || SCIPsetIsFeasEQ(set, bounds[i], 1.0));
-
-         if( i == 0 )
-            continue;
+         assert(SCIPsetIsFeasZero(set, bounds[i]) || SCIPsetIsFeasEQ(set, bounds[i], 1.0));
 
          cmp = compVars(vars[i-1], vars[i]);
          assert(cmp <= 0);
@@ -450,7 +458,7 @@ void checkImplics(
       for( i = nbinimpls; i < nimpls; ++i )
       {
          int cmp;
-         
+
          /* in case of implication we cannot use SCIPvarIsBinary() to check for binaries since the implication are
           * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
           * SCIP_VARTYPE_BINARY) and second all others;

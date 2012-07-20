@@ -95,18 +95,20 @@ void propdataReset(
 static
 SCIP_DECL_SORTPTRCOMP(varCompRedcost)
 {
+   SCIP_VAR* var1 = (SCIP_VAR*)elem1;
+   SCIP_VAR* var2 = (SCIP_VAR*)elem2;
    SCIP_Real key1;
    SCIP_Real key2;
 
-   assert(SCIPvarIsBinary((SCIP_VAR*)elem1));
-   assert(SCIPvarGetBestRootRedcost((SCIP_VAR*)elem1) != 0.0);
+   assert(SCIPvarIsBinary(var1));
+   assert(SCIPvarGetBestRootRedcost(var1) != 0.0);
 
-   assert(SCIPvarIsBinary((SCIP_VAR*)elem2));
-   assert(SCIPvarGetBestRootRedcost((SCIP_VAR*)elem2) != 0.0);
+   assert(SCIPvarIsBinary(var2));
+   assert(SCIPvarGetBestRootRedcost(var2) != 0.0);
 
    /* collect sorting key for both variables */
-   key1 = REALABS(SCIPvarGetBestRootRedcost((SCIP_VAR*)elem1)) + SCIPvarGetBestRootLPobjval((SCIP_VAR*)elem1);
-   key2 = REALABS(SCIPvarGetBestRootRedcost((SCIP_VAR*)elem2)) + SCIPvarGetBestRootLPobjval((SCIP_VAR*)elem2);
+   key1 = REALABS(SCIPvarGetBestRootRedcost(var1)) + SCIPvarGetBestRootLPObjval(var1);
+   key2 = REALABS(SCIPvarGetBestRootRedcost(var2)) + SCIPvarGetBestRootLPObjval(var2);
 
    if( key1 < key2 )
       return -1;
@@ -117,7 +119,7 @@ SCIP_DECL_SORTPTRCOMP(varCompRedcost)
     *
     * @note The problem index is unique. That means the resulting sorting is unique.
     */
-   return SCIPvarCompare((SCIP_VAR*)elem1, (SCIP_VAR*)elem2);
+   return SCIPvarCompare(var1, var2);
 }
 
 /** create propagator data structure */
@@ -304,7 +306,7 @@ SCIP_RETCODE propagateRootRedcostVar(
    assert(!SCIPisFeasZero(scip, rootredcost));
 
    rootsol = SCIPvarGetBestRootSol(var);
-   rootlpobjval = SCIPvarGetBestRootLPobjval(var);
+   rootlpobjval = SCIPvarGetBestRootLPObjval(var);
 
    /* calculate reduced cost based bound */
    newbd = rootsol + (cutoffbound - rootlpobjval) / rootredcost;
@@ -399,7 +401,7 @@ SCIP_RETCODE propagateBinaryBestRootRedcost(
 
          SCIPdebugMessage("globally fixed binary variable <%s> [%g,%g] bestroot sol <%g>, redcost <%g>, lpobj <%g>\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
-            SCIPvarGetBestRootSol(var), SCIPvarGetBestRootRedcost(var), SCIPvarGetBestRootLPobjval(var) );
+            SCIPvarGetBestRootSol(var), SCIPvarGetBestRootRedcost(var), SCIPvarGetBestRootLPObjval(var) );
 
          (*nchgbds)++;
       }
@@ -429,7 +431,7 @@ SCIP_RETCODE propagateBinaryBestRootRedcost(
          {
             SCIPdebugMessage("detected cutoff: binary variable <%s> [%g,%g], redcost <%g>, rootsol <%g>, rootlpobjval <%g>\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
-               SCIPvarGetBestRootRedcost(var), SCIPvarGetBestRootSol(var), SCIPvarGetBestRootLPobjval(var));
+               SCIPvarGetBestRootRedcost(var), SCIPvarGetBestRootSol(var), SCIPvarGetBestRootLPObjval(var));
          }
 
          break;
@@ -438,6 +440,10 @@ SCIP_RETCODE propagateBinaryBestRootRedcost(
    /* store the index of the variable which is not globally fixed */
    propdata->glbfirstnonfixed = v;
 
+#if 0 /* due to numerics it might be that the abort criteria did not work correctly, because the sorting mechanism may
+       * have evaluated variables with a really small difference in their reduced cost values but with really huge
+       * lpobjval as the same
+       */
 #ifndef NDEBUG
    /* check that the abort criteria works; that means none of the remaining binary variables can be fixed */
    for( ; v < propdata->nredcostbinvars && !(*cutoff); ++v )
@@ -457,6 +463,7 @@ SCIP_RETCODE propagateBinaryBestRootRedcost(
       assert(!tightened);
       assert(!(*cutoff));
    }
+#endif
 #endif
 
    return SCIP_OKAY;

@@ -35,6 +35,7 @@
 #include "scip/type_retcode.h"
 #include "scip/type_misc.h"
 #include "scip/type_message.h"
+#include "scip/type_var.h"
 
 /* in optimized mode some of the function are handled via defines, for that the structs are needed */
 #ifdef NDEBUG
@@ -108,6 +109,61 @@ void SCIPgmlWriteCosing(
  *
  * @{
  */
+
+/*
+ * Sparse solution
+ */
+
+/**@defgroup SparseSol Sparse solution
+ *
+ * @{
+ */
+
+/** creates a sparse solution */
+extern
+SCIP_RETCODE SCIPsparseSolCreate(
+   SCIP_SPARSESOL**      sparsesol,          /**< pointer to store the created sparse solution */
+   SCIP_VAR**            vars,               /**< variables in the sparse solution, must not contain continuous
+					      *   variables
+					      */
+   int                   nvars,              /**< number of variables to store, size of the lower and upper bound
+					      *   arrays
+					      */
+   SCIP_Bool             cleared             /**< should the lower and upper bound arrays be cleared (entries set to
+					      *	  0)
+					      */
+   );
+
+/** frees priority queue, but not the data elements themselves */
+extern
+void SCIPsparseSolFree(
+   SCIP_SPARSESOL**      sparsesol           /**< pointer to a sparse solution */
+   );
+
+/** returns the variables in the given sparse solution */
+extern
+SCIP_VAR** SCIPsparseSolGetVars(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   );
+
+/** returns the number of variables in the given sparse solution */
+extern
+int SCIPsparseSolGetNVars(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   );
+
+/** returns the the lower bound array for all variables for a given sparse solution */
+extern
+SCIP_Longint* SCIPsparseSolGetLbs(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   );
+
+/** returns the the upper bound array for all variables for a given sparse solution */
+extern
+SCIP_Longint* SCIPsparseSolGetUbs(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   );
+
 
 /*
  * Priority Queue
@@ -747,12 +803,6 @@ void SCIPbtnodeFree(
 
 #ifndef NDEBUG
 
-/** returns whether the node is a leaf */
-extern
-SCIP_Bool SCIPbtnodeIsLeaf(
-   SCIP_BTNODE*          node                /**< node */
-   );
-
 /** returns the user data pointer stored in that node */
 extern
 void* SCIPbtnodeGetData(
@@ -777,13 +827,48 @@ SCIP_BTNODE* SCIPbtnodeGetRightchild(
    SCIP_BTNODE*          node                /**< node */
    );
 
+/** returns the sibling of the node or NULL if does not exist */
+extern
+SCIP_BTNODE* SCIPbtnodeGetSibling(
+   SCIP_BTNODE*          node                /**< node */
+   );
+
+/** returns whether the node is a root node */
+extern
+SCIP_Bool SCIPbtnodeIsRoot(
+   SCIP_BTNODE*          node                /**< node */
+   );
+
+/** returns whether the node is a leaf */
+extern
+SCIP_Bool SCIPbtnodeIsLeaf(
+   SCIP_BTNODE*          node                /**< node */
+   );
+
+/** returns TRUE if the given node is left child */
+extern
+SCIP_Bool SCIPbtnodeIsLeftchild(
+   SCIP_BTNODE*          node                /**< node */
+   );
+
+/** returns TRUE if the given node is right child */
+extern
+SCIP_Bool SCIPbtnodeIsRightchild(
+   SCIP_BTNODE*          node                /**< node */
+   );
+
 #else
 
-#define SCIPbtnodeIsLeaf(node)                (node->left == NULL && node->right == NULL)
-#define SCIPbtnodeGetData(node)               (node->dataptr)
-#define SCIPbtnodeGetParent(node)             (node->parent)
-#define SCIPbtnodeGetLeftchild(node)          (node->left)
-#define SCIPbtnodeGetRightchild(node)         (node->right)
+#define SCIPbtnodeGetData(node)               ((node)->dataptr)
+#define SCIPbtnodeGetParent(node)             ((node)->parent)
+#define SCIPbtnodeGetLeftchild(node)          ((node)->left)
+#define SCIPbtnodeGetRightchild(node)         ((node)->right)
+#define SCIPbtnodeGetSibling(node)            ((node)->parent == NULL ? NULL : \
+                                               (node)->parent->left == (node) ? (node)->parent->right : (node)->parent->left)
+#define SCIPbtnodeIsRoot(node)                ((node)->parent == NULL)
+#define SCIPbtnodeIsLeaf(node)                ((node)->left == NULL && (node)->right == NULL)
+#define SCIPbtnodeIsLeftchild(node)           ((node)->parent == NULL ? FALSE : (node)->parent->left == (node) ? TRUE : FALSE)
+#define SCIPbtnodeIsRightchild(node)          ((node)->parent == NULL ? FALSE : (node)->parent->right == (node) ? TRUE : FALSE)
 
 #endif
 
@@ -4310,12 +4395,25 @@ void SCIPswapPointers(
    void**                pointer2            /**< second pointer */
    );
 
+/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
+extern
+void SCIPpermuteIntArray(
+   int*                  array,              /**< array to be shuffled */
+   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
+   int                   end,                /**< last index that should be subject to shuffling (array size for whole
+					      *   array)
+					      */
+   unsigned int*         randseed            /**< seed value for the random generator */
+   );
+
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm */
 extern
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end,                /**< last index that should be subject to shuffling (array size for whole array) */
+   int                   end,                /**< last index that should be subject to shuffling (array size for whole
+					      *   array)
+					      */
    unsigned int*         randseed            /**< pointer to seed value for the random generator */
    );
 
@@ -4390,8 +4488,16 @@ int SCIPsnprintf(
    ...                                       /**< further parameters */
    );
 
+/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to str */
+extern
+SCIP_Bool SCIPstrToIntValue(
+   const char*           str,                /**< string to search */
+   int*                  value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   );
+
 /** extract the next token as a double value if it is one; in case a value is parsed the endptr is set to NULL */
-extern 
+extern
 SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
    SCIP_Real*            value,              /**< pointer to store the parsed value */

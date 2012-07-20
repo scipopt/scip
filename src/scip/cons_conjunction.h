@@ -17,6 +17,12 @@
  * @ingroup CONSHDLRS
  * @brief  constraint handler for conjunction constraints
  * @author Tobias Achterberg
+ *
+ * A conjunction constraint \f$ C \f$ is a constraint of the form
+ * \f[
+ *   C = C_1 \wedge \dots \wedge C_n
+ * \f]
+ *  where all the \f$ C_i \f$ are individual constraints themselves.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -58,7 +64,7 @@ SCIP_RETCODE SCIPcreateConsConjunction(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic             /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    );
 

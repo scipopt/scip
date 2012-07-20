@@ -32,6 +32,15 @@
 extern "C" {
 #endif
 
+/** data structure for sparse solutions */
+struct SCIP_SparseSol
+{
+   SCIP_VAR**            vars;               /**< variables */
+   SCIP_Longint*         lbvalues;           /**< array of lower bounds */
+   SCIP_Longint*         ubvalues;           /**< array of upper bounds */
+   int                   nvars;              /**< number of variables */
+};
+
 /** priority queue data structure
  *  Elements are stored in an array, which grows dynamically in size as new elements are added to the queue.
  *  The ordering is done through a pointer comparison function.

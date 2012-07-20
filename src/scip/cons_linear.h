@@ -27,6 +27,9 @@
  * \f]
  * with \f$a_i \in Q, i = 1,\dots,n\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
  * and decision variables \f$x_i, i = 1,\dots,n\f$ which can be binary, integer, or continuous.
+ *
+ * Furthermore, this header offers the upgrade functionality of a general linear constraint into a more specific
+ * constraint, such as a knapsack constraint, via SCIP_DECL_LINCONSUPGD() and SCIPincludeLinconsUpgrade()
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -128,7 +131,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -302,7 +305,7 @@ SCIP_RETCODE SCIPmarkDoNotUpgradeConsLinear(
    SCIP_CONS*            cons                /**< linear constraint to mark */
    );
 
-/** sets upgrading flag of linear constraint 
+/** sets upgrading flag of linear constraint
  *
  *  @note the donotupgrade flag should only be changed from TRUE to FALSE, by the caller who set it to TRUE
  */

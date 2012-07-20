@@ -17,7 +17,7 @@
  * @ingroup CONSHDLRS
  * @brief  constraint handler for quadratic constraints \f$\textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_ix_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
- * 
+ *
  * This constraint handler handles constraints of the form
  * \f[
  *   \textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_ix_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}
@@ -96,7 +96,7 @@ typedef struct SCIP_BilinTerm SCIP_BILINTERM;
 
 
 /** upgrading method for quadratic constraints into more specific constraints
- * 
+ *
  * the method might upgrade a quadratic constraint into a set of quadratic constraints
  * the caller provided an array upgdconss to store upgrade constraints
  * the length of upgdconss is given by upgdconsssize
@@ -143,7 +143,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
    );
 
 /** Creates and captures a quadratic constraint.
- * 
+ *
  *  The constraint should be given in the form
  *  \f[
  *  \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m a_j y_j z_j \leq u,
@@ -182,14 +182,15 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    );
 
-/** creates and captures a quadratic constraint with all its
- *  flags set to their default values.
+/** creates and captures a quadratic constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
  *
  *  The constraint should be given in the form
  *  \f[
@@ -197,6 +198,9 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
  *  \f]
  *  where \f$x_i = y_j = z_k\f$ is possible.
  *
+ *  @see SCIPcreateConsQuadratic() for the default constraint flag configuration
+ *
+
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 extern
@@ -215,8 +219,8 @@ SCIP_RETCODE SCIPcreateConsBasicQuadratic(
    SCIP_Real             rhs                 /**< right hand side of quadratic equation (u) */
    );
 
-/** Creates and captures a quadratic constraint.
- * 
+/** creates and captures a quadratic constraint.
+ *
  * The constraint should be given in the form
  * \f[
  * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_k v_k w_k \leq u.
@@ -230,8 +234,8 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int                   nlinvars,           /**< number of linear terms (n) */
-   SCIP_VAR**            linvars,            /**< array with variables in linear part (x_i) */ 
-   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part (b_i) */ 
+   SCIP_VAR**            linvars,            /**< array with variables in linear part (x_i) */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part (b_i) */
    int                   nquadvarterms,      /**< number of quadratic terms (m) */
    SCIP_QUADVARTERM*     quadvarterms,       /**< quadratic variable terms */
    int                   nbilinterms,        /**< number of bilinear terms (p) */
@@ -249,13 +253,16 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 
-/** creates and captures a quadratic constraint in its most basic version, i.e.,
- *  all constraint flags are set to their default values.
+/** creates and captures a quadratic constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
  *
  * The constraint should be given in the form
  * \f[
  * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_kv_kw_k \leq u.
  * \f]
+ *
+ *  @see SCIPcreateConsQuadratic2() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */

@@ -934,6 +934,7 @@ SCIP_RETCODE solveSubNLP(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_RETCODE   retcode;
    SCIP_Real*     startpoint;
    SCIP_VAR*      var;
    SCIP_VAR*      subvar;
@@ -988,19 +989,20 @@ SCIP_RETCODE solveSubNLP(
    }
    assert(SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVED);
 
+   retcode = SCIP_OKAY;
    if( SCIPgetNVars(heurdata->subscip) > 0 )
    {
       /* do initial solve, i.e., "solve" root node with node limit 0 (should do scip.c::initSolve and then stop immediately in solve.c::SCIPsolveCIP) */
       SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 0LL) );
-      SCIP_CALL( SCIPsolve(heurdata->subscip) );
+      retcode = SCIPsolve(heurdata->subscip);
 
       /* If no NLP was constructed, then there were no nonlinearities after presolve.
        * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem.
        */
-      if( !SCIPisNLPConstructed(heurdata->subscip) )
+      if( !SCIPisNLPConstructed(heurdata->subscip) && retcode == SCIP_OKAY )
       {
          SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
-         SCIP_CALL( SCIPsolve(heurdata->subscip) );
+         retcode = SCIPsolve(heurdata->subscip);
       }
    }
    else
@@ -1008,7 +1010,18 @@ SCIP_RETCODE solveSubNLP(
       /* If all variables were removed by presolve, but presolve did not end with status SOLVED,
        * then we run solve, still with nodelimit=1, and hope to find some (maybe trivial) solution.
        */
-      SCIP_CALL( SCIPsolve(heurdata->subscip) );
+      retcode = SCIPsolve(heurdata->subscip);
+   }
+
+   /* errors in solving the subproblem should not kill the overall solving process;
+    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
+   if ( retcode != SCIP_OKAY )
+   {
+#ifndef NDEBUG
+      SCIP_CALL( retcode );
+#endif
+      SCIPwarningMessage(scip, "Error while solving subproblem in subnlp heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+      goto CLEANUP;
    }
 
    /* if sub-SCIP found solutions already, then pass them to main scip */
@@ -1300,6 +1313,9 @@ SCIP_RETCODE solveSubNLP(
          SCIP_CALL( SCIPresetParam(heurdata->subscip, "constraints/linear/aggregatevariables") );
       }
    }
+
+   if( iterused != NULL && *iterused == 0 )
+      *iterused = 1;
 
    return SCIP_OKAY;
 }

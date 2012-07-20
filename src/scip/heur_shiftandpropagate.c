@@ -1415,7 +1415,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    if( SCIPgetBestSol(scip) != NULL && heurdata->onlywithoutsol )
       return SCIP_OKAY;
 
-   if( !SCIPisLPConstructed(scip) && SCIPhasCurrentNodeLP(scip) )
+   /* stop if there is no LP available */
+   if ( ! SCIPhasCurrentNodeLP(scip) )
+      return SCIP_OKAY;
+
+   if( !SCIPisLPConstructed(scip) )
    {
       SCIP_Bool nodecutoff;
 
@@ -1572,11 +1576,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    else if( heurdata->sortvars && heurdata->sortkey == 'r')
    {
       if( nbinvars > 0)
-         SCIPpermuteArray((void**)permutation, 0, nbinvars - 1, &heurdata->randseed);
+         SCIPpermuteIntArray(permutation, 0, nbinvars - 1, &heurdata->randseed);
       if( nintvars > 0)
-         SCIPpermuteArray((void**)&permutation[nbinvars], 0, nintvars, &heurdata->randseed);
+         SCIPpermuteIntArray(&permutation[nbinvars], 0, nintvars, &heurdata->randseed);
       if( nimplvars > 0)
-         SCIPpermuteArray((void**)&permutation[nbinvars + nintvars], 0, nimplvars, &heurdata->randseed);
+         SCIPpermuteIntArray(&permutation[nbinvars + nintvars], 0, nimplvars, &heurdata->randseed);
       SCIPdebugMessage("Variables permuted randomly!\n");
    }
    else
@@ -1624,13 +1628,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       ub = SCIPvarGetUbLocal(var);
       assert(SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0);
       assert(SCIPvarIsIntegral(var));
-
-      /* for numerical reasons, we might have to tighten our local bounds further in order to ensure, that our bounds
-       * are indeed valid */
-      if( SCIPisGT(scip, SCIPfeasCeil(scip, ub), ub) )
-         ub = MAX(lb,SCIPfloor(scip, ub - 1));
-      if( SCIPisLT(scip, SCIPfeasFloor(scip, lb), lb) )
-         lb = MIN(ub, SCIPfloor(scip, lb + 1));
 
       /* check whether we hit some limit, e.g. the time limit, in between
        * since the check itself consumes some time, we only do it every tenth iteration
@@ -1680,7 +1677,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          permutation[c] = permutation[lastindexofsusp];
          permutation[lastindexofsusp] = permutedvarindex;
 
-         SCIPdebugMessage("  Variable %s postponed from pos <%d> to <%d> due to FREE transform status", SCIPvarGetName(var), c, lastindexofsusp);
+         SCIPdebugMessage("  Variable %s postponed from pos <%d> to <%d> due to FREE transform status\n", SCIPvarGetName(var), c, lastindexofsusp);
 
          continue;
       }

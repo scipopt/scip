@@ -729,7 +729,6 @@ SCIP_RETCODE analyzeGenVBoundConflict(
    GENVBOUND*            genvbound           /**< genvbound data structure */
    )
 {
-   SCIP_Real infeasthreshold;
    SCIP_Bool success;
 
    assert(scip != NULL);
@@ -741,24 +740,26 @@ SCIP_RETCODE analyzeGenVBoundConflict(
 
    /* initialize conflict analysis */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-   infeasthreshold = 2 * SCIPfeastol(scip);
 
    /* left-hand side variable >= ... */
    if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER )
    {
+      SCIP_Real infeasthreshold;
       SCIP_Real bound;
 
       /* get minimal right-hand side bound that leads to infeasibility */
+      infeasthreshold = MAX(REALABS(SCIPvarGetUbLocal(genvbound->var)), 1.0) * 2 * SCIPfeastol(scip);
       bound = SCIPvarGetUbLocal(genvbound->var) + infeasthreshold;
 
       /* add right-hand side variables that force the lower bound of the left-hand side variable above its upper bound
        * to conflict set
        */
       SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &bound, &success) );
-      assert(SCIPisGE(scip, bound, SCIPvarGetUbLocal(genvbound->var) + infeasthreshold));
+      assert(SCIPisFeasGT(scip, bound, SCIPvarGetUbLocal(genvbound->var)));
 
       /* compute upper bound on left-hand side variable that leads to infeasibility */
       bound -= infeasthreshold;
+      assert(SCIPisGE(scip, bound, SCIPvarGetUbLocal(genvbound->var)));
 
       /* if bound is already enforced by conflict set we do not have to add it */
       if( SCIPisGE(scip, bound, SCIPgetConflictVarUb(scip, genvbound->var)) )
@@ -776,19 +777,22 @@ SCIP_RETCODE analyzeGenVBoundConflict(
    /* left-hand side variable <= ..., i.e., - left-hand side variable >= ... */
    else
    {
+      SCIP_Real infeasthreshold;
       SCIP_Real bound;
 
       /* get minimal right-hand side bound that leads to infeasibility */
+      infeasthreshold = MAX(REALABS(SCIPvarGetLbLocal(genvbound->var)), 1.0) * 2 * SCIPfeastol(scip);
       bound = -SCIPvarGetLbLocal(genvbound->var) + infeasthreshold;
 
       /* add right-hand side variables that force the upper bound of the left-hand side variable below its lower bound
        * to conflict set
        */
       SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &bound, &success) );
-      assert(SCIPisLE(scip, -bound, SCIPvarGetLbLocal(genvbound->var) - infeasthreshold));
+      assert(SCIPisFeasLT(scip, -bound, SCIPvarGetLbLocal(genvbound->var)));
 
       /* compute lower bound on left-hand side variable that leads to infeasibility */
       bound = -bound + infeasthreshold;
+      assert(SCIPisLE(scip, bound, SCIPvarGetLbLocal(genvbound->var)));
 
       /* if bound is already enforced by conflict set we do not have to add it */
       if( SCIPisLE(scip, bound, SCIPgetConflictVarLb(scip, genvbound->var)) )
@@ -868,7 +872,9 @@ SCIP_RETCODE applyGenVBound(
          SCIP_CALL( SCIPtightenVarUbGlobal(scip, genvbound->var, boundval, FALSE, &infeas, &tightened) );
       }
    }
-   /* tighten bound locally and start conflict analysis in case of infeasibility */
+   /* tighten bound locally and start conflict analysis in case of infeasibility; as inferinfo we pass the index of the
+    * genvbound that was used for propagation
+    */
    else
    {
       if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER )
@@ -1841,6 +1847,10 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->genvboundstore != NULL);
+
+   /* as inferinfo we passed the index of the genvbound that was used for propagation; the genvbound might have been
+    * replaced, but also the new genvbound at this position has the same variable on the left-hand side
+    */
    assert(inferinfo >= 0);
    assert(inferinfo < propdata->ngenvbounds);
 

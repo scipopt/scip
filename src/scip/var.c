@@ -782,7 +782,7 @@ SCIP_RETCODE SCIPboundchgUndo(
             var->lbchginfos[var->nlbchginfos].oldbound) );
 
       /* in case all bound changes are removed the local bound should match the global bound */
-      assert(var->nlbchginfos > 0 || SCIPsetIsEQ(set, var->locdom.lb, var->glbdom.lb));
+      assert(var->nlbchginfos > 0 || SCIPsetIsFeasEQ(set, var->locdom.lb, var->glbdom.lb));
 
       break;
 
@@ -803,7 +803,7 @@ SCIP_RETCODE SCIPboundchgUndo(
             var->ubchginfos[var->nubchginfos].oldbound) );
 
       /* in case all bound changes are removed the local bound should match the global bound */
-      assert(var->nubchginfos > 0 || SCIPsetIsEQ(set, var->locdom.ub, var->glbdom.ub));
+      assert(var->nubchginfos > 0 || SCIPsetIsFeasEQ(set, var->locdom.ub, var->glbdom.ub));
 
       break;
 
@@ -5923,10 +5923,10 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
    assert(var->scip == set->scip);
    assert(set->stage == SCIP_STAGE_PROBLEM);
 
-   /* adjust bound to integral value if variable is of integral type */
-   newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
    assert(SCIPsetIsLE(set, newbound, SCIPvarGetUbOriginal(var)));
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
 
    if( SCIPsetIsZero(set, newbound) )
       newbound = 0.0;
@@ -5934,7 +5934,7 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
    /* original domains are only stored for ORIGINAL variables, not for NEGATED */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
    {
-      SCIPdebugMessage("changing original lower bound of <%s> from %g to %g\n", 
+      SCIPdebugMessage("changing original lower bound of <%s> from %g to %g\n",
          var->name, var->data.original.origdom.lb, newbound);
 
       if( SCIPsetIsEQ(set, var->data.original.origdom.lb, newbound) )
@@ -5977,10 +5977,10 @@ SCIP_RETCODE SCIPvarChgUbOriginal(
    assert(var->scip == set->scip);
    assert(set->stage == SCIP_STAGE_PROBLEM);
 
-   /* adjust bound to integral value if variable is of integral type */
-   newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
    assert(SCIPsetIsGE(set, newbound, SCIPvarGetLbOriginal(var)));
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
 
    if( SCIPsetIsZero(set, newbound) )
       newbound = 0.0;
@@ -5988,7 +5988,7 @@ SCIP_RETCODE SCIPvarChgUbOriginal(
    /* original domains are only stored for ORIGINAL variables, not for NEGATED */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
    {
-      SCIPdebugMessage("changing original upper bound of <%s> from %g to %g\n", 
+      SCIPdebugMessage("changing original upper bound of <%s> from %g to %g\n",
          var->name, var->data.original.origdom.ub, newbound);
 
       if( SCIPsetIsEQ(set, var->data.original.origdom.ub, newbound) )
@@ -6151,7 +6151,7 @@ void varIncRootboundchgs(
 /* forward declaration, because both methods call each other recursively */
 
 /* performs the current change in upper bound, changes all parents accordingly */
-static            
+static
 SCIP_RETCODE varProcessChgUbGlobal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -6164,7 +6164,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
    );
 
 /** performs the current change in lower bound, changes all parents accordingly */
-static            
+static
 SCIP_RETCODE varProcessChgLbGlobal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -6199,11 +6199,12 @@ SCIP_RETCODE varProcessChgLbGlobal(
       assert(SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
       newbound = var->glbdom.ub;
    }
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
    assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
-   
+
    SCIPdebugMessage("process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
-   
+
    if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) )
       return SCIP_OKAY;
 
@@ -6213,8 +6214,6 @@ SCIP_RETCODE varProcessChgLbGlobal(
    /* change the bound */
    oldbound = var->glbdom.lb;
    assert(SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
-   /* adjust the bound, that the lower bound is always <= to the upper bound */
-   newbound = MIN(newbound, var->glbdom.ub);
    var->glbdom.lb = newbound;
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
    assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
@@ -6336,7 +6335,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
 }
 
 /** performs the current change in upper bound, changes all parents accordingly */
-static            
+static
 SCIP_RETCODE varProcessChgUbGlobal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -6371,11 +6370,12 @@ SCIP_RETCODE varProcessChgUbGlobal(
       assert(SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
       newbound = var->glbdom.lb;
    }
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
    assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
 
    SCIPdebugMessage("process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
-   
+
    if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) )
       return SCIP_OKAY;
 
@@ -6385,8 +6385,6 @@ SCIP_RETCODE varProcessChgUbGlobal(
    /* change the bound */
    oldbound = var->glbdom.ub;
    assert(SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
-   /* adjust the bound, that the upper bound is always >= to the lower bound */
-   newbound = MAX(newbound, var->glbdom.lb);
    var->glbdom.ub = newbound;
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
    assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
@@ -6446,14 +6444,14 @@ SCIP_RETCODE varProcessChgUbGlobal(
       case SCIP_VARSTATUS_ORIGINAL:
          SCIP_CALL( varProcessChgUbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
          break;
-         
+
       case SCIP_VARSTATUS_COLUMN:
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
          SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          return SCIP_INVALIDDATA;
-      
+
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
          if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
@@ -6470,7 +6468,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
                parentnewbound = newbound;
             SCIP_CALL( varProcessChgUbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, parentnewbound) );
          }
-         else 
+         else
          {
             SCIP_Real parentnewbound;
 
@@ -6523,10 +6521,15 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   /* adjust bound to integral value if variable is of integral type */
-   newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
    assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+
+   /* we do not want to exceed the upperbound, which could have happened due to numerics */
+   newbound = MIN(newbound, var->glbdom.ub);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
+
    /* the new global bound has to be tighter except we are in the original problem */
    assert(lp == NULL || SCIPsetIsLE(set, var->glbdom.lb, newbound));
 
@@ -6554,7 +6557,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
          SCIP_CALL( varProcessChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
       break;
-         
+
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
       if( newbound > SCIPvarGetLbLocal(var) )
@@ -6567,7 +6570,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    case SCIP_VARSTATUS_FIXED:
       SCIPerrorMessage("cannot change the bounds of a fixed variable\n");
       return SCIP_INVALIDDATA;
-         
+
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
@@ -6582,7 +6585,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
          else
             childnewbound = newbound;
-         SCIP_CALL( SCIPvarChgLbGlobal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, 
+         SCIP_CALL( SCIPvarChgLbGlobal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
                childnewbound) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
@@ -6597,7 +6600,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
          else
             childnewbound = -newbound;
-         SCIP_CALL( SCIPvarChgUbGlobal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, 
+         SCIP_CALL( SCIPvarChgUbGlobal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
                childnewbound) );
       }
       else
@@ -6606,7 +6609,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
          return SCIP_INVALIDDATA;
       }
       break;
-         
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
@@ -6646,10 +6649,15 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   /* adjust bound to integral value if variable is of integral type */
-   newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
    assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+
+   /* we do not want to undercut the lowerbound, which could have happened due to numerics */
+   newbound = MAX(newbound, var->glbdom.lb);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
+
    /* the new global bound has to be tighter except we are in the original problem */
    assert(lp == NULL || SCIPsetIsGE(set, var->glbdom.ub, newbound));
 
@@ -6677,7 +6685,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
          SCIP_CALL( varProcessChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
       break;
-         
+
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
       if( newbound < SCIPvarGetUbLocal(var) )
@@ -6690,7 +6698,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    case SCIP_VARSTATUS_FIXED:
       SCIPerrorMessage("cannot change the bounds of a fixed variable\n");
       return SCIP_INVALIDDATA;
-         
+
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
@@ -6705,7 +6713,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
          else
             childnewbound = newbound;
-         SCIP_CALL( SCIPvarChgUbGlobal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, 
+         SCIP_CALL( SCIPvarChgUbGlobal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
                childnewbound) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
@@ -6720,7 +6728,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
          else
             childnewbound = -newbound;
-         SCIP_CALL( SCIPvarChgLbGlobal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, 
+         SCIP_CALL( SCIPvarChgLbGlobal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
                childnewbound) );
       }
       else
@@ -6729,7 +6737,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
          return SCIP_INVALIDDATA;
       }
       break;
-         
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
@@ -6904,7 +6912,7 @@ SCIP_RETCODE varEventUbChanged(
 /* forward declaration, because both methods call each other recursively */
 
 /* performs the current change in upper bound, changes all parents accordingly */
-static            
+static
 SCIP_RETCODE varProcessChgUbLocal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -6917,7 +6925,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    );
 
 /** performs the current change in lower bound, changes all parents accordingly */
-static            
+static
 SCIP_RETCODE varProcessChgLbLocal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -6935,11 +6943,15 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    assert(var != NULL);
    assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
-   
-   /* adjust bound to integral value if variable is of integral type */
-   newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+
    /* check that the bound is feasible */
    assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+
+   /* we do not want to exceed the upperbound, which could have happened due to numerics */
+   newbound = MIN(newbound, var->locdom.ub);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
    SCIPdebugMessage("process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
@@ -6951,8 +6963,6 @@ SCIP_RETCODE varProcessChgLbLocal(
    /* change the bound */
    oldbound = var->locdom.lb;
    assert(SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
-   /* adjust the bound, that the lower bound is always <= to the upper bound */
-   newbound = MIN(newbound, var->locdom.ub);
    var->locdom.lb = newbound;
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -7067,7 +7077,7 @@ SCIP_RETCODE varProcessChgLbLocal(
 }
 
 /** performs the current change in upper bound, changes all parents accordingly */
-static            
+static
 SCIP_RETCODE varProcessChgUbLocal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -7088,10 +7098,14 @@ SCIP_RETCODE varProcessChgUbLocal(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   /* adjust bound to integral value if variable is of integral type */
-   newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
    assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+
+   /* we do not want to undercut the lowerbound, which could have happened due to numerics */
+   newbound = MAX(newbound, var->locdom.lb);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
    SCIPdebugMessage("process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
@@ -7103,8 +7117,6 @@ SCIP_RETCODE varProcessChgUbLocal(
    /* change the bound */
    oldbound = var->locdom.ub;
    assert(SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
-   /* adjust the bound, that the upper bound is always >= to the lower bound */
-   newbound = MAX(newbound, var->locdom.lb);
    var->locdom.ub = newbound;
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -7134,14 +7146,14 @@ SCIP_RETCODE varProcessChgUbLocal(
       case SCIP_VARSTATUS_ORIGINAL:
          SCIP_CALL( varProcessChgUbLocal(parentvar, blkmem, set, NULL, lp, branchcand, eventqueue, newbound) );
          break;
-         
+
       case SCIP_VARSTATUS_COLUMN:
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
          SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          return SCIP_INVALIDDATA;
-      
+
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
          if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
@@ -7235,10 +7247,14 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   /* adjust bound to integral value if variable is of integral type */
-   newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
    assert(SCIPsetIsLE(set, newbound, var->locdom.ub));
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+
+   /* we do not want to exceed the upperbound, which could have happened due to numerics */
+   newbound = MIN(newbound, var->locdom.ub);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
    SCIPdebugMessage("changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
@@ -7251,7 +7267,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar != NULL )
       {
-         SCIP_CALL( SCIPvarChgLbLocal(var->data.original.transvar, blkmem, set, stat, lp, branchcand, eventqueue, 
+         SCIP_CALL( SCIPvarChgLbLocal(var->data.original.transvar, blkmem, set, stat, lp, branchcand, eventqueue,
                newbound) );
       }
       else
@@ -7260,7 +7276,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
          SCIP_CALL( varProcessChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
       break;
-         
+
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
       SCIP_CALL( varProcessChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
@@ -7269,7 +7285,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    case SCIP_VARSTATUS_FIXED:
       SCIPerrorMessage("cannot change the bounds of a fixed variable\n");
       return SCIP_INVALIDDATA;
-         
+
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
@@ -7284,7 +7300,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
          else
             childnewbound = newbound;
-         SCIP_CALL( SCIPvarChgLbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, 
+         SCIP_CALL( SCIPvarChgLbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
                childnewbound) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
@@ -7299,7 +7315,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
          else
             childnewbound = -newbound;
-         SCIP_CALL( SCIPvarChgUbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, 
+         SCIP_CALL( SCIPvarChgUbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
                childnewbound) );
       }
       else
@@ -7308,7 +7324,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
          return SCIP_INVALIDDATA;
       }
       break;
-         
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
@@ -7317,15 +7333,15 @@ SCIP_RETCODE SCIPvarChgLbLocal(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      SCIP_CALL( SCIPvarChgUbLocal(var->negatedvar, blkmem, set, stat, lp, branchcand, eventqueue, 
+      SCIP_CALL( SCIPvarChgUbLocal(var->negatedvar, blkmem, set, stat, lp, branchcand, eventqueue,
             var->data.negate.constant - newbound) );
       break;
-         
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -7348,10 +7364,14 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   /* adjust bound to integral value if variable is of integral type */
-   newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
    assert(SCIPsetIsGE(set, newbound, var->locdom.lb));
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+
+   /* we do not want to undercut the lowerbound, which could have happened due to numerics */
+   newbound = MAX(newbound, var->locdom.lb);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
    SCIPdebugMessage("changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
@@ -7372,7 +7392,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
          SCIP_CALL( varProcessChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
       break;
-         
+
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
       SCIP_CALL( varProcessChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
@@ -7381,7 +7401,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    case SCIP_VARSTATUS_FIXED:
       SCIPerrorMessage("cannot change the bounds of a fixed variable\n");
       return SCIP_INVALIDDATA;
-         
+
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
@@ -7396,7 +7416,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
          else
             childnewbound = newbound;
-         SCIP_CALL( SCIPvarChgUbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, 
+         SCIP_CALL( SCIPvarChgUbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
                childnewbound) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
@@ -7411,7 +7431,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
          else
             childnewbound = -newbound;
-         SCIP_CALL( SCIPvarChgLbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, 
+         SCIP_CALL( SCIPvarChgLbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
                childnewbound) );
       }
       else
@@ -7420,7 +7440,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
          return SCIP_INVALIDDATA;
       }
       break;
-         
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
@@ -7429,10 +7449,10 @@ SCIP_RETCODE SCIPvarChgUbLocal(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      SCIP_CALL( SCIPvarChgLbLocal(var->negatedvar, blkmem, set, stat, lp, branchcand, eventqueue, 
+      SCIP_CALL( SCIPvarChgLbLocal(var->negatedvar, blkmem, set, stat, lp, branchcand, eventqueue,
             var->data.negate.constant - newbound) );
       break;
-         
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
@@ -12126,7 +12146,7 @@ SCIP_Real SCIPvarGetBestRootRedcost(
  *  reduced cost which is accessible via SCIPvarGetRootRedcost() or the variable was no column of the root LP,
  *  SCIP_INVALID is returned
  */
-SCIP_Real SCIPvarGetBestRootLPobjval(
+SCIP_Real SCIPvarGetBestRootLPObjval(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
@@ -12137,7 +12157,7 @@ SCIP_Real SCIPvarGetBestRootLPobjval(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
          return SCIP_INVALID;
-      return SCIPvarGetBestRootLPobjval(var->data.original.transvar);
+      return SCIPvarGetBestRootLPObjval(var->data.original.transvar);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:

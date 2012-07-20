@@ -4550,18 +4550,19 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
    return SCIP_OKAY;
 }
 
-/** replaces violated bivariate constraints where both nonlinear variables are fixed by linear constraints */
+/** enforces violated bivariate constraints where both nonlinear variables can be assumed to be fixed
+ * apply a bound change to the remaining linear variable, or recognizing infeasibility
+ */
 static
-SCIP_RETCODE replaceViolatedByLinearConstraints(
+SCIP_RETCODE enforceViolatedFixedNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
-   SCIP_Bool*            addedcons           /**< buffer to store whether a linear constraint was added */
+   SCIP_Bool*            reduceddom,         /**< whether a domain has been reduced */
+   SCIP_Bool*            infeasible          /**< whether we detected infeasibility */
    )
 {
-   SCIP_CONS*          cons;
    SCIP_CONSDATA*      consdata;
-   SCIP_RESULT         checkresult;
    SCIP_INTERVAL       nonlinact;
    SCIP_Real           lhs;
    SCIP_Real           rhs;
@@ -4569,9 +4570,11 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
-   assert(addedcons != NULL);
+   assert(reduceddom != NULL);
+   assert(infeasible != NULL);
 
-   *addedcons = FALSE;
+   *reduceddom = FALSE;
+   *infeasible = FALSE;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4600,30 +4603,77 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
       else
          rhs = SCIPinfinity(scip);
 
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, SCIPconsGetName(conss[c]),
-            consdata->z == NULL ? 0 : 1, consdata->z == NULL ? NULL : &consdata->z, &consdata->zcoef,
-            lhs, rhs,
-            SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]),
-            SCIPconsIsChecked(conss[c]), SCIPconsIsPropagated(conss[c]),  TRUE,
-            SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
-            SCIPconsIsStickingAtNode(conss[c])) );
-
-      SCIPdebugMessage("replace violated nonlinear constraint <%s> by linear constraint after all nonlinear vars have been fixed\n", SCIPconsGetName(conss[c]) );
-      SCIPdebugPrintCons(scip, cons, NULL);
-
-      SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
-
-      if( checkresult != SCIP_INFEASIBLE )
+      if( consdata->z != NULL )
       {
-         SCIPdebugMessage("linear constraint is feasible, thus do not add\n");
+         SCIP_Bool tightened;
+         SCIP_Real coef;
+
+         coef = consdata->zcoef;
+         assert(!SCIPisZero(scip, coef));
+
+         SCIPdebugMessage("Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef, SCIPvarGetName(consdata->z), rhs);
+
+         /* possibly correct lhs/rhs */
+         if( coef >= 0.0 )
+         {
+            if( !SCIPisInfinity(scip, -lhs) )
+               lhs /= coef;
+            if( !SCIPisInfinity(scip,  rhs) )
+               rhs /= coef;
+         }
+         else
+         {
+            SCIP_Real h;
+            h = rhs;
+            if( !SCIPisInfinity(scip, -lhs) )
+               rhs = lhs/coef;
+            else
+               rhs = SCIPinfinity(scip);
+
+            if( !SCIPisInfinity(scip,  h) )
+               lhs = h/coef;
+            else
+               lhs = -SCIPinfinity(scip);
+         }
+         SCIPdebugMessage("Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(consdata->z), rhs);
+
+         if( !SCIPisInfinity(scip, -lhs) )
+         {
+            SCIP_CALL( SCIPtightenVarLb(scip, consdata->z, lhs, TRUE, infeasible, &tightened) );
+            if( *infeasible )
+            {
+               SCIPdebugMessage("Lower bound leads to infeasibility.\n");
+               return SCIP_OKAY;
+            }
+            if( tightened )
+            {
+               SCIPdebugMessage("Lower bound changed.\n");
+               *reduceddom = TRUE;
+               return SCIP_OKAY;
+            }
+         }
+
+         if( !SCIPisInfinity(scip, rhs) )
+         {
+            SCIP_CALL( SCIPtightenVarUb(scip, consdata->z, rhs, TRUE, infeasible, &tightened) );
+            if( *infeasible )
+            {
+               SCIPdebugMessage("Upper bound leads to infeasibility.\n");
+               return SCIP_OKAY;
+            }
+            if( tightened )
+            {
+               SCIPdebugMessage("Upper bound changed.\n");
+               *reduceddom = TRUE;
+               return SCIP_OKAY;
+            }
+         }
       }
       else
       {
-         SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
-         *addedcons = TRUE;
+         /* no variable, thus check feasibility of lhs <= 0.0 <= rhs */
+         *infeasible = SCIPisFeasGT(scip, lhs, 0.0) || SCIPisFeasLT(scip, rhs, 0.0);
       }
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
    }
 
    return SCIP_OKAY;
@@ -6260,16 +6310,18 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
       SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
       if( brvar == NULL )
       {
-         /* fallback 3: all nonlinear variables in all violated constraints seem to be fixed -> replace by linear constraints */
-         SCIP_Bool addedcons;
+         /* fallback 3: all nonlinear variables in all violated constraints seem to be fixed -> treat as linear constraint in one variable */
+         SCIP_Bool reduceddom;
+         SCIP_Bool infeasible;
 
-         SCIP_CALL( replaceViolatedByLinearConstraints(scip, conss, nconss, &addedcons) );
+         SCIP_CALL( enforceViolatedFixedNonlinear(scip, conss, nconss, &reduceddom, &infeasible) );
          /* if the linear constraints are actually feasible, then adding them and returning SCIP_CONSADDED confuses SCIP when it enforces the new constraints again and nothing resolves the infeasiblity that we declare here
-          * thus, we only add them if considered violated, and otherwise claim the solution is feasible (but print a warning) */
-         if( addedcons )
-         {
-            *result = SCIP_CONSADDED;
-         }
+          * thus, we only add them if considered violated, and otherwise claim the solution is feasible (but print a warning)
+          */
+         if ( infeasible )
+            *result = SCIP_CUTOFF;
+         else if ( reduceddom )
+            *result = SCIP_REDUCEDDOM;
          else
          {
             *result = SCIP_FEASIBLE;

@@ -90,7 +90,7 @@ extern "C" {
 #define SCIPstatistic(x)                        x
 
 /** prints a statistic message if SCIP_STATISTIC flag is set */
-#define SCIPstatisticMessage                printf("[%s:%d] statistic: ", __FILE__, __LINE__); printf
+#define SCIPstatisticMessage                printf("[%s:%d] statistic: ", __FILE__, __LINE__), printf
 
 /** executes printf command only if SCIP_STATISTIC flag is set */
 #define SCIPstatisticPrintf                 printf

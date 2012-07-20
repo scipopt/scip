@@ -21,9 +21,10 @@
  *
  * The constraints handler stores linking constraints between an integer variable and an array of binary variables. Such
  * a linking constraint has the form:
- *
- * intvar = sum_{i=1}^n {(offset+i) * binvars[i]}
- *
+ * \f[
+ * y = \sum_{i=1}^n {(b+i) * x_i}
+ *\f]
+ * with integer variable \f$ y \f$, binary variables \f$ x_1, \dots, x_n \f$ and offset \f$b \in Q\f$, and
  * with the additional side condition that exactly one binary variable has to be one (set partitioning condition).
  *
  * This constraint can be created only with the integer variable. In this case the binary variables are only created on
@@ -78,7 +79,7 @@ SCIP_RETCODE SCIPcreateConsLinking(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
