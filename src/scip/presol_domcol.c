@@ -1378,12 +1378,11 @@ void findFixings(
       if( SCIPisPositive(scip, SCIPvarGetObj(dominatingvar)) )
       {
          assert(SCIPisPositive(scip, SCIPvarGetObj(dominatedvar)));
-         if( (!SCIPisInfinity(scip, -dominatingwclb) &&
-               SCIPisLE(scip, dominatingwclb, SCIPvarGetUbGlobal(dominatingvar))) )
+         if( !SCIPisInfinity(scip, -dominatingwclb) &&
+               SCIPisLE(scip, dominatingwclb, SCIPvarGetUbGlobal(dominatingvar)) )
          {
             /* we have a x->y dominance relation with a positive obj coefficient
-             * of the dominating variable x, thus the obj coefficient of the
-             * dominated variable y is positive too. we need to secure feasibility
+             * of the dominating variable x. we need to secure feasibility
              * by testing if the predicted lower worst case bound is less equal the
              * current upper bound. it is possible, that the lower worst case bound
              * is infinity and the upper bound of the dominating variable x is
@@ -1410,14 +1409,13 @@ void findFixings(
             (*nboundpreventions)++;
          }
       }
-      else if( SCIPisNegative(scip, SCIPvarGetObj(dominatingvar)) )
+      else
       {
          if( !SCIPisInfinity(scip, dominatingub) &&
             SCIPisLE(scip, dominatingub, SCIPvarGetUbGlobal(dominatingvar)) )
          {
-            /* we have a x->y dominance relation with a negative obj coefficient
-             * of the dominating variable x, thus the obj coefficient of the
-             * dominated variable y is positive, zero or negative. in all cases we have to look
+            /* we have a x->y dominance relation with a negative or zero obj coefficient
+             * of the dominating variable x. in all cases we have to look
              * if the predicted upper bound of the dominating variable is great enough.
              * by testing, that the predicted upper bound is not infinity we avoid problems
              * with x->y e.g.
@@ -1426,37 +1424,6 @@ void findFixings(
              *    0<=x<=1, 0<=y<= 1
              * where y is not at their lower bound.
              */
-            if( varstofix[dominatedidx] == NOFIX )
-            {
-               varstofix[dominatedidx] = FIXATLB;
-               (*npossiblefixings)++;
-#if 0
-               printf("\n\n### [fix] type:%c->%c, obj:%g->%g,\t%s[idx:%d]->%s[idx:%d]\twclb=%g, ub'=%g, ub=%g",
-                  ((SCIPvarGetType(dominatingvar)==SCIP_VARTYPE_CONTINUOUS)?'C':'I'),
-                  ((SCIPvarGetType(dominatedvar)==SCIP_VARTYPE_CONTINUOUS)?'C':'I'),
-                  SCIPvarGetObj(dominatingvar),SCIPvarGetObj(dominatedvar),
-                  SCIPvarGetName(dominatingvar),dominatingidx,SCIPvarGetName(dominatedvar),dominatedidx,
-                  dominatingwclb,dominatingub,SCIPvarGetUbGlobal(dominatingvar));
-               printRowsOfCol(scip,matrix,dominatingidx);
-               printRowsOfCol(scip,matrix,dominatedidx);
-#endif
-            }
-         }
-         else
-         {
-            (*nboundpreventions)++;
-         }
-      }
-      else
-      {
-         /* obj coefficient of dominating variable is zero.
-          * we claim both properties from above.
-          */
-         if( (!SCIPisInfinity(scip, -dominatingwclb) &&
-               SCIPisLE(scip, dominatingwclb, SCIPvarGetUbGlobal(dominatingvar))) &&
-            (!SCIPisInfinity(scip, dominatingub) &&
-               SCIPisLE(scip, dominatingub, SCIPvarGetUbGlobal(dominatingvar))) )
-         {
             if( varstofix[dominatedidx] == NOFIX )
             {
                varstofix[dominatedidx] = FIXATLB;
@@ -1704,18 +1671,21 @@ SCIP_RETCODE findDominancePairs(
                   col2domcol1 = FALSE;
                }
 
-               if( col1domcol2 && !onlybinvars )
+               if( (vals1[r1] < 0 && vals2[r2] < 0) || (vals1[r1] > 0 && vals2[r2] > 0) )
                {
-                  /* update bounds for column 1 */
-                  SCIP_CALL( updateBounds(scip, matrix, rows1[r1], col1, vals1[r1], col2, vals2[r2],
-                        &tmpupperboundcol1, &tmpwclowerboundcol1) );
-               }
+                  if( col1domcol2 && !onlybinvars )
+                  {
+                     /* update bounds for column 1 */
+                     SCIP_CALL( updateBounds(scip, matrix, rows1[r1], col1, vals1[r1], col2, vals2[r2],
+                           &tmpupperboundcol1, &tmpwclowerboundcol1) );
+                  }
 
-               if( col2domcol1 && !onlybinvars )
-               {
-                  /* update bounds for column 2 */
-                  SCIP_CALL( updateBounds(scip, matrix, rows2[r2], col2, vals2[r2], col1, vals1[r1],
-                        &tmpupperboundcol2, &tmpwclowerboundcol2) );
+                  if( col2domcol1 && !onlybinvars )
+                  {
+                     /* update bounds for column 2 */
+                     SCIP_CALL( updateBounds(scip, matrix, rows2[r2], col2, vals2[r2], col1, vals1[r1],
+                           &tmpupperboundcol2, &tmpwclowerboundcol2) );
+                  }
                }
 
                r1++;
@@ -1921,7 +1891,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                   varidx = *rowpnt;
 
                   /* higher variable types dominate smaller ones: bin <- int <- impl <- cont
-                   * we search only for dominance relations between the same variable type
+                   * we search only for dominance relations between the same variable type.
+                   *
+                   * additionally we secure with this approach, that we only compare
+                   * variables which occur minimum in one row together.
                    */
                   if( SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_CONTINUOUS )
                   {
@@ -1992,6 +1965,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                SCIP_CALL( findDominancePairs(scip, matrix, binsearchcols, nbinfill, TRUE,
                      varstofix, &npossiblefixings, &ndomrelations, &ncliquepreventions, &nboundpreventions) );
             }
+
             for( v = 0; v < nbinfill; ++v )
             {
                varsprocessed[binsearchcols[v]] = TRUE;
