@@ -444,7 +444,7 @@ SCIP_RETCODE filterRound(
    return SCIP_OKAY;
 }
 
-/** filter some bounds that are not improvable by solving auxiliary LPs */
+/** filter some bounds that are not improvable */
 static
 SCIP_RETCODE filterBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -473,7 +473,22 @@ SCIP_RETCODE filterBounds(
    SCIPdebugMessage("filter bounds\n");
 
    /*
-    * 1.) Try first to filter lower bounds of interesting variables, whose bounds are not already filtered
+    * 0.) Fixed variables are marked as filtered
+    */
+   for( i = 0; i < propdata->nbounds; i++ )
+   {
+      if( varIsFixedLocal(scip, propdata->bounds[i]->var) )
+         propdata->bounds[i]->filtered = TRUE;
+   }
+
+   /*
+    * 1.) Inspect last solution of LP relaxation for tight bounds
+    */
+
+   SCIP_CALL( filterExistingLP(scip, propdata, &nfiltered));
+
+   /*
+    * 2.) Try first to filter lower bounds of interesting variables, whose bounds are not already filtered
     */
 
    for( i = 0; i < nvars; i++ )
@@ -502,7 +517,7 @@ SCIP_RETCODE filterBounds(
    while( nfiltered >= propdata->nminfilter && ( nleftiterations == -1 ||  nleftiterations > 0 ) );
 
    /*
-    * 2.) Now try to filter the remaining upper bounds of interesting variables, whose bounds are not already filtered
+    * 3.) Now try to filter the remaining upper bounds of interesting variables, whose bounds are not already filtered
     */
 
    for( i = 0; i < nvars; i++ )
@@ -964,7 +979,6 @@ SCIP_RETCODE applyObbt(
    )
 {
    SCIP_Longint nolditerations;
-   int nfiltered;
    int i;
 
    assert(scip != NULL);
@@ -973,18 +987,13 @@ SCIP_RETCODE applyObbt(
 
    *result = SCIP_DIDNOTFIND;
    nolditerations = SCIPgetNLPIterations(scip);
-   nfiltered = 0;
 
-   /* reset bound data structure flags; fixed variables are marked as filtered */
+   /* reset bound data structure flags */
    for( i = 0; i < propdata->nbounds; i++ )
    {
-      propdata->bounds[i]->filtered = varIsFixedLocal(scip, propdata->bounds[i]->var);
+      propdata->bounds[i]->filtered = FALSE;
       propdata->bounds[i]->found = FALSE;
    }
-
-   /* filter variables via inspecting present LP solution */
-   SCIP_CALL( filterExistingLP(scip, propdata, &nfiltered) );
-   SCIPdebugMessage("filtered %d bounds via inspecting present LP solution\n", nfiltered);
 
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
