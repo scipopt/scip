@@ -386,6 +386,9 @@ void setFastmipClpParameters(
    lpi->clp->setSpecialOptions(32|64|128|512|1024|4096|32768);
 #endif
 
+   // 8192 bit - don't even think of using primal if user asks for dual (and vv)
+   lpi->clp->setMoreSpecialOptions(8192 | lpi->clp->moreSpecialOptions());
+
    // let memory grow only (do not shrink) - [needs specialOptions & 65536 != 0]
    // does not seem to work
    //lpi->clp->setPersistenceFlag(1);
