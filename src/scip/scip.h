@@ -6485,6 +6485,8 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
    char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
+   SCIP_Real             timelimit,          /**< time limit for LP solver */
+   int                   iterlimit,          /**< iteration limit for LP solver */
    SCIP_SOL**            point               /**< relative interior point on exit */
    );
 

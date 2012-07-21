@@ -150,6 +150,7 @@ interface
 - new method for SCIP_SPARSESOL usage, SCIPsparseSolCreate(), SCIPsparseSolFree(), SCIPsparseSolGetVars(),
   SCIPsparseSolGetNVars(), SCIPsparseSolGetLbs(), SCIPsparseSolGetUbs() in (pub_)misc.{c,h}
 - renamed SCIPgetCountedSparseSolutions() to SCIPgetCountedSparseSols() in cons_countsols.{c,h}
+- SCIPcomputeLPRelIntPoint() takes two new arguments giving a time and iteration limit
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -292,6 +293,7 @@ parameters:
   constraints/setppc/cliqueshrinking, first for enabling/disabling the clique lifting algorithm in cons_setppc.c,
   second parameter is for trying to create extra clique constraints in lifting algorithm, third parameter is for trying
   to decrease the number of variable in a clique constraint in the lifting algorithm
+- new parameter <separating/closecuts/maxlpiterfactor> for iteration limit in relative interior point computation
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to

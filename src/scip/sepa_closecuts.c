@@ -72,6 +72,9 @@
 #define SCIP_DEFAULT_RECOMPUTERELINT        FALSE /**< recompute relative interior in each separation call? */
 #define SCIP_DEFAULT_RELINTNORMTYPE           'o' /**< type of norm to use when computing relative interior */
 #define SCIP_DEFAULT_MAXUNSUCCESSFUL            0 /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
+#define SCIP_DEFAULT_MAXLPITERFACTOR          2.0 /**< factor for maximal LP iterations in relative interior computation compared to node LP iterations */
+
+#define SCIP_MIN_LPITERS                      100 /**< minimum number of allowed LP iterations in relative interior computation*/
 
 
 /** separator data */
@@ -86,6 +89,7 @@ struct SCIP_SepaData
    int                   maxunsuccessful;    /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
    SCIP_SOL*             sepasol;            /**< solution that can be used for generating close cuts */
    SCIP_Longint          discardnode;        /**< number of node for which separation is discarded */
+   SCIP_Real             maxlpiterfactor;    /**< factor for maximal LP iterations in relative interior computation compared to node LP iterations */
    int                   nunsuccessful;      /**< number of consecutive unsuccessful calls */
 };
 
@@ -231,12 +235,39 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
    if ( sepadata->discardnode == currentnodenumber )
       return SCIP_OKAY;
 
+   if ( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("Separation method of closecuts separator.\n");
    *result = SCIP_DIDNOTFIND;
 
    /* check whether we have to compute a relative interior point */
    if ( sepadata->separelint )
    {
+      SCIP_Longint nlpiters;
+      SCIP_Real timelimit;
+      int iterlimit;
+
+      /* prepare time limit */
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+      if ( ! SCIPisInfinity(scip, timelimit) )
+         timelimit -= SCIPgetSolvingTime(scip);
+      /* exit if no time left */
+      if ( timelimit <= 0.0 )
+         return SCIP_OKAY;
+
+      /* determine iteration limit */
+      if ( sepadata->maxlpiterfactor < 0.0 || SCIPisInfinity(scip, sepadata->maxlpiterfactor) )
+         iterlimit = INT_MAX;
+      else
+      {
+         nlpiters = SCIPgetNNodeLPIterations(scip);
+         iterlimit = (int)(sepadata->maxlpiterfactor * nlpiters);
+         iterlimit = MAX(iterlimit, SCIP_MIN_LPITERS);
+         if ( iterlimit <= 0 )
+            return SCIP_OKAY;
+      }
+
       /* check if previous relative interior point should be forgotten,
        * otherwise it is computed only once and the same point is used for all nodes */
       if ( sepadata->recomputerelint && sepadata->sepasol != NULL )
@@ -245,9 +276,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
       }
       if ( sepadata->sepasol == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Computing relative interior point (norm type: %c) ...\n", sepadata->relintnormtype);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Computing relative interior point (norm type: %c, time limit: %g, iter limit: %d) ...\n",
+            sepadata->relintnormtype, timelimit, iterlimit);
          assert(sepadata->relintnormtype == 'o' || sepadata->relintnormtype == 's');
-         SCIP_CALL( SCIPcomputeLPRelIntPoint(scip, TRUE, sepadata->inclobjcutoff, sepadata->relintnormtype, &sepadata->sepasol) );
+         SCIP_CALL( SCIPcomputeLPRelIntPoint(scip, TRUE, sepadata->inclobjcutoff, sepadata->relintnormtype, timelimit, iterlimit, &sepadata->sepasol) );
       }
    }
    else
@@ -386,6 +418,11 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
          "separating/closecuts/maxunsuccessful",
          "turn off separation in current node after unsuccessful calls (-1 never turn off)",
          &sepadata->maxunsuccessful, TRUE, SCIP_DEFAULT_MAXUNSUCCESSFUL, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/closecuts/maxlpiterfactor",
+         "factor for maximal LP iterations in relative interior computation compared to node LP iterations (negative for no limit)",
+         &sepadata->maxlpiterfactor, TRUE, SCIP_DEFAULT_MAXLPITERFACTOR, -1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
