@@ -59,10 +59,11 @@ all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 .PHONY: lint
 lint:		$(MAINSRC)
 		-rm -f lint.out
+		-ln -fs $(SCIPDIR)/lint
 		$(SHELL) -ec 'for i in $^; \
 			do \
 			echo $$i; \
-			$(LINT) lint/$(MAINNAME).lnt +os\(lint.out\) -u -zero \
+			$(LINT) lint/scip.lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 

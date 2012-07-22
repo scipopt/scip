@@ -34,7 +34,6 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <stdio.h>
-#include <math.h>
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
@@ -46,7 +45,7 @@ SCIP_RETCODE runCircle(void);
 static const int npoints = 10;
 
 /** seed for random number generator */
-static const unsigned int randseed = 42.0;
+static const unsigned int randseed = 42;
 
 /** sets up problem */
 static
@@ -68,7 +67,7 @@ SCIP_RETCODE setupProblem(
    /* create variables and add to problem */
    SCIP_CALL( SCIPcreateVarBasic(scip, &a, "a", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &b, "b", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &r, "r", 0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &r, "r", 0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
 
    SCIP_CALL( SCIPaddVar(scip, a) );
    SCIP_CALL( SCIPaddVar(scip, b) );

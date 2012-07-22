@@ -190,7 +190,7 @@ SCIP_RETCODE setupProblem(
       SCIP_CALL( SCIPcreateVarBasic(scip, &supply[i], name,
          nodedata[i].supplylower == -infinity ? -SCIPinfinity(scip) : nodedata[i].supplylower,
          nodedata[i].supplyupper ==  infinity ?  SCIPinfinity(scip) : nodedata[i].supplyupper,
-         nodedata[i].cost, SCIP_VARTYPE_CONTINUOUS) );
+         nodedata[i].cost, SCIP_VARTYPE_CONTINUOUS) ); /*lint !e777*/
 
       SCIP_CALL( SCIPaddVar(scip, supply[i]) );
    }
