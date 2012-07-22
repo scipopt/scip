@@ -14322,33 +14322,37 @@ SCIP_Real SCIPvarGetLbAtIndex(
    SCIP_Bool             after               /**< should the bound change with given index be included? */
    )
 {
+   SCIP_VARSTATUS varstatus;
    assert(var != NULL);
 
-   /* get bounds of attached variables */
-   switch( SCIPvarGetStatus(var) )
+   varstatus = SCIPvarGetStatus(var);
+
+   if( varstatus == SCIP_VARSTATUS_COLUMN || varstatus == SCIP_VARSTATUS_LOOSE )
    {
-   case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.original.transvar != NULL);
-      return SCIPvarGetLbAtIndex(var->data.original.transvar, bdchgidx, after);
-         
-   case SCIP_VARSTATUS_COLUMN:
-   case SCIP_VARSTATUS_LOOSE:
       if( bdchgidx == NULL )
          return SCIPvarGetLbLocal(var);
       else
       {
          SCIP_BDCHGINFO* bdchginfo;
-         
+
          bdchginfo = SCIPvarGetLbchgInfo(var, bdchgidx, after);
          if( bdchginfo != NULL )
             return SCIPbdchginfoGetNewbound(bdchginfo);
          else
             return var->glbdom.lb;
       }
+   }
+
+   /* get bounds of attached variables */
+   switch( varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.original.transvar != NULL);
+      return SCIPvarGetLbAtIndex(var->data.original.transvar, bdchgidx, after);
 
    case SCIP_VARSTATUS_FIXED:
       return var->glbdom.lb;
-      
+
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
       /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
@@ -14380,18 +14384,20 @@ SCIP_Real SCIPvarGetLbAtIndex(
          SCIPABORT();
          return SCIP_INVALID; /*lint !e527*/
       }
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot get the bounds of a multi-aggregated variable.\n");
       SCIPABORT();
       return SCIP_INVALID; /*lint !e527*/
-      
+
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
       return var->data.negate.constant - SCIPvarGetUbAtIndex(var->negatedvar, bdchgidx, after);
-      
+
+   case SCIP_VARSTATUS_COLUMN: /* for lint */
+   case SCIP_VARSTATUS_LOOSE: /* for lint */
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
@@ -14408,33 +14414,37 @@ SCIP_Real SCIPvarGetUbAtIndex(
    SCIP_Bool             after               /**< should the bound change with given index be included? */
    )
 {
+   SCIP_VARSTATUS varstatus;
    assert(var != NULL);
 
-   /* get bounds of attached variables */
-   switch( SCIPvarGetStatus(var) )
+   varstatus = SCIPvarGetStatus(var);
+
+   if( varstatus == SCIP_VARSTATUS_COLUMN || varstatus == SCIP_VARSTATUS_LOOSE )
    {
-   case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.original.transvar != NULL);
-      return SCIPvarGetUbAtIndex(var->data.original.transvar, bdchgidx, after);
-         
-   case SCIP_VARSTATUS_COLUMN:
-   case SCIP_VARSTATUS_LOOSE:
       if( bdchgidx == NULL )
          return SCIPvarGetUbLocal(var);
       else
       {
          SCIP_BDCHGINFO* bdchginfo;
-         
+
          bdchginfo = SCIPvarGetUbchgInfo(var, bdchgidx, after);
          if( bdchginfo != NULL )
             return SCIPbdchginfoGetNewbound(bdchginfo);
          else
             return var->glbdom.ub;
       }
+   }
+
+   /* get bounds of attached variables */
+   switch( varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.original.transvar != NULL);
+      return SCIPvarGetUbAtIndex(var->data.original.transvar, bdchgidx, after);
 
    case SCIP_VARSTATUS_FIXED:
       return var->glbdom.ub;
-      
+
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
       /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
@@ -14466,18 +14476,20 @@ SCIP_Real SCIPvarGetUbAtIndex(
          SCIPABORT();
          return SCIP_INVALID; /*lint !e527*/
       }
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot get the bounds of a multiple aggregated variable.\n");
       SCIPABORT();
       return SCIP_INVALID; /*lint !e527*/
-      
+
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
       return var->data.negate.constant - SCIPvarGetLbAtIndex(var->negatedvar, bdchgidx, after);
-      
+
+   case SCIP_VARSTATUS_COLUMN: /* for lint */
+   case SCIP_VARSTATUS_LOOSE: /* for lint */
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
