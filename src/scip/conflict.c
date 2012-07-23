@@ -2655,7 +2655,7 @@ SCIP_Real SCIPconflictGetVarLb(
 {
    if( var->conflictlbcount == conflict->count )
    {
-      assert(var->conflictlb >= var->conflictrelaxedlb);
+      assert(EPSGE(var->conflictlb, var->conflictrelaxedlb, 1e-09));
       return var->conflictrelaxedlb;
    }
 
@@ -2672,7 +2672,7 @@ SCIP_Real SCIPconflictGetVarUb(
 {
    if( var->conflictubcount == conflict->count )
    {
-      assert(var->conflictub <= var->conflictrelaxedub);
+      assert(EPSLE(var->conflictub, var->conflictrelaxedub, 1e-09));
       return var->conflictrelaxedub;
    }
 
