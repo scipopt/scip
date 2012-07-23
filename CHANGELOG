@@ -336,6 +336,7 @@ features:
   use SCIPcreate(Empty)RowCons() and SCIPcreate(Empty)RowSepa() to support the statistics.
 - implemented first clique lifting procedure in cons_setppc.c (by default is off)
 - oneopt can now be called before presolving
+- beta-version of a AMPL interface can be found under interfaces/ampl
 
 Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;
