@@ -17964,13 +17964,15 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
 }
 
 /** compute relative interior point to current LP
- * @see SCIPlpComputeRelIntPoint
+ *  @see SCIPlpComputeRelIntPoint
  */
 SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
    char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
+   SCIP_Real             timelimit,          /**< time limit for LP solver */
+   int                   iterlimit,          /**< iteration limit for LP solver */
    SCIP_SOL**            point               /**< relative interior point on exit */
    )
 {
@@ -17987,8 +17989,8 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &pointvals, SCIPlpGetNCols(scip->lp)) );
 
-   SCIP_CALL( SCIPlpComputeRelIntPoint(scip->set, scip->stat, scip->messagehdlr, scip->lp, scip->transprob,
-         relaxrows, inclobjcutoff, normtype, pointvals, &success) );
+   SCIP_CALL( SCIPlpComputeRelIntPoint(scip->set, scip->messagehdlr, scip->lp, scip->transprob,
+         relaxrows, inclobjcutoff, normtype, timelimit, iterlimit, pointvals, &success) );
 
    /* if successful, create new solution with point values */
    if( success )

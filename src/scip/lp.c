@@ -17594,13 +17594,14 @@ void SCIPlpMarkDivingObjChanged(
  */
 SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
    char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
+   SCIP_Real             timelimit,          /**< time limit for LP solver */
+   int                   iterlimit,          /**< iteration limit for LP solver */
    SCIP_Real*            point,              /**< array to store relative interior point on exit */
    SCIP_Bool*            success             /**< buffer to indicate whether interior point was successfully computed */
    )
@@ -17616,7 +17617,6 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_Real plusinf;
    SCIP_Real objval;
    SCIP_Real alpha;
-   SCIP_Real timelimit;
    SCIP_RETCODE retcode;
    int* colinds;
    int nnewcols;
@@ -17635,6 +17635,10 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    assert(success != NULL);
 
    *success = FALSE;
+
+   /* check time and iteration limits */
+   if ( timelimit <= 0.0 || iterlimit <= 0 )
+      return SCIP_OKAY;
 
    /* exit if there are no columns */
    assert(lp->nrows >= 0);
@@ -18079,15 +18083,18 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 #endif
 
    /* set time limit */
-   SCIP_CALL( SCIPsetGetRealParam(set, "limits/time", &timelimit) );
-   if ( ! SCIPsetIsInfinity(set, timelimit) )
-      timelimit -= SCIPclockGetTime(stat->solvingtime);
-   if ( timelimit <= 0.0 )
-   {
-      SCIP_CALL( SCIPlpiFree(&lpi) );
-      return SCIP_OKAY;
-   }
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_LPTILIM, timelimit) );
+   retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_LPTILIM, timelimit);
+
+   /* check, if parameter is unknown */
+   if ( retcode == SCIP_PARAMETERUNKNOWN )
+      SCIPmessagePrintWarning(messagehdlr, "Could not set time limit of LP solver for relative interior point computation.\n");
+
+   /* set iteration limit */
+   retcode = SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPTILIM, iterlimit);
+
+   /* check, if parameter is unknown */
+   if ( retcode == SCIP_PARAMETERUNKNOWN )
+      SCIPmessagePrintWarning(messagehdlr, "Could not set iteration limit of LP solver for relative interior point computation.\n");
 
    /* solve and store point */
    /* SCIP_CALL( SCIPlpiSolvePrimal(lpi) ); */
@@ -18099,6 +18106,13 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       SCIP_CALL( SCIPlpiFree(&lpi) );
       return SCIP_OKAY;
    }
+
+#ifndef NDEBUG
+   if ( SCIPlpiIsIterlimExc(lpi) )
+      SCIPmessagePrintWarning(messagehdlr, "Iteration limit exceeded in relative interior point computation.\n");
+   if ( SCIPlpiIsTimelimExc(lpi) )
+      SCIPmessagePrintWarning(messagehdlr, "Time limit exceeded in relative interior point computation.\n");
+#endif
 
    if( SCIPlpiIsOptimal(lpi) )
    {
