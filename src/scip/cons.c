@@ -2768,17 +2768,17 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          && conshdlr->lastenfolpdomchgcount == stat->domchgcount
          && conshdlr->lastenfolpnode == stat->nnodes )
       {
-         assert(conshdlr->lastenfopsresult != SCIP_CUTOFF);
-         assert(conshdlr->lastenfopsresult != SCIP_BRANCHED);
-         assert(conshdlr->lastenfopsresult != SCIP_REDUCEDDOM);
-         /* might this assert fail due to numerics? if yes, it should probably treated like SCIP_INFEASIBLE */
-         assert(conshdlr->lastenfopsresult != SCIP_SEPARATED);
+         assert(conshdlr->lastenfolpresult != SCIP_CUTOFF);
+         assert(conshdlr->lastenfolpresult != SCIP_BRANCHED);
+         assert(conshdlr->lastenfolpresult != SCIP_REDUCEDDOM);
+         /* might this assert fail due to numerics? if yes, it should probably be treated like SCIP_INFEASIBLE */
+         assert(conshdlr->lastenfolpresult != SCIP_SEPARATED);
 
          /* if we already enforced the same pseudo solution at this node, we will only enforce new constraints in the
           * following; however, the result of the last call for the old constraint is still valid and we have to ensure
           * that an infeasibility in the last call is not lost because we only enforce new constraints
           */
-         if( conshdlr->lastenfopsresult == SCIP_INFEASIBLE || conshdlr->lastenfopsresult == SCIP_CONSADDED )
+         if( conshdlr->lastenfolpresult == SCIP_INFEASIBLE || conshdlr->lastenfolpresult == SCIP_CONSADDED )
          {
             *result = SCIP_INFEASIBLE;
             lastinfeasible = TRUE;
