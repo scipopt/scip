@@ -11747,6 +11747,15 @@ SCIP_RETCODE SCIPaddBilinTermQuadratic(
       var1pos = consdata->nquadvars-1;
    }
 
+   if( !consdata->quadvarssorted )
+   {
+      SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
+      /* sorting may change the position of var1 */
+      SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var1, &var1pos) );
+      assert(var1pos >= 0);
+   }
+
+   assert(consdata->quadvarssorted);
    SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var2, &var2pos) );
    if( var2pos < 0 )
    {
