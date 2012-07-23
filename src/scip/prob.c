@@ -517,7 +517,7 @@ SCIP_RETCODE SCIPprobTransform(
    if( source->objlim < SCIP_INVALID )
       SCIPprobSetObjlim(*target, source->objlim);
 
-   /* transform objective limit */
+   /* transform dual bound */
    if( source->dualbound < SCIP_INVALID )
       SCIPprobSetDualbound(*target, source->dualbound);
 
@@ -1498,11 +1498,11 @@ void SCIPprobUpdateDualbound(
       switch( prob->objsense )
       {
       case SCIP_OBJSENSE_MINIMIZE:
-         prob->dualbound = MIN(newbound, prob->dualbound);
+         prob->dualbound = MAX(newbound, prob->dualbound);
          break;
 
       case SCIP_OBJSENSE_MAXIMIZE:
-         prob->dualbound = MAX(newbound, prob->dualbound);
+         prob->dualbound = MIN(newbound, prob->dualbound);
          break;
 
       default:
