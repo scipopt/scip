@@ -11009,6 +11009,8 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          SCIP_CALL( applyFixings(scip, cons, &cutoff) );
          if( cutoff )
             break;
+
+	 thisnfixedvars = *nfixedvars;
       }
 
       if( !SCIPconsIsModifiable(cons) )
@@ -11031,6 +11033,14 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
             SCIP_CALL( simplifyInequalities(scip, cons, nfixedvars, ndelconss, nchgcoefs, nchgsides, naddconss, &cutoff) );
             if( cutoff )
                break;
+
+	    /* remove again all fixed variables, if further fixings were found */
+	    if( *nfixedvars > thisnfixedvars )
+	    {
+	       SCIP_CALL( applyFixings(scip, cons, &cutoff) );
+	       if( cutoff )
+		  break;
+	    }
          }
 
          /* tighten capacity and weights */
