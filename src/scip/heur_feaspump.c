@@ -21,6 +21,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define SCIP_STATISTIC
+
 #include <assert.h>
 #include <string.h>
 
@@ -806,12 +808,13 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
 
       /* if the rounded solution is feasible and better, add it to SCIP */
-      if( success )
+      /*if( success )
       {
+         SCIPdebugMessage("feasibility pump trying rounded solution\n");
          SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
          if( success )
             *result = SCIP_FOUNDSOL;
-      }
+      }*/
 
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->roundedsol) );
 
@@ -1093,6 +1096,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       success = FALSE;
 
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
+      SCIPdebugMessage("feasibility pump found solution (%d fractional variables)\n", nfracs);
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;
@@ -1288,6 +1292,25 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
    SCIPdebugMessage("feasibility pump finished [%d iterations done].\n", nloops);
 
+#ifdef SCIP_STATISTIC
+   if( nfracs == 0 )
+   {
+      double objval;
+      double primalBound;
+
+      objval = SCIPgetSolOrigObj(scip, heurdata->sol);
+      primalBound = SCIPgetPrimalbound(scip);
+      SCIPstatisticMessage("feasibility pump found: 1, objval: %f, iterations: %d, primal bound: %f\n", objval, nloops, primalBound);
+   }
+   else
+   {
+      double primalBound;
+
+      primalBound = SCIPgetPrimalbound(scip);
+      SCIPstatisticMessage("feasibility pump found: 0, objval: +inf, iterations: %d, primal bound: %f\n", nloops, primalBound);
+   }
+   
+#endif /* SCIP_STATISTIC */
    return SCIP_OKAY;
 }
 
