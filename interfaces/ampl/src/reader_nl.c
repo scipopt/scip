@@ -27,6 +27,7 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 
 #include "reader_nl.h"
 #include "scip/cons_linear.h"
@@ -38,8 +39,7 @@
 
 /* ASL includes */
 #include "nlp.h"
-//#include "getstub.h"
-#include "r_opn.hd" /* for N_OPS */
+/* #include "getstub.h" */
 #include "opcode.hd"
 #include "asl.h"
 
@@ -49,11 +49,6 @@
 #define READER_DESC             "AMPL .nl file reader"
 #define READER_EXTENSION        "nl"
 
-#define R_OPS  ((ASL_fg*)asl)->I.r_ops_
-#define OBJ_DE ((ASL_fg*)asl)->I.obj_de_
-#define VAR_E  ((ASL_fg*)asl)->I.var_e_
-#define CON_DE ((ASL_fg*)asl)->I.con_de_
-
 
 /*
  * Data structures
@@ -61,10 +56,12 @@
 
 struct cgrad;
 
+#if 0
 /** reader data */
 struct SCIP_ReaderData
 {
 };
+#endif
 
 /** problem data */
 struct SCIP_ProbData
@@ -115,7 +112,6 @@ SCIP_RETCODE setupVariables(
    }
 
    lower = nlvb - nlvbi;
-   upper = (nlvb - nlvbi) + nlvbi;
    upper = nlvb;
    for( i = lower; i < upper; ++i ) /* integer and in an objective and in a constraint */
    {
@@ -124,7 +120,7 @@ SCIP_RETCODE setupVariables(
    }
 
    lower = nlvb;
-   upper = nlvb + (nlvc - (nlvb + nlvci)) ;
+   /* upper = nlvb + (nlvc - (nlvb + nlvci)); */
    upper = nlvc - nlvci;
    for( i = lower; i < upper; ++i ) /* continuous and just in constraints */
    {
@@ -133,7 +129,6 @@ SCIP_RETCODE setupVariables(
    }
 
    lower = nlvc - nlvci;
-   upper = nlvc - nlvci + nlvci;
    upper = nlvc;
    for( i = lower; i < upper; ++i ) /* integer and just in constraints */
    {
@@ -237,7 +232,7 @@ SCIP_RETCODE walkExpression(
       {
          int varidx;
 
-         varidx = (expr_v*)amplexpr - VAR_E;
+         varidx = (expr_v*)amplexpr - ((ASL_fg*)asl)->I.var_e_;  /*lint !e826*/
 
          /* treat the common expression or defined variables */
          if( varidx >= n_var )
@@ -253,7 +248,7 @@ SCIP_RETCODE walkExpression(
             {
                struct cexp* common;
 
-               common = ((const ASL_fg *) asl)->I.cexps_ + varidx - n_var;
+               common = ((const ASL_fg *) asl)->I.cexps_ + varidx - n_var;  /*lint !e826*/
 
                nlpart = common->e;
                L = common->L;
@@ -263,7 +258,7 @@ SCIP_RETCODE walkExpression(
             {
                struct cexp1* common;
 
-               common = ((const ASL_fg *) asl)->I.cexps1_ + varidx - n_var - ncom0;
+               common = ((const ASL_fg *) asl)->I.cexps1_ + varidx - n_var - ncom0;  /*lint !e826*/
 
                nlpart = common->e;
                L = common->L;
@@ -285,7 +280,7 @@ SCIP_RETCODE walkExpression(
                SCIP_CALL( SCIPallocBufferArray(scip, &children, n_lin+1) );
                for( i = 0; i < n_lin; ++i )
                {
-                  varidx = ((size_t) (L[i].v.rp) - (size_t) VAR_E) / sizeof (expr_v);
+                  varidx = ((size_t) (L[i].v.rp) - (size_t) ((ASL_fg*)asl)->I.var_e_) / sizeof (expr_v);  /*lint !e826 !e713*/
 
                   /* assign index to variable, if we see it the first time */
                   if( exprvaridx[varidx] == -1 )  /*lint !e613*/
@@ -294,7 +289,7 @@ SCIP_RETCODE walkExpression(
                      ++*nexprvars;
                   }
 
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &children[i], SCIP_EXPR_VARIDX, exprvaridx[varidx]) );
+                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &children[i], SCIP_EXPR_VARIDX, exprvaridx[varidx]) );  /*lint !e613 */
 
                   coefs[i] = L[i].fac;
                }
@@ -319,7 +314,7 @@ SCIP_RETCODE walkExpression(
                ++*nexprvars;
             }
 
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_VARIDX, exprvaridx[varidx]) );
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_VARIDX, exprvaridx[varidx]) );  /*lint !e613*/
          }
 
          break;
@@ -356,8 +351,8 @@ SCIP_RETCODE walkExpression(
             case OPDIV:
                operand = SCIP_EXPR_DIV;
                break;
-         }
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, operand, child1, child2) );
+         }  /*lint !e744*/
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, operand, child1, child2) );  /*lint !e644*/
 
          break;
       }
@@ -658,16 +653,16 @@ SCIP_RETCODE setupObjective(
    /* for nonlinear and quadratic constraints, objconst(0) is already part of that expression, somehow
     * for a linear constraint, we may have a nonlinear expression that consists of the constant only...
     */
-   if( nqpterms >= 0 && OBJ_DE[0].e != NULL )
+   if( nqpterms >= 0 && ((ASL_fg*)asl)->I.obj_de_->e != NULL )  /*lint !e826*/
    {
-      assert(Intcast OBJ_DE[0].e->op == OPNUM);
-      objconstant += ((expr_n*)OBJ_DE[0].e)->v;
+      assert(((ASL_fg*)asl)->I.obj_de_->e->op == f_OPNUM || (Intcast ((ASL_fg*)asl)->I.obj_de_->e->op) == OPNUM); /*lint !e826*/
+      objconstant += ((expr_n*)((ASL_fg*)asl)->I.obj_de_->e)->v;  /*lint !e826*/
    }
 
    if( nqpterms == 0 )
    {
       /* linear objective */
-      SCIPdebugMessage("objective is linear\n");
+      SCIPdebugMessage("objective is linear\n");  /*lint !e534*/
 
       for( og = Ograd[0]; og; og = og->next )
       {
@@ -704,11 +699,11 @@ SCIP_RETCODE setupObjective(
          int i;
          int j;
 
-         SCIPdebugMessage("objective is quadratic\n");
+         SCIPdebugMessage("objective is quadratic\n");  /*lint !e534*/
 
-         assert(rowqp != NULL);
-         assert(colqp != NULL);
-         assert(delsqp != NULL);
+         assert(rowqp != NULL);  /*lint !e644*/
+         assert(colqp != NULL);  /*lint !e644*/
+         assert(delsqp != NULL); /*lint !e644*/
 
          SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &obj, obj_name(0), 1, &objvar, &minusone, 0, NULL, NULL, NULL,
             objtype[0] == 1 ? -objconstant : -SCIPinfinity(scip),
@@ -744,14 +739,14 @@ SCIP_RETCODE setupObjective(
          int nexprvars;
          int i;
 
-         SCIPdebugMessage("objective is nonlinear\n");
+         SCIPdebugMessage("objective is nonlinear\n");  /*lint !e534*/
 
          SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridx, probdata->nvars) );
          for( i = 0; i < probdata->nvars; ++i )
             exprvaridx[i] = -1;
          nexprvars = 0;
 
-         SCIP_CALL( walkExpression(scip, &objexpr, probdata->asl, OBJ_DE[0].e, exprvaridx, &nexprvars, probdata->nvars, success) );
+         SCIP_CALL( walkExpression(scip, &objexpr, probdata->asl, ((ASL_fg*)asl)->I.obj_de_->e, exprvaridx, &nexprvars, probdata->nvars, success) );  /*lint !e826*/
 
          if( !*success )
          {
@@ -848,7 +843,7 @@ SCIP_RETCODE setupConstraints(
       if( nqpterms == 0 )
       {
          /* linear */
-         SCIPdebugMessage("constraint %d (%s) is linear\n", c, con_name(c));
+         SCIPdebugMessage("constraint %d (%s) is linear\n", c, con_name(c));  /*lint !e534*/
 
          SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, con_name(c), 0, NULL, NULL, LUrhs[2*c], LUrhs[2*c+1]) );
 
@@ -866,11 +861,11 @@ SCIP_RETCODE setupConstraints(
          int i;
          int j;
 
-         assert(rowqp != NULL);
-         assert(colqp != NULL);
-         assert(delsqp != NULL);
+         assert(rowqp != NULL);  /*lint !e644*/
+         assert(colqp != NULL);  /*lint !e644*/
+         assert(delsqp != NULL); /*lint !e644*/
 
-         SCIPdebugMessage("constraint %d (%s) is quadratic\n", c, con_name(c));
+         SCIPdebugMessage("constraint %d (%s) is quadratic\n", c, con_name(c));  /*lint !e534*/
 
          SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, con_name(c), 0, NULL, NULL, 0, NULL, NULL, NULL, LUrhs[2*c], LUrhs[2*c+1]) );
 
@@ -897,13 +892,13 @@ SCIP_RETCODE setupConstraints(
          SCIP_EXPR* consexpr;
          int i;
 
-         SCIPdebugMessage("constraint %d (%s) is nonlinear\n", c, con_name(c));
+         SCIPdebugMessage("constraint %d (%s) is nonlinear\n", c, con_name(c));  /*lint !e534*/
 
          for( i = 0; i < probdata->nvars; ++i )
             exprvaridx[i] = -1;
          nexprvars = 0;
 
-         SCIP_CALL( walkExpression(scip, &consexpr, probdata->asl, CON_DE[c].e, exprvaridx, &nexprvars, probdata->nvars, success) );
+         SCIP_CALL( walkExpression(scip, &consexpr, probdata->asl, ((ASL_fg*)asl)->I.con_de_[c].e, exprvaridx, &nexprvars, probdata->nvars, success) );  /*lint !e826*/
 
          if( !*success )
          {
@@ -991,6 +986,7 @@ SCIP_DECL_READERCOPY(readerCopyNl)
 }
 #endif
 
+#if 0
 /** destructor of reader to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_READERFREE(readerFreeNl)
@@ -1004,6 +1000,7 @@ SCIP_DECL_READERFREE(readerFreeNl)
 
    return SCIP_OKAY;
 }
+#endif
 
 /** problem reading method of reader */
 static
@@ -1033,19 +1030,20 @@ SCIP_DECL_READERREAD(readerReadNl)
    if( nl == NULL )
    {
       SCIPerrorMessage("error processing <%s> file\n", filename);
-      *result = SCIP_READERROR;
-      return SCIP_OKAY;
+      return SCIP_READERROR;
    }
 
    want_derivs = 0;
-   qp_read(nl, 0);
+   (void) qp_read(nl, 0);
 
-   SCIPdebugMessage("number of nonzeros    = %d\n", nzc);
-   SCIPdebugMessage("number of variables   = %d\n", n_var);
-   SCIPdebugMessage("number of constraints = %d\n", n_con);
-   SCIPdebugMessage("number of objectives  = %d\n", n_obj);
-   SCIPdebugMessage("number of ranges      = %d\n", nranges);
-   SCIPdebugMessage("number of equations   = %d\n", n_eqn);
+   *result = SCIP_DIDNOTFIND;
+
+   SCIPdebugMessage("number of nonzeros    = %d\n", nzc);     /*lint !e534*/
+   SCIPdebugMessage("number of variables   = %d\n", n_var);   /*lint !e534*/
+   SCIPdebugMessage("number of constraints = %d\n", n_con);   /*lint !e534*/
+   SCIPdebugMessage("number of objectives  = %d\n", n_obj);   /*lint !e534*/
+   SCIPdebugMessage("number of ranges      = %d\n", nranges); /*lint !e534*/
+   SCIPdebugMessage("number of equations   = %d\n", n_eqn);   /*lint !e534*/
 
    SCIP_CALL( SCIPallocMemory(scip, &probdata) );
    BMSclearMemory(probdata);
@@ -1053,7 +1051,7 @@ SCIP_DECL_READERREAD(readerReadNl)
    probdata->asl = asl;
 
    /* initialize empty SCIP problem */
-   filebasename = rindex(filename, '/');
+   filebasename = strrchr(filename, '/');
    if( filebasename == NULL )
       filebasename = filename;
    else
@@ -1066,17 +1064,11 @@ SCIP_DECL_READERREAD(readerReadNl)
 
    SCIP_CALL( setupObjective(scip, probdata, &success) );
    if( !success )
-   {
-      *result = SCIP_READERROR;
-      return SCIP_OKAY;
-   }
+      return SCIP_READERROR;
 
    SCIP_CALL( setupConstraints(scip, probdata, &success) );
    if( !success )
-   {
-      *result = SCIP_READERROR;
-      return SCIP_OKAY;
-   }
+      return SCIP_READERROR;
 
    *result = SCIP_SUCCESS;
 
@@ -1191,10 +1183,7 @@ SCIP_RETCODE SCIPincludeReaderNl(
    SCIP_DIALOG* dialog;
    SCIP_DIALOG* parentdialog;
 
-   /* create nl reader data */
-   SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
-   BMSclearMemory(readerdata);
-
+   readerdata = NULL;
    reader = NULL;
 
    /* include reader */
@@ -1203,7 +1192,7 @@ SCIP_RETCODE SCIPincludeReaderNl(
 
    /* set non fundamental callbacks via setter functions */
    /* SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyNl) ); */
-   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeNl) );
+   /* SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeNl) ); */
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadNl) );
 
    if( SCIPgetRootDialog(scip) != NULL )
