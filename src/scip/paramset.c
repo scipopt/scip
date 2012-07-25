@@ -343,7 +343,7 @@ SCIP_RETCODE paramSetBool(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPmessageFPrintInfo(messagehdlr, NULL, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -379,7 +379,7 @@ SCIP_RETCODE paramSetInt(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPmessageFPrintInfo(messagehdlr, NULL, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -415,7 +415,7 @@ SCIP_RETCODE paramSetLongint(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPmessageFPrintInfo(messagehdlr, NULL, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -451,7 +451,7 @@ SCIP_RETCODE paramSetReal(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPmessageFPrintInfo(messagehdlr, NULL, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -4095,7 +4095,11 @@ SCIP_RETCODE SCIPparamSetToDefault(
 
    /* do not change the parameter if it is fixed */
    if( SCIPparamIsFixed(param) )
+   {
+      SCIPdebugMessage("parameter <%s> is fixed and is not reset to its default value.\n", param->name);
+
       return SCIP_OKAY;
+   }
 
    switch( param->paramtype )
    {
