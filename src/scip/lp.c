@@ -7214,15 +7214,19 @@ SCIP_RETCODE lpFlushChgCols(
       if( col->lpipos >= 0 )
       {
 #ifndef NDEBUG
-         SCIP_Real lpiobj;
-         SCIP_Real lpilb;
-         SCIP_Real lpiub;
+         /* do not check consistency of data with LPI in case of LPI=none */
+         if ( strcmp( SCIPlpiGetSolverName(), "none") )
+         {
+            SCIP_Real lpiobj;
+            SCIP_Real lpilb;
+            SCIP_Real lpiub;
 
-         SCIP_CALL( SCIPlpiGetObj(lp->lpi, col->lpipos, col->lpipos, &lpiobj) );
-         SCIP_CALL( SCIPlpiGetBounds(lp->lpi, col->lpipos, col->lpipos, &lpilb, &lpiub) );
-         assert(SCIPsetIsFeasEQ(set, lpiobj, col->flushedobj));
-         assert(SCIPsetIsFeasEQ(set, lpilb, col->flushedlb));
-         assert(SCIPsetIsFeasEQ(set, lpiub, col->flushedub));
+            SCIP_CALL( SCIPlpiGetObj(lp->lpi, col->lpipos, col->lpipos, &lpiobj) );
+            SCIP_CALL( SCIPlpiGetBounds(lp->lpi, col->lpipos, col->lpipos, &lpilb, &lpiub) );
+            assert(SCIPsetIsFeasEQ(set, lpiobj, col->flushedobj));
+            assert(SCIPsetIsFeasEQ(set, lpilb, col->flushedlb));
+            assert(SCIPsetIsFeasEQ(set, lpiub, col->flushedub));
+         }
 #endif
 
          if( col->objchanged )
@@ -7342,12 +7346,16 @@ SCIP_RETCODE lpFlushChgRows(
       if( row->lpipos >= 0 )
       {
 #ifndef NDEBUG
-         SCIP_Real lpilhs;
-         SCIP_Real lpirhs;
+         /* do not check consistency of data with LPI in case of LPI=none */
+         if ( strcmp( SCIPlpiGetSolverName(), "none") )
+         {
+            SCIP_Real lpilhs;
+            SCIP_Real lpirhs;
 
-         SCIP_CALL( SCIPlpiGetSides(lp->lpi, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
-         assert(SCIPsetIsSumEQ(set, lpilhs, row->flushedlhs));
-         assert(SCIPsetIsSumEQ(set, lpirhs, row->flushedrhs));
+            SCIP_CALL( SCIPlpiGetSides(lp->lpi, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
+            assert(SCIPsetIsSumEQ(set, lpilhs, row->flushedlhs));
+            assert(SCIPsetIsSumEQ(set, lpirhs, row->flushedrhs));
+         }
 #endif
          if( row->lhschanged || row->rhschanged )
          {
@@ -7504,18 +7512,22 @@ SCIP_RETCODE SCIPlpMarkFlushed(
       if( col->lpipos >= 0 )
       {
 #ifndef NDEBUG
-         SCIP_Real lpiobj;
-         SCIP_Real lpilb;
-         SCIP_Real lpiub;
+         /* do not check consistency of data with LPI in case of LPI=none */
+         if ( strcmp( SCIPlpiGetSolverName(), "none") )
+         {
+            SCIP_Real lpiobj;
+            SCIP_Real lpilb;
+            SCIP_Real lpiub;
 
-         SCIP_CALL( SCIPlpiGetObj(lp->lpi, col->lpipos, col->lpipos, &lpiobj) );
-         SCIP_CALL( SCIPlpiGetBounds(lp->lpi, col->lpipos, col->lpipos, &lpilb, &lpiub) );
-         assert(SCIPsetIsSumEQ(set, lpiobj, col->flushedobj));
-         assert(SCIPsetIsSumEQ(set, lpilb, col->flushedlb));
-         assert(SCIPsetIsSumEQ(set, lpiub, col->flushedub));
-         assert(col->flushedobj == col->obj); /*lint !e777*/
-         assert(col->flushedlb == (SCIPsetIsInfinity(set, -col->lb) ? -SCIPlpiInfinity(lp->lpi) : col->lb)); /*lint !e777*/
-         assert(col->flushedub == (SCIPsetIsInfinity(set, col->ub) ? SCIPlpiInfinity(lp->lpi) : col->ub)); /*lint !e777*/
+            SCIP_CALL( SCIPlpiGetObj(lp->lpi, col->lpipos, col->lpipos, &lpiobj) );
+            SCIP_CALL( SCIPlpiGetBounds(lp->lpi, col->lpipos, col->lpipos, &lpilb, &lpiub) );
+            assert(SCIPsetIsSumEQ(set, lpiobj, col->flushedobj));
+            assert(SCIPsetIsSumEQ(set, lpilb, col->flushedlb));
+            assert(SCIPsetIsSumEQ(set, lpiub, col->flushedub));
+            assert(col->flushedobj == col->obj); /*lint !e777*/
+            assert(col->flushedlb == (SCIPsetIsInfinity(set, -col->lb) ? -SCIPlpiInfinity(lp->lpi) : col->lb)); /*lint !e777*/
+            assert(col->flushedub == (SCIPsetIsInfinity(set, col->ub) ? SCIPlpiInfinity(lp->lpi) : col->ub)); /*lint !e777*/
+         }
 #endif
          col->objchanged = FALSE;
          col->lbchanged = FALSE;
@@ -7535,16 +7547,18 @@ SCIP_RETCODE SCIPlpMarkFlushed(
       if( row->lpipos >= 0 )
       {
 #ifndef NDEBUG
-         SCIP_Real lpilhs;
-         SCIP_Real lpirhs;
+         /* do not check consistency of data with LPI in case of LPI=none */
+         if ( strcmp( SCIPlpiGetSolverName(), "none") )
+         {
+            SCIP_Real lpilhs;
+            SCIP_Real lpirhs;
 
-         SCIP_CALL( SCIPlpiGetSides(lp->lpi, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
-         assert(SCIPsetIsSumEQ(set, lpilhs, row->flushedlhs));
-         assert(SCIPsetIsSumEQ(set, lpirhs, row->flushedrhs));
-         assert(row->flushedlhs ==
-            (SCIPsetIsInfinity(set, -row->lhs) ? -SCIPlpiInfinity(lp->lpi) : row->lhs - row->constant)); /*lint !e777*/
-         assert(row->flushedrhs ==
-            (SCIPsetIsInfinity(set, row->rhs) ? SCIPlpiInfinity(lp->lpi) : row->rhs - row->constant)); /*lint !e777*/
+            SCIP_CALL( SCIPlpiGetSides(lp->lpi, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
+            assert(SCIPsetIsSumEQ(set, lpilhs, row->flushedlhs));
+            assert(SCIPsetIsSumEQ(set, lpirhs, row->flushedrhs));
+            assert(row->flushedlhs == (SCIPsetIsInfinity(set, -row->lhs) ? -SCIPlpiInfinity(lp->lpi) : row->lhs - row->constant)); /*lint !e777*/
+            assert(row->flushedrhs == (SCIPsetIsInfinity(set, row->rhs) ? SCIPlpiInfinity(lp->lpi) : row->rhs - row->constant)); /*lint !e777*/
+         }
 #endif
          row->lhschanged = FALSE;
          row->rhschanged = FALSE;
