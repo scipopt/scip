@@ -7215,7 +7215,7 @@ SCIP_RETCODE lpFlushChgCols(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "none") )
+         if ( strcmp( SCIPlpiGetSolverName(), "none") != 0 )
          {
             SCIP_Real lpiobj;
             SCIP_Real lpilb;
@@ -7347,7 +7347,7 @@ SCIP_RETCODE lpFlushChgRows(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "none") )
+         if ( strcmp( SCIPlpiGetSolverName(), "none") != 0 )
          {
             SCIP_Real lpilhs;
             SCIP_Real lpirhs;
@@ -7513,7 +7513,7 @@ SCIP_RETCODE SCIPlpMarkFlushed(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "none") )
+         if ( strcmp( SCIPlpiGetSolverName(), "none") != 0 )
          {
             SCIP_Real lpiobj;
             SCIP_Real lpilb;
@@ -7548,7 +7548,7 @@ SCIP_RETCODE SCIPlpMarkFlushed(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "none") )
+         if ( strcmp( SCIPlpiGetSolverName(), "none") != 0 )
          {
             SCIP_Real lpilhs;
             SCIP_Real lpirhs;
