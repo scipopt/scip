@@ -8345,6 +8345,7 @@ SCIP_CONS* SCIPfindCons(
       return SCIPprobFindCons(scip->origprob, name);
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
