@@ -246,8 +246,13 @@ public:
       if ( probname != NULL )
          SOPLEX_TRY_ABORT( setProbname(probname) );
 
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
       m_lpifeastol = SPxSolver::feastol();
       m_lpiopttol = SPxSolver::opttol();
+#else
+      m_lpifeastol = SPxSolver::delta();
+      m_lpiopttol = SPxSolver::delta();
+#endif
 
 #ifdef WITH_LPSCHECK
       int cpxstat;
@@ -292,7 +297,6 @@ public:
 #endif
    }
 
-#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
    /**< return opttol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
    Real opttol()
    {
@@ -306,9 +310,12 @@ public:
    {
       m_lpiopttol = d;
 
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
       SPxSolver::setOpttol(d);
-   }
+#else
+      SPxSolver::setDelta(d);
 #endif
+   }
 
    /** set iteration limit (-1 = unbounded) */
    void setIterationLimit(
