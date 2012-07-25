@@ -391,7 +391,7 @@ BEGIN {
    firstpb = $4;
 }
 /^  Primal Bound     :/ {
-   if( $4 == "infeasible" ) {
+   if( $4 == "infeasible" || $4 == "infeasible\r" ) {
       pb = +infty;
       db = +infty;
       dbset = 1;
