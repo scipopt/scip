@@ -151,6 +151,8 @@ interface
   SCIPsparseSolGetNVars(), SCIPsparseSolGetLbs(), SCIPsparseSolGetUbs() in (pub_)misc.{c,h}
 - renamed SCIPgetCountedSparseSolutions() to SCIPgetCountedSparseSols() in cons_countsols.{c,h}
 - SCIPcomputeLPRelIntPoint() takes two new arguments giving a time and iteration limit
+- added a SCIP_CONS* parameter to SCIPcreateConsDisjunction() which can represent the linear relaxation of the whole
+  disjunction constraint as a conjunction constraint, or NULL
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -249,6 +251,7 @@ fixed bugs:
 - fixed assert with LPI=none (need to count rows/cols in lpi_none)
 - do not run heur_shiftandpropagate if there is no LP
 - fixed count of propagations in cons_indicator and only try to propagate if variables are not yet fixed
+- fixed some bugs in cons_disjunction.c (wrong assert, forgotten deletion of constraint, wrong SCIPreleaseCons() call)
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -337,6 +340,10 @@ features:
 - implemented first clique lifting procedure in cons_setppc.c (by default is off)
 - oneopt can now be called before presolving
 - beta-version of a AMPL interface can be found under interfaces/ampl
+- the conjunction and disjunction constraint handlers are now able to parse their CIP output format
+- added a presolving step in the disjunctive constraint handler, removing disjunction, where a sub-constraint was
+  deleted, which means this sub-constraint is redundant, which again means it is always TRUE or will be enforced by
+  another constraint
 
 Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;

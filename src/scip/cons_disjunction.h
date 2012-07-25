@@ -55,6 +55,7 @@ SCIP_RETCODE SCIPcreateConsDisjunction(
    const char*           name,               /**< name of constraint */
    int                   nconss,             /**< number of initial constraints in disjunction */
    SCIP_CONS**           conss,              /**< initial constraint in disjunction */
+   SCIP_CONS*            relaxcons,          /**< a conjunction constraint containing the linear relaxation of the disjunction constraint, or NULL */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
@@ -84,7 +85,8 @@ SCIP_RETCODE SCIPcreateConsBasicDisjunction(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int                   nconss,             /**< number of initial constraints in disjunction */
-   SCIP_CONS**           conss               /**< initial constraint in disjunction */
+   SCIP_CONS**           conss,              /**< initial constraint in disjunction */
+   SCIP_CONS*            relaxcons           /**< a conjunction constraint containing the linear relaxation of the disjunction constraint, or NULL */
    );
 
 /** adds constraint to the disjunction of constraints */
