@@ -4093,12 +4093,9 @@ SCIP_RETCODE SCIPparamSetToDefault(
 {
    assert(param != NULL);
 
+   /* do not change the parameter if it is fixed */
    if( SCIPparamIsFixed(param) )
-   {
-      SCIPmessageFPrintInfo(messagehdlr, NULL, "parameter <%s> is fixed and is not reset to its default value.\n", param->name);
-
       return SCIP_OKAY;
-   }
 
    switch( param->paramtype )
    {
