@@ -763,10 +763,6 @@ void printRow(
    SCIP_Real* valpnt;
    char relation;
 
-   assert(scip != NULL);
-   assert(matrix != NULL);
-   assert(0 <= row && row < matrix->nrows);
-
    relation='-';
    if( !SCIPisInfinity(scip, -matrix->lhs[row]) &&
       !SCIPisInfinity(scip, matrix->rhs[row]) &&
@@ -821,10 +817,6 @@ SCIP_RETCODE printRowsOfCol(
    int* colpnt;
    int* colend;
 
-   assert(scip != NULL);
-   assert(matrix != NULL);
-   assert(0 <= col && col < matrix->ncols);
-
    numrows = matrix->colmatcnt[col];
 
    SCIP_CALL( SCIPallocBufferArray(scip, &rows, numrows) );
@@ -845,6 +837,47 @@ SCIP_RETCODE printRowsOfCol(
    printf("\n-------");
 
    SCIPfreeBufferArray(scip, &rows);
+
+   return SCIP_OKAY;
+}
+
+/** print information about a dominance relation */
+static
+SCIP_RETCODE printDomRelInfo(
+   SCIP*                 scip,               /**< SCIP main data structure */
+   CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
+   SCIP_VAR*             dominatingvar,      /**< dominating variable */
+   int                   dominatingidx,      /**< index of dominating variable */
+   SCIP_VAR*             dominatedvar,       /**< dominated variable */
+   int                   dominatedidx,       /**< index of dominated variable */
+   SCIP_Real             dominatingub,       /**< predicted upper bound of dominating variable */
+   SCIP_Real             dominatingwclb      /**< worst case lower bound of dominating variable */
+   )
+{
+   char type;
+
+   assert(SCIPvarGetType(dominatingvar)==SCIPvarGetType(dominatedvar));
+
+   switch(SCIPvarGetType(dominatingvar))
+   {
+   case SCIP_VARTYPE_CONTINUOUS:
+      type='C';
+      break;
+   case SCIP_VARTYPE_BINARY:
+      type='B';
+      break;
+   default:
+      type='I';
+      break;
+   }
+
+   printf("\n\n### [%c], obj:%g->%g,\t%s[idx:%d](nrows:%d)->%s[idx:%d](nrows:%d)\twclb=%g, ub'=%g, ub=%g",
+      type,SCIPvarGetObj(dominatingvar),SCIPvarGetObj(dominatedvar),
+      SCIPvarGetName(dominatingvar),dominatingidx,matrix->colmatcnt[dominatingidx],
+      SCIPvarGetName(dominatedvar),dominatedidx,matrix->colmatcnt[dominatedidx],
+      dominatingwclb,dominatingub,SCIPvarGetUbGlobal(dominatingvar));
+
+   printRowsOfCol(scip,matrix,dominatingidx);
 
    return SCIP_OKAY;
 }
@@ -1081,8 +1114,6 @@ SCIP_RETCODE calcVarBounds(
 {
    SCIP_VAR* vardominating;
    SCIP_VAR* vardominated;
-   SCIP_Real lbdominating;
-   SCIP_Real ubdominating;
    SCIP_Real lbdominated;
    SCIP_Real ubdominated;
    SCIP_Real minresactivity;
@@ -1129,8 +1160,6 @@ SCIP_RETCODE calcVarBounds(
    assert(!SCIPisInfinity(scip, minresactivity));
    assert(!SCIPisInfinity(scip, -maxresactivity));
 
-   lbdominating = SCIPvarGetLbGlobal(vardominating);
-   ubdominating = SCIPvarGetUbGlobal(vardominating);
    lbdominated = SCIPvarGetLbGlobal(vardominated);
    ubdominated = SCIPvarGetUbGlobal(vardominated);
 
@@ -1307,12 +1336,12 @@ void findFixings(
    if( onlybinvars )
    {
       if( SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, TRUE, TRUE) &&
-         (!SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, FALSE, TRUE) ||
-            !SCIPvarsHaveCommonClique(dominatingvar, FALSE, dominatedvar, FALSE, TRUE) ) )
+         !SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, FALSE, TRUE) )
       {
-         /* we have a (1->1)-clique with dominance relation (x->y) (x dominates y)
-          * from dominance relation we know (1->0) is better then (0->1)
-          * it follows, only (1->0) or (0->0) are possible => y=0
+         /* we have a (1->1)-clique with dominance relation (x->y) (x dominates y).
+          * from dominance relation we know (1->0) is possible and not worse then (0->1)
+          * concerning the objective function. it follows, only (1->0) or (0->0) are possible,
+          * but in both cases y has the value 0 => y=0
           */
          if( varstofix[dominatedidx] == NOFIX )
          {
@@ -1321,12 +1350,12 @@ void findFixings(
          }
       }
       else if( SCIPvarsHaveCommonClique(dominatingvar, FALSE, dominatedvar, FALSE, TRUE) &&
-         (!SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, TRUE, TRUE) ||
-            !SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, FALSE, TRUE) ) )
+         !SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, FALSE, TRUE) )
       {
-         /* we have a (0->0)-clique with dominance relation x->y (x dominates y)
-          * from dominance relation we know (1->0) is better then (0->1)
-          * it follows only (1->0) or (1->1) are possible => x=1
+         /* we have a (0->0)-clique with dominance relation x->y (x dominates y).
+          * from dominance relation we know (1->0) is possible and not worse then (0->1)
+          * concerning the objective function. it follows only (1->0) or (1->1) are possible,
+          * but in both cases x has the value 1 => x=1
           */
          if( varstofix[dominatingidx] == NOFIX )
          {
@@ -1360,14 +1389,8 @@ void findFixings(
                varstofix[dominatedidx] = FIXATLB;
                (*npossiblefixings)++;
 #if 0
-               printf("\n\n### [fix] type:%c->%c, obj:%g->%g,\t%s[idx:%d]->%s[idx:%d]\twclb=%g, ub'=%g, ub=%g",
-                  ((SCIPvarGetType(dominatingvar)==SCIP_VARTYPE_CONTINUOUS)?'C':'I'),
-                  ((SCIPvarGetType(dominatedvar)==SCIP_VARTYPE_CONTINUOUS)?'C':'I'),
-                  SCIPvarGetObj(dominatingvar),SCIPvarGetObj(dominatedvar),
-                  SCIPvarGetName(dominatingvar),dominatingidx,SCIPvarGetName(dominatedvar),dominatedidx,
-                  dominatingwclb,dominatingub,SCIPvarGetUbGlobal(dominatingvar));
-               printRowsOfCol(scip,matrix,dominatingidx);
-               printRowsOfCol(scip,matrix,dominatedidx);
+               printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
+                  dominatedvar,dominatedidx,dominatingub,dominatingwclb);
 #endif
                return;
             }
@@ -1393,14 +1416,8 @@ void findFixings(
                varstofix[dominatedidx] = FIXATLB;
                (*npossiblefixings)++;
 #if 0
-               printf("\n\n### [fix] type:%c->%c, obj:%g->%g,\t%s[idx:%d]->%s[idx:%d]\twclb=%g, ub'=%g, ub=%g",
-                  ((SCIPvarGetType(dominatingvar)==SCIP_VARTYPE_CONTINUOUS)?'C':'I'),
-                  ((SCIPvarGetType(dominatedvar)==SCIP_VARTYPE_CONTINUOUS)?'C':'I'),
-                  SCIPvarGetObj(dominatingvar),SCIPvarGetObj(dominatedvar),
-                  SCIPvarGetName(dominatingvar),dominatingidx,SCIPvarGetName(dominatedvar),dominatedidx,
-                  dominatingwclb,dominatingub,SCIPvarGetUbGlobal(dominatingvar));
-               printRowsOfCol(scip,matrix,dominatingidx);
-               printRowsOfCol(scip,matrix,dominatedidx);
+               printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
+                  dominatedvar,dominatedidx,dominatingub,dominatingwclb);
 #endif
             }
          }
@@ -1429,14 +1446,8 @@ void findFixings(
                varstofix[dominatedidx] = FIXATLB;
                (*npossiblefixings)++;
 #if 0
-               printf("\n\n### [fix] type:%c->%c, obj:%g->%g,\t%s[idx:%d]->%s[idx:%d]\twclb=%g, ub'=%g, ub=%g",
-                  ((SCIPvarGetType(dominatingvar)==SCIP_VARTYPE_CONTINUOUS)?'C':'I'),
-                  ((SCIPvarGetType(dominatedvar)==SCIP_VARTYPE_CONTINUOUS)?'C':'I'),
-                  SCIPvarGetObj(dominatingvar),SCIPvarGetObj(dominatedvar),
-                  SCIPvarGetName(dominatingvar),dominatingidx,SCIPvarGetName(dominatedvar),dominatedidx,
-                  dominatingwclb,dominatingub,SCIPvarGetUbGlobal(dominatingvar));
-               printRowsOfCol(scip,matrix,dominatingidx);
-               printRowsOfCol(scip,matrix,dominatedidx);
+               printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
+                  dominatedvar,dominatedidx,dominatingub,dominatingwclb);
 #endif
             }
          }
