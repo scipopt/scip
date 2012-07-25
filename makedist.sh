@@ -116,6 +116,7 @@ $NAME/check/instances/MINLP/*.osil \
 $NAME/check/instances/MINLP/*.pip \
 $NAME/check/instances/PseudoBoolean/*.opb \
 $NAME/check/instances/PseudoBoolean/*.wbo \
+$NAME/check/instances/PseudoBoolean/*.cip \
 $NAME/check/instances/SAT/*.cnf \
 $NAME/check/instances/SOS/*.lp \
 $NAME/check/instances/Semicontinuous/*.lp \
