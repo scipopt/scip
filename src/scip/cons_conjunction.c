@@ -236,7 +236,7 @@ SCIP_RETCODE checkAllConss(
       if( printreason && *result == SCIP_INFEASIBLE )
       {
 	 SCIPinfoMessage(scip, NULL, "conjunction constraint %s is violated, at least the sub-constraint %s is violated by this given solution\n", SCIPconsGetName(conss[c]), SCIPconsGetName(consdata->conss[i]));
-	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
       }
    }
 
