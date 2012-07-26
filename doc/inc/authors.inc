@@ -1,5 +1,5 @@
 <div id="authors">
-             
+
     <h2><a name="main"></a>Current main developers</h2>
 
         <table class="desc">
@@ -87,7 +87,7 @@
 	      <td>
                 Project head
 	      </td>
-	    </tr>		   
+	    </tr>
 	    <tr>
 	      <td>
 		<a href="http://www.mso.math.uni-erlangen.de/optimization/edom/team/martin-alexander/prof-dr-alexander-martin.html">Alexander Martin</a>
@@ -98,11 +98,19 @@
 	    </tr>
 	    <tr>
 	      <td>
-              Robert Waniek 
+              Robert Waniek
 	      </td>
 	      <td>
                 Former student assistant
               </td>
+	    </tr>
+	    <tr>
+	      <td>
+		<a href="http://www.am.uni-erlangen.de/optimization/edom/team/weninger-dieter/dieter-weninger.html">Dieter Weninger</a>
+	      </td>
+	      <td>
+                Presolvers for independent components and dominated columns
+	      </td>
 	    </tr>
 	    <tr>
 	      <td>
@@ -148,7 +156,7 @@
 	    </tr>
             <tr>
 	      <td width="180px">
-		<a href="http://www.dii.uchile.cl/~daespino/">Daniel Espinoza</a> 
+		<a href="http://www.dii.uchile.cl/~daespino/">Daniel Espinoza</a>
 	      </td>
 	      <td>
                  Interface to <a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a>
@@ -218,6 +226,16 @@
 	      </td>
 	      <td>
                  Interface to <a href="http://www.dashoptimization.com/home/products/products_optimizer.html">FICO/Xpress</a>
+	      </td>
+	    </tr>
+            <tr>
+	      <td>
+                Fr&eacute;d&eacute;ric Pythoud
+	      </td>
+	      <td>
+                 Superindicator constraint handler
+	      </td>
+	      <td>
 	      </td>
 	    </tr>
             <tr>
@@ -293,7 +311,17 @@
 	      </td>
 	      <td>
 	      </td>
-	    </tr> 
+	    </tr>
+            <tr>
+	      <td>
+                Stefan Weltge
+	      </td>
+	      <td>
+                 OBBT propagator
+	      </td>
+	      <td>
+	      </td>
+	    </tr>
 	</table>
 </div>
 
