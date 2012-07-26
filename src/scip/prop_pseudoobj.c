@@ -1630,7 +1630,7 @@ SCIP_RETCODE propdataInit(
    propdata->glbpropagated = FALSE;
    propdata->glbpseudoobjval = SCIPgetGlobalPseudoObjval(scip);
    propdata->cutoffbound = SCIPgetCutoffbound(scip);
-   assert(SCIPisFeasEQ(scip, propdata->glbpseudoobjval, SCIPgetPseudoObjval(scip)));
+   assert(SCIPgetDepth(scip) > 0 || SCIPisFeasEQ(scip, propdata->glbpseudoobjval, SCIPgetPseudoObjval(scip)));
 
    /* create hash table which is used for resolving bound changes */
    if( nminactvars > 0 )
