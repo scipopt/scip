@@ -22,16 +22,16 @@
  *
  * @page PROBLEMDATA Main problem data
  *
- * The problem data is accessible in all plugin. The function SCIPgetProbData() return the pointer to that structure. We
- * are using this data structure to store all the information of the binpacking problem. Since this structure is not
- * visible in the other plugins we implemented setter and getter functions to access this data. The problem data structure
+ * The problem data is accessible in all plugins. The function SCIPgetProbData() returns the pointer to that structure. We
+ * use this data structure to store all the information of the binpacking problem. Since this structure is not
+ * visible in the other plugins, we implemented setter and getter functions to access this data. The problem data structure
  * SCIP_ProbData is shown below.
  *
  * \code
  *  ** @brief Problem data which is accessible in all places
  *  *
- *  *   This problem data is used to store the input of the binpacking, all variables which are created, and all
- *  *   constrsaints.
+ *  *   This problem data is used to store the input of the binpacking instance, all variables which are created, and all
+ *  *   constraints.
  *  *
  * struct SCIP_ProbData
  * {
@@ -46,12 +46,14 @@
  * };
  * \endcode
  *
- * The function SCIPprobdataCreate(), which is called in the reader plugin after the input file was parsed, initial the
- * problem data structure and creates the problem in the SCIP environment. Therefore, it creates for each item of the
- * binpacking problem on set covering constraints and creates an initial set of variables/packing. Note that the set
- * covering constraints have to have the modifiable flag set to TRUE. This is necessary to tell the solver that these
- * constraints are not completed yet. This means, during the search new variables might be added. The solver has to know
- * this since in this case certain reductions are not allowed. See the body of the function SCIPprobdataCreate() for
+ * The function SCIPprobdataCreate(), which is called in the \ref reader_bpa.c "reader plugin" after the input file was parsed,
+ * initializes the
+ * problem data structure and creates the problem in the SCIP environment. For this, it creates for each item of the
+ * binpacking problem one set covering constraint and creates an initial set of variables for the packings. Note that the set
+ * covering constraints have to have the <code>modifiable</code>-flag set to TRUE. This is necessary to tell the solver that these
+ * constraints are not completed yet. This means, during the search new variables/packings might be added.
+ * The solver needs this information because certain reductions are not allowed.
+ * See the body of the function SCIPprobdataCreate() for
  * more details.
  *
  * A list of all interface methods can be found in probdata_binpacking.h.

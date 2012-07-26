@@ -122,7 +122,7 @@
  * solution of the restricted master problem.
  *
  * The above problem is a knapsack problem which can be solved via dynamic programming or by solving the above integer
- * program. In this example we implemented a pricer which solve the integer program.
+ * program. In this example we implemented a pricer which solves the integer program.
  *
  */
 
@@ -130,8 +130,8 @@
 
 /**@page MAKEFILE The Makefile
  *
- * The Makefile is based on the main \SCIP Makefile. This means, all compiling options which are 
- * available for \SCIP are also available for the binpacking project. Below you find a list 
+ * The Makefile is based on the main \SCIP Makefile. This means that all compiling options which are
+ * available for \SCIP are also available for the binpacking project. Below, you find a list
  * of the most important compiling flags, the values they can take, and a short description. The
  * values in bold face are the default values. 
  *
@@ -156,9 +156,10 @@
  *
  * - <b>lint</b>
  *   <br>
- *   Statically checks the code for uninitialized variables and many other stuff. Therefore, the
- *   the external tool flexelint is needed. This call produces the file <code>lint.out</code> 
- *   which contains all the detected warnings. From the development of \SCIP we strongly 
+ *   Statically checks the code for uninitialized variables and many other possible problems,
+ *   which even do not lead to compiler errors. For this, the
+ *   the external tool flexelint is needed. The call produces the file <code>lint.out</code>
+ *   which contains all the detected warnings. From the experience when developing \SCIP, we strongly
  *   recommend to use such a code checker. It is always a surprising the stuff such tools detect.  
  *   <br>
  *
@@ -166,7 +167,7 @@
  *   <br>
  *   Generates a html documentation. For this call the external tool
  *   <a href="http://doxygen.org">doyxgen</a> is needed.
- *   After generating the documentation you can use your favorite browser to open the main page
+ *   After generating the documentation, you can use your favorite browser to open the main page
  *   <code>doc/html/index.html</code>.
  *   <br>
  *
@@ -177,13 +178,13 @@
  *
  * - <b>test</b> 
  *   <br> 
- *   Starts the automated test runs which is based on the SCIP test runs (see <a
+ *   Starts an automated test run based on the SCIP test runs (see <a
  *   href="http://scip.zib.de/doc/html/TEST.html">How to run automated tests with SCIP</a>).  
  *   <br>
  *
  * - <b>tags</b>
  *   <br>
- *   Generates tags which can be used in the editor emacs and xemacs.
+ *   Generates tags which can be used in the editor <b>emacs</b> and <b>xemacs</b>.
  *   <br>
  *
  * - <b>depend</b>

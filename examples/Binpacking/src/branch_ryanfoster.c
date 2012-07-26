@@ -23,37 +23,39 @@
  *
  * @page BRANCHING Ryan/Foster branching
  *
- * Ryan/Foster branching is one of the branching rules which are very useful for the used integer programs model. A
- * standard variable branching has the disadvantage that the zero branch is more or less useless. This is the case since
- * we only forbid one packing out of exponential many. The one branch on the other side reduces the problem since
+ * Ryan/Foster branching is a very useful branching rule  for the integer program model in use. A
+ * standard variable branching has the disadvantage that the zero branch is more or less useless because
+ * we only forbid one packing out of exponential many. On the other hand, the branch fixing a packing reduces the problem since
  * certain items are packed. This leads to a very unbalanced search tree.
  *
- * The idea of Ryan/Foster is to branch in a way that we say that on the one branch a certain pair of items are always
- * together and on the other branch they are never together. Note that in both case it is allowed that packings are
- * used which contain none of the two items.
+ * The branching idea of Ryan/Foster is to select a pair of items which is either a) forced to be packed together or b)
+ * not allowed to be packed together. Note that in both cases, it is allowed to use packings
+ * which contain none of the two items.
  *
- * There are two issue to be taken care off:
- * -# How do we select the pair of itmes?
+ * There are two issues to be taken care off:
+ * -# How do we select the pair of items?
  * -# How do we realize such a branching within \SCIP?
  *
  * @section SELECTION How do we select the pair of items?
  *
- * To select a pair of items, we have to know for each packing to items which are contained. Since every packing is a
+ * To select a pair of items, we have to know for each packing the items which are contained. Since every packing is a
  * variable and each item is a set covering constraint, we have to know for each variable in which set covering
- * constraints it appears (this means, has a coefficient of 1.0). Since \SCIP is constraint based, it is not possible to
- * get this information in general. To overcome this issue we use to functionality to add variable data to each
- * variable. This variable data contains the required information. This means, the constraints in which this variable
- * appears (see vardata_binpacking.c for more details). Having this variable data, it is now possible to get the
+ * constraints it appears (this means, has a coefficient of 1.0). Since \SCIP is constraint based, it is in general
+ *  not possible to get this information directly. To overcome this issue, we use the functionality to add
+ * \ref vardata_binpacking.c "variable data" to every
+ * variable. This variable data contains the constraints in which this variable appears (see vardata_binpacking.c for more details).
+ * With the help of the variable data, it is now possible to get the
  * information which items belong to which packing. Therefore, we can use the Ryan/Foster idea to select a pair of
  * items.
  *
  * @section SAMEDIFFBRANCHING How do we realize such a branching within SCIP?
  *
- * After we selected a pair of items to branch on, the questions how to realize that with \SCIP. Since \SCIP is
- * constraint based, it is really easy to do that. We implement a constraint handler which handles these
- * informations. Therefore, see cons_samediff.c. This constraint handler does not only stores the branching
- * decisions. It also takes care of the fact that in each node all packing which are not feasible for that node a fixed
- * locally to zero. For more details we refer to the source code of the constraint handler.
+ * After having selected a pair of items to branch on, the question now is how to realize such a branching with \SCIP.
+ * Since \SCIP is
+ * constraint based, it is really easy to do that. We implement a constraint handler which handles the
+ * information, see cons_samediff.c. This constraint handler does not only store the branching
+ * decisions. Furthermore, it also ensures that all packing which are not feasible at a particular node are
+ * locally fixed to zero. For more details, we refer to the \ref cons_samediff.c "source code of the constraint handler".
  * 
  */
 

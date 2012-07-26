@@ -18,13 +18,13 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
- * This file implements the variable pricer which check if variables exist with negative reduced cost. See for more
- * details \ref PRICER.
+ * This file implements the variable pricer which check if variables exist with negative reduced cost. See
+ * @ref PRICER for more details.
  *
  * @page PRICER Pricing new variables
  *
- * The task of the pricer is to search for new variables with negative reduced cost. Therefore the following integer
- * program is solved.
+ * The task of the pricer is to search for new variables with negative reduced costs. For this, the following integer
+ * program is solved:
  *
  *  \f[
  *  \begin{array}[t]{rll}
@@ -39,16 +39,16 @@
  * where \f$ (\lambda_S)_i \f$ for \f$i\in\{1,\dots,n\}\f$ are binary variables and \f$y^\star_i\f$ given by the dual
  * solution of the restricted master problem. See the \ref PROBLEM "problem description" for more details.
  *
- * To solve the above integer program we create new SCIP instance within SCIP and use the usual functions to create
- * variables and constraints. Besides that we need the current dual solutions to all set covering constraints (each
- * stands for one item) which are the objective coefficient the binary variables. Therefore, we use the function
- * SCIPgetDualsolSetppc() which returns the dual solutions for the given set converting constraint.
+ * To solve the above integer program, we create a new SCIP instance within SCIP and use the usual functions to create
+ * variables and constraints. Besides, we need the current dual solutions to all set covering constraints (each
+ * stands for one item) which are the objective coefficients of the binary variables. Therefore, we use the function
+ * SCIPgetDualsolSetppc() which returns the dual solutions for the given set covering constraint.
  *
- * Since we also want to generate new variables during search we have to care that we do not generate variables over and
- * over again. For example if we branched or fix a certain packing to zero, we have to make sure that we in that node do
- * not generate that variables again. To do so we have to add constraints which forbid to generate variables which are
- * locally fixed to zero. See the function addFixedVarsConss() for more details. If we use the \ref BRANCHING
- * "Ryan/Foster branching", we also have to ensure that these branching decisions are respected. This realized within
+ * Since we also want to generate new variables during search, we have to care that we do not generate variables over and
+ * over again. For example, if we branched or fixed a certain packing to zero, we have to make sure that we  do
+ * not generate the corresponding variables at that node again. For this, we have to add constraints forbidding to generate variables which are
+ * locally fixed to zero. See the function addFixedVarsConss() for more details. While using the \ref BRANCHING
+ * "Ryan/Foster branching", we also have to ensure that these branching decisions are respected. This is realized within
  * the function addBranchingDecisionConss().
  *
  */
