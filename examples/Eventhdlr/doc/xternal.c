@@ -36,7 +36,7 @@
  *  -# When to \a remove the event handler.
  *
  * <b>Note:</b> You can replace the event type in this example with any none-variable event. See
- * in the href="http://scip.zib.de/doc/html/type__event_8h.html">type_event.h</a> in the SCIP documentation for a
+ * in the <a href="http://scip.zib.de/doc/html/type__event_8h.html">type_event.h</a> in the SCIP documentation for a
  * complete list.
  *
  * The remainder of this page focusses on the best solution event handler. See @ref event_boundwriting.c for

@@ -35,7 +35,7 @@
  *
  *
  *
- * <b>What is SCIP?</b>
+ * @section WHATISSCIP What is SCIP?
  *
  * SCIP is a framework to solve constraint integer programs (CIPs). In particular,
  *
@@ -49,33 +49,26 @@
  * href="http://www.am.uni-erlangen.de/optimization/edom.html">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
  * and has more than 450,000 lines of C code.
  *
- * <b>Getting started</b>
- *
- * - \ref SHELL   "Tutorial: the interactive shell"
- * - \ref FILEREADERS "Readable file formats"
+ * @section GETTINGSTARTED Getting started
  *
  * - \ref MAKE    "Installation information / Makefiles"
- *
- * - \ref START   "How to start a new project"
- * - \ref DOC     "How to search the documentation for interface methods"
- *
- * <b>General Information</b>
- *
- * - \ref FAQ     "Frequently asked questions (FAQ)"
  * - \ref LICENSE "License"
- *
- * - \ref PUBLICMETHODS "List of callable functions"
- * - \ref PARAMETERS "List of all SCIP parameters"
- *
- * - \ref TEST    "How to run automated tests with SCIP"
- * - \ref COUNTER "How to use SCIP to count feasible solutions"
+
+ * - \ref SHELL   "Tutorial: the interactive shell"
+ * - \ref FILEREADERS "Readable file formats"
+ * - \ref START   "How to start a new project"
  *
  *
- * <b>Programming with SCIP</b>
+ * @section PROGRAMMING Programming with SCIP
  *
- * - \ref DEBUG   "Debugging"
+ * @subsection CODINGBASICS Coding basics for SCIP
  *
- * - How to add ...
+ *   - \ref CODE    "Coding style guidelines"
+ *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
+ *   - \ref DOC     "How to search the documentation for interface methods" *
+ *   - \ref DEBUG   "Debugging"
+ *
+ * @subsection HOWTOADD How to add ...
  *   - \ref CONS    "Constraint handlers"
  *   - \ref PRICER  "Variable pricers"
  *   - \ref PRESOL  "Presolvers"
@@ -92,17 +85,47 @@
  *   - \ref NLPI    "Interfaces to NLP solvers"
  *   - \ref EXPRINT "Interfaces to expression interpreters"
  *   - \ref CONF    "Conflict analysis"
- *
- * - Miscellaneous
- *   - \ref CODE    "Coding style guidelines"
- *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  *   - \ref PARAM   "Adding additional user parameters"
  *
+ * - \ref TEST    "How to run automated tests with SCIP"
+ * - \ref COUNTER "How to use SCIP to count feasible solutions"
+ *
+ * @section EXAMPLESECTION Guide to the SCIP examples
+ *   - <a href="http://scip.zib.de/doc/examples/Binpacking/index.html"> Binpacking</a>
+ *      An implementation of the column generation approach for the binpacking problem.
+ *      It includes a customized reader, Ryan/Foster branching rule, (global) problem data, variable data,
+ *      and constraint handler.
+ *   - <a href="http://scip.zib.de/doc/examples/Coloring/index.html">Coloring</a>
+ *     An implementation of the column generation approach for the binpacking problem.
+ *      It includes a customized reader, Ryan/Foster branching rule, (global) problem data,
+ *     variable data, and constraint handler.
+ *   - <a href="http://scip.zib.de/doc/examples/Eventhdlr/index.html">Event handler</a>
+ *      A small example illustrating the use of an event handler.
+ *   - <a href="scip.zib.de/doc/examples/LOP/index.html">LOP</a>
+ *      An example for implementing a constraint handler.
+ *   - <a href="http://scip.zib.de/doc/examples/MIPSolver/index.html">MIP Solver</a>
+ *      A minimal implementation for using SCIP included into another source code.
+ *   - <a href="http://scip.zib.de/doc/examples/TSP/index.html">TSP </a>
+ *      Simple implementations of a constraint handler, two combinatorial heuristics,
+ *      a file reader, etc. which demonstrate the usage of SCIP as a branch-and-cut-framework for
+ *       solving traveling salesman problem instances.
+ *   - <a href="http://scip.zib.de/doc/examples/VRP/index.html">VRP </a>
+ *      A solver for a simple capacity-constrained vehicle routing problem, which is
+ *      based on pricing tours via a dynamic programming algorithm.
+ *
+ * @section FURTHERINFORMATION Reference and further information
+ *
+ * - \ref PUBLICMETHODS "List of callable functions"
+ * - \ref PARAMETERS "List of all SCIP parameters"
+ *
+ * - \ref FAQ     "Frequently asked questions (FAQ)"
+ *
+ * @section SCIP history
  *
  * <table cellpadding="0px" border="0" width="100%">
  *   <tr>
  *     <td nowrap >
- * <b>Changes between different versions of SCIP</b>
+ * @subsection CHG Changes between different versions of SCIP
  *
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
@@ -112,7 +135,7 @@
  * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
  * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
  *
- * <b>SCIP Authors</b>
+ * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="AUTHORS.html#main">Current main developers</a>
  * - <a class="el" href="AUTHORS.html#further">Further developers</a>
  * - <a class="el" href="AUTHORS.html#contributors">Contributors</a>
@@ -712,7 +735,7 @@
  * MINLPs, etc... at hand. SCIP can also be customized to the type of problems you
  * are working on by additional plugins.
  * Instructions on how to write a new plugin and include it in SCIP can be found in the corresponding
- * <b> How to add ... </b> pages of the \ref OTHERDOCU.
+ * <b> How to add ... </b> pages of the \ref PROGRAMMING ''programming section''.
  *
  * SCIP can also be used for writing your own branch-and-cut or branch-and-cut-and-price code. SCIP already
  * provides a number of existing code examples which we suggest as both reference and starting point
@@ -725,7 +748,7 @@
  *
  *    We suggest the use one of the following examples:
  *     - The <code>VRP</code>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
- *       and in <b>C++</b>.
+ *       in <b>C++</b>.
  *     - The <code>Coloring</code> and the <code>Binpacking</code>-example are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
  *     - The <code>TSP</code>-example is a <b>branch-and-cut</b>-code in <b>C++</b>.
@@ -734,7 +757,7 @@
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
  *   directory). For instance, type
  *   \verbatim
- *    > cp -r examples/Coloring/ ../SCIPProject/ ; cd ../SCIPProject
+ > cp -r examples/Coloring/ ../SCIPProject/ ; cd ../SCIPProject
  *   \endverbatim
  *
  *   from the SCIP root directory for copying the content of the <code>Coloring</code>-example into a fresh
@@ -743,7 +766,7 @@
  *
  *  - Open the <code>Makefile</code>  via
  *    \verbatim
- *     > kate
+ > kate Makefile
  *    \endverbatim
  *
  *    and edit the following variables at the top to have a compilable code:
@@ -754,6 +777,8 @@
  *
  * - Once you have edited the makefile, you can use all the flags that can be used in SCIP to
  *   compile your code, see \ref MAKE.
+ *
+ *
  *
  *
  */
@@ -775,7 +800,8 @@
  *
  * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/download.shtml">SCIP download
  * section</a> and download an appropriate binary for your operating system. To follow this tutorial, we recommend downloading the instance
- * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from the <a href="http://miplib.zib.de/miplib3/miplib3.html">MIPLIB 3.0</a> homepage.
+ * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
+ * the <a href="http://miplib.zib.de/miplib3/miplib3.html">MIPLIB 3.0</a> homepage.
  *
  * Now start your binary, without any arguments. This opens the interactive shell, which should look somehow like this:
  *
@@ -1070,7 +1096,7 @@
  *
  * We now explain how users can add their own constraint handlers.
  * For an example, look into the subtour constraint handler (examples/TSP/src/ConshdlrSubtour.cpp) of the
- * TSP example project.
+ * <a href="http://scip.zib.de/doc/examples/TSP/index.html">TSP </a> example project.
  * The example is written in C++ and uses the C++ wrapper classes.
  * However, we will explain the implementation of a constraint handler using the C interface.
  * It is very easy to transfer the C explanation to C++; whenever a method should be implemented using the
@@ -1084,7 +1110,7 @@
  * -# Copy the template files src/scip/cons_xyz.c and src/scip/cons_xyz.h into files "cons_subtour.c"
  *    and "cons_subtour.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to <it>adjust your Makefile</it> such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "subtour".
  * -# Adjust the \ref CONS_PROPERTIES "properties of the constraint handler".
  * -# Define the \ref CONS_DATA "constraint data and the constraint handler data". This is optional.
@@ -1096,10 +1122,13 @@
  * @section CONS_PROPERTIES Properties of a Constraint Handler
  *
  * At the top of the new file "cons_subtour.c" you can find the constraint handler properties.
- * These are given as compiler defines.
+ * These are given as compiler defines. Some of them are optional, as, e.g., separation-related properties,
+ * which only have to be defined if the constraint handler supports the related callbacks.
  * In the C++ wrapper class, you have to provide the constraint handler properties by calling the constructor
  * of the abstract base class scip::ObjConshdlr from within your constructor (see the TSP example).
  * The properties you have to set have the following meaning:
+ *
+ * <b> Fundamental Constraint Handler properties </b>
  *
  * \par CONSHDLR_NAME: the name of the constraint handler.
  * This name is used in the interactive shell to address the constraint handler.
@@ -1108,22 +1137,6 @@
  *
  * \par CONSHDLR_DESC: the description of the constraint handler.
  * This string is printed as a description of the constraint handler in the interactive shell of SCIP.
- *
- * \par CONSHDLR_SEPAPRIORITY: the priority of the constraint handler for separation.
- * In each separation round during the price-and-cut loop of the subproblem processing or during the separation loop
- * of the primal solution separation, the separators and separation methods of the constraint handlers are called in
- * a predefined order, which is given by the priorities of the separators and the separation priorities of the
- * constraint handlers.
- * First, the separators with non-negative priority are called in the order of decreasing priority.
- * Next, the separation methods of the different constraint handlers are called in the order of decreasing separation
- * priority.
- * Finally, the separators with negative priority are called in the order of decreasing priority.
- * \n
- * The separation priority of the constraint handler should be set according to the complexity of the cut separation
- * algorithm and the impact of the resulting cuts:
- * Constraint handlers that provide fast algorithms that usually have a high impact (i.e., cut off a large portion of
- * the LP relaxation) should have a high priority.
- * See \ref CONSSEPALP and \ref CONSSEPASOL for further details of the separation callbacks.
  *
  * \par CONSHDLR_ENFOPRIORITY: the priority of the constraint handler for constraint enforcing.
  * Like the separation priority, the enforcement priorities define the order in which the different constraint handlers
@@ -1147,6 +1160,43 @@
  * The integrality constraint handler has a checking priority of 0.
  * That means, constraint handlers with negative checking priorities only have to deal with integral solutions.
  *
+ * \par CONSHDLR_EAGERFREQ: the default frequency for using all instead of only the useful constraints in separation, propagation and enforcement.
+ * If \em constraint \em aging is activated, some constraints that were not useful in the past for propagation or
+ * separation are marked to be \em obsolete.
+ * Usually, the obsolete constraints are not presented to the separation and propagation methods of the constraint
+ * handlers, such that the constraint handlers only process the non-obsolete constraints.
+ * However, every n'th call, with n being the EAGERFREQ of the constraint handler, all constraints are presented to the
+ * separation and propagation methods of the constraint handler.
+ * This gives obsolete constraints the chance of becoming non-obsolete again.
+ * \n
+ * If the eager evaluation frequency is set to -1, obsolete constraints are never presented to the separation and
+ * propagation methods.
+ * A frequency of 0 means, that obsolete constraints are only used in the first call of each method.
+ *
+ * \par CONSHDLR_NEEDSCONS: indicates whether the constraint handler should be skipped, if no constraints are available.
+ * Usually, a constraint handler is only executed if there are constraints of its corresponding class in the model.
+ * For those constraint handlers, the NEEDSCONS flag should be set to TRUE.
+ * However, some constraint handlers must be called without having a constraint of the class in the model, because
+ * the constraint is only implicitly available.
+ * For example, the integrality constraint handler has the NEEDSCONS flag set to FALSE, because there is no explicit
+ * integrality constraint in the model.
+ * The integrality conditions are attached to the variables, and the integrality constraint handler has to check
+ * all variables that are marked to be integer for integral values.
+ *
+ * <b> Optional Constraint Handler properties </b>
+ *
+ * The following properties are optional and only need to be defined if the constraint handlers support
+ * separation, presolving, propagation, and/or upgrade functionality.
+ *
+ * \par LINCONSUPGD_PRIORITY: priority of the constraint handler for upgrading of linear constraints
+ * This property is only needed if a certain linear constraint can be upgraded to a more specific one. In one of
+ * the first presolving rounds SCIP tries to upgrade linear constraints to more specialized constraints, such as
+ * knapsack constraints. The upgrading calls are processed in the order of decreasing priority.
+ *
+ * \par NONLINCONSUPGD_PRIORITY: priority of the constraint handler for upgrading of nonlinear constraints
+ * This property has the same effect as the \ref LINCONSUPGD_PRIORITY parameter, and should be set whenever
+ * an upgrade functionality from a general nonlinear constraint to the more specific one is defined.
+ *
  * \par CONSHDLR_SEPAFREQ: the default frequency for separating cuts.
  * The separation frequency defines the depth levels at which the constraint handler's separation methods \ref CONSSEPALP
  * and \ref CONSSEPASOL are called.
@@ -1162,24 +1212,41 @@
  * want to execute the separator or not.
  * If you do not want to execute the method, set the result code to SCIP_DIDNOTRUN.
  *
+ * \par CONSHDLR_SEPAPRIORITY: the priority of the constraint handler for separation. (optional: to be set only if the constraint handler supports separation)
+ * In each separation round during the price-and-cut loop of the subproblem processing or during the separation loop
+ * of the primal solution separation, the separators and separation methods of the constraint handlers are called in
+ * a predefined order, which is given by the priorities of the separators and the separation priorities of the
+ * constraint handlers.
+ * First, the separators with non-negative priority are called in the order of decreasing priority.
+ * Next, the separation methods of the different constraint handlers are called in the order of decreasing separation
+ * priority.
+ * Finally, the separators with negative priority are called in the order of decreasing priority.
+ * \n
+ * The separation priority of the constraint handler should be set according to the complexity of the cut separation
+ * algorithm and the impact of the resulting cuts:
+ * Constraint handlers that provide fast algorithms that usually have a high impact (i.e., cut off a large portion of
+ * the LP relaxation) should have a high priority.
+ * See \ref CONSSEPALP and \ref CONSSEPASOL for further details of the separation callbacks.
+ *
+ * \par CONSHDLR_DELAYSEPA: the default for whether the separation method should be delayed, if other separators found cuts.
+ * If the constraint handler's separation method is marked to be delayed, it is only executed after no other separator
+ * or constraint handler found a cut during the price-and-cut loop.
+ * If the separation method of the constraint handler is very expensive, you may want to mark it to be delayed until all
+ * cheap separation methods have been executed.
+ *
  * \par CONSHDLR_PROPFREQ: the default frequency for propagating domains.
  * This default frequency has the same meaning as the CONSHDLR_SEPAFREQ with respect to the domain propagation
  * callback of the constraint handler.
  * A propagation frequency of 0 means that propagation is only applied in preprocessing and at the root node.
  * A propagation frequency of -1 disables the propagation method of the constraint handler.
  *
- * \par CONSHDLR_EAGERFREQ: the default frequency for using all instead of only the useful constraints in separation, propagation and enforcement.
- * If \em constraint \em aging is activated, some constraints that were not useful in the past for propagation or
- * separation are marked to be \em obsolete.
- * Usually, the obsolete constraints are not presented to the separation and propagation methods of the constraint
- * handlers, such that the constraint handlers only process the non-obsolete constraints.
- * However, every n'th call, with n being the EAGERFREQ of the constraint handler, all constraints are presented to the
- * separation and propagation methods of the constraint handler.
- * This gives obsolete constraints the chance of becoming non-obsolete again.
- * \n
- * If the eager evaluation frequency is set to -1, obsolete constraints are never presented to the separation and
- * propagation methods.
- * A frequency of 0 means, that obsolete constraints are only used in the first call of each method.
+ * \par CONSHDLR_DELAYPROP: the default for whether the propagation method should be delayed, if other propagators found reductions.
+ * This property is analogous to the DELAYSEPA flag, but deals with the propagation method of the constraint handler.
+ *
+ * \par CONSHDLR_PROP_TIMING: the propagation timing mask of the constraint handler.
+ * SCIP calls the domain propagation routines at different places in the node processing loop.
+ * This property indicates at which places the propagation routine of the constraint handler is called.
+ * Possible values are defined in type_timing.h and can be concatenated, e.g., as in SCIP_PROPTIMING_ALWAYS.
  *
  * \par CONSHDLR_MAXPREROUNDS: the default maximal number of presolving rounds the constraint handler participates in.
  * The preprocessing is executed in rounds.
@@ -1189,38 +1256,10 @@
  * A value of -1 means that there is no limit on the number of rounds.
  * A value of 0 means the preprocessing callback of the constraint handler is disabled.
  *
- * \par CONSHDLR_DELAYSEPA: the default for whether the separation method should be delayed, if other separators found cuts.
- * If the constraint handler's separation method is marked to be delayed, it is only executed after no other separator
- * or constraint handler found a cut during the price-and-cut loop.
- * If the separation method of the constraint handler is very expensive, you may want to mark it to be delayed until all
- * cheap separation methods have been executed.
- *
- * \par CONSHDLR_DELAYPROP: the default for whether the propagation method should be delayed, if other propagators found reductions.
- * This property is analogous to the DELAYSEPA flag, but deals with the propagation method of the constraint handler.
- *
  * \par CONSHDLR_DELAYPRESOL: the default for whether the presolving method should be delayed, if other presolvers found reductions.
  * This property is analogous to the DELAYSEPA flag, but deals with the preprocessing method of the constraint handler.
  *
- * \par CONSHDLR_NEEDSCONS: indicates whether the constraint handler should be skipped, if no constraints are available.
- * Usually, a constraint handler is only executed if there are constraints of its corresponding class in the model.
- * For those constraint handlers, the NEEDSCONS flag should be set to TRUE.
- * However, some constraint handlers must be called without having a constraint of the class in the model, because
- * the constraint is only implicitly available.
- * For example, the integrality constraint handler has the NEEDSCONS flag set to FALSE, because there is no explicit
- * integrality constraint in the model.
- * The integrality conditions are attached to the variables, and the integrality constraint handler has to check
- * all variables that are marked to be integer for integral values.
- *
- * \par CONSHDLR_PROP_TIMING: the propagation timing mask of the constraint handler.
- * SCIP calls the domain propagation routines at different places in the node processing loop.
- * This property indicates at which places the propagation routine of the constraint handler is called.
- * Possible values are defined in type_timing.h and can be concatenated, e.g., as in SCIP_PROPTIMING_ALWAYS.
- *
- * \par LINCONSUPGD_PRIORITY(optional): priority of the constraint handler for upgrading of linear constraints
- * This property is only needed if a certain linear constraint can be upgraded to a more specific one. In one of
- * the first presolving rounds SCIP tries to upgrade linear constraints to more specialized constraints, such as
- * knapsack constraints. The upgrading calls are processed in the order of decreasing priority.
- *
+
  *
  *
  * @section CONS_DATA Constraint Data and Constraint Handler Data
@@ -1246,34 +1285,72 @@
  *
  * @section CONS_INTERFACE Interface Methods
  *
- * At the bottom of "cons_subtour.c" you can find two interface methods, that also appear in "cons_subtour.h".
- * These are SCIPincludeConshdlrSubtour() and SCIPcreateConsSubtour().
+ * At the bottom of "cons_subtour.c" you can find three interface methods, that also appear in "cons_subtour.h".
+ * These are SCIPincludeConshdlrSubtour(), SCIPcreateConsSubtour(), and SCIPcreateConsSubtourBasic().
  * \n
  * The method SCIPincludeConshdlrSubtour() only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the constraint handler by calling the method
  * SCIPincludeConshdlr().
  * It is called by the user, if he wants to include the constraint handler, i.e., if he wants to make
- * the constraint handler available to the model.
+ * the constraint handler available to the model, and looks like this:
+ *  -# If you are using constraint handler data, you have to <b>allocate the memory for the data</b> at this point.
+ *     You also have to initialize the fields in struct SCIP_ConshdlrData afterwards.
+ *  \code
+ * SCIP_RETCODE SCIPincludeConshdlrKnapsack(
+ * ...
+ * )
+ * {
+ *    SCIP_EVENTHDLRDATA* eventhdlrdata;
+ *    SCIP_CONSHDLRDATA* conshdlrdata;
+ *    SCIP_CONSHDLR* conshdlr;
  *
- * If you are using constraint handler data, you have to allocate the memory for the data at this point.
- * You can do this by calling:
+ *  SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+ *  ...
+ *  \endcode
+ *  -# Now, <b>SCIP gets notified</b> of the presence of the constraint handler together with its \ref CONS_FUNDAMENTALCALLBACKS "basic callbacks".
+ *   \code
+ *  SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+ *        CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+ *        consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack, consLockKnapsack,
+ *        conshdlrdata) );
+ *  assert(conshdlr != NULL);
+ *  \endcode
+ *  -# All \ref CONS_ADDITIONALCALLBACKS "additional callbacks" are added via their setter functions.
+ *  \code
+ *  SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyKnapsack, consCopyKnapsack) );
+ *  SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransKnapsack) );
+ *  \endcode
+ *  -# If the constraint handler is a specialization of a general linear or nonlinear constraint, we want to include an <b>automatic
+ * upgrading mechanism</b> by calling the interface method
+ *  \code
+ *  if( SCIPfindConshdlr(scip,"linear") != NULL )
+ *  {
+ *       SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdKnapsack, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+ *  }
+ *  \endcode
+ *  or
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+ * SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdSubtour, NULL, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
  * \endcode
- * You also have to initialize the fields in struct SCIP_ConshdlrData afterwards.
- *
- * If the constraint handler is a specialization of a linear constraint, you may want to include an automatic
- * upgrade mechanism by calling the interface method
+ * in the nonlinear case.
+ * See also cons_nonlinear.h for further information about the general upgrade procedure in the nonlinear case.
+ *  -# You may also add <b>user parameters</b> for your constraint handler.
+ * Some parameters which are important to play with are added to every constraint automatically, as, e.g.,
+ * propagation or separation frequency.
  * \code
- * SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdSubtour, LINCONSUPGD_PRIORITY) );
+ *  SCIP_CALL( SCIPaddIntParam(scip,
+ *        "constraints/knapsack/sepacardfreq",
+ *        "multiplier on separation frequency, how often knapsack cuts are separated (-1: never, 0: only at root)",
+ *        &conshdlrdata->sepacardfreq, TRUE, DEFAULT_SEPACARDFREQ, -1, INT_MAX, NULL, NULL) );
+ *  ...
+ *  return SCIP_OKAY;
+ * }
  * \endcode
- * of the linear constraint handler (see cons_linear.h).
  *
- * You may also add user parameters for your constraint handler.  An
- * example for this and the automatic linear upgrading mechanism can be
- * found in the \ref cons_knapsack.h "knapsack constraint handler".
  *
- * The method SCIPcreateConsSubtour() is called to create a single constraint of the constraint
+ *
+ *
+ * The methods SCIPcreateConsSubtour() and SCIPcreateConsSubtourBasic() are called to create a single constraint of the constraint
  * handler's constraint class.
  * It should allocate and fill the constraint data, and call SCIPcreateCons().
  * Take a look at the following example from the \ref cons_knapsack.h "knapsack constraint handler":
@@ -1324,12 +1401,39 @@
  * \endcode
  *
  * In this example, consdataCreate() is a local method that allocates memory for the given consdata
- * and fills the data with the given vars array. For allocating memory for the constraint data you
- * can use the method:
+ * and fills the data with the given <code>vars</code> array. For allocating memory for the constraint data, you
+ * can use SCIP memory allocation:
  * \code
  * SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
  * \endcode
  *
+ *
+ * @section CONS_CALLBACKS Callback methods of Constraint handlers
+ *
+ * Besides the various functions which you will implement inside your constraint handler there exists a number
+ * of <b> callback methods </b> associated with your constraint handler. Callback methods can be regarded as
+ * tasks which your constraint handler is able to provide to the solver. They are grouped into two
+ * categories:
+ *
+ * \ref CONS_FUNDAMENTALCALLBACKS "Fundamental Callback methods" are mandatory to implement
+ * such that your code will work. For example, every constraint handler has to provide the
+ * functionality to state whether all of its constraints are
+ * fulfilled by a given variable assignment. Hence, the \ref CONSCHECK "CONSCHECK" callback is
+ * one of the fundamental (or \a basic) callbacks of a constraint handler.
+ *
+ * Callbacks which are not necessarily implemented are grouped together as
+ * \ref CONS_ADDITIONALCALLBACKS "additional callbacks". Such callbacks can be used to allocate and free memory
+ * at different stages of the solving process. Although not mandatory, it might be useful to implement
+ * some of these callbacks, e.g., to extend your constraint handler by a
+ * \ref CONSSEPALP "separation" or \ref CONSPRESOL "presolving" functionality.
+ *
+ * All callbacks should be passed to SCIP during the SCIPinclude\<PLUGINTYPE\>\<PLUGINNAME\> method
+ * (e.g., SCIPincludeConshdlrKnapsack() for the \ref cons_knapsack.h "knapsack constraint handler").
+ * Since SCIP version 3.0, two ways of setting callbacks can be used, either via SCIPincludeConshdlr()
+ * (all at once, as it always was), or via SCIPincludeConshdlrBasic() and setter functions for additional callbacks.
+ * Since the basic inclusion methods are very unlikely to change and will thus
+ * make your code more stable towards future versions of SCIP with more callbacks,
+ * we recommend the latter choice, as explained in the \ref CONS_INTERFACE "interface" section.
  *
  * @section CONS_FUNDAMENTALCALLBACKS Fundamental Callback Methods
  *
@@ -1365,7 +1469,7 @@
  * SCIPgetSolVal(scip, sol, var)
  * \endcode
  *
- * For example, the \ref cons_knapsack.h "knapsack constraint handler" loops over his constraints and
+ * For example, the \ref cons_knapsack.h "knapsack constraint handler" loops over its constraints and
  * calculates the scalar product \f$w^T x\f$ of weights \f$w\f$ with the solution vector \f$x\f$.
  * This scalar product is compared with the capacity of the knapsack constraint.
  * If it exceeds the capacity, the CONSCHECK method is immediately aborted with the result SCIP_INFEASIBLE.
@@ -1374,24 +1478,9 @@
  * @subsection CONSENFOLP
  *
  * The CONSENFOLP method is called after the price-and-cut loop was finished and an LP solution is available.
- * Like the CHECK method, the ENFOLP method should check the solution (in this case, the LP solution) for
- * feasibility.
- * However, the solution is not given as a SCIP_SOL* data structure.
- *
- * The value of a variable \em var in the LP solution can be accessed by calling
- * \code
- * SCIPgetVarSol(scip, var)
- * \endcode
- * or by
- * \code
- * SCIPgetSolVal(scip, NULL, var)
- * \endcode
- * By using the latter method, you can have a single local method to check a solution for feasibility by passing
- * the given \em sol in the CHECK call and by passing a NULL pointer as \em sol in the ENFOLP and ENFOPS calls.
- *
  * Like the CHECK call, the ENFOLP method should return a result SCIP_FEASIBLE, if the solution satisfies all the
  * constraints.
- * However, the behavior should be different, if the solution violates one or more constraints.
+ * However, the behavior should be different, if the solution violates some of the associated constraints.
  * The constraint handler may return a result SCIP_INFEASIBLE in this situation, but this is not the best what
  * one can do.
  * The ENFOLP method has the possibility of \em resolving the infeasibility by
@@ -1400,6 +1489,21 @@
  * - reducing the domain of a variable (result SCIP_REDUCEDDOM),
  * - adding a cutting plane (result SCIP_SEPARATED),
  * - performing a branching (result SCIP_BRANCHED).
+ *
+ * However, the solution is not given as a SCIP_SOL* data structure.
+ *
+ * The value of a variable <code>var</code> in the LP solution can be accessed by calling
+ * \code
+ * SCIPgetVarSol(scip, var)
+ * \endcode
+ * or by
+ * \code
+ * SCIPgetSolVal(scip, NULL, var)
+ * \endcode
+ * By using the latter method, you can have a single local method to check a solution for feasibility by passing
+ * the given <code>sol</code> to the CONSCHECK call and by passing a NULL pointer as <code>sol</code> to
+ * the CONSENFOLP and CONSENFOPS calls.
+ *
  *
  * @subsection CONSENFOPS
  *
@@ -1482,8 +1586,9 @@
  *
  * @section CONS_ADDITIONALCALLBACKS Additional Callback Methods
  *
- * The additional callback methods do not need to be implemented in every case.  However, some of them have to be
- * implemented for most applications.
+ * The additional callback methods do not need to be implemented in every case, but provide useful functionality
+ * for many applications. They can be added to your constraint handler via setter functions, see
+ * \ref CONS_INTERFACE "here".
  *
  * @subsection CONSFREE
  *
@@ -1739,7 +1844,7 @@
  * need more information to efficiently infer the original propagation steps that lead to the conflict. This would,
  * however, require too much space. In the extreme, the original propagation steps have to be repeated.
  *
- * For example, the logicor constraint \f$c = x \vee y \vee z\f$ fixes variable \f$z\f$ to TRUE (i.e., changes the lower
+ * For example, the \ref cons_logicor.h "logicor constraint" \f$c = x \vee y \vee z\f$ fixes variable \f$z\f$ to TRUE (i.e., changes the lower
  * bound of \f$z\f$ to 1.0), if both, \f$x\f$ and \f$y\f$, are assigned to FALSE (i.e., if the upper bounds of these
  * variables are 0.0). It uses <code>SCIPinferVarLbCons(scip, z, 1.0, c, 0)</code> to apply this assignment (an
  * inference information tag is not needed by the constraint handler and is set to 0).  In the conflict analysis, the
@@ -1753,7 +1858,7 @@
  * If conflict analysis should not be supported, the method has to set the result code to SCIP_DIDNOTFIND.  Although
  * this is a viable approach to circumvent the implementation of the usually rather complex conflict resolving method, it
  * will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check how
- * effective the propagation method is. If it produces a lot of propagations for your application, you definitely should
+ * effective the \ref CONSPROP "propagation method" is. If it produces a lot of propagations for your application, you definitely should
  * consider implementing the conflict resolving method.
  *
  * @subsection CONSPRESOL
@@ -1811,7 +1916,7 @@
  *
  * @subsection CONSCOPY
  *
- * The CONSCOPY callback method is used if constraints should get copied from one SCIP instance into another SCIP
+ * The CONSCOPY callback method is used whenever constraints should be copied from one SCIP instance into another SCIP
  * instance. This method comes with the necessary parameters to do so, most importantly with a mapping of the variables of the
  * source SCIP instance to the corresponding variables of the target SCIP instance, and a mapping for the constraints
  * in the same way. For a complete list of all arguments of this callback method see type_cons.h.
@@ -1822,15 +1927,15 @@
  * targetvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, sourcevar);
  * \endcode
  *
- * We recommend, however, to use the method SCIPgetVarCopy() which gets the variable map and the constraint map as input
- * (besides others) and returns the requested target variable. The advantage of using SCIPgetVarCopy() is, that in case
- * the required variable does not exist, yet, it is created and added to the copy automatically:
+ * We recommend, however, to use the method SCIPgetVarCopy() which gets besides others the variable map and the constraint map as input
+ * and returns the requested target variable. The advantage of using SCIPgetVarCopy() is that in the case
+ * the required variable does not yet exist, it is created and added to the copy automatically:
  *
  * \code
  * SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevar, &targetvar, varmap, consmap, global) );
  * \endcode
  *
- * Finally, the result pointer valid has to be set to TRUE if (and only if!) the copy process was successful.
+ * Finally, the result pointer <code>valid</code> has to be set to TRUE if (and only if!) the copy process was successful.
  *
  * <b>Note:</b> Be careful when setting the valid pointer. If you set the valid pointer to TRUE, but the constraint was
  * not copied one-to-one, then optimal solutions might be cut off during the search (see section
@@ -1859,6 +1964,22 @@
  *
  * Additional documentation and the complete list of all parameters can be found in the file type_cons.h.
  *
+ * @subsection CONSGETVARS
+ *
+ * The CONSGETVARS callback of a constraint handler can be implemented to give access to the constraint variables
+ * as array, independently from the internal data structure of the constraint. The buffer array
+ * is already passed, together with its length. Consider implementing @ref CONSGETNVARS, too, to have
+ * information about the number of variables in this constraint.
+ *
+ * @subsection CONSGETNVARS
+ *
+ * This callback can be implemented to return the number of variables involved into a particular constraint.
+ *
+ * @section CONS_FURTHERINFO Further documentation
+ *
+ * Further documentation can be found in @ref type_cons.h for callback descriptions and a complete
+ * list of all callback parameters, or in @ref scip.h
+ * for globally available functions.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -5222,29 +5343,67 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page DEBUG Debugging
  *
- *  If you want to debug your own code that uses SCIP, here are some tips and tricks:
+ *  If you need to debug your own code that uses SCIP, here are some tips and tricks:
+
+ *  - Use <b>asserts</b> in your code to show preconditions for the parameters, invariants and postconditions.
+ *    Assertions are boolean expressions which inevitably have to evaluate to <code>TRUE</code>. Consider the
+ *    following example, taken from the file src/scip/cons_linear.c:
+ * \verbatim
+SCIP_RETCODE consdataCatchEvent(
+   SCIP*                 scip,               /**< SCIP data structure *\/
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data *\/
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing *\/
+   int                   pos                 /**< array position of variable to catch bound change events for *\/
+   )
+   {
+      assert(scip != NULL);
+      assert(consdata != NULL);
+      assert(eventhdlr != NULL);
+      assert(0 <= pos && pos < consdata->nvars);
+   ...
+   }
+ * \endverbatim
  *
- *  - Use the debug mode (<code>make OPT=dbg</code>, see \ref MAKE) and run the code.
- *  - Use asserts in your code (see \ref CODE).
- *  - Turn on additional debug output by placing <code>\#define SCIP_DEBUG</code> at the top of SCIP files you
- *    want to analyze. This will output messages included in the code using <code>SCIPdebugMessage()</code> (see \ref EXAMPLE_1).
+ *    As you can see, both pointers and integers are checked for valid values at the beginning of the
+ *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
+ *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>
+ *    pointer could result in unexspected behaviour
+ *    if the asserted precondition on <code>pos</code> were not matched and <pos> were an arbitrary index
+ *    outside the array range.
+ *
+ *  - In order to activate assertions, use the <b>Debug mode</b> by compiling SCIP via
+ *   \code
+ *    make OPT=dbg
+ *   \endcode and run the code. See \ref MAKE for further information about compiler options for SCIP.
+ *
+ *  - Spending only little extra time on
+ *    asserting preconditions saves most of the time spent on debugging!
+ *
+ *  - Turn on <b>additional debug output</b> by adding the line
+ *    \code
+ *    #define SCIP_DEBUG
+ *    \endcode
+ *    at the top of SCIP files you want to analyze. This will output messages included in the code using
+ *    <code>SCIPdebugMessage()</code> (see \ref EXAMPLE_1).
  *    We recommend to also use <code>SCIPdebugMessage()</code> in your own code for being able to activate
  *    debug output in the same way.
- *  - If available on your system, we recommend to use a debugger like gdb to trace all function calls on the stack,
+ *  - If available on your system, we recommend to use a debugger like <code>gdb</code>
+ *    to trace all function calls on the stack,
  *    display values of certain expressions, manually break the running code, and so forth.
  *  - If available on your system, you can use software like <a href="http://valgrind.org">valgrind</a> to check for uninitialized
  *    values or segmentation faults.
  *  - For checking the usage of SCIP memory, you can use
- *    <code>SCIPprintMemoryDiagnostic()</code>. This outputs memory that is currently in use. This is
- *    almost always only useful after a <code>SCIPfree()</code> call.
+ *    <code>SCIPprintMemoryDiagnostic()</code>. This outputs memory that is currently in use,
+ *    which can be useful after a <code>SCIPfree()</code> call.
  *  - If your code cuts off a feasible solution, but you do not know which component is responsible,
  *    you can define <code>SCIP_DEBUG_SOLUTION</code> in the file <code>debug.h</code> to be a filename
  *    containing a solution in SCIP format (see \ref EXAMPLE_2).
  *    This solution is then read and it is checked for every cut, whether the solution violates the cut.
  *
  *  @section EXAMPLE_1 How to activate debug messages
- *    For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h and recompile in DBG mode,
- *    and run the scip interactive shell to solve p0033.mps from the miplib, we get some output like:
+ *    For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
+ *    in DBG mode, and run the SCIP interactive shell to solve p0033.mps from the
+ *     <a href="http://miplib.zib.de/miplib3/miplib3.html">MIPLIB 3.0</a> , we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
  * Copyright (c) 2002-2012 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
@@ -5286,7 +5445,8 @@
  * ...
  * \endcode
  *
- *  @section EXAMPLE_2 How to add a debug solution
+ * @section EXAMPLE_2 How to add a debug solution
+ *
  * Continuing the example above, we finish the solving process.
  * The optimal solution can now be written to a file:
  * \code
@@ -6167,7 +6327,7 @@
  * first search the corresponding "pub_<...>.h" header. E.g., for constraints, look in pub_cons.h. If you need some
  * information about the overall problem, you should start searching in scip.h.
  *
- * Since there are a huge number of methods in scip.h, these methods are grouped into different categories. These
+ * Since there is a huge number of methods in scip.h, these methods are grouped into different categories. These
  * categories are:
  *
  * - Memory Management

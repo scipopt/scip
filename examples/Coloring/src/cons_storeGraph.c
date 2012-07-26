@@ -42,7 +42,7 @@
  * in another subtree. In order to forbid all of these sets, which do not fulfill the current
  * restrictions, a propagation is started when the node is entered the first time and repeated
  * later, if the node is reentered after the creation of new variables in another subtree. The
- * propagation simply fixes to 0 all variables representing a stable set that does not
+ * propagation simply fixes  all variables to 0 which represent a stable set that does not
  * fulfill the restriction at the current node.
  *
  * The information about all fusions of nodes (caused by the SAME() operation) is stored, so that the nodes
