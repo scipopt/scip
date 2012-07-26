@@ -58,6 +58,14 @@
  * - \ref FILEREADERS "Readable file formats"
  * - \ref START   "How to start a new project"
  *
+ * @section FURTHERINFORMATION References and further information
+ *
+ * - \ref PUBLICMETHODS "List of callable functions"
+ * - \ref PARAMETERS "List of all SCIP parameters"
+ *
+ * - \ref DOC     "How to search the documentation for interface methods"
+ * - \ref FAQ     "Frequently asked questions (FAQ)"
+ *
  *
  * @section PROGRAMMING Programming with SCIP
  *
@@ -65,7 +73,6 @@
  *
  *   - \ref CODE    "Coding style guidelines"
  *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
- *   - \ref DOC     "How to search the documentation for interface methods" *
  *   - \ref DEBUG   "Debugging"
  *
  * @subsection HOWTOADD How to add ...
@@ -90,7 +97,7 @@
  * - \ref TEST    "How to run automated tests with SCIP"
  * - \ref COUNTER "How to use SCIP to count feasible solutions"
  *
- * @section EXAMPLESECTION Guide to the SCIP examples
+ * @section EXAMPLESECTION Examples for the usage of SCIP
  *   - <a href="http://scip.zib.de/doc/examples/Binpacking/index.html"> Binpacking</a>
  *      An implementation of the column generation approach for the binpacking problem.
  *      It includes a customized reader, Ryan/Foster branching rule, (global) problem data, variable data,
@@ -112,13 +119,6 @@
  *   - <a href="http://scip.zib.de/doc/examples/VRP/index.html">VRP </a>
  *      A solver for a simple capacity-constrained vehicle routing problem, which is
  *      based on pricing tours via a dynamic programming algorithm.
- *
- * @section FURTHERINFORMATION Reference and further information
- *
- * - \ref PUBLICMETHODS "List of callable functions"
- * - \ref PARAMETERS "List of all SCIP parameters"
- *
- * - \ref FAQ     "Frequently asked questions (FAQ)"
  *
  * @section SCIP history
  *
