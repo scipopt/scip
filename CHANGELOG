@@ -252,6 +252,7 @@ fixed bugs:
 - do not run heur_shiftandpropagate if there is no LP
 - fixed count of propagations in cons_indicator and only try to propagate if variables are not yet fixed
 - fixed some bugs in cons_disjunction.c (wrong assert, forgotten deletion of constraint, wrong SCIPreleaseCons() call)
+- fixed bug in cip reader, wrong use of SCIPstrtok()
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
