@@ -129,7 +129,7 @@ typedef enum Proprule PROPRULE;
  *
  */
 
-/** compares two varbound constraints   cons1: lhs1 \le x1 + c1 y1 \le rhs1   and   cons2: lhs2 \le x2 + c2 y2 \le rhs2
+/** compares two varbound constraints   cons1: \f$ lhs1 \le x1 + c1 y1 \le rhs1 \f$   and   cons2: \f$ lhs2 \le x2 + c2 y2 \le rhs2 \f$
  *  w.r.t. the indices of the contained variables
  *
  *  returns -1 if:

@@ -4111,9 +4111,9 @@ SCIP_DECL_SORTPTRCOMP(compNodedataLct)
 static
 SCIP_RETCODE analyzeConflictOverload(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BTNODE**         leafs,              /**< responsible leafs for the overload */
+   SCIP_BTNODE**         leaves,             /**< responsible leaves for the overload */
    int                   capacity,           /**< cumulative capacity */
-   int                   nleafs,             /**< number of responsible leafs */
+   int                   nleaves,            /**< number of responsible leaves */
    int                   est,                /**< earliest start time of the ...... */
    int                   lct,                /**< latest completly time of the .... */
    int                   reportedenergy,     /**< energy which already reported */
@@ -4133,17 +4133,17 @@ SCIP_RETCODE analyzeConflictOverload(
    energy = (lct - est) * capacity;
 
    /* sort the start time variables which were added to search tree w.r.t. earliest start time */
-   SCIPsortDownPtr((void**)leafs, compNodeEst, nleafs);
+   SCIPsortDownPtr((void**)leaves, compNodeEst, nleaves);
 
-   /* collect the energy of the responsible leafs until the cumulative energy is large enough an overload */
-   for( j = 0; j < nleafs && reportedenergy <= energy; ++j )
+   /* collect the energy of the responsible leaves until the cumulative energy is large enough an overload */
+   for( j = 0; j < nleaves && reportedenergy <= energy; ++j )
    {
       SCIP_NODEDATA* nodedata;
 
-      nodedata = SCIPbtnodeGetData(leafs[j]);
+      nodedata = SCIPbtnodeGetData(leaves[j]);
       assert(nodedata != NULL);
 
-      reportedenergy += computeEnergyContribution(leafs[j]);
+      reportedenergy += computeEnergyContribution(leaves[j]);
 
       /* adjust energy if the earliest start time decrease */
       if( nodedata->est < est )
@@ -4160,11 +4160,11 @@ SCIP_RETCODE analyzeConflictOverload(
    /* report the variables and relax their bounds to final time interval [est,lct) which was been detected to be
     * overloaded
     */
-   for( j = nleafs-1; j >= 0; --j )
+   for( j = nleaves-1; j >= 0; --j )
    {
       SCIP_NODEDATA* nodedata;
 
-      nodedata = SCIPbtnodeGetData(leafs[j]);
+      nodedata = SCIPbtnodeGetData(leaves[j]);
       assert(nodedata != NULL);
       assert(nodedata->var != NULL);
 
@@ -4230,7 +4230,7 @@ SCIP_RETCODE propagateEdgeFinder(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_BT*              tree,               /**< binary tree constaining the theta and lambda sets */
-   SCIP_BTNODE**         leafs,
+   SCIP_BTNODE**         leaves,             /**< array of leaves ??????? */
    int                   capacity,           /**< cumulative capacity */
    int                   ncands,             /**< number of candidates */
    SCIP_Bool             propest,            /**< should the earliest start times be propagated, otherwise the latest completion times */
@@ -4250,15 +4250,15 @@ SCIP_RETCODE propagateEdgeFinder(
    rootdata = SCIPbtnodeGetData(SCIPbtGetRoot(tree));
    assert(rootdata != NULL);
 
-   /* iterate over all added candidate (leafs) in non-increasing order w.r.t. their latest completion time */
+   /* iterate over all added candidate (leaves) in non-increasing order w.r.t. their latest completion time */
    for( j = ncands-1; j >= 0 && !(*cutoff); --j )
    {
       SCIP_NODEDATA* nodedata;
 
-      if( SCIPbtnodeIsRoot(leafs[j]) )
+      if( SCIPbtnodeIsRoot(leaves[j]) )
          break;
 
-      nodedata = SCIPbtnodeGetData(leafs[j]);
+      nodedata = SCIPbtnodeGetData(leaves[j]);
       assert(nodedata->est != -1);
 
       /* check if the root lambda envelop exeeds the available capacity */
@@ -4407,7 +4407,7 @@ SCIP_RETCODE propagateEdgeFinder(
       }
 
       /* move current job j from the theta set into the lambda set */
-      SCIP_CALL( moveNodeToLambda(scip, tree, leafs[j]) );
+      SCIP_CALL( moveNodeToLambda(scip, tree, leaves[j]) );
    }
 
    return SCIP_OKAY;
@@ -4440,7 +4440,7 @@ SCIP_RETCODE checkOverload(
    )
 {
    SCIP_NODEDATA** nodedatas;
-   SCIP_BTNODE** leafs;
+   SCIP_BTNODE** leaves;
    SCIP_BT* tree;
 
    int totalenergy;
@@ -4460,7 +4460,7 @@ SCIP_RETCODE checkOverload(
    SCIPdebugMessage("check overload of cumulative condition of constraint <%s> (capacity %d)\n", SCIPconsGetName(cons), capacity);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nodedatas, 2*nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &leafs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &leaves, nvars) );
 
    ncands = 0;
    totalenergy = 0;
@@ -4619,7 +4619,7 @@ SCIP_RETCODE checkOverload(
       assert(nnodedatas <= 2*nvars);
 
       /* move the inserted candidates together */
-      leafs[ninsertcands] = leaf;
+      leaves[ninsertcands] = leaf;
       ninsertcands++;
 
       assert(!SCIPbtIsEmpty(tree));
@@ -4677,13 +4677,13 @@ SCIP_RETCODE checkOverload(
       }
 
       /* analyze the overload */
-      SCIP_CALL( analyzeConflictOverload(scip, leafs, capacity, ninsertcands, est, lct, glbenery,
+      SCIP_CALL( analyzeConflictOverload(scip, leaves, capacity, ninsertcands, est, lct, glbenery,
             usebdwidening, initialized, explanation) );
    }
    else if( ninsertcands > 1 && edgefinding )
    {
       /* if we have more than one job insterted and edge-finding should be performed we do it */
-      SCIP_CALL( propagateEdgeFinder(scip, cons, tree, leafs, capacity, ninsertcands,
+      SCIP_CALL( propagateEdgeFinder(scip, cons, tree, leaves, capacity, ninsertcands,
             propest, shift, usebdwidening, initialized, explanation, nchgbds, cutoff) );
    }
 
@@ -4697,7 +4697,7 @@ SCIP_RETCODE checkOverload(
    SCIPbtFree(&tree);
 
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &leafs);
+   SCIPfreeBufferArray(scip, &leaves);
    SCIPfreeBufferArray(scip, &nodedatas);
 
    return SCIP_OKAY;
