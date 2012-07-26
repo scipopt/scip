@@ -3986,11 +3986,15 @@ void traceThetaEnvelop(
       assert(nodedata != NULL);
 
       if( nodedata->enveloptheta == leftdata->enveloptheta + rightdata->energytheta )
+      {
          traceThetaEnvelop(left, omegaset, nelements, est, lct, energy);
+         collectThetaSubtree(right, omegaset, nelements, est, lct, energy);
+      }
       else
+      {
          assert(nodedata->enveloptheta == rightdata->enveloptheta);
-
-      collectThetaSubtree(right, omegaset, nelements, est, lct, energy);
+         traceThetaEnvelop(right, omegaset, nelements, est, lct, energy);
+      }
    }
 }
 
