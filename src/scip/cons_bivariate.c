@@ -4787,7 +4787,7 @@ SCIP_RETCODE propagateBoundsCons(
    *result = SCIP_DIDNOTRUN;
    *redundant = FALSE;
 
-   /* extend interval by feastol to avoid cutoff in forward propagation if constraint is only almost feasible */
+   /* extend interval by epsilon to avoid cutoff in forward propagation if constraint is only almost feasible */
    SCIPintervalSetBounds(&consbounds,
       -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -consdata->lhs+SCIPepsilon(scip)),    /*lint !e666*/
       +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  consdata->rhs+SCIPepsilon(scip)) );  /*lint !e666*/
