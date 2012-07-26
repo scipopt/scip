@@ -2401,7 +2401,7 @@ SCIP_RETCODE createCountDialog(
    if( !SCIPdialogHasEntry(submenu, "allsolutions") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecWriteAllsolutions, NULL, NULL,
-            "allsolutions", "writes all counted primal solutions to file", FALSE, NULL) );
+            "allsolutions", "write all counted primal solutions to file", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

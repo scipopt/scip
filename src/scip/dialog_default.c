@@ -2859,18 +2859,6 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* conflictgraph */
-   if( !SCIPdialogHasEntry(root, "conflictgraph") )
-   {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-            NULL,
-            SCIPdialogExecConflictgraph, NULL, NULL,
-            "conflictgraph", "writes binary variable implications of transformed problem as conflict graph to file",
-            FALSE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-   }
-
    /* display */
    if( !SCIPdialogHasEntry(root, "display") )
    {
@@ -3327,7 +3315,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecWriteTransproblem, NULL, NULL,
             "transproblem",
-            "write currend node transformed problem to file (format is given by file extension, e.g., trans.{lp,rlp,cip,mps})",
+            "write current node transformed problem to file (format is given by file extension, e.g., trans.{lp,rlp,cip,mps})",
             FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
@@ -3340,12 +3328,24 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecWriteGenTransproblem, NULL, NULL,
             "gentransproblem",
-            "write currend node transformed problem with generic names to file (format is given by file extension, e.g., trans.{lp,rlp,cip,mps})",
+            "write current node transformed problem with generic names to file (format is given by file extension, e.g., trans.{lp,rlp,cip,mps})",
             FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* write conflictgraph */
+   if( !SCIPdialogHasEntry(submenu, "conflictgraph") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecConflictgraph, NULL, NULL,
+            "conflictgraph",
+            "write binary variable implications of transformed problem as conflict graph to file",
+            FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
 
    return SCIP_OKAY;
 }
