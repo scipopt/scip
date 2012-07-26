@@ -10034,6 +10034,9 @@ SCIP_RETCODE freeSolve(
    assert( ! restart || scip->stat->inrestart );
    scip->stat->inrestart = FALSE;
 
+   /* free all debug data */
+   SCIP_CALL( SCIPdebugFreeDebugData(scip->set) );
+
    return SCIP_OKAY;
 }
 
