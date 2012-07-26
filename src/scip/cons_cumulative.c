@@ -4307,6 +4307,8 @@ SCIP_RETCODE propagateEdgeFinder(
          /* if the computed earliest start time is greater than the latest completion time of the omega set we detected an overload */
          if( newest > lct )
          {
+            SCIPdebugMessage("an overload was detected duration edge-finder propagattion\n");
+
             /* analyze over load */
             SCIP_CALL( analyzeConflictOverload(scip, omegaset, capacity, nelements,  est, lct, 0, usebdwidening, initialized, explanation) );
             (*cutoff) = TRUE;
@@ -4319,36 +4321,32 @@ SCIP_RETCODE propagateEdgeFinder(
 
             if( propest )
             {
-
                /* constuct inference information; store used propagation rule and the the time window of the omega set */
                inferinfo = getInferInfo(PROPRULE_2_EDGEFINDING, est + shift, lct + shift);
 
-               SCIPdebugMessage("adjust lower bound from %g to %d\n", SCIPvarGetLbLocal(leafdata->var), newest + shift);
+               SCIPdebugMessage("variable <%s> adjust lower bound from %g to %d\n",
+                  SCIPvarGetName(leafdata->var), SCIPvarGetLbLocal(leafdata->var), newest + shift);
+
                SCIP_CALL( SCIPinferVarLbCons(scip, leafdata->var, (SCIP_Real)(newest + shift),
                      cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
-
-               /* adjust the earliest start time */
-               if( tightened )
-               {
-                  leafdata->est = newest;
-                  (*nchgbds)++;
-               }
             }
             else
             {
                /* constuct inference information; store used propagation rule and the the time window of the omega set */
                inferinfo = getInferInfo(PROPRULE_2_EDGEFINDING, shift - lct, shift - est);
 
-               SCIPdebugMessage("adjust upper bound from %g to %d\n", SCIPvarGetUbLocal(leafdata->var), shift - newest - leafdata->duration);
+               SCIPdebugMessage("variable <%s> adjust upper bound from %g to %d\n",
+                  SCIPvarGetName(leafdata->var), SCIPvarGetUbLocal(leafdata->var), shift - newest - leafdata->duration);
+
                SCIP_CALL( SCIPinferVarUbCons(scip, leafdata->var, (SCIP_Real)(shift - newest - leafdata->duration),
                      cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
+            }
 
-               /* adjust the earliest start time */
-               if( tightened )
-               {
-                  leafdata->est = newest;
-                  (*nchgbds)++;
-               }
+            /* adjust the earliest start time */
+            if( tightened )
+            {
+               leafdata->est = newest;
+               (*nchgbds)++;
             }
 
             if( infeasible )
@@ -4356,6 +4354,8 @@ SCIP_RETCODE propagateEdgeFinder(
                if( SCIPisConflictAnalysisApplicable(scip) )
                {
                   int i;
+
+                  SCIPdebugMessage("edge-finder dectected an infeasibility\n");
 
                   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
