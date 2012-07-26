@@ -30,7 +30,7 @@
 #define HEUR_DESC             "heuristic trying to solve the problem without objective"
 #define HEUR_DISPCHAR         'Z'
 #define HEUR_PRIORITY         100
-#define HEUR_FREQ             0
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_BEFOREPRESOL

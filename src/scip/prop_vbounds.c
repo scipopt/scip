@@ -102,8 +102,8 @@
  */
 
 #define DEFAULT_USEBDWIDENING      TRUE      /**< should bound widening be used to initialize conflict analysis? */
-#define DEFAULT_USEIMPLICS         TRUE      /**< should implications be propagated? */
-#define DEFAULT_USECLIQUES         TRUE      /**< should cliques be propagated? */
+#define DEFAULT_USEIMPLICS         FALSE     /**< should implications be propagated? */
+#define DEFAULT_USECLIQUES         FALSE     /**< should cliques be propagated? */
 #define DEFAULT_USEVBOUNDS         TRUE      /**< should variable bounds be propagated? */
 #define DEFAULT_DOTOPOSORT         TRUE      /**< should the bounds be topologically sorted in advance? */
 #define DEFAULT_SORTCLIQUES        FALSE     /**< should cliques be regarded for the topological sort? */
