@@ -28,7 +28,7 @@
  *
  * Separation:
  * - can be done using binary start time model, see Pritskers, Watters and Wolfe
- * - or by just separating relatively weak cuts on the start time variables
+ * - or by just separating relatively weak cuts on the integer start time variables
  *
  * Propagation:
  * - time tabling, Klein & Scholl (1999)
@@ -4223,14 +4223,15 @@ int computeEstOmegaset(
 
 /** propagates start time using an edge finding algorithm which is based on binary trees (theta lambda trees)
  *
- *  @note The algorithm is based on the paper: Petr Vilim, ?????????? CP 2009
+ * @note The algorithm is based on the paper: Petr Vilim, "Edge Finding Filtering Algorithm for Discrete Cumulative
+ *       Resources in O(kn log n)".  *I.P. Gent (Ed.): CP 2009, LNCS 5732, pp. 802–816, 2009.
  */
 static
 SCIP_RETCODE propagateEdgeFinder(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_BT*              tree,               /**< binary tree constaining the theta and lambda sets */
-   SCIP_BTNODE**         leaves,             /**< array of leaves ??????? */
+   SCIP_BTNODE**         leaves,             /**< array of all leaves for each job one */
    int                   capacity,           /**< cumulative capacity */
    int                   ncands,             /**< number of candidates */
    SCIP_Bool             propest,            /**< should the earliest start times be propagated, otherwise the latest completion times */
@@ -4286,7 +4287,7 @@ SCIP_RETCODE propagateEdgeFinder(
          assert(leafdata->duration > 0);
          assert(leafdata->est >= 0);
 
-         /* ?????????????? */
+         /* check if the job has to be removed since its latest completion is to large */
          if( leafdata->est + leafdata->duration >= nodedata->lct )
          {
             SCIP_CALL( deleteLambdaLeaf(scip, tree, leaf) );
@@ -4375,7 +4376,7 @@ SCIP_RETCODE propagateEdgeFinder(
                   if( explanation != NULL )
                      explanation[leafdata->idx] = TRUE;
 
-                  /* add lower and upper bound of variable which leads to the infeasibilty */
+                  /* add lower and upper bound of variable which lead to the infeasibilty */
                   for( i = 0; i < nelements; ++i )
                   {
                      nodedata = SCIPbtnodeGetData(omegaset[i]);
@@ -7788,7 +7789,7 @@ SCIP_RETCODE presolveCons(
       SCIPstatistic( conshdlrdata->ndualfixs += consdata->ndualfixs );
       SCIPstatistic( conshdlrdata->nalwaysruns += consdata->nalwaysruns );
 
-      /* remove jobs which have a duration or demand of zero ????????????? */
+      /* remove jobs which have a demand larger than the capacity */
       SCIP_CALL( removeOversizedJobs(scip, cons, nchgbds, nchgcoefs, naddconss, cutoff) );
 
       if( *cutoff || SCIPconsIsDeleted(cons) )
