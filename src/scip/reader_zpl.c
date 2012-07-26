@@ -674,7 +674,7 @@ SCIP_RETCODE addConsTerm(
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_PRODUCT, mono_get_degree(monomial), children) );
 
             /* create expression for function of product of variables */
-            if( op == SCIP_EXPR_INTPOWER )
+            if( op == SCIP_EXPR_INTPOWER )  /*lint !e644 */
             {
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &extramonomials[nextramonomials], op, expr, argint) );  /*lint !e644*/
             }
