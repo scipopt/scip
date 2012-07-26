@@ -2962,6 +2962,8 @@ SCIP_RETCODE propagateLowerboundVar(
    objval = SCIPvarGetObj(var);
    assert(!SCIPisZero(scip, objval));
 
+   (*tightened) = FALSE;
+
    /* get residual pseudo objective activity, that is the pseudo objective activity without the given variable */
    residual = getMaxObjPseudoactivityResidual(scip, propdata, var);
 
