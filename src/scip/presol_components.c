@@ -338,7 +338,7 @@ SCIP_RETCODE copyAndSolveComponent(
       /* do not catch control-C */
       SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-#ifndef SCIP_DEBUG
+#ifndef MORE_DEBUG
       /* disable output */
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 #endif
@@ -424,7 +424,7 @@ SCIP_RETCODE copyAndSolveComponent(
       /* solve the subproblem */
       SCIP_CALL( SCIPsolve(subscip) );
 
-#ifdef SCIP_DEBUG
+#ifdef MORE_DEBUG
       SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
 
