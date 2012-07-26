@@ -2280,6 +2280,15 @@ SCIP_RETCODE respropCumulativeCondition(
    }
 
    case PROPRULE_2_EDGEFINDING:
+      if( boundtype == SCIP_BOUNDTYPE_LOWER )
+      {
+         SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
+      }
+
       SCIP_CALL( resolvePropagationEdgeFinding(scip, nvars, vars, durations,
             infervar, inferinfo, bdchgidx, explanation) );
       break;
