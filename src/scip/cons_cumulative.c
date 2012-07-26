@@ -4002,6 +4002,58 @@ void traceThetaEnvelop(
 
 /** collect the jobs (omega set) which are contribute to lambda envelop from the theta set */
 static
+void traceLambdaEnergy(
+   SCIP_BTNODE*          node,               /**< node whose lambda envelop needs to be backtracked */
+   SCIP_BTNODE**         omegaset,           /**< array to store the collected jobs */
+   int*                  nelements,          /**< pointer to store the number of elements in omega set */
+   int*                  est,                /**< pointer to store the earliest start time of the omega set */
+   int*                  lct,                /**< pointer to store the latest start time of the omega set */
+   int*                  energy              /**< pointer to store the energy of the omega set */
+   )
+{
+   SCIP_BTNODE* left;
+   SCIP_BTNODE* right;
+   SCIP_NODEDATA* nodedata;
+   SCIP_NODEDATA* leftdata;
+   SCIP_NODEDATA* rightdata;
+
+   assert(node != NULL);
+
+   nodedata = SCIPbtnodeGetData(node);
+   assert(nodedata != NULL);
+
+   /* check if the node is a leaf */
+   if( SCIPbtnodeIsLeaf(node) )
+      return;
+
+   left = SCIPbtnodeGetLeftchild(node);
+   assert(left != NULL);
+
+   leftdata = SCIPbtnodeGetData(left);
+   assert(leftdata != NULL);
+
+   right = SCIPbtnodeGetRightchild(node);
+   assert(right != NULL);
+
+   rightdata = SCIPbtnodeGetData(right);
+   assert(rightdata != NULL);
+
+   if( nodedata->energylambda == leftdata->energylambda + rightdata->energytheta )
+   {
+      traceLambdaEnergy(left, omegaset, nelements, est, lct, energy);
+      collectThetaSubtree(right, omegaset, nelements, est, lct, energy);
+   }
+   else
+   {
+      assert(nodedata->energylambda == leftdata->energytheta + rightdata->energylambda);
+
+      collectThetaSubtree(left, omegaset, nelements, est, lct, energy);
+      traceLambdaEnergy(right, omegaset, nelements, est, lct, energy);
+   }
+}
+
+/** collect the jobs (omega set) which are contribute to lambda envelop from the theta set */
+static
 void traceLambdaEnvelop(
    SCIP_BTNODE*          node,               /**< node whose lambda envelop needs to be backtracked */
    SCIP_BTNODE**         omegaset,           /**< array to store the collected jobs */
@@ -4051,11 +4103,13 @@ void traceLambdaEnvelop(
       if( nodedata->enveloplambda == leftdata->enveloptheta + rightdata->energylambda )
       {
          traceThetaEnvelop(left, omegaset, nelements, est, lct, energy);
+         traceLambdaEnergy(right, omegaset, nelements, est, lct, energy);
       }
       else
+      {
          assert(nodedata->enveloplambda == rightdata->enveloplambda);
-
-      traceLambdaEnvelop(right, omegaset, nelements, est, lct, energy);
+         traceLambdaEnvelop(right, omegaset, nelements, est, lct, energy);
+      }
    }
 }
 
