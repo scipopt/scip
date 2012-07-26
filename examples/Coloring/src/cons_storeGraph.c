@@ -27,9 +27,9 @@
  * node corresponding to the constraint is examined for the first time, the constraint creates a
  * graph that takes into account all the restrictions, which are active at this node.
  * At the root, this is the original (preprocessed) graph.  At any other branch-and-bound node, it
- * takes the graph of the constraint related to the branch-and-bound father of the current node and
+ * takes the graph of the constraint related to the branch-and-bound parent node of the current node and
  * modifies it so that all restrictions up to this node are respected.  Since the graph in the
- * branch-and-bound father respects all restrictions on the path to that node, only the last
+ * branch-and-bound parent respects all restrictions on the path to that node, only the last
  * requirement, the one saved at the current branch-and-bound node, must be added.
  * This is done as follows: Adding a DIFFER(v,w) constraint is easy, since it suffices to add
  * an edge between v and w. For a SAME(v,w) constraint, the original idea is to collapse the nodes v
@@ -685,27 +685,6 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
 
    return SCIP_OKAY;
 }
-
-/* define not used callbacks as NULL */
-#define consPresolStoreGraph NULL
-#define consRespropStoreGraph NULL
-#define consInitStoreGraph NULL
-#define consExitStoreGraph NULL
-#define consInitpreStoreGraph NULL
-#define consExitpreStoreGraph NULL
-#define consTransStoreGraph NULL
-#define consInitlpStoreGraph NULL
-#define consSepalpStoreGraph NULL
-#define consSepasolStoreGraph NULL
-#define consEnableStoreGraph NULL
-#define consDisableStoreGraph NULL
-#define consDelVarsStoreGraph NULL
-#define consPrintStoreGraph NULL
-#define consCopyStoreGraph NULL
-#define consParseStoreGraph NULL
-#define consGetVarsStoreGraph NULL
-#define consGetNVarsStoreGraph NULL
-
 
 /*
  * interface methods
