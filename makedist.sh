@@ -52,14 +52,14 @@ $NAME/check/cmpres.awk $NAME/check/allcmpres.sh \
 $NAME/check/getlastprob.awk \
 $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
-$NAME/src/*.c $NAME/src/*.cpp $NAME/src/*.h \
+$NAME/src/*.c $NAME/src/*.cpp \
 $NAME/src/scip/*.c $NAME/src/scip/*.cpp $NAME/src/scip/*.h \
 $NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h \
 $NAME/src/xml/*.c $NAME/src/xml/*.h \
 $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
-$NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.cpp $NAME/src/blockmemshell/*.h \
-$NAME/src/tclique/*.c $NAME/src/tclique/*.cpp $NAME/src/tclique/*.h \
-$NAME/src/objscip/*.c $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
+$NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.h \
+$NAME/src/tclique/*.c $NAME/src/tclique/*.h \
+$NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
 $NAME/src/cppad/* $NAME/src/cppad/local/* \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
 $NAME/examples/Binpacking/doc/* $NAME/examples/Binpacking/doc/pics/binpacking.png \
@@ -67,6 +67,11 @@ $NAME/examples/Binpacking/check/testset/short.test $NAME/examples/Binpacking/che
 $NAME/examples/Binpacking/src/depend.* \
 $NAME/examples/Binpacking/src/*.c $NAME/examples/Binpacking/src/*.h \
 $NAME/examples/Binpacking/data/*.bpa \
+$NAME/examples/CallableLibrary/Makefile $NAME/examples/CallableLibrary/INSTALL \
+$NAME/examples/CallableLibrary/doc/sciplib.dxy $NAME/examples/CallableLibrary/doc/header.html \
+$NAME/examples/CallableLibrary/doc/layout.xml $NAME/examples/CallableLibrary/doc/sciplib.dxy \
+$NAME/examples/CallableLibrary/doc/xternal.c \
+$NAME/examples/CallableLibrary/src/depend.* $NAME/examples/CallableLibrary/src/*.c \
 $NAME/examples/Coloring/* $NAME/examples/Coloring/doc/* $NAME/examples/Coloring/data/* \
 $NAME/examples/Coloring/check/testset/short.test $NAME/examples/Coloring/check/testset/short.solu \
 $NAME/examples/Coloring/src/depend.* \
@@ -81,23 +86,22 @@ $NAME/examples/LOP/src/*.c $NAME/examples/LOP/src/*.h \
 $NAME/examples/MIPSolver/Makefile  $NAME/examples/MIPSolver/INSTALL $NAME/examples/MIPSolver/scipmip.set \
 $NAME/examples/MIPSolver/doc/scipmip.dxy $NAME/examples/MIPSolver/doc/xternal.c \
 $NAME/examples/MIPSolver/src/depend.* \
-$NAME/examples/MIPSolver/src/*.c $NAME/examples/MIPSolver/src/*.cpp $NAME/examples/MIPSolver/src/*.h \
+$NAME/examples/MIPSolver/src/*.cpp \
 $NAME/examples/Queens/* $NAME/examples/Queens/doc/scip_intro.tex \
 $NAME/examples/Queens/src/depend.* \
-$NAME/examples/Queens/src/*.c $NAME/examples/Queens/src/*.cpp \
-$NAME/examples/Queens/src/*.h $NAME/examples/Queens/src/*.hpp \
+$NAME/examples/Queens/src/*.cpp $NAME/examples/Queens/src/*.hpp \
 $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
 $NAME/examples/TSP/sciptsp.set \
 $NAME/examples/TSP/doc/* \
 $NAME/examples/TSP/check/testset/short.test $NAME/examples/TSP/check/testset/short.solu \
 $NAME/examples/TSP/src/depend.* \
-$NAME/examples/TSP/src/*.c $NAME/examples/TSP/src/*.cpp $NAME/examples/TSP/src/*.h \
+$NAME/examples/TSP/src/*.cpp $NAME/examples/TSP/src/*.h \
 $NAME/examples/TSP/tspviewer/*.java $NAME/examples/TSP/tspdata/*.tsp \
 $NAME/examples/VRP/Makefile  $NAME/examples/VRP/INSTALL  \
 $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
-$NAME/examples/VRP/src/*.c $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
+$NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
 $NAME/interfaces/matlab/* \
 $NAME/interfaces/ampl/Makefile $NAME/interfaces/ampl/INSTALL $NAME/interfaces/ampl/get.ASL \
 $NAME/interfaces/ampl/src/*.{c,h} $NAME/interfaces/ampl/src/depend.* \
