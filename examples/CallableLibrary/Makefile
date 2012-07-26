@@ -35,14 +35,14 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAME	=	sciplib
-MAINOBJ		=	cmain.o string.o gastrans.o circle.o
+MAINNAMES	=	string gastrans circle
+MAINOBJ		=	$(addsuffix .o,$(MAINNAMES))
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
-MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
+MAINDEP		=	$(SRCDIR)/depend.$(OPT)
 
-MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
-MAINFILE	=	$(BINDIR)/$(MAIN)
-MAINSHORTLINK	=	$(BINDIR)/$(MAINNAME)
+MAINS		=	$(addsuffix .$(BASE).$(LPS)$(EXEEXTENSION),$(MAINNAMES))
+MAINFILES	=	$(addprefix $(BINDIR)/,$(MAINS))
+MAINSHORTLINKS	=	$(addprefix $(BINDIR)/,$(MAINNAMES))
 MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 
 #-----------------------------------------------------------------------------
@@ -50,11 +50,11 @@ MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 #-----------------------------------------------------------------------------
 
 ifeq ($(VERBOSE),false)
-.SILENT:	$(MAINFILE) $(MAINOBJFILES) $(MAINSHORTLINK)
+.SILENT:	$(MAINFILES) $(MAINOBJFILES) $(MAINSHORTLINKS)
 endif
 
 .PHONY: all
-all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
+all:            $(SCIPDIR) $(MAINFILES) $(MAINSHORTLINKS)
 
 .PHONY: lint
 lint:		$(MAINSRC)
@@ -67,21 +67,17 @@ lint:		$(MAINSRC)
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
-.PHONY: sciplib
-sciplib:
-		@$(MAKE) -C $(SCIPDIR) libs $^
-
 .PHONY: doc
 doc:		
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
-		cd doc; $(DOXY) $(MAINNAME).dxy
+		cd doc; $(DOXY) sciplib.dxy
 
-$(MAINSHORTLINK):	$(MAINFILE)
+$(MAINSHORTLINKS):	$(MAINFILES)
 		@rm -f $@
-		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
+		cd $(dir $@) && ln -s $(notdir $@.$(BASE).$(LPS)$(EXEEXTENSION)) $(notdir $@)
 
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)
@@ -90,8 +86,8 @@ $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
 .PHONY: test
-test: $(MAINFILE)
-		$(MAINFILE) string gastrans circle
+test: $(MAINFILES)
+		for i in $(MAINFILES) ; do $$i || break 1 ; done
 
 .PHONY: clean
 clean:		$(OBJDIR)
@@ -99,7 +95,7 @@ ifneq ($(OBJDIR),)
 		-rm -f $(OBJDIR)/*.o
 		-rmdir $(OBJDIR)
 endif
-		-rm -f $(MAINFILE)
+		-rm -f $(MAINFILES)
 
 .PHONY: depend
 depend:		$(SCIPDIR)
@@ -109,9 +105,26 @@ depend:		$(SCIPDIR)
 
 -include	$(MAINDEP)
 
-$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
+
+$(BINDIR)/string.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/string.o
 		@echo "-> linking $@"
-		$(LINKCXX) $(MAINOBJFILES) \
+		$(LINKCXX) $(OBJDIR)/string.o \
+		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
+                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+                $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) $(LINKCXX_o)$@
+
+$(BINDIR)/gastrans.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/gastrans.o
+		@echo "-> linking $@"
+		$(LINKCXX) $(OBJDIR)/gastrans.o \
+		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
+                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+                $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) $(LINKCXX_o)$@
+
+$(BINDIR)/circle.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/circle.o
+		@echo "-> linking $@"
+		$(LINKCXX) $(OBJDIR)/circle.o \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
                 $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
                 $(OFLAGS) $(LPSLDFLAGS) \

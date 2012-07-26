@@ -42,9 +42,6 @@
 #define M_PI           3.141592653589793238462643
 #endif
 
-extern
-SCIP_RETCODE runString(void);
-
 
 /* Model parameters */
 
@@ -431,6 +428,7 @@ SCIP_RETCODE setupProblem(
 }
 
 /* runs string example */
+static
 SCIP_RETCODE runString(void)
 {
    SCIP* scip;
@@ -470,4 +468,26 @@ SCIP_RETCODE runString(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    return SCIP_OKAY;
+}
+
+
+/** main method starting SCIP */
+int main(
+   int                        argc,          /**< number of arguments from the shell */
+   char**                     argv           /**< array of shell arguments */
+   )
+{
+   SCIP_RETCODE retcode;
+
+   retcode = runString();
+
+   /* evaluate return code of the SCIP process */
+   if( retcode != SCIP_OKAY )
+   {
+      /* write error back trace */
+      SCIPprintError(retcode);
+      return -1;
+   }
+
+   return 0;
 }

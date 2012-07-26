@@ -40,9 +40,6 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 
-extern
-SCIP_RETCODE runGastrans(void);
-
 /* Model parameters */
 
 /** node data structure */
@@ -302,6 +299,7 @@ SCIP_RETCODE setupProblem(
 }
 
 /* runs gas transportation example */
+static
 SCIP_RETCODE runGastrans(void)
 {
    SCIP* scip;
@@ -343,4 +341,26 @@ SCIP_RETCODE runGastrans(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    return SCIP_OKAY;
+}
+
+
+/** main method starting SCIP */
+int main(
+   int                        argc,          /**< number of arguments from the shell */
+   char**                     argv           /**< array of shell arguments */
+   )
+{
+   SCIP_RETCODE retcode;
+
+   retcode = runGastrans();
+
+   /* evaluate return code of the SCIP process */
+   if( retcode != SCIP_OKAY )
+   {
+      /* write error back trace */
+      SCIPprintError(retcode);
+      return -1;
+   }
+
+   return 0;
 }
