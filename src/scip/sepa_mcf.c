@@ -6597,6 +6597,7 @@ SCIP_RETCODE separateCuts(
    int ncuts;
    int ncols;
    int nrows;
+   int nvars;
    SCIP_Real colrowratio;
    int i;
    SCIP_Bool cutoff;
@@ -6607,10 +6608,21 @@ SCIP_RETCODE separateCuts(
    ncuts = 0;
    cutoff = FALSE;
 
-   /* check for column/row ratio */
+   /* check for number of columns, number of variables, column/row ratio */
    nrows = SCIPgetNLPRows(scip);
    ncols = SCIPgetNLPCols(scip);
+   nvars = SCIPgetNVars(scip);
 
+   /* exit if not all variables are in the LP (e.g. dynamic columns) */
+   /* Notice that in principle we should have most of the columns in the LP to be able to detect a structure */
+   if( ncols != nvars )
+   {
+      MCFdebugMessage("%d variables but %d columns -> exit\n", nvars, ncols );
+
+      return SCIP_OKAY;
+   }
+
+   /* exit if number of columns is too large (expensive detection) */
    if( ncols > MAXCOLS )
    {
       MCFdebugMessage("%d > %d columns -> exit\n", ncols, MAXCOLS );
