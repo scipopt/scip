@@ -182,9 +182,7 @@ SCIP_RETCODE addConsTerm(
    SCIP_Bool removable;
    SCIP_Bool usercut;
    SCIP_Bool lazycut;
-
-   int  maxdegree;
-   int  i;
+   int i;
 
    switch( type )
    {
@@ -253,9 +251,7 @@ SCIP_RETCODE addConsTerm(
       check = TRUE;
    }
 
-   maxdegree = term_get_degree(term);
-
-   if (maxdegree <= 1)
+   if( term_is_linear(term) )
    {
       /* if the constraint gives an indicator constraint */
       if ( flags & LP_FLAG_CON_INDIC )
@@ -380,7 +376,7 @@ SCIP_RETCODE addConsTerm(
          (*created) = TRUE;
       }
    }
-   else if (maxdegree == 2)
+   else if( term_get_degree(term) == 2 )
    {
       int        nlinvars;
       int        nquadterms;
@@ -623,6 +619,8 @@ SCIP_RETCODE addConsTerm(
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &extramonomials[nextramonomials], op, expr) );  /*lint !e644*/
 
             ++nextramonomials;
+
+            SCIPfreeBufferArray(scip, &children);
          }
       }
 
