@@ -165,6 +165,8 @@ SCIP_Longint* SCIPsparseSolGetUbs(
    );
 
 
+/**@} */
+
 /*
  * Priority Queue
  */
@@ -965,6 +967,8 @@ void SCIPbtSetRoot(
    SCIP_BT*              tree,               /**< tree to be evaluated */
    SCIP_BTNODE*          root                /**< new root, or NULL */
    );
+
+/**@} */
 
 /**@} */
 
