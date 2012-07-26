@@ -2155,7 +2155,6 @@ SCIP_RETCODE resolvePropagationEdgeFinding(
    SCIP_Bool*            explanation         /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    )
 {
-
    int est;
    int lct;
    int j;
@@ -3554,7 +3553,8 @@ SCIP_RETCODE updateEnvelop(
       else
          nodedata->enveloplambda = rightdata->enveloplambda;
 
-      nodedata->enveloplambda = MAX(nodedata->enveloplambda, leftdata->enveloptheta + rightdata->energylambda);
+      if( leftdata->enveloptheta > 0 && rightdata->energylambda > 0 )
+         nodedata->enveloplambda = MAX(nodedata->enveloplambda, leftdata->enveloptheta + rightdata->energylambda);
 
       SCIPdebugMessage("node <%p> lambda envelop %d\n", (void*)node, nodedata->enveloplambda);
 
@@ -3562,6 +3562,8 @@ SCIP_RETCODE updateEnvelop(
          nodedata->energylambda = MAX(leftdata->energylambda + rightdata->energytheta, leftdata->energytheta + rightdata->energylambda);
       else if( rightdata->energylambda > 0 )
          nodedata->energylambda = leftdata->energytheta + rightdata->energylambda;
+      else if( leftdata->energylambda > 0 )
+         nodedata->energylambda = leftdata->energylambda + rightdata->energytheta;
       else
          nodedata->energylambda = 0;
 
