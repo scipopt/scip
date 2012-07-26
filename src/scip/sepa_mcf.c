@@ -6202,7 +6202,8 @@ SCIP_RETCODE generateClusterCuts(
                   comdemands[k] = coef;
 
                /* insert coefficients of integer variables into deltas array */
-               if( !SCIPisFeasZero(scip, coef) && SCIPcolIsIntegral(rowcols[j]) )
+               /* coefficients should not be too small and not be too big */
+               if( !SCIPisZero(scip, 1.0 / coef) && !SCIPisFeasZero(scip, coef) && SCIPcolIsIntegral(rowcols[j]) )
                {
                   SCIP_Bool exists;
                   int left;
@@ -6364,10 +6365,10 @@ SCIP_RETCODE generateClusterCuts(
             SCIP_Real abscutrhs = 0.0;
             SCIP_Real relviolation = 0.0;
 
-
-            /* do not use too small deltas */
-            if( SCIPisFeasZero(scip, deltas[d]) )
-               continue;
+            /* we should not have too small deltas */
+            assert( !SCIPisFeasZero(scip, deltas[d]) );
+            /* we should not have too large deltas */
+            assert( !SCIPisZero(scip, 1.0/deltas[d]) );
 
             SCIPdebugMessage("applying MIR with delta = %g\n", deltas[d]);
             SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
@@ -6547,6 +6548,11 @@ SCIP_RETCODE generateClusterCuts(
                   SCIP_Real cutact;
                   SCIP_Bool success;
                   SCIP_Bool cutislocal;
+
+                  /* we should not have too small deltas */
+                  assert( !SCIPisFeasZero(scip, bestdelta) );
+                  /* we should not have too large deltas */
+                  assert( !SCIPisZero(scip, 1.0/bestdelta) );
 
                   SCIPdebugMessage("applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
                   SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
