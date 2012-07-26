@@ -19,6 +19,7 @@
  * @author Timo Berthold
  * @author Gerald Gamrath
  * @author Stefan Heinz
+ * @author Gregor Hendel
  * @author Mathias Kinder
  * @author Marc Pfetsch
  * @author Stefan Vigerske
@@ -47,7 +48,7 @@
  *
  * SCIP is developed together with <a href="http://www.tu-braunschweig.de/mo/">TU Braunschweig</a> and <a
  * href="http://www.am.uni-erlangen.de/optimization/edom.html">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
- * and has more than 450,000 lines of C code.
+ * and has more than 500,000 lines of C code.
  *
  * @section GETTINGSTARTED Getting started
  *
@@ -58,7 +59,7 @@
  * - \ref FILEREADERS "Readable file formats"
  * - \ref START   "How to start a new project"
  *
- * @section FURTHERINFORMATION References and further information
+ * @section FURTHERINFORMATION References
  *
  * - \ref PUBLICMETHODS "List of callable functions"
  * - \ref PARAMETERS "List of all SCIP parameters"
@@ -120,7 +121,7 @@
  *      A solver for a simple capacity-constrained vehicle routing problem, which is
  *      based on pricing tours via a dynamic programming algorithm.
  *
- * @section SCIP history
+ * @section Further information
  *
  * <table cellpadding="0px" border="0" width="100%">
  *   <tr>
@@ -1110,7 +1111,7 @@
  * -# Copy the template files src/scip/cons_xyz.c and src/scip/cons_xyz.h into files "cons_subtour.c"
  *    and "cons_subtour.h".
       \n
- *    Make sure to <it>adjust your Makefile</it> such that these files are compiled and linked to your project.
+ *    Make sure to <em>adjust your Makefile</em> such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "subtour".
  * -# Adjust the \ref CONS_PROPERTIES "properties of the constraint handler".
  * -# Define the \ref CONS_DATA "constraint data and the constraint handler data". This is optional.
@@ -1194,7 +1195,7 @@
  * knapsack constraints. The upgrading calls are processed in the order of decreasing priority.
  *
  * \par NONLINCONSUPGD_PRIORITY: priority of the constraint handler for upgrading of nonlinear constraints
- * This property has the same effect as the \ref LINCONSUPGD_PRIORITY parameter, and should be set whenever
+ * This property has the same effect as the LINCONSUPGD_PRIORITY parameter, see above, and should be set whenever
  * an upgrade functionality from a general nonlinear constraint to the more specific one is defined.
  *
  * \par CONSHDLR_SEPAFREQ: the default frequency for separating cuts.
@@ -5368,7 +5369,7 @@ SCIP_RETCODE consdataCatchEvent(
  *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
  *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>
  *    pointer could result in unexspected behaviour
- *    if the asserted precondition on <code>pos</code> were not matched and <pos> were an arbitrary index
+ *    if the asserted precondition on <code>pos</code> were not matched and \<pos\> were an arbitrary index
  *    outside the array range.
  *
  *  - In order to activate assertions, use the <b>Debug mode</b> by compiling SCIP via
