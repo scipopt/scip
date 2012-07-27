@@ -894,6 +894,7 @@ SCIP_RETCODE SCIPincludePricerColoring(
          pricerRedcostColoring, pricerFarkasColoring, pricerdata) );
    assert(pricer != NULL);
    
+   /* include non-fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetPricerCopy(scip, pricer, pricerCopyColoring) );
    SCIP_CALL( SCIPsetPricerFree(scip, pricer, pricerFreeColoring) );
    SCIP_CALL( SCIPsetPricerInit(scip, pricer, pricerInitColoring) );
