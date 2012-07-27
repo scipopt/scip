@@ -62,6 +62,9 @@ Additional Notes
 
 - first release of GCG, a generic branch-cut-and-price solver built on top of SCIP
 
-- first release of UG, a framework for solving mixed integer programs in parallel
+- first release of UG, a framework for solving mixed integer programs, mixed integer
+  nonlinear programs, and constraint integer programs in parallel
 
 - new examples for scheduling and usage of the callable library with nonlinear problems
+
+- new SCIP T-shirts
