@@ -1853,29 +1853,41 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          SCIP_CALL( chooseCoefVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
          assert(bestcand != -1);
-         var = nlpcands[bestcand];
-         bestboundval = nlpcandssol[bestcand];
+         if( bestcand >= 0 )
+         {
+            var = nlpcands[bestcand];
+            bestboundval = nlpcandssol[bestcand];
+         }
          break;
       case 'v':
          SCIP_CALL( chooseVeclenVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
          assert(bestcand != -1);
-         var = nlpcands[bestcand];
-         bestboundval = nlpcandssol[bestcand];
+         if( bestcand >= 0 )
+         {
+            var = nlpcands[bestcand];
+            bestboundval = nlpcandssol[bestcand];
+         }
          break;
       case 'p':
          SCIP_CALL( choosePscostVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
          assert(bestcand != -1);
-         var = nlpcands[bestcand];
-         bestboundval = nlpcandssol[bestcand];
+         if( bestcand >= 0 )
+         {
+            var = nlpcands[bestcand];
+            bestboundval = nlpcandssol[bestcand];
+         }
          break;
       case 'g':
          SCIP_CALL( chooseGuidedVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, bestsol, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
          assert(bestcand != -1);
-         var = nlpcands[bestcand];
-         bestboundval = nlpcandssol[bestcand];
+         if( bestcand >= 0 )
+         {
+            var = nlpcands[bestcand];
+            bestboundval = nlpcandssol[bestcand];
+         }
          break;
       case 'd':
          /* double diving only works if we have both relaxations at hand, otherwise we fall back to fractional diving */
@@ -1891,7 +1903,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             SCIP_CALL( chooseDoubleVar(scip, heurdata, pseudocands, pseudocandsnlpsol, pseudocandslpsol, npseudocands,
                   varincover, covercomputed, &bestcand, &bestboundval, &bestcandmayround, &bestcandroundup) );
             assert(bestcand != -1);
-            var = pseudocands[bestcand];
+            if( bestcand >= 0 )
+               var = pseudocands[bestcand];
             break;
          }
          else
@@ -1901,13 +1914,20 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          SCIP_CALL( chooseFracVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
          assert(bestcand != -1);
-         var = nlpcands[bestcand];
-         bestboundval = nlpcandssol[bestcand];
+         if( bestcand >= 0 )
+         {
+            var = nlpcands[bestcand];
+            bestboundval = nlpcandssol[bestcand];
+         }
          break;
       default:
          SCIPerrorMessage("invalid variable selection rule\n");
          return SCIP_INVALIDDATA;
       }
+
+      /* this should never happen */
+      if( bestcand < 0 )
+         break;
 
       /* if all candidates are roundable, try to round the solution */
       if( bestcandmayround && backtrackdepth == -1 )
