@@ -3876,7 +3876,7 @@ SCIP_BTNODE* findResponsibleLambdaLeafTraceEnergy(
 
    assert(node != NULL);
 
-   nodedata = SCIPbtnodeGetData(node);
+   nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
    assert(nodedata != NULL);
 
    /* check if the node is the (responsible) leaf */
@@ -3889,13 +3889,13 @@ SCIP_BTNODE* findResponsibleLambdaLeafTraceEnergy(
    left = SCIPbtnodeGetLeftchild(node);
    assert(left != NULL);
 
-   leftdata = SCIPbtnodeGetData(left);
+   leftdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(left);
    assert(leftdata != NULL);
 
    right = SCIPbtnodeGetRightchild(node);
    assert(right != NULL);
 
-   rightdata = SCIPbtnodeGetData(right);
+   rightdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(right);
    assert(rightdata != NULL);
 
    assert(nodedata->energylambda != -1);
@@ -3925,7 +3925,7 @@ SCIP_BTNODE* findResponsibleLambdaLeafTraceEnvelop(
 
    assert(node != NULL);
 
-   nodedata = SCIPbtnodeGetData(node);
+   nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
    assert(nodedata != NULL);
 
    /* check if the node is the (responsible) leaf */
@@ -3938,13 +3938,13 @@ SCIP_BTNODE* findResponsibleLambdaLeafTraceEnvelop(
    left = SCIPbtnodeGetLeftchild(node);
    assert(left != NULL);
 
-   leftdata = SCIPbtnodeGetData(left);
+   leftdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(left);
    assert(leftdata != NULL);
 
    right = SCIPbtnodeGetRightchild(node);
    assert(right != NULL);
 
-   rightdata = SCIPbtnodeGetData(right);
+   rightdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(right);
    assert(rightdata != NULL);
 
    assert(nodedata->enveloplambda != -1);
@@ -3977,7 +3977,7 @@ void collectThetaSubtree(
 {
    SCIP_NODEDATA* nodedata;
 
-   nodedata = SCIPbtnodeGetData(node);
+   nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
    assert(nodedata != NULL);
 
    if( !SCIPbtnodeIsLeaf(node) )
@@ -4023,23 +4023,23 @@ void traceThetaEnvelop(
       SCIP_NODEDATA* leftdata;
       SCIP_NODEDATA* rightdata;
 
-      nodedata = SCIPbtnodeGetData(node);
+      nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
       assert(nodedata != NULL);
 
 
       left = SCIPbtnodeGetLeftchild(node);
       assert(left != NULL);
 
-      leftdata = SCIPbtnodeGetData(left);
+      leftdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(left);
       assert(leftdata != NULL);
 
       right = SCIPbtnodeGetRightchild(node);
       assert(right != NULL);
 
-      rightdata = SCIPbtnodeGetData(right);
+      rightdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(right);
       assert(rightdata != NULL);
 
-      nodedata = SCIPbtnodeGetData(node);
+      nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
       assert(nodedata != NULL);
 
       assert(nodedata->enveloptheta != -1);
