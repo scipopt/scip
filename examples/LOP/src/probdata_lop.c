@@ -67,12 +67,6 @@ SCIP_DECL_PROBDELORIG(probdelorigLOP)
 }
 
 
-#define probtransLOP NULL
-#define probdeltransLOP NULL
-#define probinitsolLOP NULL
-#define probexitsolLOP NULL
-
-
 /** copies user data of source SCIP for the target SCIP */
 static
 SCIP_DECL_PROBCOPY(probcopyLOP)
@@ -275,8 +269,8 @@ SCIP_RETCODE LOPcreateProb(
    SCIP_CALL( LOPreadFile(scip, filename, probdata) );
    probdata->vars = NULL;
 
-   SCIP_CALL( SCIPcreateProb(scip, probname, probdelorigLOP, probtransLOP, probdeltransLOP,
-	 probinitsolLOP, probexitsolLOP, probcopyLOP, probdata) );
+   SCIP_CALL( SCIPcreateProb(scip, probname, probdelorigLOP, NULL, NULL,
+	 NULL, NULL, probcopyLOP, probdata) );
 
    return SCIP_OKAY;
 }

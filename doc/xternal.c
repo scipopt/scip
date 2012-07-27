@@ -1975,6 +1975,7 @@
  * @subsection CONSGETNVARS
  *
  * This callback can be implemented to return the number of variables involved into a particular constraint.
+ * In order to have access to the variable pointers, consider implementing @ref CONSGETVARS.
  *
  * @section CONS_FURTHERINFO Further documentation
  *
