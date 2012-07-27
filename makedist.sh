@@ -24,7 +24,7 @@ echo adjust file modes
 find ./ -type d -exec chmod 750 {} \;
 find ./ -type f -exec chmod 640 {} \;
 find ./ -name "*.sh" -exec chmod 750 {} \;
-chmod 750 bin/* interfaces/ampl/get.ASL
+chmod 750 bin/* scripts/* interfaces/ampl/get.ASL
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*CVS*" \
@@ -102,6 +102,7 @@ $NAME/examples/VRP/Makefile  $NAME/examples/VRP/INSTALL  \
 $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
 $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
+$NAME/examples/VRP/check/check.sh $NAME/examples/VRP/check/testset/{short,vrp}.* \
 $NAME/interfaces/matlab/* \
 $NAME/interfaces/ampl/Makefile $NAME/interfaces/ampl/INSTALL $NAME/interfaces/ampl/get.ASL \
 $NAME/interfaces/ampl/src/*.{c,h} $NAME/interfaces/ampl/src/depend.* \
