@@ -7287,7 +7287,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          &conshdlrdata->cliquelifting, TRUE, DEFAULT_CLIQUELIFTING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/addvariablesascliques",
-         "should we try to generate extra cliques out of all binary variables to maybe fasten redundant constraint detection ",
+         "should we try to generate extra cliques out of all binary variables to maybe fasten redundant constraint detection",
          &conshdlrdata->addvariablesascliques, TRUE, DEFAULT_ADDVARIABLESASCLIQUES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/cliqueshrinking",

@@ -7383,9 +7383,9 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
       "   #                      'Z' zero rows,\n"
       "   #                      'C' fast {'z','s'},\n"
       "   #                      'R' fast {'Z','L','I'}\n"
-      "   #                      \n"
+      "   #\n"
       "   #                      '-' no preprocessing\n"
-      "   #                     ", '\0', (unsigned int) (SCIP_MAXSTRLEN - ncharsprinted - 1));
+      "   #", '\0', (unsigned int) (SCIP_MAXSTRLEN - ncharsprinted - 1));
 
    assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
 
@@ -7402,9 +7402,9 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
    ncharsprinted += SCIPmemccpy(&(sepamethodsdescription[ncharsprinted - 1]),
       "   #                      's' auxiliary IP heuristics (i.e. number of solved nodes is limited)\n"
       "   #                      'S' auxiliary IP exact      (i.e. unlimited number of nodes)\n"
-      "   #                      \n"
+      "   #\n"
       "   #                      '-' no processing\n"
-      "   #                     ", '\0', (unsigned int) (SCIP_MAXSTRLEN - ncharsprinted - 1));
+      "   #", '\0', (unsigned int) (SCIP_MAXSTRLEN - ncharsprinted - 1));
 
    assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
 
@@ -7421,7 +7421,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
       "   #                      'p' maximize cut violation and penalize a high number\n"
       "   #                          of aggregated rows in the cut weighted by the number\n"
       "   #                          of rows in the aggregation and the penalty factor p\n"
-      "   #                     ", '\0', (unsigned int) (SCIP_MAXSTRLEN - ncharsprinted - 1));
+      "   #", '\0', (unsigned int) (SCIP_MAXSTRLEN - ncharsprinted - 1));
 
    assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
 
@@ -7483,7 +7483,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
   
    SCIP_CALL(SCIPaddIntParam(scip,
          "separating/zerohalf/maxcutsfound",
-         "maximal number of {0,1/2}-cuts determined per separation round \n\
+         "maximal number of {0,1/2}-cuts determined per separation round\n\
    #                      (this includes separated but inefficacious cuts)",
          &(sepadata->maxcuts), TRUE, DEFAULT_MAXCUTS, 0, INT_MAX, NULL, NULL));
    SCIP_CALL(SCIPaddIntParam(scip,
