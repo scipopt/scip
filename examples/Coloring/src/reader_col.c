@@ -257,8 +257,6 @@ SCIP_DECL_READERCOPY(readerCopyCol)
    return SCIP_OKAY;
 }
 
-#define readerFreeCol NULL
-
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadCol)

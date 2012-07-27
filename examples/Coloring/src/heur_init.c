@@ -683,15 +683,6 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    return SCIP_OKAY;
 }
 
-
-/* define not used callbacks as NULL */
-#define heurInitInit NULL
-#define heurExitInit NULL
-#define heurInitsolInit NULL
-#define heurExitsolInit NULL
-
-
-
 /*
  * primal heuristic specific interface methods
  */

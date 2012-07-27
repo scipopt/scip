@@ -725,14 +725,6 @@ SCIP_DECL_BRANCHEXIT(branchExitStrongcoloring)
    return SCIP_OKAY;
 }
 
-
-/* define not used callbacks as NULL */
-#define branchInitsolStrongcoloring NULL
-#define branchExitsolStrongcoloring NULL
-#define branchExecpsStrongcoloring NULL
-#define branchExecrelStrongcoloring NULL
-
-
 /*
  * branching rule specific interface methods
  */

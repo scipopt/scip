@@ -350,12 +350,6 @@ SCIP_DECL_EVENTFREE(eventFreeBoundwriting)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of event handler (called when branch and bound process is about to begin) */
-#define eventInitsolBoundwriting NULL
-
-/** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
-#define eventExitsolBoundwriting NULL
-
 /** initialization method of event handler (called after problem was transformed) */
 static
 SCIP_DECL_EVENTINIT(eventInitBoundwriting)
@@ -397,9 +391,6 @@ SCIP_DECL_EVENTEXIT(eventExitBoundwriting)
 
    return SCIP_OKAY;
 }
-
-/** frees specific event data */
-#define eventDeleteBoundwriting NULL
 
 /** execution method of event handler */
 static
