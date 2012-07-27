@@ -2047,7 +2047,8 @@
  * The higher the priority, the earlier the pricer is called.
  * Usually, you will have only one pricer in your application and the priority is therefore irrelevant.
  *
- * \par PRICER_DELAY: the default for whether the pricer should be delayed, if other variables with negative reduced costs have already been found in the current pricing round.
+ * \par PRICER_DELAY: the default for whether the pricer should be delayed, if other variables with negative reduced
+ * costs have already been found in the current pricing round.
  * Variables may be declared to be "removable" in the SCIPcreateVar() call. This means that SCIP may remove the variable
  * from the LP if it was inactive (i.e., sitting at zero) for a number of LP solves. Nevertheless, after the removal of the
  * column from the LP, the variable still exists, and SCIP can calculate reduced costs and add it to the LP again if
@@ -2055,7 +2056,8 @@
  * \n
  * If the PRICER_DELAY flag is set to TRUE (which is the common setting), all those existing variables with negative reduced costs
  * are added to the LP, and the LP is resolved before the pricer is called. Thus, the pricer can assume that all existing variables
- * have non-negative reduced costs if the \ref PRICERREDCOST or \ref PRICERFARKAS methods are called.
+ * have non-negative reduced costs if the \ref PRICERREDCOST method is called or non-positive Farkas value if the \ref PRICERFARKAS
+ * method is called.
  * \n
  * In some applications, this inner pricing loop on the already existing variables can significantly slow down the solving process,
  * since it may lead to the addition of only very few variables in each pricing round. If this is an issue in your application,
@@ -2113,8 +2115,8 @@
  * They are passed together with the pricer itself to SCIP using SCIPincludePricer() or SCIPincludePricerBasic(),
  * see @ref PRICER_INTERFACE.
  *
- * In the case of a pricer, there are two fundamental callback method, namely the @ref PRICERREDCOST method
- * which searches and adds new variables to the problem, and the @ref PRICERFARKAS callback.
+ * In the case of a pricer, there are two fundamental callback methods, namely the @ref PRICERREDCOST and the
+ * @ref PRICERFARKAS callbacks, which both search for new variables and add them to the problem.
  * These methods have to be implemented for every pricer; the other callback methods are optional.
  * In the C++ wrapper class scip::ObjPricer, the scip_redcost() method (which corresponds to the PRICERREDCOST callback)
  * is a virtual abstract member function. You have to implement it in order to be able to construct an object of your
