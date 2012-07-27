@@ -75,7 +75,11 @@ scip:
 
 .PHONY: doc
 doc:
-		cd doc; $(DOXY) $(MAINNAME).dxy
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
+		cd doc; $(DOXY) scheduler.dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@

@@ -15,8 +15,15 @@
 
 /**@file   reader_sm.c
  * @brief  scheduling problem file reader for RCPSP problem format
- * @author Stefan Heinz
  * @author Michael Bastubbe
+ * @author Stefan Heinz
+ *
+ * This reader is capabale of parsing resource-constraint project scheduling (RCPSP) instances. The <a
+ * href="http://129.187.106.231/psplib/datasm.html">PSPlib</a> provides several instances set.
+ *
+ * @page READERSM File reader for RCPSP problem format
+ *
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
