@@ -329,7 +329,7 @@ struct SCIP_ExprInt
 };
 
 /** expression specific interpreter data */
-class SCIP_ExprIntData
+struct SCIP_ExprIntData
 {
 public:
    /* constructor */
