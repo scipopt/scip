@@ -37,7 +37,7 @@
  *    - For the @p length variant, Clp computes the number of elements from this length variant and
  *      there exists no matrix implementation that uses the length information, i.e., it is recomputed
  *      again.
- *    .
+ *
  *    Concluding: the implementation of Clp/CoinPackeMatrix could be improved. The functions
  *    affected by this are SCIPlpiLoadColLP(), SCIPlpiAddCols(), SCIPlpiAddRows()
  *
