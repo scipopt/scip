@@ -94,6 +94,7 @@
 #define DEFAULT_CORETIMES               TRUE /**< should core-times be propagated (time tabling)? */
 #define DEFAULT_OVERLOAD                TRUE /**< should edge finding be used to detect an overload? */
 #define DEFAULT_EDGEFINDING             TRUE /**< should edge-finding be executed? */
+#define DEFAULT_USEADJUSTEDJOBS        FALSE /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
 
 /* presolving */
 #define DEFAULT_DUALPRESOLVE            TRUE /**< should dual presolving be applied? */
@@ -178,6 +179,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             coretimes;          /**< should core-times be propagated (time tabling)? */
    SCIP_Bool             overload;           /**< should edge finding be used to detect an overload? */
    SCIP_Bool             edgefinding;        /**< should edge-finding be executed? */
+   SCIP_Bool             useadjustedjobs;    /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
    SCIP_Bool             localcuts;          /**< should cuts be added only locally? */
    SCIP_Bool             usecovercuts;       /**< should covering cuts be added? */
    SCIP_Bool             sepaold;            /**< shall old sepa algo be applied? */
@@ -2149,6 +2151,8 @@ SCIP_RETCODE resolvePropagationEdgeFinding(
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_VAR*             infervar,           /**< variable whose bound change is to be explained */
    INFERINFO             inferinfo,          /**< inference info containing position of correct bdchgids */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
@@ -2173,6 +2177,8 @@ SCIP_RETCODE resolvePropagationEdgeFinding(
    for( j = 0; j < nvars; ++j )
    {
       SCIP_VAR* var;
+      SCIP_Bool left;
+      SCIP_Bool right;
       int lb;
       int ub;
 
@@ -2185,8 +2191,18 @@ SCIP_RETCODE resolvePropagationEdgeFinding(
       lb = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
       ub = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
 
+      /* in case the earliest start time is equal to hmin we have to also consider the jobs which run in that region
+       * since we use adjusted jobs during the propagation
+       */
+      left = (est == hmin && lb + durations[j] > hmin) || lb >= est;
+
+      /* in case the latest completion time is equal to hmin we have to also consider the jobs which run in that region
+       * since we use adjusted jobs during the propagation
+       */
+      right = (lct == hmax && ub < hmax) || ub + durations[j] <= lct;
+
       /* store all jobs running in [est_omega; lct_omega] */
-      if( lb >= est &&  ub + durations[j] <= lct )
+      if( left && right  )
       {
          SCIP_CALL( SCIPaddConflictUb(scip, vars[j], bdchgidx) );
          SCIP_CALL( SCIPaddConflictLb(scip, vars[j], bdchgidx) );
@@ -2208,6 +2224,8 @@ SCIP_RETCODE respropCumulativeCondition(
    int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
    INFERINFO             inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
@@ -2288,7 +2306,7 @@ SCIP_RETCODE respropCumulativeCondition(
          SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
       }
 
-      SCIP_CALL( resolvePropagationEdgeFinding(scip, nvars, vars, durations,
+      SCIP_CALL( resolvePropagationEdgeFinding(scip, nvars, vars, durations, hmin, hmax,
             infervar, inferinfo, bdchgidx, explanation) );
       break;
    }
@@ -4492,6 +4510,7 @@ SCIP_RETCODE checkOverload(
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
+   SCIP_Bool             useadjustedjobs,    /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
    SCIP_Bool             propest,            /**< should the earliest start times be propagated, otherwise the latest completion times */
    SCIP_Bool             edgefinding,        /**< complete edge-finding, otherwise only overload */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
@@ -4576,21 +4595,26 @@ SCIP_RETCODE checkOverload(
       /* adjust the duration, earliest start time, and latest completion time of jobs which do not lie completely in the
        * effective horizon [hmin,hmax)
        */
-      if( est < hmin )
+      if( useadjustedjobs )
       {
-         leftadjust = (hmin - est);
-         est = hmin;
-      }
-      if( lct > hmax )
-      {
-         rightadjust = (lct - hmax);
-         lct = hmax;
-      }
+         if( est < hmin )
+         {
+            leftadjust = (hmin - est);
+            est = hmin;
+         }
+         if( lct > hmax )
+         {
+            rightadjust = (lct - hmax);
+            lct = hmax;
+         }
 
-      /* only consider jobs which have a (adjusted) duration greater than zero (the amound which will run defenetly with
-       * the effective time horizon
-       */
-      if( duration - leftadjust - rightadjust <= 0 )
+         /* only consider jobs which have a (adjusted) duration greater than zero (the amound which will run defenetly
+          * with the effective time horizon
+          */
+         if( duration - leftadjust - rightadjust <= 0 )
+            continue;
+      }
+      else if( est < hmin || lct > hmax )
          continue;
 
       energy = demands[j] * (duration - leftadjust - rightadjust);
@@ -4932,7 +4956,8 @@ SCIP_RETCODE propagateCumulativeCondition(
    {
       /* check for overload, which may result in a cutoff */
       SCIP_CALL( checkOverload(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-            cons, usebdwidening, TRUE, conshdlrdata->edgefinding, initialized, explanation, nchgbds, cutoff) );
+            cons, usebdwidening, conshdlrdata->useadjustedjobs, TRUE, conshdlrdata->edgefinding,
+            initialized, explanation, nchgbds, cutoff) );
 
       if( *cutoff )
          return SCIP_OKAY;
@@ -4942,7 +4967,7 @@ SCIP_RETCODE propagateCumulativeCondition(
    {
       /* check for overload, which may result in a cutoff */
       SCIP_CALL( checkOverload(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-            cons, usebdwidening, FALSE, TRUE, initialized, explanation, nchgbds, cutoff) );
+            cons, usebdwidening, conshdlrdata->useadjustedjobs, FALSE, TRUE, initialized, explanation, nchgbds, cutoff) );
    }
 
 
@@ -8553,7 +8578,7 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
       SCIPvarGetName(infervar), SCIPconsGetName(cons), consdata->capacity, inferInfoGetProprule(intToInferInfo(inferinfo)));
 
    SCIP_CALL( respropCumulativeCondition(scip, consdata->nvars, consdata->vars,
-         consdata->durations, consdata->demands, consdata->capacity,
+         consdata->durations, consdata->demands, consdata->capacity, consdata->hmin, consdata->hmax,
          infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, conshdlrdata->usebdwidening, NULL, result) );
 
    return SCIP_OKAY;
@@ -8906,6 +8931,9 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/edgefinding", "should edge-finding be executed?",
          &conshdlrdata->edgefinding, FALSE, DEFAULT_EDGEFINDING, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/useadjustedjobs", "should edge-finding be executed?",
+         &conshdlrdata->useadjustedjobs, FALSE, DEFAULT_USEADJUSTEDJOBS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/usebinvars", "should the binary representation be used?",
@@ -9323,6 +9351,8 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
    int                   inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
@@ -9331,7 +9361,7 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
-   SCIP_CALL( respropCumulativeCondition(scip, nvars, vars, durations, demands, capacity,
+   SCIP_CALL( respropCumulativeCondition(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
          infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, TRUE, explanation, result) );
 
    return SCIP_OKAY;
