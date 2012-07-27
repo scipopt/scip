@@ -26,11 +26,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the convertinttobin presolver and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludePresolConvertinttobin(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
