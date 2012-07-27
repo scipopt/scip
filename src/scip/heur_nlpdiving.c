@@ -1846,6 +1846,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       bestcandroundup = FALSE;
       bestboundval = SCIP_INVALID;
       updatepscost = TRUE;
+      var = NULL;
 
       /* find best candidate variable */
       switch( heurdata->varselrule )
@@ -1929,6 +1930,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       /* this should never happen */
       if( bestcand < 0 )
          break;
+      assert(var != NULL);
 
       /* if all candidates are roundable, try to round the solution */
       if( bestcandmayround && backtrackdepth == -1 )
