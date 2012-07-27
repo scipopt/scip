@@ -403,8 +403,6 @@ SCIP_RETCODE initPricing(
  * Callback methods of variable pricer
  */
 
-/** copy method for pricer plugins (called when SCIP copies plugins) */
-#define pricerCopyBinpacking NULL
 
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
 static
@@ -462,14 +460,6 @@ SCIP_DECL_PRICERINIT(pricerInitBinpacking)
 
    return SCIP_OKAY;
 }
-
-
-/** deinitialization method of variable pricer (called before transformed problem is freed) */
-#define pricerExitBinpacking NULL
-
-
-/** solving process initialization method of variable pricer (called when branch and bound process is about to begin) */
-#define pricerInitsolBinpacking NULL
 
 
 /** solving process deinitialization method of variable pricer (called before branch and bound process data is freed) */
@@ -679,7 +669,6 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
    return SCIP_OKAY;
 }
 
-
 /** farkas pricing method of variable pricer for infeasible LPs */
 static
 SCIP_DECL_PRICERFARKAS(pricerFarkasBinpacking)
@@ -703,7 +692,6 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasBinpacking)
 
    return SCIP_OKAY;
 }
-
 
 /*
  * variable pricer specific interface methods

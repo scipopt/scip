@@ -80,42 +80,6 @@
  * Callback methods of branching rule
  */
 
-/** copy method for branchrule plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_BRANCHCOPY(branchCopyRyanFoster)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
-
-   /* call inclusion method of branchrule */
-   SCIP_CALL( SCIPincludeBranchruleRyanFoster(scip) );
- 
-   return SCIP_OKAY;
-}
-#else
-#define branchCopyRyanFoster NULL
-#endif
-
-/** destructor of branching rule to free user data (called when SCIP is exiting) */
-#define branchFreeRyanFoster NULL
-
-/** initialization method of branching rule (called after problem was transformed) */
-#define branchInitRyanFoster NULL
-
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitRyanFoster NULL
-
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolRyanFoster NULL
-
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolRyanFoster NULL
-
-/** TS: whats this ?*/
-#define branchExecrelRyanFoster NULL
-
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
@@ -258,12 +222,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
 
    return SCIP_OKAY;
 }
-
-/** branching execution method for relaxation solutions */
-#define branchExecrelRyanFoster NULL
-
-/** branching execution method for not completely fixed pseudo solutions */
-#define branchExecpsRyanFoster NULL
 
 /*
  * branching rule specific interface methods

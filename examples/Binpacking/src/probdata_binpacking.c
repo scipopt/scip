@@ -337,9 +337,6 @@ SCIP_DECL_PROBEXITSOL(probexitsolBinpacking)
    return SCIP_OKAY;
 }
 
-/** copies user data of source SCIP for the target SCIP */
-#define probcopyBinpacking NULL
-
 /*
  * probdata specific interface methods
  */
@@ -369,7 +366,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* create problem in SCIP */
    SCIP_CALL( SCIPcreateProb(scip, probname, probdelorigBinpacking, probtransBinpacking, probdeltransBinpacking,
-         probinitsolBinpacking, probexitsolBinpacking, probcopyBinpacking, NULL) );
+         probinitsolBinpacking, probexitsolBinpacking, NULL, NULL) );
    
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );

@@ -100,9 +100,6 @@ SCIP_DECL_VARDELTRANS(vardataDelTrans)
    return SCIP_OKAY;
 }
 
-/** copies variable data of source SCIP variable for the target SCIP variable */
-#define vardataCopy NULL
-
 /** create variable data */
 SCIP_RETCODE SCIPvardataCreateBinpacking(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -154,7 +151,7 @@ SCIP_RETCODE SCIPcreateVarBinpacking(
    )
 {
    SCIP_CALL( SCIPcreateVar(scip, var, name, 0.0, 1.0, obj, SCIP_VARTYPE_BINARY,
-         initial, removable, vardataDelOrig, vardataTrans, vardataDelTrans, vardataCopy, vardata) );
+         initial, removable, vardataDelOrig, vardataTrans, vardataDelTrans, NULL, vardata) );
 
    SCIPvarMarkDeletable(*var);
    

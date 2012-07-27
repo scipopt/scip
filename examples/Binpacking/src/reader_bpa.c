@@ -225,9 +225,6 @@ SCIP_DECL_READERREAD(readerReadBpa)
    return SCIP_OKAY;
 }
 
-#define readerWriteBpa NULL
-
-
 /*
  * reader specific interface methods
  */
