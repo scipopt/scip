@@ -3503,10 +3503,10 @@ SCIP_RETCODE createNodedata(
    (*nodedata)->lct = INT_MAX;
    (*nodedata)->duration = 0;
    (*nodedata)->demand = 0;
-   (*nodedata)->enveloptheta = 0;
+   (*nodedata)->enveloptheta = -1;
    (*nodedata)->energytheta = 0;
-   (*nodedata)->enveloplambda = 0;
-   (*nodedata)->energylambda = 0;
+   (*nodedata)->enveloplambda = -1;
+   (*nodedata)->energylambda = -1;
    (*nodedata)->idx = -1;
    (*nodedata)->intheta = TRUE;
 
@@ -3563,27 +3563,49 @@ SCIP_RETCODE updateEnvelop(
       assert(rightdata != NULL);
 
       /* update envelop and energy */
-      nodedata->enveloptheta = MAX(leftdata->enveloptheta + rightdata->energytheta, rightdata->enveloptheta);
+      if( leftdata->enveloptheta >= 0 )
+      {
+         assert(rightdata->energytheta != -1);
+         nodedata->enveloptheta = MAX(leftdata->enveloptheta + rightdata->energytheta, rightdata->enveloptheta);
+      }
+      else
+         nodedata->enveloptheta = rightdata->enveloptheta;
+
+      assert(leftdata->energytheta != -1);
+      assert(rightdata->energytheta != -1);
       nodedata->energytheta = leftdata->energytheta + rightdata->energytheta;
 
-      if( leftdata->enveloplambda > 0 )
+      if( leftdata->enveloplambda >= 0 )
+      {
+         assert(rightdata->energytheta != -1);
          nodedata->enveloplambda = MAX(leftdata->enveloplambda + rightdata->energytheta, rightdata->enveloplambda);
+      }
       else
          nodedata->enveloplambda = rightdata->enveloplambda;
 
-      if( leftdata->enveloptheta > 0 && rightdata->energylambda > 0 )
+      if( leftdata->enveloptheta >= 0 && rightdata->energylambda >= 0 )
          nodedata->enveloplambda = MAX(nodedata->enveloplambda, leftdata->enveloptheta + rightdata->energylambda);
 
       SCIPdebugMessage("node <%p> lambda envelop %d\n", (void*)node, nodedata->enveloplambda);
 
-      if( leftdata->energylambda > 0 && rightdata->energylambda > 0 )
+      if( leftdata->energylambda >= 0 && rightdata->energylambda >= 0 )
+      {
+         assert(rightdata->energytheta != -1);
+         assert(leftdata->energytheta != -1);
          nodedata->energylambda = MAX(leftdata->energylambda + rightdata->energytheta, leftdata->energytheta + rightdata->energylambda);
-      else if( rightdata->energylambda > 0 )
+      }
+      else if( rightdata->energylambda >= 0 )
+      {
+         assert(leftdata->energytheta != -1);
          nodedata->energylambda = leftdata->energytheta + rightdata->energylambda;
-      else if( leftdata->energylambda > 0 )
+      }
+      else if( leftdata->energylambda >= 0 )
+      {
+         assert(rightdata->energytheta != -1);
          nodedata->energylambda = leftdata->energylambda + rightdata->energytheta;
+      }
       else
-         nodedata->energylambda = 0;
+         nodedata->energylambda = -1;
 
       /* go to parent */
       node = SCIPbtnodeGetParent(node);
@@ -3719,10 +3741,14 @@ SCIP_RETCODE moveNodeToLambda(
    assert(nodedata->intheta);
 
    /* move the contributions form the theta set into the lambda set */
+   assert(nodedata->enveloptheta != -1);
+   assert(nodedata->energytheta != -1);
+   assert(nodedata->enveloplambda == -1);
+   assert(nodedata->energylambda == -1);
    nodedata->enveloplambda = nodedata->enveloptheta;
    nodedata->energylambda = nodedata->energytheta;
 
-   nodedata->enveloptheta = 0;
+   nodedata->enveloptheta = -1;
    nodedata->energytheta = 0;
    nodedata->intheta = FALSE;
 
@@ -3872,10 +3898,16 @@ SCIP_BTNODE* findResponsibleLambdaLeafTraceEnergy(
    rightdata = SCIPbtnodeGetData(right);
    assert(rightdata != NULL);
 
-   if( nodedata->energylambda == leftdata->energylambda + rightdata->energytheta )
+   assert(nodedata->energylambda != -1);
+   assert(rightdata->energytheta != -1);
+
+   if( leftdata->energylambda >= 0 && nodedata->energylambda == leftdata->energylambda + rightdata->energytheta )
       return findResponsibleLambdaLeafTraceEnergy(left);
 
+   assert(leftdata->energytheta != -1);
+   assert(rightdata->energylambda != -1);
    assert(nodedata->energylambda == leftdata->energytheta + rightdata->energylambda);
+
    return findResponsibleLambdaLeafTraceEnergy(right);
 }
 
@@ -3915,12 +3947,17 @@ SCIP_BTNODE* findResponsibleLambdaLeafTraceEnvelop(
    rightdata = SCIPbtnodeGetData(right);
    assert(rightdata != NULL);
 
+   assert(nodedata->enveloplambda != -1);
+   assert(rightdata->energytheta != -1);
+
    /* check if the left or right child is the one defining the envelop for the lambda set */
-   if( nodedata->enveloplambda == leftdata->enveloplambda + rightdata->energytheta )
+   if( leftdata->enveloplambda >= 0 && nodedata->enveloplambda == leftdata->enveloplambda + rightdata->energytheta )
       return findResponsibleLambdaLeafTraceEnvelop(left);
-   else if( nodedata->enveloplambda == leftdata->enveloptheta + rightdata->energylambda )
+   else if( leftdata->enveloptheta >= 0 && rightdata->energylambda >= 0
+      && nodedata->enveloplambda == leftdata->enveloptheta + rightdata->energylambda )
       return findResponsibleLambdaLeafTraceEnergy(right);
 
+   assert(rightdata->enveloplambda != -1);
    assert(nodedata->enveloplambda == rightdata->enveloplambda);
 
    return findResponsibleLambdaLeafTraceEnvelop(right);
@@ -4005,13 +4042,17 @@ void traceThetaEnvelop(
       nodedata = SCIPbtnodeGetData(node);
       assert(nodedata != NULL);
 
-      if( nodedata->enveloptheta == leftdata->enveloptheta + rightdata->energytheta )
+      assert(nodedata->enveloptheta != -1);
+      assert(rightdata->energytheta != -1);
+
+      if( leftdata->enveloptheta >= 0 && nodedata->enveloptheta == leftdata->enveloptheta + rightdata->energytheta )
       {
          traceThetaEnvelop(left, omegaset, nelements, est, lct, energy);
          collectThetaSubtree(right, omegaset, nelements, est, lct, energy);
       }
       else
       {
+         assert(rightdata->enveloptheta != -1);
          assert(nodedata->enveloptheta == rightdata->enveloptheta);
          traceThetaEnvelop(right, omegaset, nelements, est, lct, energy);
       }
@@ -4056,13 +4097,18 @@ void traceLambdaEnergy(
    rightdata = SCIPbtnodeGetData(right);
    assert(rightdata != NULL);
 
-   if( nodedata->energylambda == leftdata->energylambda + rightdata->energytheta )
+   assert(nodedata->energylambda != -1);
+   assert(rightdata->energytheta != -1);
+
+   if( leftdata->energylambda >= 0 && nodedata->energylambda == leftdata->energylambda + rightdata->energytheta )
    {
       traceLambdaEnergy(left, omegaset, nelements, est, lct, energy);
       collectThetaSubtree(right, omegaset, nelements, est, lct, energy);
    }
    else
    {
+      assert(leftdata->energytheta != -1);
+      assert(rightdata->energylambda != -1);
       assert(nodedata->energylambda == leftdata->energytheta + rightdata->energylambda);
 
       collectThetaSubtree(left, omegaset, nelements, est, lct, energy);
@@ -4111,20 +4157,25 @@ void traceLambdaEnvelop(
    rightdata = SCIPbtnodeGetData(right);
    assert(rightdata != NULL);
 
-   if( nodedata->enveloplambda == leftdata->enveloplambda + rightdata->energytheta )
+   assert(nodedata->enveloplambda != -1);
+   assert(rightdata->energytheta != -1);
+
+   if( leftdata->enveloplambda >= 0 && nodedata->enveloplambda == leftdata->enveloplambda + rightdata->energytheta )
    {
       traceLambdaEnvelop(left, omegaset, nelements, est, lct, energy);
       collectThetaSubtree(right, omegaset, nelements, est, lct, energy);
    }
    else
    {
-      if( nodedata->enveloplambda == leftdata->enveloptheta + rightdata->energylambda )
+      if( leftdata->enveloptheta >= 0 && rightdata->energylambda >= 0
+         && nodedata->enveloplambda == leftdata->enveloptheta + rightdata->energylambda )
       {
          traceThetaEnvelop(left, omegaset, nelements, est, lct, energy);
          traceLambdaEnergy(right, omegaset, nelements, est, lct, energy);
       }
       else
       {
+         assert(rightdata->enveloplambda != -1);
          assert(nodedata->enveloplambda == rightdata->enveloplambda);
          traceLambdaEnvelop(right, omegaset, nelements, est, lct, energy);
       }
@@ -4195,6 +4246,8 @@ SCIP_RETCODE analyzeConflictOverload(
    int                   est,                /**< earliest start time of the ...... */
    int                   lct,                /**< latest completly time of the .... */
    int                   reportedenergy,     /**< energy which already reported */
+   SCIP_Bool             propest,            /**< should the earliest start times be propagated, otherwise the latest completion times */
+   int                   shift,              /**< shift applied to all jobs before adding them to the tree */
    SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation         /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
@@ -4249,8 +4302,16 @@ SCIP_RETCODE analyzeConflictOverload(
       /* check if bound widening should be used */
       if( usebdwidening )
       {
-         SCIP_CALL( SCIPaddConflictRelaxedLb(scip, nodedata->var, NULL, (SCIP_Real)(est - nodedata->leftadjust)) );
-         SCIP_CALL( SCIPaddConflictRelaxedUb(scip, nodedata->var, NULL, (SCIP_Real)(lct - nodedata->duration + nodedata->rightadjust)) );
+         if( propest )
+         {
+            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, nodedata->var, NULL, (SCIP_Real)(shift + est  - nodedata->leftadjust)) );
+            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, nodedata->var, NULL, (SCIP_Real)(shift + lct  - nodedata->duration + nodedata->rightadjust)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, nodedata->var, NULL, (SCIP_Real)(shift - est - nodedata->leftadjust)) );
+            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, nodedata->var, NULL, (SCIP_Real)(shift - lct - nodedata->duration + nodedata->rightadjust)) );
+         }
       }
       else
       {
@@ -4398,7 +4459,7 @@ SCIP_RETCODE propagateEdgeFinder(
             SCIPdebugMessage("an overload was detected duration edge-finder propagattion\n");
 
             /* analyze over load */
-            SCIP_CALL( analyzeConflictOverload(scip, omegaset, capacity, nelements,  est, lct, 0, usebdwidening, initialized, explanation) );
+            SCIP_CALL( analyzeConflictOverload(scip, omegaset, capacity, nelements,  est, lct, 0, propest, shift, usebdwidening, initialized, explanation) );
             (*cutoff) = TRUE;
          }
          else if( newest > 0 )
@@ -4661,8 +4722,8 @@ SCIP_RETCODE checkOverload(
        */
       nodedata->enveloptheta = capacity * est + energy;
       nodedata->energytheta = energy;
-      nodedata->enveloplambda = 0;
-      nodedata->energylambda = 0;
+      nodedata->enveloplambda = -1;
+      nodedata->energylambda = -1;
 
       nodedata->idx = j;
       nodedata->intheta = TRUE;
@@ -4762,7 +4823,7 @@ SCIP_RETCODE checkOverload(
       }
 
       /* analyze the overload */
-      SCIP_CALL( analyzeConflictOverload(scip, leaves, capacity, ninsertcands, est, lct, glbenery,
+      SCIP_CALL( analyzeConflictOverload(scip, leaves, capacity, ninsertcands, est, lct, glbenery, propest, shift,
             usebdwidening, initialized, explanation) );
    }
    else if( ninsertcands > 1 && edgefinding )
