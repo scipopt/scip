@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the node selector for best estimate search and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeNodeselEstimate(
    SCIP*                 scip                /**< SCIP data structure */
    );

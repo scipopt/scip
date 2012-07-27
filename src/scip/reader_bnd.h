@@ -40,7 +40,7 @@ extern "C" {
 #endif
 
 /** includes the bnd file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderBnd(
    SCIP*                 scip                /**< SCIP data structure */
    );

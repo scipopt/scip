@@ -36,7 +36,7 @@ extern "C" {
  *  valid for the mixed knapsack set corresponding to the current aggregated constraint. Cuts will only be added here if 
  *  no pointer to store best scaling factor delta is given.
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
@@ -61,7 +61,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    );
 
 /** creates the cmir separator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeSepaCmir(
    SCIP*                 scip                /**< SCIP data structure */
    );

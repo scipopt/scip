@@ -44,7 +44,7 @@ extern "C" {
 #endif
 
 /** creates the handler for xor constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -53,7 +53,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
 */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -94,7 +94,7 @@ SCIP_RETCODE SCIPcreateConsXor(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -105,21 +105,21 @@ SCIP_RETCODE SCIPcreateConsBasicXor(
    );
 
 /** gets number of variables in xor constraint */
-extern
+EXTERN
 int SCIPgetNVarsXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in xor constraint */
-extern
+EXTERN
 SCIP_VAR** SCIPgetVarsXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the right hand side of the xor constraint */
-extern
+EXTERN
 SCIP_Bool SCIPgetRhsXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

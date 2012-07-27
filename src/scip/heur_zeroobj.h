@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** main procedure of the zeroobj heuristic, creates and solves a sub-SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPapplyZeroobj(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
@@ -42,7 +42,7 @@ SCIP_RETCODE SCIPapplyZeroobj(
    );
 
 /** creates the zeroobj primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurZeroobj(
    SCIP*                 scip                /**< SCIP data structure */
    );

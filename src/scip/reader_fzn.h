@@ -36,13 +36,13 @@ extern "C" {
 #endif
 
 /** includes the FlatZinc file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderFzn(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** print given solution in Flatzinc format w.r.t. the output annotation */
-extern
+EXTERN
 SCIP_RETCODE SCIPprintSolReaderFzn(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */

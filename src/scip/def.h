@@ -191,7 +191,7 @@ extern "C" {
  * Define the marco EXTERN depending if the OS is Windows or not
  */
 #if defined(_WIN32) || defined(_WIN64)
-#define EXTERN extern
+#define EXTERN __declspec(dllexport)
 #else
 #define EXTERN extern
 #endif

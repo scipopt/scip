@@ -50,13 +50,13 @@ extern "C" {
 #endif
 
 /** creates the reliable pseudo cost branching rule and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** execution reliability pseudo cost branching with the given branching candidates */
-extern
+EXTERN
 SCIP_RETCODE SCIPexecRelpscostBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints to the current node

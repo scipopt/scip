@@ -33,13 +33,13 @@ extern "C" {
 #endif
 
 /** includes the ppm file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderPpm(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /* writes problem to file */
-extern
+EXTERN
 SCIP_RETCODE SCIPwritePpm(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */

@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /** creates the handler for SOS1 constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -50,7 +50,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -91,7 +91,7 @@ SCIP_RETCODE SCIPcreateConsSOS1(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -102,7 +102,7 @@ SCIP_RETCODE SCIPcreateConsBasicSOS1(
    );
 
 /** adds variable to SOS1 constraint, the position is determined by the given weight */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddVarSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -111,7 +111,7 @@ SCIP_RETCODE SCIPaddVarSOS1(
    );
 
 /** appends variable to SOS1 constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPappendVarSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -119,7 +119,7 @@ SCIP_RETCODE SCIPappendVarSOS1(
    );
 
 /** gets number of variables in SOS1 constraint */
-extern
+EXTERN
 int SCIPgetNVarsSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */

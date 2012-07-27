@@ -38,7 +38,7 @@ extern "C" {
 #endif
 
 /** creates the redcost propagator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePropRedcost(
    SCIP*                 scip                /**< SCIP data structure */
    );

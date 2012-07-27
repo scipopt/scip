@@ -47,7 +47,7 @@ extern "C" {
 #endif
 
 /** creates the most infeasible LP branching rule and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeBranchruleMostinf(
    SCIP*                 scip                /**< SCIP data structure */
    );

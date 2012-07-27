@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the flowcover separator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeSepaFlowcover(
    SCIP*                 scip                /**< SCIP data structure */
    );

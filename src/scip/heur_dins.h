@@ -36,7 +36,7 @@ extern "C" {
 #endif
 
 /** creates the DINS primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurDins(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -37,13 +37,13 @@ extern "C" {
 #endif
 
 /** creates the trysol primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurTrySol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** pass solution to trysol heuristic */
-extern
+EXTERN
 SCIP_RETCODE SCIPheurPassSolTrySol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< trysol heuristic */
@@ -51,7 +51,7 @@ SCIP_RETCODE SCIPheurPassSolTrySol(
    );
 
 /** pass solution to trysol heuristic which just gets added (without checking feasibility */
-extern
+EXTERN
 SCIP_RETCODE SCIPheurPassSolAddSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< trysol heuristic */

@@ -49,7 +49,7 @@ extern "C" {
 #endif
 
 /** creates the all variables full strong LP branching rule and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeBranchruleAllfullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    );

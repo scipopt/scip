@@ -48,7 +48,7 @@ extern "C" {
 
 
 /** creates the handler for orbitope constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -57,7 +57,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -100,7 +100,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

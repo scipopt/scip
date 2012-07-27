@@ -41,7 +41,7 @@ extern "C" {
 #endif
 
 /** creates the random branching rule and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeBranchruleRandom(
    SCIP*                 scip                /**< SCIP data structure */
    );

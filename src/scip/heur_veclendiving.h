@@ -38,7 +38,7 @@ extern "C" {
 #endif
 
 /** creates the veclendiving heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurVeclendiving(
    SCIP*                 scip                /**< SCIP data structure */
    );
