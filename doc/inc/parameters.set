@@ -1288,6 +1288,10 @@ constraints/cumulative/overload = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/cumulative/edgefinding = TRUE
 
+# should edge-finding be executed?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/cumulative/useadjustedjobs = FALSE
+
 # should the binary representation be used?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/cumulative/usebinvars = FALSE
