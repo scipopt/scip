@@ -255,6 +255,8 @@ SCIP_RETCODE copyAndSolveComponent(
    assert(nvars > 0);
    assert(nsolvedprobs != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
 #ifndef SCIP_DEBUG
    SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
       compnr, nvars, nbinvars, nintvars, nvars - nintvars - nbinvars, nconss);
@@ -916,8 +918,11 @@ SCIP_RETCODE splitProblem(
                compfixvals, ncompvars, nbinvars, nintvars, nsolvedprobs, ndeletedvars, ndeletedconss,
                &subscipresult) );
 
-         if( subscipresult == SCIP_CUTOFF )
+         if( subscipresult == SCIP_CUTOFF || subscipresult == SCIP_UNBOUNDED )
+	 {
+	    *result = subscipresult;
             break;
+	 }
 
          if( !presoldata->pluginscopied )
             break;
