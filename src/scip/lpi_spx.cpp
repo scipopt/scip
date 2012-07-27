@@ -131,6 +131,7 @@ using namespace soplex;
  *  make no distinction between different exception types, e.g., between memory allocation and other
  *  exceptions.
  */
+#ifndef NDEBUG
 #define SOPLEX_TRY(messagehdlr, x)  do                                  \
    {                                                                    \
       try                                                               \
@@ -145,6 +146,21 @@ using namespace soplex;
       }                                                                 \
    }                                                                    \
    while( FALSE )
+
+#else
+#define SOPLEX_TRY(messagehdlr, x)  do                                  \
+   {                                                                    \
+      try                                                               \
+      {                                                                 \
+         (x);                                                           \
+      }                                                                 \
+      catch(SPxException E)                                             \
+      {                                                                 \
+         return SCIP_LPERROR;                                           \
+      }                                                                 \
+   }                                                                    \
+   while( FALSE )
+#endif
 
 #define SOPLEX_TRYLPI(x) SOPLEX_TRY(lpi->messagehdlr, x)
 #define SOPLEX_TRYLPIPTR(x) SOPLEX_TRY((*lpi)->messagehdlr, x)
@@ -792,6 +808,7 @@ public:
       /* restore verbosity */
       Param::setVerbose(verbosity);
 
+      assert(SPxSolver::isInitialized());
       return m_stat;
    }
 
@@ -893,7 +910,11 @@ public:
             setObjUpLimit(soplex::infinity);
          }
 
+#ifndef NDEBUG
          doSolve();
+#else
+         doSolve(false);
+#endif
 
          if( simplifier != NULL || scaler != NULL )
          {
@@ -1000,7 +1021,11 @@ public:
          }
 
          SCIPdebugMessage("solve original LP\n");
+#ifndef NDEBUG
          doSolve();
+#else
+         doSolve(false);
+#endif
 
          /* free allocated memory */
          if( cstat != NULL )
@@ -1020,6 +1045,7 @@ public:
          if( (objval > m_objUpLimit) || (objval < m_objLoLimit) )
             m_stat = ABORT_VALUE;
       }
+      assert(SPxSolver::isInitialized());
 
       return m_stat;
    }
@@ -1039,6 +1065,7 @@ public:
       }
       catch(SPxException x)
       {
+#ifndef NDEBUG
          std::string s = x.what();
          SCIPmessagePrintWarning(m_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 
@@ -1047,6 +1074,7 @@ public:
           * not OPTIMAL anymore.
           */
          assert(m_stat != SPxSolver::OPTIMAL);
+#endif
       }
    }
 
@@ -1062,8 +1090,10 @@ public:
       }
       catch(SPxException x)
       {
+#ifndef NDEBUG
          std::string s = x.what();
          SCIPmessagePrintWarning(m_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
          m_stat = SPxSolver::status();
 
          /* since it is not clear if the status in SoPlex are set correctly
@@ -1637,8 +1667,10 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -1703,8 +1735,10 @@ SCIP_RETCODE SCIPlpiAddCols(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
  
@@ -1816,8 +1850,10 @@ SCIP_RETCODE SCIPlpiAddRows(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -1929,8 +1965,10 @@ SCIP_RETCODE SCIPlpiChgBounds(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -1971,8 +2009,10 @@ SCIP_RETCODE SCIPlpiChgSides(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -2054,8 +2094,10 @@ SCIP_RETCODE SCIPlpiChgObj(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -2117,8 +2159,10 @@ SCIP_RETCODE SCIPlpiScaleRow(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -2187,8 +2231,10 @@ SCIP_RETCODE SCIPlpiScaleCol(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -3472,8 +3518,10 @@ SCIP_RETCODE SCIPlpiGetSol(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -3499,8 +3547,10 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -3529,8 +3579,10 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -3912,8 +3964,10 @@ SCIP_RETCODE prepareFactorization(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
    return SCIP_OKAY;
@@ -3967,8 +4021,10 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -4027,8 +4083,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -4133,8 +4191,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -4269,8 +4329,10 @@ SCIP_RETCODE SCIPlpiClearState(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       assert( lpi->spx->getStatus() != SPxSolver::OPTIMAL );
       return SCIP_LPERROR;
    }
@@ -4629,8 +4691,10 @@ SCIP_RETCODE SCIPlpiReadLP(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_READERROR;
    }
    
@@ -4654,8 +4718,10 @@ SCIP_RETCODE SCIPlpiWriteLP(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_WRITEERROR;
    }
 
