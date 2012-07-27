@@ -255,8 +255,6 @@ SCIP_RETCODE copyAndSolveComponent(
    assert(nvars > 0);
    assert(nsolvedprobs != NULL);
 
-   *result = SCIP_DIDNOTRUN;
-
 #ifndef SCIP_DEBUG
    SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
       compnr, nvars, nbinvars, nintvars, nvars - nintvars - nbinvars, nconss);
@@ -1147,11 +1145,11 @@ SCIP_RETCODE presolComponents(
    /* print statistics */
    SCIPstatistic( printStatistics(presoldata) );
 
-   SCIPdebugMessage("%d components, %d solved, %d deleted constraints, %d deleted variables\n",
-      ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars);
+   SCIPdebugMessage("%d components, %d solved, %d deleted constraints, %d deleted variables, result = %d\n",
+      ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars, *result);
 #ifdef NDEBUG
-   SCIPstatisticMessage("%d components, %d solved, %d deleted constraints, %d deleted variables\n",
-      ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars);
+   SCIPstatisticMessage("%d components, %d solved, %d deleted constraints, %d deleted variables, result = %d\n",
+      ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars, *result);
 #endif
 
    presoldata->lastnvars = SCIPgetNVars(scip);
