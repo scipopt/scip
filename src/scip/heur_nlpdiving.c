@@ -1437,7 +1437,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlpdiving)
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
+SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_NLPSOLSTAT nlpsolstat;
@@ -1499,7 +1499,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    pseudocandsnlpsol = NULL;
    pseudocandslpsol = NULL;
    covervars = NULL;
-      
+
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
@@ -1840,6 +1840,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       SCIP_CALL( SCIPnewProbingNode(scip) );
       divedepth++;
 
+      var = NULL;
       bestcand = -1;
       bestcandmayround = TRUE;
       bestcandroundup = FALSE;
@@ -1894,7 +1895,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIP_VAR** pseudocands;
-            
+
             SCIP_CALL( SCIPgetPseudoBranchCands(scip, &pseudocands, &npseudocands, NULL) );
             assert(backtrackdepth > 0 || nnlpcands <= npseudocands);
             assert(SCIPgetNLPBranchCands(scip) <= npseudocands);
@@ -1964,6 +1965,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 
          if( backtracked && backtrackdepth > 0 )
          {
+	    assert(backtrackvar != NULL);
+
             /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
              * occured or variable was fixed by propagation while backtracking => Abort diving!
              */
@@ -2010,6 +2013,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          }
          else
          {
+	    assert(var != NULL);
+
             /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
              * occured or variable was fixed by propagation while backtracking => Abort diving!
              */
