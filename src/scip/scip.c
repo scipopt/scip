@@ -12488,7 +12488,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
 /** gets strong branching information on column variable x with integral LP solution value (val); that is, the down branch
  *  is (val -1.0) and the up brach ins (val +1.0)
  *
- *  @note If the integral LP solution is the lower or upper bound of the variable, the corresponding branch will be
+ *  @note If the integral LP solution value is the lower or upper bound of the variable, the corresponding branch will be
  *        marked as infeasible. That is, the valid pointer and the infeasible pointer are set to TRUE.
  */
 SCIP_RETCODE SCIPgetVarStrongbranchInt(
@@ -12785,7 +12785,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchLast(
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
                                               *   otherwise, it can only be used as an estimate value */
-   SCIP_Real*            solval,             /**< stores LP solution value of variable at the last strong branching call */
+   SCIP_Real*            solval,             /**< stores LP solution value of variable at the last strong branching call, or NULL */
    SCIP_Real*            lpobjval            /**< stores LP objective value at last strong branching call, or NULL */
    )
 {
@@ -14611,7 +14611,7 @@ SCIP_RETCODE SCIPaddVarVub(
 SCIP_RETCODE SCIPaddVarImplication(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Bool             varfixing,          /**< FALSE if y should be added in implications for x <= 0, TRUE for x >= 1 */
+   SCIP_Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
    SCIP_VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    SCIP_BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER)
                                               *                          or y >= b (SCIP_BOUNDTYPE_LOWER) */
@@ -16165,7 +16165,7 @@ SCIP_RETCODE SCIPaddConflictUb(
  *  with the additional information of a relaxed upper bound; this relaxed upper bound is the one which would be enough
  *  to explain a certain bound change;
  *  this method should be called in one of the following two cases:
- *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictUb() should be called for each (relaxed) upper
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedUb() should be called for each (relaxed) upper
  *      bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelaxedUb() should be
  *      called for each (relaxed) upper bound, whose current assignment lead to the deduction of the given conflict
@@ -17271,7 +17271,10 @@ SCIP_RETCODE SCIPdeactiveCons(
    return SCIP_OKAY;
 }
 
-/** outputs constraint information to file stream */
+/** outputs constraint information to file stream via the message handler system
+ *
+ *  @note If the message handler is set to a NULL pointer nothing will be printed
+ */
 SCIP_RETCODE SCIPprintCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
