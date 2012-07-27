@@ -3636,7 +3636,7 @@ void updateKeyOnTrace(
       {
          SCIP_NODEDATA* nodedata;
 
-         nodedata = SCIPbtnodeGetData(parent);
+         nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(parent);
          assert(nodedata != NULL);
 
          nodedata->key = key;
@@ -3702,7 +3702,7 @@ SCIP_RETCODE deleteLambdaLeaf(
          assert(SCIPbtnodeIsRightchild(parent));
          SCIPbtnodeSetRightchild(grandparent, sibling);
 
-         nodedata = SCIPbtnodeGetData(sibling);
+         nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(sibling);
 
          updateKeyOnTrace(grandparent, nodedata->key);
       }
