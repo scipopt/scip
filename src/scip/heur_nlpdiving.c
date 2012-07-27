@@ -1840,7 +1840,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       SCIP_CALL( SCIPnewProbingNode(scip) );
       divedepth++;
 
-      var = NULL;
       bestcand = -1;
       bestcandmayround = TRUE;
       bestcandroundup = FALSE;
