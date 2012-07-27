@@ -4078,7 +4078,7 @@ void traceLambdaEnergy(
 
    assert(node != NULL);
 
-   nodedata = SCIPbtnodeGetData(node);
+   nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
    assert(nodedata != NULL);
 
    /* check if the node is a leaf */
@@ -4088,13 +4088,13 @@ void traceLambdaEnergy(
    left = SCIPbtnodeGetLeftchild(node);
    assert(left != NULL);
 
-   leftdata = SCIPbtnodeGetData(left);
+   leftdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(left);
    assert(leftdata != NULL);
 
    right = SCIPbtnodeGetRightchild(node);
    assert(right != NULL);
 
-   rightdata = SCIPbtnodeGetData(right);
+   rightdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(right);
    assert(rightdata != NULL);
 
    assert(nodedata->energylambda != -1);
@@ -4135,7 +4135,7 @@ void traceLambdaEnvelop(
 
    assert(node != NULL);
 
-   nodedata = SCIPbtnodeGetData(node);
+   nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
    assert(nodedata != NULL);
 
    /* check if the node is a leaf */
@@ -4148,13 +4148,13 @@ void traceLambdaEnvelop(
    left = SCIPbtnodeGetLeftchild(node);
    assert(left != NULL);
 
-   leftdata = SCIPbtnodeGetData(left);
+   leftdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(left);
    assert(leftdata != NULL);
 
    right = SCIPbtnodeGetRightchild(node);
    assert(right != NULL);
 
-   rightdata = SCIPbtnodeGetData(right);
+   rightdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(right);
    assert(rightdata != NULL);
 
    assert(nodedata->enveloplambda != -1);
@@ -4191,7 +4191,7 @@ int computeEnergyContribution(
    SCIP_NODEDATA* nodedata;
    int duration;
 
-   nodedata = SCIPbtnodeGetData(node);
+   nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
    assert(nodedata != NULL);
    assert(nodedata->var != NULL);
 
@@ -4271,7 +4271,7 @@ SCIP_RETCODE analyzeConflictOverload(
    {
       SCIP_NODEDATA* nodedata;
 
-      nodedata = SCIPbtnodeGetData(leaves[j]);
+      nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(leaves[j]);
       assert(nodedata != NULL);
 
       reportedenergy += computeEnergyContribution(leaves[j]);
@@ -4295,7 +4295,7 @@ SCIP_RETCODE analyzeConflictOverload(
    {
       SCIP_NODEDATA* nodedata;
 
-      nodedata = SCIPbtnodeGetData(leaves[j]);
+      nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(leaves[j]);
       assert(nodedata != NULL);
       assert(nodedata->var != NULL);
 
@@ -4387,7 +4387,7 @@ SCIP_RETCODE propagateEdgeFinder(
 
    assert(!SCIPbtIsEmpty(tree));
 
-   rootdata = SCIPbtnodeGetData(SCIPbtGetRoot(tree));
+   rootdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(SCIPbtGetRoot(tree));
    assert(rootdata != NULL);
 
    /* iterate over all added candidate (leaves) in non-increasing order w.r.t. their latest completion time */
@@ -4398,7 +4398,7 @@ SCIP_RETCODE propagateEdgeFinder(
       if( SCIPbtnodeIsRoot(leaves[j]) )
          break;
 
-      nodedata = SCIPbtnodeGetData(leaves[j]);
+      nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(leaves[j]);
       assert(nodedata->est != -1);
 
       /* check if the root lambda envelop exeeds the available capacity */
@@ -4420,7 +4420,7 @@ SCIP_RETCODE propagateEdgeFinder(
          assert(leaf != NULL);
          assert(SCIPbtnodeIsLeaf(leaf));
 
-         leafdata = SCIPbtnodeGetData(leaf);
+         leafdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(leaf);
          assert(leafdata != NULL);
          assert(!leafdata->intheta);
          assert(leafdata->duration > 0);
@@ -4432,7 +4432,7 @@ SCIP_RETCODE propagateEdgeFinder(
             SCIP_CALL( deleteLambdaLeaf(scip, tree, leaf) );
 
             /* the root might changed therefore we need to collect the new root node datas */
-            rootdata = SCIPbtnodeGetData(SCIPbtGetRoot(tree));
+            rootdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(SCIPbtGetRoot(tree));
             assert(rootdata != NULL);
 
             continue;
@@ -4518,7 +4518,7 @@ SCIP_RETCODE propagateEdgeFinder(
                   /* add lower and upper bound of variable which lead to the infeasibilty */
                   for( i = 0; i < nelements; ++i )
                   {
-                     nodedata = SCIPbtnodeGetData(omegaset[i]);
+                     nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(omegaset[i]);
                      assert(nodedata != NULL);
 
                      SCIP_CALL( SCIPaddConflictLb(scip, nodedata->var, NULL) );
@@ -4542,7 +4542,7 @@ SCIP_RETCODE propagateEdgeFinder(
          SCIP_CALL( deleteLambdaLeaf(scip, tree, leaf) );
 
          /* the root might changed therefore we need to collect the new root node datas */
-         rootdata = SCIPbtnodeGetData(SCIPbtGetRoot(tree));
+         rootdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(SCIPbtGetRoot(tree));
          assert(rootdata != NULL);
       }
 
@@ -4769,7 +4769,7 @@ SCIP_RETCODE checkOverload(
       ninsertcands++;
 
       assert(!SCIPbtIsEmpty(tree));
-      rootdata = SCIPbtnodeGetData(SCIPbtGetRoot(tree));
+      rootdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(SCIPbtGetRoot(tree));
       assert(rootdata != NULL);
 
       /* check if the theta set envelops exceeds the available capacity */
