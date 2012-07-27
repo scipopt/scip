@@ -5308,7 +5308,7 @@ void SCIProwSort(
    /* sort non-LP columns */
    rowSortNonLP(row);
 
-#ifdef MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
    /* check the sorting */
    {
       int c;
