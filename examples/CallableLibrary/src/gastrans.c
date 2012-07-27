@@ -62,10 +62,10 @@ typedef struct ArcData {
 } ArcData;
 
 /** number of nodes (towns) */
-static const int nnodes = 20;
+#define nnodes 20
 
 /** number of arcs */
-static const int narcs = 24;
+#define narcs  24
 
 /** value we use to represent infinity */
 #define infinity 1e+20

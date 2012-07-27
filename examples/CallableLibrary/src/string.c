@@ -46,7 +46,7 @@
 /* Model parameters */
 
 /** number of possible wire types */
-static const int nwires = 11;
+#define nwires 11
 
 /** diameters of available diameters (in) */
 static const SCIP_Real diameters[] = { 0.207, 0.225, 0.244, 0.263, 0.283, 0.307, 0.331, 0.362, 0.394, 0.4375, 0.500 };
