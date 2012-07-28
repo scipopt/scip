@@ -121,13 +121,9 @@
  *      A solver for a simple capacity-constrained vehicle routing problem, which is
  *      based on pricing tours via a dynamic programming algorithm.
  *
- * @section Further information
+ * @section FURTHERINFO Further information
  *
- * <table cellpadding="0px" border="0" width="100%">
- *   <tr>
- *     <td nowrap >
  * @subsection CHG Changes between different versions of SCIP
- *
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
  * - \ref CHG5         "Interface changes between version 2.0 and 2.1"
@@ -143,14 +139,7 @@
  *
  * @version  3.0.0
  *
- *     </td>
- *     <td valign="bottom" width="200">
- *       \image html scippy.png
- *     </td>
- *   </tr>
- * </table>
- *
- *
+ * \image html scippy.png
  *
  */
 
