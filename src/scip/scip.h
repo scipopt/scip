@@ -3618,7 +3618,18 @@ SCIP_RETCODE SCIPchgChildPrio(
 /**@name Solve Methods */
 /**@{ */
 
-/** initializes solving data structures and transforms problem */
+/** initializes solving data structures and transforms problem
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called at any solving stage except \ref SCIP_STAGE_INIT and \ref SCIP_STAGE_TRANSFORMING
+ *
+ *  @post If \SCIP was already beyond the \ref SCIP_STAGE_TRANSFORMED nothing happens. Otherwise, \SCIP reaches the
+ *        solving stage \ref SCIP_STAGE_TRANSFORMED after calling that method.
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPtransformProb(
    SCIP*                 scip                /**< SCIP data structure */
@@ -3630,7 +3641,25 @@ SCIP_RETCODE SCIPpresolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** transforms, presolves, and solves problem */
+/** transforms, presolves, and solves problem
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *
+ *  @post After calling this method \SCIP reaches one of the following stages depending if and when the solution process
+ *        was interrupted:
+ *        - \ref SCIP_STAGE_PRESOLVING if the solution process was interrupted during presolving
+ *        - \ref SCIP_STAGE_SOLVING if the the solution process was interrupted during the tree search
+ *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPsolve(
    SCIP*                 scip                /**< SCIP data structure */
