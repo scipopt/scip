@@ -54,10 +54,10 @@
  *
  * - \ref MAKE    "Installation information / Makefiles"
  * - \ref LICENSE "License"
-
- * - \ref SHELL   "Tutorial: the interactive shell"
+ *
+ * - \ref SHELL       "Tutorial: the interactive shell"
  * - \ref FILEREADERS "Readable file formats"
- * - \ref START   "How to start a new project"
+ * - \ref START       "How to start a new project"
  *
  * @section FURTHERINFORMATION References
  *
