@@ -498,7 +498,10 @@ SCIP_Real getUpperbound(
  * miscellaneous methods
  */
 
-/** returns SCIP version number */
+/** returns complete SCIP version number in the format "major . minor tech"
+ *
+ *  @return complete SCIP version
+ */
 SCIP_Real SCIPversion(
    void
    )
@@ -506,7 +509,10 @@ SCIP_Real SCIPversion(
    return (SCIP_Real)(SCIP_VERSION)/100.0;
 }
 
-/** returns SCIP major version */
+/** returns SCIP major version
+ *
+ *  @return major SCIP version
+ */
 int SCIPmajorVersion(
    void
    )
@@ -514,7 +520,10 @@ int SCIPmajorVersion(
    return SCIP_VERSION/100;
 }
 
-/** returns SCIP minor version */
+/** returns SCIP minor version
+ *
+ *  @return minor SCIP version
+ */
 int SCIPminorVersion(
    void
    )
@@ -522,7 +531,10 @@ int SCIPminorVersion(
    return (SCIP_VERSION/10) % 10;
 }
 
-/** returns SCIP technical version */
+/** returns SCIP technical version
+ *
+ *  @return technical SCIP version
+ */
 int SCIPtechVersion(
    void
    )
@@ -530,7 +542,10 @@ int SCIPtechVersion(
    return SCIP_VERSION % 10;
 }
 
-/** returns SCIP sub version number */
+/** returns SCIP sub version number
+ *
+ *  @return subversion SCIP version
+ */
 int SCIPsubversion(
    void
    )
@@ -573,7 +588,7 @@ void SCIPprintVersion(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "%s\n", SCIP_COPYRIGHT);
 }
 
-/** prints error message for the given SCIP return code via the error prints method */
+/** prints error message for the given SCIP_RETCODE via the error prints method */
 void SCIPprintError(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    )
@@ -593,6 +608,13 @@ void SCIPprintError(
  *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() to install your own
  *        message handler or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
  *        file and turn off/on the display output, respectively.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @post After calling this method \SCIP reached the solving stage \ref SCIP_STAGE_INIT
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 SCIP_RETCODE SCIPcreate(
    SCIP**                scip                /**< pointer to SCIP data structure */
@@ -645,7 +667,27 @@ SCIP_RETCODE SCIPcreate(
    return SCIP_OKAY;
 }
 
-/** frees SCIP data structures */
+/** frees SCIP data structures
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @post After calling this method \SCIP reached the solving stage \ref SCIP_STAGE_FREE
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 SCIP_RETCODE SCIPfree(
    SCIP**                scip                /**< pointer to SCIP data structure */
    )
@@ -675,7 +717,12 @@ SCIP_RETCODE SCIPfree(
    return SCIP_OKAY;
 }
 
-/** returns current stage of SCIP */
+/** returns current stage of SCIP
+ *
+ *  @return the current SCIP stage
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 SCIP_STAGE SCIPgetStage(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -689,6 +736,11 @@ SCIP_STAGE SCIPgetStage(
 /** outputs SCIP stage and solution status if applicable via the message handler
  *
  *  @note If the message handler is set to a NULL pointer nothing will be printed
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 SCIP_RETCODE SCIPprintStage(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -765,7 +817,12 @@ SCIP_RETCODE SCIPprintStage(
    return SCIP_OKAY;
 }
 
-/** gets solution status */
+/** gets solution status
+ *
+ *  @return SCIP solution status
+ *
+ *  See \ref SCIP_Status "SCIP_STATUS" for a complete list of all possible solving status.
+ */
 SCIP_STATUS SCIPgetStatus(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -782,7 +839,13 @@ SCIP_STATUS SCIPgetStatus(
    }
 }
 
-/** outputs solution status */
+/** outputs solution status
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  See \ref SCIP_Status "SCIP_STATUS" for a complete list of all possible solving status.
+ */
 SCIP_RETCODE SCIPprintStatus(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -842,7 +905,10 @@ SCIP_RETCODE SCIPprintStatus(
    return SCIP_OKAY;
 }
 
-/** returns whether the current stage belongs to the transformed problem space */
+/** returns whether the current stage belongs to the transformed problem space
+ *
+ *  @return Returns TRUE if the \SCIP instance is transformed, otherwise FALSE
+ */
 SCIP_Bool SCIPisTransformed(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -852,7 +918,12 @@ SCIP_Bool SCIPisTransformed(
    return ((int)scip->set->stage >= (int)SCIP_STAGE_TRANSFORMING);
 }
 
-/** returns whether the solution process should be probably correct */
+/** returns whether the solution process should be probably correct
+ *
+ *  @note This feature is not supported yet!
+ *
+ *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
+ */
 SCIP_Bool SCIPisExactSolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -872,6 +943,8 @@ SCIP_Bool SCIPisExactSolve(
  *  @note if subsequent presolvers find more reductions, presolving might continue even if the method returns FALSE
  *  @note does not check whether infeasibility or unboundedness was already detected in presolving (which would result
  *        in presolving being stopped although the method returns TRUE)
+ *
+ *  @return Returns TRUE if presolving is finished if no further reductions are detected
  */
 SCIP_Bool SCIPisPresolveFinished(
    SCIP*                 scip                /**< SCIP data structure */
@@ -930,8 +1003,10 @@ SCIP_Bool SCIPisPresolveFinished(
    return finished;
 }
 
-
-/** returns whether the user pressed CTRL-C to interrupt the solving process */
+/** returns whether the user pressed CTRL-C to interrupt the solving process
+ *
+ *  @return Returns TRUE if Ctrl-C was pressed, otherwise FALSE.
+ */
 SCIP_Bool SCIPpressedCtrlC(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -944,6 +1019,8 @@ SCIP_Bool SCIPpressedCtrlC(
 /** returns whether the solving process should be / was stopped before proving optimality;
  *  if the solving process should be / was stopped, the status returned by SCIPgetStatus() yields
  *  the reason for the premature abort
+ *
+ *  @return Returns TRUE if solving process is stopped/interrupted, otherwise FALSE.
  */
 SCIP_Bool SCIPisStopped(
    SCIP*                 scip                /**< SCIP data structure */
