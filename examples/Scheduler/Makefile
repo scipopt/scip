@@ -37,7 +37,8 @@ MAINNAME	=	scip
 MAINOBJ		=	cmain.o \
 			heur_listscheduling.o \
 			reader_sch.o \
-			reader_sm.o
+			reader_sm.o \
+			reader_rcp.o
 
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
