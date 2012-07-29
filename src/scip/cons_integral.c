@@ -84,6 +84,14 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
       return SCIP_OKAY;
    }
 
+#ifndef NPARASCIP
+   /* call branching methods */
+   SCIP_CALL( SCIPbranchLP(scip, result) );
+
+   /* if no branching was done, the LP solution was not fractional */
+   if( *result == SCIP_DIDNOTRUN )
+      *result = SCIP_FEASIBLE;
+#else
    /* since ENFOLP is called, we should have an optimal LP solution or an unbounded ray (handled above)
     * if for some so far unknown reason this is not the case, and the LP is not infeasible,
     * we pretend that every unfixed discrete variables is fractional and let the pseudo candidates branching
@@ -111,7 +119,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
       else
          *result = SCIP_FEASIBLE;
    }
-
+#endif
    return SCIP_OKAY;
 }
 
