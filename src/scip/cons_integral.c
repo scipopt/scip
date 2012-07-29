@@ -84,7 +84,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
       return SCIP_OKAY;
    }
 
-#ifndef NPARASCIP
+#ifdef NPARASCIP
    /* call branching methods */
    SCIP_CALL( SCIPbranchLP(scip, result) );
 
