@@ -2958,6 +2958,7 @@ SCIP_RETCODE removeFixedVariables(
    {
       assert(consdata->bilinterms[i].var1 != consdata->bilinterms[i].var2);
       assert(consdata->bilinterms[i].coef != 0.0);
+      assert(SCIPvarCompare(consdata->bilinterms[i].var1, consdata->bilinterms[i].var2) < 0);
    }
 #endif
 
@@ -9501,6 +9502,14 @@ SCIP_DECL_CONSTRANS(consTransQuadratic)
    {
       SCIP_CALL( SCIPgetTransformedVar(scip, targetdata->bilinterms[i].var1, &targetdata->bilinterms[i].var1) );
       SCIP_CALL( SCIPgetTransformedVar(scip, targetdata->bilinterms[i].var2, &targetdata->bilinterms[i].var2) );
+
+      if( SCIPvarCompare(targetdata->bilinterms[i].var1, targetdata->bilinterms[i].var2) > 0 )
+      {
+         SCIP_VAR* tmp;
+         tmp = targetdata->bilinterms[i].var2;
+         targetdata->bilinterms[i].var2 = targetdata->bilinterms[i].var1;
+         targetdata->bilinterms[i].var1 = tmp;
+      }
    }
 
    /* create target constraint */
