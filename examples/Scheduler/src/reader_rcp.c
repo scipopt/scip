@@ -291,7 +291,7 @@ SCIP_DECL_READERREAD(readerReadRcp)
  * reader specific interface methods
  */
 
-/** includes the sch file reader in SCIP */
+/** includes the rcp file reader into SCIP */
 SCIP_RETCODE SCIPincludeReaderRcp(
    SCIP*                 scip                /**< SCIP data structure */
    )

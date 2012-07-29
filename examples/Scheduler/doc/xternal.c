@@ -13,37 +13,23 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reader_sch.h
- * @brief  scheduling problem file reader for RCPSP/max format
+/**@file   xternal.c
+ * @brief  main document page
  * @author Stefan Heinz
- *
- * This reader is capabale of parsing resource-constrained project scheduling problem with minimal and maximal time lags
- * (RCPSP/max) instances. The <a http://www.wior.uni-karlsruhe.de/LS_Neumann/Forschung/ProGenMax/rcpspmax.html">PSPlib</a>
- *  provides several instances
- * set.
- *
+ * @author Jens Schulz
  */
 
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_READER_SCH_H__
-#define __SCIP_READER_SCH_H__
-
-
-#include "scip/scip.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** includes the sch file reader into SCIP */
-extern
-SCIP_RETCODE SCIPincludeReaderSch(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+/**@mainpage Overview
+ * @author Stefan Heinz
+ * @author Jens Schulz
+ *
+ * This example contains several readers and \ref heur_listscheduling.h "one primal heuristic" for scheduling
+ * problems. Via this example three different type of scheduling problem can be parsed and solved with \SCIP. These are:
+ *
+ *  - resource-constrained project scheduling problems (RCPSP) (see reader_sm.h)
+ *  - resource-constrained project scheduling problem with minimal and maximal time lags (RCPSP/max) (see reader_sch.h)
+ *  - pack instances (see reader_rcp.h)
+ *
+ */
