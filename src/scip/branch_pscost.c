@@ -484,7 +484,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
    SCIPdebugMessage("Execlp method of pscost branching\n");
 

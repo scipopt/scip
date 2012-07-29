@@ -223,8 +223,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
 
    if( branchruledata->fractionals )
    {
-      assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-
       /* get LP candidates (fractional integer variables) */
       SCIP_CALL( SCIPgetLPBranchCands(scip, &cands, NULL, NULL, NULL, &ncands) );
    }
