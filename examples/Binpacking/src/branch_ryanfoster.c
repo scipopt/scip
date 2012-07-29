@@ -41,7 +41,7 @@
  * To select a pair of items, we have to know for each packing the items which are contained. Since every packing is a
  * variable and each item is a set covering constraint, we have to know for each variable in which set covering
  * constraints it appears (this means, has a coefficient of 1.0). Since \SCIP is constraint based, it is in general
- *  not possible to get this information directly. To overcome this issue, we use the functionality to add
+ * not possible to get this information directly. To overcome this issue, we use the functionality to add
  * \ref vardata_binpacking.c "variable data" to every
  * variable. This variable data contains the constraints in which this variable appears (see vardata_binpacking.c for more details).
  * With the help of the variable data, it is now possible to get the
@@ -151,7 +151,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
       nconsids = SCIPvardataGetNConsids(vardata);
       assert(nconsids > 0);
 
-      /* loop over all constraints/itmes the variable belongs to */
+      /* loop over all constraints/items the variable belongs to */
       for( i = 0; i < nconsids; ++i )
       {
          id1 = consids[i];
