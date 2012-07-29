@@ -95,31 +95,10 @@
  *   - \ref CONF    "Conflict analysis"
  *   - \ref PARAM   "Adding additional user parameters"
  *
- * - \ref TEST    "How to run automated tests with SCIP"
- * - \ref COUNTER "How to use SCIP to count feasible solutions"
+ * - \ref TEST     "How to run automated tests with SCIP"
+ * - \ref COUNTER  "How to use SCIP to count feasible solutions"
+ * - \ref EXAMPLES "Examples projects"
  *
- * @section EXAMPLESECTION Examples for the usage of SCIP
- *   - <a href="http://scip.zib.de/doc/examples/Binpacking/index.html"> Binpacking</a>
- *      An implementation of the column generation approach for the binpacking problem.
- *      It includes a customized reader, Ryan/Foster branching rule, (global) problem data, variable data,
- *      and constraint handler.
- *   - <a href="http://scip.zib.de/doc/examples/Coloring/index.html">Coloring</a>
- *     An implementation of the column generation approach for the binpacking problem.
- *      It includes a customized reader, Ryan/Foster branching rule, (global) problem data,
- *     variable data, and constraint handler.
- *   - <a href="http://scip.zib.de/doc/examples/Eventhdlr/index.html">Event handler</a>
- *      A small example illustrating the use of an event handler.
- *   - <a href="scip.zib.de/doc/examples/LOP/index.html">LOP</a>
- *      An example for implementing a constraint handler.
- *   - <a href="http://scip.zib.de/doc/examples/MIPSolver/index.html">MIP Solver</a>
- *      A minimal implementation for using SCIP included into another source code.
- *   - <a href="http://scip.zib.de/doc/examples/TSP/index.html">TSP </a>
- *      Simple implementations of a constraint handler, two combinatorial heuristics,
- *      a file reader, etc. which demonstrate the usage of SCIP as a branch-and-cut-framework for
- *       solving traveling salesman problem instances.
- *   - <a href="http://scip.zib.de/doc/examples/VRP/index.html">VRP </a>
- *      A solver for a simple capacity-constrained vehicle routing problem, which is
- *      based on pricing tours via a dynamic programming algorithm.
  *
  * @section FURTHERINFO Further information
  *
@@ -143,6 +122,95 @@
  *
  */
 
+/** @page EXAMPLES Examples projects
+ *
+ *  SCIP contains several examples that demonstrate its usage. They are contained in the &quot;examples&quot; directory
+ *  in the source code distribution.
+ *
+ *  @section BRANCHANDPRICE Branch-and-price
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/Binpacking/index.html"><b>Binpacking</b></a>
+ *  </td>
+ *  <td>
+ *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
+ *  Ryan/Foster branching rule, (global) problem data, variable data, and constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/Coloring/index.html"><b>Coloring</b></a>
+ *  </td>
+ *  <td>
+ *  An implemenation of the column generation approach for graph coloring of Mehrotra and Trick.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/VRP/index.html"><b>VRP</b></a>
+ *  </td>
+ *  <td>
+ *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
+ *  programming algorithm.
+ *  </td>
+ *  </tr>
+ *  </table>
+ *
+ *  @section CALLABLELIBRARY Callable library
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/MIPSolver/index.html"><b>MIPSolver</b></a>
+ *  </td>
+ *  <td>
+ *  A minimal implementation for using SCIP included into another source code
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <b>Queen</b>
+ *  </td>
+ *  <td>
+ *  An example showing the use of SCIP as callable library.
+ *  </td>
+ *  </tr>
+ *  </table>
+ *
+ *
+ *  @section OTHERPLUGINS Other plugins
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/Eventhdlr/index.html"><b>Eventhdlr</b></a>
+ *  </td>
+ *  <td>
+ *  A small example illustrating the use of an event handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/LOP/index.html"><b>LOP</b></a>
+ *  </td>
+ *  <td>
+ *  An example for implementing a constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/TSP/index.html"><b>TSP</b></a>
+ *  </td>
+ *  <td>
+ *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
+ *  demonstrate the usage of SCIP as a branch-and-cut-framework for solving traveling salesman problem instances.
+ *  </td>
+ *  </tr>
+ *  </table>
+ *
+ */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page CODE Coding style guidelines
