@@ -163,6 +163,14 @@
  *  <table>
  *  <tr>
  *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/CallableLibrary/index.html"><b>CallableLibrary</b></a>
+ *  </td>
+ *  <td>
+ *  An example showing how to setup constraints (esp. nonlinear ones) when using SCIP as callable library.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
  *  <a href="http://scip.zib.de/doc/examples/MIPSolver/index.html"><b>MIPSolver</b></a>
  *  </td>
  *  <td>
@@ -175,14 +183,6 @@
  *  </td>
  *  <td>
  *  An example showing the use of SCIP as callable library.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <b>CallableLibrary</b>
- *  </td>
- *  <td>
- *  An example showing how to setup constraints (esp. nonlinear ones) when using SCIP as callable library.
  *  </td>
  *  </tr>
  *  </table>
@@ -205,6 +205,14 @@
  *  </td>
  *  <td>
  *  An example for implementing a constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/Scheduler/index.html"><b>Scheduler</b></a>
+ *  </td>
+ *  <td>
+ *  An examples containing three readers and one primal heuristics for scheduling problems.
  *  </td>
  *  </tr>
  *  <tr>
