@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#define SCIP_DEBUG
 
 /**@file   cons_linear.c
  * @brief Constraint handler for linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.

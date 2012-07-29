@@ -348,7 +348,7 @@ SCIP_RETCODE runGastrans(void)
 int main(
    int                        argc,          /**< number of arguments from the shell */
    char**                     argv           /**< array of shell arguments */
-   )
+   )  /*lint --e{715}*/
 {
    SCIP_RETCODE retcode;
 
