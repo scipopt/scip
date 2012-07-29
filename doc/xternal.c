@@ -177,6 +177,14 @@
  *  An example showing the use of SCIP as callable library.
  *  </td>
  *  </tr>
+ *  <tr>
+ *  <td>
+ *  <b>CallableLibrary</b>
+ *  </td>
+ *  <td>
+ *  An example showing how to setup constraints (esp. nonlinear ones) when using SCIP as callable library.
+ *  </td>
+ *  </tr>
  *  </table>
  *
  *
