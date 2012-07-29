@@ -58,6 +58,7 @@
  * - \ref SHELL       "Tutorial: the interactive shell"
  * - \ref FILEREADERS "Readable file formats"
  * - \ref START       "How to start a new project"
+ * - \ref EXAMPLES    "Examples"
  *
  * @section FURTHERINFORMATION References
  *
@@ -97,7 +98,6 @@
  *
  * - \ref TEST     "How to run automated tests with SCIP"
  * - \ref COUNTER  "How to use SCIP to count feasible solutions"
- * - \ref EXAMPLES "Examples projects"
  *
  *
  * @section FURTHERINFO Further information
