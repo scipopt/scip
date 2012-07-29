@@ -4,8 +4,6 @@ Notes for SCIP Release 3.0
 Features
 ========
 
-- full support of non-convex MINLP
-
 - new presolvers convertinttobin, components, domcol, gateextraction
 
 - new primal heuristics nlpdiving and zeroobj
