@@ -304,6 +304,13 @@ void SCIPexprFreeDeep(
    SCIP_EXPR**           expr                /**< pointer to expression to free */
    );
 
+/** frees an expression but not its children */
+EXTERN
+void SCIPexprFreeShallow(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr                /**< pointer to expression to free */
+   );
+
 /** creates a SCIP_EXPR_LINEAR expression that is (affine) linear in its children: constant + sum_i coef_i child_i */
 EXTERN
 SCIP_RETCODE SCIPexprCreateLinear(
@@ -313,6 +320,17 @@ SCIP_RETCODE SCIPexprCreateLinear(
    SCIP_EXPR**           children,           /**< children of expression */
    SCIP_Real*            coefs,              /**< coefficients of children */
    SCIP_Real             constant            /**< constant part */
+   );
+
+/** adds new terms to a linear expression */
+EXTERN
+SCIP_RETCODE SCIPexprAddToLinear(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< linear expression */
+   int                   nchildren,          /**< number of children to add */
+   SCIP_Real*            coefs,              /**< coefficients of additional children */
+   SCIP_EXPR**           children,           /**< additional children expressions */
+   SCIP_Real             constant            /**< constant to add */
    );
 
 /** creates a SCIP_EXPR_QUADRATIC expression: constant + sum_i coef_i child_i + sum_i coef_i child1_i child2_i */
