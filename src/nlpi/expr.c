@@ -5379,12 +5379,12 @@ SCIP_RETCODE SCIPexprAddToLinear(
 
    /* add new children to expr's children array */
    SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &expr->children, expr->nchildren, expr->nchildren + nchildren) );
-   BMScopyMemoryArray(&expr->children[expr->nchildren], children, nchildren);
+   BMScopyMemoryArray(&expr->children[expr->nchildren], children, nchildren);  /*lint !e866*/
 
    /* add constant and new coefs to expr's data array */
    SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &data, expr->nchildren + 1, expr->nchildren + nchildren + 1) );
    data[expr->nchildren + nchildren] = data[expr->nchildren] + constant;
-   BMScopyMemoryArray(&data[expr->nchildren], coefs, nchildren);
+   BMScopyMemoryArray(&data[expr->nchildren], coefs, nchildren);  /*lint !e866*/
    expr->data.data = (void*)data;
 
    expr->nchildren += nchildren;

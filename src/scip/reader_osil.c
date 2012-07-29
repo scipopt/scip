@@ -1240,7 +1240,6 @@ SCIP_RETCODE exprAdd(
       {
          term1 = term2;
          coef1 = coef2;
-         term2 = NULL;
       }
       if( constant != 0.0 || coef1 != 1.0 )
       {
@@ -1376,7 +1375,7 @@ SCIP_RETCODE exprMulConstant(
       }
 
       /* @todo case SCIP_EXPR_QUADRATIC: */
-   }
+   } /*lint !e788 */
 
    return SCIP_OKAY;
 }
