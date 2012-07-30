@@ -110,8 +110,8 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  *  set is "x <= u", the negation to be used has to be "x >= u", and not "x > u".
  *  The given "bdchginfos" array representing the conflict set is only a reference to an internal
  *  buffer, that may be modified at any time by SCIP. The user must copy the needed information from the
- *  "bdchginfos" array to its own data structures, if he wants to use the information later.
- *  He should not keep a pointer to the array or pointers to the single bdchginfos in the array, because these
+ *  "bdchginfos" array to its own data structures, if (s)he wants to use the information later.
+ *  (S)he should not keep a pointer to the array or pointers to the single bdchginfos in the array, because these
  *  may get invalid afterwards.
  *
  *  input:

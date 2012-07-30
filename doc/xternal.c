@@ -809,7 +809,7 @@
  * MINLPs, etc... at hand. SCIP can also be customized to the type of problems you
  * are working on by additional plugins.
  * Instructions on how to write a new plugin and include it in SCIP can be found in the corresponding
- * <b> How to add ... </b> pages of the \ref PROGRAMMING ''programming section''.
+ * \ref HOWTOADD "How to add ... pages".
  *
  * SCIP can also be used for writing your own branch-and-cut or branch-and-cut-and-price code. SCIP already
  * provides a number of existing code examples which we suggest as both reference and starting point
@@ -821,12 +821,15 @@
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project.
  *
  *    We suggest the use one of the following examples:
- *     - The <code>VRP</code>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
+ *     - The <a href="http://scip.zib.de/doc/examples/VRP/index.html"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
- *     - The <code>Coloring</code> and the <code>Binpacking</code>-example are
+ *     - The <a href="http://scip.zib.de/doc/examples/Coloring/index.html"><b>Coloring</b></a>
+ *        and the <a href="http://scip.zib.de/doc/examples/Binpacking/index.html"><b>Binpacking</b></a>-example are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
- *     - The <code>TSP</code>-example is a <b>branch-and-cut</b>-code in <b>C++</b>.
- *     - The <code>LOP</code>-example is a <b>branch-and-cut</b>-code in <b>C</b>.
+ *     - The <a href="http://scip.zib.de/doc/examples/TSP/index.html"><b>TSP</b></a>-example
+ *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
+ *     - The <a href="http://scip.zib.de/doc/examples/LOP/index.html"><b>LOP</b></a>-example
+ *         is a <b>branch-and-cut</b>-code in <b>C</b>.
 
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
  *   directory). For instance, type
@@ -1257,7 +1260,7 @@
  * The integrality conditions are attached to the variables, and the integrality constraint handler has to check
  * all variables that are marked to be integer for integral values.
  *
- * @subsection CONS_ADDTIONALPROPERTIES Optional Constraint Handler properties
+ * @subsection CONS_ADDITIONALPROPERTIES Optional Constraint Handler properties
  *
  * The following properties are optional and only need to be defined if the constraint handlers support
  * separation, presolving, propagation, and/or upgrade functionality.
@@ -1365,7 +1368,7 @@
  * The method SCIPincludeConshdlrSubtour() only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the constraint handler by calling the method
  * SCIPincludeConshdlr().
- * It is called by the user, if he wants to include the constraint handler, i.e., if he wants to make
+ * It is called by the user, if (s)he wants to include the constraint handler, i.e., if (s)he wants to make
  * the constraint handler available to the model, and looks like this:
  *  -# If you are using constraint handler data, you have to <b>allocate the memory for the data</b> at this point.
  *     You also have to initialize the fields in struct SCIP_ConshdlrData afterwards.
@@ -1733,7 +1736,7 @@
  *
  * The CONSINIT callback is executed after the problem is transformed.
  * The constraint handler may, e.g., use this call to replace the original variables in its constraints by transformed
- * variables, or to initialize his statistical constraint handler data.
+ * variables, or to initialize its statistical constraint handler data.
  *
  * @subsection CONSEXIT
  *
@@ -1862,6 +1865,10 @@
  *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
  *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
  *
+ * Please see also the @ref CONS_ADDITIONALPROPERTIES section to learn about the properties
+ * CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, and CONSHDLR_DELAYSEPA, which influence the behaviour of SCIP
+ * calling CONSSEPALP.
+ *
  * @subsection CONSSEPASOL
  *
  * The CONSSEPASOL callback is executed during separation loop on arbitrary primal solutions.
@@ -1884,6 +1891,10 @@
  *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
  *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
  *
+ * Please see also the @ref CONS_ADDITIONALPROPERTIES section to learn about the properties
+ * CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, and CONSHDLR_DELAYSEPA, which influence the behaviour of SCIP
+ * calling CONSSEPASOL.
+ *
  * @subsection CONSPROP
  *
  * The CONSPROP callback is called during the subproblem processing.
@@ -1900,21 +1911,25 @@
  *  - stating that the propagator was skipped (result SCIP_DIDNOTRUN)
  *  - stating that the propagator was skipped, but should be called again (result SCIP_DELAYED)
  *
+ * Please see also the @ref CONS_ADDITIONALPROPERTIES section to learn about the properties
+ * CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, and CONSHDLR_PROP_TIMING, which influence the behaviour of SCIP
+ * calling CONSPROP.
+ *
  * @subsection CONSRESPROP
  *
- * If the constraint handler should support conflict analysis, it has to supply a CONSRESPROP method.
+ * If the constraint handler should support \ref CONF "conflict analysis", it has to supply a CONSRESPROP method.
  * It also should call SCIPinferVarLbCons() or SCIPinferVarUbCons() in domain propagation instead of SCIPchgVarLb() or
  * SCIPchgVarUb() in order to deduce bound changes on variables.
  * In the SCIPinferVarLbCons() and SCIPinferVarUbCons() calls, the handler provides the constraint that deduced the
- * variable's bound change, and an integer value "inferinfo" that can be arbitrarily chosen.
+ * variable's bound change, and an integer value <code>inferinfo</code> that can be arbitrarily chosen.
  *
  * The propagation conflict resolving method CONSRESPROP must then be implemented to provide the "reasons" for the bound
  * changes, i.e., the bounds of variables at the time of the propagation, which forced the constraint to set the
- * conflict variable's bound to its current value. It can use the "inferinfo" tag to identify its own propagation rule
+ * conflict variable's bound to its current value. It can use the <code>inferinfo</code> tag to identify its own propagation rule
  * and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided by
  * calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
  *
- * <b>Note:</b> The fact that "inferinfo" is an integer, as opposed to an arbitrary data object, is a compromise between space and speed. Sometimes a propagator would
+ * <b>Note:</b> The fact that <code>inferinfo</code> is an integer, as opposed to an arbitrary data object, is a compromise between space and speed. Sometimes a propagator would
  * need more information to efficiently infer the original propagation steps that lead to the conflict. This would,
  * however, require too much space. In the extreme, the original propagation steps have to be repeated.
  *
@@ -1955,6 +1970,10 @@
  *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
  *  - SCIP_DIDNOTRUN  : the presolver was skipped
  *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
+ *
+ * Please see also the @ref CONS_ADDITIONALPROPERTIES section to learn about the properties
+ * CONSHDLR_MAXPREROUNDS and CONSHDLR_DELAYPRESOL, which influence the behaviour of SCIP
+ * calling CONSPRESOL.
  *
  * @subsection CONSACTIVE
  *
@@ -2155,7 +2174,7 @@
  * @section PRICER_INTERFACE Interface Methods
  *
  * At the bottom of "pricer_mypricer.c" you can find the interface method SCIPincludePricerMypricer(), which also appears in "pricer_mypricer.h".
- * It is called by the user, if he wants to include the pricer, i.e., if he wants to solve a model for which variables should
+ * It is called by the user, if (s)he wants to include the pricer, i.e., if (s)he wants to solve a model for which variables should
  * be generated by this pricer.
  *
  * This method only has to be adjusted slightly.
@@ -2309,7 +2328,7 @@
  *
  * The PRICERINIT callback is executed after the problem is transformed.
  * The pricer may, e.g., use this call to replace the original constraints stored in its pricer data by transformed
- * constraints, or to initialize other elements of his pricer data.
+ * constraints, or to initialize other elements of its pricer data.
  *
  * @subsection PRICEREXIT
  *
@@ -2436,8 +2455,8 @@
  *
  * At the bottom of "presol_mypresolver.c", you can find the interface method SCIPincludePresolMypresolver(),
  * which also appears in "presol_mypresolver.h"
- * SCIPincludePresolMypresolver() is called by the user, if he wants to include the presolver,
- * i.e., if he wants to use the presolver in his application.
+ * SCIPincludePresolMypresolver() is called by the user, if (s)he wants to include the presolver,
+ * i.e., if (s)he wants to use the presolver in his/her application.
  *
  * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the presolver. For this, you can either call SCIPincludePresol(),
@@ -2670,8 +2689,8 @@
  *
  * At the bottom of "sepa_myseparator.c", you can find the interface method SCIPincludeSepaMyseparator(),
  * which also appears in "sepa_myseparator.h"
- * SCIPincludeSepaMyseparator() is called by the user, if he wants to include the separator,
- * i.e., if he wants to use the separator in his application.
+ * SCIPincludeSepaMyseparator() is called by the user, if (s)he wants to include the separator,
+ * i.e., if (s)he wants to use the separator in his/her application.
  *
  * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the separator. For this, you can either call SCIPincludeSepa(),
@@ -2899,10 +2918,10 @@
  * This property indicates at which places the propagator is called.
  * Possible values are defined in type_timing.h and can be concatenated, e.g., as in SCIP_PROPTIMING_ALWAYS.
  *
- * @subsection PROP_ADDTIONALPROPERTIES Optional propagator properties
+ * @subsection PROP_ADDITIONALPROPERTIES Optional propagator properties
  *
  * The following properties are optional and only need to be defined if the propagator supports
- * presolving, that is, if its  the \ref PROPPRESOL "presolving callback" is implemented.
+ * presolving, that is, if the \ref PROPPRESOL "presolving callback" is implemented.
  *
  * \par PROP_PRESOL_PRIORITY: the priority of the presolving method.
  * This attribute is analogous to the PROP_PRIORITY flag, but deals with the preprocessing method of the presolver.
@@ -2932,8 +2951,8 @@
  *
  * At the bottom of "prop_mypropagator.c", you can find the interface method SCIPincludeSepaMypropagator(),
  * which also appears in "prop_mypropagator.h"
- * SCIPincludePropMypropagator() is called by the user, if he wants to include the propagator,
- * i.e., if he wants to use the propagator in his application.
+ * SCIPincludePropMypropagator() is called by the user, if (s)he wants to include the propagator,
+ * i.e., if (s)he wants to use the propagator in his/her application.
  *
  * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the propagator. For this, you can either call SCIPincludeProp(),
@@ -3097,6 +3116,11 @@
  *  - SCIP_DIDNOTRUN  : the presolver was skipped
  *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
  *
+ *
+ * Please see also the @ref PROP_ADDITIONALPROPERTIES section to learn about the properties
+ * PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, and PROP_PRESOL_DELAY, which influence the behaviour of SCIP
+ * calling PROPPRESOL.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3169,7 +3193,7 @@
  * only the rule of highest priority is used. In combination with the BRANCHRULE_MAXDEPTH and
  * BRANCHRULE_MAXBOUNDDIST settings, however, interesting strategies can be easily employed. For example,
  * the user can set the priority of the "full strong branching" strategy to the highest value and assign the
- * second highest value to the "reliable pseudo cost" rule. If he also sets the maximal depth for the
+ * second highest value to the "reliable pseudo cost" rule. If (s)he also sets the maximal depth for the
  * "full strong branching" to 5, in the top 5 depth levels of the search tree the "full strong branching" is
  * applied, while in the deeper levels "reliable pseudo cost branching" is used.
  * \n
@@ -3210,8 +3234,8 @@
  *
  * At the bottom of "branch_mybranchingrule.c", you can find the interface method SCIPincludeBranchruleMybranchingrule(),
  * which also appears in "branch_mybranchingrule.h"
- * SCIPincludeBranchruleMybranchingrule() is called by the user, if he wants to include the branching rule,
- * i.e., if he wants to use the branching rule in his application.
+ * SCIPincludeBranchruleMybranchingrule() is called by the user, if (s)he wants to include the branching rule,
+ * i.e., if (s)he wants to use the branching rule in his/her application.
  *
  * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the branching rule. For this, you can either call
@@ -3500,8 +3524,8 @@
  *
  * At the bottom of "nodesel_mynodeselector.c", you can find the interface method SCIPincludeNodeselMynodeselector(),
  * which also appears in "nodesel_mynodeselector.h"
- * SCIPincludeNodeselMynodeselector() is called by the user, if he wants to include the node selector,
- * i.e., if he wants to use the node selector in his application.
+ * SCIPincludeNodeselMynodeselector() is called by the user, if (s)he wants to include the node selector,
+ * i.e., if (s)he wants to use the node selector in his/her application.
  *
  * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the node selector. For this, you can either call
@@ -3817,8 +3841,8 @@
  *
  * At the bottom of "heur_myheuristic.c", you can find the interface method SCIPincludeHeurMyheuristic(),
  * which also appears in "heur_myheuristic.h"
- * SCIPincludeHeurMyheuristic() is called by the user, if he wants to include the heuristic,
- * i.e., if he wants to use the heuristic in his application.
+ * SCIPincludeHeurMyheuristic() is called by the user, if (s)he wants to include the heuristic,
+ * i.e., if (s)he wants to use the heuristic in his/her application.
  *
  * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the heuristic. For this, you can either call
@@ -4024,8 +4048,8 @@
  *
  * At the bottom of "relax_myrelaxator.c", you can find the interface method SCIPincludeRelaxMyrelaxator(),
  * which also appears in "relax_myrelaxator.h".
- * SCIPincludeRelaxMyrelaxator() is called by the user, if he wants to include the relaxation handler,
- * i.e., if he wants to use the relaxation handler in his application.
+ * SCIPincludeRelaxMyrelaxator() is called by the user, if (s)he wants to include the relaxation handler,
+ * i.e., if (s)he wants to use the relaxation handler in his/her application.
  *
  * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the relaxation handler. For this, you can either call
@@ -4247,8 +4271,8 @@
  *
  * At the bottom of "reader_myreader.c", you can find the interface method SCIPincludeReaderMyreader(),
  * which also appears in "reader_myreader.h".
- * SCIPincludeReaderMyreader() is called by the user, if he wants to include the reader,
- * i.e., if he wants to use the reader in his application.
+ * SCIPincludeReaderMyreader() is called by the user, if (s)he wants to include the reader,
+ * i.e., if (s)he wants to use the reader in his/her application.
  *
  * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the reader. For this, you can either call
@@ -4316,7 +4340,7 @@
  *   SCIPaddCons(), and SCIPreleaseCons()
  *
  * Primal solutions can only be created for the transformed problem. Therefore, the user has to call SCIPtransformProb()
- * before he reads in the file containing the solution and adds it to the solution pool via the method SCIPreadSol().
+ * before (s)he reads in the file containing the solution and adds it to the solution pool via the method SCIPreadSol().
  *
  *
  * @subsection READERWRITE
@@ -4473,8 +4497,8 @@
  * Here "parentdialog" has to be an existing dialog which is defined to be a menu (see DIALOG_ISSUBMENU), e.g.,
  * the default root dialog. The method SCIPgetRootDialog() returns the root dialog.
  *
- * The interface method is called by the user, if he wants to include the dialog, i.e., if he wants to use the dialog in
- * his application.
+ * The interface method is called by the user, if (s)he wants to include the dialog, i.e., if (s)he wants to use the dialog in
+ * his/her application.
  * Note that in order to be able to link the new dialog to an existing default dialog
  * (except the root dialog) it has to be included <b>after the
  * default dialogs plugin</b>, i.e., the SCIPincludeDialogMydialog() call has to occur after the
@@ -4505,8 +4529,8 @@
  * You also have to initialize the fields in struct SCIP_DialogData afterwards.
  *
  * Consider the following example. The user wants to add a "drawgraph" command to the root menu of SCIP.
- * He copies the "dialog_xyz.c" and "dialog_xyz.h" files into files "dialog_drawgraph.c" and "dialog_drawgraph.h", respectively.
- * Then, he puts the following code into the SCIPincludeDialogDrawgraph() method, compare SCIPincludeDialogDefault() in
+ * (S)he copies the "dialog_xyz.c" and "dialog_xyz.h" files into files "dialog_drawgraph.c" and "dialog_drawgraph.h", respectively.
+ * Then, (s)he puts the following code into the SCIPincludeDialogDrawgraph() method, compare SCIPincludeDialogDefault() in
  * src/scip/dialog_default.c:
  * \code
  * SCIP_RETCODE SCIPincludeDialogDrawgraph(
@@ -4614,7 +4638,7 @@
  * While solving a constraint integer program, SCIP displays status information in a column-like fashion. The current
  * number of processed branching tree nodes, the solving time, and the relative gap between primal and dual bound are
  * examples of such display columns. There already exists a wide variety of display columns which can be activated or
- * deactivated on demand, see src/scip/disp_default.c. Additionally, the user can implement his own display columns
+ * deactivated on demand, see src/scip/disp_default.c. Additionally, the user can implement his/her own display columns
  * in order to track problem or algorithm specific values.
  * \n
  * A complete list of all displays contained in this release can be found \ref DISPLAYS "here".
@@ -4669,7 +4693,7 @@
  * \par DISP_PRIORITY: the priority of the display column.
  * The total width of status information lines is bounded by the parameter "display width". The display columns actually contained
  * in the status information display are selected in decreasing order of their priority. Furthermore, the user can force
- * columns to be displayed or not to be displayed in the status information display. For that, he has to switch the value
+ * columns to be displayed or not to be displayed in the status information display. For that, (s)he has to switch the value
  * of the display column's parameter "active" from "auto" (its default value) to "on" or "off", respectively.
  *
  * \par DISP_POSITION: the relative position of the display column.
@@ -4699,7 +4723,7 @@
  * It is responsible for notifying SCIP of the presence of the display column by calling the method
  * SCIPincludeDisp().
  *
- * The interface method is called by the user, if he wants to include the display column, i.e., if he wants to use the display column in his
+ * The interface method is called by the user, if (s)he wants to include the display column, i.e., if (s)he wants to use the display column in his
  * application.
  *
  * If you are using display column data, you have to allocate the memory for the data at this point.
@@ -4858,8 +4882,8 @@
  *
  * At the bottom of "event_bestsol.c", you can find the interface method SCIPincludeEventBestsol(),
  * which also appears in "event_bestsol.h".
- * SCIPincludeEventBestsol() is called by the user, if he wants to include the event handler,
- * i.e., if he wants to use the event handler in his application.
+ * SCIPincludeEventBestsol() is called by the user, if (s)he wants to include the event handler,
+ * i.e., if (s)he wants to use the event handler in his/her application.
  *
  * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the event handler. For this, you can either call
@@ -5110,7 +5134,7 @@
  * This method only has to be adjusted slightly.
  * It is responsible for creating an NLPI that contains all properties and callback methods of your
  * solver interface by calling the method SCIPnlpiCreate().
- * SCIPcreateNlpSolverXyz() is called by the user (e.g., SCIP), if he wants to use this solver interface in his application.
+ * SCIPcreateNlpSolverXyz() is called by the user (e.g., SCIP), if (s)he wants to use this solver interface in his/her application.
  *
  * If you are using NLPI data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
@@ -5401,10 +5425,10 @@
  * Tobias Achterberg, Conflict Analysis in Mixed Integer Programming@n
  * Discrete Optimization, 4, 4-20 (2007)
  *
- * For conflict analysis to work well, the author of a constraint handler or a propagator has to
- * implement three kinds of functionality:
+ * For conflict analysis to work well, the author of a \ref CONS "Constraint Handler" or a
+ * \ref PROP "Propagator" has to implement three kinds of functionality:
  *
- * -# If one detects infeasibility, one should initiate conflict analysis, see below.
+ * -# If one detects infeasibility, one should initiate conflict analysis, see \ref INITCONFS "below".
  * -# During propagation, one should call the right functions to fix variables.
  * -# One should implement the <em>so-called reverse propagation</em>.
  *
@@ -5438,8 +5462,9 @@
  *
  * Reverse Propagation is used to build up the conflict graph. Essentially, it provides an algorithm to detect the arcs
  * leading to a node in the conflict graph, i.e., the bound changes responsible for the new bound change deduced during
- * propagation. Reverse Propagation needs to be implemented in the RESPROP callback functions of constraint handlers or
- * propagators. These callbacks receive the following information: the variable which is under investigation (@p
+ * propagation. Reverse Propagation needs to be implemented in the RESPROP callback functions of
+ * \ref CONSRESPROP "constraint handlers" or \ref PROPRESPROP "propagators".
+ * These callbacks receive the following information: the variable which is under investigation (@p
  * infervar), the corresponding bound change (@p bdchgidx, @p boundtype), and the integer (@p inferinfo) that has been
  * supplied during propagation.
  *
@@ -5450,33 +5475,38 @@
  *
  * Details and (more) examples are given in Sections @ref CONSRESPROP and @ref PROPRESPROP.
  *
+ *
  * @section Example
  *
- * Consider the constraint handler @p cons_linearordering.c in the linear ordering example (see @p
- * example/LOP directory). This constraint handler propagates the equations \f$x_{ij} + x_{ji} =
+ * Consider the constraint handler @p cons_linearordering.c in the
+ * <a href="http://scip.zib.de/doc/examples/LOP/index.html"><b>linear ordering example</b></a>
+ * (see @p example/LOP directory). This constraint handler propagates the equations \f$x_{ij} + x_{ji} =
  * 1\f$ and triangle inequalities \f$x_{ij} + x_{jk} + x_{ki} \leq 2\f$.
  *
- * When propagating the equation and @p vars[i][j] is fixed to 1, the constraint handler uses
+ * When propagating the equation and <code>vars[i][j]</code> is fixed to 1, the constraint handler uses
  * \code
  *    SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], FALSE, cons, i*n + j, &infeasible, &tightened) );
  * \endcode
- * Thus, variable @p vars[j][i] is fixed to 0 (@p FALSE), and it passes @p i*n + @p j as @p inferinfo.
+ * Thus, variable <code>vars[j][i]</code> is fixed to 0 (@p FALSE), and it passes <code>i*n + j </code> as @p inferinfo.
  *
- * When it propagates the triangle inequality and @p vars[i][j] and @p vars[j[k] are fixed to 1, the constraint handler uses
+ * When it propagates the triangle inequality and both <code>vars[i][j]</code> and <code>vars[j][k]</code>
+ * are fixed to 1, the constraint handler uses
  * \code
  *    SCIP_CALL( SCIPinferBinvarCons(scip, vars[k][i], FALSE, cons, n*n + i*n*n + j*n + k, &infeasible, &tightened) );
  * \endcode
- * Thus, in this case, variable @p vars[k][i] is fixed to 0 and @p n*n + @p i*n*n + @p j*n + @p k is
- * passed as inferinfo.
+ * Thus, in this case, variable  <code>vars[k][i]</code> is fixed to 0 and  <code>n*n + i*n*n +  j*n + k</code> is
+ * passed as <code>inferinfo</code>.
  *
- * In reverse propagation, the two cases can be distinguished by @p inferinfo: if it is less than @p
- * n*n, we deal with an equation, otherwise with a triangle inequality. The constraint handler can then extract the
+ * In reverse propagation, the two cases can be distinguished by @p inferinfo: if it is less than @p n*n,
+ * we deal with an equation, otherwise with a triangle inequality. The constraint handler can then extract the
  * indices @p i, @p j (and @p k in the second case) from inferinfo.
  *
- * In the first case it has to distinguish whether @p vars[i][j] is fixed to 0 or 1 &ndash; by calling SCIPaddConflictLb()
- * or SCIPaddConflictUb(), respectively, with variable @p vars[j][i]. In the second case, it is clear that the only
- * possible propagation is to fix @p vars[i][j] to 0 when @p vars[k][i] and @p vars[j][k] are fixed to 1. It then calls
- * SCIPaddConflictLb() for both @p vars[k][i] and @p vars[j][k].
+ * In the first case, it has to distinguish whether <code>vars[i][j]</code> is fixed to 0 or 1 &ndash;
+ * by calling SCIPaddConflictLb()
+ * or SCIPaddConflictUb(), respectively, with variable <code>vars[j][i]</code>. In the second case, it is clear that the only
+ * possible propagation is to fix <code>vars[i][j]</code> to 0 when both <code>vars[k][i]</code> and <code>vars[j][k]</code>
+ * are fixed to 1. It then calls
+ * SCIPaddConflictLb() for both <code>vars[k][i]</code> and <code>vars[j][k]</code>.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -5490,7 +5520,7 @@
  *  object will be destroyed automatically.
  *
  *  Remember that a created data object is automatically captured. If the user
- *  doesn't need the object anymore, he has to call the object's release method.
+ *  doesn't need the object anymore, (s)he has to call the object's release method.
  *
  *  When a data object is added to SCIP (e.g., by calling SCIPaddVar()) , it is captured again, such that a
  *  release call does not destroy the object. If SCIP doesn't need the object
@@ -5517,7 +5547,7 @@
  *     SCIPsetXyzParam() calls.
  *   - If the given valueptr is not NULL, SCIP stores the parameter value at the given
  *     address, and the user can directly manipulate the value at this address.
- *     He has to be careful with memory management in string parameters: when the
+ *     (S)he has to be careful with memory management in string parameters: when the
  *     SCIPaddStringParam() method is called, the given address must hold a char*
  *     pointer with value NULL. The default value is then copied into this pointer,
  *     allocating memory with BMSallocMemoryArray(). If the parameter is changed, the
