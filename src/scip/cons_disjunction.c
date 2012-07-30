@@ -649,6 +649,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
    char* token;
    char* saveptr;
    char* nexttokenstart;
+   char* copystr;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -665,9 +666,10 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
    nconss = 0;
    sconss = 10;
    SCIP_CALL( SCIPallocBufferArray(scip, &conss, sconss) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &copystr, str, strlen(str)+1) );
 
    /* find '(' at the beginning, string should start with 'disjunction(' */
-   saveptr = strpbrk(str, "("); /*lint !e158*/
+   saveptr = strpbrk(copystr, "("); /*lint !e158*/
 
    if( saveptr == NULL )
    {
@@ -831,6 +833,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 
  TERMINATE:
    /* free temporary memory */
+   SCIPfreeBufferArray(scip, &copystr);
    SCIPfreeBufferArray(scip, &conss);
 
    return SCIP_OKAY;
