@@ -27,3 +27,8 @@ hooks/
 localhooks/
 src/scip/githash.c
 settings/
+interfaces/ampl/solvers
+interfaces/ampl/check/locks
+interfaces/ampl/check/results
+interfaces/ampl/lint
+examples/CallableLibrary/lint
