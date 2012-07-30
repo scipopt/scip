@@ -85,7 +85,7 @@ SCIP_RETCODE fromCommandLine(
       return SCIP_OKAY;
    default:
       SCIP_CALL( retcode );
-   }
+   } /*lint !e788*/
 
    /*******************
     * Problem Solving *

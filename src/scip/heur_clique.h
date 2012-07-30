@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 /** creates the clique primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurClique(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -72,7 +72,7 @@ void debugRowPrint(
    /* print row name */
    if( row->name != NULL && row->name[0] != '\0' )
    {
-      SCIPdebugMessage("%s: ", row->name);
+      SCIPdebugPrintf("%s: ", row->name);
    }
 
    /* print left hand side */
@@ -118,7 +118,7 @@ void debugColPrint(
    assert(col->var != NULL);
 
    /* print bounds */
-   SCIPdebugMessage("(obj: %.15g) [%.15g,%.15g], ", col->obj, col->lb, col->ub);
+   SCIPdebugPrintf("(obj: %.15g) [%.15g,%.15g], ", col->obj, col->lb, col->ub);
 
    /* print coefficients */
    if( col->len == 0 )
@@ -5308,7 +5308,7 @@ void SCIProwSort(
    /* sort non-LP columns */
    rowSortNonLP(row);
 
-#ifdef MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
    /* check the sorting */
    {
       int c;
@@ -7074,7 +7074,7 @@ SCIP_RETCODE lpFlushAddRows(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &val, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &name, naddrows) );
-   
+
    /* fill temporary memory with row data */
    nnonz = 0;
    for( pos = 0, r = lp->nlpirows; r < lp->nrows; ++pos, ++r )
@@ -7214,15 +7214,19 @@ SCIP_RETCODE lpFlushChgCols(
       if( col->lpipos >= 0 )
       {
 #ifndef NDEBUG
-         SCIP_Real lpiobj;
-         SCIP_Real lpilb;
-         SCIP_Real lpiub;
+         /* do not check consistency of data with LPI in case of LPI=none */
+         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         {
+            SCIP_Real lpiobj;
+            SCIP_Real lpilb;
+            SCIP_Real lpiub;
 
-         SCIP_CALL( SCIPlpiGetObj(lp->lpi, col->lpipos, col->lpipos, &lpiobj) );
-         SCIP_CALL( SCIPlpiGetBounds(lp->lpi, col->lpipos, col->lpipos, &lpilb, &lpiub) );
-         assert(SCIPsetIsFeasEQ(set, lpiobj, col->flushedobj));
-         assert(SCIPsetIsFeasEQ(set, lpilb, col->flushedlb));
-         assert(SCIPsetIsFeasEQ(set, lpiub, col->flushedub));
+            SCIP_CALL( SCIPlpiGetObj(lp->lpi, col->lpipos, col->lpipos, &lpiobj) );
+            SCIP_CALL( SCIPlpiGetBounds(lp->lpi, col->lpipos, col->lpipos, &lpilb, &lpiub) );
+            assert(SCIPsetIsFeasEQ(set, lpiobj, col->flushedobj));
+            assert(SCIPsetIsFeasEQ(set, lpilb, col->flushedlb));
+            assert(SCIPsetIsFeasEQ(set, lpiub, col->flushedub));
+         }
 #endif
 
          if( col->objchanged )
@@ -7342,12 +7346,16 @@ SCIP_RETCODE lpFlushChgRows(
       if( row->lpipos >= 0 )
       {
 #ifndef NDEBUG
-         SCIP_Real lpilhs;
-         SCIP_Real lpirhs;
+         /* do not check consistency of data with LPI in case of LPI=none */
+         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         {
+            SCIP_Real lpilhs;
+            SCIP_Real lpirhs;
 
-         SCIP_CALL( SCIPlpiGetSides(lp->lpi, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
-         assert(SCIPsetIsSumEQ(set, lpilhs, row->flushedlhs));
-         assert(SCIPsetIsSumEQ(set, lpirhs, row->flushedrhs));
+            SCIP_CALL( SCIPlpiGetSides(lp->lpi, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
+            assert(SCIPsetIsSumEQ(set, lpilhs, row->flushedlhs));
+            assert(SCIPsetIsSumEQ(set, lpirhs, row->flushedrhs));
+         }
 #endif
          if( row->lhschanged || row->rhschanged )
          {
@@ -7504,18 +7512,22 @@ SCIP_RETCODE SCIPlpMarkFlushed(
       if( col->lpipos >= 0 )
       {
 #ifndef NDEBUG
-         SCIP_Real lpiobj;
-         SCIP_Real lpilb;
-         SCIP_Real lpiub;
+         /* do not check consistency of data with LPI in case of LPI=none */
+         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         {
+            SCIP_Real lpiobj;
+            SCIP_Real lpilb;
+            SCIP_Real lpiub;
 
-         SCIP_CALL( SCIPlpiGetObj(lp->lpi, col->lpipos, col->lpipos, &lpiobj) );
-         SCIP_CALL( SCIPlpiGetBounds(lp->lpi, col->lpipos, col->lpipos, &lpilb, &lpiub) );
-         assert(SCIPsetIsSumEQ(set, lpiobj, col->flushedobj));
-         assert(SCIPsetIsSumEQ(set, lpilb, col->flushedlb));
-         assert(SCIPsetIsSumEQ(set, lpiub, col->flushedub));
-         assert(col->flushedobj == col->obj); /*lint !e777*/
-         assert(col->flushedlb == (SCIPsetIsInfinity(set, -col->lb) ? -SCIPlpiInfinity(lp->lpi) : col->lb)); /*lint !e777*/
-         assert(col->flushedub == (SCIPsetIsInfinity(set, col->ub) ? SCIPlpiInfinity(lp->lpi) : col->ub)); /*lint !e777*/
+            SCIP_CALL( SCIPlpiGetObj(lp->lpi, col->lpipos, col->lpipos, &lpiobj) );
+            SCIP_CALL( SCIPlpiGetBounds(lp->lpi, col->lpipos, col->lpipos, &lpilb, &lpiub) );
+            assert(SCIPsetIsSumEQ(set, lpiobj, col->flushedobj));
+            assert(SCIPsetIsSumEQ(set, lpilb, col->flushedlb));
+            assert(SCIPsetIsSumEQ(set, lpiub, col->flushedub));
+            assert(col->flushedobj == col->obj); /*lint !e777*/
+            assert(col->flushedlb == (SCIPsetIsInfinity(set, -col->lb) ? -SCIPlpiInfinity(lp->lpi) : col->lb)); /*lint !e777*/
+            assert(col->flushedub == (SCIPsetIsInfinity(set, col->ub) ? SCIPlpiInfinity(lp->lpi) : col->ub)); /*lint !e777*/
+         }
 #endif
          col->objchanged = FALSE;
          col->lbchanged = FALSE;
@@ -7535,16 +7547,18 @@ SCIP_RETCODE SCIPlpMarkFlushed(
       if( row->lpipos >= 0 )
       {
 #ifndef NDEBUG
-         SCIP_Real lpilhs;
-         SCIP_Real lpirhs;
+         /* do not check consistency of data with LPI in case of LPI=none */
+         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         {
+            SCIP_Real lpilhs;
+            SCIP_Real lpirhs;
 
-         SCIP_CALL( SCIPlpiGetSides(lp->lpi, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
-         assert(SCIPsetIsSumEQ(set, lpilhs, row->flushedlhs));
-         assert(SCIPsetIsSumEQ(set, lpirhs, row->flushedrhs));
-         assert(row->flushedlhs ==
-            (SCIPsetIsInfinity(set, -row->lhs) ? -SCIPlpiInfinity(lp->lpi) : row->lhs - row->constant)); /*lint !e777*/
-         assert(row->flushedrhs ==
-            (SCIPsetIsInfinity(set, row->rhs) ? SCIPlpiInfinity(lp->lpi) : row->rhs - row->constant)); /*lint !e777*/
+            SCIP_CALL( SCIPlpiGetSides(lp->lpi, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
+            assert(SCIPsetIsSumEQ(set, lpilhs, row->flushedlhs));
+            assert(SCIPsetIsSumEQ(set, lpirhs, row->flushedrhs));
+            assert(row->flushedlhs == (SCIPsetIsInfinity(set, -row->lhs) ? -SCIPlpiInfinity(lp->lpi) : row->lhs - row->constant)); /*lint !e777*/
+            assert(row->flushedrhs == (SCIPsetIsInfinity(set, row->rhs) ? SCIPlpiInfinity(lp->lpi) : row->rhs - row->constant)); /*lint !e777*/
+         }
 #endif
          row->lhschanged = FALSE;
          row->rhschanged = FALSE;
@@ -11812,6 +11826,7 @@ SCIP_RETCODE lpLexDualSimplex(
                   type = 'b';
                   break;
                default:
+                  type = '?';
                   SCIPerrorMessage("unknown base stat %d\n", cstat[j]);
                   SCIPABORT();
                }
@@ -11819,7 +11834,7 @@ SCIP_RETCODE lpLexDualSimplex(
             }
          }
          SCIPdebugMessage("\n\n");
-         
+
          if( !chooseBasic )
          {
             SCIPsetFreeBufferArray(set, &primsol);
@@ -12035,6 +12050,7 @@ SCIP_RETCODE lpLexDualSimplex(
                         type = 'b'; 
                         break;
                      default: 
+                        type = '?';
                         SCIPerrorMessage("unknown base state %d\n", cstat[j]);
                         SCIPABORT();
                      }
@@ -12042,7 +12058,7 @@ SCIP_RETCODE lpLexDualSimplex(
                   }
                }
                SCIPdebugMessage("\n\n");
-               
+
                if( !chooseBasic )
                {
                   SCIPsetFreeBufferArray(set, &primsol);
@@ -12294,11 +12310,11 @@ SCIP_RETCODE lpAlgorithm(
    success = FALSE;
    if( lptimelimit > 0.0 )
       SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
-   
+
    if( lptimelimit <= 0.0 || !success )
    {
       SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
-      *lperror = FALSE;
+      *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
       *timelimit = TRUE;
       return SCIP_OKAY;
    }
@@ -12556,7 +12572,7 @@ SCIP_RETCODE lpSolveStable(
       }
 
       success3 = FALSE;
-      if( !simplex && !tightdualfeastol && !tightdualfeastol )
+      if( !simplex && !tightprimfeastol && !tightdualfeastol )
       {
          SCIP_CALL( lpSetBarrierconvtol(lp, FEASTOLTIGHTFAC * SCIPsetBarrierconvtol(set), &success3) );
       }
@@ -12592,7 +12608,7 @@ SCIP_RETCODE lpSolveStable(
          {
             SCIP_CALL( lpSetDualfeastol(lp, SCIPsetDualfeastol(set), &success) );
          }
-         if( !simplex && !tightdualfeastol && !tightdualfeastol )
+         if( !simplex && !tightprimfeastol && !tightdualfeastol )
          {
             SCIP_CALL( lpSetBarrierconvtol(lp, SCIPsetBarrierconvtol(set), &success) );
          }
@@ -13142,7 +13158,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
-   int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool             limitresolveiters,  /**< should LP iterations for resolving calls be limited?
                                               *   (limit is computed within the method w.r.t. the average LP iterations) */
    SCIP_Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
@@ -13153,6 +13169,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SCIP_RETCODE retcode;
    SCIP_Bool needprimalray;
    SCIP_Bool needdualray;
+   int harditlim;
    int resolveitlim;
 
    assert(lp != NULL);
@@ -13172,8 +13189,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       || (set->conf_enable && set->conf_useinflp));
 
    /* compute the limit for the number of LP resolving iterations, if needed (i.e. if limitresolveiters == TRUE) */
-   resolveitlim = ( limitresolveiters ? lpGetResolveItlim(set, stat, itlim) : itlim );
-   assert(itlim == -1 || (resolveitlim <= itlim));
+   harditlim = (int) MAX(itlim, INT_MAX);
+   resolveitlim = ( limitresolveiters ? lpGetResolveItlim(set, stat, harditlim) : harditlim );
+   assert(harditlim == -1 || (resolveitlim <= harditlim));
 
    /* if there are lazy bounds, check whether the bounds should explicitly be put into the LP (diving was started)
     * or removed from the LP (diving was ended)
@@ -13214,7 +13232,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SOLVEAGAIN:
       /* solve the LP */
       oldnlps = stat->nlps;
-      SCIP_CALL( lpFlushAndSolve(lp, blkmem, set, messagehdlr, stat, prob, eventqueue, resolveitlim, itlim, needprimalray,
+      SCIP_CALL( lpFlushAndSolve(lp, blkmem, set, messagehdlr, stat, prob, eventqueue, resolveitlim, harditlim, needprimalray,
             needdualray, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
       SCIPdebugMessage("lpFlushAndSolve() returned solstat %d (error=%u)\n", SCIPlpGetSolstat(lp), *lperror);
       assert(!(*lperror) || !lp->solved);
@@ -16183,7 +16201,7 @@ SCIP_RETCODE SCIPlpEndDive(
    {
       SCIP_Bool lperror;
 
-      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr,  blkmem, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, FALSE, &lperror) );
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr,  blkmem, stat, eventqueue, eventfilter, prob, -1LL, FALSE, FALSE, FALSE, &lperror) );
       if( lperror )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -17597,13 +17615,14 @@ void SCIPlpMarkDivingObjChanged(
  */
 SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
    char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
+   SCIP_Real             timelimit,          /**< time limit for LP solver */
+   int                   iterlimit,          /**< iteration limit for LP solver */
    SCIP_Real*            point,              /**< array to store relative interior point on exit */
    SCIP_Bool*            success             /**< buffer to indicate whether interior point was successfully computed */
    )
@@ -17619,7 +17638,6 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_Real plusinf;
    SCIP_Real objval;
    SCIP_Real alpha;
-   SCIP_Real timelimit;
    SCIP_RETCODE retcode;
    int* colinds;
    int nnewcols;
@@ -17638,6 +17656,10 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    assert(success != NULL);
 
    *success = FALSE;
+
+   /* check time and iteration limits */
+   if ( timelimit <= 0.0 || iterlimit <= 0 )
+      return SCIP_OKAY;
 
    /* exit if there are no columns */
    assert(lp->nrows >= 0);
@@ -18082,15 +18104,18 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 #endif
 
    /* set time limit */
-   SCIP_CALL( SCIPsetGetRealParam(set, "limits/time", &timelimit) );
-   if ( ! SCIPsetIsInfinity(set, timelimit) )
-      timelimit -= SCIPclockGetTime(stat->solvingtime);
-   if ( timelimit <= 0.0 )
-   {
-      SCIP_CALL( SCIPlpiFree(&lpi) );
-      return SCIP_OKAY;
-   }
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_LPTILIM, timelimit) );
+   retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_LPTILIM, timelimit);
+
+   /* check, if parameter is unknown */
+   if ( retcode == SCIP_PARAMETERUNKNOWN )
+      SCIPmessagePrintWarning(messagehdlr, "Could not set time limit of LP solver for relative interior point computation.\n");
+
+   /* set iteration limit */
+   retcode = SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPTILIM, iterlimit);
+
+   /* check, if parameter is unknown */
+   if ( retcode == SCIP_PARAMETERUNKNOWN )
+      SCIPmessagePrintWarning(messagehdlr, "Could not set iteration limit of LP solver for relative interior point computation.\n");
 
    /* solve and store point */
    /* SCIP_CALL( SCIPlpiSolvePrimal(lpi) ); */
@@ -18102,6 +18127,13 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       SCIP_CALL( SCIPlpiFree(&lpi) );
       return SCIP_OKAY;
    }
+
+#ifndef NDEBUG
+   if ( SCIPlpiIsIterlimExc(lpi) )
+      SCIPmessagePrintWarning(messagehdlr, "Iteration limit exceeded in relative interior point computation.\n");
+   if ( SCIPlpiIsTimelimExc(lpi) )
+      SCIPmessagePrintWarning(messagehdlr, "Time limit exceeded in relative interior point computation.\n");
+#endif
 
    if( SCIPlpiIsOptimal(lpi) )
    {

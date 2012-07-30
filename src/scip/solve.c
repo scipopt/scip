@@ -1752,7 +1752,10 @@ SCIP_RETCODE SCIPpriceLoop(
       /* check if pricing loop should be aborted */
       if( SCIPsolveIsStopped(set, stat, FALSE) )
       {
-         SCIPmessagePrintWarning(messagehdlr, "pricing has been interrupted -- LP of current node is invalid\n");
+         /* do not print the warning message if we stopped because the problem is solved */
+         if( !SCIPsetIsLE(set, SCIPgetUpperbound(set->scip), SCIPgetLowerbound(set->scip)) )
+            SCIPmessagePrintWarning(messagehdlr, "pricing has been interrupted -- LP of current node is invalid\n");
+
          *aborted = TRUE;
          break;
       }
@@ -1797,8 +1800,7 @@ SCIP_RETCODE SCIPpriceLoop(
        * if LP was infeasible, we have to use dual simplex
        */
       SCIPdebugMessage("pricing: solve LP\n");
-      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob,
-            -1, FALSE, TRUE, FALSE, lperror) );
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1LL, FALSE, TRUE, FALSE, lperror) );
       assert(lp->flushed);
       assert(lp->solved || *lperror);
 
@@ -1819,8 +1821,7 @@ SCIP_RETCODE SCIPpriceLoop(
 
       /* solve LP again after resetting bounds and adding new initial constraints (with dual simplex) */
       SCIPdebugMessage("pricing: solve LP after resetting bounds and adding new initial constraints\n");
-      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob,
-            -1, FALSE, FALSE, FALSE, lperror) );
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1LL, FALSE, FALSE, FALSE, lperror) );
       assert(lp->flushed);
       assert(lp->solved || *lperror);
 
@@ -2496,7 +2497,16 @@ SCIP_RETCODE solveNodeLP(
    SCIP_CALL( applyBounding(blkmem, set, stat, transprob, primal, tree, lp, branchcand, eventqueue, conflict, cutoff) );
 #ifdef SCIP_DEBUG
    if( *cutoff )
-      SCIPdebugMessage("solution cuts off root node, stop solution process\n");
+   {
+      if( SCIPtreeGetCurrentDepth(tree) == 0 )
+      {
+         SCIPdebugMessage("solution cuts off root node, stop solution process\n");
+      }
+      else
+      {
+         SCIPdebugMessage("solution cuts off node\n");
+      }
+   }
 #endif
 
    if( !(*cutoff) && !(*lperror) )
@@ -2519,14 +2529,13 @@ SCIP_RETCODE solveNodeLP(
       && !(*cutoff) )
    {
       SCIP_Real tmpcutoff;
-      
-      /* temporarily disable cutoffbound, which also disables the objective limit */ 
+
+      /* temporarily disable cutoffbound, which also disables the objective limit */
       tmpcutoff = lp->cutoffbound;
       lp->cutoffbound = SCIPlpiInfinity(SCIPlpGetLPI(lp));
 
       lp->solved = FALSE;
-      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
-            -1, FALSE, FALSE, FALSE, lperror) );
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, lperror) );
 
       /* reinstall old cutoff bound */
       lp->cutoffbound = tmpcutoff;
@@ -3625,7 +3634,7 @@ SCIP_RETCODE solveNode(
                if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT || SCIPsolveIsStopped(set, stat, FALSE) )
                {
                   SCIP_NODE* node;
-               
+
                   /* as we hit the time or iteration limit or another interrupt (e.g., gap limit), we do not want to solve the LP again.
                    * in order to terminate correctly, we create a "branching" with only one child node 
                    * that is a copy of the focusnode 
@@ -3767,6 +3776,8 @@ SCIP_RETCODE addCurrentSolution(
    /* found a feasible solution */
    if( SCIPtreeHasFocusNodeLP(tree) )
    {
+      assert(lp->primalfeasible);
+
       /* start clock for LP solutions */
       SCIPclockStart(stat->lpsoltime, set);
 

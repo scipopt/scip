@@ -23,7 +23,7 @@
  *
  * The heuristic is called only one time: before solving the root node.
  *
- * It checks, whether a solution-file was read in and there already is a starting solution.  If this
+ * It checks, whether a solution-file was read in and a starting solution already exists.  If this
  * is not the case, an initial possible coloring is computed by a greedy method.  After that, a
  * tabu-search is called, which tries to reduce the number of colors needed. The tabu-search algorithm
  * follows the description in
@@ -52,7 +52,7 @@
  * FALSE.  The number of iterations after which the tabu-search stops if no solution was yet found
  * can be changed by the param <heuristics/initcol/maxiter>. A great effect is also obtained by
  * changing the parameters <heuristics/initcol/tabubase> and <heuristics/initcol/tabugamma>, which
- * distinguish the number of iterations for which the former color of a node is forbidden; more
+ * determine the number of iterations for which the former color of a node is forbidden; more
  * precisely, this number is \<tabubase\> + ncritical * \<tabugamma\>, where ncritical is the number
  * of nodes, which are incident to violated edges.  Finally, the level of output and the frequency of
  * status lines can be changed by <heuristics/initcol/output> and <heuristics/initcol/dispfreq>.
@@ -682,15 +682,6 @@ SCIP_DECL_HEUREXEC(heurExecInit)
 
    return SCIP_OKAY;
 }
-
-
-/* define not used callbacks as NULL */
-#define heurInitInit NULL
-#define heurExitInit NULL
-#define heurInitsolInit NULL
-#define heurExitsolInit NULL
-
-
 
 /*
  * primal heuristic specific interface methods

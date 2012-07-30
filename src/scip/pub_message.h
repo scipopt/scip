@@ -55,7 +55,7 @@ extern "C" {
 #define SCIPdebug(x)                        x
 
 /** prints a debugging message if SCIP_DEBUG flag is set */
-#define SCIPdebugMessage                printf("[%s:%d] debug: ", __FILE__, __LINE__); printf
+#define SCIPdebugMessage                printf("[%s:%d] debug: ", __FILE__, __LINE__), printf
 
 /** executes printf command only if SCIP_DEBUG flag is set */
 #define SCIPdebugPrintf                 printf
@@ -90,7 +90,7 @@ extern "C" {
 #define SCIPstatistic(x)                        x
 
 /** prints a statistic message if SCIP_STATISTIC flag is set */
-#define SCIPstatisticMessage                printf("[%s:%d] statistic: ", __FILE__, __LINE__); printf
+#define SCIPstatisticMessage                printf("[%s:%d] statistic: ", __FILE__, __LINE__), printf
 
 /** executes printf command only if SCIP_STATISTIC flag is set */
 #define SCIPstatisticPrintf                 printf

@@ -4966,8 +4966,8 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
-   SCIPdebugMessage("Copying the plugins was %s successful.", success ? "" : "not");
-  
+   SCIPdebugMessage("Copying the plugins was %s successful.\n", success ? "" : "not");
+
    SCIP_CALL( SCIPcreateProb(auxipdata->subscip, "sepa_zerohalf auxiliary IP (AuxIP)",
          NULL, NULL , NULL , NULL , NULL , NULL , NULL) );
 
@@ -5207,12 +5207,13 @@ SCIP_RETCODE solveSubscip(
    SCIP_SOL***           sols,               /**< pointer to store array of solutions */
    int*                  nsols               /**< pointer to store number of solutions */
    )
-{ 
+{
+   SCIP_RETCODE          retcode;
    SCIP_STAGE            subscipstage;
    SCIP_Real             maxslack;
    int                   i;
    int                   j;
-  
+
    assert(sepadata != NULL);
    assert(mod2data != NULL);
    assert(auxipdata != NULL);
@@ -5221,9 +5222,20 @@ SCIP_RETCODE solveSubscip(
    assert(*sols == NULL);
    assert(*nsols == 0);
 
-
    /* solve AuxIP */
-   SCIP_CALL(SCIPsolve(auxipdata->subscip));
+   retcode = SCIPsolve(auxipdata->subscip);
+
+   /* errors in solving the subproblem should not kill the overall solving process;
+    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
+   if ( retcode != SCIP_OKAY )
+   {
+#ifndef NDEBUG
+      SCIP_CALL( retcode );
+#endif
+      SCIPwarningMessage(scip, "Error while solving subproblem in zerohalf separator; sub-SCIP terminated with code <%d>\n", retcode);
+      *nsols = 0;
+      return SCIP_OKAY;
+   }
 
    /* print statistic */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(auxipdata->subscip, NULL) ) );
@@ -7371,9 +7383,9 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
       "   #                      'Z' zero rows,\n"
       "   #                      'C' fast {'z','s'},\n"
       "   #                      'R' fast {'Z','L','I'}\n"
-      "   #                      \n"
+      "   #\n"
       "   #                      '-' no preprocessing\n"
-      "   #                     ", '\0', SCIP_MAXSTRLEN - ncharsprinted - 1);
+      "   #", '\0', (unsigned int) (SCIP_MAXSTRLEN - ncharsprinted - 1));
 
    assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
 
@@ -7390,9 +7402,9 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
    ncharsprinted += SCIPmemccpy(&(sepamethodsdescription[ncharsprinted - 1]),
       "   #                      's' auxiliary IP heuristics (i.e. number of solved nodes is limited)\n"
       "   #                      'S' auxiliary IP exact      (i.e. unlimited number of nodes)\n"
-      "   #                      \n"
+      "   #\n"
       "   #                      '-' no processing\n"
-      "   #                     ", '\0', SCIP_MAXSTRLEN - ncharsprinted - 1);
+      "   #", '\0', (unsigned int) (SCIP_MAXSTRLEN - ncharsprinted - 1));
 
    assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
 
@@ -7409,7 +7421,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
       "   #                      'p' maximize cut violation and penalize a high number\n"
       "   #                          of aggregated rows in the cut weighted by the number\n"
       "   #                          of rows in the aggregation and the penalty factor p\n"
-      "   #                     ", '\0', SCIP_MAXSTRLEN - ncharsprinted - 1);
+      "   #", '\0', (unsigned int) (SCIP_MAXSTRLEN - ncharsprinted - 1));
 
    assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
 
@@ -7471,7 +7483,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
   
    SCIP_CALL(SCIPaddIntParam(scip,
          "separating/zerohalf/maxcutsfound",
-         "maximal number of {0,1/2}-cuts determined per separation round \n\
+         "maximal number of {0,1/2}-cuts determined per separation round\n\
    #                      (this includes separated but inefficacious cuts)",
          &(sepadata->maxcuts), TRUE, DEFAULT_MAXCUTS, 0, INT_MAX, NULL, NULL));
    SCIP_CALL(SCIPaddIntParam(scip,

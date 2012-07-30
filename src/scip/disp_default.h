@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** includes the default display columns in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeDispDefault(
    SCIP*                 scip                /**< SCIP data structure */
    );

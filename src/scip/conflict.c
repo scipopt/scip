@@ -2017,7 +2017,7 @@ SCIP_Bool conflictMarkBoundCheckPresence(
          }
          else if( var->conflictlb == newbound ) /*lint !e777*/
          {
-            SCIPdebugMessage("ignoring redundant bound change <%s> >= %g since it this lower bound is already present\n", SCIPvarGetName(var), newbound);
+            SCIPdebugMessage("ignoring redundant bound change <%s> >= %g since this lower bound is already present\n", SCIPvarGetName(var), newbound);
             SCIPdebugMessage("adjust relaxed lower bound <%g> -> <%g>\n", var->conflictlb, relaxedbd);
             var->conflictrelaxedlb = MAX(var->conflictrelaxedlb, relaxedbd);
             return TRUE;
@@ -2048,7 +2048,7 @@ SCIP_Bool conflictMarkBoundCheckPresence(
          }
          else if( var->conflictub == newbound ) /*lint !e777*/
          {
-            SCIPdebugMessage("ignoring redundant bound change <%s> <= %g since it this upper bound is already present\n", SCIPvarGetName(var), newbound);
+            SCIPdebugMessage("ignoring redundant bound change <%s> <= %g since this upper bound is already present\n", SCIPvarGetName(var), newbound);
             SCIPdebugMessage("adjust relaxed upper bound <%g> -> <%g>\n", var->conflictub, relaxedbd);
             var->conflictrelaxedub = MIN(var->conflictrelaxedub, relaxedbd);
             return TRUE;
@@ -2397,20 +2397,32 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
    if( bdchginfo == NULL )
       return SCIP_OKAY;
 
+   /* check that the bound change info is not a temporary one */
+   assert(SCIPbdchgidxGetPos(&bdchginfo->bdchgidx) >= 0);
+
    /* get the position of the bound change information within the bound change array of the variable */
    nbdchgs = bdchginfo->pos;
    assert(nbdchgs >= 0);
 
+   /* if the relaxed bound should be ignored, set the relaxed bound to the bound given by the bdchgidx; that ensures
+    * that the loop(s) below will be skipped
+    */
+   if( set->conf_ignorerelaxedbd )
+      relaxedbd = SCIPbdchginfoGetNewbound(bdchginfo);
+
    /* search for the bound change information which includes the relaxed bound */
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
+      SCIP_Real newbound;
+
       /* adjust relaxed lower bound w.r.t. variable type */
       SCIPvarAdjustLb(var, set, &relaxedbd);
 
       /* due to numericis we compare the relaxed lower bound to the one present at the particular time point and take
        * the better one
        */
-      relaxedbd = MIN(relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo));
+      newbound = SCIPbdchginfoGetNewbound(bdchginfo);
+      relaxedbd = MIN(relaxedbd, newbound);
 
       /* check if relaxed lower bound is smaller or equal to global lower bound; if so we can ignore the conflicting
        * bound
@@ -2445,6 +2457,8 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
    }
    else
    {
+      SCIP_Real newbound;
+
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
 
       /* adjust relaxed upper bound w.r.t. variable type */
@@ -2453,7 +2467,8 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
       /* due to numericis we compare the relaxed upper bound to the one present at the particular time point and take
        * the better one
        */
-      relaxedbd = MAX(relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo));
+      newbound = SCIPbdchginfoGetNewbound(bdchginfo);
+      relaxedbd = MAX(relaxedbd, newbound);
 
       /* check if relaxed upper bound is greater or equal to global upper bound; if so we can ignore the conflicting
        * bound
@@ -2640,8 +2655,8 @@ SCIP_Real SCIPconflictGetVarLb(
 {
    if( var->conflictlbcount == conflict->count )
    {
-      assert(var->conflictlb >= var->conflictrelaxedlb);
-      return var->conflictlb;
+      assert(EPSGE(var->conflictlb, var->conflictrelaxedlb, 1e-09));
+      return var->conflictrelaxedlb;
    }
 
    return SCIPvarGetLbGlobal(var);
@@ -2657,7 +2672,7 @@ SCIP_Real SCIPconflictGetVarUb(
 {
    if( var->conflictubcount == conflict->count )
    {
-      assert(var->conflictub <= var->conflictrelaxedub);
+      assert(EPSLE(var->conflictub, var->conflictrelaxedub, 1e-09));
       return var->conflictrelaxedub;
    }
 

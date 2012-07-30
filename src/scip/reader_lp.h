@@ -39,13 +39,13 @@ extern "C" {
 #endif
 
 /** includes the lp file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderLp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /* reads problem from file */
-extern
+EXTERN
 SCIP_RETCODE SCIPreadLp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< the file reader itself */
@@ -54,7 +54,7 @@ SCIP_RETCODE SCIPreadLp(
    );
 
 /* writes problem to file */
-extern
+EXTERN
 SCIP_RETCODE SCIPwriteLp(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */

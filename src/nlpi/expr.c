@@ -5289,6 +5289,27 @@ void SCIPexprFreeDeep(
    BMSfreeBlockMemory(blkmem, expr);
 }
 
+/** frees an expression but not its children */
+void SCIPexprFreeShallow(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr                /**< pointer to expression to free */
+   )
+{
+   assert(blkmem != NULL);
+   assert(expr   != NULL);
+   assert(*expr  != NULL);
+
+   /* call operands data free callback, if given */
+   if( exprOpTable[(*expr)->op].freedata != NULL )
+   {
+      exprOpTable[(*expr)->op].freedata(blkmem, (*expr)->nchildren, (*expr)->data);
+   }
+
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*expr)->children, (*expr)->nchildren);
+
+   BMSfreeBlockMemory(blkmem, expr);
+}
+
 /** creates a SCIP_EXPR_LINEAR expression that is (affine) linear in its children: constant + sum_i coef_i child_i */
 SCIP_RETCODE SCIPexprCreateLinear(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
@@ -5326,6 +5347,50 @@ SCIP_RETCODE SCIPexprCreateLinear(
    return SCIP_OKAY;
 }
 
+/** adds new terms to a linear expression */
+SCIP_RETCODE SCIPexprAddToLinear(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< linear expression */
+   int                   nchildren,          /**< number of children to add */
+   SCIP_Real*            coefs,              /**< coefficients of additional children */
+   SCIP_EXPR**           children,           /**< additional children expressions */
+   SCIP_Real             constant            /**< constant to add */
+   )
+{
+   SCIP_Real* data;
+
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_LINEAR);
+   assert(nchildren >= 0);
+   assert(coefs != NULL || nchildren == 0);
+   assert(children != NULL || nchildren == 0);
+
+   data = (SCIP_Real*)expr->data.data;
+   assert(data != NULL);
+
+   /* handle simple case of adding a constant */
+   if( nchildren == 0 )
+   {
+      data[expr->nchildren] += constant;
+
+      return SCIP_OKAY;
+   }
+
+   /* add new children to expr's children array */
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &expr->children, expr->nchildren, expr->nchildren + nchildren) );
+   BMScopyMemoryArray(&expr->children[expr->nchildren], children, nchildren);  /*lint !e866*/
+
+   /* add constant and new coefs to expr's data array */
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &data, expr->nchildren + 1, expr->nchildren + nchildren + 1) );
+   data[expr->nchildren + nchildren] = data[expr->nchildren] + constant;
+   BMScopyMemoryArray(&data[expr->nchildren], coefs, nchildren);  /*lint !e866*/
+   expr->data.data = (void*)data;
+
+   expr->nchildren += nchildren;
+
+   return SCIP_OKAY;
+}
 
 /** creates a SCIP_EXPR_QUADRATIC expression: constant + sum_i coef_i child_i + sum_i coef_i child1_i child2_i */
 SCIP_RETCODE SCIPexprCreateQuadratic(
@@ -8653,6 +8718,10 @@ void exprgraphNodePropagateBounds(
    /* if node is not enabled, then do nothing */
    if( !node->enabled )
       return;
+
+   /* tell children that they should propagate their bounds even if not tightened */
+   if( (node->boundstatus & SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTFORCE) == SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTFORCE )
+      minstrength = -1.0;
 
    /* we will do something, so reset boundstatus to "tightened-by-parent, but not recently" */
    node->boundstatus = SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENT;
@@ -12770,7 +12839,7 @@ void SCIPexprgraphTightenNodeBounds(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
    SCIP_EXPRGRAPHNODE*   node,               /**< node in expression graph with no parents */
    SCIP_INTERVAL         nodebounds,         /**< new bounds for node */
-   SCIP_Real             minstrength,        /**< minimal required relative bound strengthening in a node to trigger a propagation into children nodes */
+   SCIP_Real             minstrength,        /**< minimal required relative bound strengthening in a node to trigger a propagation into children nodes (set to negative value if propagation should always be triggered) */
    SCIP_Bool*            cutoff              /**< buffer to store whether a node's bounds were propagated to an empty interval */
    )
 {
@@ -12804,12 +12873,17 @@ void SCIPexprgraphTightenNodeBounds(
       return;
    }
 
-   /* if bounds are considerably improved or tightening leads to an empty interval,
-    * mark that node have recently tightened bounds
+   /* if minstrength is negative, always mark that node has recently tightened bounds,
+    * if bounds are considerably improved or tightening leads to an empty interval,
+    * mark that node has recently tightened bounds
     * if bounds are only slightly improved, set the status to tightened by parent,
-    * so next propagateVarBound round will reset the bounds */
-   if( isLbBetter(minstrength, nodebounds.inf, node->bounds.inf, node->bounds.sup) ||
-      (isUbBetter(minstrength, nodebounds.sup, node->bounds.inf, node->bounds.sup)) )
+    * so next propagateVarBound round will reset the bounds
+    */
+   if( minstrength < 0.0 )
+      node->boundstatus |= SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTFORCE;
+   else if(
+      isLbBetter(minstrength, nodebounds.inf, node->bounds.inf, node->bounds.sup) ||
+      isUbBetter(minstrength, nodebounds.sup, node->bounds.inf, node->bounds.sup) )
       node->boundstatus |= SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTRECENT;
    else if( nodebounds.inf > node->bounds.inf || nodebounds.sup < node->bounds.sup )
       node->boundstatus |= SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENT;

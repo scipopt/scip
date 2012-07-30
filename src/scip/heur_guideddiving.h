@@ -38,7 +38,7 @@ extern "C" {
 #endif
 
 /** creates the guideddiving heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurGuideddiving(
    SCIP*                 scip                /**< SCIP data structure */
    );

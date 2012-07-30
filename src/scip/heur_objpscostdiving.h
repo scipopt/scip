@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the objpscostdiving heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurObjpscostdiving(
    SCIP*                 scip                /**< SCIP data structure */
    );

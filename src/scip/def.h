@@ -98,7 +98,7 @@ extern "C" {
 #define SCIP_DEFAULT_SUMEPSILON       1e-06  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL          1e-08  /**< default feasibility tolerance for constraints */
 #define SCIP_DEFAULT_LPFEASTOL        1e-08  /**< default primal feasibility tolerance of LP solver */
-#define SCIP_DEFAULT_DUALFEASTOL      1e-09  /**< default feasibility tolerance for reduced costs */
+#define SCIP_DEFAULT_DUALFEASTOL      1e-06  /**< default feasibility tolerance for reduced costs */
 #define SCIP_DEFAULT_BARRIERCONVTOL   1e-10  /**< default convergence tolerance used in barrier algorithm */
 #define SCIP_DEFAULT_BOUNDSTREPS       0.05  /**< default minimal relative improve for strengthening bounds */
 #define SCIP_DEFAULT_PSEUDOCOSTEPS    1e-01  /**< default minimal variable distance value to use for pseudo cost updates */
@@ -191,7 +191,7 @@ extern "C" {
  * Define the marco EXTERN depending if the OS is Windows or not
  */
 #if defined(_WIN32) || defined(_WIN64)
-#define EXTERN extern
+#define EXTERN __declspec(dllexport)
 #else
 #define EXTERN extern
 #endif

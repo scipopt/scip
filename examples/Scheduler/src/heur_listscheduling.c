@@ -17,26 +17,27 @@
  * @brief  scheduling specific primal heuristic which is based on bidirectional serial generation scheme.
  * @author Jens Schulz
  *
- * The heuristic performs a serial SGS (schedule generation scheme), see Kolisch and Hartmann 2006. Therefore, the jobs
- * are considered in a topological order (e.g., sorted by their earliest start) and are scheduled according to that
- * order as early as possible respecting the precedence and resource constraints.
+ * @page HEUR List scheduling heuristic
  *
- * The serial generation scheme is extended to bidirectional SGS; see Li and Willis 1992. The first obtained schedule is
- * the so-called forward schedule.  Then, all jobs are sorted in non-increasing order of their completion times in the
- * forward schedule.  According to that ordering, a backward schedule is created by scheduling all jobs as late as
- * possible again with respect to precedence and resource constraints.  It gets clear from the way the algorithm works,
- * that if a feasible forward schedule has been found, a feasible backward schedule can be obtained, since no job needs
- * to be scheduled earlier as in the forward schedule.  Recreating a forward schedule by sorting the jobs according to
- * their start times in the backward schedule leads to a makespan not larger than the one in the first forward schedule.
+ * The heuristic performs a serial SGS (schedule generation scheme), see Kolisch and Hartmann 2006 \cite KolH06.
+ * Therefore, the jobs are considered in a topological order (e.g., sorted by their earliest start) and are scheduled
+ * according to that order as early as possible respecting the precedence and resource constraints.
  *
- * References:
- * Kolisch & Hartmann:
- * Experimental investigation of heuristics for resource-constrained project scheduling: An update
- * EJOR, 2006
+ * The serial generation scheme is extended to bidirectional SGS; see Li and Willis 1992 \cite LiW92. The first obtained
+ * schedule is the so-called forward schedule.  Then, all jobs are sorted in non-increasing order of their completion
+ * times in the forward schedule.  According to that ordering, a backward schedule is created by scheduling all jobs as
+ * late as possible again with respect to precedence and resource constraints.  It gets clear from the way the algorithm
+ * works, that if a feasible forward schedule has been found, a feasible backward schedule can be obtained, since no job
+ * needs to be scheduled earlier as in the forward schedule.  Recreating a forward schedule by sorting the jobs
+ * according to their start times in the backward schedule leads to a makespan not larger than the one in the first
+ * forward schedule.
  *
- * Li & Willis
- * An iterative scheduling technique for resource-constrained project scheduling
- * EJOR 1985
+ * @section REFERENCES References
+ *
+ * -# Rainer Kolisch and S&ouml;nke Hartmann. Experimental investigation of heuristics for resource-constrained
+ *    project scheduling: An update. <em>European Journal of Operational Research</em>, 174(1):23&ndash;37, 2006.
+ * -# K.Y. Li and R.J. Willis. An iterative scheduling technique for resource-constrained project
+ *    scheduling. <em>European Journal of Operational Research</em>, 56(3):370&ndash;379, 1992.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -209,7 +210,7 @@ SCIP_RETCODE constructSolution(
 /** insert given job into the profiles */
 static
 void profilesInsertJob(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROFILE**        profiles,           /**< array of resource profiles */
    int                   nprofiles,          /**< number of profiles */
    int                   starttime,          /**< start time of the job */
@@ -426,7 +427,7 @@ void propagateLst(
  */
 static
 SCIP_RETCODE performForwardScheduling(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    int*                  starttimes,         /**< array to store the start times for each job */
    int*                  lsts,               /**< array of latest start times for each job */
@@ -507,7 +508,7 @@ SCIP_RETCODE performForwardScheduling(
  */
 static
 SCIP_RETCODE performBackwardScheduling(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    int*                  starttimes,         /**< array of latest start times for each job */
    int*                  perm,               /**< permutation defining the order of jobs */

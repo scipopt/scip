@@ -18,6 +18,13 @@
  * @brief  constraint handler for indicator constraints over arbitrary constraint types
  * @author Ambros Gleixner
  * @author Frederic Pythoud
+ *
+ * Superindicator constraints are constraints of the form
+ * \f[
+ *    x_i = 1 \Rightarrow C(x)
+ * \f]
+ * where \f$ x_i \f$ is a binary variable and \f$ C(\dot) \f$ a constraint.  The superindicator constraint is satisfied
+ * if and only if x_i is zero or C is satisfied.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -39,7 +46,7 @@ extern "C" {
  */
 
 /** creates the handler for superindicator constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -48,7 +55,7 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsSuperindicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -85,7 +92,7 @@ SCIP_RETCODE SCIPcreateConsSuperindicator(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicSuperindicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -95,13 +102,13 @@ SCIP_RETCODE SCIPcreateConsBasicSuperindicator(
    );
 
 /** gets binary variable corresponding to the superindicator constraint */
-extern
+EXTERN
 SCIP_VAR* SCIPgetBinaryVarSuperindicator(
    SCIP_CONS*            cons                /**< superindicator constraint */
    );
 
 /** gets the slack constraint corresponding to the superindicator constraint */
-extern
+EXTERN
 SCIP_CONS* SCIPgetSlackConsSuperindicator(
    SCIP_CONS*            cons                /**< superindicator constraint */
    );
@@ -115,7 +122,7 @@ SCIP_CONS* SCIPgetSlackConsSuperindicator(
 /** transforms the current problem into a MinUC problem (minimizing the number of unsatisfied constraints),
  *  a CIP generalization of the MinULR (min. unsatisfied linear relations) problem
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPtransformMinUC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            success             /**< could all constraints be transformed? */
@@ -128,7 +135,7 @@ SCIP_RETCODE SCIPtransformMinUC(
  */
 
 /** dialog execution method for the SCIPtransformMinUC() command */
-extern
+EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinUC);
 
 #ifdef __cplusplus

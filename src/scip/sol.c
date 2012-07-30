@@ -1085,6 +1085,7 @@ SCIP_Real SCIPsolGetVal(
     */
    if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
+      SCIP_RETCODE retcode;
       SCIP_VAR* origvar;
       SCIP_Real scalar;
       SCIP_Real constant;
@@ -1095,7 +1096,9 @@ SCIP_Real SCIPsolGetVal(
       origvar = var;
       scalar = 1.0;
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+      retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
+      if ( retcode != SCIP_OKAY )
+         return SCIP_INVALID;
       if( origvar == NULL )
       {
          /* the variable has no original counterpart: in the original solution, it has a value of zero */

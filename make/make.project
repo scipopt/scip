@@ -68,6 +68,7 @@ EXPRINT 	=	cppad
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
+PARASCIP	=	false
 
 CC		=	gcc
 CC_c		=	-c # the trailing space is important
@@ -179,6 +180,16 @@ endif
 
 ifneq ($(LINKRPATH),)
 LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
+endif
+
+#-----------------------------------------------------------------------------
+# PARASCIP
+#-----------------------------------------------------------------------------
+
+ifeq ($(PARASCIP),false)
+FLAGS		+=	-DNPARASCIP
+else
+LDFLAGS 	+=	-lpthread
 endif
 
 #-----------------------------------------------------------------------------

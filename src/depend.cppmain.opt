@@ -25,9 +25,10 @@ $(BINOBJDIR)/cppmain.o: src/cppmain.cpp src/scip/scip.h src/scip/def.h \
  src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
  src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
  src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/scip/scipshell.h
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/scipshell.h

@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** Create default message handler. To free the message handler use SCIPmessagehdlrFree() */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateMessagehdlrDefault(
    SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store message handler */
    SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */

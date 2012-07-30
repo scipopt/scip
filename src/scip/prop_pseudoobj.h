@@ -38,13 +38,13 @@ extern "C" {
 #endif
 
 /** creates the pseudo objective function propagator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePropPseudoobj(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** propagates the cutoff bound for the given variables */
-extern
+EXTERN
 SCIP_RETCODE SCIPpropagateCutoffboundVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator, or NULL */

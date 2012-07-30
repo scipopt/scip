@@ -17,6 +17,21 @@
  * @ingroup BRANCHINGRULES
  * @brief  pseudo costs branching rule
  * @author Tobias Achterberg
+ *
+ * The pseudo costs branching rule selects the branching variable with respect to the so-called pseudo costs
+ * of the variables. Pseudo costs measure the average gain per unit in the objective function when the variable
+ * was branched on upwards or downwards, resp. The required information is updated at every node of
+ * the solving process.
+ *
+ * The selected variable maximizes the expected gain of the dual bound in the created subtree.
+ *
+ * For a more mathematical description and a comparison between the pseudo costs branching rule
+ * and other branching rules in SCIP, we refer to
+ *
+ * @par
+ * Tobias Achterberg@n
+ * Constraint Integer Programming@n
+ * PhD Thesis, Technische Universität Berlin, 2007@n
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -32,14 +47,14 @@ extern "C" {
 #endif
 
 /** creates the pseudo cost branching rule and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** selects a branching variable, due to pseudo cost, from the given candidate array and returns this variable together
  *  with a branching point */
-extern
+EXTERN
 SCIP_RETCODE SCIPselectBranchVarPscost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            branchcands,        /**< branching candidates */

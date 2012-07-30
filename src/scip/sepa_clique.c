@@ -229,7 +229,7 @@ SCIP_RETCODE tcliquegraphAddNode(
       SCIP_CALL( tcliquegraphCreate(scip, tcliquegraph) );
    }
    assert(*tcliquegraph != NULL);
-   assert((*tcliquegraph)->nnodes < 2*SCIPgetNBinVars(scip) - 1);
+   assert((*tcliquegraph)->nnodes < 2*SCIPgetNBinVars(scip));
 
    /* if the value is FALSE, use the negated variable for the node */
    if( !value )
@@ -911,8 +911,16 @@ SCIP_RETCODE loadTcliquegraph(
    /* add all implications between used variables to the tclique graph */
    SCIP_CALL( tcliquegraphAddImplics(scip, sepadata->tcliquegraph, cliquegraphidx) );
 
-   /* construct the dense clique table */
-   SCIP_CALL( tcliquegraphConstructCliqueTable(scip, sepadata->tcliquegraph, sepadata->cliquetablemem, sepadata->cliquedensity) );
+   /* it occurs that it might be that some cliques were not yet removed from the global clique array, so SCIPgetNClique
+    * can be greater than 0, even if there is no clique with some variables left
+    *
+    * @todo clean up empty cliques
+    */
+   if( sepadata->tcliquegraph != NULL )
+   {
+      /* construct the dense clique table */
+      SCIP_CALL( tcliquegraphConstructCliqueTable(scip, sepadata->tcliquegraph, sepadata->cliquetablemem, sepadata->cliquedensity) );
+   }
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &cliquegraphidx[1]);
@@ -1293,8 +1301,10 @@ SCIP_RETCODE separateCuts(
           * implication graph or in the clique table -> nothing has to be done
           */
          else
+	 {
             SCIPdebugMessage("no 3-cliques found in implication graph\n");
-         
+         }
+
          return SCIP_OKAY;
       }
    }

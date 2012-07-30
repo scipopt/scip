@@ -26,6 +26,7 @@
 #include "scip/scipshell.h"
 
 #include "heur_listscheduling.h"
+#include "reader_rcp.h"
 #include "reader_sch.h"
 #include "reader_sm.h"
 
@@ -50,6 +51,7 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* include problem reader */
+   SCIP_CALL( SCIPincludeReaderRcp(scip) );
    SCIP_CALL( SCIPincludeReaderSm(scip) );
    SCIP_CALL( SCIPincludeReaderSch(scip) );
 

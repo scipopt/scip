@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 /** creates RENS primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurRens(
    SCIP*                 scip                /**< SCIP data structure */
    );

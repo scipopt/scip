@@ -100,34 +100,46 @@ SCIP_RETCODE ObjPricerVRP::pricing(
    )
 {
    /* allocate array for reduced costs */
-   vector< vector<double> > red_length(num_nodes());
+   vector< vector<SCIP_Real> > red_length(num_nodes());
    for (int i = 0; i < num_nodes(); ++i)
-      red_length[i].resize(i, 0);
+      red_length[i].resize(i, 0.0);
 
    /* compute reduced-cost arc lengths store only lower triangualar matrix, i.e., red_length[i][j] only for i > j */
-   for (int i = 0; i < num_nodes(); ++i)
+   if ( isfarkas )
    {
-      assert( i == 0 || part_con(i) != 0 );
-      for (int j = 0; j < i; ++j)
+      for (int i = 0; i < num_nodes(); ++i)
       {
-         red_length[i][j] = 0.0;
+         assert( i == 0 || part_con(i) != 0 );
+         for (int j = 0; j < i; ++j)
+         {
+            SCIP_Real r = 0.0;
+            assert( arc_con(i,j) != 0 );
 
-         assert( arc_con(i,j) != 0 );
-         if ( isfarkas )
-         {
-            red_length[i][j] -= SCIPgetDualfarkasLinear(scip, arc_con(i,j));
+            r -= SCIPgetDualfarkasLinear(scip, arc_con(i,j));
             if ( j != 0 )
-               red_length[i][j] -= 0.5 * SCIPgetDualfarkasLinear(scip, part_con(j));
+               r -= 0.5 * SCIPgetDualfarkasLinear(scip, part_con(j));
             if ( i != 0 )
-               red_length[i][j] -= 0.5 * SCIPgetDualfarkasLinear(scip, part_con(i));
+               r -= 0.5 * SCIPgetDualfarkasLinear(scip, part_con(i));
+            red_length[i][j] = r;
          }
-         else
+      }
+   }
+   else
+   {
+      for (int i = 0; i < num_nodes(); ++i)
+      {
+         assert( i == 0 || part_con(i) != 0 );
+         for (int j = 0; j < i; ++j)
          {
-            red_length[i][j] -= SCIPgetDualsolLinear(scip, arc_con(i,j));
+            SCIP_Real r = 0.0;
+            assert( arc_con(i,j) != 0 );
+
+            r -= SCIPgetDualsolLinear(scip, arc_con(i,j));
             if ( j != 0 )
-               red_length[i][j] -= 0.5 * SCIPgetDualsolLinear(scip, part_con(j));
+               r -= 0.5 * SCIPgetDualsolLinear(scip, part_con(j));
             if ( i != 0 )
-               red_length[i][j] -= 0.5 * SCIPgetDualsolLinear(scip, part_con(i));
+               r -= 0.5 * SCIPgetDualsolLinear(scip, part_con(i));
+            red_length[i][j] = r;
          }
       }
    }
@@ -173,7 +185,7 @@ SCIP_RETCODE ObjPricerVRP::pricing(
 
    /* compute shortest length restricted tour w.r.t. reduced-cost arc length */
    list<int> tour;
-   double reduced_cost = find_shortest_tour(red_length, tour);
+   SCIP_Real reduced_cost = find_shortest_tour(red_length, tour);
 
    /* add tour variable */
    if ( SCIPisNegative(scip, reduced_cost) )
@@ -239,8 +251,6 @@ SCIP_RETCODE ObjPricerVRP::add_tour_variable(
    const list<int>&      tour                /**< list of nodes in tour */
    )
 {
-   SCIP_VAR* var;
-
    /* create meaningful variable name */
    char tmp_name[255];
    char var_name[255];
@@ -256,6 +266,7 @@ SCIP_RETCODE ObjPricerVRP::add_tour_variable(
     * the reduced costs of the variable in the pricing. The upper bound of 1 is implicitly satisfied
     * due to the set partitioning constraints.
     */
+   SCIP_VAR* var;
    SCIP_CALL( SCIPcreateVar(scip, &var, var_name,
                             0.0,                     // lower bound
                             SCIPinfinity(scip),      // upper bound
@@ -299,14 +310,14 @@ namespace
 {
 
 /* types needed for prioity queue -------------------- */
-static const double      eps = 1e-10;
+static const SCIP_Real   eps = 1e-9;
 
 struct PQUEUE_KEY
 {
-   int    demand;
-   double length;
+   int       demand;
+   SCIP_Real length;
 
-   PQUEUE_KEY() : demand(0), length(0) {}
+   PQUEUE_KEY() : demand(0), length(0.0) {}
 };
 
 bool operator< (const PQUEUE_KEY& l1, const PQUEUE_KEY& l2)
@@ -317,8 +328,10 @@ bool operator< (const PQUEUE_KEY& l1, const PQUEUE_KEY& l2)
       return false;
    if ( l1.length < l2.length-eps )
       return true;
+   /* not needed, since we return false anyway:
    if ( l1.length > l2.length+eps )
       return false;
+   */
    return false;
 }
 
@@ -330,11 +343,11 @@ typedef PQUEUE::pqueue_item                    PQUEUE_ITEM;
 /* types needed for dyn. programming table */
 struct NODE_TABLE_DATA
 {
-   double                length;
+   SCIP_Real             length;
    int                   predecessor;
    PQUEUE::pqueue_item   queue_item;
 
-   NODE_TABLE_DATA( ) : length(0), predecessor(-1), queue_item( NULL ) {}
+   NODE_TABLE_DATA( ) : length(0.0), predecessor(-1), queue_item( NULL ) {}
 };
 
 typedef int NODE_TABLE_KEY; // demand
@@ -348,8 +361,8 @@ typedef std::map< NODE_TABLE_KEY, NODE_TABLE_DATA > NODE_TABLE;
  *  priority queues cannot be used, since it currently does not support removal of elements that are
  *  not at the top.
  */
-double ObjPricerVRP::find_shortest_tour(
-   const vector< vector<double> >& length,   /**< matrix of lengths */
+SCIP_Real ObjPricerVRP::find_shortest_tour(
+   const vector< vector<SCIP_Real> >& length,   /**< matrix of lengths */
    list<int>&            tour                /**< list of nodes in tour */
    )
 {
@@ -370,7 +383,7 @@ double ObjPricerVRP::find_shortest_tour(
    NODE_TABLE_DATA  table_entry;
 
    /* run Dijkstra-like updates */
-   while ( PQ.empty() == false )
+   while ( ! PQ.empty() )
    {
       /* get front queue entry */
       queue_item = PQ.top();
@@ -379,9 +392,9 @@ double ObjPricerVRP::find_shortest_tour(
       PQ.pop();
 
       /* get corresponding node and node-table key */
-      const int    curr_node   = queue_data;
-      const double curr_length = queue_key.length;
-      const int    curr_demand = queue_key.demand;
+      const int       curr_node   = queue_data;
+      const SCIP_Real curr_length = queue_key.length;
+      const int       curr_demand = queue_key.demand;
 
       /* stop as soon as some negative length tour was found */
       if ( curr_node == 0 && curr_length < -eps )
@@ -400,11 +413,13 @@ double ObjPricerVRP::find_shortest_tour(
             continue;
 
          const int next_demand = curr_demand + demand(next_node);
-         const double next_length = curr_length + ( curr_node > next_node ?
-                                                    length[curr_node][next_node] :
-                                                    length[next_node][curr_node] );
+
          if ( next_demand > capacity() )
             continue;
+
+         const SCIP_Real next_length = curr_length + ( curr_node > next_node ?
+                                                    length[curr_node][next_node] :
+                                                    length[next_node][curr_node] );
 
          NODE_TABLE& next_table = table[next_node];
 
@@ -412,7 +427,7 @@ double ObjPricerVRP::find_shortest_tour(
          bool skip = false;
          list<NODE_TABLE::iterator> dominated;
 
-         for (NODE_TABLE::iterator it = next_table.begin(); it != next_table.end() && skip == false; ++it)
+         for (NODE_TABLE::iterator it = next_table.begin(); it != next_table.end() && ! skip; ++it)
          {
             if ( next_demand >= it->first && next_length >= it->second.length - eps )
                skip = true;
@@ -465,7 +480,7 @@ double ObjPricerVRP::find_shortest_tour(
          table_entry = it->second;
       }
    }
-   double tour_length = table_entry.length;
+   SCIP_Real tour_length = table_entry.length;
 
    while ( table_entry.predecessor > 0 )
    {

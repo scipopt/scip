@@ -53,7 +53,7 @@ extern "C" {
 #endif
 
 /** creates the handler for absolute power constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrAbspower(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -62,7 +62,7 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -101,13 +101,13 @@ SCIP_RETCODE SCIPcreateConsAbspower(
 
 /** creates and captures an absolute power constraint
  *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
- *  method SCIPcreateConsAbspower(); all flags can be set via SCIPconsSetFLAGNAME-methods in pub_cons.h
+ *  method SCIPcreateConsAbspower(); all flags can be set via SCIPconsSetFLAGNAME-methods in scip.h
  *
  *  @see SCIPcreateConsAbspower() for information about the basic constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -122,7 +122,7 @@ SCIP_RETCODE SCIPcreateConsBasicAbspower(
    );
 
 /** gets the absolute power constraint as a nonlinear row representation */
-extern
+EXTERN
 SCIP_RETCODE SCIPgetNlRowAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -130,56 +130,56 @@ SCIP_RETCODE SCIPgetNlRowAbspower(
    );
 
 /** gets nonlinear variable x in absolute power constraint */
-extern
+EXTERN
 SCIP_VAR* SCIPgetNonlinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    );
 
 /** gets linear variable z in absolute power constraint */
-extern
+EXTERN
 SCIP_VAR* SCIPgetLinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    );
 
 /** gets exponent in power term in absolute power constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetExponentAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    );
 
 /** gets offset in power term in absolute power constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetOffsetAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    );
 
 /** gets coefficient of linear variable in absolute power constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetCoefLinearAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    );
 
 /** gets left hand side in absolute power constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetLhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    );
 
 /** gets right hand side in absolute power constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetRhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    );
 
 /** gets the absolute violation of a absolute power constraint by a solution */
-extern
+EXTERN
 SCIP_Real SCIPgetViolationAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< absolute power constraint */

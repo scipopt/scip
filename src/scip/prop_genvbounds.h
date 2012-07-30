@@ -28,11 +28,11 @@
  *  used for providing bounds on the LHS's variable \f$x_i\f$. If the above inequality is valid, the
  *  following bounds, depending on \f$x_i\f$'s coefficient, are also valid:
  *  \f[
- *     c = 1   \qquad\Rightarrow\qquad   x_i \geq  \mbox{minactivity}(\sum a_j \, x_j) 
+ *     c = 1   \qquad\Rightarrow\qquad   x_i \geq  \mbox{minactivity}(\sum a_j \, x_j)
  *                                       + d \cdot \mbox{primal\_bound} + \mbox{const}
  *  \f]
  *  \f[
- *     c = -1  \qquad\Rightarrow\qquad   x_i \leq - \mbox{minactivity}(\sum a_j \, x_j) 
+ *     c = -1  \qquad\Rightarrow\qquad   x_i \leq - \mbox{minactivity}(\sum a_j \, x_j)
  *                                       - d \cdot \mbox{primal\_bound} - \mbox{const}.
  *  \f]
  *
@@ -71,7 +71,7 @@ extern "C" {
 /** adds a generalized variable bound to the genvbounds propagator; if there is already a genvbound for the bound
  *  "boundtype" of variable "var", it will be replaced
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPgenVBoundAdd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            genvboundprop,      /**< genvbound propagator */
@@ -85,7 +85,7 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    );
 
 /** creates the genvbounds propagator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /** includes the osil file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderOsil(
    SCIP*                 scip                /**< SCIP data structure */
    );

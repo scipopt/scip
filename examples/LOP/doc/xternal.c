@@ -29,17 +29,17 @@
  *
  * The linear ordering problem is the following:
  *
- * Given a positive interger n and an n x n matrix W the goal is to
- * find a linear order of {1, ..., n} such that the sum of weights \f$
- * w_{ij}\f$ for all pairs in which i comes before j in the order is
+ * Given a positive integer \f$ n \f$  and an \f$ n \times n  \f$ matrix \f$ W \f$  the goal is to
+ * find a linear order of \f$ \{1, \dots, n\}  \f$  such that the sum of weights \f$
+ * w_{ij}\f$ for all pairs in which \f$ x \f$  comes before \f$ j \f$  in the order is
  * maximized.
  *
  * We use the integer programming following model: We have binary
  * variables \f$ x_{ij}\f$ for all pairs \f$ (i,j)\f$ with \f$ i \neq
- * j\f$, where \f$ x_{ij} = 1\f$ if and only if i comes before j in the
+ * j\f$, where \f$ x_{ij} = 1\f$ if and only if \f$ i \f$  comes before \f$ j \f$  in the
  * encoded order. The basic model is then:
  * \f[
- *     \max \{ \sum_{i,j} w_{ij} x_{ij}\;:\; x_{ij} = x_{ji} \mbox{ for all } j \neq i\}.
+ *     \max \{ \sum_{i,j} w_{ij} x_{ij}\;:\; x_{ij} + x_{ji} = 1 \mbox{ for all } j \neq i\}.
  * \f]
  * To ensure that x encodes a linear order one has to add the
  * following @em triangle @em inequalities:

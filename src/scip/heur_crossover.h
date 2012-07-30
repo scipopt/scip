@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /** creates the crossover primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurCrossover(
    SCIP*                 scip                /**< SCIP data structure */
    );

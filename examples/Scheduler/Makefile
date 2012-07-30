@@ -37,7 +37,8 @@ MAINNAME	=	scip
 MAINOBJ		=	cmain.o \
 			heur_listscheduling.o \
 			reader_sch.o \
-			reader_sm.o
+			reader_sm.o \
+			reader_rcp.o
 
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
@@ -75,7 +76,11 @@ scip:
 
 .PHONY: doc
 doc:
-		cd doc; $(DOXY) $(MAINNAME).dxy
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
+		cd doc; $(DOXY) scheduler.dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@

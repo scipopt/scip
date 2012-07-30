@@ -40,7 +40,7 @@ extern "C" {
 #endif
 
 /** includes the mps file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderMps(
    SCIP*                 scip                /**< SCIP data structure */
    );

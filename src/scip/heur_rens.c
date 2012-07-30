@@ -481,7 +481,7 @@ SCIP_RETCODE SCIPapplyRens(
       if( heurdata->copycuts )
       {
          /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE) );
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
       }
 
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
@@ -522,19 +522,22 @@ SCIP_RETCODE SCIPapplyRens(
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
       /* use best estimate node selection */
-      if( SCIPfindNodesel(scip, "estimate") != NULL )
+      if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
       }
 
       /* use inference branching */
-      if( SCIPfindBranchrule(scip, "inference") != NULL )
+      if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
       }
 
       /* disable conflict analysis */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
+      if( !SCIPisParamFixed(subscip, "conflict/enable") )
+      {
+         SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
+      }
    }
 
 #ifdef SCIP_DEBUG
@@ -578,7 +581,12 @@ SCIP_RETCODE SCIPapplyRens(
 #ifndef NDEBUG
       SCIP_CALL( retcode );
 #endif
-      SCIPwarningMessage(scip, "Error while presolving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage(scip, "Error while presolving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+
+      /* free */
+      SCIPfreeBufferArray(scip, &subvars);
+      SCIP_CALL( SCIPfree(&subscip) );
+      return SCIP_OKAY;
    }
 
    SCIPdebugMessage("RENS presolved subproblem: %d vars, %d cons, success=%u\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
@@ -608,7 +616,7 @@ SCIP_RETCODE SCIPapplyRens(
 #ifndef NDEBUG
          SCIP_CALL( retcode );
 #endif
-         SCIPwarningMessage(scip, "Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+         SCIPwarningMessage(scip, "Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
       }
 
       /* check, whether a solution was found;

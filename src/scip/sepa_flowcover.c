@@ -38,7 +38,7 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        15 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXTRIES            100 /**< maximal number of rows to separate flow cover cuts for per separation round 
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to separate flow cover cuts for per separation round 
@@ -72,6 +72,7 @@
 
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 #define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for snf relaxation */
+#define MAXBOUND                  1e+10 /**< maximal value of normal bounds used for snf relaxation */
 
 
 /*
@@ -367,6 +368,12 @@ void getClosestLb(
          *closestlbtype = -2;
       }
    }
+
+   /* due to numerical reasons, huge bounds are relaxed to infinite bounds; this way the bounds are not used for
+    * the construction of the 0-1 single node flow relaxation
+    */
+   if( *closestlb <= -MAXBOUND )
+      *closestlb = -SCIPinfinity(scip);
 }
 
 /** return global or local upper bound of given variable whichever is closer to the variables current LP solution value */
@@ -394,6 +401,12 @@ void getClosestUb(
          *closestubtype = -2;
       }
    }
+
+   /* due to numerical reasons, huge bounds are relaxed to infinite bounds; this way the bounds are not used for
+    * the construction of the 0-1 single node flow relaxation
+    */
+   if( *closestub >= MAXBOUND )
+      *closestub = SCIPinfinity(scip);
 }
 
 /** construct a 0-1 single node flow relaxation (with some additional simple constraints) of a mixed integer set 
@@ -872,6 +885,17 @@ SCIP_RETCODE constructSNFRelaxation(
                vubconsts[bestubtype], *transrhs);
          }
       }
+
+      /* relaxing the mixed integer set to a 0-1 single node flow set was not successful because coefficient of y_j and
+       * the bounds selected for the transformation together result in an infinite variable upper bound in the 0-1 single
+       * node flow set; this can be caused by huge but finite values for the bounds or the coefficient
+       */
+      if( SCIPisInfinity(scip, transvarvubcoefs[*ntransvars]) )
+      {
+         assert(!(*success));
+         goto TERMINATE;
+      }
+
       assert(boundsfortrans[probidx] > -3);
       assert(assoctransvars[probidx] >= 0 && assoctransvars[probidx] == (*ntransvars));
       assert(transvarcoefs[*ntransvars] == 1 || transvarcoefs[*ntransvars] == - 1 );
@@ -1398,7 +1422,7 @@ SCIP_RETCODE getFlowCover(
    /* there exists no flow cover if the capacity of knapsack constraint in KP^SNF_rat after fixing 
     * is less than or equal to zero 
     */ 
-   if( SCIPisFeasLE(scip, transcapacityreal, 0.0) )
+   if( SCIPisFeasLE(scip, transcapacityreal/10, 0.0) )
    {
       assert(!(*found));
       goto TERMINATE;

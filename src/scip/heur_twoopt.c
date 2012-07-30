@@ -545,7 +545,7 @@ SCIP_Real determineBound(
          }
          else
          {
-            SCIPdebugMessage("  Zero effect on row %s, effect %g, master coeff: %g slave coeff: %g (i=%d, j=%d)",
+            SCIPdebugMessage("  Zero effect on row %s, effect %g, master coeff: %g slave coeff: %g (i=%d, j=%d)\n",
                SCIProwGetName(row), effect, mastercolvals[j], slavecolvals[i], i, j);
          }
 

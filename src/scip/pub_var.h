@@ -994,7 +994,7 @@ SCIP_Real SCIPvarGetBestRootRedcost(
  *  SCIP_INVALID is returned
  */
 extern
-SCIP_Real SCIPvarGetBestRootLPobjval(
+SCIP_Real SCIPvarGetBestRootLPObjval(
    SCIP_VAR*             var                 /**< problem variable */
    );
 

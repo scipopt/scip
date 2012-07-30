@@ -107,17 +107,27 @@ SCIP_RETCODE performSimpleRounding(
    }
 
    /* check, if rounding was successful */
-   if ( c == ncands )
+   if( c == ncands )
    {
       SCIP_Bool stored;
 
-      /* check solution for feasibility, and add it to solution store if possible
-       * neither integrality nor feasibility of LP rows has to be checked, because all fractional
-       * variables were already moved in feasible direction to the next integer
-       */
-      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, &stored) );
+      if( SCIPallColsInLP(scip) )
+      {
+         /* check solution for feasibility, and add it to solution store if possible
+          * neither integrality nor feasibility of LP rows has to be checked, because all fractional
+          * variables were already moved in feasible direction to the next integer
+          */
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, &stored) );
+      }
+      else
+      {
+         /* if there are variables which are not present in the LP, e.g., for 
+          * column generation, we need to check their bounds
+          */
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, FALSE, &stored) );
+      }
 
-      if ( stored )
+      if( stored )
       {
 #ifdef SCIP_DEBUG
          SCIPdebugMessage("found feasible rounded solution:\n");

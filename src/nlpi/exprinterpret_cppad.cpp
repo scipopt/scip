@@ -329,7 +329,7 @@ struct SCIP_ExprInt
 };
 
 /** expression specific interpreter data */
-class SCIP_ExprIntData
+struct SCIP_ExprIntData
 {
 public:
    /* constructor */
@@ -443,25 +443,31 @@ bool forward_posintpower(
 /** reverse sweep of positive integer power
  * Assume y(x) is a function of the taylor coefficients of f(x) = x^p for x, i.e.,
  *   y(x) = [ x^p, p * x^(p-1) * x', p * (p-1) * x^(p-2) * x'^2 + p * x^(p-1) * x'', ... ].
- * Then in the reverse sweep we have to compute the elements of \partial h / \partial x^[l], l = 0, ..., k,
+ * Then in the reverse sweep we have to compute the elements of \f$\partial h / \partial x^[l], l = 0, ..., k,\f$
  * where x^[l] is the l'th taylor coefficient (x, x', x'', ...) and h(x) = g(y(x)) for some function g:R^k -> R.
  * That is, we have to compute
+ *\f$
  * px[l] = \partial h / \partial x^[l] = (\partial g / \partial y) * (\partial y / \partial x^[l])
  *       = \sum_{i=0}^k (\partial g / \partial y_i) * (\partial y_i / \partial x^[l])
  *       = \sum_{i=0}^k py[i] * (\partial y_i / \partial x^[l])
+ * \f$
  *
  * For k = 0, this means
+ *\f$
  * px[0] = py[0] * (\partial y_0 / \partial x^[0])
  *       = py[0] * (\partial x^p / \partial x)
  *       = py[0] * p * tx[0]^(p-1)
+ *\f$
  *
  * For k = 1, this means
- * px[0] = py[0] * (\partial y_0 / \partial x^[0]) + py[1] * (\partial y_1 / \partial x^[0])
+ * \f$
+ px[0] = py[0] * (\partial y_0 / \partial x^[0]) + py[1] * (\partial y_1 / \partial x^[0])
  *       = py[0] * (\partial x^p / \partial x)     + py[1] * (\partial (p * x^(p-1) * x') / \partial x)
  *       = py[0] * p * tx[0]^(p-1)                 + py[1] * p * (p-1) * tx[0]^(p-2) * tx[1]
  * px[1] = py[0] * (\partial y_0 / \partial x^[1]) + py[1] * (\partial y_1 / \partial x^[1])
  *       = py[0] * (\partial x^p / \partial x')    + py[1] * (\partial (p * x^(p-1) x') / \partial x')
  *       = py[0] * 0                               + py[1] * p * tx[0]^(p-1)
+ * \f$
  */
 template<class Type>
 bool reverse_posintpower(
@@ -789,25 +795,31 @@ bool forward_signpower(
 /** reverse sweep of signpower
  * Assume y(x) is a function of the taylor coefficients of f(x) = sign(x)|x|^p for x, i.e.,
  *   y(x) = [ f(x), f'(x), f''(x), ... ].
- * Then in the reverse sweep we have to compute the elements of \partial h / \partial x^[l], l = 0, ..., k,
+ * Then in the reverse sweep we have to compute the elements of \f$\partial h / \partial x^[l], l = 0, ..., k,\f$
  * where x^[l] is the l'th taylor coefficient (x, x', x'', ...) and h(x) = g(y(x)) for some function g:R^k -> R.
  * That is, we have to compute
+ *\f$
  * px[l] = \partial h / \partial x^[l] = (\partial g / \partial y) * (\partial y / \partial x^[l])
  *       = \sum_{i=0}^k (\partial g / \partial y_i) * (\partial y_i / \partial x^[l])
  *       = \sum_{i=0}^k py[i] * (\partial y_i / \partial x^[l])
+ *\f$
  *
  * For k = 0, this means
+ *\f$
  * px[0] = py[0] * (\partial y_0 / \partial x^[0])
  *       = py[0] * (\partial f(x) / \partial x)
  *       = py[0] * p * abs(tx[0])^(p-1)
+ * \f$
  *
  * For k = 1, this means
+ *\f$
  * px[0] = py[0] * (\partial y_0  / \partial x^[0]) + py[1] * (\partial y_1   / \partial x^[0])
  *       = py[0] * (\partial f(x) / \partial x)     + py[1] * (\partial f'(x) / \partial x)
  *       = py[0] * p * abs(tx[0])^(p-1)             + py[1] * p * (p-1) * abs(tx[0])^(p-2) * sign(tx[0]) * tx[1]
  * px[1] = py[0] * (\partial y_0  / \partial x^[1]) + py[1] * (\partial y_1 / \partial x^[1])
  *       = py[0] * (\partial f(x) / \partial x')    + py[1] * (\partial f'(x) / \partial x')
  *       = py[0] * 0                                + py[1] * p * abs(tx[0])^(p-1)
+ * \f$
  */
 template<class Type>
 bool reverse_signpower(

@@ -17,6 +17,20 @@
  * @ingroup BRANCHINGRULES
  * @brief  least infeasible LP branching rule
  * @author Tobias Achterberg
+ *
+ * The least infeasible branching rule selects a candidate variable $j$ with fractional solution value \f$ \hat{x}_j\f$
+ * which maximizes
+ * \f[
+ *      \max \left\{ \lceil \hat{x}_j \rceil - \hat{x}_j, \hat{x}_j - \lfloor \hat{x}_j \rfloor  \right\}.
+ * \f]
+ * i. e., a variable which already is closest to being integral among all branching candidates.
+ *
+ * The least infeasible rule and many other branching rules of SCIP are explained and compared in
+ *
+ * @par
+ * Tobias Achterberg@n
+ * Constraint Integer Programming@n
+ * PhD Thesis, Technische Universität Berlin, 2007@n
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -32,7 +46,7 @@ extern "C" {
 #endif
 
 /** creates the least infeasible LP branching rule and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeBranchruleLeastinf(
    SCIP*                 scip                /**< SCIP data structure */
    );

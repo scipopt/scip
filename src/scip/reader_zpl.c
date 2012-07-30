@@ -182,9 +182,7 @@ SCIP_RETCODE addConsTerm(
    SCIP_Bool removable;
    SCIP_Bool usercut;
    SCIP_Bool lazycut;
-
-   int  maxdegree;
-   int  i;
+   int i;
 
    switch( type )
    {
@@ -253,9 +251,7 @@ SCIP_RETCODE addConsTerm(
       check = TRUE;
    }
 
-   maxdegree = term_get_degree(term);
-
-   if (maxdegree <= 1)
+   if( term_is_linear(term) )
    {
       /* if the constraint gives an indicator constraint */
       if ( flags & LP_FLAG_CON_INDIC )
@@ -380,7 +376,7 @@ SCIP_RETCODE addConsTerm(
          (*created) = TRUE;
       }
    }
-   else if (maxdegree == 2)
+   else if( term_get_degree(term) == 2 )
    {
       int        nlinvars;
       int        nquadterms;
@@ -547,18 +543,75 @@ SCIP_RETCODE addConsTerm(
             SCIP_EXPR** children;
             SCIP_EXPR* expr;
             SCIP_EXPROP op;
+            SCIP_Real coef;
+            SCIP_Real argdbl;
+            int argint;
 
+            coef = 1.0;
+            argint = 0;
+            argdbl = 0.0;
             switch( mono_get_function(monomial) )
             {
             case MFUN_SQRT:
                op = SCIP_EXPR_SQRT;
                break;
             case MFUN_LOG:
+               /* log10(x) = ln(x) / ln(10.0) */
                op = SCIP_EXPR_LOG;
+               coef = 1.0 / log(10.0);
                break;
             case MFUN_EXP:
                op = SCIP_EXPR_EXP;
                break;
+#if ZIMPL_VERSION >= 330
+            case MFUN_LN:
+               op = SCIP_EXPR_LOG;
+               break;
+            /*
+            case MFUN_SIN:
+               op = SCIP_EXPR_SIN;
+               break;
+            case MFUN_COS:
+               op = SCIP_EXPR_COS;
+               break;
+            case MFUN_TAN:
+               op = SCIP_EXPR_TAN;
+               break;
+            */
+            case MFUN_ABS:
+               op = SCIP_EXPR_ABS;
+               break;
+            case MFUN_SGN:
+               op = SCIP_EXPR_SIGN;
+               break;
+            case MFUN_POW:
+               if( numb_is_int(mono_get_coeff(monomial)) )
+               {
+                  op = SCIP_EXPR_INTPOWER;
+                  argint = numb_toint(mono_get_coeff(monomial));
+               }
+               else
+               {
+                  op = SCIP_EXPR_REALPOWER;
+                  argdbl = numb_todbl(mono_get_coeff(monomial));
+               }
+               break;
+            case MFUN_SGNPOW:
+               op = SCIP_EXPR_SIGNPOWER;
+               argdbl = numb_todbl(mono_get_coeff(monomial));
+               break;
+#endif
+            case MFUN_NONE:
+            case MFUN_TRUE:
+            case MFUN_FALSE:
+               SCIPerrorMessage("ZIMPL function %d invalid here.\n", mono_get_function(monomial));
+               (*created) = FALSE;
+               break;
+#if ZIMPL_VERSION >= 330
+            case MFUN_SIN:
+            case MFUN_COS:
+            case MFUN_TAN:
+#endif
             default:
                SCIPerrorMessage("ZIMPL function %d not supported\n", mono_get_function(monomial));
                (*created) = FALSE;
@@ -581,7 +634,7 @@ SCIP_RETCODE addConsTerm(
             }
             assert(extracoefs != NULL);
             assert(extramonomials != NULL);
-            extracoefs[nextramonomials] = numb_todbl(mono_get_coeff(monomial));
+            extracoefs[nextramonomials] = coef;
 
             /* create children expressions */
             SCIP_CALL( SCIPallocBufferArray(scip, &children, mono_get_degree(monomial)) );
@@ -619,10 +672,24 @@ SCIP_RETCODE addConsTerm(
 
             /* create expression for product of variables */
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_PRODUCT, mono_get_degree(monomial), children) );
+
             /* create expression for function of product of variables */
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &extramonomials[nextramonomials], op, expr) );  /*lint !e644*/
+            if( op == SCIP_EXPR_INTPOWER )  /*lint !e644 */
+            {
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &extramonomials[nextramonomials], op, expr, argint) );  /*lint !e644*/
+            }
+            else if( op == SCIP_EXPR_REALPOWER || op == SCIP_EXPR_SIGNPOWER )
+            {
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &extramonomials[nextramonomials], op, expr, argdbl) );  /*lint !e644*/
+            }
+            else
+            {
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &extramonomials[nextramonomials], op, expr) );  /*lint !e644*/
+            }
 
             ++nextramonomials;
+
+            SCIPfreeBufferArray(scip, &children);
          }
       }
 

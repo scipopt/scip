@@ -43,16 +43,16 @@ extern "C" {
 #endif
 
 /** creates the handler for and constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrAnd(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a and constraint
+/** creates and captures an and constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -76,7 +76,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -93,7 +93,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -104,21 +104,21 @@ SCIP_RETCODE SCIPcreateConsBasicAnd(
    );
 
 /** gets number of variables in and constraint */
-extern
+EXTERN
 int SCIPgetNVarsAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in and constraint */
-extern
+EXTERN
 SCIP_VAR** SCIPgetVarsAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the resultant variable in and constraint */
-extern
+EXTERN
 SCIP_VAR* SCIPgetResultantAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

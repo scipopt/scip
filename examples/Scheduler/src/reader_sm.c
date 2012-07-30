@@ -14,9 +14,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_sm.c
- * @brief  scheduling problem file reader for RCPSP problem format
- * @author Stefan Heinz
+ * @brief  scheduling problem file reader for RCPSP format
  * @author Michael Bastubbe
+ * @author Stefan Heinz
+ *
+ * This reader is capabale of parsing resource-constrained project scheduling problem (RCPSP) instances. The <a
+ * href="http://129.187.106.231/psplib/datasm.html">PSPlib</a> provides several instances set.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -326,6 +330,7 @@ SCIP_RETCODE getJobs(
    )
 {
    char jobname[SCIP_MAXSTRLEN];
+   int value;
    int jobid;
    int r;
 
@@ -339,18 +344,30 @@ SCIP_RETCODE getJobs(
       return SCIP_OKAY;
    }
 
-   jobid = strtol(linestr, &linestr, 10) - 1;
-   sprintf(jobname,"%d" , jobid) ;
+   /* parse job id */
+   SCIPstrToIntValue(linestr, &value, &linestr);
+   jobid = value - 1;
+
+   /* construct job name */
+   (void)SCIPsnprintf(jobname, SCIP_MAXSTRLEN, "%d" , jobid) ;
+
+   /* copy job name */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &rcpspdata->jobnames[jobid], jobname, strlen(jobname) + 1) );
 
-   strtol(linestr, &linestr, 10);
-   rcpspdata->durations[jobid] = strtol(linestr, &linestr, 10);
+   /* skip next value */
+   SCIPstrToIntValue(linestr, &value, &linestr);
+
+   /* parse duration */
+   SCIPstrToIntValue(linestr, &value, &linestr);
+   rcpspdata->durations[jobid] = value;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &rcpspdata->demands[jobid], rcpspdata->nresources) );
 
+   /* parse demands */
    for( r = 0; r < rcpspdata->nresources; ++r )
    {
-      rcpspdata->demands[jobid][r] = strtol(linestr, &linestr, 10);
+      SCIPstrToIntValue(linestr, &value, &linestr);
+      rcpspdata->demands[jobid][r] = value;
    }
 
    /* check if we paresed the last job */
@@ -370,8 +387,9 @@ SCIP_RETCODE getPrecedence(
    SCIP_RCPSPDATA*       rcpspdata           /**< pointer to resources constrained project scheduling data */
    )
 {
-   int pred;
    int nsuccessors;
+   int value;
+   int pred;
    int p;
 
    assert(s != NULL);
@@ -389,15 +407,23 @@ SCIP_RETCODE getPrecedence(
       SCIP_CALL( SCIPdigraphCreate(&rcpspdata->precedencegraph, rcpspdata->njobs) );
    }
 
-   pred = strtol(s,&s,10) -1;
-   strtol(s,&s,10);
-   nsuccessors = strtol(s,&s,10);
+   /* parse predecessor */
+   SCIPstrToIntValue(s, &value, &s);
+   pred = value - 1;
 
+   /* skip integer value */
+   SCIPstrToIntValue(s, &value, &s);
+
+   /* parse number of successors */
+   SCIPstrToIntValue(s, &nsuccessors, &s);
+
+   /* parse successors */
    for( p = 0; p < nsuccessors; ++p )
    {
       int succ;
 
-      succ = strtol(s,&s,10)-1;
+      SCIPstrToIntValue(s, &value, &s);
+      succ = value - 1;
 
       /* add precedence to digraph */
       SCIP_CALL( SCIPdigraphAddArc(rcpspdata->precedencegraph, pred, succ, (void*)(size_t)INT_MAX) );

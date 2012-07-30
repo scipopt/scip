@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /** creates the closecuts separator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeSepaClosecuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
  *
  *  The point is only stored if separation of relative interior points is used. The solution is copied.
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPsetBasePointClosecuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< base point solution */

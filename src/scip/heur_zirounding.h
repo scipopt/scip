@@ -38,7 +38,7 @@ extern "C" {
 #endif
 
 /** creates the zirounding primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurZirounding(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -3113,7 +3113,7 @@ SCIP_RETCODE writeOpbConstraints(
    {
       cons = conss[c]; /*lint !e613 */
       assert(cons != NULL);
-      
+
       conshdlr = SCIPconsGetHdlr(cons);
       assert(conshdlr != NULL);
 
@@ -3134,25 +3134,38 @@ SCIP_RETCODE writeOpbConstraints(
 
          if( artcons == NULL )
          {
-            if( existands )
-            {
-               SCIP_CALL( printNonLinearCons(scip, file,
-                     SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
-                     SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), resvars, nresvars, andvars, nandvars, 
-                     0LL, transformed, multisymbol) );
-            }            
-            else
-            {
-               SCIP_CALL( printLinearCons(scip, file,
-                     SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
-                     SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), 0LL, transformed, multisymbol) );
-            }
+	    if( SCIPgetNVarsLinear(scip, cons) == 0 )
+	    {
+	       if( SCIPisGT(scip, SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons)) )
+	       {
+		  SCIPerrorMessage("Cannot print empty violated constraint %s, %g <= %g is not fulfilled\n",
+                     SCIPconsGetName(cons), SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons));
+	       }
+	       continue;
+	    }
+
+	    if( existands )
+	    {
+	       SCIP_CALL( printNonLinearCons(scip, file,
+		     SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
+		     SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), resvars, nresvars, andvars, nandvars,
+		     0LL, transformed, multisymbol) );
+	    }
+	    else
+	    {
+	       SCIP_CALL( printLinearCons(scip, file,
+		     SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
+		     SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), 0LL, transformed, multisymbol) );
+	    }
          }
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
          consvars = SCIPgetVarsSetppc(scip, cons);
          nconsvars = SCIPgetNVarsSetppc(scip, cons);
+
+	 if( nconsvars == 0 )
+	    continue;
 
          switch( SCIPgetTypeSetppc(scip, cons) )
          {
@@ -3161,7 +3174,7 @@ SCIP_RETCODE writeOpbConstraints(
             {
                SCIP_CALL( printNonLinearCons(scip, file,
                      consvars, NULL, nconsvars, 1.0, 1.0, resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
-            }            
+            }
             else
             {
                SCIP_CALL( printLinearCons(scip, file,
@@ -3174,7 +3187,7 @@ SCIP_RETCODE writeOpbConstraints(
                SCIP_CALL( printNonLinearCons(scip, file,
                      consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, resvars, nresvars, andvars, nandvars,
                      0LL, transformed, multisymbol) );
-            }            
+            }
             else
             {
                SCIP_CALL( printLinearCons(scip, file,
@@ -3187,7 +3200,7 @@ SCIP_RETCODE writeOpbConstraints(
                SCIP_CALL( printNonLinearCons(scip, file,
                      consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), resvars, nresvars, andvars, nandvars,
                      0LL, transformed, multisymbol) );
-            }            
+            }
             else
             {
                SCIP_CALL( printLinearCons(scip, file,
@@ -3198,14 +3211,17 @@ SCIP_RETCODE writeOpbConstraints(
       }
       else if( strcmp(conshdlrname, "logicor") == 0 )
       {
+	 if( SCIPgetNVarsLogicor(scip, cons) == 0 )
+	    continue;
+
          if( existands )
          {
             SCIP_CALL( printNonLinearCons(scip, file,
-                  SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip), 
+                  SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip),
                   resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
-         }     
+         }
          else
-         {       
+         {
             SCIP_CALL( printLinearCons(scip, file,
                   SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
                   1.0, SCIPinfinity(scip), 0LL, transformed, multisymbol) );
@@ -3218,6 +3234,9 @@ SCIP_RETCODE writeOpbConstraints(
          consvars = SCIPgetVarsKnapsack(scip, cons);
          nconsvars = SCIPgetNVarsKnapsack(scip, cons);
 
+	 if( nconsvars == 0 )
+	    continue;
+
          /* copy Longint array to SCIP_Real array */
          weights = SCIPgetWeightsKnapsack(scip, cons);
          SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
@@ -3226,13 +3245,13 @@ SCIP_RETCODE writeOpbConstraints(
 
          if( existands )
          {
-            SCIP_CALL( printNonLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip), 
+            SCIP_CALL( printNonLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip),
                   (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), resvars, nresvars, andvars, nandvars,
                   0LL, transformed, multisymbol) );
-         }     
+         }
          else
-         {       
-            SCIP_CALL( printLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip), 
+         {
+            SCIP_CALL( printLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip),
                   (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), 0LL, transformed, multisymbol) );
          }
 
@@ -3251,12 +3270,12 @@ SCIP_RETCODE writeOpbConstraints(
 
          if( existands )
          {
-            SCIP_CALL( printNonLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons), 
+            SCIP_CALL( printNonLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
                   SCIPgetRhsVarbound(scip, cons), resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
-         }     
+         }
          else
-         {       
-            SCIP_CALL( printLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons), 
+         {
+            SCIP_CALL( printLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
                   SCIPgetRhsVarbound(scip, cons), 0LL, transformed, multisymbol) );
          }
 
@@ -3815,6 +3834,7 @@ SCIP_RETCODE SCIPwriteOpb(
    int                   nintvars,           /**< number of general integer variables */
    int                   nimplvars,          /**< number of implicit integer variables */
    int                   ncontvars,          /**< number of continuous variables */
+   SCIP_VAR**            fixedvars,          /**< array with fixed variables */
    int                   nfixedvars,         /**< number of fixed and aggregated variables in the problem */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
@@ -3855,7 +3875,7 @@ SCIP_RETCODE SCIPwriteOpb(
                if( SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, vars[v], nresvars, &pos) )
                   continue;
             }
-            
+
             assert(sscanf(SCIPvarGetName(vars[v]), "x%d", &idx) == 1);
          }
 #endif
@@ -3879,7 +3899,7 @@ SCIP_RETCODE SCIPwriteOpb(
                   SCIPwarningMessage(scip, "At least following variable name isn't allowed in opb format.\n");
                   SCIP_CALL( SCIPprintVar(scip, vars[v], NULL) );
                   SCIPwarningMessage(scip, "OPB format needs generic variable names!\n");
-                  
+
                   if( transformed )
                   {
                      SCIPwarningMessage(scip, "write transformed problem with generic variable names.\n");
@@ -3901,12 +3921,12 @@ SCIP_RETCODE SCIPwriteOpb(
             for( v = nfixedvars - 1; v >= 0; --v )
                if( !existands || !SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, vars[v], nresvars, &pos) )
                {
-                  if( sscanf(SCIPvarGetName(vars[v]), transformed ? "t_x%d" : "x%d", &idx) != 1 && strstr(SCIPvarGetName(vars[v]), INDICATORVARNAME) == NULL && strstr(SCIPvarGetName(vars[v]), INDICATORSLACKVARNAME) == NULL )
+                  if( sscanf(SCIPvarGetName(fixedvars[v]), transformed ? "t_x%d" : "x%d", &idx) != 1 && strstr(SCIPvarGetName(fixedvars[v]), INDICATORVARNAME) == NULL && strstr(SCIPvarGetName(fixedvars[v]), INDICATORSLACKVARNAME) == NULL )
                   {
                      SCIPwarningMessage(scip, "At least following variable name isn't allowed in opb format.\n");
-                     SCIP_CALL( SCIPprintVar(scip, vars[v], NULL) );
+                     SCIP_CALL( SCIPprintVar(scip, fixedvars[v], NULL) );
                      SCIPwarningMessage(scip, "OPB format needs generic variable names!\n");
-                  
+
                      if( transformed )
                      {
                         SCIPwarningMessage(scip, "write transformed problem with generic variable names.\n");
@@ -3933,7 +3953,7 @@ SCIP_RETCODE SCIPwriteOpb(
                   if( SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, vars[v], nresvars, &pos) )
                      continue;
                }
-               
+
                assert(sscanf(SCIPvarGetName(vars[v]), transformed ? "t_x%d" : "x%d", &idx) == 1 || strstr(SCIPvarGetName(vars[v]), INDICATORVARNAME) != NULL || strstr(SCIPvarGetName(vars[v]), INDICATORSLACKVARNAME) != NULL );
             }
 #endif
@@ -3948,7 +3968,7 @@ SCIP_RETCODE SCIPwriteOpb(
          assert(resvars != NULL);
          assert(andvars != NULL);
          assert(nandvars != NULL);
-            
+
          for( v = nresvars - 1; v >= 0; --v )
          {
             assert(andvars[v] != NULL);
@@ -3961,7 +3981,7 @@ SCIP_RETCODE SCIPwriteOpb(
 
       *result = SCIP_SUCCESS;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -3979,7 +3999,7 @@ SCIP_DECL_READERCOPY(readerCopyOpb)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderOpb(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -4001,7 +4021,7 @@ SCIP_DECL_READERWRITE(readerWriteOpb)
 {  /*lint --e{715}*/
 
    SCIP_CALL( SCIPwriteOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-         nvars, nbinvars, nintvars, nimplvars, ncontvars, nfixedvars, conss, nconss, genericnames, result) );
+         nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, genericnames, result) );
 
    return SCIP_OKAY;
 }

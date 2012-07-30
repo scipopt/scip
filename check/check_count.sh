@@ -138,17 +138,18 @@ do
             echo > $TMPFILE
             if test $SETTINGS != "default"
             then
-                echo set load $SETTINGS                >>  $TMPFILE
+                echo set load $SETTINGS            >> $TMPFILE
+	    else
+		echo set emphasis count            >> $TMPFILE
             fi
             if test $FEASTOL != "default"
             then
-                echo set numerics feastol $FEASTOL    >> $TMPFILE
+                echo set numerics feastol $FEASTOL >> $TMPFILE
             fi
             echo set limits time $TIMELIMIT        >> $TMPFILE
             echo set limits nodes $NODELIMIT       >> $TMPFILE
             echo set limits memory $MEMLIMIT       >> $TMPFILE
             echo set timing clocktype 1            >> $TMPFILE
-            echo set display verblevel 4           >> $TMPFILE
             echo set display freq $DISPFREQ        >> $TMPFILE
             echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
             if test "$LPS" == "none"

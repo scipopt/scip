@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates local branching primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurLocalbranching(
    SCIP*                 scip                /**< SCIP data structure */
    );

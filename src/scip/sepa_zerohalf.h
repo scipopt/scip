@@ -33,7 +33,7 @@ extern "C" {
 #endif
 
 /** creates the {0,1/2}-cut separator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeSepaZerohalf(
    SCIP*                 scip                /**< SCIP data structure */
    );

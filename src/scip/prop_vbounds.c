@@ -102,8 +102,8 @@
  */
 
 #define DEFAULT_USEBDWIDENING      TRUE      /**< should bound widening be used to initialize conflict analysis? */
-#define DEFAULT_USEIMPLICS         TRUE      /**< should implications be propagated? */
-#define DEFAULT_USECLIQUES         TRUE      /**< should cliques be propagated? */
+#define DEFAULT_USEIMPLICS         FALSE     /**< should implications be propagated? */
+#define DEFAULT_USECLIQUES         FALSE     /**< should cliques be propagated? */
 #define DEFAULT_USEVBOUNDS         TRUE      /**< should variable bounds be propagated? */
 #define DEFAULT_DOTOPOSORT         TRUE      /**< should the bounds be topologically sorted in advance? */
 #define DEFAULT_SORTCLIQUES        FALSE     /**< should cliques be regarded for the topological sort? */
@@ -318,7 +318,7 @@ SCIP_RETCODE catchEvents(
       else
          eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
 
-      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (void*) (size_t) v, NULL) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, NULL) );
    }
 
    return SCIP_OKAY;
@@ -367,7 +367,7 @@ SCIP_RETCODE dropEvents(
       else
          eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
 
-      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (void*) (size_t) v, -1) );
+      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, -1) );
    }
 
    return SCIP_OKAY;
@@ -716,7 +716,7 @@ SCIP_RETCODE topologicalSort(
 
 #ifndef NDEBUG
    for( i = 0; i < nbounds; ++i )
-      assert(propdata->inqueue[i] == 0);
+      assert(!propdata->inqueue[i]);
 #endif
 
    /* while there are unvisited nodes, run dfs starting from one of these nodes; the dfs orders are stored in the
@@ -1436,9 +1436,10 @@ SCIP_RETCODE propagateVbounds(
    while( SCIPpqueueNElems(propdata->propqueue) > 0 )
    {
       topopos = ((int)(size_t)SCIPpqueueRemove(propdata->propqueue)) - 1;
+      assert(propdata->inqueue[topopos]);
       startpos = propdata->topoorder[topopos];
       assert(startpos >= 0);
-      propdata->inqueue[startpos] = FALSE;
+      propdata->inqueue[topopos] = FALSE;
 
       startvar = vars[getVarIndex(startpos)];
       starttype = getBoundtype(startpos);
@@ -1827,6 +1828,7 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
       SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(idx + 1)) );
       propdata->inqueue[idx] = TRUE;
    }
+   assert(SCIPpqueueNElems(propdata->propqueue) > 0);
 
    return SCIP_OKAY;
 }

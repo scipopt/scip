@@ -104,7 +104,7 @@ SCIP_RETCODE propagateRootRedcostBinvar(
 
    rootredcost = SCIPvarGetBestRootRedcost(var);
    rootsol = SCIPvarGetBestRootSol(var);
-   rootlpobjval = SCIPvarGetBestRootLPobjval(var);
+   rootlpobjval = SCIPvarGetBestRootLPObjval(var);
 
    if( SCIPisFeasZero(scip, rootredcost) )
       return SCIP_OKAY;

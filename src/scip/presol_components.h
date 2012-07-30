@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /** creates the components presolver and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePresolComponents(
    SCIP*                 scip                /**< SCIP data structure */
    );

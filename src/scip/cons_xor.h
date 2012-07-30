@@ -44,16 +44,16 @@ extern "C" {
 #endif
 
 /** creates the handler for xor constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a xor constraint
+/** creates and captures an xor constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
 */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -77,7 +77,7 @@ SCIP_RETCODE SCIPcreateConsXor(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -86,12 +86,15 @@ SCIP_RETCODE SCIPcreateConsXor(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** creates and captures a xor constraint x_0 xor ... xor x_{k-1} = rhs
- *  with all constraint flags set to their default values
+/** creates and captures an xor constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsXor(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsXor() for information about the basic constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -102,21 +105,21 @@ SCIP_RETCODE SCIPcreateConsBasicXor(
    );
 
 /** gets number of variables in xor constraint */
-extern
+EXTERN
 int SCIPgetNVarsXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in xor constraint */
-extern
+EXTERN
 SCIP_VAR** SCIPgetVarsXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the right hand side of the xor constraint */
-extern
+EXTERN
 SCIP_Bool SCIPgetRhsXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

@@ -40,7 +40,7 @@
 
 #define DEFAULT_MAXLPITERQUOT    0.01   /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS     1000   /**< additional number of allowed LP iterations */
-#define DEFAULT_MAXSOLS             2   /**< total number of feasible solutions found up to which heuristic is called
+#define DEFAULT_MAXSOLS            10   /**< total number of feasible solutions found up to which heuristic is called
                                          *   (-1: no limit) */
 #define DEFAULT_MAXLOOPS        10000   /**< maximal number of pumping rounds (-1: no limit) */
 #define DEFAULT_MAXSTALLLOOPS      10   /**< maximal number of pumping rounds without fractionality improvement (-1: no limit) */
@@ -117,7 +117,7 @@ SCIP_RETCODE setupProbingSCIP(
    if( copycuts )
    {
       /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-      SCIP_CALL( SCIPcopyCuts(scip, *probingscip, *varmapfw, NULL, FALSE) );
+      SCIP_CALL( SCIPcopyCuts(scip, *probingscip, *varmapfw, NULL, FALSE, NULL) );
    }
 
    return SCIP_OKAY;
@@ -354,7 +354,11 @@ SCIP_RETCODE createNewSols(
    
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   assert(nvars == SCIPgetNOrigVars(subscip));
+
+   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
+    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
+    */
+   assert(nvars <= SCIPgetNOrigVars(subscip));
 
    /* for copying a solution we need an explicit mapping */
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
@@ -660,7 +664,12 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
       if( success )
       {
-         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/feaspump/freq", -1) );
+         if( SCIPisParamFixed(probingscip, "heuristics/"HEUR_NAME"/freq") )
+         {
+            SCIPwarningMessage(scip, "unfixing parameter heuristics/"HEUR_NAME"/freq in probingscip of "HEUR_NAME" heuristic to avoid recursive calls\n");
+            SCIP_CALL( SCIPunfixParam(probingscip, "heuristics/"HEUR_NAME"/freq") );
+         }
+         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/"HEUR_NAME"/freq", -1) );
 
          /* do not abort subproblem on CTRL-C */
          SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
@@ -672,15 +681,36 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
          /* do presolve and initialize solving */
          SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1LL) );
+         if( SCIPisParamFixed(probingscip, "lp/solvefreq") )
+         {
+            SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in probingscip of "HEUR_NAME" heuristic to avoid recursive calls\n");
+            SCIP_CALL( SCIPunfixParam(probingscip, "lp/solvefreq") );
+         }
          SCIP_CALL( SCIPsetIntParam(probingscip, "lp/solvefreq", -1) );
 
          /* disable expensive presolving */
          SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
-         SCIP_CALL( SCIPsolve(probingscip) );
+         retcode = SCIPsolve(probingscip);
+
+         /* errors in solving the subproblem should not kill the overall solving process;
+          * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
+         if( retcode != SCIP_OKAY )
+         {
+#ifndef NDEBUG
+            SCIP_CALL( retcode );
+#endif
+            SCIPwarningMessage(scip, "Error while solving subproblem in feaspump heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+
+            /* free hash map and copied SCIP */
+            SCIPhashmapFree(&varmapfw);
+            SCIP_CALL( SCIPfree(&probingscip) );
+            return SCIP_OKAY;
+         }
+
          if( SCIPgetStage(probingscip) != SCIP_STAGE_SOLVING)
          {
             SCIP_STATUS probingstatus = SCIPgetStatus(probingscip);
-            
+
             if( probingstatus == SCIP_STATUS_OPTIMAL )
             {
                assert( SCIPgetNSols(probingscip) > 0 );
@@ -688,7 +718,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                if( success )
                   *result = SCIP_FOUNDSOL;
             }
-            
+
             /* free hash map and copied SCIP */
             SCIPhashmapFree(&varmapfw);
             SCIP_CALL( SCIPfree(&probingscip) );
@@ -1130,12 +1160,26 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
          /* forbid recursive call of heuristics and separators solving sub-SCIPs */
          SCIP_CALL( SCIPsetSubscipsOff(probingscip, TRUE) );
+         if( SCIPisParamFixed(probingscip, "heuristics/"HEUR_NAME"/freq") )
+         {
+            SCIPwarningMessage(scip,"unfixing parameter heuristics/"HEUR_NAME"/freq in probingscip of "HEUR_NAME" heuristic to avoid recursive calls\n");
+            SCIP_CALL( SCIPunfixParam(probingscip, "heuristics/"HEUR_NAME"/freq") );
+         }
+         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/feaspump/freq", -1) );
 
          /* disable heuristics which aim to feasibility instead of optimality */
-         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/feaspump/freq", -1) );
-         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/octane/freq", -1) );
-         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/objpscostdiving/freq", -1) );
-         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/rootsoldiving/freq", -1) );
+         if( !SCIPisParamFixed(probingscip, "heuristics/octane/freq") )
+         {
+            SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/octane/freq", -1) );
+         }
+         if( !SCIPisParamFixed(probingscip, "heuristics/objpscostdiving/freq") )
+         {
+               SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/objpscostdiving/freq", -1) );
+         }
+         if( !SCIPisParamFixed(probingscip, "heuristics/rootsoldiving/freq") )
+         {
+            SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/rootsoldiving/freq", -1) );
+         }
 
          /* disable cutting plane separation */
          SCIP_CALL( SCIPsetSeparating(probingscip, SCIP_PARAMSETTING_OFF, TRUE) );
@@ -1143,18 +1187,39 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          /* disable expensive presolving */
          SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
-         /* use inference branching */
-         SCIP_CALL( SCIPsetIntParam(probingscip, "branching/inference/priority", INT_MAX/4) );
-
          /* use best estimate node selection */
-         SCIP_CALL( SCIPsetIntParam(probingscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
+         if( SCIPfindNodesel(probingscip, "estimate") != NULL && !SCIPisParamFixed(probingscip, "nodeselection/estimate/stdpriority") )
+         {
+            SCIP_CALL( SCIPsetIntParam(probingscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
+         }
+
+         /* use inference branching */
+         if( SCIPfindBranchrule(probingscip, "inference") != NULL && !SCIPisParamFixed(probingscip, "branching/inference/priority") )
+         {
+            SCIP_CALL( SCIPsetIntParam(probingscip, "branching/inference/priority", INT_MAX/4) );
+         }
 
          /* disable conflict analysis */
-         SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useprop", FALSE) );
-         SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useinflp", FALSE) );
-         SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useboundlp", FALSE) );
-         SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usesb", FALSE) );
-         SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usepseudo", FALSE) );
+         if( !SCIPisParamFixed(probingscip, "conflict/useprop") )
+         {
+            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useprop", FALSE) );
+         }
+         if( !SCIPisParamFixed(probingscip, "conflict/useinflp") )
+         {
+            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useinflp", FALSE) );
+         }
+         if( !SCIPisParamFixed(probingscip, "conflict/useboundlp") )
+         {
+            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useboundlp", FALSE) );
+         }
+         if( !SCIPisParamFixed(probingscip, "conflict/usesb") )
+         {
+            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usesb", FALSE) );
+         }
+         if( !SCIPisParamFixed(probingscip, "conflict/usepseudo") )
+         {
+            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usepseudo", FALSE) );
+         }
 
          /* the neighborhood size is double the distance plus another ten percent */
          mindistance = SCIPceil(scip, 2.2*mindistance);

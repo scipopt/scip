@@ -215,7 +215,6 @@ SCIP_RETCODE SCIPincludeObjSepa(
    )
 {
    SCIP_SEPADATA* sepadata;
-   SCIP_SEPA* sepa;
 
    assert(scip != NULL);
    assert(objsepa != NULL);
@@ -224,20 +223,13 @@ SCIP_RETCODE SCIPincludeObjSepa(
    sepadata = new SCIP_SEPADATA;
    sepadata->objsepa = objsepa;
    sepadata->deleteobject = deleteobject;
-   sepa = NULL;
 
    /* include cut separator */
-   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, objsepa->scip_name_, objsepa->scip_desc_, objsepa->scip_priority_,
+   SCIP_CALL( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, objsepa->scip_priority_,
          objsepa->scip_freq_, objsepa->scip_maxbounddist_, objsepa->scip_usessubscip_, objsepa->scip_delay_,
-         sepaExeclpObj, sepaExecsolObj, sepadata) ); /*lint !e429*/
-   assert(sepa != NULL);
-
-   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyObj) );
-   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeObj) );
-   SCIP_CALL( SCIPsetSepaInit(scip, sepa, sepaInitObj) );
-   SCIP_CALL( SCIPsetSepaExit(scip, sepa, sepaExitObj) );
-   SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolObj) );
-   SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolObj) );
+         sepaCopyObj, sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj,
+         sepaExeclpObj, sepaExecsolObj,
+         sepadata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

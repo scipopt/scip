@@ -592,7 +592,6 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLR* conshdlr;
 
    assert(scip != NULL);
    assert(objconshdlr != NULL);
@@ -603,44 +602,23 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
    conshdlrdata->objconshdlr = objconshdlr;
    conshdlrdata->deleteobject = deleteobject;
 
-   conshdlr = NULL;
-
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, objconshdlr->scip_name_, objconshdlr->scip_desc_,
-         objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
-         objconshdlr->scip_eagerfreq_, objconshdlr->scip_needscons_,
-         consEnfolpObj, consEnfopsObj, consCheckObj, consLockObj,
-         conshdlrdata) ); /*lint !e429*/
-   assert(conshdlr != NULL);
-
-   /* set non-fundamental callbacks via specific setter functions */
-   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveObj) );
-   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyObj, consCopyObj) );
-   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveObj) );
-   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteObj) );
-   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelVarsObj) );
-   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableObj) );
-   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableObj) );
-   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitObj) );
-   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreObj) );
-   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolObj) );
-   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeObj) );
-   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsObj) );
-   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsObj) );
-   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitObj) );
-   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreObj) );
-   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolObj) );
-   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpObj) );
-   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseObj) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolObj, objconshdlr->scip_maxprerounds_,
-         objconshdlr->scip_delaypresol_) );
-   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintObj) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropObj, objconshdlr->scip_propfreq_,
-         objconshdlr->scip_delayprop_, objconshdlr->scip_timingmask_) );
-   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropObj) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpObj, consSepasolObj, objconshdlr->scip_sepafreq_,
-         objconshdlr->scip_sepapriority_, objconshdlr->scip_delaysepa_) );
-   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransObj) );
+   SCIP_CALL( SCIPincludeConshdlr(scip, objconshdlr->scip_name_, objconshdlr->scip_desc_,
+         objconshdlr->scip_sepapriority_, objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
+         objconshdlr->scip_sepafreq_, objconshdlr->scip_propfreq_, objconshdlr->scip_eagerfreq_,
+         objconshdlr->scip_maxprerounds_,
+         objconshdlr->scip_delaysepa_, objconshdlr->scip_delayprop_, objconshdlr->scip_delaypresol_,
+         objconshdlr->scip_needscons_, objconshdlr->scip_timingmask_,
+         conshdlrCopyObj,
+         consFreeObj, consInitObj, consExitObj,
+         consInitpreObj, consExitpreObj, consInitsolObj, consExitsolObj,
+         consDeleteObj, consTransObj, consInitlpObj,
+         consSepalpObj, consSepasolObj, consEnfolpObj, consEnfopsObj, consCheckObj,
+         consPropObj, consPresolObj, consRespropObj, consLockObj,
+         consActiveObj, consDeactiveObj,
+         consEnableObj, consDisableObj, consDelVarsObj,
+         consPrintObj, consCopyObj, consParseObj,
+         consGetVarsObj, consGetNVarsObj, conshdlrdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

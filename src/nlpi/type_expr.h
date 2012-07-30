@@ -199,11 +199,16 @@ typedef struct SCIP_ExprGraph     SCIP_EXPRGRAPH;     /**< an expression graph (
  */
 #define SCIP_DECL_EXPRGRAPHVARCHGIDX(x) SCIP_RETCODE x (SCIP_EXPRGRAPH* exprgraph, void* userdata, void* var, SCIP_EXPRGRAPHNODE* varnode, int oldidx, int newidx)
 
+/* SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTFORCE is used to indicate that bounds in a node should be propagated down even if they are not better than the bounds given by the child nodes
+ * this is useful if the expression itself has a domain that is not the whole real numbers and we want to propagate this information down to a child node
+ * e.g., a x^0.3 should result in x >= 0 even if no new bounds on the expression x^0.3 have been obtained
+ */
 #define SCIP_EXPRBOUNDSTATUS_VALID             0x0 /**< bounds are valid, i.e., conform with bounds of children */
 #define SCIP_EXPRBOUNDSTATUS_CHILDTIGHTENED    0x1 /**< a child bounds were tightened since last calculation */
 #define SCIP_EXPRBOUNDSTATUS_CHILDRELAXED      0x2 /**< bounds are not valid and need to be recomputed, because the bounds in a child were relaxed */
 #define SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENT 0x4 /**< bounds have been tightened by reverse propagation in a parent, they are valid as long as there has been no relaxation of bounds somewhere in the graph */
 #define SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTRECENT (0x8 | SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENT) /**< bounds have recently been tightened by reverse propagation in a parent, this tightening has not been propagated further down yet */
+#define SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTFORCE (0x10 | SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTRECENT) /**< bounds may have recently been tightened by reverse propagation in a parent, in any case we want to propagate bounds further down */
 
 typedef char             SCIP_EXPRBOUNDSTATUS;     /**< bitflags that indicate the status of bounds stored in a node of an expression graph */
 

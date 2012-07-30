@@ -1150,23 +1150,38 @@ SCIP_RETCODE solveSubMIP(
    SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* use best estimate node selection */
-   if( SCIPfindNodesel(scip, "estimate") != NULL )
+   if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
    }
 
    /* use inference branching */
-   if( SCIPfindBranchrule(subscip, "inference") != NULL )
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
    /* disable conflict analysis */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
+   if( !SCIPisParamFixed(subscip, "conflict/useprop") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/usesb") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/usepseudo") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
+   }
 
    if( SCIPgetNSols(scip) > 0 )
    {
@@ -1272,7 +1287,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
       /* if cover variable is now fixed */
       if( SCIPisFeasEQ(scip, newbound, otherbound) )
       {
-         assert(!SCIPisFeasEQ(scip, oldbound, otherbound));
+         assert(!SCIPisEQ(scip, oldbound, otherbound));
          ++(heurdata->nfixedcovervars);
       }
       break;
@@ -1281,7 +1296,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
       /* if cover variable is now unfixed */
       if( SCIPisFeasEQ(scip, oldbound,otherbound) )
       {
-         assert(!SCIPisFeasEQ(scip, newbound, otherbound));
+         assert(!SCIPisEQ(scip, newbound, otherbound));
          --(heurdata->nfixedcovervars);
       }
       break;
@@ -1422,7 +1437,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlpdiving)
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
+SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_NLPSOLSTAT nlpsolstat;
@@ -1484,7 +1499,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    pseudocandsnlpsol = NULL;
    pseudocandslpsol = NULL;
    covervars = NULL;
-      
+
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
@@ -1495,6 +1510,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 
    /* only call heuristic, if an NLP relaxation has been constructed */
    if( !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the current node will not be cutoff, e.g., due to a (integer and NLP-)feasible LP solution */
+   if( SCIPisFeasGE(scip, SCIPgetLocalLowerbound(scip), SCIPgetUpperbound(scip)) )
       return SCIP_OKAY;
 
    /* get heuristic's data */
@@ -1526,15 +1545,15 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess;
    maxnnlpiterations = heurdata->maxnlpiterabs;
-   maxnnlpiterations += (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxnlpiterrel;
+   maxnnlpiterations += (int)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxnlpiterrel);
 
    /* don't try to dive, if we took too many NLP iterations during diving */
    if( heurdata->nnlpiterations >= maxnnlpiterations )
       return SCIP_OKAY;
 
    /* allow at least a bit more than the so far average number of NLP iterations per dive */
-   avgnnlpiterations = heurdata->nnlpiterations / MAX(ncalls, 1.0);
-   maxnnlpiterations = MAX(maxnnlpiterations, heurdata->nnlpiterations + 1.2*avgnnlpiterations);
+   avgnnlpiterations = (int)(heurdata->nnlpiterations / MAX(ncalls, 1.0));
+   maxnnlpiterations = (int)MAX(maxnnlpiterations, heurdata->nnlpiterations + 1.2*avgnnlpiterations);
 
    /* don't try to dive, if there are no unfixed discrete variables */
    SCIP_CALL( SCIPgetPseudoBranchCands(scip, NULL, &npseudocands, NULL) );
@@ -1553,7 +1572,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 
    /* set whether NLP solver should fail fast */
    SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, &origfastfail) );
-   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, heurdata->nlpfastfail) );
+   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, (int)heurdata->nlpfastfail) );
 
    /* set starting point to lp solution */
    SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
@@ -1816,6 +1835,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       && !SCIPisStopped(scip) )
    {
       SCIP_VAR* var;
+      SCIP_Bool updatepscost;
 
       SCIP_CALL( SCIPnewProbingNode(scip) );
       divedepth++;
@@ -1824,43 +1844,58 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       bestcandmayround = TRUE;
       bestcandroundup = FALSE;
       bestboundval = SCIP_INVALID;
+      updatepscost = TRUE;
+      var = NULL;
 
       /* find best candidate variable */
       switch( heurdata->varselrule )
       {
-         SCIP_VAR** pseudocands;
       case 'c':
          SCIP_CALL( chooseCoefVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
          assert(bestcand != -1);
-         var = nlpcands[bestcand];
-         bestboundval = nlpcandssol[bestcand];
+         if( bestcand >= 0 )
+         {
+            var = nlpcands[bestcand];
+            bestboundval = nlpcandssol[bestcand];
+         }
          break;
       case 'v':
          SCIP_CALL( chooseVeclenVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
          assert(bestcand != -1);
-         var = nlpcands[bestcand];
-         bestboundval = nlpcandssol[bestcand];
+         if( bestcand >= 0 )
+         {
+            var = nlpcands[bestcand];
+            bestboundval = nlpcandssol[bestcand];
+         }
          break;
       case 'p':
          SCIP_CALL( choosePscostVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
          assert(bestcand != -1);
-         var = nlpcands[bestcand];
-         bestboundval = nlpcandssol[bestcand];
+         if( bestcand >= 0 )
+         {
+            var = nlpcands[bestcand];
+            bestboundval = nlpcandssol[bestcand];
+         }
          break;
       case 'g':
          SCIP_CALL( chooseGuidedVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, bestsol, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
          assert(bestcand != -1);
-         var = nlpcands[bestcand];
-         bestboundval = nlpcandssol[bestcand];
+         if( bestcand >= 0 )
+         {
+            var = nlpcands[bestcand];
+            bestboundval = nlpcandssol[bestcand];
+         }
          break;
       case 'd':
          /* double diving only works if we have both relaxations at hand, otherwise we fall back to fractional diving */
          if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
          {
+            SCIP_VAR** pseudocands;
+
             SCIP_CALL( SCIPgetPseudoBranchCands(scip, &pseudocands, &npseudocands, NULL) );
             assert(backtrackdepth > 0 || nnlpcands <= npseudocands);
             assert(SCIPgetNLPBranchCands(scip) <= npseudocands);
@@ -1869,21 +1904,32 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             SCIP_CALL( chooseDoubleVar(scip, heurdata, pseudocands, pseudocandsnlpsol, pseudocandslpsol, npseudocands,
                   varincover, covercomputed, &bestcand, &bestboundval, &bestcandmayround, &bestcandroundup) );
             assert(bestcand != -1);
-            var = pseudocands[bestcand];
+            if( bestcand >= 0 )
+               var = pseudocands[bestcand];
             break;
          }
+         else
+            updatepscost = FALSE;
          /*lint -fallthrough*/
       case 'f':
          SCIP_CALL( chooseFracVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
          assert(bestcand != -1);
-         var = nlpcands[bestcand];
-         bestboundval = nlpcandssol[bestcand];
+         if( bestcand >= 0 )
+         {
+            var = nlpcands[bestcand];
+            bestboundval = nlpcandssol[bestcand];
+         }
          break;
       default:
          SCIPerrorMessage("invalid variable selection rule\n");
          return SCIP_INVALIDDATA;
       }
+
+      /* this should never happen */
+      if( bestcand < 0 )
+         break;
+      assert(var != NULL);
 
       /* if all candidates are roundable, try to round the solution */
       if( bestcandmayround && backtrackdepth == -1 )
@@ -1916,9 +1962,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       do
       {
          SCIP_Real frac;
+         frac = SCIP_INVALID;
 
          if( backtracked && backtrackdepth > 0 )
          {
+	    assert(backtrackvar != NULL);
+
             /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
              * occured or variable was fixed by propagation while backtracking => Abort diving!
              */
@@ -1965,6 +2014,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          }
          else
          {
+	    assert(var != NULL);
+
             /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
              * occured or variable was fixed by propagation while backtracking => Abort diving!
              */
@@ -2024,14 +2075,17 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             }
 
             /* for pseudo-cost computation */
-            if( heurdata->varselrule == 'd' && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+            if( updatepscost && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
             {
-               assert(pseudocandsnlpsol != NULL);
-               assert(0 <= bestcand && bestcand < npseudocands);
-               frac = SCIPfrac(scip, pseudocandsnlpsol[bestcand]);
+               if( heurdata->varselrule == 'd' )
+               {
+                  assert(pseudocandsnlpsol != NULL);
+                  assert(0 <= bestcand && bestcand < npseudocands);
+                  frac = SCIPfrac(scip, pseudocandsnlpsol[bestcand]);
+               }
+               else
+                  frac = nlpcandsfrac[bestcand];
             }
-            else
-               frac = nlpcandsfrac[bestcand];
          }
 
          /* apply domain propagation */
@@ -2130,8 +2184,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
                objval = SCIPgetLPObjval(scip);
 
                /* update pseudo cost values */
-               if( SCIPisGT(scip, objval, oldobjval) )
+               if( updatepscost && SCIPisGT(scip, objval, oldobjval) )
                {
+                  assert(frac != SCIP_INVALID);  /*lint !e777*/
                   if( bestcandroundup )
                   {
                      SCIP_CALL( SCIPupdateVarPseudocost(scip, var, 1.0-frac, objval - oldobjval, 1.0) );
@@ -2265,6 +2320,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
                SCIP_CALL( SCIPbacktrackProbing(scip, backtrackdepth-1) );
                SCIP_CALL( SCIPnewProbingNode(scip) );
                divedepth = backtrackdepth;
+
+               /* do not update pseudocosts if backtracking by more than one level */
+               updatepscost = FALSE;
+
                /* in case, we are feasible after backtracking, fix less variables at once in continuing diving
                 * @todo should we remember the fixquot in heurdata for the next run?
                 */
@@ -2335,7 +2394,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       SCIPdebugMessage("nlpdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
-#ifndef NDEBUG
+#ifdef SCIP_DEBUG
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, FALSE, FALSE, TRUE, &success) );
 #else
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, TRUE, &success) );
@@ -2360,7 +2419,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    if( covercomputed )
    {
       assert(heurdata->eventhdlr != NULL);
-      assert(heurdata->nfixedcovervars == 0);
+      assert(heurdata->nfixedcovervars >= 0); /* variables might have been globally fixed in propagation */
       assert(varincover != NULL);
       assert(covervars != NULL);
 

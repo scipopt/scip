@@ -16,6 +16,8 @@
 /**@file   cons_nonlinear.c
  * @brief  constraint handler for nonlinear constraints \f$\textrm{lhs} \leq \sum_{i=1}^n a_ix_i + \sum_{j=1}^m c_jf_j(x) \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
+ *
+ * @todo implement CONSPARSE callback
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -103,7 +105,8 @@ struct SCIP_ConsData
    unsigned int          iscurvchecked:1;    /**< is nonlinear function checked on convexity or concavity ? */
    unsigned int          isremovedfixingslin:1; /**< did we removed fixed/aggr/multiaggr variables in linear part? */
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds of linear variables in this constraint? */
-   unsigned int          ispresolved:1;      /**< did we checked for possibilities of upgrading or implicit integer variables ? */
+   unsigned int          ispresolved:1;      /**< did we checked for possibilities of upgrading or implicit integer variables? */
+   unsigned int          forcebackprop:1;    /**< should we force to run the backward propagation on our subgraph in the exprgraph? */
 
    SCIP_Real             minlinactivity;     /**< sum of minimal activities of all linear terms with finite minimal activity */
    SCIP_Real             maxlinactivity;     /**< sum of maximal activities of all linear terms with finite maximal activity */
@@ -161,8 +164,8 @@ struct SCIP_ConshdlrData
    unsigned int          isremovedfixings:1; /**< have fixed variables been removed in the expression graph? */
    unsigned int          ispropagated:1;     /**< have current bounds of linear variables in constraints and variables in expression graph been propagated? */
    unsigned int          isreformulated:1;   /**< has expression graph been reformulated? */
+   unsigned int          sepanlp:1;          /**< has a linearization in the NLP relaxation been added? */
    int                   naddedreformconss;  /**< number of constraints added via reformulation */
-   SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
    SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
    int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
 };
@@ -417,6 +420,7 @@ void consdataUpdateLinearActivity(
 
       for( i = 0; i < consdata->nlinvars; ++i )
       {
+         assert(SCIPvarGetLbLocal(consdata->linvars[i]) <= SCIPvarGetUbLocal(consdata->linvars[i]));
          assert(consdata->lineventdata[i] != NULL);
          if( consdata->lincoefs[i] >= 0.0 )
          {
@@ -450,6 +454,7 @@ void consdataUpdateLinearActivity(
       for( i = 0; i < consdata->nlinvars; ++i )
       {
          assert(consdata->lineventdata[i] != NULL);
+         assert(SCIPvarGetLbLocal(consdata->linvars[i]) <= SCIPvarGetUbLocal(consdata->linvars[i]));
          if( consdata->lincoefs[i] >= 0.0 )
          {
             bnd = SCIPvarGetUbLocal(consdata->linvars[i]);
@@ -473,6 +478,7 @@ void consdataUpdateLinearActivity(
          consdata->maxlinactivity += consdata->lincoefs[i] * bnd;
       }
    }
+   assert(consdata->minlinactivity <= consdata->maxlinactivity || consdata->minlinactivityinf > 0 || consdata->maxlinactivityinf > 0);
 
    SCIPintervalSetRoundingMode(prevroundmode);
 }
@@ -522,9 +528,7 @@ void consdataUpdateLinearActivityLbChange(
       }
       else
       {
-         SCIP_Real minuscoef;
-         minuscoef = -coef;
-         consdata->minlinactivity += minuscoef * oldbnd;
+         consdata->minlinactivity += SCIPintervalNegateReal(coef) * oldbnd;
       }
 
       if( SCIPisInfinity(scip, -newbnd) )
@@ -560,9 +564,7 @@ void consdataUpdateLinearActivityLbChange(
       }
       else
       {
-         SCIP_Real minuscoef;
-         minuscoef = -coef;
-         consdata->maxlinactivity += minuscoef * oldbnd;
+         consdata->maxlinactivity += SCIPintervalNegateReal(coef) * oldbnd;
       }
 
       if( SCIPisInfinity(scip, -newbnd) )
@@ -600,7 +602,6 @@ void consdataUpdateLinearActivityUbChange(
     * a > 0:  y <= rhs - a*lb(x),  y >= lhs - a*ub(x)
     * a < 0:  y <= rhs - a*ub(x),  y >= lhs - a*lb(x)
     */
-
    if( coef > 0.0 )
    {
       /* we should only be called if lhs is finite */
@@ -623,9 +624,7 @@ void consdataUpdateLinearActivityUbChange(
       }
       else
       {
-         SCIP_Real minuscoef;
-         minuscoef = -coef;
-         consdata->maxlinactivity += minuscoef * oldbnd;
+         consdata->maxlinactivity += SCIPintervalNegateReal(coef) * oldbnd;
       }
 
       if( SCIPisInfinity(scip, newbnd) )
@@ -661,9 +660,7 @@ void consdataUpdateLinearActivityUbChange(
       }
       else
       {
-         SCIP_Real minuscoef;
-         minuscoef = -coef;
-         consdata->minlinactivity += minuscoef * oldbnd;
+         consdata->minlinactivity += SCIPintervalNegateReal(coef) * oldbnd;
       }
 
       if( SCIPisInfinity(scip, newbnd) )
@@ -1772,7 +1769,7 @@ SCIP_RETCODE splitOffLinearPart(
    assert(conshdlrdata->exprgraph != NULL);
 
    /* number of children of expression graph node is a good upper estimate on number of linear variables */
-   linvarssize = MAX(SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode), 1);
+   linvarssize = MAX(SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode), 1);  /*lint !e666*/
    SCIP_CALL( SCIPallocBufferArray(scip, &linvars,  linvarssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, linvarssize) );
 
@@ -3316,6 +3313,12 @@ SCIP_RETCODE reformulate(
       if( consdata->exprgraphnode == NULL )
          continue;
 
+      /* after reformulation, force a round of backpropagation in expression graph for all constraints,
+       * since new variables (nlreform*) may now be used in existing constraints and we want domain restrictions
+       * of operators propagated for these variables
+       */
+      consdata->forcebackprop = TRUE;
+
       curv = SCIPexprgraphGetNodeCurvature(consdata->exprgraphnode);
 
       /* if nothing concave, then continue */
@@ -3489,6 +3492,7 @@ SCIP_RETCODE computeViolation(
    )
 {  /*lint --e{666}*/
    SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
    SCIP_Real varval;
    int i;
 
@@ -3531,17 +3535,45 @@ SCIP_RETCODE computeViolation(
 
       if( nvars == 1 )
       {
-         /* in the not so unusual case that an expression has only one variable, we do not extra alloc memory */
-         varval = SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(consdata->exprtrees[i])[0]);
+         /* in the not so unusual case that an expression has only one variable, we do not need to extra allocate memory */
+         var = SCIPexprtreeGetVars(consdata->exprtrees[i])[0];
+         varval = SCIPgetSolVal(scip, sol, var);
+
+         /* project onto local box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
+         if( sol == NULL )
+         {
+            assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
+            assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
+            varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
+         }
+
          SCIP_CALL( SCIPexprintEval(exprint, consdata->exprtrees[i], &varval, &val) );
       }
       else
       {
          SCIP_Real* x;
+         int j;
 
          SCIP_CALL( SCIPallocBufferArray(scip, &x, nvars) );
-         SCIP_CALL( SCIPgetSolVals(scip, sol, nvars, SCIPexprtreeGetVars(consdata->exprtrees[i]), x) );
+
+         for( j = 0; j < nvars; ++j )
+         {
+            var = SCIPexprtreeGetVars(consdata->exprtrees[i])[j];
+            varval = SCIPgetSolVal(scip, sol, var);
+
+            /* project onto local box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
+            if( sol == NULL )
+            {
+               assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
+               assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
+               varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
+            }
+
+            x[j] = varval;
+         }
+
          SCIP_CALL( SCIPexprintEval(exprint, consdata->exprtrees[i], x, &val) );
+
          SCIPfreeBufferArray(scip, &x);
       }
 
@@ -3875,13 +3907,13 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    xlb = SCIPvarGetLbLocal(var);
    xub = SCIPvarGetUbLocal(var);
 
-   /* if variable is fixed, then cannot really compute secant */
-   if( SCIPisEQ(scip, xlb, xub) )
-      return SCIP_OKAY;
    /* if variable is unbounded, then cannot really compute secant */
    if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
+   {
+      SCIPdebugMessage("skip secant for tree %d of constraint <%s> since variable is unbounded\n", exprtreeidx, SCIPconsGetName(cons));
       return SCIP_OKAY;
-   assert(SCIPisLT(scip, xlb, xub));
+   }
+   assert(SCIPisLE(scip, xlb, xub));
 
    SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) );
    if( !finite(vallb) || SCIPisInfinity(scip, REALABS(vallb)) )
@@ -3894,13 +3926,22 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) );
    if( !finite(valub) || SCIPisInfinity(scip, REALABS(valub)) )
    {
-      SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated in lower bound\n", exprtreeidx, SCIPconsGetName(cons));
+      SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated in upper bound\n", exprtreeidx, SCIPconsGetName(cons));
       return SCIP_OKAY;
    }
    valub *= treecoef;
 
-   slope = (valub - vallb) / (xub - xlb);
-   constant = vallb - slope * xlb;
+   if( SCIPisEQ(scip, xlb, xub) )
+   {
+      assert(SCIPisFeasEQ(scip, vallb, valub));
+      slope = 0.0;
+      constant = 0.5 * (vallb+valub);
+   }
+   else
+   {
+      slope = (valub - vallb) / (xub - xlb);
+      constant = vallb - slope * xlb;
+   }
 
    /* add secant to SCIP row */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
@@ -3911,7 +3952,10 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    {
       SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
    }
-   SCIP_CALL( SCIPaddVarsToRow(scip, row, 1, &var, &slope) );
+   if( slope != 0.0 )
+   {
+      SCIP_CALL( SCIPaddVarsToRow(scip, row, 1, &var, &slope) );
+   }
 
    *success = TRUE;
 
@@ -4028,12 +4072,6 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
       return SCIP_OKAY;
    }
 
-   if( SCIPisEQ(scip, xlb, xub) && SCIPisEQ(scip, ylb, yub) )
-   {
-      SCIPdebugMessage("skip bivariate secant since both <%s> and <%s> are fixed\n", SCIPvarGetName(x), SCIPvarGetName(y));
-      return SCIP_OKAY;
-   }
-
    /* reference point should not be outside of bounds */
    assert(SCIPisFeasLE(scip, xlb, ref[0]));
    assert(SCIPisFeasGE(scip, xub, ref[0]));
@@ -4058,7 +4096,23 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
    p4[0] = xlb;
    p4[1] = yub;
 
-   if( SCIPisEQ(scip, xlb, xub) )
+   if( SCIPisEQ(scip, xlb, xub) && SCIPisEQ(scip, ylb, yub) )
+   {
+      SCIP_CALL( SCIPexprtreeEval(exprtree, p1, &p1val) );
+
+      if( !finite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) )
+      {
+         SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated\n", exprtreeidx, SCIPconsGetName(cons));
+         return SCIP_OKAY;
+      }
+
+      p1val *= treecoef;
+
+      coefx = 0.0;
+      coefy = 0.0;
+      constant = p1val;
+   }
+   else if( SCIPisEQ(scip, xlb, xub) )
    {
       /* secant between p1 and p4: p1val + [(p4val - p1val) / (yub - ylb)] * (y - ylb) */
       assert(!SCIPisEQ(scip, ylb, yub));
@@ -4668,7 +4722,9 @@ SCIP_RETCODE addIntervalGradientEstimator(
 
       SCIPintervalMulScalar(INTERVALINFTY, &intgrad[i], intgrad[i], treecoef);
 
-      if( (overestimate && val == ub) ||  /*lint !e777*/
+      if( SCIPisEQ(scip, lb, ub) )
+         coefs[i] = 0.0;
+      else if( (overestimate && val == ub) ||  /*lint !e777*/
          (!overestimate && val == lb) )   /*lint !e777*/
          coefs[i] = SCIPintervalGetInf(intgrad[i]);
       else
@@ -4799,7 +4855,7 @@ SCIP_RETCODE generateCut(
          }
          if( !success )
          {
-            SCIPdebugMessage("failed to generate polyhedral estimator for concave function, fall back to intervalgradient cut\n");
+            SCIPdebugMessage("failed to generate polyhedral estimator for %d-dim concave function in exprtree %d, fall back to intervalgradient cut\n", SCIPexprtreeGetNVars(consdata->exprtrees[i]), i);
             SCIP_CALL( addIntervalGradientEstimator(scip, exprint, cons, i, x, newsol, side == SCIP_SIDETYPE_LEFT, *row, &success) );
          }
       }
@@ -4979,6 +5035,12 @@ SCIP_RETCODE separatePoint(
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
+
+      /* skip constraints that are not enabled */
+      if( !SCIPconsIsEnabled(conss[c]) )
+         continue;
+      assert(SCIPconsIsActive(conss[c]));
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
@@ -5313,7 +5375,9 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
-   SCIP_Bool*            addedcons           /**< buffer to store whether a linear constraint was added */
+   SCIP_Bool*            addedcons,          /**< buffer to store whether a linear constraint was added */
+   SCIP_Bool*            reduceddom,         /**< whether a domain has been reduced */
+   SCIP_Bool*            infeasible          /**< whether we detected infeasibility */
    )
 {
    SCIP_CONS*          cons;
@@ -5327,8 +5391,12 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
    assert(addedcons != NULL);
+   assert(reduceddom != NULL);
+   assert(infeasible != NULL);
 
    *addedcons = FALSE;
+   *reduceddom = FALSE;
+   *infeasible = FALSE;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5358,30 +5426,98 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
             rhs -= SCIPintervalGetInf(nonlinactivity);
       }
 
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, SCIPconsGetName(conss[c]),
-            consdata->nlinvars, consdata->linvars, consdata->lincoefs,
-            lhs, rhs,
-            SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]),
-            SCIPconsIsChecked(conss[c]), SCIPconsIsPropagated(conss[c]),  TRUE,
-            SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
-            SCIPconsIsStickingAtNode(conss[c])) );
-
-      SCIPdebugMessage("replace violated nonlinear constraint <%s> by linear constraint after all nonlinear vars have been fixed\n", SCIPconsGetName(conss[c]) );
-      SCIPdebugPrintCons(scip, conss[c], NULL);
-      SCIPdebugPrintCons(scip, cons, NULL);
-
-      SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
-
-      if( checkresult != SCIP_INFEASIBLE )
+      /* check if we have a bound change */
+      if ( consdata->nlinvars == 1 )
       {
-         SCIPdebugMessage("linear constraint is feasible, thus do not add\n");
+         SCIP_Bool tightened;
+         SCIP_Real coef;
+
+         coef = *consdata->lincoefs;
+         SCIPdebugMessage("Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef, SCIPvarGetName(*consdata->linvars), rhs);
+
+         /* possibly correct lhs/rhs */
+         assert( ! SCIPisZero(scip, coef) );
+         if ( coef >= 0.0 )
+         {
+            if ( ! SCIPisInfinity(scip, -lhs) )
+               lhs /= coef;
+            if ( ! SCIPisInfinity(scip, rhs) )
+               rhs /= coef;
+         }
+         else
+         {
+            SCIP_Real h;
+            h = rhs;
+            if ( ! SCIPisInfinity(scip, -lhs) )
+               rhs = lhs/coef;
+            else
+               rhs = SCIPinfinity(scip);
+
+            if ( ! SCIPisInfinity(scip, h) )
+               lhs = h/coef;
+            else
+               lhs = -SCIPinfinity(scip);
+         }
+         SCIPdebugMessage("Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(*consdata->linvars), rhs);
+
+         if ( ! SCIPisInfinity(scip, -lhs) )
+         {
+            SCIP_CALL( SCIPtightenVarLb(scip, *consdata->linvars, lhs, TRUE, infeasible, &tightened) );
+            if ( *infeasible )
+            {
+               SCIPdebugMessage("Lower bound leads to infeasibility.\n");
+               return SCIP_OKAY;
+            }
+            if ( tightened )
+            {
+               SCIPdebugMessage("Lower bound changed.\n");
+               *reduceddom = TRUE;
+               return SCIP_OKAY;
+            }
+         }
+
+         if ( ! SCIPisInfinity(scip, rhs) )
+         {
+            SCIP_CALL( SCIPtightenVarUb(scip, *consdata->linvars, rhs, TRUE, infeasible, &tightened) );
+            if ( *infeasible )
+            {
+               SCIPdebugMessage("Upper bound leads to infeasibility.\n");
+               return SCIP_OKAY;
+            }
+            if ( tightened )
+            {
+               SCIPdebugMessage("Upper bound changed.\n");
+               *reduceddom = TRUE;
+               return SCIP_OKAY;
+            }
+         }
       }
       else
       {
-         SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
-         *addedcons = TRUE;
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, SCIPconsGetName(conss[c]),
+               consdata->nlinvars, consdata->linvars, consdata->lincoefs, lhs, rhs,
+               SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]),
+               SCIPconsIsChecked(conss[c]), SCIPconsIsPropagated(conss[c]),  TRUE,
+               SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
+               SCIPconsIsStickingAtNode(conss[c])) );
+
+         SCIPdebugMessage("replace violated nonlinear constraint <%s> by linear constraint after all nonlinear vars have been fixed\n", SCIPconsGetName(conss[c]) );
+         SCIPdebugPrintCons(scip, conss[c], NULL);
+         SCIPdebugPrintCons(scip, cons, NULL);
+
+         SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
+
+         if( checkresult != SCIP_INFEASIBLE )
+         {
+            SCIPdebugMessage("linear constraint is feasible, thus do not add\n");
+         }
+         else
+         {
+            SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
+            *addedcons = TRUE;
+         }
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
    }
 
@@ -5844,7 +5980,10 @@ SCIP_RETCODE propagateConstraintSides(
 
       SCIPintervalSetRoundingMode(roundmode);
 
-      SCIPexprgraphTightenNodeBounds(conshdlrdata->exprgraph, consdata->exprgraphnode, bounds, BOUNDTIGHTENING_MINSTRENGTH, &cutoff);
+      /* if we want the expression graph to propagate the bounds in any case, we set minstrength to a negative value */
+      SCIPexprgraphTightenNodeBounds(conshdlrdata->exprgraph, consdata->exprgraphnode, bounds,
+         consdata->forcebackprop ? -1.0 : BOUNDTIGHTENING_MINSTRENGTH, &cutoff);
+      consdata->forcebackprop = FALSE; /* do this only once */
 
       if( cutoff )
       {
@@ -5973,6 +6112,7 @@ SCIP_RETCODE propagateBounds(
          assert(conss != NULL);
          if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
             continue;
+         assert(SCIPconsIsActive(conss[c]));
 
 #ifndef NDEBUG
          consdata = SCIPconsGetData(conss[c]);
@@ -6348,6 +6488,10 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 
    for( c = 0; c < nconss; ++c )
    {
+      /* skip not yet active constraints */
+      if( !SCIPconsIsActive(conss[c]) )  /*lint !e613*/
+         continue;
+
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
@@ -6400,6 +6544,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
+
+      /* skip inactive constraints */
+      if( !SCIPconsIsActive(conss[c]) )
+         continue;
+      assert(SCIPconsIsAdded(conss[c]));
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
@@ -6452,8 +6602,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 #endif
 
          /* tell SCIP that we have something nonlinear */
-         if( SCIPconsIsAdded(conss[c]) )
-            SCIPenableNLP(scip);
+         SCIPenableNLP(scip);
       }
    }
 
@@ -6791,7 +6940,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
     * if there is something convex, then linearizing in the solution of the NLP relaxation can be very useful
     */
    if( SCIPgetDepth(scip) == 0 && !conshdlrdata->sepanlp &&
-      (SCIPgetNContVars(scip) >= conshdlrdata->sepanlpmincont * SCIPgetNVars(scip) || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) &&
+      (SCIPgetNContVars(scip) >= conshdlrdata->sepanlpmincont * SCIPgetNVars(scip) || (SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY && conshdlrdata->sepanlpmincont <= 1.0)) &&
       SCIPisNLPConstructed(scip) && SCIPgetNNlpis(scip) > 0 )
    {
       SCIP_CONSDATA* consdata;
@@ -6972,10 +7121,14 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
 
    consdata = SCIPconsGetData(maxviolcons);
    assert(consdata != NULL);
+
    maxviol = consdata->lhsviol + consdata->rhsviol;
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
    SCIPdebugMessage("enfolp with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
+
+   /* we propagate and separate constraints only if they are active and enforcing by branching only does not seem much effective */
+   assert(SCIPconsIsActive(maxviolcons));
 
    /* if we are above the 100'th enforcement round for this node, something is strange
     * (maybe the LP does not think that the cuts we add are violated, or we do ECP on a high-dimensional convex function)
@@ -7062,25 +7215,33 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
       {
          /* fallback 3: all nonlinear variables in all violated constraints seem to be fixed -> replace by linear constraints */
          SCIP_Bool addedcons;
+         SCIP_Bool reduceddom;
+         SCIP_Bool infeasible;
 
          SCIPdebugMessage("All nonlinear variables seem to be fixed. Replace remaining violated nonlinear constraints by linear constraints.\n");
-         SCIP_CALL( replaceViolatedByLinearConstraints(scip, conss, nconss, &addedcons) );
-         /* if the linear constraints are actually feasible, then adding them and returning SCIP_CONSADDED confuses SCIP when it enforces the new constraints again and nothing resolves the infeasiblity that we declare here
-          * thus, we only add them if considered violated, and otherwise claim the solution is feasible (but print a warning) */
-         if( addedcons )
-         {
+         SCIP_CALL( replaceViolatedByLinearConstraints(scip, conss, nconss, &addedcons, &reduceddom, &infeasible) );
+         /* if the linear constraints are actually feasible, then adding them and returning SCIP_CONSADDED confuses SCIP
+          * when it enforces the new constraints again and nothing resolves the infeasiblity that we declare here thus,
+          * we only add them if considered violated, and otherwise claim the solution is feasible (but print a
+          * warning) */
+         if ( infeasible )
+            *result = SCIP_CUTOFF;
+         else if ( addedcons )
             *result = SCIP_CONSADDED;
-         }
+         else if ( reduceddom )
+            *result = SCIP_REDUCEDDOM;
          else
          {
             *result = SCIP_FEASIBLE;
             SCIPwarningMessage(scip, "could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
+            assert(!SCIPisInfinity(scip, maxviol));
          }
          return SCIP_OKAY;
       }
       else
       {
-         SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n", SCIPvarGetName(brvar), SCIPgetSolVal(scip, NULL, brvar));
+         SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n",
+            SCIPvarGetName(brvar), SCIPgetSolVal(scip, NULL, brvar));
          nnotify = 1;
       }
    }
@@ -7122,6 +7283,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
    *result = SCIP_INFEASIBLE;
 
    SCIPdebugMessage("enfops with max violation in cons <%s>\n", SCIPconsGetName(maxviolcons));
+
+   /* we propagate constraints only if they are active and enforcing by branching only does not seem much effective */
+   assert(SCIPconsIsActive(maxviolcons));
 
    /* run domain propagation */
    dummy = 0;
@@ -7191,7 +7355,6 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
 
    assert(scip != NULL);
    assert(conss != NULL || nconss == 0);
-   assert(sol != NULL);
    assert(result != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -7386,6 +7549,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
@@ -7400,6 +7564,10 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
          assert(consdata->isremovedfixingslin);
          havechange = TRUE;
       }
+
+      /* the reductions below require the constraint nonlinear function to be in the expression graph, which is only the case for active constraints */
+      if( !SCIPconsIsActive(conss[c]) )
+         continue;
 
       if( !consdata->ispresolved || havegraphchange )
       {
@@ -7517,6 +7685,11 @@ SCIP_DECL_CONSLOCK(consLockNonlinear)
    assert(scip != NULL);
    assert(cons != NULL);
 
+   /* variable locking for nonlinear part is done w.r.t. variables in the expression graph
+    * since only active constraints have their nonlinear part in the expression graph, we can lock only active constraints
+    */
+   assert(SCIPconsIsActive(cons) || SCIPconsIsDeleted(cons));
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -7592,11 +7765,21 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
 
       /* remember that we should run reformulation again */
       conshdlrdata->isreformulated = FALSE;
+
+      /* remember that we should force backward propagation on our subgraph propagating the next time,
+       * so possible domain restrictions are propagated into variable bounds
+       */
+      consdata->forcebackprop = TRUE;
    }
    else if( consdata->exprgraphnode != NULL )
    {
       /* if constraint already comes with node in expression graph, then also remember that we should run reformulation again */
       conshdlrdata->isreformulated = FALSE;
+
+      /* remember that we should force backward propagation on our subgraph propagating the next time,
+       * so possible domain restrictions are propagated into variable bounds
+       */
+      consdata->forcebackprop = TRUE;
    }
 
    return SCIP_OKAY;
@@ -7899,43 +8082,34 @@ SCIP_DECL_CONSCOPY(consCopyNonlinear)
    return SCIP_OKAY;
 }
 
-/** constraint parsing method of constraint handler */
-static
-SCIP_DECL_CONSPARSE(consParseNonlinear)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-
 /** constraint method of constraint handler which returns the variables (if possible) */
 static
 SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   int cnt;
 
    assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   *success = TRUE;
+
    if( varssize < consdata->nlinvars )
    {
-      (*success) = FALSE;
+      *success = FALSE;
       return SCIP_OKAY;
    }
 
-   (*success) = TRUE;
-
    BMScopyMemoryArray(vars, consdata->linvars, consdata->nlinvars);
+   cnt = consdata->nlinvars;
 
    if( consdata->exprgraphnode != NULL )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
       int* varsusage;
       int i;
-      int cnt;
 
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
@@ -7944,7 +8118,6 @@ SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
 
       SCIPexprgraphGetSubtreeVarsUsage(conshdlrdata->exprgraph, consdata->exprgraphnode, varsusage);
 
-      cnt = consdata->nlinvars;
       for( i = 0; i < SCIPexprgraphGetNVars(conshdlrdata->exprgraph); ++i )
       {
          if( varsusage[i] == 0 )
@@ -7952,15 +8125,37 @@ SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
 
          if( cnt >= varssize )
          {
-            (*success) = FALSE;
+            *success = FALSE;
             break;
          }
 
-         vars[cnt] = SCIPexprgraphGetVars(conshdlrdata->exprgraph)[i];
+         vars[cnt] = (SCIP_VAR*)(SCIPexprgraphGetVars(conshdlrdata->exprgraph)[i]);
          ++cnt;
       }
 
       SCIPfreeBufferArray(scip, &varsusage);
+   }
+   else
+   {
+      SCIP_VAR** exprvars;
+      int nexprvars;
+      int e;
+
+      for( e = 0; e < consdata->nexprtrees; ++e )
+      {
+         exprvars  = SCIPexprtreeGetVars(consdata->exprtrees[e]);
+         nexprvars = SCIPexprtreeGetNVars(consdata->exprtrees[e]);
+         assert(exprvars != NULL || nexprvars == 0);
+
+         if( cnt + nexprvars >= varssize )
+         {
+            *success = FALSE;
+            break;
+         }
+
+         BMScopyMemoryArray(&vars[cnt], exprvars, nexprvars);  /*lint !e866*/
+         cnt += nexprvars;
+      }
    }
 
    return SCIP_OKAY;
@@ -7975,7 +8170,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsNonlinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   (*nvars) = consdata->nlinvars;
+   *nvars = consdata->nlinvars;
 
    if( consdata->exprgraphnode != NULL )
    {
@@ -7992,12 +8187,19 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsNonlinear)
 
       for( i = 0; i < SCIPexprgraphGetNVars(conshdlrdata->exprgraph); ++i )
          if( varsusage[i] > 0 )
-            ++(*nvars);
+            ++*nvars;
 
       SCIPfreeBufferArray(scip, &varsusage);
    }
+   else
+   {
+      int e;
 
-   (*success) = TRUE;
+      for( e = 0; e < consdata->nexprtrees; ++e )
+         *nvars += SCIPexprtreeGetNVars(consdata->exprtrees[e]);
+   }
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -8043,7 +8245,6 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreNonlinear) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolNonlinear) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpNonlinear) );
-   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseNonlinear) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolNonlinear, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintNonlinear) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropNonlinear, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
@@ -8492,7 +8693,6 @@ SCIP_RETCODE SCIPsetExprtreesNonlinear(
 /** adds expression trees to a nonlinear constraint
  * constraint must not be active yet
  */
-extern
 SCIP_RETCODE SCIPaddExprtreesNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */

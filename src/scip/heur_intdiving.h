@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /** creates the intdiving heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurIntdiving(
    SCIP*                 scip                /**< SCIP data structure */
    );

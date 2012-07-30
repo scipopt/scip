@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   ConshdlrSubtour.cpp
- * @brief  C++ file reader for TSP data files
+ * @brief  Subtour elimination constraint handler for TSP problems, written in C++
  * @author Timo Berthold
  */
 

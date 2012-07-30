@@ -147,6 +147,13 @@ SCIP_RETCODE SCIPparamsetAddString(
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
+/** returns whether an existing parameter is fixed */
+extern
+SCIP_Bool SCIPparamsetIsFixed(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name                /**< name of the parameter */
+   );
+
 /** gets the value of an existing SCIP_Bool parameter */
 extern
 SCIP_RETCODE SCIPparamsetGetBool(

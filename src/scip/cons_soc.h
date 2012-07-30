@@ -17,7 +17,7 @@
  * @ingroup CONSHDLRS
  * @brief  constraint handler for second order cone constraints \f$\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})\f$
  * @author Stefan Vigerske
- * 
+ *
  * This constraint handler implements second order cone constraints of the form
  * \f[
  *    \sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})
@@ -60,7 +60,7 @@ extern "C" {
 #endif
 
 /** creates the handler for second order cone constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -69,7 +69,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -98,18 +98,21 @@ SCIP_RETCODE SCIPcreateConsSOC(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    );
 
-/** creates and captures a second order cone constraint with all its constraint flags
- *  set to their default values
+/** creates and captures a second order cone constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ *
+ *  @see SCIPcreateConsSOC() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -126,7 +129,7 @@ SCIP_RETCODE SCIPcreateConsBasicSOC(
 
 /** Gets the SOC constraint as a nonlinear row representation.
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPgetNlRowSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -135,7 +138,7 @@ SCIP_RETCODE SCIPgetNlRowSOC(
 
 /** Gets the number of variables on the left hand side of a SOC constraint.
  */
-extern
+EXTERN
 int SCIPgetNLhsVarsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -143,7 +146,7 @@ int SCIPgetNLhsVarsSOC(
 
 /** Gets the variables on the left hand side of a SOC constraint.
  */
-extern
+EXTERN
 SCIP_VAR** SCIPgetLhsVarsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -151,7 +154,7 @@ SCIP_VAR** SCIPgetLhsVarsSOC(
 
 /** Gets the coefficients of the variables on the left hand side of a SOC constraint, or NULL if all are equal to 1.0.
  */
-extern
+EXTERN
 SCIP_Real* SCIPgetLhsCoefsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -159,7 +162,7 @@ SCIP_Real* SCIPgetLhsCoefsSOC(
 
 /** Gets the offsets of the variables on the left hand side of a SOC constraint, or NULL if all are equal to 0.0.
  */
-extern
+EXTERN
 SCIP_Real* SCIPgetLhsOffsetsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -167,7 +170,7 @@ SCIP_Real* SCIPgetLhsOffsetsSOC(
 
 /** Gets the constant on the left hand side of a SOC constraint.
  */
-extern
+EXTERN
 SCIP_Real SCIPgetLhsConstantSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -175,7 +178,7 @@ SCIP_Real SCIPgetLhsConstantSOC(
 
 /** Gets the variable on the right hand side of a SOC constraint.
  */
-extern
+EXTERN
 SCIP_VAR* SCIPgetRhsVarSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -183,7 +186,7 @@ SCIP_VAR* SCIPgetRhsVarSOC(
 
 /** Gets the coefficient of the variable on the right hand side of a SOC constraint.
  */
-extern
+EXTERN
 SCIP_Real SCIPgetRhsCoefSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -191,7 +194,7 @@ SCIP_Real SCIPgetRhsCoefSOC(
 
 /** Gets the offset of the variables on the right hand side of a SOC constraint.
  */
-extern
+EXTERN
 SCIP_Real SCIPgetRhsOffsetSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -200,7 +203,7 @@ SCIP_Real SCIPgetRhsOffsetSOC(
 /** Adds the constraint to an NLPI problem.
  * Uses nonconvex formulation as quadratic function.
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddToNlpiProblemSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< SOC constraint */

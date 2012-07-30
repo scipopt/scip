@@ -3567,7 +3567,7 @@ SCIP_RETCODE parseSolveItem(
       {
          assert(equalTokens(scip, fzninput->token, "maximize"));
          fzninput->objsense = SCIP_OBJSENSE_MAXIMIZE;
-         SCIPdebugMessage("detected a maximization problem");
+         SCIPdebugMessage("detected a maximization problem\n");
       }
 
       /* parse objective coefficients */

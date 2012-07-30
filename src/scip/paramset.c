@@ -343,7 +343,7 @@ SCIP_RETCODE paramSetBool(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPmessageFPrintInfo(messagehdlr, NULL, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -379,7 +379,7 @@ SCIP_RETCODE paramSetInt(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPmessageFPrintInfo(messagehdlr, NULL, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -415,7 +415,7 @@ SCIP_RETCODE paramSetLongint(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPmessageFPrintInfo(messagehdlr, NULL, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -451,7 +451,7 @@ SCIP_RETCODE paramSetReal(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPmessageFPrintInfo(messagehdlr, NULL, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -1387,7 +1387,7 @@ void SCIPparamsetFree(
    assert((*paramset)->paramssize == 0 || (*paramset)->params != NULL);
    assert((*paramset)->paramssize >= (*paramset)->nparams);
 
-   for( i = 0; i < (*paramset)->nparams; ++i )
+   for( i = (*paramset)->nparams - 1; i >= 0; --i )
    {
       paramFree(&(*paramset)->params[i], blkmem);
    }
@@ -1616,6 +1616,28 @@ const char* paramtypeGetName(
    };
 
    return paramtypename[(int)paramtype];
+}
+
+/** returns whether an existing parameter is fixed */
+SCIP_Bool SCIPparamsetIsFixed(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name                /**< name of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      SCIPABORT();
+      return FALSE; /*lint !e527*/
+   }
+
+   return SCIPparamIsFixed(param);
 }
 
 /** gets the value of an existing SCIP_Bool parameter */
@@ -2750,12 +2772,11 @@ SCIP_RETCODE paramsetSetPresolvingDefault(
       SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, paramname) );
    }
 
+   /* explicitly reset parameters of setppc constraint handler, if the constraint handler is included */
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "constraints/setppc/cliquelifting") );
+
    /* explicitly reset parameters of knapsack constraint handler, if the constraint handler is included */
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "constraints/knapsack/disaggregation") );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "constraints/knapsack/simplifyinequalities") );
-
-   /* explicitly reset parameters of linear constraint handler, if the constraint handler is included */
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities") );
 
    /* explicitly reset restart parameters */
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "presolving/maxrestarts") );
@@ -2789,20 +2810,12 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
    SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/restartfac", 0.03, quiet) );
    SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/restartminred", 0.06, quiet) );
 
-   /* explicitly change parameters of linear constraint handler, if included */
+   /* explicitly change parameters of setppc constraint handler, if included */
 #ifndef NDEBUG
-   if( SCIPsetFindConshdlr(set, "linear") != NULL )
+   if( SCIPsetFindConshdlr(set, "setppc") != NULL )
 #endif
    {
-      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities", TRUE, quiet) );
-   }
-
-   /* explicitly change parameters of knapsack constraint handler, if included */
-#ifndef NDEBUG
-   if( SCIPsetFindConshdlr(set, "knapsack") != NULL )
-#endif
-   {
-      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/knapsack/simplifyinequalities", TRUE, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/setppc/cliquelifting", TRUE, quiet) );
    }
 
    /* explicitly change parameters of presolver boundshift, if included */
@@ -3429,6 +3442,9 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
       /* turn on aggressive constraint aging */ 
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/agelimit", 1, quiet) );       
+
+      /* turn off components presolver since we are currently not able to handle that in case of counting */
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/components/maxrounds", 0, quiet) );
       break;
 
    case SCIP_PARAMEMPHASIS_CPSOLVER:
@@ -3551,6 +3567,22 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
          /* get frequency parameter of heuristic */
          (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", heurname);
 
+         /* we have to unfix the parameter if it fixed and not already set to -1 */
+         if( SCIPparamsetIsFixed(paramset, paramname) )
+         {
+            int oldfreq;
+
+            SCIP_CALL( SCIPparamsetGetInt(paramset, paramname, &oldfreq) );
+
+            /* if the frequency is already set to -1, we do not have to unfix it, but must not try to set it, either */
+            if( oldfreq == -1 )
+               continue;
+
+            /* unfix parameter */
+            SCIPmessageFPrintInfo(messagehdlr, NULL, "unfixing parameter %s in order to disable sub-SCIPs in the current (sub-)SCIP instance\n", paramname);
+            SCIP_CALL( SCIPparamsetFix(paramset, paramname, FALSE) );
+         }
+
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, -1, quiet) );
       }
    }
@@ -3568,6 +3600,23 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
       
          /* get frequency parameter of separator */
          (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", sepaname);
+
+         /* we have to unfix the parameter if it fixed and not already set to -1 */
+         if( SCIPparamsetIsFixed(paramset, paramname) )
+         {
+            int oldfreq;
+
+            SCIP_CALL( SCIPparamsetGetInt(paramset, paramname, &oldfreq) );
+
+            /* if the frequency is already set to -1, we do not have to unfix it, but must not try to set it, either */
+            if( oldfreq == -1 )
+               continue;
+
+            /* unfix parameter */
+            SCIPmessageFPrintInfo(messagehdlr, NULL, "unfixing parameter %s in order to disable sub-SCIPs in the current (sub-)SCIP instance\n", paramname);
+            SCIP_CALL( SCIPparamsetFix(paramset, paramname, FALSE) );
+         }
+
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, -1, quiet) );
       }
    }
@@ -4045,9 +4094,10 @@ SCIP_RETCODE SCIPparamSetToDefault(
 {
    assert(param != NULL);
 
+   /* do not change the parameter if it is fixed */
    if( SCIPparamIsFixed(param) )
    {
-      SCIPmessageFPrintInfo(messagehdlr, NULL, "parameter <%s> is fixed and is not reset to its default value.\n", param->name);
+      SCIPdebugMessage("parameter <%s> is fixed and is not reset to its default value.\n", param->name);
 
       return SCIP_OKAY;
    }

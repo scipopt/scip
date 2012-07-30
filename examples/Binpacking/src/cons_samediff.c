@@ -312,45 +312,6 @@ SCIP_RETCODE consdataFree(
  * Callback methods of constraint handler
  */
 
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_CONSHDLRCOPY(conshdlrCopySamediff)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-
-   /* call inclusion method of constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrSamediff(scip) );
- 
-   return SCIP_OKAY;
-}
-#else
-#define conshdlrCopySamediff NULL
-#endif
-
-/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#define consFreeSamediff NULL
-
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitSamediff NULL
-
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitSamediff NULL
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreSamediff NULL
-
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreSamediff NULL
-
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolSamediff NULL
-
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#define consExitsolSamediff NULL
-
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteSamediff)
@@ -395,15 +356,6 @@ SCIP_DECL_CONSTRANS(consTransSamediff)
 
    return SCIP_OKAY;
 }
-
-/** LP initialization method of constraint handler */
-#define consInitlpSamediff NULL
-
-/** separation method of constraint handler for LP solutions */
-#define consSepalpSamediff NULL
-
-/** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolSamediff NULL
 
 /** constraint enforcing method of constraint handler for LP solutions */
 #define consEnfolpSamediff NULL
@@ -485,12 +437,6 @@ SCIP_DECL_CONSPROP(consPropSamediff)
    return SCIP_OKAY;
 }
 
-/** presolving method of constraint handler */
-#define consPresolSamediff NULL
-
-/** propagation conflict resolving method of constraint handler */
-#define consRespropSamediff NULL
-
 /** variable rounding lock method of constraint handler */
 #define consLockSamediff NULL
 
@@ -556,15 +502,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSamediff)
    return SCIP_OKAY;
 }
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableSamediff NULL
-
-/** constraint disabling notification method of constraint handler */
-#define consDisableSamediff NULL
-
-/** variable deletion method of constraint handler */
-#define consDelVarsSamediff NULL
-
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintSamediff)
@@ -578,18 +515,6 @@ SCIP_DECL_CONSPRINT(consPrintSamediff)
       
    return SCIP_OKAY;
 }
-
-/** constraint copying method of constraint handler */
-#define consCopySamediff NULL
-
-/** constraint parsing method of constraint handler */
-#define consParseSamediff NULL
-
-/** constraint method of constraint handler which returns the variables (if possible) */
-#define consGetVarsSamediff NULL
-
-/** constraint method of constraint handler which returns the number of variables (if possible) */
-#define consGetNVarsSamediff NULL
 
 /*
  * constraint specific interface methods

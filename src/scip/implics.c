@@ -426,7 +426,18 @@ void checkImplics(
       assert(nimpls == 0 || types != NULL);
       assert(nimpls == 0 || bounds != NULL);
 
-      for( i = 0; i < nbinimpls; ++i )
+      if( nbinimpls > 0 )
+      {
+         /* in case of implication we cannot use SCIPvarIsBinary() to check for binaries since the implication are
+          * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
+          * SCIP_VARTYPE_BINARY) and second all others;
+          */
+         assert(SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY);
+         assert((types[0] == SCIP_BOUNDTYPE_LOWER) == (bounds[0] > 0.5));
+         assert(SCIPsetIsFeasZero(set, bounds[0]) || SCIPsetIsFeasEQ(set, bounds[0], 1.0));
+      }
+
+      for( i = 1; i < nbinimpls; ++i )
       {
          int cmp;
 
@@ -436,10 +447,7 @@ void checkImplics(
           */
          assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY);
          assert((types[i] == SCIP_BOUNDTYPE_LOWER) == (bounds[i] > 0.5));
-         assert(SCIPsetIsFeasEQ(set, bounds[i], 0.0) || SCIPsetIsFeasEQ(set, bounds[i], 1.0));
-
-         if( i == 0 )
-            continue;
+         assert(SCIPsetIsFeasZero(set, bounds[i]) || SCIPsetIsFeasEQ(set, bounds[i], 1.0));
 
          cmp = compVars(vars[i-1], vars[i]);
          assert(cmp <= 0);
@@ -450,7 +458,7 @@ void checkImplics(
       for( i = nbinimpls; i < nimpls; ++i )
       {
          int cmp;
-         
+
          /* in case of implication we cannot use SCIPvarIsBinary() to check for binaries since the implication are
           * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
           * SCIP_VARTYPE_BINARY) and second all others;
@@ -1220,15 +1228,15 @@ SCIP_RETCODE SCIPcliqueAddVar(
       const int amount = clique->nvars - pos;
 
       /* moving elements to correct position */
-      BMSmoveMemoryArray(&(clique->vars[pos+1]), &(clique->vars[pos]), amount);
-      BMSmoveMemoryArray(&(clique->values[pos+1]), &(clique->values[pos]), amount);
+      BMSmoveMemoryArray(&(clique->vars[pos+1]), &(clique->vars[pos]), amount); /*lint !e866*/
+      BMSmoveMemoryArray(&(clique->values[pos+1]), &(clique->values[pos]), amount); /*lint !e866*/
       clique->nvars++;
 
       /* insertion for a variable with cliquevalue FALSE */
       if( !value )
       {
 	 /* find last entry with the same variable and value behind the insertion position */
-	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] == value; ++pos );
+	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] == value; ++pos ); /*lint !e722*/
 
 	 /* check if the same variable with other value also exists */
 	 if( pos < clique->nvars - 1 && clique->vars[pos + 1] == var )
@@ -1243,7 +1251,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
 	 else
 	 {
 	    /* find last entry with the same variable and different value before the insertion position */
-	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] != value; --pos );
+	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] != value; --pos ); /*lint !e722*/
 
 	    /* check if we found the same variable with the same value more than once */
 	    if( pos > 0 && clique->vars[pos - 1] == var )
@@ -1267,7 +1275,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
       else
       {
 	 /* find last entry with the same variable and different value behind the insertion position */
-	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] != value; ++pos );
+	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] != value; ++pos ); /*lint !e722*/
 
 	 /* check if the same variable with other value also exists */
 	 if( pos < clique->nvars - 1 && clique->vars[pos + 1] == var )
@@ -1291,7 +1299,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
 	 else
 	 {
 	    /* find last entry with the same variable and value before the insertion position */
-	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] == value; --pos );
+	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] == value; --pos ); /*lint !e722*/
 
 	    if( pos != i )
 	       *doubleentry = TRUE;

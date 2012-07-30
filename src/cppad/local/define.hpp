@@ -40,7 +40,7 @@ This type must support \c std::numeric_limits,
 the \c <= operator,
 and conversion to \c size_t.
 */
-# define CPPAD_TAPE_ID_TYPE unsigned int
+# define CPPAD_TAPE_ID_TYPE size_t
 
 /*!
 \def CPPAD_USE_FORWARD0SWEEP

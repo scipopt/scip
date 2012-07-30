@@ -106,6 +106,7 @@
 #define SCIP_DEFAULT_CONF_RESTARTNUM          0 /**< number of successful conflict analysis calls that trigger a restart
                                                  *   (0: disable conflict restarts) */
 #define SCIP_DEFAULT_CONF_RESTARTFAC        1.5 /**< factor to increase restartnum with after each restart */
+#define SCIP_DEFAULT_CONF_IGNORERELAXEDBD FALSE /**< should relaxed bounds be ignored? */
 
 
 /* Constraints */
@@ -912,6 +913,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/restartfac",
          "factor to increase restartnum with after each restart",
          &(*set)->conf_restartfac, FALSE, SCIP_DEFAULT_CONF_RESTARTFAC, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/ignorerelaxedbd",
+         "should relaxed bounds be ignored?",
+         &(*set)->conf_ignorerelaxedbd, TRUE, SCIP_DEFAULT_CONF_IGNORERELAXEDBD,
          NULL, NULL) );
 
    /* constraint parameters */
@@ -1864,6 +1870,17 @@ SCIP_RETCODE SCIPsetAddStringParam(
          defaultvalue, paramchgd, paramdata) );
 
    return SCIP_OKAY;
+}
+
+/** gets the fixing status value of an existing parameter */
+SCIP_Bool SCIPsetIsParamFixed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   return SCIPparamsetIsFixed(set->paramset, name);
 }
 
 /** gets the value of an existing SCIP_Bool parameter */
@@ -3717,7 +3734,6 @@ SCIP_RETCODE SCIPsetExitPlugins(
 /** calls initpre methods of all plugins */
 SCIP_RETCODE SCIPsetInitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
@@ -3750,7 +3766,6 @@ SCIP_RETCODE SCIPsetInitprePlugins(
 /** calls exitpre methods of all plugins */
 SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    )

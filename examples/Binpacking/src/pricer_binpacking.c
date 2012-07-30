@@ -18,13 +18,13 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
- * This file implements the variable pricer which check if variables exist with negative reduced cost. See for more
- * details \ref PRICER.
+ * This file implements the variable pricer which check if variables exist with negative reduced cost. See
+ * @ref PRICER for more details.
  *
  * @page PRICER Pricing new variables
  *
- * The task of the pricer is to search for new variables with negative reduced cost. Therefore the following integer
- * program is solved.
+ * The task of the pricer is to search for new variables with negative reduced costs. For this, the following integer
+ * program is solved:
  *
  *  \f[
  *  \begin{array}[t]{rll}
@@ -39,18 +39,30 @@
  * where \f$ (\lambda_S)_i \f$ for \f$i\in\{1,\dots,n\}\f$ are binary variables and \f$y^\star_i\f$ given by the dual
  * solution of the restricted master problem. See the \ref PROBLEM "problem description" for more details.
  *
- * To solve the above integer program we create new SCIP instance within SCIP and use the usual functions to create
- * variables and constraints. Besides that we need the current dual solutions to all set covering constraints (each
- * stands for one item) which are the objective coefficient the binary variables. Therefore, we use the function
- * SCIPgetDualsolSetppc() which returns the dual solutions for the given set converting constraint.
+ * To solve the above integer program, we create a new SCIP instance within SCIP and use the usual functions to create
+ * variables and constraints. Besides, we need the current dual solutions to all set covering constraints (each stands
+ * for one item) which are the objective coefficients of the binary variables. Therefore, we use the function
+ * SCIPgetDualsolSetppc() which returns the dual solutions for the given set covering constraint.
  *
- * Since we also want to generate new variables during search we have to care that we do not generate variables over and
- * over again. For example if we branched or fix a certain packing to zero, we have to make sure that we in that node do
- * not generate that variables again. To do so we have to add constraints which forbid to generate variables which are
- * locally fixed to zero. See the function addFixedVarsConss() for more details. If we use the \ref BRANCHING
- * "Ryan/Foster branching", we also have to ensure that these branching decisions are respected. This realized within
- * the function addBranchingDecisionConss().
+ * Since we also want to generate new variables during search, we have to care that we do not generate variables over
+ * and over again. For example, if we branched or fixed a certain packing to zero, we have to make sure that we do not
+ * generate the corresponding variables at that node again. For this, we have to add constraints forbidding to generate
+ * variables which are locally fixed to zero. See the function addFixedVarsConss() for more details. While using the
+ * \ref BRANCHING "Ryan/Foster branching", we also have to ensure that these branching decisions are respected. This is
+ * realized within the function addBranchingDecisionConss().
  *
+ * @note In case of this binpacking example, the master LP should not get infeasible after branching, because of the way
+ *       branching is performed. Therefore, the Farkas pricing is not implemented.
+ *       1. In case of Ryan/Foster branching, the two items are selected in a way such that the sum of the LP values of
+ *          all columns/packings containing both items is fractional. Hence, it exists at least one column/packing which
+ *          contains both items and also at least one column/packing for each item containing this but not the other
+ *          item. That means, branching in the "same" direction stays LP feasible since there exists at least one
+ *          column/packing with both items and branching in the "differ" direction stays LP feasible since there exists
+ *          at least one column/packing containing one item, but not the other.
+ *       2. In case of variable branching, we only branch on fractional variables. If a variable is fixed to one, there
+ *          is no issue.  If a variable is fixed to zero, then we know that for each item which is part of that
+ *          column/packing, there exists at least one other column/packing containing this particular item due to the
+ *          covering constraints.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -391,8 +403,6 @@ SCIP_RETCODE initPricing(
  * Callback methods of variable pricer
  */
 
-/** copy method for pricer plugins (called when SCIP copies plugins) */
-#define pricerCopyBinpacking NULL
 
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
 static
@@ -450,14 +460,6 @@ SCIP_DECL_PRICERINIT(pricerInitBinpacking)
 
    return SCIP_OKAY;
 }
-
-
-/** deinitialization method of variable pricer (called before transformed problem is freed) */
-#define pricerExitBinpacking NULL
-
-
-/** solving process initialization method of variable pricer (called when branch and bound process is about to begin) */
-#define pricerInitsolBinpacking NULL
 
 
 /** solving process deinitialization method of variable pricer (called before branch and bound process data is freed) */
@@ -667,10 +669,29 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
    return SCIP_OKAY;
 }
 
-
 /** farkas pricing method of variable pricer for infeasible LPs */
-#define pricerFarkasBinpacking NULL
+static
+SCIP_DECL_PRICERFARKAS(pricerFarkasBinpacking)
+{  /*lint --e{715}*/
 
+   /** @note In case of this binpacking example, the master LP should not get infeasible after branching, because of the
+    *        way branching is performed. Therefore, the Farkas pricing is not implemented.
+    *        1. In case of Ryan/Foster branching, the two items are selected in a way such that the sum of the LP values
+    *           of all columns/packings containing both items is fractional. Hence, it exists at least one
+    *           column/packing which contains both items and also at least one column/packing for each item containing
+    *           this but not the other item. That means, branching in the "same" direction stays LP feasible since there
+    *           exists at least one column/packing with both items and branching in the "differ" direction stays LP
+    *           feasible since there exists at least one column/packing containing one item, but not the other.
+    *        2. In case of variable branching, we only branch on fractional variables. If a variable is fixed to one,
+    *           there is no issue.  If a variable is fixed to zero, then we know that for each item which is part of
+    *           that column/packing, there exists at least one other column/packing containing this particular item due
+    *           to the covering constraints.
+    */
+   SCIPwarningMessage(scip, "Current master LP is infeasible, but Farkas pricing was not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;
+}
 
 /*
  * variable pricer specific interface methods
@@ -698,7 +719,7 @@ SCIP_RETCODE SCIPincludePricerBinpacking(
    
    /* include variable pricer */
    SCIP_CALL( SCIPincludePricerBasic(scip, &pricer, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
-         pricerRedcostBinpacking, NULL, pricerdata) );
+         pricerRedcostBinpacking, pricerFarkasBinpacking, pricerdata) );
 
    SCIP_CALL( SCIPsetPricerFree(scip, pricer, pricerFreeBinpacking) );
    SCIP_CALL( SCIPsetPricerInit(scip, pricer, pricerInitBinpacking) );

@@ -50,10 +50,11 @@
  * - There is a time limit (parameter @a timelimit).
  * - If paramter @a earlyterm is true, the separation is run until the first cut that is violated is
  *   found. (Note that these cuts are not necessarily added to the LP, because here also the norm of
- *   the cuts are taken into account - which cannot easily be included into the separation subscip.) 
+ *   the cuts are taken into account - which cannot easily be included into the separation subscip.)
  *   Then the solution is continued for a certain number of nodes.
  *
  * @todo Check whether one can weaken the conditions on the continuous variables.
+ * @todo Use pointers to originating separators to sort out cuts that should not be used.
  *
  * @warning This plugin is not yet fully tested.
  * @warning This separator should be used carefully - it may require a long separation time.
@@ -1691,10 +1692,22 @@ SCIP_RETCODE subscipSetParams(
    SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
 #else
    /* set other heuristics */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shifting/freq", 3) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/simplerounding/freq", 1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rounding/freq", 1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
+   if( !SCIPisParamFixed(subscip, "heuristics/shifting/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shifting/freq", 3) );
+   }
+   if( !SCIPisParamFixed(subscip, "heuristics/simplerounding/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/simplerounding/freq", 1) );
+   }
+   if( !SCIPisParamFixed(subscip, "heuristics/rounding/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rounding/freq", 1) );
+   }
+   if( !SCIPisParamFixed(subscip, "heuristics/oneopt/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
+   }
 
    /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/pscostdiving/freq", 1) ); */
    /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", 3) ); */
@@ -1735,6 +1748,7 @@ SCIP_RETCODE solveSubscip(
    )
 {
    SCIP* subscip;
+   SCIP_RETCODE retcode;
    SCIP_STATUS status;
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
@@ -1804,7 +1818,20 @@ SCIP_RETCODE solveSubscip(
    /* check whether we want a complete solve */
    if ( ! sepadata->earlyterm )
    {
-      SCIP_CALL( SCIPsolve(subscip) );
+      retcode = SCIPsolve(subscip);
+
+      /* errors in solving the subproblem should not kill the overall solving process;
+       * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
+      if ( retcode != SCIP_OKAY )
+      {
+#ifndef NDEBUG
+         SCIP_CALL( retcode );
+#endif
+         SCIPwarningMessage(scip, "Error while solving subproblem in CGMIP separator; sub-SCIP terminated with code <%d>\n", retcode);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
       status = SCIPgetStatus(subscip);
 
 #ifdef SCIP_OUTPUT
@@ -1831,13 +1858,25 @@ SCIP_RETCODE solveSubscip(
 
       /* -> solve until first solution is found */
       SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 1) );
-      SCIP_CALL( SCIPsolve(subscip) );
+      retcode = SCIPsolve(subscip);
       SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", -1) );
+
+      /* errors in solving the subproblem should not kill the overall solving process;
+       * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
+      if ( retcode != SCIP_OKAY )
+      {
+#ifndef NDEBUG
+         SCIP_CALL( retcode );
+#endif
+         SCIPwarningMessage(scip, "Error while solving subproblem in CGMIP separator; sub-SCIP terminated with code <%d>\n", retcode);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
 
       status = SCIPgetStatus(subscip);
 
       /* if the solution process was terminated or the problem is infeasible (can happen because of violation constraint) */
-      if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT || status == SCIP_STATUS_NODELIMIT || 
+      if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT || status == SCIP_STATUS_NODELIMIT ||
          status == SCIP_STATUS_INFEASIBLE || status == SCIP_STATUS_INFORUNBD)
       {
          *success = FALSE;
@@ -1857,8 +1896,20 @@ SCIP_RETCODE solveSubscip(
          SCIPdebugMessage("Continue solving separation problem ...\n");
 
          SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", STALLNODELIMIT) );
-         SCIP_CALL( SCIPsolve(subscip) );
+         retcode = SCIPsolve(subscip);
          SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", -1LL) );
+
+         /* errors in solving the subproblem should not kill the overall solving process;
+          * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
+         if ( retcode != SCIP_OKAY )
+         {
+#ifndef NDEBUG
+            SCIP_CALL( retcode );
+#endif
+            SCIPwarningMessage(scip, "Error while solving subproblem in CGMIP separator; sub-SCIP terminated with code <%d>\n", retcode);
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
 
          status = SCIPgetStatus(subscip);
          assert( status != SCIP_STATUS_BESTSOLLIMIT );
@@ -2434,12 +2485,12 @@ SCIP_RETCODE createCGCutDirect(
             cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
       SCIPdebugMessage("act=%f, rhs=%f, norm=%f, eff=%f\n", cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
-      
+
       /* if norm is 0, the cut is trivial */
       if ( SCIPisPositive(scip, cutnorm) )
       {
          SCIP_Bool violated = SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm);
-         
+
          if ( violated || (sepadata->usecutpool && ! cutislocal ) )
          {
             SCIP_ROW* cut;
@@ -3092,12 +3143,13 @@ SCIP_RETCODE createCGCuts(
       SCIP_SOL* sol;
       sol = sols[s];
 
+      /* generate cuts by the C-MIR and/or Strong-CG functions */
       if ( sepadata->usecmir )
       {
          SCIP_CALL( createCGCutCMIR(scip, sepa, sepadata, mipdata, sol, normtype, cutcoefs, cutvars, cutvals, varsolvals, weights,
                boundsfortrans, boundtypesfortrans, &nprevrows, prevrows, ngen) );
       }
-      
+
       if ( sepadata->usestrongcg )
       {
          SCIP_CALL( createCGCutStrongCG(scip, sepa, sepadata, mipdata, sol, normtype, cutcoefs, cutvars, cutvals, varsolvals, weights,
@@ -3110,7 +3162,9 @@ SCIP_RETCODE createCGCuts(
                &nprevrows, prevrows, ngen) );
       }
    }
-   assert( nprevrows <= nsols );
+   assert( nprevrows <= 2 * nsols );
+   assert( sepadata->usecmir || nprevrows <= nsols );
+   assert( sepadata->usestrongcg || nprevrows <= nsols );
 
    /* release rows */
    for (k = 0; k < nprevrows; ++k)
@@ -3373,7 +3427,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    SCIP_CALL( subscipSetParams(sepadata, mipdata, &success) );
 
    if ( success && !SCIPisStopped(scip) )
-   {      
+   {
       /* solve subscip */
       SCIP_CALL( solveSubscip(scip, sepadata, mipdata, &success) );
 

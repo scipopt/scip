@@ -1671,12 +1671,14 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    /* remember variable as inference variable, and get corresponding active variable, bound and bound type */
    infervar = var;
    inferboundtype = boundtype;
+
    SCIP_CALL( SCIPvarGetProbvarBound(&var, &newbound, &boundtype) );
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
       SCIPerrorMessage("cannot change bounds of multi-aggregated variable <%s>\n", SCIPvarGetName(var));
-      return SCIP_INVALIDDATA;
+      SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
    }
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
@@ -1953,7 +1955,8 @@ SCIP_RETCODE SCIPnodeAddHoleinfer(
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
       SCIPerrorMessage("cannot change bounds of multi-aggregated variable <%s>\n", SCIPvarGetName(var));
-      return SCIP_INVALIDDATA;
+      SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
    }
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    
@@ -3635,7 +3638,7 @@ SCIP_RETCODE focusnodeToFork(
       if( !lp->solved || !lp->flushed )
       {
          SCIPdebugMessage("resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, TRUE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1LL, FALSE, FALSE, TRUE, &lperror) );
       }
    }
    assert(lp->flushed);
@@ -3757,14 +3760,14 @@ SCIP_RETCODE focusnodeToSubroot(
       if( !lp->solved || !lp->flushed )
       {
          SCIPdebugMessage("resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, TRUE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1LL, FALSE, FALSE, TRUE, &lperror) );
       }
    }
    assert(lp->flushed);
    assert(lp->solved || lperror);
 
    /* There are two reasons, that the (reduced) LP is not solved to optimality:
-    *  - The primal heuristics (called after the current node's LP was solved) found a new 
+    *  - The primal heuristics (called after the current node's LP was solved) found a new
     *    solution, that is better than the current node's lower bound.
     *    (But in this case, all children should be cut off and the node should be converted
     *    into a dead-end instead of a subroot.)
@@ -4924,14 +4927,16 @@ SCIP_RETCODE SCIPtreeBranchVar(
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
       SCIPerrorMessage("cannot branch on fixed or multi-aggregated variable <%s>\n", SCIPvarGetName(var));
-      return SCIP_INVALIDDATA;
+      SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
    /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
    {
       SCIPerrorMessage("Cannot branch on continuous variables without a given branching value.\n", SCIPvarGetName(var));
-      return SCIP_INVALIDDATA;
+      SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
    assert(SCIPvarIsActive(var));
@@ -5190,7 +5195,8 @@ SCIP_RETCODE SCIPtreeBranchVarHole(
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
       SCIPerrorMessage("cannot branch on fixed or multi-aggregated variable <%s>\n", SCIPvarGetName(var));
-      return SCIP_INVALIDDATA;
+      SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
    assert(SCIPvarIsActive(var));
@@ -5366,14 +5372,16 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
       SCIPerrorMessage("cannot branch on fixed or multi-aggregated variable <%s>\n", SCIPvarGetName(var));
-      return SCIP_INVALIDDATA;
+      SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
    /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
    {
       SCIPerrorMessage("Cannot branch on continuous variables without a given branching value.\n", SCIPvarGetName(var));
-      return SCIP_INVALIDDATA;
+      SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
    assert(SCIPvarIsActive(var));
@@ -5733,20 +5741,17 @@ SCIP_RETCODE SCIPtreeStartProbing(
    SCIP_CALL( SCIPlpStartProbing(lp) );
 
    /* remember, whether the LP was flushed and solved */
-   if( set->stage == SCIP_STAGE_SOLVING )
-   {
-      tree->probinglpwasflushed = lp->flushed;
-      tree->probinglpwassolved = lp->solved;
-      tree->probingloadlpistate = FALSE;
-      tree->probinglpwasrelax = lp->isrelax;
-      tree->probingsolvedlp = FALSE;
+   tree->probinglpwasflushed = lp->flushed;
+   tree->probinglpwassolved = lp->solved;
+   tree->probingloadlpistate = FALSE;
+   tree->probinglpwasrelax = lp->isrelax;
+   tree->probingsolvedlp = FALSE;
 
-      /* remember the LP state in order to restore the LP solution quickly after probing */
-      /**@todo could the lp state be worth storing if the LP is not flushed (and hence not solved)? */
-      if( lp->flushed && lp->solved )
-      {
-         SCIP_CALL( SCIPlpGetState(lp, blkmem, &tree->probinglpistate) );
-      }
+   /* remember the LP state in order to restore the LP solution quickly after probing */
+   /**@todo could the lp state be worth storing if the LP is not flushed (and hence not solved)? */
+   if( lp->flushed && lp->solved )
+   {
+      SCIP_CALL( SCIPlpGetState(lp, blkmem, &tree->probinglpistate) );
    }
 
    /* create temporary probing root node */
@@ -6028,8 +6033,6 @@ SCIP_RETCODE SCIPtreeEndProbing(
    /* if the LP was flushed before probing starts, flush it again */
    if( tree->probinglpwasflushed )
    {
-      assert(set->stage == SCIP_STAGE_SOLVING);
-
       SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
 
       /* if the LP was solved before probing starts, solve it again to restore the LP solution */
@@ -6053,7 +6056,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          SCIPlpSetIsRelax(lp, tree->probinglpwasrelax);
 
          /* resolve LP to reset solution */
-         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, FALSE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1LL, FALSE, FALSE, FALSE, &lperror) );
          if( lperror )
          {
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -6076,7 +6079,27 @@ SCIP_RETCODE SCIPtreeEndProbing(
          }
       }
    }
+   else
+      lp->flushed = FALSE;
+
    assert(tree->probinglpistate == NULL);
+
+   /* if no LP was solved during probing and the LP before probing was not solved, then it should not be solved now */
+   assert(tree->probingsolvedlp || tree->probinglpwassolved || !lp->solved);
+
+   /* if the LP was solved (and hence flushed) before probing, then lp->solved should be TRUE unless we occured an error
+    * during resolving right above
+    */
+   assert(!tree->probinglpwassolved || lp->solved || lp->resolvelperror);
+
+   /* if the LP was not solved before probing it should be marked unsolved now; this can occur if a probing LP was
+    * solved in between
+    */
+   if( !tree->probinglpwassolved )
+   {
+      lp->solved = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
 
    /* if the LP was solved during probing, but had been unsolved before probing started, we discard the LP state */
    if( set->lp_clearinitialprobinglp && tree->probingsolvedlp && !tree->probinglpwassolved )
@@ -6097,7 +6120,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
 
    SCIPdebugMessage("probing ended in depth %d (LP flushed: %u, solstat: %d)\n",
       tree->pathlen-1, lp->flushed, SCIPlpGetSolstat(lp));
-   
+
    return SCIP_OKAY;
 }
 

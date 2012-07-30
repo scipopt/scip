@@ -48,7 +48,7 @@ extern "C" {
 
 
 /** creates the handler for orbitope constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -57,7 +57,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -93,11 +93,14 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    );
 
 /** creates and captures an orbitope constraint
- *  in its most basic variant, i. e., with all constraint flags set to their default values
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ *
+ *  @see SCIPcreateConsOrbitope() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

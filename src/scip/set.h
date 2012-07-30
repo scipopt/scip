@@ -210,6 +210,13 @@ SCIP_RETCODE SCIPsetAddStringParam(
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
+/** gets the fixing status value of an existing parameter */
+extern
+SCIP_Bool SCIPsetIsParamFixed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of the parameter */
+   );
+
 /** gets the value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPsetGetBoolParam(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -881,7 +888,6 @@ SCIP_RETCODE SCIPsetExitPlugins(
 extern
 SCIP_RETCODE SCIPsetInitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
@@ -890,7 +896,6 @@ SCIP_RETCODE SCIPsetInitprePlugins(
 extern
 SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    );

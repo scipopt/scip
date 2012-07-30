@@ -37,13 +37,13 @@ extern "C" {
 #endif
 
 /** creates the undercover primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** computes a minimal set of covering variables */
-extern
+EXTERN
 SCIP_RETCODE SCIPcomputeCoverUndercover(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  coversize,          /**< size of the computed cover */

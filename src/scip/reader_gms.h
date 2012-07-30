@@ -37,13 +37,13 @@ extern "C" {
 #endif
 
 /** includes the gms file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderGms(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /* writes problem to file */
-extern
+EXTERN
 SCIP_RETCODE SCIPwriteGms(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */

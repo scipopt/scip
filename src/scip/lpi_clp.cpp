@@ -37,7 +37,7 @@
  *    - For the @p length variant, Clp computes the number of elements from this length variant and
  *      there exists no matrix implementation that uses the length information, i.e., it is recomputed
  *      again.
- *    .
+ *
  *    Concluding: the implementation of Clp/CoinPackeMatrix could be improved. The functions
  *    affected by this are SCIPlpiLoadColLP(), SCIPlpiAddCols(), SCIPlpiAddRows()
  *
@@ -66,19 +66,15 @@
 #define CLP_VERSION VERSION
 #endif
 
-#include <iostream>
 #include <cassert>
+#include <cstdlib>
+#include <iostream>
 #include <vector>
 #include <string>
 
 #include "scip/lpi.h"
 #include "scip/bitencode.h"
 #include "scip/pub_message.h"
-
-
-/* in C++ we have to use "0" instead of "(void*)0" */
-#undef NULL
-#define NULL 0
 
 
 /* for debugging: alternatingly write files "debug_[p|d]_[0|1].mps" after each run - use with care! */
@@ -389,6 +385,9 @@ void setFastmipClpParameters(
 #else
    lpi->clp->setSpecialOptions(32|64|128|512|1024|4096|32768);
 #endif
+
+   // 8192 bit - don't even think of using primal if user asks for dual (and vv)
+   lpi->clp->setMoreSpecialOptions(8192 | lpi->clp->moreSpecialOptions());
 
    // let memory grow only (do not shrink) - [needs specialOptions & 65536 != 0]
    // does not seem to work
@@ -1448,7 +1447,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    )
 {
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 
@@ -1464,7 +1463,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    )
 {
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 
@@ -2382,7 +2381,7 @@ SCIP_Bool SCIPlpiIsPrimalInfeasible(
     * detects an objective limit exceedence. The primal simplex has no such detection (will never
     * stop with objective limit exceedence). Hence we are infeasible only if status == 1 and we have
     * not stopped due to the objective limit. */
-   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 );
+   return ( lpi->clp->status() == 1 && (lpi->clp->secondaryStatus() == 0 || lpi->clp->secondaryStatus() == 6) );
 }
 
 
@@ -3442,7 +3441,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_PRICING:
       /* should not happen - see above */
       SCIPABORT();
-      return SCIP_ERROR; /*lint !e527*/
+      return SCIP_LPERROR; /*lint !e527*/
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
       /** Amount of print out:

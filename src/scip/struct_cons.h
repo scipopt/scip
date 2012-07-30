@@ -126,6 +126,8 @@ struct SCIP_Conshdlr
    SCIP_Longint          lastenfopsdomchgcount;/**< last bound change number, where the pseudo enforcement was called */
    SCIP_Longint          lastenfolpnode;     /**< last node at which the LP enforcement was called */
    SCIP_Longint          lastenfopsnode;     /**< last node at which the pseudo enforcement was called */
+   SCIP_RESULT           lastenfolpresult;   /**< result of last LP enforcement call */
+   SCIP_RESULT           lastenfopsresult;   /**< result of last pseudo enforcement call */
    SCIP_Real             ageresetavg;        /**< exp. decaying weighted average of constraint ages at moment of age reset */
    char*                 name;               /**< name of constraint handler */
    char*                 desc;               /**< description of constraint handler */

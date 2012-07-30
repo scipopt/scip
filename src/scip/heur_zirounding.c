@@ -770,7 +770,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             SCIP_CALL( updateSlacks(scip, sol, var, shiftval, upslacks,
                   downslacks, activities, slackvars, slackvarcoeffs, nslacks) );
 
-            SCIPdebugMessage("zirounding update step : %d var index, oldsolval=%g, shiftval=%g \n ",
+            SCIPdebugMessage("zirounding update step : %d var index, oldsolval=%g, shiftval=%g\n",
                SCIPvarGetIndex(var), oldsolval, shiftval);
             /* since at least one improvement has been found, heuristic will enter main loop for another time because the improvement
              * might affect many LP rows and their current slacks and thus make further rounding steps possible */

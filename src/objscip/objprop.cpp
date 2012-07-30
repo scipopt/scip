@@ -271,7 +271,6 @@ SCIP_RETCODE SCIPincludeObjProp(
    )
 {
    SCIP_PROPDATA* propdata;
-   SCIP_PROP* prop;
 
    assert(scip != NULL);
    assert(objprop != NULL);
@@ -280,26 +279,15 @@ SCIP_RETCODE SCIPincludeObjProp(
    propdata = new SCIP_PROPDATA;
    propdata->objprop = objprop;
    propdata->deleteobject = deleteobject;
-   prop = NULL;
 
    /* include propagator */
-   SCIP_CALL( SCIPincludePropBasic(scip, &prop, objprop->scip_name_, objprop->scip_desc_,
+   SCIP_CALL( SCIPincludeProp(scip, objprop->scip_name_, objprop->scip_desc_,
          objprop->scip_priority_, objprop->scip_freq_, objprop->scip_delay_,
-         objprop->scip_timingmask_,
-         propExecObj, propdata) ); /*lint !e429*/
-   assert(prop != NULL);
-
-   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyObj) );
-   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeObj) );
-   SCIP_CALL( SCIPsetPropInit(scip, prop, propInitObj) );
-   SCIP_CALL( SCIPsetPropExit(scip, prop, propExitObj) );
-   SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreObj) );
-   SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreObj) );
-   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolObj) );
-   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolObj) );
-   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolObj, objprop->scip_presol_priority_,
-         objprop->scip_presol_maxrounds_, objprop->scip_presol_delay_) );
-   SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropObj) );
+         objprop->scip_timingmask_, objprop->scip_presol_priority_, objprop->scip_presol_maxrounds_, objprop->scip_presol_delay_,
+         propCopyObj,
+         propFreeObj, propInitObj, propExitObj, propInitpreObj, propExitpreObj, propInitsolObj, propExitsolObj,
+         propPresolObj, propExecObj, propRespropObj,
+         propdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

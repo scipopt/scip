@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the rootsoldiving heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurRootsoldiving(
    SCIP*                 scip                /**< SCIP data structure */
    );

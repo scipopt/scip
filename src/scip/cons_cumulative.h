@@ -18,6 +18,25 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  * @author Jens Schulz
+ *
+ * Given:
+ * - a set of jobs, represented by their integer start time variables \f$S_j\f$, their array of processing times \f$p_j\f$ and of
+ *   their demands \f$d_j\f$.
+ * - an integer resource capacity \f$C\f$
+ *
+ * The cumulative constraint ensures that for each point in time \f$t\f$ \f$\sum_{j: S_j \leq t < S_j + p_j} d_j \leq C\f$ holds.
+ *
+ * @par
+ * Separation:
+ * - can be done using binary start time model, see Pritskers, Watters and Wolfe
+ * - or by just separating relatively weak cuts on the start time variables
+ *
+ * @par
+ * Propagation:
+ * - time tabling, Klein & Scholl (1999)
+ * - Edge-finding from Petr Vilim, adjusted and simplified for dynamic repropagation
+ *   (2009)
+ * - energetic reasoning, see Baptiste, Le Pape, Nuijten (2001)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -33,13 +52,13 @@ extern "C" {
 #endif
 
 /** creates the constraint handler for cumulative constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates and captures a cumulative constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -82,7 +101,7 @@ SCIP_RETCODE SCIPcreateConsCumulative(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -95,7 +114,7 @@ SCIP_RETCODE SCIPcreateConsBasicCumulative(
    );
 
 /** set the left bound of effective horizon */
-extern
+EXTERN
 SCIP_RETCODE SCIPsetHminCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -103,7 +122,7 @@ SCIP_RETCODE SCIPsetHminCumulative(
    );
 
 /** returns the left bound of the effective horizon */
-extern
+EXTERN
 int SCIPgetHminCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -111,7 +130,7 @@ int SCIPgetHminCumulative(
 
 
 /** set the right bound of the effective horizon */
-extern
+EXTERN
 SCIP_RETCODE SCIPsetHmaxCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -119,42 +138,42 @@ SCIP_RETCODE SCIPsetHmaxCumulative(
    );
 
 /** returns the right bound of effective horizon */
-extern
+EXTERN
 int SCIPgetHmaxCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns the start time variables of the cumulative constraint */
-extern
+EXTERN
 SCIP_VAR** SCIPgetVarsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns the number of start time variables of the cumulative constraint */
-extern
+EXTERN
 int SCIPgetNVarsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns the capacity of the cumulative constraint */
-extern
+EXTERN
 int SCIPgetCapacityCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns the durations of the cumulative constraint */
-extern
+EXTERN
 int* SCIPgetDurationsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns the demands of the cumulative constraint */
-extern
+EXTERN
 int* SCIPgetDemandsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -163,7 +182,7 @@ int* SCIPgetDemandsCumulative(
 /** check for the given starting time variables with their demands and durations if the cumulative conditions for the
  *  given solution is satisfied
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcheckCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -180,7 +199,7 @@ SCIP_RETCODE SCIPcheckCumulativeCondition(
    );
 
 /** propagate the given cumulative condition */
-extern
+EXTERN
 SCIP_RETCODE SCIPpropCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables (jobs) */
@@ -198,7 +217,7 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
    );
 
 /** resolve propagation w.r.t. the cumulative condition */
-extern
+EXTERN
 SCIP_RETCODE SCIPrespropCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of start time variables (activities) */
@@ -206,6 +225,8 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
    int                   inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
@@ -215,7 +236,7 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    );
 
 /** this method visualizes the cumulative structure in GML format */
-extern
+EXTERN
 SCIP_RETCODE SCIPconsdataVisualize(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< cumulative constraint */

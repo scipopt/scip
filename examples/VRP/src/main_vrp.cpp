@@ -298,7 +298,8 @@ int main(int argc, char** argv)
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* set verbosity parameter */
-   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", 4) );
+   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", 5) );
+   /* SCIP_CALL( SCIPsetBoolParam(scip, "display/lpinfo", TRUE) ); */
 
    /* create empty problem */
    SCIP_CALL( SCIPcreateProb(scip, "VRP", 0, 0, 0, 0, 0, 0, 0) );
