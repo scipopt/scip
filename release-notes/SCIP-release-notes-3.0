@@ -10,13 +10,11 @@ Features
 
 - new constraint handler superindicator for indicators on arbitrary constraints
 
-- new propagator OBBT for optimality-based bound tightening
+- new propagators obbt and genvbounds for MINLP
 
 - new reader for OSiL files
 
 - extended vbounds propagator to cliques and implications
-
-- iterative refinement for numerical more accurate LP solutions (beta, only with SoPlex)
 
 - GUB cover cuts
 
@@ -34,7 +32,7 @@ Interfaces
 
 - new AMPL interface
 
-- rudimentary beta version of a MATLAB interface
+- beta version of a functional MATLAB interface
 
 - introduced basic inclusion and creation methods to simplify usage of the SCIP library
 
@@ -50,7 +48,7 @@ Performance Improvements and Bug Fixes
 
 - better handling of numerical tolerances for LP solver
 
-- enhanced Pseudo-Boolean support
+- several performance improvements for Pseudo-Boolean optimization
 
 - many bug fixes
 
