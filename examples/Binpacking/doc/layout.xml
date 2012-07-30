@@ -13,13 +13,13 @@
       <tab type="files" visible="no" title=""/>
       <tab type="globals" visible="no" title=""/>
     </tab>
-    <tab type="pages" visible="yes" title=""/>
+    <tab type="pages" visible="no" title=""/>
     <tab type="namespaces" visible="no" title="">
       <tab type="namespaces" visible="no" title=""/>
       <tab type="namespacemembers" visible="no" title=""/>
     </tab>
-    <tab type="dirs" visible="yes" title=""/>
-    <tab type="examples" visible="yes" title=""/>
+    <tab type="dirs" visible="no" title=""/>
+    <tab type="examples" visible="no" title=""/>
   </navindex>
 
   <!-- Layout definition for a class page -->

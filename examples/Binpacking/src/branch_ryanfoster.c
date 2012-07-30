@@ -56,7 +56,7 @@
  * information, see cons_samediff.c. This constraint handler does not only store the branching
  * decisions. Furthermore, it also ensures that all packing which are not feasible at a particular node are
  * locally fixed to zero. For more details, we refer to the \ref cons_samediff.c "source code of the constraint handler".
- * 
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -69,6 +69,10 @@
 #include "probdata_binpacking.h"
 #include "vardata_binpacking.h"
 
+/**@name Branching rule properties
+ *
+ * @{
+ */
 
 #define BRANCHRULE_NAME            "RyanFoster"
 #define BRANCHRULE_DESC            "Ryan/Foster branching rule"
@@ -76,8 +80,11 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
-/*
- * Callback methods of branching rule
+/**@} */
+
+/**@name Callback methods
+ *
+ * @{
  */
 
 /** branching execution method for fractional LP solutions */
@@ -85,9 +92,9 @@ static
 SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
 {  /*lint --e{715}*/
    SCIP_PROBDATA* probdata;
-      
+
    SCIP_Real** pairweights;
-   
+
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandsfrac;
    int nlpcands;
@@ -103,7 +110,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    int* consids;
    int nconsids;
    int nitems;
-   
+
    int id1;
    int id2;
 
@@ -115,14 +122,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(result != NULL);
-   
+
    SCIPdebugMessage("start branching at node %"SCIP_LONGINT_FORMAT", depth %d\n", SCIPgetNNodes(scip), SCIPgetDepth(scip));
 
    *result = SCIP_DIDNOTRUN;
-   
+
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
-   
+
    nitems = SCIPprobdataGetNItems(probdata);
 
    /* allocate memory for triangle matrix */
@@ -130,11 +137,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    for( i = 0; i < nitems; ++i )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &pairweights[i], nitems) );
-      
+
       for( j = 0; j < nitems; ++j )
          pairweights[i][j] = 0.0;
    }
-      
+
    /* get fractional LP candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands) );
    assert(nlpcands > 0);
@@ -165,9 +172,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
             assert( SCIPisFeasLE(scip, pairweights[id2][id1], 1.0) );
             assert( SCIPisFeasGE(scip, pairweights[id2][id1], 0.0) );
          }
-      }   
+      }
    }
-   
+
    /* select branching */
    bestvalue = 0.0;
    id1 = -1;
@@ -198,8 +205,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
       SCIPfreeBufferArray(scip, &pairweights[i]);
    }
    SCIPfreeBufferArray(scip, &pairweights);
-   
-   SCIPdebugMessage("branch on order pair <%d,%d> with weight <%g>\n", 
+
+   SCIPdebugMessage("branch on order pair <%d,%d> with weight <%g>\n",
       SCIPprobdataGetIds(probdata)[id1], SCIPprobdataGetIds(probdata)[id2], bestvalue);
 
    /* create the branch-and-bound tree child nodes of the current node */
@@ -223,8 +230,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    return SCIP_OKAY;
 }
 
-/*
- * branching rule specific interface methods
+/**@} */
+
+/**@name Interface methods
+ *
+ * @{
  */
 
 /** creates the ryan foster branching rule and includes it in SCIP */
@@ -240,13 +250,12 @@ SCIP_RETCODE SCIPincludeBranchruleRyanFoster(
    branchrule = NULL;
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-	 BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+         BRANCHRULE_MAXBOUNDDIST, branchruledata) );
    assert(branchrule != NULL);
 
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpRyanFoster) );
 
-   /* add ryan foster branching rule parameters */
-   /* TODO: (optional) add branching rule specific parameters with SCIPaddTypeParam() here */
-
    return SCIP_OKAY;
 }
+
+/**@} */

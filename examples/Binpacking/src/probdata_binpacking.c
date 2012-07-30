@@ -22,10 +22,10 @@
  *
  * @page PROBLEMDATA Main problem data
  *
- * The problem data is accessible in all plugins. The function SCIPgetProbData() returns the pointer to that structure. We
- * use this data structure to store all the information of the binpacking problem. Since this structure is not
- * visible in the other plugins, we implemented setter and getter functions to access this data. The problem data structure
- * SCIP_ProbData is shown below.
+ * The problem data is accessible in all plugins. The function SCIPgetProbData() returns the pointer to that
+ * structure. We use this data structure to store all the information of the binpacking problem. Since this structure is
+ * not visible in the other plugins, we implemented setter and getter functions to access this data. The problem data
+ * structure SCIP_ProbData is shown below.
  *
  * \code
  *  ** @brief Problem data which is accessible in all places
@@ -46,15 +46,13 @@
  * };
  * \endcode
  *
- * The function SCIPprobdataCreate(), which is called in the \ref reader_bpa.c "reader plugin" after the input file was parsed,
- * initializes the
- * problem data structure and creates the problem in the SCIP environment. For this, it creates for each item of the
- * binpacking problem one set covering constraint and creates an initial set of variables for the packings. Note that the set
- * covering constraints have to have the <code>modifiable</code>-flag set to TRUE. This is necessary to tell the solver that these
- * constraints are not completed yet. This means, during the search new variables/packings might be added.
- * The solver needs this information because certain reductions are not allowed.
- * See the body of the function SCIPprobdataCreate() for
- * more details.
+ * The function SCIPprobdataCreate(), which is called in the \ref reader_bpa.c "reader plugin" after the input file was
+ * parsed, initializes the problem data structure and creates the problem in the SCIP environment. For this, it creates
+ * for each item of the binpacking problem one set covering constraint and creates an initial set of variables for the
+ * packings. Note that the set covering constraints have to have the <code>modifiable</code>-flag set to TRUE. This is
+ * necessary to tell the solver that these constraints are not completed yet. This means, during the search new
+ * variables/packings might be added.  The solver needs this information because certain reductions are not allowed.
+ * See the body of the function SCIPprobdataCreate() for more details.
  *
  * A list of all interface methods can be found in probdata_binpacking.h.
  */
@@ -88,11 +86,20 @@ struct SCIP_ProbData
 };
 
 
-/*
- * Callback methods of event handler
+/**@name Event handler properties
+ *
+ * @{
  */
+
 #define EVENTHDLR_NAME         "addedvar"
 #define EVENTHDLR_DESC         "event handler for catching added variables"
+
+/**@} */
+
+/**@name Callback methods of event handler
+ *
+ * @{
+ */
 
 /** execution method of event handler */
 static
@@ -107,13 +114,16 @@ SCIP_DECL_EVENTEXEC(eventExecAddedVar)
 
    /* add new variable to probdata */
    SCIP_CALL( SCIPprobdataAddVar(scip, SCIPgetProbData(scip), SCIPeventGetVar(event)) );
-      
+
    return SCIP_OKAY;
 }
 
+/**@} */
 
-/*
- * local methods 
+
+/**@name Local methods
+ *
+ * @{
  */
 
 /** creates problem data */
@@ -143,7 +153,7 @@ SCIP_RETCODE probdataCreate(
    }
    else
       (*probdata)->vars = NULL;
-   
+
    /* duplicate arrays */
    SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*probdata)->conss, conss, nitems) );
    SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*probdata)->weights, weights, nitems) );
@@ -168,11 +178,11 @@ SCIP_RETCODE probdataFree(
 
    assert(scip != NULL);
    assert(probdata != NULL);
-   
+
    /* release all variables */
    for( i = 0; i < (*probdata)->nvars; ++i )
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->vars[i]) ); 
+      SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->vars[i]) );
    }
 
    /* release all constraints */
@@ -180,12 +190,12 @@ SCIP_RETCODE probdataFree(
    {
       SCIP_CALL( SCIPreleaseCons(scip, &(*probdata)->conss[i]) );
    }
-   
+
    /* free memory of arrays */
    SCIPfreeMemoryArray(scip, &(*probdata)->vars);
    SCIPfreeMemoryArray(scip, &(*probdata)->conss);
    SCIPfreeMemoryArray(scip, &(*probdata)->weights);
-   SCIPfreeMemoryArray(scip, &(*probdata)->ids);  
+   SCIPfreeMemoryArray(scip, &(*probdata)->ids);
 
    /* free probdata */
    SCIPfreeMemory(scip, probdata);
@@ -208,24 +218,24 @@ SCIP_RETCODE createInitialColumns(
    int* ids;
    SCIP_Longint* weights;
    int nitems;
-   
+
    int i;
-   
+
    conss = probdata->conss;
    ids = probdata->ids;
    weights = probdata->weights;
    nitems = probdata->nitems;
-   
+
    /* create start solution each item in exactly one bin */
    for( i = 0; i < nitems; ++i )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "item_%d", ids[i]);
-      
+
       SCIPdebugMessage("create variable for item %d with weight = %"SCIP_LONGINT_FORMAT"\n", ids[i], weights[i]);
 
       /* create variable for the packing pattern which contains only this item */
       SCIP_CALL( SCIPcreateVarBinpacking(scip, &var, name, 1.0, TRUE, TRUE, NULL) );
-      
+
       /* add variable to the problem */
       SCIP_CALL( SCIPaddVar(scip, var) );
 
@@ -234,30 +244,33 @@ SCIP_RETCODE createInitialColumns(
 
       /* add variable to corresponding set covering constraint */
       SCIP_CALL( SCIPaddCoefSetppc(scip, conss[i], var) );
-      
+
       /* create the variable data for the variable; the variable data contains the information in which constraints the
        * variable appears */
       SCIP_CALL( SCIPvardataCreateBinpacking(scip, &vardata, &i, 1) );
 
       /* add the variable data to the variable */
-      SCIPvarSetData(var, vardata);      
-      
-      /* change the upper bound of the binary variable to lazy since the upper bound is already enforced 
+      SCIPvarSetData(var, vardata);
+
+      /* change the upper bound of the binary variable to lazy since the upper bound is already enforced
        * due to the objective function the set covering constraint;
        * The reason for doing is that, is to avoid the bound of x <= 1 in the LP relaxation since this bound
-       * constraint would produce a dual variable which might have a positive reduced cost 
+       * constraint would produce a dual variable which might have a positive reduced cost
        */
       SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
-      
+
       /* release variable */
       SCIP_CALL( SCIPreleaseVar(scip, &var) );
-   }   
+   }
 
    return SCIP_OKAY;
 }
 
-/*
- * Callback methods of probdata
+/**@} */
+
+/**@name Callback methods of problem data
+ *
+ * @{
  */
 
 /** frees user data of original problem (called when the original problem is freed) */
@@ -266,8 +279,8 @@ SCIP_DECL_PROBDELORIG(probdelorigBinpacking)
 {
    SCIPdebugMessage("free original problem data\n");
 
-   SCIP_CALL( probdataFree(scip, probdata) ); 
-   
+   SCIP_CALL( probdataFree(scip, probdata) );
+
    return SCIP_OKAY;
 }
 
@@ -285,10 +298,9 @@ SCIP_DECL_PROBTRANS(probtransBinpacking)
 
    /* transform all variables */
    SCIP_CALL( SCIPtransformVars(scip, (*targetdata)->nvars, (*targetdata)->vars, (*targetdata)->vars) );
-   
+
    return SCIP_OKAY;
 }
-
 
 /** frees user data of transformed problem (called when the transformed problem is freed) */
 static
@@ -297,7 +309,7 @@ SCIP_DECL_PROBDELTRANS(probdeltransBinpacking)
    SCIPdebugMessage("free transformed problem data\n");
 
    SCIP_CALL( probdataFree(scip, probdata) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -306,39 +318,42 @@ static
 SCIP_DECL_PROBINITSOL(probinitsolBinpacking)
 {
    SCIP_EVENTHDLR* eventhdlr;
-   
+
    assert(probdata != NULL);
 
    /* catch variable added event */
    eventhdlr = SCIPfindEventhdlr(scip, "addedvar");
    assert(eventhdlr != NULL);
-      
+
    SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_VARADDED, eventhdlr, NULL, NULL) );
-   
+
    return SCIP_OKAY;
 }
-
 
 /** solving process deinitialization method of transformed data (called before the branch and bound data is freed) */
 static
 SCIP_DECL_PROBEXITSOL(probexitsolBinpacking)
 {
    SCIP_EVENTHDLR* eventhdlr;
-   
+
    assert(probdata != NULL);
-   
+
    /* drop variable added event */
    eventhdlr = SCIPfindEventhdlr(scip, "addedvar");
    assert(eventhdlr != NULL);
 
    SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_VARADDED, eventhdlr, NULL, -1) );
-   
+
 
    return SCIP_OKAY;
 }
 
-/*
- * probdata specific interface methods
+/**@} */
+
+
+/**@name Interface methods
+ *
+ * @{
  */
 
 /** sets up the problem data */
@@ -367,13 +382,13 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* create problem in SCIP */
    SCIP_CALL( SCIPcreateProb(scip, probname, probdelorigBinpacking, probtransBinpacking, probdeltransBinpacking,
          probinitsolBinpacking, probexitsolBinpacking, NULL, NULL) );
-   
+
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
 
    /* tell SCIP that the objective will be always integral */
    SCIP_CALL( SCIPsetObjIntegral(scip) );
-   
+
    SCIP_CALL( SCIPallocBufferArray(scip, &conss, nitems) );
 
    /* create set covering constraints for each item */
@@ -381,11 +396,11 @@ SCIP_RETCODE SCIPprobdataCreate(
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "item_%d", ids[i]);
 
-      SCIP_CALL( SCIPcreateConsSetcover(scip, &conss[i], name, 
+      SCIP_CALL( SCIPcreateConsSetcover(scip, &conss[i], name,
             0, NULL, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddCons(scip, conss[i]) );   
-   }   
-   
+      SCIP_CALL( SCIPaddCons(scip, conss[i]) );
+   }
+
    /* create problem data */
    SCIP_CALL( probdataCreate(scip, &probdata, NULL, conss, weights, ids, 0, nitems, capacity) );
 
@@ -477,9 +492,10 @@ SCIP_RETCODE SCIPprobdataAddVar(
 
    probdata->vars[probdata->nvars] = var;
    probdata->nvars++;
-   
+
    SCIPdebugMessage("added variable to probdata; nvars = %d\n", probdata->nvars);
 
    return SCIP_OKAY;
 }
 
+/**@} */
