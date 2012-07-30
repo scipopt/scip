@@ -158,5 +158,5 @@ reader_nl.o: src/reader_nl.c src/reader_nl.h ../../src/scip/scip.h \
  ../../src/scip/event.h ../../src/scip/struct_event.h \
  ../../src/scip/cons_linear.h ../../src/scip/cons_quadratic.h \
  ../../src/scip/cons_nonlinear.h solvers/nlp.h solvers/asl.h \
- solvers/arith.h solvers/stdio1.h solvers/funcadd.h solvers/r_opn.hd \
- solvers/opcode.hd solvers/asl.h
+ solvers/arith.h solvers/stdio1.h solvers/funcadd.h solvers/opcode.hd \
+ solvers/asl.h
