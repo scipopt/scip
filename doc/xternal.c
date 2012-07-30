@@ -112,9 +112,9 @@
  * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
  *
  * @subsection AUTHORS SCIP Authors
- * - <a class="el" href="AUTHORS.html#main">Current main developers</a>
- * - <a class="el" href="AUTHORS.html#further">Further developers</a>
- * - <a class="el" href="AUTHORS.html#contributors">Contributors</a>
+ * - <a class="el" href="AUTHORS.shtml#main">Current main developers</a>
+ * - <a class="el" href="AUTHORS.shtml#further">Further developers</a>
+ * - <a class="el" href="AUTHORS.shtml#contributors">Contributors</a>
  *
  * @version  3.0.0
  *
@@ -132,7 +132,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Binpacking/index.html"><b>Binpacking</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/Binpacking/index.shtml"><b>Binpacking</b></a>
  *  </td>
  *  <td>
  *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
@@ -141,7 +141,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Coloring/index.html"><b>Coloring</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/Coloring/index.shtml"><b>Coloring</b></a>
  *  </td>
  *  <td>
  *  An implemenation of the column generation approach for graph coloring of Mehrotra and Trick.
@@ -149,7 +149,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/VRP/index.html"><b>VRP</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/VRP/index.shtml"><b>VRP</b></a>
  *  </td>
  *  <td>
  *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
@@ -163,7 +163,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/CallableLibrary/index.html"><b>CallableLibrary</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/CallableLibrary/index.shtml"><b>CallableLibrary</b></a>
  *  </td>
  *  <td>
  *  An example showing how to setup constraints (esp. nonlinear ones) when using SCIP as callable library.
@@ -171,7 +171,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/MIPSolver/index.html"><b>MIPSolver</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/MIPSolver/index.shtml"><b>MIPSolver</b></a>
  *  </td>
  *  <td>
  *  A minimal implementation for using SCIP included into another source code
@@ -193,7 +193,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Eventhdlr/index.html"><b>Eventhdlr</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/Eventhdlr/index.shtml"><b>Eventhdlr</b></a>
  *  </td>
  *  <td>
  *  A small example illustrating the use of an event handler.
@@ -201,7 +201,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/LOP/index.html"><b>LOP</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>LOP</b></a>
  *  </td>
  *  <td>
  *  An example for implementing a constraint handler.
@@ -209,7 +209,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Scheduler/index.html"><b>Scheduler</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/Scheduler/index.shtml"><b>Scheduler</b></a>
  *  </td>
  *  <td>
  *  An examples containing three readers and one primal heuristics for scheduling problems.
@@ -217,7 +217,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/TSP/index.html"><b>TSP</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/TSP/index.shtml"><b>TSP</b></a>
  *  </td>
  *  <td>
  *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
@@ -1108,7 +1108,7 @@
  * \endcode
  *
  * Okay, what happened here? First, we reset all parameters to their default values, using "set default". Next, we
- * loaded some meta-parameter settings (also see <a href="FAQ.html#Section2">the FAQ</a>), to apply primal heuristics
+ * loaded some meta-parameter settings (also see <a href="FAQ.shtml#Section2">the FAQ</a>), to apply primal heuristics
  * more aggressively. SCIP shows us, which single parameters it changed therefor. Now, the optimal solution is already
  * found at the root node, by a heuristic which is deactivated by default.  Then, after node 200, the user pressed
  * CTRL-C which interrupts the solving process, We see that now in the short status report, primal and dual bound are
@@ -1132,7 +1132,7 @@
  * \endcode
  *
  * We hope this tutorial gave you an overview of what is possible using the SCIP interactive shell. Please also read our
- * \ref FAQ, in particular the section <a href="FAQ.html#Section2">Using SCIP as a standalone MIP/MINLP-Solver</a>.
+ * \ref FAQ, in particular the section <a href="FAQ.shtml#Section2">Using SCIP as a standalone MIP/MINLP-Solver</a>.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1170,7 +1170,7 @@
  *
  * We now explain how users can add their own constraint handlers.
  * For an example, look into the subtour constraint handler (examples/TSP/src/ConshdlrSubtour.cpp) of the
- * <a href="http://scip.zib.de/doc/examples/TSP/index.html">TSP </a> example project.
+ * <a href="http://scip.zib.de/doc/examples/TSP/index.shtml">TSP </a> example project.
  * The example is written in C++ and uses the C++ wrapper classes.
  * However, we will explain the implementation of a constraint handler using the C interface.
  * It is very easy to transfer the C explanation to C++; whenever a method should be implemented using the
@@ -5598,7 +5598,7 @@ SCIP_RETCODE consdataCatchEvent(
  *  @section EXAMPLE_1 How to activate debug messages
  *    For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
  *    in DBG mode, and run the SCIP interactive shell to solve p0033.mps from the
- *     <a href="http://miplib.zib.de/miplib3/miplib3.html">MIPLIB 3.0</a> , we get some output like:
+ *     <a href="http://miplib.zib.de/miplib3/miplib3.shtml">MIPLIB 3.0</a> , we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
  * Copyright (c) 2002-2012 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
@@ -6510,8 +6510,8 @@ SCIP_RETCODE consdataCatchEvent(
 /**@defgroup PUBLICMETHODS Public Methods
  *
  * This page lists headers containing methods provided by the core of SCIP that can be used via the
- * callable library. If you are in the <a href="../html/index.html">User's Manual</a> you only find methods that are
- * public and, therefore, allowed to be used. The <a href="../html_devel/index.html">Developer's Manual</a> includes
+ * callable library. If you are in the <a href="../html/index.shtml">User's Manual</a> you only find methods that are
+ * public and, therefore, allowed to be used. The <a href="../html_devel/index.shtml">Developer's Manual</a> includes
  * all methods.
  *
  * All of the headers listed below include functions that are allowed to be called by external users. Besides those
