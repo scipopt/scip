@@ -24157,7 +24157,22 @@ SCIP_Bool SCIPinDive(
  * probing methods
  */
 
-/** returns whether we are in probing mode */
+/** returns whether we are in probing mode; probing mode is activated via SCIPstartProbing() and stopped
+ *  via SCIPendProbing()
+ *
+ *  @return TRUE, if SCIP is currently in probing mode, otherwise FALSE
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 SCIP_Bool SCIPinProbing(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -24169,6 +24184,13 @@ SCIP_Bool SCIPinProbing(
 
 /** initiates probing, making methods SCIPnewProbingNode(), SCIPbacktrackProbing(), SCIPchgVarLbProbing(),
  *  SCIPchgVarUbProbing(), SCIPfixVarProbing(), SCIPpropagateProbing(), and SCIPsolveProbingLP() available
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
  *
  *  @note The collection of variable statistics is turned off during probing. If these statistics should be collected
  *        during probing use the method SCIPenableVarHistory() to turn the collection explicitly on.
@@ -24202,6 +24224,13 @@ SCIP_RETCODE SCIPstartProbing(
 /** creates a new probing sub node, whose changes can be undone by backtracking to a higher node in the probing path
  *  with a call to SCIPbacktrackProbing();
  *  using a sub node for each set of probing bound changes can improve conflict analysis
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPnewProbingNode(
    SCIP*                 scip                /**< SCIP data structure */
@@ -24220,7 +24249,14 @@ SCIP_RETCODE SCIPnewProbingNode(
    return SCIP_OKAY;
 }
 
-/** returns the current probing depth, i.e. the number of probing sub nodes existing in the probing path */
+/** returns the current probing depth
+ *
+ *  @return the probing depth, i.e. the number of probing sub nodes existing in the probing path
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 int SCIPgetProbingDepth(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -24239,6 +24275,13 @@ int SCIPgetProbingDepth(
 /** undoes all changes to the problem applied in probing up to the given probing depth;
  *  the changes of the probing node of the given probing depth are the last ones that remain active;
  *  changes that were applied before calling SCIPnewProbingNode() cannot be undone
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPbacktrackProbing(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -24265,7 +24308,15 @@ SCIP_RETCODE SCIPbacktrackProbing(
    return SCIP_OKAY;
 }
 
-/** quits probing and resets bounds and constraints to the focus node's environment */
+/** quits probing and resets bounds and constraints to the focus node's environment
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPendProbing(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -24290,6 +24341,13 @@ SCIP_RETCODE SCIPendProbing(
 
 /** injects a change of variable's lower bound into current probing node; the same can also be achieved with a call to
  *  SCIPchgVarLb(), but in this case, the bound change would be treated like a deduction instead of a branching decision
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPchgVarLbProbing(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -24317,6 +24375,13 @@ SCIP_RETCODE SCIPchgVarLbProbing(
 
 /** injects a change of variable's upper bound into current probing node; the same can also be achieved with a call to
  *  SCIPchgVarUb(), but in this case, the bound change would be treated like a deduction instead of a branching decision
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPchgVarUbProbing(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -24345,6 +24410,13 @@ SCIP_RETCODE SCIPchgVarUbProbing(
 /** injects a change of variable's bounds into current probing node to fix the variable to the specified value;
  *  the same can also be achieved with a call to SCIPfixVar(), but in this case, the bound changes would be treated
  *  like deductions instead of branching decisions
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPfixVarProbing(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -24395,6 +24467,13 @@ SCIP_RETCODE SCIPfixVarProbing(
  *  the propagated domains of the variables can be accessed with the usual bound accessing calls SCIPvarGetLbLocal()
  *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
  *  bounds due to SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), and SCIPfixVarProbing() are used for propagation
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPpropagateProbing(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -24430,6 +24509,13 @@ SCIP_RETCODE SCIPpropagateProbing(
  *  the propagated domains of the variables can be accessed with the usual bound accessing calls SCIPvarGetLbLocal()
  *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
  *  bounds due to SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), and SCIPfixVarProbing() are used for propagation
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPpropagateProbingImplications(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -24527,6 +24613,12 @@ SCIP_RETCODE solveProbingLP(
  *  no separation or pricing is applied
  *
  *  The LP has to be constructed before (you can use SCIPisLPConstructed() or SCIPconstructLP()).
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPsolveProbingLP(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -24543,10 +24635,16 @@ SCIP_RETCODE SCIPsolveProbingLP(
 
 /** solves the LP at the current probing node (cannot be applied at preprocessing stage) and applies pricing
  *  until the LP is solved to optimality; no separation is applied
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPsolveProbingLPWithPricing(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
+   SCIP_Bool             pretendroot,        /**< should the pricers be called as if we were at the root node? */
    SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
    int                   maxpricerounds,     /**< maximal number of pricing rounds (-1: no limit);
                                               *   a finite limit means that the LP might not be solved to optimality! */
