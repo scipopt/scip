@@ -146,6 +146,16 @@
 	    </tr>
            <tr>
 	      <td>
+		 <a href="http://www.mie.utoronto.ca/faculty/beck/">Chris Beck</a>
+	      </td>
+	      <td>
+                 Logic-based Bender's decomposition
+	      </td>
+	      <td>
+	      </td>
+	    </tr>
+           <tr>
+	      <td>
 		 Livio Bertacco
 	      </td>
 	      <td>
