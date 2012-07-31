@@ -3699,7 +3699,7 @@ SCIP_RETCODE SCIPchgChildPrio(
 
 /** initializes solving data structures and transforms problem
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called at any solving stage except \ref SCIP_STAGE_INIT and \ref SCIP_STAGE_TRANSFORMING
@@ -3722,7 +3722,7 @@ SCIP_RETCODE SCIPpresolve(
 
 /** transforms, presolves, and solves problem
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if \SCIP is in one of the following stages:
