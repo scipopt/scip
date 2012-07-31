@@ -167,12 +167,26 @@ SCIP_RETCODE SCIPcreateVarBinpacking(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
-   SCIP_CALL( SCIPcreateVar(scip, var, name, 0.0, 1.0, obj, SCIP_VARTYPE_BINARY,
-         initial, removable, vardataDelOrig, vardataTrans, vardataDelTrans, NULL, vardata) );
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(*var != NULL);
+
+   /* create a basic variable object */
+   SCIP_CALL( SCIPcreateVarBasic(scip, var, name, 0.0, 1.0, obj, SCIP_VARTYPE_BINARY) );
+
+   /* set callback functions */
+   SCIPvarSetData(*var, vardata);
+   SCIPvarSetDelorigData(*var, vardataDelOrig);
+   SCIPvarSetTransData(*var, vardataTrans);
+   SCIPvarSetDeltransData(*var, vardataDelTrans);
+
+   /* set initial and removable flag */
+   SCIP_CALL( SCIPvarSetInitial(*var, initial) );
+   SCIP_CALL( SCIPvarSetRemovable(*var, removable) );
 
    SCIPvarMarkDeletable(*var);
 
-   SCIPdebug(SCIPprintVar(scip, *var, NULL) );
+   SCIPdebug( SCIPprintVar(scip, *var, NULL) );
 
    return SCIP_OKAY;
 }
