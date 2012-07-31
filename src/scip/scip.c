@@ -31985,9 +31985,11 @@ SCIP_Real SCIPgetAvgConflictlengthScore(
    return SCIPbranchGetScore(scip->set, NULL, conflictlengthdown, conflictlengthup);
 }
 
-/** gets the average conflictlength score value over all variables, only using the pseudo cost information of the current run
+/** gets the average conflictlength score value over all variables, only using the pseudo cost information of the
+ *  current run
  *
- *  @return the average conflictlength score value over all variables, only using the pseudo cost information of the current run
+ *  @return the average conflictlength score value over all variables, only using the pseudo cost information of the
+ *          current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
