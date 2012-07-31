@@ -8905,14 +8905,26 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
 /**@name LP Column Methods */
 /**@{ */
 
-/** returns the reduced costs of a column in the last (feasible) LP */
+/** returns the reduced costs of a column in the last (feasible) LP
+ *
+ *  @return the reduced costs of a column in the last (feasible) LP
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetColRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COL*             col                 /**< LP column */
    );
 
-/** returns the Farkas coefficient of a column in the last (infeasible) LP */
+/** returns the Farkas coefficient of a column in the last (infeasible) LP
+ *
+ *  @return the Farkas coefficient of a column in the last (infeasible) LP
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetColFarkasCoef(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8931,7 +8943,14 @@ SCIP_Real SCIPgetColFarkasCoef(
 /**@name LP Row Methods */
 /**@{ */
 
-/** creates and captures an LP row from a constraint handler */
+/** creates and captures an LP row from a constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateRowCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8948,7 +8967,14 @@ SCIP_RETCODE SCIPcreateRowCons(
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
-/** creates and captures an LP row from a separator */
+/** creates and captures an LP row from a separator
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateRowSepa(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8965,7 +8991,14 @@ SCIP_RETCODE SCIPcreateRowSepa(
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
-/** creates and captures an LP row from an unspecified source */
+/** creates and captures an LP row from an unspecified source
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateRowUnspec(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8982,6 +9015,12 @@ SCIP_RETCODE SCIPcreateRowUnspec(
    );
 
 /** creates and captures an LP row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
  *
  *  @deprecated Please use SCIPcreateRowCons() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
  *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateRowUnspec().
@@ -9002,7 +9041,14 @@ SCIP_RETCODE SCIPcreateRow(
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
-/** creates and captures an LP row without any coefficients from a constraint handler */
+/** creates and captures an LP row without any coefficients from a constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateEmptyRowCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9016,7 +9062,14 @@ SCIP_RETCODE SCIPcreateEmptyRowCons(
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
-/** creates and captures an LP row without any coefficients from a separator */
+/** creates and captures an LP row without any coefficients from a separator
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateEmptyRowSepa(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9030,7 +9083,14 @@ SCIP_RETCODE SCIPcreateEmptyRowSepa(
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
-/** creates and captures an LP row without any coefficients from an unspecified source */
+/** creates and captures an LP row without any coefficients from an unspecified source
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateEmptyRowUnspec(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9044,6 +9104,12 @@ SCIP_RETCODE SCIPcreateEmptyRowUnspec(
    );
 
 /** creates and captures an LP row without any coefficients
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
  *
  *  @deprecated Please use SCIPcreateEmptyRowCons() or SCIPcreateEmptyRowSepa() when calling from a constraint handler or separator in order
  *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateEmptyRowUnspec().
@@ -9061,21 +9127,42 @@ SCIP_RETCODE SCIPcreateEmptyRow(
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
-/** increases usage counter of LP row */
+/** increases usage counter of LP row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcaptureRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< row to capture */
    );
 
-/** decreases usage counter of LP row, and frees memory if necessary */
+/** decreases usage counter of LP row, and frees memory if necessary
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPreleaseRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row                 /**< pointer to LP row */
    );
 
-/** changes left hand side of LP row */
+/** changes left hand side of LP row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPchgRowLhs(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9083,7 +9170,14 @@ SCIP_RETCODE SCIPchgRowLhs(
    SCIP_Real             lhs                 /**< new left hand side */
    );
 
-/** changes right hand side of LP row */
+/** changes right hand side of LP row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPchgRowRhs(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9096,6 +9190,12 @@ SCIP_RETCODE SCIPchgRowRhs(
  *  while the caching of row extensions is activated, information methods of the row give invalid results;
  *  caching should be used, if a row is build with SCIPaddVarToRow() calls variable by variable to increase
  *  the performance
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
 SCIP_RETCODE SCIPcacheRowExtensions(
@@ -9105,6 +9205,12 @@ SCIP_RETCODE SCIPcacheRowExtensions(
 
 /** flushes all cached row extensions after a call of SCIPcacheRowExtensions() and merges coefficients with
  *  equal columns into a single coefficient
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
 SCIP_RETCODE SCIPflushRowExtensions(
@@ -9113,6 +9219,12 @@ SCIP_RETCODE SCIPflushRowExtensions(
    );
 
 /** resolves variable to columns and adds them with the coefficient to the row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
  *
  *  @note In case calling this method in the enforcement process of an lp solution, it might be that some variables,
  *        that were not yet in the LP (e.g. dynamic columns) will change there lp solution value returned by SCIP.
@@ -9133,6 +9245,12 @@ SCIP_RETCODE SCIPaddVarToRow(
 
 /** resolves variables to columns and adds them with the coefficients to the row;
  *  this method caches the row extensions and flushes them afterwards to gain better performance
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
 SCIP_RETCODE SCIPaddVarsToRow(
@@ -9145,6 +9263,12 @@ SCIP_RETCODE SCIPaddVarsToRow(
 
 /** resolves variables to columns and adds them with the same single coefficient to the row;
  *  this method caches the row extensions and flushes them afterwards to gain better performance
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
 SCIP_RETCODE SCIPaddVarsToRowSameCoef(
@@ -9155,7 +9279,14 @@ SCIP_RETCODE SCIPaddVarsToRowSameCoef(
    SCIP_Real             val                 /**< unique value of all coefficients */
    );
 
-/** tries to find a value, such that all row coefficients, if scaled with this value become integral */
+/** tries to find a value, such that all row coefficients, if scaled with this value become integral
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcalcRowIntegralScalar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9169,7 +9300,14 @@ SCIP_RETCODE SCIPcalcRowIntegralScalar(
    SCIP_Bool*            success             /**< stores whether returned value is valid */
    );
 
-/** tries to scale row, s.t. all coefficients (of integer variables) become integral */
+/** tries to scale row, s.t. all coefficients (of integer variables) become integral
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPmakeRowIntegral(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9182,98 +9320,185 @@ SCIP_RETCODE SCIPmakeRowIntegral(
    SCIP_Bool*            success             /**< stores whether row could be made rational */
    );
 
-/** returns minimal absolute value of row vector's non-zero coefficients */
+/** returns minimal absolute value of row vector's non-zero coefficients
+ *
+ *  @return minimal absolute value of row vector's non-zero coefficients
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetRowMinCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns maximal absolute value of row vector's non-zero coefficients */
+/** returns maximal absolute value of row vector's non-zero coefficients
+ *
+ *  @return maximal absolute value of row vector's non-zero coefficients
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetRowMaxCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns the minimal activity of a row w.r.t. the column's bounds */
+/** returns the minimal activity of a row w.r.t. the column's bounds
+ *
+ *  @return the minimal activity of a row w.r.t. the column's bounds
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetRowMinActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns the maximal activity of a row w.r.t. the column's bounds */
+/** returns the maximal activity of a row w.r.t. the column's bounds
+ *
+ *  @return the maximal activity of a row w.r.t. the column's bounds
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetRowMaxActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** recalculates the activity of a row in the last LP solution */
+/** recalculates the activity of a row in the last LP solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPrecalcRowLPActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns the activity of a row in the last LP solution */
+/** returns the activity of a row in the last LP solution
+ *
+ *  @return activity of a row in the last LP solution
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetRowLPActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns the feasibility of a row in the last LP solution: negative value means infeasibility */
+/** returns the feasibility of a row in the last LP solution
+ *
+ *  @return the feasibility of a row in the last LP solution: negative value means infeasibility
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetRowLPFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** recalculates the activity of a row for the current pseudo solution */
+/** recalculates the activity of a row for the current pseudo solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPrecalcRowPseudoActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns the activity of a row for the current pseudo solution */
+/** returns the activity of a row for the current pseudo solution
+ *
+ *  @return the activity of a row for the current pseudo solution
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetRowPseudoActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns the feasibility of a row for the current pseudo solution: negative value means infeasibility */
+/** returns the feasibility of a row for the current pseudo solution: negative value means infeasibility
+ *
+ *  @return the feasibility of a row for the current pseudo solution: negative value means infeasibility
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetRowPseudoFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** recalculates the activity of a row in the last LP or pseudo solution */
+/** recalculates the activity of a row in the last LP or pseudo solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPrecalcRowActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns the activity of a row in the last LP or pseudo solution */
+/** returns the activity of a row in the last LP or pseudo solution
+ *
+ *  @return the activity of a row in the last LP or pseudo solution
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetRowActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns the feasibility of a row in the last LP or pseudo solution */
+/** returns the feasibility of a row in the last LP or pseudo solution
+ *
+ *  @return the feasibility of a row in the last LP or pseudo solution
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetRowFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns the activity of a row for the given primal solution */
+/** returns the activity of a row for the given primal solution
+ *
+ *  @return the activitiy of a row for the given primal solution
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetRowSolActivity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9281,7 +9506,13 @@ SCIP_Real SCIPgetRowSolActivity(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-/** returns the feasibility of a row for the given primal solution */
+/** returns the feasibility of a row for the given primal solution
+ *
+ *  @return the feasibility of a row for the given primal solution
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetRowSolFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9289,7 +9520,16 @@ SCIP_Real SCIPgetRowSolFeasibility(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-/** output row to file stream via the message handler system */
+/** output row to file stream via the message handler system
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 EXTERN
 SCIP_RETCODE SCIPprintRow(
    SCIP*                 scip,               /**< SCIP data structure */
