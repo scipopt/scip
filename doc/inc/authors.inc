@@ -90,6 +90,14 @@
 	    </tr>
 	    <tr>
 	      <td>
+		Felipe Serrano
+	      </td>
+	      <td>
+                nonlinear development
+	      </td>
+	    </tr>
+	    <tr>
+	      <td>
 		<a href="http://www.mso.math.uni-erlangen.de/optimization/edom/team/martin-alexander/prof-dr-alexander-martin.html">Alexander Martin</a>
 	      </td>
 	      <td>
