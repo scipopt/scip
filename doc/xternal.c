@@ -497,7 +497,7 @@
  * @section BRIEFINSTALL Brief installation description
  *
  * The easiest way to install SCIP is to use the SCIP Optimization Suite which contains SCIP, SoPlex, and ZIMPL. For
- * that we refer to the INSTALL file of the SCIP Optimization Suite (In case of the SCIP Optimization Suite, there is not need
+ * that we refer to the INSTALL file of the SCIP Optimization Suite (main advantage: there is no need
  * to specify any directories, the compiling process is fully automated).
  *
  * Compiling SCIP directly can be done as follows:
@@ -513,14 +513,23 @@
  * -# the directory where the include files of the LP solver lie
  * -# the library file(s) "lib*.a" or/and "lib*.so"
  *
- * Beside that, SCIP needs some soft-link targets, for ZIMPL
+ * Besides that, SCIP needs some soft-link targets, for ZIMPL
  * -# the directory where the include files of ZIMPL lie
  * -# the library file(s) "lib*.a" or/and "lib*.so"
  *
  * You will need either the .a or the .so files and can skip the others by
  * just pressing return.
  *
- * @section DETAILEDINSTALL Detailed installation description
+ * The most common compiling issue is that some libraries are missing
+ * on your system or that they are outdated. SCIP per default requires
+ * zlib, gmp and readline.  Try compiling with: <code> make ZLIB=false
+ * READLINE=false ZIMPL=false</code> or, better, install them. Note
+ * that under Linux-based systems, you need to install the
+ * developer-versions of gmp/zlib/readline, in order to also have the
+ * header-files available.
+ *
+ @section DETAILEDINSTALL Detailed
+ * installation description
  *
  * In this section we describe the use, and a few features, of the SCIP Makefile. We also give two examples for how to install
  * SCIP. The \ref EXAMPLE1 "first example" illustrates the default installation. This means, with SoPleX and ZIMPL. The

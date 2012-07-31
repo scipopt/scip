@@ -57,6 +57,14 @@ Beside that, SCIP needs the some soft-link targets for ZIMPL
 You will need either the .a or the .so files and can skip the others by
 just pressing return.
 
+The most common compiling issue is that some libraries are missing on
+your system or that they are outdated. SCIP per default requires zlib,
+gmp and readline.  Try compiling with:
+make ZLIB=false READLINE=false ZIMPL=false
+or, better, install them. Note that under Linux-based systems, you
+need to install the developer-versions of gmp/zlib/readline, in order
+to also have the header-files available.
+
 II Detailed installation description
 ************************************
 
