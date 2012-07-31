@@ -23,6 +23,8 @@
 #ifndef __SCIPGITHASH_H__
 #define __SCIPGITHASH_H__
 
+#include "scip/def.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
