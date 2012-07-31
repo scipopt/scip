@@ -29,7 +29,7 @@
 /** @brief Variable data which is attached to all variables.
  *
  *  This variables data is used to know in which constraints this variables appears. Therefore, the variable data
- *  containing the ids of constraints in which the variable is part of. Hence, that data give us a column view.
+ *  contains the ids of constraints in which the variable is part of. Hence, that data give us a column view.
  */
 struct SCIP_VarData
 {

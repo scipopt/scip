@@ -379,9 +379,14 @@ SCIP_RETCODE SCIPprobdataCreate(
       SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecAddedVar, NULL) );
    }
 
-   /* create problem in SCIP */
-   SCIP_CALL( SCIPcreateProb(scip, probname, probdelorigBinpacking, probtransBinpacking, probdeltransBinpacking,
-         probinitsolBinpacking, probexitsolBinpacking, NULL, NULL) );
+   /* create problem in SCIP and add non-NULL callbacks via setter functions */
+   SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
+
+   SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigBinpacking) );
+   SCIP_CALL( SCIPsetProbTrans(scip, probtransBinpacking) );
+   SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransBinpacking) );
+   SCIP_CALL( SCIPsetProbInitsol(scip, probinitsolBinpacking) );
+   SCIP_CALL( SCIPsetProbExitsol(scip, probexitsolBinpacking) );
 
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
@@ -396,11 +401,13 @@ SCIP_RETCODE SCIPprobdataCreate(
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "item_%d", ids[i]);
 
-      SCIP_CALL( SCIPcreateConsSetcover(scip, &conss[i], name,
-            0, NULL, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddCons(scip, conss[i]) );
-   }
+      SCIP_CALL( SCIPcreateConsBasicSetcover(scip, &conss[i], name, 0, NULL) );
 
+      /* declare constraint modifiable for adding variables during pricing */
+      SCIP_CALL( SCIPsetConsModifiable(scip, conss[i], TRUE) );
+      SCIP_CALL( SCIPaddCons(scip, conss[i]) );   
+   }   
+   
    /* create problem data */
    SCIP_CALL( probdataCreate(scip, &probdata, NULL, conss, weights, ids, 0, nitems, capacity) );
 

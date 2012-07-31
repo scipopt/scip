@@ -195,10 +195,9 @@ SCIP_RETCODE addBranchingDecisionConss(
        * - branching type DIFFER:  x1 - x2 <= 1 <=> -inf <= x1 - x2 <= 1
        *
        */
-      SCIP_CALL( SCIPcreateConsVarbound(subscip, &cons, SCIPconsGetName(conss[c]),
-            vars[id1], vars[id2], vbdcoef, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
+      SCIP_CALL( SCIPcreateConsBasicVarbound(subscip, &cons, SCIPconsGetName(conss[c]),
+            vars[id1], vars[id2], vbdcoef, lhs, rhs) );
+      
       SCIPdebug( SCIPprintCons(subscip, cons, NULL) );
 
       SCIP_CALL( SCIPaddCons(subscip, cons) );
@@ -310,8 +309,9 @@ SCIP_RETCODE addFixedVarsConss(
 
          if( needed )
          {
-            SCIP_CALL( SCIPcreateConsLogicor(subscip, &cons, SCIPvarGetName(origvars[v]), nlogicorvars, logicorvars,
-                  FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcreateConsBasicLogicor(subscip, &cons, SCIPvarGetName(origvars[v]), nlogicorvars, logicorvars) );
+            SCIP_CALL( SCIPsetConsInitial(subscip, cons, FALSE) );
+
             SCIP_CALL( SCIPaddCons(subscip, cons) );
             SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
          }
@@ -378,9 +378,8 @@ SCIP_RETCODE initPricing(
 
       /* dual value in original SCIP */
       dual = SCIPgetDualsolSetppc(scip, cons);
-
-      SCIP_CALL( SCIPcreateVar(subscip, &var, SCIPconsGetName(cons), 0.0, 1.0, dual,
-            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      
+      SCIP_CALL( SCIPcreateVarBasic(subscip, &var, SCIPconsGetName(cons), 0.0, 1.0, dual, SCIP_VARTYPE_BINARY) );
       SCIP_CALL( SCIPaddVar(subscip, var) );
 
       vals[nvars] = weights[c];
@@ -392,9 +391,9 @@ SCIP_RETCODE initPricing(
    }
 
    /* create capacity constraint */
-   SCIP_CALL( SCIPcreateConsKnapsack(subscip, &cons, "capacity", nvars, vars, vals,
-         capacity, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
+   SCIP_CALL( SCIPcreateConsBasicKnapsack(subscip, &cons, "capacity", nvars, vars, vals,
+         capacity) );
+   
    SCIP_CALL( SCIPaddCons(subscip, cons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
 
@@ -545,8 +544,8 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
-   /* free sub SCIP */
-   SCIP_CALL( SCIPcreateProb(subscip, "pricing", NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   /* create problem in sub SCIP */
+   SCIP_CALL( SCIPcreateProbBasic(subscip, "pricing") );
    SCIP_CALL( SCIPsetObjsense(subscip, SCIP_OBJSENSE_MAXIMIZE) );
 
    /* do not abort subproblem on CTRL-C */
