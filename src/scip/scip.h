@@ -10862,6 +10862,14 @@ SCIP_RETCODE SCIPremoveInefficaciousCuts(
 
 /** initiates LP diving, making methods SCIPchgVarObjDive(), SCIPchgVarLbDive(), and SCIPchgVarUbDive() available
  *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ *
  *  @note diving is allowed even if the current LP is not flushed, not solved, or not solved to optimality; be aware
  *  that solving the (first) diving LP may take longer than expect and that the latter two cases could stem from
  *  numerical troubles during the last LP solve; because of this, most users will want to call this method only if
@@ -10872,19 +10880,47 @@ SCIP_RETCODE SCIPstartDive(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** quits LP diving and resets bounds and objective values of columns to the current node's values */
+/** quits LP diving and resets bounds and objective values of columns to the current node's values
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPendDive(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** changes cutoffbound in current dive
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPchgCutoffboundDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             newcutoffbound      /**< new cutoffbound */
    );
 
-/** changes variable's objective value in current dive */
+/** changes variable's objective value in current dive
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPchgVarObjDive(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10892,7 +10928,16 @@ SCIP_RETCODE SCIPchgVarObjDive(
    SCIP_Real             newobj              /**< new objective value */
    );
 
-/** changes variable's lower bound in current dive */
+/** changes variable's lower bound in current dive
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPchgVarLbDive(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10900,7 +10945,16 @@ SCIP_RETCODE SCIPchgVarLbDive(
    SCIP_Real             newbound            /**< new value for bound */
    );
 
-/** changes variable's upper bound in current dive */
+/** changes variable's upper bound in current dive
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPchgVarUbDive(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10908,35 +10962,75 @@ SCIP_RETCODE SCIPchgVarUbDive(
    SCIP_Real             newbound            /**< new value for bound */
    );
 
-/** adds a row to the LP in current dive */
+/** adds a row to the LP in current dive
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPaddRowDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< row to be added */
    );
 
-/** gets variable's objective value in current dive */
+/** gets variable's objective value in current dive
+ *
+ *  @return the variable's objective value in current dive.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Real SCIPgetVarObjDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get the bound for */
    );
 
-/** gets variable's lower bound in current dive */
+/** gets variable's lower bound in current dive
+ *
+ *  @return the variable's lower bound in current dive.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Real SCIPgetVarLbDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get the bound for */
    );
 
-/** gets variable's upper bound in current dive */
+/** gets variable's upper bound in current dive
+ *
+ *  @return the variable's upper bound in current dive.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Real SCIPgetVarUbDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get the bound for */
    );
-
 /** solves the LP of the current dive; no separation or pricing is applied
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  *
  *  @note be aware that the LP solve may take longer than expected if SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL,
  *  compare the explanation of SCIPstartDive()
@@ -10950,13 +11044,49 @@ SCIP_RETCODE SCIPsolveDiveLP(
 
 /** returns the number of the node in the current branch and bound run, where the last LP was solved in diving
  *  or probing mode
+ *
+ *  @return the number of the node in the current branch and bound run, where the last LP was solved in diving
+ *  or probing mode.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_Longint SCIPgetLastDivenode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether we are in diving mode */
+/** returns whether we are in diving mode
+ *
+ *  @return whether we are in diving mode.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Bool SCIPinDive(
    SCIP*                 scip                /**< SCIP data structure */
