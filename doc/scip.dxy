@@ -659,7 +659,8 @@ FILE_PATTERNS          = scip*.h \
                          obj*.h \
                          def.h \
                          xternal.c \
-			 interfaces.dxy
+			 interfaces.dxy \
+			 howtoadd.dxy
 
 # The RECURSIVE tag can be used to turn specify whether or not subdirectories
 # should be searched for input files as well. Possible values are YES and NO.

@@ -1,0 +1,49 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*                  2002-2012 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   howto.dxy
+ * @brief  List of how to add "stuff"
+ * @author Stefan Heinz
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/** @page HOWTOADD How to ...
+ *
+ *  @section HOWTOADDSECTION How to add ...
+ *
+ *   - \ref CONS    "Constraint handlers"
+ *   - \ref PRICER  "Variable pricers"
+ *   - \ref PRESOL  "Presolvers"
+ *   - \ref SEPA    "Separators"
+ *   - \ref PROP    "Propagators"
+ *   - \ref BRANCH  "Branching rules"
+ *   - \ref NODESEL "Node selectors"
+ *   - \ref HEUR    "Primal heuristics"
+ *   - \ref RELAX   "Relaxation handlers"
+ *   - \ref READER  "File readers"
+ *   - \ref DIALOG  "Dialogs"
+ *   - \ref DISP    "Display columns"
+ *   - \ref EVENT   "Event handler"
+ *   - \ref NLPI    "Interfaces to NLP solvers"
+ *   - \ref EXPRINT "Interfaces to expression interpreters"
+ *   - \ref PARAM   "Adding additional user parameters"
+ *
+ *  @section HOWTOUSESECTION How to use ...
+ *
+ *   - \ref CONF    "Conflict analysis"
+ *   - \ref TEST     "How to run automated tests with SCIP"
+ *   - \ref COUNTER  "How to use SCIP to count feasible solutions"
+ */
