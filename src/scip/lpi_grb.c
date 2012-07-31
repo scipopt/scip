@@ -3178,7 +3178,6 @@ SCIP_RETCODE SCIPlpiGetIterations(
  *  Such information is usually only available, if also a (maybe not optimal) solution is available.
  *  The LPI should return SCIP_INVALID for quality, if the requested quantity is not available. 
  */
-extern
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */

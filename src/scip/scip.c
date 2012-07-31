@@ -23322,7 +23322,6 @@ SCIP_RETCODE SCIPprintRow(
  *
  * @see SCIPenableNLP
  */
-extern
 SCIP_Bool SCIPisNLPEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -23346,7 +23345,6 @@ SCIP_Bool SCIPisNLPEnabled(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-extern
 void SCIPenableNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
