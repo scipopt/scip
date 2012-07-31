@@ -15822,81 +15822,159 @@ SCIP_RETCODE SCIPwriteImplicationConflictGraph(
 /**@name Timing Methods */
 /**@{ */
 
-/** gets current time of day in seconds (standard time zone) */
+/** gets current time of day in seconds (standard time zone)
+ *
+ *  @return the current time of day in seconds (standard time zone).
+ */
 EXTERN
 SCIP_Real SCIPgetTimeOfDay(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates a clock using the default clock type */
+/** creates a clock using the default clock type
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK**          clck                /**< pointer to clock timer */
    );
 
-/** creates a clock counting the CPU user seconds */
+/** creates a clock counting the CPU user seconds
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateCPUClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK**          clck                /**< pointer to clock timer */
    );
 
-/** creates a clock counting the wall clock seconds */
+/** creates a clock counting the wall clock seconds
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateWallClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK**          clck                /**< pointer to clock timer */
    );
 
-/** frees a clock */
+/** frees a clock
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPfreeClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK**          clck                /**< pointer to clock timer */
    );
 
-/** resets the time measurement of a clock to zero and completely stops the clock */
+/** resets the time measurement of a clock to zero and completely stops the clock
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPresetClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK*           clck                /**< clock timer */
    );
 
-/** starts the time measurement of a clock */
+/** starts the time measurement of a clock
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPstartClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK*           clck                /**< clock timer */
    );
 
-/** stops the time measurement of a clock */
+/** stops the time measurement of a clock
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPstopClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK*           clck                /**< clock timer */
    );
 
-/** starts the current solving time */
+/** starts the current solving time
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPstartSolvingTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** stops the current solving time in seconds */
+/** stops the current solving time in seconds
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPstopSolvingTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the measured time of a clock in seconds */
+/** gets the measured time of a clock in seconds
+ *
+ *  @return the measured time of a clock in seconds.
+ */
 EXTERN
 SCIP_Real SCIPgetClockTime(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK*           clck                /**< clock timer */
    );
 
-/** sets the measured time of a clock to the given value in seconds */
+/** sets the measured time of a clock to the given value in seconds
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPsetClockTime(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -15904,25 +15982,75 @@ SCIP_RETCODE SCIPsetClockTime(
    SCIP_Real             sec                 /**< time in seconds to set the clock's timer to */
    );
 
-/** gets the current total SCIP time in seconds */
+/** gets the current total SCIP time in seconds
+ *
+ *  @return the current total SCIP time in seconds.
+ */
 EXTERN
 SCIP_Real SCIPgetTotalTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the current solving time in seconds */
+/** gets the current solving time in seconds
+ *
+ *  @return the current solving time in seconds.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Real SCIPgetSolvingTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the current reading time in seconds */
+/** gets the current reading time in seconds
+ *
+ *  @return the current reading time in seconds.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Real SCIPgetReadingTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the current presolving time in seconds */
+/** gets the current presolving time in seconds
+ *
+ *  @return the current presolving time in seconds.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Real SCIPgetPresolvingTime(
    SCIP*                 scip                /**< SCIP data structure */
