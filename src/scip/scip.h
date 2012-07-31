@@ -6511,6 +6511,17 @@ SCIP_RETCODE SCIPprintVar(
 
 /** return TRUE if conflict analysis is applicable; In case the function return FALSE there is no need to initialize the
  *  conflict analysis since it will not be applied
+ *
+ *  @return return TRUE if conflict analysis is applicable; In case the function return FALSE there is no need to initialize the
+ *          conflict analysis since it will not be applied
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_Bool SCIPisConflictAnalysisApplicable(
@@ -6520,6 +6531,15 @@ SCIP_Bool SCIPisConflictAnalysisApplicable(
 /** initializes the conflict analysis by clearing the conflict candidate queue; this method must be called before you
  *  enter the conflict variables by calling SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
  *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar();
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_RETCODE SCIPinitConflictAnalysis(
@@ -6532,6 +6552,15 @@ SCIP_RETCODE SCIPinitConflictAnalysis(
  *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictLb() should be called
  *      for each lower bound, whose current assignment lead to the deduction of the given conflict bound.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_RETCODE SCIPaddConflictLb(
@@ -6545,11 +6574,19 @@ SCIP_RETCODE SCIPaddConflictLb(
  *  with the additional information of a relaxed lower bound; this relaxed lower bound is the one which would be enough
  *  to explain a certain bound change;
  *  this method should be called in one of the following two cases:
- *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedLb() should be called for each (relaxed)
- *      lower bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
- *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelexedLb() should be
- *      called for each (relaxed) lower bound, whose current assignment lead to the deduction of the given conflict
- *      bound.
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedLb() should be called for each (relaxed) lower bound
+ *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelexedLb() should be called
+ *      for each (relaxed) lower bound, whose current assignment lead to the deduction of the given conflict bound.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_RETCODE SCIPaddConflictRelaxedLb(
@@ -6562,10 +6599,19 @@ SCIP_RETCODE SCIPaddConflictRelaxedLb(
 
 /** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
  *  this method should be called in one of the following two cases:
- *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictUb() should be called for each upper bound
- *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
- *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictUb() should be called
- *      for each upper bound, whose current assignment lead to the deduction of the given conflict bound.
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictUb() should be called for each upper bound that
+ *      lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictUb() should be called for
+ *      each upper bound, whose current assignment lead to the deduction of the given conflict bound.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_RETCODE SCIPaddConflictUb(
@@ -6579,11 +6625,20 @@ SCIP_RETCODE SCIPaddConflictUb(
  *  with the additional information of a relaxed upper bound; this relaxed upper bound is the one which would be enough
  *  to explain a certain bound change;
  *  this method should be called in one of the following two cases:
- *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedUb() should be called for each (relaxed)
- *      upper bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedUb() should be called for each (relaxed) upper
+ *      bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelaxedUb() should be
  *      called for each (relaxed) upper bound, whose current assignment lead to the deduction of the given conflict
  *      bound.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_RETCODE SCIPaddConflictRelaxedUb(
@@ -6600,6 +6655,15 @@ SCIP_RETCODE SCIPaddConflictRelaxedUb(
  *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictBd() should be called
  *      for each bound, whose current assignment lead to the deduction of the given conflict bound.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_RETCODE SCIPaddConflictBd(
@@ -6618,6 +6682,15 @@ SCIP_RETCODE SCIPaddConflictBd(
  *      bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelaxedBd() should be
  *      called for each (relaxed) bound, whose current assignment lead to the deduction of the given conflict bound.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_RETCODE SCIPaddConflictRelaxedBd(
@@ -6635,6 +6708,15 @@ SCIP_RETCODE SCIPaddConflictRelaxedBd(
  *      variable that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictBinvar() should be called
  *      for each binary variable, whose current fixing lead to the deduction of the given conflict bound.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_RETCODE SCIPaddConflictBinvar(
@@ -6644,6 +6726,15 @@ SCIP_RETCODE SCIPaddConflictBinvar(
 
 /** checks if the given variable is already part of the current conflict set or queued for resolving with the same or
  *  even stronger bound
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_RETCODE SCIPisConflictVarUsed(
@@ -6657,6 +6748,15 @@ SCIP_RETCODE SCIPisConflictVarUsed(
 
 /** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
  *  bound
+ *
+ *  @return returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
+ *          bound
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_Real SCIPgetConflictVarLb(
@@ -6666,6 +6766,15 @@ SCIP_Real SCIPgetConflictVarLb(
 
 /** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus global
  *  upper bound
+ *
+ *  @return returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus global
+ *          upper bound
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_Real SCIPgetConflictVarUb(
@@ -6681,6 +6790,15 @@ SCIP_Real SCIPgetConflictVarUb(
  *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), and SCIPaddConflictBinvar() is
  *  valid for the whole subtree; if the conflict was found by a violated constraint, use SCIPanalyzeConflictCons()
  *  instead of SCIPanalyzeConflict() to make sure, that the correct valid depth is used
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_RETCODE SCIPanalyzeConflict(
@@ -6696,6 +6814,15 @@ SCIP_RETCODE SCIPanalyzeConflict(
  *  that is infeasible in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictLb(),
  *  SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(),
  *  SCIPaddConflictRelaxedBd(), and SCIPaddConflictBinvar())
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
  */
 EXTERN
 SCIP_RETCODE SCIPanalyzeConflictCons(
