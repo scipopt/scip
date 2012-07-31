@@ -11909,25 +11909,59 @@ SCIP_RETCODE SCIPdropRowEvent(
 /**@name Tree Methods */
 /**@{ */
 
-/** gets current node in the tree */
+/** gets current node in the tree
+ *
+ *  @return the current node of the search tree
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_NODE* SCIPgetCurrentNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the root node of the tree */
+/** gets the root node of the tree
+ *
+ *  @return the root node of the search tree
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_NODE* SCIPgetRootNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether the current node is already solved and only propagated again */
+/** returns whether the current node is already solved and only propagated again
+ *
+ *  @return TRUE is returned if \SCIP performance repropagation, otherwise FALSE.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Bool SCIPinRepropagation(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets children of focus node along with the number of children */
+/** gets children of focus node along with the number of children
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPgetChildren(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11935,13 +11969,26 @@ SCIP_RETCODE SCIPgetChildren(
    int*                  nchildren           /**< pointer to store number of children, or NULL if not needed */
    );
 
-/** gets number of children of focus node */
+/** gets number of children of focus node
+ *
+ *  @return number of children of the focus node
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 int SCIPgetNChildren(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets siblings of focus node along with the number of siblings */
+/** gets siblings of focus node along with the number of siblings
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPgetSiblings(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11949,13 +11996,26 @@ SCIP_RETCODE SCIPgetSiblings(
    int*                  nsiblings           /**< pointer to store number of siblings, or NULL if not needed */
    );
 
-/** gets number of siblings of focus node */
+/** gets number of siblings of focus node
+ *
+ *  @return the number of siblings of focus node
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 int SCIPgetNSiblings(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets leaves of the tree along with the number of leaves */
+/** gets leaves of the tree along with the number of leaves
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPgetLeaves(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11963,82 +12023,162 @@ SCIP_RETCODE SCIPgetLeaves(
    int*                  nleaves             /**< pointer to store number of leaves, or NULL if not needed */
    );
 
-/** gets number of leaves in the tree */
+/** gets number of leaves in the tree
+ *
+ *  @return the number of leaves in the tree
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 int SCIPgetNLeaves(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the best child of the focus node w.r.t. the node selection priority assigned by the branching rule */
+/** gets the best child of the focus node w.r.t. the node selection priority assigned by the branching rule
+ *
+ *  @return the best child of the focus node w.r.t. the node selection priority assigned by the branching rule
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_NODE* SCIPgetPrioChild(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the best sibling of the focus node w.r.t. the node selection priority assigned by the branching rule */
+/** gets the best sibling of the focus node w.r.t. the node selection priority assigned by the branching rule
+ *
+ *  @return the best sibling of the focus node w.r.t. the node selection priority assigned by the branching rule
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_NODE* SCIPgetPrioSibling(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the best child of the focus node w.r.t. the node selection strategy */
+/** gets the best child of the focus node w.r.t. the node selection strategy
+ *
+ *  @return the best child of the focus node w.r.t. the node selection strategy
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_NODE* SCIPgetBestChild(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the best sibling of the focus node w.r.t. the node selection strategy */
+/** gets the best sibling of the focus node w.r.t. the node selection strategy
+ *
+ *  @return the best sibling of the focus node w.r.t. the node selection strategy
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_NODE* SCIPgetBestSibling(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the best leaf from the node queue w.r.t. the node selection strategy */
+/** gets the best leaf from the node queue w.r.t. the node selection strategy
+ *
+ *  @return the best leaf from the node queue w.r.t. the node selection strategy
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_NODE* SCIPgetBestLeaf(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the best node from the tree (child, sibling, or leaf) w.r.t. the node selection strategy */
+/** gets the best node from the tree (child, sibling, or leaf) w.r.t. the node selection strategy
+ *
+ *  @return the best node from the tree (child, sibling, or leaf) w.r.t. the node selection strategy
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_NODE* SCIPgetBestNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the node with smallest lower bound from the tree (child, sibling, or leaf) */
+/** gets the node with smallest lower bound from the tree (child, sibling, or leaf)
+ *
+ *  @return the node with smallest lower bound from the tree (child, sibling, or leaf)
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_NODE* SCIPgetBestboundNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** cuts off node and whole sub tree from branch and bound tree */
+/** cuts off node and whole sub tree from branch and bound tree
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcutoffNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node that should be cut off */
    );
 
-/** marks the given node to be propagated again the next time a node of its subtree is processed */
+/** marks the given node to be propagated again the next time a node of its subtree is processed
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPrepropagateNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node that should be propagated again */
    );
 
-/** returns depth of first node in active path that is marked being cutoff */
+/** returns depth of first node in active path that is marked being cutoff
+ *
+ *  @return depth of first node in active path that is marked being cutoff
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 int SCIPgetCutoffdepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns depth of first node in active path that has to be propagated again */
+/** returns depth of first node in active path that has to be propagated again
+ *
+ *  @return depth of first node in active path that has to be propagated again
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 int SCIPgetRepropdepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-
-/* prints all branching decisions on variables from the root to the given node */
+/** prints all branching decisions on variables from the root to the given node
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPprintNodeRootPath(
    SCIP*                 scip,               /**< SCIP data structure */
