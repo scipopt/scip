@@ -332,16 +332,6 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsColoring)
    return SCIP_OKAY;
 }
 
-
-/* define not used callbacks as NULL */
-#define branchFreeColoring NULL
-#define branchInitColoring NULL
-#define branchExitColoring NULL
-#define branchInitsolColoring NULL
-#define branchExitsolColoring NULL
-#define branchExecrelColoring NULL
-
-
 /*
  * branching rule specific interface methods
  */
