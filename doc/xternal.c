@@ -6411,51 +6411,50 @@ SCIP_RETCODE consdataCatchEvent(
   * - <b>Conflict Analysis</b>:
   *     <br>
   *     <br>
-  *   - Added parameter "relaxedbds" to conflict handler callback method SCIP_DECL_CONFLICTEXEC(). This array with
-  *     relaxed bounds are efficient to create a valid conflict.
+  *   - Added parameter "relaxedbds" to conflict handler callback method SCIP_DECL_CONFLICTEXEC(). This array contains
+  *     bounds which are sufficient to create a valid conflict
   *
   * - <b>Constraint Handler</b>:
   *     <br>
   *     <br>
-  *   - New callback methods in constraint handler SCIP_DECL_CONSGETVARS and SCIP_DECL_CONSGETNVARS of optional
-  *     implementation. These callbacks, if implemented, should return all variables or the number of all variables used
-  *     by the given constraint. (This method might be called by a presolver.)
-  *   - Added a propagation timing parameter "proptiming" to SCIP_DECL_CONSPROP() to identify the current timing that
-  *     this method is called.
-  *   - Added a paremeter 'restart' to SCIP_DECL_CONSEXITSOL() callback method, indicating whether this call was
+  *   - New optional callback methods in constraint handlers: SCIP_DECL_CONSGETVARS and SCIP_DECL_CONSGETNVARS.
+  *     These callbacks, if implemented, should return an array of all variables and the number of all variables used
+  *     by the given constraint, respectively. (This method might, e.g., be called by a presolver)
+  *   - Added a propagation timing parameter "proptiming" to SCIP_DECL_CONSPROP(), giving the current timing at which
+  *     this method is called
+  *   - Added a parameter 'restart' to the SCIP_DECL_CONSEXITSOL() callback method, indicating whether this call was
   *     triggered by a restart.
-  *   - Added a paremeter 'relaxedbd' to SCIP_DECL_CONSRESPROP() callback method. If explaining a given bound change
-  *     (index), it is sufficient when explaining the reason for reaching the 'relaxedbd' value.
+  *   - Added a parameter 'relaxedbd' to SCIP_DECL_CONSRESPROP() callback method. If explaining a given bound change
+  *     (index), it is sufficient to explain the reason for reaching the 'relaxedbd' value, see above
   *   - Removed parameters "isunbounded", "isinfeasible" and "result" from SCIP_DECL_CONSINITPRE() and
-  *     SCIP_DECL_CONSEXITPRE() callback methods. Is is not allowed to determined unboundedness or infeasibility in
-  *     these setup callbacks, anymore.
+  *     SCIP_DECL_CONSEXITPRE() callback methods. It is not allowed to determine unboundedness or infeasibility in
+  *     these callbacks, anymore.
   *
   * - <b>Message Handler</b>:
   *      <br>
   *      <br>
-  *   - A new callback method SCIP_DECL_MESSAGEHDLRFREE() was implemented, and is called when the message handler will
-  *     be freed.
+  *   - New callback method SCIP_DECL_MESSAGEHDLRFREE() which is called when the message handler is freed.
   *   - The old callback method SCIP_DECL_MESSAGEERROR() was replaced by the callback method SCIP_DECL_ERRORPRINTING().
   *
   * - <b>Presolving</b>:
   *      <br>
   *      <br>
   *   - Removed parameters "isunbounded", "isinfeasible" and "result" from SCIP_DECL_PRESOLINITPRE() and
-  *     SCIP_DECL_PRESOLSEXITPRE(). Is is not allowed to determined unboundedness or infeasibility in these setup
+  *     SCIP_DECL_PRESOLSEXITPRE(). It is not allowed to determine unboundedness or infeasibility in these
   *     callbacks, anymore.
   *
   * - <b>Propagator</b>:
   *     <br>
   *     <br>
-  *   - Added a propagation timing parameter "proptiming" to SCIP_DECL_PROPEXEC() callback method to identify the
-  *     current timing that this method is called.
-  *   - Added a paremeter 'restart' to SCIP_DECL_PROPEXITSOL() callback method, indicating whether this call was
+  *   - Added a propagation timing parameter "proptiming" to SCIP_DECL_PROPEXEC(), giving the
+  *     current timing at which this method is called.
+  *   - Added a parameter 'restart' to SCIP_DECL_PROPEXITSOL() callback method, indicating whether this call was
   *     triggered by a restart.
-  *   - Added a paremeter 'relaxedbd' to SCIP_DECL_PROPRESPROP() callback method. If explaining a given bound change
-  *     (index), it is sufficient when explaining the reason for reaching the 'relaxedbd' value.
+  *   - Added a parameter 'relaxedbd' to SCIP_DECL_PROPRESPROP() callback method. If explaining a given bound change
+  *     (index), it is sufficient to explain the reason for reaching the 'relaxedbd' value.
   *   - Removed parameters "isunbounded", "isinfeasible" and "result" from SCIP_DECL_PROPINITPRE() and
-  *     SCIP_DECL_PROPEXITPRE() callback methods. Is is not allowed to determined unboundedness or infeasibility in
-  *     these setup callbacks, anymore.
+  *     SCIP_DECL_PROPEXITPRE() callback methods. It is not allowed to determined unboundedness or infeasibility in
+  *     these callbacks, anymore.
   *
   * - <b>NLP Solver Interface</b>:
   *     <br>
@@ -6468,39 +6467,25 @@ SCIP_RETCODE consdataCatchEvent(
   * - <b>Plugin management</b>:
   *      <br>
   *      <br>
-  *   - Added basic include methods for almost all plugin types. For example SCIPincludeConshdlrBasic(),
-  *     SCIPincludePropBasic() and SCIPincludeEventhdlrBasic(); these methods should make the usage easier hiding some
-  *     more advanced parameters. (The plugin type with new basic methods are the readers, constraint handlers, conflict
-  *     handlers, presolvers, propagators, heuristics, separators, relaxation handlers, branching rules, node selectors,
-  *     and pricers.)
-  *   - To be able to extend the basic functionalities, provided by the above methods there are setter method to add
-  *     additional callbacks. For example SCIPsetConshdlrParse(), SCIPsetPropCopy() or SCIPsetHeurCopy().
+  *   - Added basic include methods for almost all plugin types, e.g., SCIPincludeConshdlrBasic();
+  *     these methods should make the usage easier, sparing out optional callbacks and parameters.
+  *   - To extend the basic functionalities, there are setter method to add
+  *     optional callbacks. For example SCIPsetConshdlrParse(), SCIPsetPropCopy() or SCIPsetHeurInitsol().
   *
   * - <b>Constraint Handlers</b>:
   *      <br>
   *      <br>
-  *   - Added basic creation methods for all constraints types. For example SCIPcreateConsBasicLinear(),
-  *     SCIPcreateConsBasicKnapsack() or SCIPcreateConsBasicNonlinear(); these methods should make the usage easier
-  *     hiding some more advanced parameters.
-  *   - New methods SCIPgetConsVars() and SCIPgetConsNVars() which return for a given constraint the involved variables and
-  *     the number of variables if the corresponding constraint handler supports this (implemented CONSGETVARS and
-  *     CONSGETNVARS).
-  *   - Advanced feature: Added public wrapper functions for calling constraint handler callback methods for a single
-  *     constraint: SCIPactiveCons(), SCIPdeactiveCons(), SCIPinitlpCons(), SCIPsepalpCons(), SCIPsepasolCons(),
-  *     SCIPpropCons(), SCIPrespropCons(), SCIPenfopsCons(), SCIPenfolpCons().
+  *   - Added basic creation methods for all constraints types, e.g., SCIPcreateConsBasicLinear(); these methods should make the usage easier,
+  *      sparing out optional callbacks and parameters.
+  *   - New methods SCIPgetConsVars() and SCIPgetConsNVars() (corresponding callbacks need to be implemented, see above)
   *
   * - <b>Problem</b>:
   *      <br>
   *      <br>
-  *   - Added basic creation methods SCIPcreateVarBasic() and SCIPcreateProbBasic() and setter functions to make the
-  *     usage easier.
-  *   - Added setter methods to extend the functionality provided by the above methods. For example SCIPvarSetData() and
-  *     SCIPsetProbTrans().
-  *   - Added method SCIPgetNObjVars() which returns the number of variables which have a non-zero objective
-  *     coefficient.
+  *   - Added basic creation methods SCIPcreateVarBasic() and SCIPcreateProbBasic() and setter functions
   *   - Added method SCIPisPresolveFinished() which returns whether the presolving process would be stopped after the
   *     current presolving round, given no further reductions will be found.
-  *   - Forbid problem modifications in SCIP_STAGE_{INIT,EXIT}PRESOLVE(, see pre-conditions for all public methods).
+  *   - Forbid problem modifications in SCIP_STAGE_{INIT,EXIT}PRESOLVE (see pre-conditions for corresponding methods in scip.h).
   *
   * - <b>Variable usage</b>:
   *      <br>
@@ -6508,35 +6493,15 @@ SCIP_RETCODE consdataCatchEvent(
   *   - Renamed SCIPvarGetBestBound() to SCIPvarGetBestBoundLocal(), SCIPvarGetWorstBound() to
   *     SCIPvarGetWorstBoundLocal() and added new methods SCIPvarGetBestBoundGlobal() and SCIPvarGetWorstBoundGlobal().
   *   - Method SCIPvarGetProbvarSum() is not public anymore, use SCIPgetProbvarSum() instead.
-  *   - Replace method SCIPvarGetRootRedcost() by SCIPvarGetBestRootRedcost().
+  *   - Replaced method SCIPvarGetRootRedcost() by SCIPvarGetBestRootRedcost().
   *
   * - <b>Message Handler</b>:
   *      <br>
   *      <br>
-  *   - Changed the message handler system within SCIP heavily such that it is thread save. SCIPcreateMessagehdlr() in
+  *   - Changed the message handler system within SCIP heavily such that it is thread-safe. SCIPcreateMessagehdlr() in
   *     scip.{c,h} was replaced by SCIPmessagehdlrCreate() in pub_message.h/message.c with a changed parameter list.
-  *   - In scip.{c,h} are also new setter and getter methods like SCIPsetMessagehdlr() and SCIPgetMessagehdlr() to
-  *     (ex)change the message handler.
-  *   - SCIPmessagehdlrCapture() and SCIPmessagehdlrRelease() should also be used, when the message handler is used in
-  *     multiple (SCIP) instances.
   *   - Error messages (SCIPerrorMessage()) are not handled via the message handler anymore; per default the error
   *     message is written to stderr.
-  *
-  * - <b>Copy</b>:
-  *      <br>
-  *      <br>
-  *   - New parameter in SCIPcopy() and SCIPcopyPlugins() to indicate whether the message handler from the source SCIP
-  *     should be passed to the target SCIP (only the pointer is copied and the usage counter of the message handler is
-  *     increased).
-  *
-  * - <b>Conflict Analysis</b>:
-  *      <br>
-  *      <br>
-  *   - New method SCIPisConflictAnalysisApplicable() which return FALSE if the conflict will not run. This can be used
-  *     to avoid unnecessary initialization of the conflict analysis.
-  *   - New methods SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), and SCIPaddConflictRelaxedBd(); these methods
-  *     can be used to give for a bound change which is part of an explanation a relaxed bound; this means the relaxed
-  *     bound is already efficient to be part of a valid explanation.
   *
   * - <b>Separation</b>:
   *      <br>
@@ -6548,25 +6513,11 @@ SCIP_RETCODE consdataCatchEvent(
   *     deprecated.
   *   - New functions SCIProwGetOrigintype(), SCIProwGetOriginCons(), and SCIProwGetOriginSepa() to obtain the originator
   *     that created a row.
-
-  * - <b>Changing Parameter</b>:
-  *      <br>
-  *      <br>
-  *   - New methods SCIPfixParam() and SCIPunfixParam() to fix and unfix a parameter, respectively;
-  *     the fixing status of a parameter can be requested by SCIPparamIsFixed();
-  *     in the interactive shell, this can be done with 'fix' (instead of 'set'), e.g., "fix heuristics rens freq TRUE";
-  *   - Replaced SCIPparamSet*() by SCIPchg*Param() (where * is either Bool, Int, Longint, Real, Char, or String).
-  *
-  * - <b>Solution</b>:
-  *      <br>
-  *      <br>
-  *   - New method SCIPsolIsOriginal() that returns whether a solution is defined on the original variables.
   *
   * - <b>LP interface</b>:
   *      <br>
   *      <br>
   *   - SCIPlpiCreate() got a new parameter 'messagehdlr'.
-  *   - New method SCIPlpiGetObjsen() to query objective sense.
   *   - SoPlex LPI supports setting of SCIP_LPPAR_DUALFEASTOL when using SoPlex version 1.6.0.5 and higher.
   *
   * - <b>Nonlinear expressions, relaxation, and solver interface</b>:
@@ -6584,39 +6535,22 @@ SCIP_RETCODE consdataCatchEvent(
   *     SCIPsparseSolGetNVars(), SCIPsparseSolGetLbs(), SCIPsparseSolGetUbs() in (pub_)misc.{c,h}.
   *   - Renamed SCIPgetCountedSparseSolutions() to SCIPgetCountedSparseSols() in cons_countsols.{c,h}.
   *
-  * - <b>Others</b>:
-  *      <br>
-  *      <br>
-  *   - SCIPprintCons() does not print termination symbol ";\n" anymore; if wanted, use SCIPinfoMessage() to print
-  *     ";\n" manually
-  *   - All objscip *.h file now use the default SCIP interface macros.
-  *
-  *
   * <br>
   * @section MISCELLANEOUS6 Miscellaneous
   *
+  *   - Replaced SCIPparamSet*() by SCIPchg*Param() (where * is either Bool, Int, Longint, Real, Char, or String).
+  *   - New parameter in SCIPcopy() and SCIPcopyPlugins() to indicate whether the message handler from the source SCIP
+  *     should be passed to the target SCIP (only the pointer is copied and the usage counter of the message handler is
+  *     increased).
+  *   - SCIPprintCons() does not print termination symbol ";\n" anymore; if wanted, use SCIPinfoMessage() to print
+  *     ";\n" manually
+  *   - All objscip *.h file now use the default SCIP interface macros.
   *   - The methods SCIPsortedvecInsert*() have an additional parameter which can be used to receive the position where
   *     the new element was inserted.
-  *   - Several new sorting methods.
-  *   - New method SCIPcalcBinomCoef() in pub_misc.h and misc.c which calculates a binomial coefficient up to 33 over
-  *     16.
-  *   - New method SCIPmemccpy() in pub_misc.h and misc.c which copies either a specified number of charcters of a
-  *     source string to a destination string or until it hits a termination character.
-  *   - New methods BMSmoveMemory(), BMSmoveMemoryArray(), BMSmoveMemorySize() and corresponding BMSmoveMemory_call() in
-  *     memory.{h,c} too move memory elements.
-  *   - New method SCIPisHugeValue() to check whether a value is huge and should be handled separately from other values
-  *     (e.g., in activity computations), and SCIPgetHugeValue() to get the smallest value counting as huge.
-  *   - Default integer comparer SCIPsortCompInt() (see pub_misc.h)
-  *   - New methods writing a Graph Modelling Language (GML) file: SCIPgmlWriteNode(), SCIPgmlWriteEdge(),
-  *     SCIPgmlWriteArc(), SCIPgmlWriteOpening(), SCIPgmlWriteCosing().
   *   - New macro SCIPdebugPrintCons() to print constraint only if SCIP_DEBUG flag is set.
-  *   - New data structure for binary trees (SCIP_BT and SCIP_BTNODE in pub_misc.h) and corresponding methods.
-  *   - Renamed data structure SCIP_STAIRMAP to SCIP_PROFILE and replaced 'stairmap' by 'profile' in corresponding
-  *     methods.
-  *   - New data structure SCIP_DIGRAPH and corresponding methods in pub_misc.h.
   *
   * <br>
-  * For further release notes we refer the \ref RELEASENOTES "Release notes".
+  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
