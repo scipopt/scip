@@ -1,6 +1,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*                  This file is part of the program and library             */
+/*                  this file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
 /*                  2002-2012 Konrad-Zuse-Zentrum                            */
@@ -496,8 +496,8 @@
 *
  * @section BRIEFINSTALL Brief installation description
  *
- * The easiest way to install SCIP is to use the ZIB Optimization Suite which contains SCIP, SoPlex, and ZIMPL. For
- * that we refer to the INSTALL file of the ZIB Optimization Suite (In case of the ZIB Optimization Suite, there is not need
+ * The easiest way to install SCIP is to use the SCIP Optimization Suite which contains SCIP, SoPlex, and ZIMPL. For
+ * that we refer to the INSTALL file of the SCIP Optimization Suite (In case of the SCIP Optimization Suite, there is not need
  * to specify any directories, the compiling process is fully automated).
  *
  * Compiling SCIP directly can be done as follows:
@@ -875,8 +875,8 @@
  * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the SCIP standard distribution, we recommend to go to the <a
- * href="http://zibopt.zib.de/download.shtml">ZIBopt download section</a>, download the latest release (version 2.1 as
- * of this writing), inflate the tarball (e.g., with "tar xzf ziboptsuite-[version].tgz"), and follow the instructions
+ * href="http://scip.zib.de/download.shtml">SCIP download section</a>, download the latest release (version 3.0 as
+ * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * ziboptsuite-[version]/scip-[version]/check/instances/MIP/stein27.mps.
  *
