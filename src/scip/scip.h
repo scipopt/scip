@@ -13052,6 +13052,14 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
  *  fractionalities, and number of branching candidates;
  *  branching rules should always select the branching candidate among the first npriolpcands of the candidate
  *  list
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_RETCODE SCIPgetLPBranchCands(
@@ -13063,13 +13071,29 @@ SCIP_RETCODE SCIPgetLPBranchCands(
    int*                  npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
    );
 
-/** gets number of branching candidates for LP solution branching (number of fractional variables) */
+/** gets number of branching candidates for LP solution branching (number of fractional variables)
+ *
+ *  @return the number of branching candidates for LP solution branching (number of fractional variables).
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNLPBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of branching candidates with maximal priority for LP solution branching */
+/** gets number of branching candidates with maximal priority for LP solution branching
+ *
+ *  @return the number of branching candidates with maximal priority for LP solution branching.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNPrioLPBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
@@ -13079,6 +13103,14 @@ int SCIPgetNPrioLPBranchCands(
  *  these branching candidates can be used by relaxations or nonlinear constraint handlers
  *  branching rules should always select the branching candidate among the first nprioexterncands of the candidate
  *  list
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_RETCODE SCIPgetExternBranchCands(
@@ -13094,37 +13126,85 @@ SCIP_RETCODE SCIPgetExternBranchCands(
                                               *   or NULL */
    );
 
-/** gets number of external branching candidates */
+/** gets number of external branching candidates
+ *
+ *  @return the number of external branching candidates.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of external branching candidates with maximal branch priority */
+/** gets number of external branching candidates with maximal branch priority
+ *
+ *  @return the number of external branching candidates with maximal branch priority.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNPrioExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of binary external branching candidates with maximal branch priority */
+/** gets number of binary external branching candidates with maximal branch priority 
+ *
+ *  @return the number of binary external branching candidates with maximal branch priority.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNPrioExternBranchBins(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of integer external branching candidates with maximal branch priority */
+/** gets number of integer external branching candidates with maximal branch priority
+ *
+ *  @return the number of integer external branching candidates with maximal branch priority.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNPrioExternBranchInts(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of implicit integer external branching candidates with maximal branch priority */
+/** gets number of implicit integer external branching candidates with maximal branch priority
+ *
+ *  @return the number of implicit integer external branching candidates with maximal branch priority.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNPrioExternBranchImpls(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of continuous external branching candidates with maximal branch priority */
+/** gets number of continuous external branching candidates with maximal branch priority
+ *
+ *  @return the number of continuous external branching candidates with maximal branch priority.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNPrioExternBranchConts(
    SCIP*                 scip                /**< SCIP data structure */
@@ -13132,6 +13212,14 @@ int SCIPgetNPrioExternBranchConts(
 
 /** insert variable, its score and its solution value into the external branching candidate storage
  * the relative difference of the current lower and upper bounds of a continuous variable must be at least epsilon
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_RETCODE SCIPaddExternBranchCand(
@@ -13141,20 +13229,44 @@ SCIP_RETCODE SCIPaddExternBranchCand(
    SCIP_Real             solval              /**< value of the variable in the current solution */
    );
 
-/** removes all external candidates from the storage for external branching */
+/** removes all external candidates from the storage for external branching
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 void SCIPclearExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** checks whether the given variable is contained in the candidate storage for external branching */
+/** checks whether the given variable is contained in the candidate storage for external branching
+ *
+ *  @return whether the given variable is contained in the candidate storage for external branching.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Bool SCIPcontainsExternBranchCand(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to look for */
    );
 
-/** gets branching candidates for pseudo solution branching (non-fixed variables) along with the number of candidates */
+/** gets branching candidates for pseudo solution branching (non-fixed variables) along with the number of candidates
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPgetPseudoBranchCands(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13163,37 +13275,87 @@ SCIP_RETCODE SCIPgetPseudoBranchCands(
    int*                  npriopseudocands    /**< pointer to store the number of candidates with maximal priority, or NULL */
    );
 
-/** gets branching candidates for pseudo solution branching (non-fixed variables) */
+/** gets number of branching candidates for pseudo solution branching (non-fixed variables)
+ *
+ *  @return the number branching candidates for pseudo solution branching (non-fixed variables).
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNPseudoBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of branching candidates with maximal branch priority for pseudo solution branching */
+/** gets number of branching candidates with maximal branch priority for pseudo solution branching
+ *
+ *  @return the number of branching candidates with maximal branch priority for pseudo solution branching.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNPrioPseudoBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of binary branching candidates with maximal branch priority for pseudo solution branching */
+/** gets number of binary branching candidates with maximal branch priority for pseudo solution branching
+ *
+ *  @return the number of binary branching candidates with maximal branch priority for pseudo solution branching.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNPrioPseudoBranchBins(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of integer branching candidates with maximal branch priority for pseudo solution branching */
+/** gets number of integer branching candidates with maximal branch priority for pseudo solution branching
+ *
+ *  @return the number of integer branching candidates with maximal branch priority for pseudo solution branching.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNPrioPseudoBranchInts(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of implicit integer branching candidates with maximal branch priority for pseudo solution branching */
+/** gets number of implicit integer branching candidates with maximal branch priority for pseudo solution branching
+ *
+ *  @return the number of implicit integer branching candidates with maximal branch priority for pseudo solution branching.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNPrioPseudoBranchImpls(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** calculates the branching score out of the gain predictions for a binary branching */
+/** calculates the branching score out of the gain predictions for a binary branching
+ *
+ *  @return the branching score out of the gain predictions for a binary branching.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Real SCIPgetBranchScore(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13202,7 +13364,15 @@ SCIP_Real SCIPgetBranchScore(
    SCIP_Real             upgain              /**< prediction of objective gain for rounding upwards */
    );
 
-/** calculates the branching score out of the gain predictions for a branching with arbitrary many children */
+/** calculates the branching score out of the gain predictions for a branching with arbitrary many children
+ *
+ *  @return the branching score out of the gain predictions for a branching with arbitrary many children.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Real SCIPgetBranchScoreMultiple(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13213,6 +13383,13 @@ SCIP_Real SCIPgetBranchScoreMultiple(
 
 /** computes a branching point for a continuous or discrete variable
  * @see SCIPbranchGetBranchingPoint
+ *
+ *  @return the branching point for a continuous or discrete variable.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_Real SCIPgetBranchingPoint(
@@ -13223,6 +13400,13 @@ SCIP_Real SCIPgetBranchingPoint(
 
 /** calculates the node selection priority for moving the given variable's LP value to the given target value;
  *  this node selection priority can be given to the SCIPcreateChild() call
+ *
+ *  @return the node selection priority for moving the given variable's LP value to the given target value.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_Real SCIPcalcNodeselPriority(
@@ -13234,8 +13418,16 @@ SCIP_Real SCIPcalcNodeselPriority(
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 
-/** calculates an estimate for the objective of the best feasible solution contained in the subtree after applying the given 
+/** calculates an estimate for the objective of the best feasible solution contained in the subtree after applying the given
  *  branching; this estimate can be given to the SCIPcreateChild() call
+ *
+ *  @return the estimate for the objective of the best feasible solution contained in the subtree after applying the given
+ *  branching.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_Real SCIPcalcChildEstimate(
@@ -13244,7 +13436,16 @@ SCIP_Real SCIPcalcChildEstimate(
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 
-/** creates a child node of the focus node */
+/** creates a child node of the focus node
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateChild(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13261,6 +13462,14 @@ SCIP_RETCODE SCIPcreateChild(
  *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
  *  otherwise (up to) three child nodes will be created
  *  (x <= x'-1, x == x', x >= x'+1)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_RETCODE SCIPbranchVar(
@@ -13271,7 +13480,16 @@ SCIP_RETCODE SCIPbranchVar(
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    );
 
-/** branches a variable x using a given domain hole; two child nodes (x <= left, x >= right) are created */
+/** branches a variable x using a given domain hole; two child nodes (x <= left, x >= right) are created
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPbranchVarHole(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13289,6 +13507,14 @@ SCIP_RETCODE SCIPbranchVarHole(
  *  (x <= floor(x'), x >= ceil(x')),
  *  if x' is integral, three child nodes are created
  *  (x <= x'-1, x == x', x >= x'+1)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_RETCODE SCIPbranchVarVal(
@@ -13315,6 +13541,14 @@ SCIP_RETCODE SCIPbranchVarVal(
  * results in a ternary branching where the branching variable is mostly fixed in the middle child.
  * Setting widthfactor to 1.0 results in children where the branching variable always has the same domain width
  * (except for one child if the branching value is not in the middle).
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_RETCODE SCIPbranchVarValNary(
@@ -13330,6 +13564,14 @@ SCIP_RETCODE SCIPbranchVarValNary(
 /** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
  *  if the branch priority of an unfixed variable is larger than the maximal branch priority of the fractional
  *  variables, pseudo solution branching is applied on the unfixed variables with maximal branch priority
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_RETCODE SCIPbranchLP(
@@ -13337,14 +13579,32 @@ SCIP_RETCODE SCIPbranchLP(
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );
 
-/** calls branching rules to branch on a external candidates; if no such candidates exist, the result is SCIP_DIDNOTRUN */
+/** calls branching rules to branch on a external candidates; if no such candidates exist, the result is SCIP_DIDNOTRUN
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPbranchExtern(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );
 
-/** calls branching rules to branch on a pseudo solution; if no unfixed variables exist, the result is SCIP_DIDNOTRUN */
+/** calls branching rules to branch on a pseudo solution; if no unfixed variables exist, the result is SCIP_DIDNOTRUN
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPbranchPseudo(
    SCIP*                 scip,               /**< SCIP data structure */
