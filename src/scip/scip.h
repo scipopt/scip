@@ -1508,6 +1508,13 @@ int SCIPgetNParams(
 
 /** creates a reader and includes it in SCIP
  *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
  *  @note method has all reader callbacks as arguments and is thus changed every time a new callback is added
  *        in future releases; consider using SCIPincludeReaderBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
@@ -1529,6 +1536,13 @@ SCIP_RETCODE SCIPincludeReader(
  *  Optional callbacks can be set via specific setter functions, see
  *  SCIPsetReaderCopy(), SCIPsetReaderFree(), SCIPsetReaderRead(), SCIPsetReaderWrite().
  *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeReader() instead
  */
 EXTERN
@@ -1541,7 +1555,15 @@ SCIP_RETCODE SCIPincludeReaderBasic(
    SCIP_READERDATA*      readerdata          /**< reader data */
    );
 
-/**< set copy method of reader */
+/** set copy method of reader
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetReaderCopy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1549,7 +1571,15 @@ SCIP_RETCODE SCIPsetReaderCopy(
    SCIP_DECL_READERCOPY  ((*readercopy))     /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
    );
 
-/**< set deinitialization method of reader */
+/** set deinitialization method of reader
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetReaderFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1557,7 +1587,15 @@ SCIP_RETCODE SCIPsetReaderFree(
    SCIP_DECL_READERFREE  ((*readerfree))     /**< destructor of reader */
    );
 
-/**< set read method of reader */
+/** set read method of reader
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetReaderRead(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1565,7 +1603,15 @@ SCIP_RETCODE SCIPsetReaderRead(
    SCIP_DECL_READERREAD  ((*readerread))     /**< read method of reader */
    );
 
-/**< set write method of reader */
+/** set write method of reader
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetReaderWrite(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1595,6 +1641,13 @@ int SCIPgetNReaders(
 /** creates a variable pricer and includes it in SCIP
  *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
  *  This should be done during the problem creation stage.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
  *
  *  @note method has all pricer callbacks as arguments and is thus changed every time a new callback is added
  *        in future releases; consider using SCIPincludePricerBasic() and setter functions
@@ -1630,7 +1683,14 @@ SCIP_RETCODE SCIPincludePricer(
  *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
  *  This should be done during the problem creation stage.
  *
- * @note if you want to set all callbacks with a single method call, consider using SCIPincludePricer() instead
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludePricer() instead
  */
 EXTERN
 SCIP_RETCODE SCIPincludePricerBasic(
@@ -1649,7 +1709,15 @@ SCIP_RETCODE SCIPincludePricerBasic(
    SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
    );
 
-/** sets copy method of pricer */
+/** sets copy method of pricer
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetPricerCopy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1657,7 +1725,15 @@ SCIP_RETCODE SCIPsetPricerCopy(
    SCIP_DECL_PRICERCOPY ((*pricercopy))     /**< copy method of pricer or NULL if you don't want to copy your plugin into sub-SCIPs */
    );
 
-/** sets destructor method of pricer */
+/** sets destructor method of pricer
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetPricerFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1665,7 +1741,15 @@ SCIP_RETCODE SCIPsetPricerFree(
    SCIP_DECL_PRICERFREE ((*pricerfree))      /**< destructor of pricer */
    );
 
-/** sets initialization method of pricer */
+/** sets initialization method of pricer
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetPricerInit(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1673,7 +1757,15 @@ SCIP_RETCODE SCIPsetPricerInit(
    SCIP_DECL_PRICERINIT  ((*pricerinit))     /**< initialize pricer */
    );
 
-/** sets deinitialization method of pricer */
+/** sets deinitialization method of pricer
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetPricerExit(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1681,7 +1773,15 @@ SCIP_RETCODE SCIPsetPricerExit(
    SCIP_DECL_PRICEREXIT  ((*pricerexit))     /**< deinitialize pricer */
    );
 
-/** sets solving process initialization method of pricer */
+/** sets solving process initialization method of pricer
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetPricerInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1689,7 +1789,15 @@ SCIP_RETCODE SCIPsetPricerInitsol(
    SCIP_DECL_PRICERINITSOL ((*pricerinitsol))/**< solving process initialization method of pricer */
    );
 
-/** sets solving process deinitialization method of pricer */
+/** sets solving process deinitialization method of pricer
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetPricerExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1734,6 +1842,12 @@ SCIP_RETCODE SCIPsetPricerPriority(
  *  This method should be called during the problem creation stage for all pricers that are necessary to solve
  *  the problem model.
  *  The pricers are automatically deactivated when the problem is freed.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
  */
 EXTERN
 SCIP_RETCODE SCIPactivatePricer(
@@ -1741,14 +1855,29 @@ SCIP_RETCODE SCIPactivatePricer(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
-/** deactivates pricer */
+/** deactivates pricer
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 EXTERN
 SCIP_RETCODE SCIPdeactivatePricer(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
-/** creates a constraint handler and includes it in SCIP
+/** creates a constraint handler and includes it in SCIP.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
  *
  *  @note method has all constraint handler callbacks as arguments and is thus changed every time a new
  *        callback is added
@@ -1814,6 +1943,13 @@ SCIP_RETCODE SCIPincludeConshdlr(
  *  SCIPsetConshdlrEnable(), SCIPsetConshdlrDisable(), SCIPsetConshdlrResprop(), SCIPsetConshdlrTrans(),
  *  SCIPsetConshdlrPrint(), and SCIPsetConshdlrParse().
  *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeConshdlr() instead
  */
 EXTERN
@@ -1834,7 +1970,15 @@ SCIP_RETCODE SCIPincludeConshdlrBasic(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
-/* sets all separation related callbacks/parameters of the constraint handler */
+/** sets all separation related callbacks/parameters of the constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrSepa(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1846,7 +1990,15 @@ SCIP_RETCODE SCIPsetConshdlrSepa(
    SCIP_Bool             delaysepa           /**< should separation method be delayed, if other separators found cuts? */
    );
 
-/* sets both the propagation callback and the propagation frequency of the constraint handler */
+/** sets both the propagation callback and the propagation frequency of the constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrProp(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1857,7 +2009,15 @@ SCIP_RETCODE SCIPsetConshdlrProp(
    SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
    );
 
-/** sets copy method of both the constraint handler and each associated constraint */
+/** sets copy method of both the constraint handler and each associated constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrCopy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1866,7 +2026,15 @@ SCIP_RETCODE SCIPsetConshdlrCopy(
    SCIP_DECL_CONSCOPY    ((*conscopy))       /**< constraint copying method */
    );
 
-/** sets destructor method of constraint handler */
+/** sets destructor method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1874,7 +2042,15 @@ SCIP_RETCODE SCIPsetConshdlrFree(
    SCIP_DECL_CONSFREE    ((*consfree))       /**< destructor of constraint handler */
    );
 
-/** sets initialization method of constraint handler */
+/** sets initialization method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrInit(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1882,7 +2058,15 @@ SCIP_RETCODE SCIPsetConshdlrInit(
    SCIP_DECL_CONSINIT    ((*consinit))   /**< initialize constraint handler */
    );
 
-/** sets deinitialization method of constraint handler */
+/** sets deinitialization method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrExit(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1890,7 +2074,15 @@ SCIP_RETCODE SCIPsetConshdlrExit(
    SCIP_DECL_CONSEXIT    ((*consexit))       /**< deinitialize constraint handler */
    );
 
-/** sets solving process initialization method of constraint handler */
+/** sets solving process initialization method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1898,7 +2090,15 @@ SCIP_RETCODE SCIPsetConshdlrInitsol(
    SCIP_DECL_CONSINITSOL((*consinitsol))     /**< solving process initialization method of constraint handler */
    );
 
-/** sets solving process deinitialization method of constraint handler */
+/** sets solving process deinitialization method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1906,7 +2106,15 @@ SCIP_RETCODE SCIPsetConshdlrExitsol(
    SCIP_DECL_CONSEXITSOL ((*consexitsol))/**< solving process deinitialization method of constraint handler */
    );
 
-/** sets preprocessing initialization method of constraint handler */
+/** sets preprocessing initialization method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrInitpre(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1914,7 +2122,15 @@ SCIP_RETCODE SCIPsetConshdlrInitpre(
    SCIP_DECL_CONSINITPRE((*consinitpre))     /**< preprocessing initialization method of constraint handler */
    );
 
-/** sets preprocessing deinitialization method of constraint handler */
+/** sets preprocessing deinitialization method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrExitpre(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1922,7 +2138,15 @@ SCIP_RETCODE SCIPsetConshdlrExitpre(
    SCIP_DECL_CONSEXITPRE((*consexitpre))     /**< preprocessing deinitialization method of constraint handler */
    );
 
-/** sets presolving method of constraint handler */
+/** sets presolving method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrPresol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1932,7 +2156,15 @@ SCIP_RETCODE SCIPsetConshdlrPresol(
    SCIP_Bool             delaypresol         /**< should presolving method be delayed, if other presolvers found reductions? */
    );
 
-/** sets method of constraint handler to free specific constraint data */
+/** sets method of constraint handler to free specific constraint data
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrDelete(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1940,7 +2172,15 @@ SCIP_RETCODE SCIPsetConshdlrDelete(
    SCIP_DECL_CONSDELETE  ((*consdelete))     /**< free specific constraint data */
    );
 
-/** sets method of constraint handler to transform constraint data into data belonging to the transformed problem */
+/** sets method of constraint handler to transform constraint data into data belonging to the transformed problem
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrTrans(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1948,7 +2188,15 @@ SCIP_RETCODE SCIPsetConshdlrTrans(
    SCIP_DECL_CONSTRANS   ((*constrans))      /**< transform constraint data into data belonging to the transformed problem */
    );
 
-/** sets method of constraint handler to initialize LP with relaxations of "initial" constraints */
+/** sets method of constraint handler to initialize LP with relaxations of "initial" constraints
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrInitlp(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1956,7 +2204,15 @@ SCIP_RETCODE SCIPsetConshdlrInitlp(
    SCIP_DECL_CONSINITLP  ((*consinitlp))     /**< initialize LP with relaxations of "initial" constraints */
    );
 
-/** sets propagation conflict resolving method of constraint handler */
+/** sets propagation conflict resolving method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrResprop(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1964,7 +2220,15 @@ SCIP_RETCODE SCIPsetConshdlrResprop(
    SCIP_DECL_CONSRESPROP ((*consresprop))    /**< propagation conflict resolving method */
    );
 
-/** sets activation notification method of constraint handler */
+/** sets activation notification method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrActive(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1972,7 +2236,15 @@ SCIP_RETCODE SCIPsetConshdlrActive(
    SCIP_DECL_CONSACTIVE  ((*consactive))     /**< activation notification method */
    );
 
-/** sets deactivation notification method of constraint handler */
+/** sets deactivation notification method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrDeactive(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1980,7 +2252,15 @@ SCIP_RETCODE SCIPsetConshdlrDeactive(
    SCIP_DECL_CONSDEACTIVE((*consdeactive))   /**< deactivation notification method */
    );
 
-/** sets enabling notification method of constraint handler */
+/** sets enabling notification method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrEnable(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1988,7 +2268,15 @@ SCIP_RETCODE SCIPsetConshdlrEnable(
    SCIP_DECL_CONSENABLE  ((*consenable))     /**< enabling notification method */
    );
 
-/** sets disabling notification method of constraint handler */
+/** sets disabling notification method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrDisable(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1996,7 +2284,15 @@ SCIP_RETCODE SCIPsetConshdlrDisable(
    SCIP_DECL_CONSDISABLE ((*consdisable))    /**< disabling notification method */
    );
 
-/** sets variable deletion method of constraint handler */
+/** sets variable deletion method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrDelvars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2004,7 +2300,15 @@ SCIP_RETCODE SCIPsetConshdlrDelvars(
    SCIP_DECL_CONSDELVARS ((*consdelvars))    /**< variable deletion method */
    );
 
-/** sets constraint display method of constraint handler */
+/** sets constraint display method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrPrint(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2012,7 +2316,15 @@ SCIP_RETCODE SCIPsetConshdlrPrint(
    SCIP_DECL_CONSPRINT   ((*consprint))      /**< constraint display method */
    );
 
-/** sets constraint parsing method of constraint handler */
+/** sets constraint parsing method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrParse(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2020,7 +2332,15 @@ SCIP_RETCODE SCIPsetConshdlrParse(
    SCIP_DECL_CONSPARSE   ((*consparse))      /**< constraint parsing method */
    );
 
-/** sets constraint variable getter method of constraint handler */
+/** sets constraint variable getter method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrGetVars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2028,7 +2348,15 @@ SCIP_RETCODE SCIPsetConshdlrGetVars(
    SCIP_DECL_CONSGETVARS ((*consgetvars))    /**< constraint variable getter method */
    );
 
-/** sets constraint variable number getter method of constraint handler */
+/** sets constraint variable number getter method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 EXTERN
 SCIP_RETCODE SCIPsetConshdlrGetNVars(
    SCIP*                 scip,               /**< SCIP data structure */
