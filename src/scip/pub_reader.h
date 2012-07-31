@@ -33,44 +33,44 @@ extern "C" {
 #endif
 
 /** gets user data of reader */
-extern
+EXTERN
 SCIP_READERDATA* SCIPreaderGetData(
    SCIP_READER*          reader              /**< reader */
    );
 
 /** sets user data of reader; user has to free old data in advance! */
-extern
+EXTERN
 void SCIPreaderSetData(
    SCIP_READER*          reader,             /**< reader */
    SCIP_READERDATA*      readerdata          /**< new reader user data */
    );
 
 /** gets name of reader */
-extern
+EXTERN
 const char* SCIPreaderGetName(
    SCIP_READER*          reader              /**< reader */
    );
 
 /** gets description of reader */
-extern
+EXTERN
 const char* SCIPreaderGetDesc(
    SCIP_READER*          reader              /**< reader */
    );
 
 /** gets file extension of reader */
-extern
+EXTERN
 const char* SCIPreaderGetExtension(
    SCIP_READER*          reader              /**< reader */
    );
 
 /** return whether the reader can read files */
-extern
+EXTERN
 SCIP_Bool SCIPreaderCanRead(
    SCIP_READER*          reader              /**< reader */
    );
 
 /** return whether the reader can write files */
-extern
+EXTERN
 SCIP_Bool SCIPreaderCanWrite(
    SCIP_READER*          reader              /**< reader */
    );

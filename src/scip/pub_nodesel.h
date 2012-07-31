@@ -33,56 +33,56 @@ extern "C" {
 #endif
 
 /** gets name of node selector */
-extern
+EXTERN
 const char* SCIPnodeselGetName(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 /** gets description of node selector */
-extern
+EXTERN
 const char* SCIPnodeselGetDesc(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 /** gets priority of node selector in standard mode */
-extern
+EXTERN
 int SCIPnodeselGetStdPriority(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 /** gets priority of node selector in memory saving mode */
-extern
+EXTERN
 int SCIPnodeselGetMemsavePriority(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 /** gets user data of node selector */
-extern
+EXTERN
 SCIP_NODESELDATA* SCIPnodeselGetData(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 /** sets user data of node selector; user has to free old data in advance! */
-extern
+EXTERN
 void SCIPnodeselSetData(
    SCIP_NODESEL*         nodesel,            /**< node selector */
    SCIP_NODESELDATA*     nodeseldata         /**< new node selector user data */
    );
 
 /** is node selector initialized? */
-extern
+EXTERN
 SCIP_Bool SCIPnodeselIsInitialized(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 /** gets time in seconds used in this node selector for setting up for next stages */
-extern
+EXTERN
 SCIP_Real SCIPnodeselGetSetupTime(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 /** gets time in seconds used in this node selector */
-extern
+EXTERN
 SCIP_Real SCIPnodeselGetTime(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );

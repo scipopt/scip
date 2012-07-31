@@ -36,68 +36,68 @@ extern "C" {
 #endif
 
 /** gets user data of display column */
-extern
+EXTERN
 SCIP_DISPDATA* SCIPdispGetData(
    SCIP_DISP*            disp                /**< display column */
    );
 
 /** sets user data of display column; user has to free old data in advance! */
-extern
+EXTERN
 void SCIPdispSetData(
    SCIP_DISP*            disp,               /**< display column */
    SCIP_DISPDATA*        dispdata            /**< new display column user data */
    );
 
 /** gets name of display column */
-extern
+EXTERN
 const char* SCIPdispGetName(
    SCIP_DISP*            disp                /**< display column */
    );
 
 /** gets description of display column */
-extern
+EXTERN
 const char* SCIPdispGetDesc(
    SCIP_DISP*            disp                /**< display column */
    );
 
 /** gets head line of display column */
-extern
+EXTERN
 const char* SCIPdispGetHeader(
    SCIP_DISP*            disp                /**< display column */
    );
 
 /** gets width of display column */
-extern
+EXTERN
 int SCIPdispGetWidth(
    SCIP_DISP*            disp                /**< display column */
    );
 
 /** gets priority of display column */
-extern
+EXTERN
 int SCIPdispGetPriority(
    SCIP_DISP*            disp                /**< display column */
    );
 
 /** gets position of display column */
-extern
+EXTERN
 int SCIPdispGetPosition(
    SCIP_DISP*            disp                /**< display column */
    );
 
 /** gets status of display column */
-extern
+EXTERN
 SCIP_DISPSTATUS SCIPdispGetStatus(
    SCIP_DISP*            disp                /**< display column */
    );
 
 /** is display column initialized? */
-extern
+EXTERN
 SCIP_Bool SCIPdispIsInitialized(
    SCIP_DISP*            disp                /**< display column */
    );
 
 /** displays a long integer in decimal form fitting in a given width */
-extern
+EXTERN
 void SCIPdispLongint(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output stream */
@@ -106,7 +106,7 @@ void SCIPdispLongint(
    );
 
 /** displays an integer in decimal form fitting in a given width */
-extern
+EXTERN
 void SCIPdispInt(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output stream */
@@ -115,7 +115,7 @@ void SCIPdispInt(
    );
 
 /** displays a time value fitting in a given width */
-extern
+EXTERN
 void SCIPdispTime(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output stream */
