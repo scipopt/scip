@@ -1218,7 +1218,7 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called if \ref sourcescip is in one of the following stages:
+ *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -1229,15 +1229,15 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
- *  @pre This method can be called if \ref targetscip is in one of the following stages:
+ *  @pre This method can be called if targetscip is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_FREE
  *
- *  @post After calling this method \ref targetscip reaches one of the following stages depending on if and when the solution
+ *  @post After calling this method targetscip reaches one of the following stages depending on if and when the solution
  *        process was interrupted:
  *       - \ref SCIP_STAGE_PROBLEM
  *
- *  @note \ref sourcescip stage does not get changed
+ *  @note sourcescip stage does not get changed
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -1293,7 +1293,7 @@ SCIP_RETCODE SCIPcopyPlugins(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called if \ref sourcescip is in one of the following stages:
+ *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -1304,15 +1304,15 @@ SCIP_RETCODE SCIPcopyPlugins(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
- *  @pre This method can be called if \ref targetscip is in one of the following stages:
+ *  @pre This method can be called if targetscip is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_FREE
  *
- *  @post After calling this method \ref targetscip reaches one of the following stages depending on if and when the solution
+ *  @post After calling this method targetscip reaches one of the following stages depending on if and when the solution
  *        process was interrupted:
  *       - \ref SCIP_STAGE_PROBLEM
  *
- *  @note \ref sourcescip stage does not get changed
+ *  @note sourcescip stage does not get changed
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -1408,7 +1408,7 @@ SCIP_RETCODE SCIPcopyProb(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called if \ref sourcescip is in one of the following stages:
+ *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -1419,16 +1419,16 @@ SCIP_RETCODE SCIPcopyProb(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
- *  @pre This method can be called if \ref targetscip is in one of the following stages:
+ *  @pre This method can be called if targetscip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @note \ref targetscip stage does not get changed
+ *  @note targetscip stage does not get changed
  *
- *  @note \ref sourcescip stage does not get changed
+ *  @note sourcescip stage does not get changed
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -1663,7 +1663,7 @@ SCIP_RETCODE SCIPgetVarCopy(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called if \ref sourcescip is in one of the following stages:
+ *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -1674,12 +1674,12 @@ SCIP_RETCODE SCIPgetVarCopy(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
- *  @pre This method can be called if \ref targetscip is in one of the following stages:
+ *  @pre This method can be called if targetscip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *
- *  @note \ref sourcescip stage does not get changed
+ *  @note sourcescip stage does not get changed
  *
- *  @note \ref targetscip stage does not get changed
+ *  @note targetscip stage does not get changed
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -1827,7 +1827,7 @@ SCIP_RETCODE SCIPcopyVars(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called if \ref sourcescip is in one of the following stages:
+ *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -1838,7 +1838,7 @@ SCIP_RETCODE SCIPcopyVars(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
- *  @pre This method can be called if \ref targetscip is in one of the following stages:
+ *  @pre This method can be called if targetscip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -1848,9 +1848,9 @@ SCIP_RETCODE SCIPcopyVars(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  *
- *  @note \ref sourcescip stage does not get changed
+ *  @note sourcescip stage does not get changed
  *
- *  @note \ref targetscip stage does not get changed
+ *  @note targetscip stage does not get changed
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -1962,7 +1962,7 @@ SCIP_RETCODE SCIPgetConsCopy(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called if \ref sourcescip is in one of the following stages:
+ *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -1973,12 +1973,12 @@ SCIP_RETCODE SCIPgetConsCopy(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
- *  @pre This method can be called if \ref targetscip is in one of the following stages:
+ *  @pre This method can be called if targetscip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *
- *  @note \ref sourcescip stage does not get changed
+ *  @note sourcescip stage does not get changed
  *
- *  @note \ref targetscip stage does not get changed
+ *  @note targetscip stage does not get changed
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -2192,7 +2192,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called if \ref sourcescip is in one of the following stages:
+ *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -2203,7 +2203,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  *
- *  @pre This method can be called if \ref targetscip is in one of the following stages:
+ *  @pre This method can be called if targetscip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
@@ -2212,9 +2212,9 @@ SCIP_RETCODE SCIPconvertCutsToConss(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  *
- *  @note \ref sourcescip stage does not get changed
+ *  @note sourcescip stage does not get changed
  *
- *  @note \ref targetscip stage does not get changed
+ *  @note targetscip stage does not get changed
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -2336,7 +2336,7 @@ SCIP_RETCODE SCIPcopyCuts(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called if \ref sourcescip is in one of the following stages:
+ *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -2347,14 +2347,14 @@ SCIP_RETCODE SCIPcopyCuts(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
- *  @pre This method can be called if \ref targetscip is in one of the following stages:
+ *  @pre This method can be called if targetscip is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_FREE
  *
- *  @note \ref sourcescip stage does not get changed
+ *  @note sourcescip stage does not get changed
  *
- *  @note \ref targetscip stage does not get changed
+ *  @note targetscip stage does not get changed
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -2427,7 +2427,7 @@ int SCIPgetSubscipDepth(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called if \ref sourcescip is in one of the following stages:
+ *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -2438,13 +2438,13 @@ int SCIPgetSubscipDepth(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
- *  @pre This method can be called if \ref targetscip is in one of the following stages:
+ *  @pre This method can be called if targetscip is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_FREE
  *
- *  @note \ref sourcescip stage does not get changed
+ *  @note sourcescip stage does not get changed
  *
- *  @note \ref targetscip stage does not get changed
+ *  @note targetscip stage does not get changed
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
