@@ -1188,7 +1188,7 @@ void SCIPverbMessage(
  *
  *  @return message verbosity level of SCIP
  *
- *  @see \ref SCIP_Verblevel "SCIP_VERBLEVEL" for a list of all verbosity levels
+ *  @see \ref SCIP_VerbLevel "SCIP_VERBLEVEL" for a list of all verbosity levels
  */
 SCIP_VERBLEVEL SCIPgetVerbLevel(
    SCIP*                 scip                /**< SCIP data structure */
