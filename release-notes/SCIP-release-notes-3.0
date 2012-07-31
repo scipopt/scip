@@ -10,6 +10,8 @@ Features
 
 - new constraint handler superindicator for indicators on arbitrary constraints
 
+- new shell command "change minuc" to minimize the number of unsatisfied constraints
+
 - new propagators obbt and genvbounds for MINLP
 
 - new reader for OSiL files
