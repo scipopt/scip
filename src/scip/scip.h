@@ -978,10 +978,10 @@ SCIP_RETCODE SCIPcopy(
 /**@name Parameter Methods */
 /**@{ */
 
-/** creates a SCIP_Bool parameter, sets it to its default value, and adds it to the parameter set 
+/** creates a SCIP_Bool parameter, sets it to its default value, and adds it to the parameter set
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPaddBoolParam(
@@ -995,10 +995,10 @@ SCIP_RETCODE SCIPaddBoolParam(
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
-/** creates a int parameter, sets it to its default value, and adds it to the parameter set 
+/** creates a int parameter, sets it to its default value, and adds it to the parameter set
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPaddIntParam(
@@ -1014,10 +1014,10 @@ SCIP_RETCODE SCIPaddIntParam(
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
-/** creates a SCIP_Longint parameter, sets it to its default value, and adds it to the parameter set 
+/** creates a SCIP_Longint parameter, sets it to its default value, and adds it to the parameter set
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPaddLongintParam(
@@ -1033,10 +1033,10 @@ SCIP_RETCODE SCIPaddLongintParam(
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
-/** creates a SCIP_Real parameter, sets it to its default value, and adds it to the parameter set 
+/** creates a SCIP_Real parameter, sets it to its default value, and adds it to the parameter set
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPaddRealParam(
@@ -1052,10 +1052,10 @@ SCIP_RETCODE SCIPaddRealParam(
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
-/** creates a char parameter, sets it to its default value, and adds it to the parameter set 
+/** creates a char parameter, sets it to its default value, and adds it to the parameter set
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPaddCharParam(
@@ -1070,10 +1070,10 @@ SCIP_RETCODE SCIPaddCharParam(
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
-/** creates a string(char*) parameter, sets it to its default value, and adds it to the parameter set 
+/** creates a string(char*) parameter, sets it to its default value, and adds it to the parameter set
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPaddStringParam(
@@ -1087,7 +1087,7 @@ SCIP_RETCODE SCIPaddStringParam(
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
-/** gets the fixing status of an existing parameter 
+/** gets the fixing status of an existing parameter
  *
  *  @return TRUE if the parameter is fixed to a value, otherwise FALSE.
  */
@@ -1097,10 +1097,10 @@ SCIP_Bool SCIPisParamFixed(
    const char*           name                /**< name of the parameter */
    );
 
-/** gets the value of an existing SCIP_Bool parameter 
+/** gets the value of an existing SCIP_Bool parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPgetBoolParam(
@@ -1109,10 +1109,10 @@ SCIP_RETCODE SCIPgetBoolParam(
    SCIP_Bool*            value               /**< pointer to store the parameter */
    );
 
-/** gets the value of an existing int parameter 
+/** gets the value of an existing int parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPgetIntParam(
@@ -1121,10 +1121,10 @@ SCIP_RETCODE SCIPgetIntParam(
    int*                  value               /**< pointer to store the parameter */
    );
 
-/** gets the value of an existing SCIP_Longint parameter 
+/** gets the value of an existing SCIP_Longint parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPgetLongintParam(
@@ -1133,10 +1133,10 @@ SCIP_RETCODE SCIPgetLongintParam(
    SCIP_Longint*         value               /**< pointer to store the parameter */
    );
 
-/** gets the value of an existing SCIP_Real parameter 
+/** gets the value of an existing SCIP_Real parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPgetRealParam(
@@ -1145,10 +1145,10 @@ SCIP_RETCODE SCIPgetRealParam(
    SCIP_Real*            value               /**< pointer to store the parameter */
    );
 
-/** gets the value of an existing char parameter 
+/** gets the value of an existing char parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPgetCharParam(
@@ -1157,10 +1157,10 @@ SCIP_RETCODE SCIPgetCharParam(
    char*                 value               /**< pointer to store the parameter */
    );
 
-/** gets the value of an existing string(char*) parameter 
+/** gets the value of an existing string(char*) parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPgetStringParam(
@@ -1172,7 +1172,7 @@ SCIP_RETCODE SCIPgetStringParam(
 /** fixes the value of an existing parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @note: Be careful with this method! Some general settings, e.g., the time or node limit, should not be fixed because
  *         they have to be changed for sub-SCIPs.
@@ -1183,10 +1183,10 @@ SCIP_RETCODE SCIPfixParam(
    const char*           name                /**< name of the parameter */
    );
 
-/** unfixes the value of an existing parameter 
+/** unfixes the value of an existing parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPunfixParam(
@@ -1194,10 +1194,10 @@ SCIP_RETCODE SCIPunfixParam(
    const char*           name                /**< name of the parameter */
    );
 
-/** changes the value of an existing parameter 
+/** changes the value of an existing parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPsetParam(
@@ -1209,7 +1209,7 @@ SCIP_RETCODE SCIPsetParam(
 /** changes the value of an existing SCIP_Bool parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPchgBoolParam(
@@ -1218,10 +1218,10 @@ SCIP_RETCODE SCIPchgBoolParam(
    SCIP_Bool             value               /**< new value of the parameter */
    );
 
-/** changes the value of an existing SCIP_Bool parameter 
+/** changes the value of an existing SCIP_Bool parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPsetBoolParam(
@@ -1230,10 +1230,10 @@ SCIP_RETCODE SCIPsetBoolParam(
    SCIP_Bool             value               /**< new value of the parameter */
    );
 
-/** changes the value of an existing int parameter 
+/** changes the value of an existing int parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPchgIntParam(
@@ -1245,7 +1245,7 @@ SCIP_RETCODE SCIPchgIntParam(
 /** changes the value of an existing int parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPsetIntParam(
@@ -1254,10 +1254,10 @@ SCIP_RETCODE SCIPsetIntParam(
    int                   value               /**< new value of the parameter */
    );
 
-/** changes the value of an existing SCIP_Longint parameter 
+/** changes the value of an existing SCIP_Longint parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPchgLongintParam(
@@ -1269,7 +1269,7 @@ SCIP_RETCODE SCIPchgLongintParam(
 /** changes the value of an existing SCIP_Longint parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPsetLongintParam(
@@ -1281,7 +1281,7 @@ SCIP_RETCODE SCIPsetLongintParam(
 /** changes the value of an existing SCIP_Real parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPchgRealParam(
@@ -1290,10 +1290,10 @@ SCIP_RETCODE SCIPchgRealParam(
    SCIP_Real             value               /**< new value of the parameter */
    );
 
-/** changes the value of an existing SCIP_Real parameter 
+/** changes the value of an existing SCIP_Real parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPsetRealParam(
@@ -1302,10 +1302,10 @@ SCIP_RETCODE SCIPsetRealParam(
    SCIP_Real             value               /**< new value of the parameter */
    );
 
-/** changes the value of an existing char parameter 
+/** changes the value of an existing char parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPchgCharParam(
@@ -1314,10 +1314,10 @@ SCIP_RETCODE SCIPchgCharParam(
    char                  value               /**< new value of the parameter */
    );
 
-/** changes the value of an existing char parameter 
+/** changes the value of an existing char parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPsetCharParam(
@@ -1326,10 +1326,10 @@ SCIP_RETCODE SCIPsetCharParam(
    char                  value               /**< new value of the parameter */
    );
 
-/** changes the value of an existing string(char*) parameter 
+/** changes the value of an existing string(char*) parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPchgStringParam(
@@ -1338,10 +1338,10 @@ SCIP_RETCODE SCIPchgStringParam(
    const char*           value               /**< new value of the parameter */
    );
 
-/** changes the value of an existing string(char*) parameter 
+/** changes the value of an existing string(char*) parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPsetStringParam(
@@ -1350,10 +1350,10 @@ SCIP_RETCODE SCIPsetStringParam(
    const char*           value               /**< new value of the parameter */
    );
 
-/** reads parameters from a file 
+/** reads parameters from a file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPreadParams(
@@ -1364,7 +1364,7 @@ SCIP_RETCODE SCIPreadParams(
 /** writes all parameters in the parameter set to a file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPwriteParams(
@@ -1374,10 +1374,10 @@ SCIP_RETCODE SCIPwriteParams(
    SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    );
 
-/** resets a single parameter to its default value 
+/** resets a single parameter to its default value
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPresetParam(
@@ -1385,10 +1385,10 @@ SCIP_RETCODE SCIPresetParam(
    const char*           name                /**< name of the parameter */
    );
 
-/** resets all parameters to their default values 
+/** resets all parameters to their default values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPresetParams(
@@ -1406,7 +1406,7 @@ SCIP_RETCODE SCIPresetParams(
  *  - SCIP_PARAMEMPHASIS_OPTIMALITY to prove optimality fast
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPsetEmphasis(
@@ -1419,7 +1419,7 @@ SCIP_RETCODE SCIPsetEmphasis(
  *  auxiliary SCIP instances to avoid recursion
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPsetSubscipsOff(
@@ -1435,7 +1435,7 @@ SCIP_RETCODE SCIPsetSubscipsOff(
  *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPsetHeuristics(
@@ -1452,7 +1452,7 @@ SCIP_RETCODE SCIPsetHeuristics(
  *  - SCIP_PARAMSETTING_OFF which turn off all presolving
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPsetPresolving(
@@ -1469,7 +1469,7 @@ SCIP_RETCODE SCIPsetPresolving(
  *  - SCIP_PARAMSETTING_OFF which turn off all separating
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPsetSeparating(
@@ -1478,7 +1478,7 @@ SCIP_RETCODE SCIPsetSeparating(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** returns the array of all available SCIP parameters 
+/** returns the array of all available SCIP parameters
  *
  *  @return SCIP_PARAM* array, containing all SCIP parameters.
  */
@@ -1487,7 +1487,7 @@ SCIP_PARAM** SCIPgetParams(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the total number of all available SCIP parameters 
+/** returns the total number of all available SCIP parameters
  *
  *  @return number of all SCIP parameters.
  */

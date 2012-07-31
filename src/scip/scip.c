@@ -2572,10 +2572,10 @@ SCIP_RETCODE SCIPcopy(
  * parameter settings
  */
 
-/** creates a SCIP_Bool parameter, sets it to its default value, and adds it to the parameter set 
+/** creates a SCIP_Bool parameter, sets it to its default value, and adds it to the parameter set
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPaddBoolParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2596,10 +2596,10 @@ SCIP_RETCODE SCIPaddBoolParam(
    return SCIP_OKAY;
 }
 
-/** creates a int parameter, sets it to its default value, and adds it to the parameter set 
+/** creates a int parameter, sets it to its default value, and adds it to the parameter set
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPaddIntParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2622,10 +2622,10 @@ SCIP_RETCODE SCIPaddIntParam(
    return SCIP_OKAY;
 }
 
-/** creates a SCIP_Longint parameter, sets it to its default value, and adds it to the parameter set 
+/** creates a SCIP_Longint parameter, sets it to its default value, and adds it to the parameter set
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPaddLongintParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2648,10 +2648,10 @@ SCIP_RETCODE SCIPaddLongintParam(
    return SCIP_OKAY;
 }
 
-/** creates a SCIP_Real parameter, sets it to its default value, and adds it to the parameter set 
+/** creates a SCIP_Real parameter, sets it to its default value, and adds it to the parameter set
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPaddRealParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2674,10 +2674,10 @@ SCIP_RETCODE SCIPaddRealParam(
    return SCIP_OKAY;
 }
 
-/** creates a char parameter, sets it to its default value, and adds it to the parameter set 
+/** creates a char parameter, sets it to its default value, and adds it to the parameter set
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPaddCharParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2699,10 +2699,10 @@ SCIP_RETCODE SCIPaddCharParam(
    return SCIP_OKAY;
 }
 
-/** creates a string(char*) parameter, sets it to its default value, and adds it to the parameter set 
+/** creates a string(char*) parameter, sets it to its default value, and adds it to the parameter set
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPaddStringParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2723,7 +2723,7 @@ SCIP_RETCODE SCIPaddStringParam(
    return SCIP_OKAY;
 }
 
-/** gets the fixing status of an existing parameter 
+/** gets the fixing status of an existing parameter
  *
  *  @return TRUE if the parameter is fixed to a value, otherwise FALSE.
  */
@@ -2737,10 +2737,10 @@ SCIP_Bool SCIPisParamFixed(
    return SCIPsetIsParamFixed(scip->set, name);
 }
 
-/** gets the value of an existing SCIP_Bool parameter 
+/** gets the value of an existing SCIP_Bool parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPgetBoolParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2755,10 +2755,10 @@ SCIP_RETCODE SCIPgetBoolParam(
    return SCIP_OKAY;
 }
 
-/** gets the value of an existing int parameter 
+/** gets the value of an existing int parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPgetIntParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2773,10 +2773,10 @@ SCIP_RETCODE SCIPgetIntParam(
    return SCIP_OKAY;
 }
 
-/** gets the value of an existing SCIP_Longint parameter 
+/** gets the value of an existing SCIP_Longint parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPgetLongintParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2791,10 +2791,10 @@ SCIP_RETCODE SCIPgetLongintParam(
    return SCIP_OKAY;
 }
 
-/** gets the value of an existing SCIP_Real parameter 
+/** gets the value of an existing SCIP_Real parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPgetRealParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2809,10 +2809,10 @@ SCIP_RETCODE SCIPgetRealParam(
    return SCIP_OKAY;
 }
 
-/** gets the value of an existing char parameter 
+/** gets the value of an existing char parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPgetCharParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2827,10 +2827,10 @@ SCIP_RETCODE SCIPgetCharParam(
    return SCIP_OKAY;
 }
 
-/** gets the value of an existing string(char*) parameter 
+/** gets the value of an existing string(char*) parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPgetStringParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2848,7 +2848,7 @@ SCIP_RETCODE SCIPgetStringParam(
 /** fixes the value of an existing parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @note: Be careful with this method! Some general settings, e.g., the time or node limit, should not be fixed because
  *         they have to be changed for sub-SCIPs.
@@ -2865,10 +2865,10 @@ SCIP_RETCODE SCIPfixParam(
    return SCIP_OKAY;
 }
 
-/** unfixes the value of an existing parameter 
+/** unfixes the value of an existing parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPunfixParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2882,10 +2882,10 @@ SCIP_RETCODE SCIPunfixParam(
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing parameter 
+/** changes the value of an existing parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPsetParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2903,7 +2903,7 @@ SCIP_RETCODE SCIPsetParam(
 /** changes the value of an existing SCIP_Bool parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPchgBoolParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2925,10 +2925,10 @@ SCIP_RETCODE SCIPchgBoolParam(
    return retcode;
 }
 
-/** changes the value of an existing SCIP_Bool parameter 
+/** changes the value of an existing SCIP_Bool parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPsetBoolParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2943,10 +2943,10 @@ SCIP_RETCODE SCIPsetBoolParam(
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing int parameter 
+/** changes the value of an existing int parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPchgIntParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2971,7 +2971,7 @@ SCIP_RETCODE SCIPchgIntParam(
 /** changes the value of an existing int parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPsetIntParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2986,10 +2986,10 @@ SCIP_RETCODE SCIPsetIntParam(
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing SCIP_Longint parameter 
+/** changes the value of an existing SCIP_Longint parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPchgLongintParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3014,7 +3014,7 @@ SCIP_RETCODE SCIPchgLongintParam(
 /** changes the value of an existing SCIP_Longint parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPsetLongintParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3032,7 +3032,7 @@ SCIP_RETCODE SCIPsetLongintParam(
 /** changes the value of an existing SCIP_Real parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPchgRealParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3054,10 +3054,10 @@ SCIP_RETCODE SCIPchgRealParam(
    return retcode;
 }
 
-/** changes the value of an existing SCIP_Real parameter 
+/** changes the value of an existing SCIP_Real parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPsetRealParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3072,10 +3072,10 @@ SCIP_RETCODE SCIPsetRealParam(
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing char parameter 
+/** changes the value of an existing char parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPchgCharParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3097,10 +3097,10 @@ SCIP_RETCODE SCIPchgCharParam(
    return retcode;
 }
 
-/** changes the value of an existing char parameter 
+/** changes the value of an existing char parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPsetCharParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3115,10 +3115,10 @@ SCIP_RETCODE SCIPsetCharParam(
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing string(char*) parameter 
+/** changes the value of an existing string(char*) parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPchgStringParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3140,10 +3140,10 @@ SCIP_RETCODE SCIPchgStringParam(
    return retcode;
 }
 
-/** changes the value of an existing string(char*) parameter 
+/** changes the value of an existing string(char*) parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPsetStringParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3158,10 +3158,10 @@ SCIP_RETCODE SCIPsetStringParam(
    return SCIP_OKAY;
 }
 
-/** reads parameters from a file 
+/** reads parameters from a file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPreadParams(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3178,7 +3178,7 @@ SCIP_RETCODE SCIPreadParams(
 /** writes all parameters in the parameter set to a file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPwriteParams(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3194,10 +3194,10 @@ SCIP_RETCODE SCIPwriteParams(
    return SCIP_OKAY;
 }
 
-/** resets a single parameter to its default value 
+/** resets a single parameter to its default value
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPresetParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3211,10 +3211,10 @@ SCIP_RETCODE SCIPresetParam(
    return SCIP_OKAY;
 }
 
-/** resets all parameters to their default values 
+/** resets all parameters to their default values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPresetParams(
    SCIP*                 scip                /**< SCIP data structure */
@@ -3238,7 +3238,7 @@ SCIP_RETCODE SCIPresetParams(
  *  - SCIP_PARAMEMPHASIS_OPTIMALITY to prove optimality fast
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPsetEmphasis(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3257,7 +3257,7 @@ SCIP_RETCODE SCIPsetEmphasis(
  *  auxiliary SCIP instances to avoid recursion
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPsetSubscipsOff(
    SCIP*                 scip,               /**< (auxiliary) SCIP data structure */
@@ -3279,7 +3279,7 @@ SCIP_RETCODE SCIPsetSubscipsOff(
  *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPsetHeuristics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3304,7 +3304,7 @@ SCIP_RETCODE SCIPsetHeuristics(
  *  - SCIP_PARAMSETTING_OFF which turn off all presolving
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPsetPresolving(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3329,7 +3329,7 @@ SCIP_RETCODE SCIPsetPresolving(
  *  - SCIP_PARAMSETTING_OFF which turn off all separating
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes. 
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPsetSeparating(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3346,7 +3346,7 @@ SCIP_RETCODE SCIPsetSeparating(
    return SCIP_OKAY;
 }
 
-/** returns the array of all available SCIP parameters 
+/** returns the array of all available SCIP parameters
  *
  *  @return SCIP_PARAM* array, containing all SCIP parameters.
  */
@@ -3359,7 +3359,7 @@ SCIP_PARAM** SCIPgetParams(
    return SCIPsetGetParams(scip->set);
 }
 
-/** returns the total number of all available SCIP parameters 
+/** returns the total number of all available SCIP parameters
  *
  *  @return number of all SCIP parameters.
  */
