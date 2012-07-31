@@ -42,6 +42,16 @@
 #endif
 #endif
 
+/*
+ * Define the marco EXTERN depending if the OS is Windows or not
+ */
+#if defined(_WIN32) || defined(_WIN64)
+#define EXTERN __declspec(dllexport)
+#else
+#define EXTERN extern
+#endif
+
+
 #include "scip/type_retcode.h"
 #include "scip/pub_message.h"
 
@@ -184,17 +194,6 @@ extern "C" {
 #define SCIP_HASHSIZE_VBC            131101 /**< size of hash map for node -> nodenum mapping used for VBC output */
 
 /*#define BMS_NOBLOCKMEM*/
-
-
-
-/*
- * Define the marco EXTERN depending if the OS is Windows or not
- */
-#if defined(_WIN32) || defined(_WIN64)
-#define EXTERN __declspec(dllexport)
-#else
-#define EXTERN extern
-#endif
 
 
 /*
