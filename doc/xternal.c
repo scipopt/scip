@@ -158,6 +158,28 @@
  *  </tr>
  *  </table>
  *
+ *  @section BRANCHANDCUT Branch-and-cut
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>LOP</b></a>
+ *  </td>
+ *  <td>
+ *  An example for implementing a constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/examples/TSP/index.shtml"><b>TSP</b></a>
+ *  </td>
+ *  <td>
+ *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
+ *  demonstrate the usage of SCIP as a branch-and-cut-framework for solving traveling salesman problem instances.
+ *  </td>
+ *  </tr>
+ *  </table>
+ *
  *  @section CALLABLELIBRARY Callable library
  *
  *  <table>
@@ -201,27 +223,10 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>LOP</b></a>
- *  </td>
- *  <td>
- *  An example for implementing a constraint handler.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
  *  <a href="http://scip.zib.de/doc/examples/Scheduler/index.shtml"><b>Scheduler</b></a>
  *  </td>
  *  <td>
- *  An examples containing three readers and one primal heuristics for scheduling problems.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/examples/TSP/index.shtml"><b>TSP</b></a>
- *  </td>
- *  <td>
- *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
- *  demonstrate the usage of SCIP as a branch-and-cut-framework for solving traveling salesman problem instances.
+ *  An examples containing three readers and one primal heuristic for scheduling problems.
  *  </td>
  *  </tr>
  *  </table>
