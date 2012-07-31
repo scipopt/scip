@@ -32627,7 +32627,10 @@ SCIP_Real SCIPgetPresolvingTime(
  * numeric values and comparisons
  */
 
-/** returns value treated as zero */
+/** returns value treated as zero
+ *
+ *  @return value treated as zero
+ */
 SCIP_Real SCIPepsilon(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -32638,7 +32641,10 @@ SCIP_Real SCIPepsilon(
    return SCIPsetEpsilon(scip->set);
 }
 
-/** returns value treated as zero for sums of floating point values */
+/** returns value treated as zero for sums of floating point values
+ *
+ *  @return value treated as zero for sums of floating point values
+ */
 SCIP_Real SCIPsumepsilon(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -32649,7 +32655,10 @@ SCIP_Real SCIPsumepsilon(
    return SCIPsetSumepsilon(scip->set);
 }
 
-/** returns feasibility tolerance for constraints */
+/** returns feasibility tolerance for constraints
+ *
+ *  @return feasibility tolerance for constraints
+ */
 SCIP_Real SCIPfeastol(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -32660,7 +32669,10 @@ SCIP_Real SCIPfeastol(
    return SCIPsetFeastol(scip->set);
 }
 
-/** returns primal feasibility tolerance of LP solver */
+/** returns primal feasibility tolerance of LP solver
+ *
+ *  @return primal feasibility tolerance of LP solver
+ */
 SCIP_Real SCIPlpfeastol(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -32671,7 +32683,10 @@ SCIP_Real SCIPlpfeastol(
    return SCIPsetLpfeastol(scip->set);
 }
 
-/** returns feasibility tolerance for reduced costs */
+/** returns feasibility tolerance for reduced costs
+ *
+ *  @return feasibility tolerance for reduced costs
+ */
 SCIP_Real SCIPdualfeastol(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -32682,7 +32697,10 @@ SCIP_Real SCIPdualfeastol(
    return SCIPsetDualfeastol(scip->set);
 }
 
-/** returns convergence tolerance used in barrier algorithm */
+/** returns convergence tolerance used in barrier algorithm
+ *
+ *  @return convergence tolerance used in barrier algorithm
+ */
 SCIP_Real SCIPbarrierconvtol(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -32693,7 +32711,10 @@ SCIP_Real SCIPbarrierconvtol(
    return SCIPsetBarrierconvtol(scip->set);
 }
 
-/** return the cutoff bound delta */
+/** return the cutoff bound delta
+ *
+ *  @return cutoff bound data
+ */
 SCIP_Real SCIPcutoffbounddelta(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -32704,7 +32725,11 @@ SCIP_Real SCIPcutoffbounddelta(
    return SCIPsetCutoffbounddelta(scip->set);
 }
 
-/** sets the feasibility tolerance for constraints */
+/** sets the feasibility tolerance for constraints
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPchgFeastol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             feastol             /**< new feasibility tolerance for constraints */
@@ -32718,7 +32743,11 @@ SCIP_RETCODE SCIPchgFeastol(
    return SCIP_OKAY;
 }
 
-/** sets the primal feasibility tolerance of LP solver */
+/** sets the primal feasibility tolerance of LP solver
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPchgLpfeastol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             lpfeastol,          /**< new primal feasibility tolerance of LP solver */
@@ -32737,7 +32766,11 @@ SCIP_RETCODE SCIPchgLpfeastol(
    return SCIP_OKAY;
 }
 
-/** sets the feasibility tolerance for reduced costs */
+/** sets the feasibility tolerance for reduced costs
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPchgDualfeastol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             dualfeastol         /**< new feasibility tolerance for reduced costs */
@@ -32755,7 +32788,11 @@ SCIP_RETCODE SCIPchgDualfeastol(
    return SCIP_OKAY;
 }
 
-/** sets the convergence tolerance used in barrier algorithm */
+/** sets the convergence tolerance used in barrier algorithm
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPchgBarrierconvtol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */

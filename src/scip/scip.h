@@ -16256,56 +16256,85 @@ SCIP_Real SCIPgetPresolvingTime(
 /**@{ */
 
 
-/** returns value treated as zero */
+/** returns value treated as zero
+ *
+ *  @return value treated as zero
+ */
 EXTERN
 SCIP_Real SCIPepsilon(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns value treated as zero for sums of floating point values */
+/** returns value treated as zero for sums of floating point values
+ *
+ *  @return value treated as zero for sums of floating point values
+ */
 EXTERN
 SCIP_Real SCIPsumepsilon(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns feasibility tolerance for constraints */
+/** returns feasibility tolerance for constraints
+ *
+ *  @return feasibility tolerance for constraints
+ */
 EXTERN
 SCIP_Real SCIPfeastol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns primal feasibility tolerance of LP solver */
+/** returns primal feasibility tolerance of LP solver
+ *
+ *  @return primal feasibility tolerance of LP solver
+ */
 EXTERN
 SCIP_Real SCIPlpfeastol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns feasibility tolerance for reduced costs */
+/** returns feasibility tolerance for reduced costs
+ *
+ *  @return feasibility tolerance for reduced costs
+ */
 EXTERN
 SCIP_Real SCIPdualfeastol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns convergence tolerance used in barrier algorithm */
+/** returns convergence tolerance used in barrier algorithm
+ *
+ *  @return convergence tolerance used in barrier algorithm
+ */
 EXTERN
 SCIP_Real SCIPbarrierconvtol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** return the cutoff bound delta */
+/** return the cutoff bound delta
+ *
+ *  @return cutoff bound data
+ */
 EXTERN
 SCIP_Real SCIPcutoffbounddelta(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** sets the feasibility tolerance for constraints */
+/** sets the feasibility tolerance for constraints
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPchgFeastol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             feastol             /**< new feasibility tolerance for constraints */
    );
 
-/** sets the primal feasibility tolerance of LP solver */
+/** sets the primal feasibility tolerance of LP solver
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPchgLpfeastol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -16313,14 +16342,22 @@ SCIP_RETCODE SCIPchgLpfeastol(
    SCIP_Bool             printnewvalue       /**< should "numerics/lpfeastol = ..." be printed? */
    );
 
-/** sets the feasibility tolerance for reduced costs */
+/** sets the feasibility tolerance for reduced costs
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPchgDualfeastol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             dualfeastol         /**< new feasibility tolerance for reduced costs */
    );
 
-/** sets the convergence tolerance used in barrier algorithm */
+/** sets the convergence tolerance used in barrier algorithm
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPchgBarrierconvtol(
    SCIP*                 scip,               /**< SCIP data structure */
