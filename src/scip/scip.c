@@ -9891,6 +9891,7 @@ SCIP_RETCODE SCIPdelConsLocal(
 }
 
 /** gets estimate of best primal solution w.r.t. original problem contained in current subtree
+ *
  *  @return estimate of best primal solution w.r.t. original problem contained in current subtree
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
@@ -9909,6 +9910,7 @@ SCIP_Real SCIPgetLocalOrigEstimate(
 }
 
 /** gets estimate of best primal solution w.r.t. transformed problem contained in current subtree
+ *
  *  @return estimate of best primal solution w.r.t. transformed problem contained in current subtree
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
@@ -9928,6 +9930,7 @@ SCIP_Real SCIPgetLocalTransEstimate(
 }
 
 /** gets dual bound of current node
+ *
  *  @return dual bound of current node
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
@@ -9946,6 +9949,7 @@ SCIP_Real SCIPgetLocalDualbound(
 }
 
 /** gets lower bound of current node in transformed problem
+ *
  *  @return lower bound  of current node in transformed problem
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
@@ -9965,6 +9969,7 @@ SCIP_Real SCIPgetLocalLowerbound(
 }
 
 /** gets dual bound of given node
+ *
  *  @return dual bound of a given node
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
@@ -9981,6 +9986,7 @@ SCIP_Real SCIPgetNodeDualbound(
 }
 
 /** gets lower bound of given node in transformed problem
+ *
  *  @return lower bound  of given node in transformed problem
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
