@@ -32630,7 +32630,10 @@ void SCIPprintReal(
  * memory management
  */
 
-/** returns block memory to use at the current time */
+/** returns block memory to use at the current time
+ *
+ *  @return the block memory to use at the current time.
+ */
 BMS_BLKMEM* SCIPblkmem(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -32664,7 +32667,10 @@ BMS_BLKMEM* SCIPblkmem(
    }  /*lint !e788*/
 }
 
-/** returns the total number of bytes used in block memory */
+/** returns the total number of bytes used in block memory
+ *
+ *  @return the total number of bytes used in block memory.
+ */
 SCIP_Longint SCIPgetMemUsed(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -32674,7 +32680,10 @@ SCIP_Longint SCIPgetMemUsed(
    return SCIPmemGetUsed(scip->mem);
 }
 
-/** returns the estimated number of bytes used by external software, e.g., the LP solver */
+/** returns the estimated number of bytes used by external software, e.g., the LP solver
+ *
+ *  @return the estimated number of bytes used by external software, e.g., the LP solver.
+ */
 SCIP_Longint SCIPgetMemExternEstim(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -32684,7 +32693,10 @@ SCIP_Longint SCIPgetMemExternEstim(
    return SCIPsetGetMemExternEstim(scip->set);
 }
 
-/** calculate memory size for dynamically allocated arrays */
+/** calculate memory size for dynamically allocated arrays
+ *
+ *  @return the memory size for dynamically allocated arrays.
+ */
 int SCIPcalcMemGrowSize(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   num                 /**< minimum number of entries to store */
@@ -32697,6 +32709,9 @@ int SCIPcalcMemGrowSize(
 
 /** extends a dynamically allocated block memory array to be able to store at least the given number of elements;
  *  use SCIPensureBlockMemoryArray() define to call this method!
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPensureBlockMemoryArray_call(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -32723,7 +32738,11 @@ SCIP_RETCODE SCIPensureBlockMemoryArray_call(
    return SCIP_OKAY;
 }
 
-/** gets a memory buffer with at least the given size */
+/** gets a memory buffer with at least the given size
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPallocBufferSize(
    SCIP*                 scip,               /**< SCIP data structure */
    void**                ptr,                /**< pointer to store the buffer */
@@ -32739,7 +32758,11 @@ SCIP_RETCODE SCIPallocBufferSize(
    return SCIP_OKAY;
 }
 
-/** allocates a memory buffer with at least the given size and copies the given memory into the buffer */
+/** allocates a memory buffer with at least the given size and copies the given memory into the buffer
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPduplicateBufferSize(
    SCIP*                 scip,               /**< SCIP data structure */
    void**                ptr,                /**< pointer to store the buffer */
@@ -32756,7 +32779,11 @@ SCIP_RETCODE SCIPduplicateBufferSize(
    return SCIP_OKAY;
 }
 
-/** reallocates a memory buffer to at least the given size */
+/** reallocates a memory buffer to at least the given size
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPreallocBufferSize(
    SCIP*                 scip,               /**< SCIP data structure */
    void**                ptr,                /**< pointer to the buffer */

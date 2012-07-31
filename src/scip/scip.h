@@ -16727,25 +16727,37 @@ void SCIPprintReal(
 #define SCIPfreeBufferArrayNull(scip,ptr)       { if( *(ptr) != NULL ) SCIPfreeBufferArray(scip, ptr); }
 
 
-/** returns block memory to use at the current time */
+/** returns block memory to use at the current time
+ *
+ *  @return the block memory to use at the current time.
+ */
 EXTERN
 BMS_BLKMEM* SCIPblkmem(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the total number of bytes used in block memory */
+/** returns the total number of bytes used in block memory
+ *
+ *  @return the total number of bytes used in block memory.
+ */
 EXTERN
 SCIP_Longint SCIPgetMemUsed(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the estimated number of bytes used by external software, e.g., the LP solver */
+/** returns the estimated number of bytes used by external software, e.g., the LP solver
+ *
+ *  @return the estimated number of bytes used by external software, e.g., the LP solver.
+ */
 EXTERN
 SCIP_Longint SCIPgetMemExternEstim(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** calculate memory size for dynamically allocated arrays */
+/** calculate memory size for dynamically allocated arrays
+ *
+ *  @return the memory size for dynamically allocated arrays.
+ */
 EXTERN
 int SCIPcalcMemGrowSize(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -16754,6 +16766,9 @@ int SCIPcalcMemGrowSize(
 
 /** extends a dynamically allocated block memory array to be able to store at least the given number of elements;
  *  use SCIPensureBlockMemoryArray() define to call this method!
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 EXTERN
 SCIP_RETCODE SCIPensureBlockMemoryArray_call(
@@ -16764,7 +16779,11 @@ SCIP_RETCODE SCIPensureBlockMemoryArray_call(
    int                   minsize             /**< required minimal array size */
    );
 
-/** gets a memory buffer with at least the given size */
+/** gets a memory buffer with at least the given size
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPallocBufferSize(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -16772,7 +16791,11 @@ SCIP_RETCODE SCIPallocBufferSize(
    int                   size                /**< required size in bytes of buffer */
    );
 
-/** allocates a memory buffer with at least the given size and copies the given memory into the buffer */
+/** allocates a memory buffer with at least the given size and copies the given memory into the buffer
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPduplicateBufferSize(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -16781,7 +16804,11 @@ SCIP_RETCODE SCIPduplicateBufferSize(
    int                   size                /**< required size in bytes of buffer */
    );
 
-/** reallocates a memory buffer to at least the given size */
+/** reallocates a memory buffer to at least the given size
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 EXTERN
 SCIP_RETCODE SCIPreallocBufferSize(
    SCIP*                 scip,               /**< SCIP data structure */
