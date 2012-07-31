@@ -470,7 +470,7 @@ SCIP_RETCODE SCIPwriteCcg(
          w = SCIPgetWeightsKnapsack(scip, cons);
          SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
          for( v = 0; v < nconsvars; ++v )
-            consvals[v] = w[v];
+            consvals[v] = (SCIP_Real)w[v];
 
          if( nconsvars > 0 ) 
          { 

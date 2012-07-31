@@ -229,7 +229,7 @@ SCIP_RETCODE tcliquegraphAddNode(
       SCIP_CALL( tcliquegraphCreate(scip, tcliquegraph) );
    }
    assert(*tcliquegraph != NULL);
-   assert((*tcliquegraph)->nnodes < 2*SCIPgetNBinVars(scip) - 1);
+   assert((*tcliquegraph)->nnodes < 2*SCIPgetNBinVars(scip));
 
    /* if the value is FALSE, use the negated variable for the node */
    if( !value )

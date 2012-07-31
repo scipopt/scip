@@ -28,7 +28,7 @@
  *
  * Separation:
  * - can be done using binary start time model, see Pritskers, Watters and Wolfe
- * - or by just separating relatively weak cuts on the start time variables
+ * - or by just separating relatively weak cuts on the integer start time variables
  *
  * Propagation:
  * - time tabling, Klein & Scholl (1999)
@@ -93,6 +93,8 @@
 /* propagation */
 #define DEFAULT_CORETIMES               TRUE /**< should core-times be propagated (time tabling)? */
 #define DEFAULT_OVERLOAD                TRUE /**< should edge finding be used to detect an overload? */
+#define DEFAULT_EDGEFINDING             TRUE /**< should edge-finding be executed? */
+#define DEFAULT_USEADJUSTEDJOBS        FALSE /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
 
 /* presolving */
 #define DEFAULT_DUALPRESOLVE            TRUE /**< should dual presolving be applied? */
@@ -176,6 +178,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             cutsasconss;        /**< should the cumulative constraint create cuts as knapsack constraints? */
    SCIP_Bool             coretimes;          /**< should core-times be propagated (time tabling)? */
    SCIP_Bool             overload;           /**< should edge finding be used to detect an overload? */
+   SCIP_Bool             edgefinding;        /**< should edge-finding be executed? */
+   SCIP_Bool             useadjustedjobs;    /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
    SCIP_Bool             localcuts;          /**< should cuts be added only locally? */
    SCIP_Bool             usecovercuts;       /**< should covering cuts be added? */
    SCIP_Bool             sepaold;            /**< shall old sepa algo be applied? */
@@ -216,8 +220,7 @@ struct SCIP_ConshdlrData
 enum Proprule
 {
    PROPRULE_1_CORETIMES          = 1,        /**< core-time propagator */
-   PROPRULE_2_EDGEFINDING        = 2,        /**< edge-finder */
-   PROPRULE_3_ENERGETICREASONING = 3         /**< energetic reasoning */
+   PROPRULE_2_EDGEFINDING        = 2         /**< edge-finder */
 };
 typedef enum Proprule PROPRULE;
 
@@ -278,7 +281,6 @@ int inferInfoGetData1(
    return inferinfo.val.asbits.data1;
 }
 
-#if 0
 /** returns data field two of the inference information */
 static
 int inferInfoGetData2(
@@ -287,7 +289,6 @@ int inferInfoGetData2(
 {
    return inferinfo.val.asbits.data2;
 }
-#endif
 
 
 /** constructs an inference information out of a propagation rule, an earliest start and a latest completion time */
@@ -345,7 +346,7 @@ SCIP_RETCODE computeImpliedEst(
    SCIP_HASHMAP*         addedvars,          /**< hash map containig the variable which are already added */
    int*                  est                 /**< pointer to store the implied earliest start time */
    )
-{
+{  /*lint --e{715}*/
 #if 0
    SCIP_VAR** vbdvars;
    SCIP_VAR* vbdvar;
@@ -415,7 +416,7 @@ SCIP_RETCODE computeImpliedLct(
    SCIP_HASHMAP*         addedvars,          /**< hash map containig the variable which are already added */
    int*                  lct                 /**< pointer to store the implied latest completion time */
    )
-{
+{  /*lint --e{715}*/
 #if 0
    SCIP_VAR** vbdvars;
    SCIP_VAR* vbdvar;
@@ -2141,6 +2142,79 @@ SCIP_RETCODE resolvePropagationCoretimes(
    return SCIP_OKAY;
 }
 
+/** repropagation of Edge finding algorithm simplified version from Petr Vilim only a small subset is reported such that
+ *  energy in total and for bound change is enough
+ */
+static
+SCIP_RETCODE resolvePropagationEdgeFinding(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_VAR*             infervar,           /**< variable whose bound change is to be explained */
+   INFERINFO             inferinfo,          /**< inference info containing position of correct bdchgids */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Bool*            explanation         /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
+   )
+{
+   int est;
+   int lct;
+   int j;
+
+   assert(scip != NULL);
+   assert(nvars > 0);
+   assert(inferInfoGetProprule(inferinfo) == PROPRULE_2_EDGEFINDING);
+
+   SCIPdebugMessage("repropagate edge-finding with short reasons for variable <%s>\n", SCIPvarGetName(infervar));
+
+   est = inferInfoGetData1(inferinfo);
+   lct = inferInfoGetData2(inferinfo);
+   assert(est < lct);
+
+   /* collect the energies of all variables in [est_omega, lct_omega] */
+   for( j = 0; j < nvars; ++j )
+   {
+      SCIP_VAR* var;
+      SCIP_Bool left;
+      SCIP_Bool right;
+      int lb;
+      int ub;
+
+      var = vars[j];
+      assert(var != NULL);
+
+      if( var == infervar )
+         continue;
+
+      lb = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
+      ub = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+
+      /* in case the earliest start time is equal to hmin we have to also consider the jobs which run in that region
+       * since we use adjusted jobs during the propagation
+       */
+      left = (est == hmin && lb + durations[j] > hmin) || lb >= est;
+
+      /* in case the latest completion time is equal to hmin we have to also consider the jobs which run in that region
+       * since we use adjusted jobs during the propagation
+       */
+      right = (lct == hmax && ub < hmax) || ub + durations[j] <= lct;
+
+      /* store all jobs running in [est_omega; lct_omega] */
+      if( left && right  )
+      {
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[j], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[j], bdchgidx) );
+
+         if( explanation != NULL )
+            explanation[j] = TRUE;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** resolve propagation w.r.t. the cumulative condition */
 static
 SCIP_RETCODE respropCumulativeCondition(
@@ -2150,6 +2224,8 @@ SCIP_RETCODE respropCumulativeCondition(
    int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
    INFERINFO             inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
@@ -2159,33 +2235,28 @@ SCIP_RETCODE respropCumulativeCondition(
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
-   int inferdemand;
-   int inferduration;
-   int inferpos;
-
-   *result = SCIP_DIDNOTFIND;
-
-   /* get the position of the inferred variable in the vars array */
-   inferpos = inferInfoGetData1(inferinfo);
-   if( inferpos >= nvars || vars[inferpos] != infervar )
-   {
-      /* find inference variable in constraint */
-      for( inferpos = 0; inferpos < nvars && vars[inferpos] != infervar; ++inferpos )
-      {}
-   }
-   assert(inferpos < nvars);
-   assert(vars[inferpos] == infervar);
-
-   inferdemand = demands[inferpos];
-   inferduration = durations[inferpos];
-
-   SCIPdebugMessage("variable <%s>: duration %d, demand %d\n", SCIPvarGetName(infervar), inferduration, inferdemand);
-
    switch( inferInfoGetProprule(inferinfo) )
    {
    case PROPRULE_1_CORETIMES:
    {
+      int inferdemand;
+      int inferduration;
+      int inferpos;
       int inferpeak;
+
+      /* get the position of the inferred variable in the vars array */
+      inferpos = inferInfoGetData1(inferinfo);
+      if( inferpos >= nvars || vars[inferpos] != infervar )
+      {
+         /* find inference variable in constraint */
+         for( inferpos = 0; inferpos < nvars && vars[inferpos] != infervar; ++inferpos )
+         {}
+      }
+      assert(inferpos < nvars);
+      assert(vars[inferpos] == infervar);
+
+      inferdemand = demands[inferpos];
+      inferduration = durations[inferpos];
 
       if( boundtype == SCIP_BOUNDTYPE_UPPER )
       {
@@ -2222,17 +2293,25 @@ SCIP_RETCODE respropCumulativeCondition(
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity,
             infervar, inferdemand, inferpeak, bdchgidx, usebdwidening, explanation) );
 
-      (*result) = SCIP_SUCCESS;
-
       break;
    }
 
    case PROPRULE_2_EDGEFINDING:
-      break;
+      if( boundtype == SCIP_BOUNDTYPE_LOWER )
+      {
+         SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
+      }
 
-   case PROPRULE_3_ENERGETICREASONING:
+      SCIP_CALL( resolvePropagationEdgeFinding(scip, nvars, vars, durations, hmin, hmax,
+            infervar, inferinfo, bdchgidx, explanation) );
       break;
    }
+
+   (*result) = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
@@ -3038,37 +3117,25 @@ SCIP_RETCODE coretimesUpdateLb(
 static
 SCIP_RETCODE coretimesUpdateUb(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of start time variables (activities) */
-   SCIP_VAR**            vars,               /**< array of start time variables */
-   int*                  durations,          /**< array of durations */
-   int*                  demands,            /**< array of demands */
+   SCIP_VAR*             var,                /**< start time variable to propagate */
+   int                   duration,           /**< duration of the job */
+   int                   demand,             /**< demand of the job */
    int                   capacity,           /**< cumulative capacity */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_PROFILE*         profile,            /**< resource profile */
-   int                   pos,                /**< position of the variable to propagate */
    int*                  nchgbds             /**< pointer to store the number of bound changes */
    )
 {
-   SCIP_VAR* var;
    int ntimepoints;
-   int duration;
-   int demand;
    int newub;
    int peak;
+   int pos;
    int est;
    int lst;
    int lct;
 
-   assert(vars != NULL);
-   assert(pos >= 0 && pos < nvars);
-
-   var = vars[pos];
    assert(var != NULL);
-
-   duration = durations[pos];
    assert(duration > 0);
-
-   demand = demands[pos];
    assert(demand > 0);
 
    est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
@@ -3333,6 +3400,7 @@ SCIP_RETCODE propagateCoretimes(
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), duration, demand, starts[j], ends[j]);
 
             SCIP_CALL( SCIPprofileDeleteCore(profile, starts[j], ends[j], demand) );
+            ncores--;
          }
 
          /* first try to update the earliest start time */
@@ -3343,8 +3411,8 @@ SCIP_RETCODE propagateCoretimes(
             break;
 
          /* second try to update the latest start time */
-         SCIP_CALL( coretimesUpdateUb(scip, nvars, vars, durations, demands, capacity, cons,
-               profile, j, nchgbds) );
+         SCIP_CALL( coretimesUpdateUb(scip, vars[j], durations[j], demands[j], capacity, cons,
+               profile, nchgbds) );
 
          if( *cutoff )
             break;
@@ -3382,6 +3450,7 @@ SCIP_RETCODE propagateCoretimes(
             }
 
             cores[j] = TRUE;
+            ncores++;
          }
       }
    }
@@ -3400,13 +3469,62 @@ SCIP_RETCODE propagateCoretimes(
 }
 
 
-struct SCIP_Envelop
+/** node data structure for the binary tree used for edgefinding (with overload checking) */
+struct SCIP_NodeData
 {
+   SCIP_VAR*             var;                /**< start time variable of the job if the node data belongs to a leaf, otherwise NULL */
    SCIP_Real             key;                /**< key which is to insert the corresponding search node */
-   int                   envelop;            /**< envelop of ?????????????? */
-   int                   energy;             /**< energy of the job */
+   int                   est;                /**< earliest start time if the node data belongs to a leaf */
+   int                   lct;                /**< latest completion time if the node data belongs to a leaf */
+   int                   demand;             /**< demand of the job if the node data belongs to a leaf */
+   int                   duration;           /**< duration of the job if the node data belongs to a leaf */
+   int                   leftadjust;         /**< left adjustments of the duration w.r.t. hmin */
+   int                   rightadjust;        /**< right adjustments of the duration w.r.t. hmax */
+   int                   enveloptheta;       /**< the maximal energy of a subset of jobs part of the theta set */
+   int                   energytheta;        /**< energy of the subset of the jobs which are part of theta set */
+   int                   energylambda;
+   int                   enveloplambda;
+   int                   idx;                /**< index of the start time variable in the (global) variable array */
+   SCIP_Bool             intheta;            /**< belongs the node to the theta set (otherwise to the lambda set) */
 };
-typedef struct SCIP_Envelop SCIP_ENVELOP;
+typedef struct SCIP_NodeData SCIP_NODEDATA;
+
+/** creates a node data structure */
+static
+SCIP_RETCODE createNodedata(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODEDATA**       nodedata            /**< pointer to store the create node data */
+   )
+{
+   SCIP_CALL( SCIPallocBuffer(scip, nodedata) );
+   (*nodedata)->var = NULL;
+   (*nodedata)->key = SCIP_INVALID;
+   (*nodedata)->est = INT_MIN;
+   (*nodedata)->lct = INT_MAX;
+   (*nodedata)->duration = 0;
+   (*nodedata)->demand = 0;
+   (*nodedata)->enveloptheta = -1;
+   (*nodedata)->energytheta = 0;
+   (*nodedata)->enveloplambda = -1;
+   (*nodedata)->energylambda = -1;
+   (*nodedata)->idx = -1;
+   (*nodedata)->intheta = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** frees a  node data structure */
+static
+void freeNodedata(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODEDATA**       nodedata            /**< pointer to store node data which should be freed */
+   )
+{
+   if( *nodedata != NULL )
+   {
+      SCIPfreeBuffer(scip, nodedata);
+   }
+}
 
 /** update node data structure strating form the given node along the path to the root node */
 static
@@ -3417,48 +3535,236 @@ SCIP_RETCODE updateEnvelop(
 {
    SCIP_BTNODE* left;
    SCIP_BTNODE* right;
-   SCIP_ENVELOP* nodedata;
-   SCIP_ENVELOP* leftdata;
-   SCIP_ENVELOP* rightdata;
+   SCIP_NODEDATA* nodedata;
+   SCIP_NODEDATA* leftdata;
+   SCIP_NODEDATA* rightdata;
 
-   node = SCIPbtnodeGetParent(node);
+   SCIPdebugMessage("update envelop starting from node <%p>\n", (void*)node);
+
+   if( SCIPbtnodeIsLeaf(node) )
+      node = SCIPbtnodeGetParent(node);
 
    while( node != NULL )
    {
       /* get node data */
-      nodedata = (SCIP_ENVELOP*)SCIPbtnodeGetData(node);
+      nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
       assert(nodedata != NULL);
 
       /* collect node data from left node */
       left = SCIPbtnodeGetLeftchild(node);
       assert(left != NULL);
-      leftdata = (SCIP_ENVELOP*)SCIPbtnodeGetData(left);
+      leftdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(left);
       assert(leftdata != NULL);
 
       /* collect node data from right node */
       right = SCIPbtnodeGetRightchild(node);
       assert(right != NULL);
-      rightdata = (SCIP_ENVELOP*)SCIPbtnodeGetData(right);
+      rightdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(right);
       assert(rightdata != NULL);
 
       /* update envelop and energy */
-      nodedata->envelop = MAX(leftdata->envelop + rightdata->energy, rightdata->envelop);
-      nodedata->energy = leftdata->energy + rightdata->energy;
+      if( leftdata->enveloptheta >= 0 )
+      {
+         assert(rightdata->energytheta != -1);
+         nodedata->enveloptheta = MAX(leftdata->enveloptheta + rightdata->energytheta, rightdata->enveloptheta);
+      }
+      else
+         nodedata->enveloptheta = rightdata->enveloptheta;
+
+      assert(leftdata->energytheta != -1);
+      assert(rightdata->energytheta != -1);
+      nodedata->energytheta = leftdata->energytheta + rightdata->energytheta;
+
+      if( leftdata->enveloplambda >= 0 )
+      {
+         assert(rightdata->energytheta != -1);
+         nodedata->enveloplambda = MAX(leftdata->enveloplambda + rightdata->energytheta, rightdata->enveloplambda);
+      }
+      else
+         nodedata->enveloplambda = rightdata->enveloplambda;
+
+      if( leftdata->enveloptheta >= 0 && rightdata->energylambda >= 0 )
+         nodedata->enveloplambda = MAX(nodedata->enveloplambda, leftdata->enveloptheta + rightdata->energylambda);
+
+      SCIPdebugMessage("node <%p> lambda envelop %d\n", (void*)node, nodedata->enveloplambda);
+
+      if( leftdata->energylambda >= 0 && rightdata->energylambda >= 0 )
+      {
+         assert(rightdata->energytheta != -1);
+         assert(leftdata->energytheta != -1);
+         nodedata->energylambda = MAX(leftdata->energylambda + rightdata->energytheta, leftdata->energytheta + rightdata->energylambda);
+      }
+      else if( rightdata->energylambda >= 0 )
+      {
+         assert(leftdata->energytheta != -1);
+         nodedata->energylambda = leftdata->energytheta + rightdata->energylambda;
+      }
+      else if( leftdata->energylambda >= 0 )
+      {
+         assert(rightdata->energytheta != -1);
+         nodedata->energylambda = leftdata->energylambda + rightdata->energytheta;
+      }
+      else
+         nodedata->energylambda = -1;
 
       /* go to parent */
       node = SCIPbtnodeGetParent(node);
    }
 
+   SCIPdebugMessage("updating done\n");
+
    return SCIP_OKAY;
 }
 
-/** insert mmethod for theta tree */
+/** updates the key of the first parent on the trace which comes from left */
 static
-SCIP_RETCODE thetatreeInsert(
+void updateKeyOnTrace(
+   SCIP_BTNODE*          node,               /**< node to start the trace */
+   SCIP_Real             key                 /**< update search key */
+   )
+{
+   assert(node != NULL);
+
+   while( !SCIPbtnodeIsRoot(node) )
+   {
+      SCIP_BTNODE* parent;
+
+      parent = SCIPbtnodeGetParent(node);
+      assert(parent != NULL);
+
+      if( SCIPbtnodeIsLeftchild(node) )
+      {
+         SCIP_NODEDATA* nodedata;
+
+         nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(parent);
+         assert(nodedata != NULL);
+
+         nodedata->key = key;
+         return;
+      }
+
+      node = parent;
+   }
+}
+
+
+/** deletes the given node and updates all envelops */
+static
+SCIP_RETCODE deleteLambdaLeaf(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BT*              tree,               /**< binary tree */
+   SCIP_BTNODE*          node                /**< node to be deleted */
+   )
+{
+   SCIP_BTNODE* parent;
+   SCIP_BTNODE* grandparent;
+   SCIP_BTNODE* sibling;
+
+   assert(scip != NULL);
+   assert(tree != NULL);
+   assert(node != NULL);
+
+   assert(SCIPbtnodeIsLeaf(node));
+   assert(!SCIPbtnodeIsRoot(node));
+
+   SCIPdebugMessage("delete node <%p>\n", (void*)node);
+
+   parent = SCIPbtnodeGetParent(node);
+   assert(parent != NULL);
+   if( SCIPbtnodeIsLeftchild(node) )
+   {
+      sibling = SCIPbtnodeGetRightchild(parent);
+      SCIPbtnodeSetRightchild(parent, NULL);
+   }
+   else
+   {
+      sibling = SCIPbtnodeGetLeftchild(parent);
+      SCIPbtnodeSetLeftchild(parent, NULL);
+   }
+   assert(sibling != NULL);
+
+   grandparent = SCIPbtnodeGetParent(parent);
+
+   if( grandparent != NULL )
+   {
+      /* reset parent of sibling */
+      SCIPbtnodeSetParent(sibling, grandparent);
+
+      /* reset child of grandparent to sibling */
+      if( SCIPbtnodeIsLeftchild(parent) )
+      {
+         SCIPbtnodeSetLeftchild(grandparent, sibling);
+      }
+      else
+      {
+         SCIP_NODEDATA* nodedata;
+
+         assert(SCIPbtnodeIsRightchild(parent));
+         SCIPbtnodeSetRightchild(grandparent, sibling);
+
+         nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(sibling);
+
+         updateKeyOnTrace(grandparent, nodedata->key);
+      }
+
+      SCIP_CALL( updateEnvelop(scip, grandparent) );
+   }
+   else
+   {
+      SCIPbtnodeSetParent(sibling, NULL);
+
+      SCIPbtSetRoot(tree, sibling);
+   }
+
+
+   SCIPbtnodeFree(tree, &parent);
+
+   return SCIP_OKAY;
+}
+
+/** moves a node form the theta set into the lambda set and updates the envelops */
+static
+SCIP_RETCODE moveNodeToLambda(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BT*              tree,               /**< binary tree */
+   SCIP_BTNODE*          node                /**< node to move into the lambda set */
+   )
+{
+   SCIP_NODEDATA* nodedata;
+
+   assert(scip != NULL);
+   assert(tree != NULL);
+   assert(node != NULL);
+
+   nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
+   assert(nodedata != NULL);
+   assert(nodedata->intheta);
+
+   /* move the contributions form the theta set into the lambda set */
+   assert(nodedata->enveloptheta != -1);
+   assert(nodedata->energytheta != -1);
+   assert(nodedata->enveloplambda == -1);
+   assert(nodedata->energylambda == -1);
+   nodedata->enveloplambda = nodedata->enveloptheta;
+   nodedata->energylambda = nodedata->energytheta;
+
+   nodedata->enveloptheta = -1;
+   nodedata->energytheta = 0;
+   nodedata->intheta = FALSE;
+
+   /* update the energy and envelop values on trace */
+   SCIP_CALL( updateEnvelop(scip, node) );
+
+   return SCIP_OKAY;
+}
+
+/** inserts a node into the theta set and update the envelops */
+static
+SCIP_RETCODE insertThetanode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BT*              tree,               /**< binary tree */
    SCIP_BTNODE*          node,               /**< node to insert */
-   SCIP_ENVELOP**        nodedatas,          /**< array of node datas */
+   SCIP_NODEDATA**       nodedatas,          /**< array of node datas */
    int*                  nnodedatas          /**< pointer to number of node datas */
    )
 {
@@ -3469,9 +3775,9 @@ SCIP_RETCODE thetatreeInsert(
    }
    else
    {
-      SCIP_ENVELOP* newnodedata;
-      SCIP_ENVELOP* leafdata;
-      SCIP_ENVELOP* nodedata;
+      SCIP_NODEDATA* newnodedata;
+      SCIP_NODEDATA* leafdata;
+      SCIP_NODEDATA* nodedata;
       SCIP_BTNODE* leaf;
       SCIP_BTNODE* newnode;
       SCIP_BTNODE* parent;
@@ -3479,11 +3785,12 @@ SCIP_RETCODE thetatreeInsert(
       leaf = SCIPbtGetRoot(tree);
       assert(leaf != NULL);
 
-      leafdata = (SCIP_ENVELOP*)SCIPbtnodeGetData(leaf);
+      leafdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(leaf);
       assert(leafdata != NULL);
 
-      nodedata = (SCIP_ENVELOP*)SCIPbtnodeGetData(node);
+      nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
       assert(nodedata != NULL);
+      assert(nodedata->intheta);
 
       /* find the position to insert the node */
       while( !SCIPbtnodeIsLeaf(leaf) )
@@ -3493,7 +3800,7 @@ SCIP_RETCODE thetatreeInsert(
          else
             leaf = SCIPbtnodeGetRightchild(leaf);
 
-         leafdata = (SCIP_ENVELOP*)SCIPbtnodeGetData(leaf);
+         leafdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(leaf);
          assert(leafdata != NULL);
       }
 
@@ -3501,10 +3808,7 @@ SCIP_RETCODE thetatreeInsert(
       assert(leaf != node);
 
       /* create node data */
-      SCIP_CALL( SCIPallocBuffer(scip, &newnodedata) );
-      newnodedata->key = SCIP_INVALID;
-      newnodedata->envelop = 0;
-      newnodedata->energy = 0;
+      SCIP_CALL( createNodedata(scip, &newnodedata) );
 
       /* create a new node */
       SCIP_CALL( SCIPbtnodeCreate(tree, &newnode, newnodedata) );
@@ -3552,6 +3856,700 @@ SCIP_RETCODE thetatreeInsert(
       SCIPbtnodeSetParent(node, newnode);
    }
 
+   /* update envelop */
+   SCIP_CALL( updateEnvelop(scip, node) );
+
+   return SCIP_OKAY;
+}
+
+/** returns the leaf responsible for the lambda energy */
+static
+SCIP_BTNODE* findResponsibleLambdaLeafTraceEnergy(
+   SCIP_BTNODE*          node                /**< node which defines the subtree beases on the lambda energy */
+   )
+{
+   SCIP_BTNODE* left;
+   SCIP_BTNODE* right;
+   SCIP_NODEDATA* nodedata;
+   SCIP_NODEDATA* leftdata;
+   SCIP_NODEDATA* rightdata;
+
+   assert(node != NULL);
+
+   nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
+   assert(nodedata != NULL);
+
+   /* check if the node is the (responsible) leaf */
+   if( SCIPbtnodeIsLeaf(node) )
+   {
+      assert(!nodedata->intheta);
+      return node;
+   }
+
+   left = SCIPbtnodeGetLeftchild(node);
+   assert(left != NULL);
+
+   leftdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(left);
+   assert(leftdata != NULL);
+
+   right = SCIPbtnodeGetRightchild(node);
+   assert(right != NULL);
+
+   rightdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(right);
+   assert(rightdata != NULL);
+
+   assert(nodedata->energylambda != -1);
+   assert(rightdata->energytheta != -1);
+
+   if( leftdata->energylambda >= 0 && nodedata->energylambda == leftdata->energylambda + rightdata->energytheta )
+      return findResponsibleLambdaLeafTraceEnergy(left);
+
+   assert(leftdata->energytheta != -1);
+   assert(rightdata->energylambda != -1);
+   assert(nodedata->energylambda == leftdata->energytheta + rightdata->energylambda);
+
+   return findResponsibleLambdaLeafTraceEnergy(right);
+}
+
+/** returns the leaf responsible for the lambda envelop */
+static
+SCIP_BTNODE* findResponsibleLambdaLeafTraceEnvelop(
+   SCIP_BTNODE*          node                /**< node which defines the subtree beases on the lambda envelop */
+   )
+{
+   SCIP_BTNODE* left;
+   SCIP_BTNODE* right;
+   SCIP_NODEDATA* nodedata;
+   SCIP_NODEDATA* leftdata;
+   SCIP_NODEDATA* rightdata;
+
+   assert(node != NULL);
+
+   nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
+   assert(nodedata != NULL);
+
+   /* check if the node is the (responsible) leaf */
+   if( SCIPbtnodeIsLeaf(node) )
+   {
+      assert(!nodedata->intheta);
+      return node;
+   }
+
+   left = SCIPbtnodeGetLeftchild(node);
+   assert(left != NULL);
+
+   leftdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(left);
+   assert(leftdata != NULL);
+
+   right = SCIPbtnodeGetRightchild(node);
+   assert(right != NULL);
+
+   rightdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(right);
+   assert(rightdata != NULL);
+
+   assert(nodedata->enveloplambda != -1);
+   assert(rightdata->energytheta != -1);
+
+   /* check if the left or right child is the one defining the envelop for the lambda set */
+   if( leftdata->enveloplambda >= 0 && nodedata->enveloplambda == leftdata->enveloplambda + rightdata->energytheta )
+      return findResponsibleLambdaLeafTraceEnvelop(left);
+   else if( leftdata->enveloptheta >= 0 && rightdata->energylambda >= 0
+      && nodedata->enveloplambda == leftdata->enveloptheta + rightdata->energylambda )
+      return findResponsibleLambdaLeafTraceEnergy(right);
+
+   assert(rightdata->enveloplambda != -1);
+   assert(nodedata->enveloplambda == rightdata->enveloplambda);
+
+   return findResponsibleLambdaLeafTraceEnvelop(right);
+}
+
+
+/** reports all elements from set theta to generate a conflicting set */
+static
+void collectThetaSubtree(
+   SCIP_BTNODE*          node,               /**< node within a theta subtree */
+   SCIP_BTNODE**         omegaset,           /**< array to store the collected jobs */
+   int*                  nelements,          /**< pointer to store the number of elements in omegaset */
+   int*                  est,                /**< pointer to store the earliest start time of the omega set */
+   int*                  lct,                /**< pointer to store the latest start time of the omega set */
+   int*                  energy              /**< pointer to store the energy of the omega set */
+   )
+{
+   SCIP_NODEDATA* nodedata;
+
+   nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
+   assert(nodedata != NULL);
+
+   if( !SCIPbtnodeIsLeaf(node) )
+   {
+      collectThetaSubtree(SCIPbtnodeGetLeftchild(node), omegaset, nelements, est, lct, energy);
+      collectThetaSubtree(SCIPbtnodeGetRightchild(node), omegaset, nelements, est, lct, energy);
+   }
+   else if( nodedata->intheta )
+   {
+      assert(nodedata->var != NULL);
+      SCIPdebugMessage("add variable <%s> as elements %d to omegaset\n", SCIPvarGetName(nodedata->var), *nelements);
+      omegaset[*nelements] = node;
+      (*est) = MIN(*est, nodedata->est);
+      (*lct) = MAX(*lct, nodedata->lct);
+      (*energy) += (nodedata->duration - nodedata->leftadjust - nodedata->rightadjust) * nodedata->demand;
+      (*nelements)++;
+   }
+}
+
+
+/** collect the jobs (omega set) which are contribute to theta envelop from the theta set */
+static
+void traceThetaEnvelop(
+   SCIP_BTNODE*          node,               /**< node whose theta envelop needs to be backtracked */
+   SCIP_BTNODE**         omegaset,           /**< array to store the collected jobs */
+   int*                  nelements,          /**< pointer to store the number of elements in omegaset */
+   int*                  est,                /**< pointer to store the earliest start time of the omega set */
+   int*                  lct,                /**< pointer to store the latest start time of the omega set */
+   int*                  energy              /**< pointer to store the energy of the omega set */
+   )
+{
+   assert(node != NULL);
+
+   if( SCIPbtnodeIsLeaf(node) )
+   {
+      collectThetaSubtree(node, omegaset, nelements, est, lct, energy);
+   }
+   else
+   {
+      SCIP_BTNODE* left;
+      SCIP_BTNODE* right;
+      SCIP_NODEDATA* nodedata;
+      SCIP_NODEDATA* leftdata;
+      SCIP_NODEDATA* rightdata;
+
+      nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
+      assert(nodedata != NULL);
+
+
+      left = SCIPbtnodeGetLeftchild(node);
+      assert(left != NULL);
+
+      leftdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(left);
+      assert(leftdata != NULL);
+
+      right = SCIPbtnodeGetRightchild(node);
+      assert(right != NULL);
+
+      rightdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(right);
+      assert(rightdata != NULL);
+
+      nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
+      assert(nodedata != NULL);
+
+      assert(nodedata->enveloptheta != -1);
+      assert(rightdata->energytheta != -1);
+
+      if( leftdata->enveloptheta >= 0 && nodedata->enveloptheta == leftdata->enveloptheta + rightdata->energytheta )
+      {
+         traceThetaEnvelop(left, omegaset, nelements, est, lct, energy);
+         collectThetaSubtree(right, omegaset, nelements, est, lct, energy);
+      }
+      else
+      {
+         assert(rightdata->enveloptheta != -1);
+         assert(nodedata->enveloptheta == rightdata->enveloptheta);
+         traceThetaEnvelop(right, omegaset, nelements, est, lct, energy);
+      }
+   }
+}
+
+/** collect the jobs (omega set) which are contribute to lambda envelop from the theta set */
+static
+void traceLambdaEnergy(
+   SCIP_BTNODE*          node,               /**< node whose lambda envelop needs to be backtracked */
+   SCIP_BTNODE**         omegaset,           /**< array to store the collected jobs */
+   int*                  nelements,          /**< pointer to store the number of elements in omega set */
+   int*                  est,                /**< pointer to store the earliest start time of the omega set */
+   int*                  lct,                /**< pointer to store the latest start time of the omega set */
+   int*                  energy              /**< pointer to store the energy of the omega set */
+   )
+{
+   SCIP_BTNODE* left;
+   SCIP_BTNODE* right;
+   SCIP_NODEDATA* nodedata;
+   SCIP_NODEDATA* leftdata;
+   SCIP_NODEDATA* rightdata;
+
+   assert(node != NULL);
+
+   nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
+   assert(nodedata != NULL);
+
+   /* check if the node is a leaf */
+   if( SCIPbtnodeIsLeaf(node) )
+      return;
+
+   left = SCIPbtnodeGetLeftchild(node);
+   assert(left != NULL);
+
+   leftdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(left);
+   assert(leftdata != NULL);
+
+   right = SCIPbtnodeGetRightchild(node);
+   assert(right != NULL);
+
+   rightdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(right);
+   assert(rightdata != NULL);
+
+   assert(nodedata->energylambda != -1);
+   assert(rightdata->energytheta != -1);
+
+   if( leftdata->energylambda >= 0 && nodedata->energylambda == leftdata->energylambda + rightdata->energytheta )
+   {
+      traceLambdaEnergy(left, omegaset, nelements, est, lct, energy);
+      collectThetaSubtree(right, omegaset, nelements, est, lct, energy);
+   }
+   else
+   {
+      assert(leftdata->energytheta != -1);
+      assert(rightdata->energylambda != -1);
+      assert(nodedata->energylambda == leftdata->energytheta + rightdata->energylambda);
+
+      collectThetaSubtree(left, omegaset, nelements, est, lct, energy);
+      traceLambdaEnergy(right, omegaset, nelements, est, lct, energy);
+   }
+}
+
+/** collect the jobs (omega set) which are contribute to lambda envelop from the theta set */
+static
+void traceLambdaEnvelop(
+   SCIP_BTNODE*          node,               /**< node whose lambda envelop needs to be backtracked */
+   SCIP_BTNODE**         omegaset,           /**< array to store the collected jobs */
+   int*                  nelements,          /**< pointer to store the number of elements in omega set */
+   int*                  est,                /**< pointer to store the earliest start time of the omega set */
+   int*                  lct,                /**< pointer to store the latest start time of the omega set */
+   int*                  energy              /**< pointer to store the energy of the omega set */
+   )
+{
+   SCIP_BTNODE* left;
+   SCIP_BTNODE* right;
+   SCIP_NODEDATA* nodedata;
+   SCIP_NODEDATA* leftdata;
+   SCIP_NODEDATA* rightdata;
+
+   assert(node != NULL);
+
+   nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
+   assert(nodedata != NULL);
+
+   /* check if the node is a leaf */
+   if( SCIPbtnodeIsLeaf(node) )
+   {
+      assert(!nodedata->intheta);
+      return;
+   }
+
+   left = SCIPbtnodeGetLeftchild(node);
+   assert(left != NULL);
+
+   leftdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(left);
+   assert(leftdata != NULL);
+
+   right = SCIPbtnodeGetRightchild(node);
+   assert(right != NULL);
+
+   rightdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(right);
+   assert(rightdata != NULL);
+
+   assert(nodedata->enveloplambda != -1);
+   assert(rightdata->energytheta != -1);
+
+   if( leftdata->enveloplambda >= 0 && nodedata->enveloplambda == leftdata->enveloplambda + rightdata->energytheta )
+   {
+      traceLambdaEnvelop(left, omegaset, nelements, est, lct, energy);
+      collectThetaSubtree(right, omegaset, nelements, est, lct, energy);
+   }
+   else
+   {
+      if( leftdata->enveloptheta >= 0 && rightdata->energylambda >= 0
+         && nodedata->enveloplambda == leftdata->enveloptheta + rightdata->energylambda )
+      {
+         traceThetaEnvelop(left, omegaset, nelements, est, lct, energy);
+         traceLambdaEnergy(right, omegaset, nelements, est, lct, energy);
+      }
+      else
+      {
+         assert(rightdata->enveloplambda != -1);
+         assert(nodedata->enveloplambda == rightdata->enveloplambda);
+         traceLambdaEnvelop(right, omegaset, nelements, est, lct, energy);
+      }
+   }
+}
+
+/** compute the energy contribution by job which corresponds to the given leaf */
+static
+int computeEnergyContribution(
+   SCIP_BTNODE*          node                /**< leaf */
+   )
+{
+   SCIP_NODEDATA* nodedata;
+   int duration;
+
+   nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
+   assert(nodedata != NULL);
+   assert(nodedata->var != NULL);
+
+   duration = nodedata->duration - nodedata->leftadjust - nodedata->rightadjust;
+   assert(duration > 0);
+
+   SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
+      SCIPvarGetName(nodedata->var), SCIPvarGetLbLocal(nodedata->var), SCIPvarGetUbLocal(nodedata->var),
+      SCIPvarGetLbGlobal(nodedata->var), SCIPvarGetUbGlobal(nodedata->var), duration, nodedata->demand);
+
+   /* return energy which is contributed by the start time variable */
+   return nodedata->demand * duration;
+}
+
+/** comparison method for two node datas w.r.t. the earliest start time */
+static
+SCIP_DECL_SORTPTRCOMP(compNodeEst)
+{
+   int est1;
+   int est2;
+
+   est1 = ((SCIP_NODEDATA*)SCIPbtnodeGetData((SCIP_BTNODE*)elem1))->est;
+   est2 = ((SCIP_NODEDATA*)SCIPbtnodeGetData((SCIP_BTNODE*)elem2))->est;
+
+   return (est1 - est2);
+}
+
+/** comparison method for two node datas w.r.t. the latest completion time */
+static
+SCIP_DECL_SORTPTRCOMP(compNodedataLct)
+{
+   int lct1;
+   int lct2;
+
+   lct1 = ((SCIP_NODEDATA*)elem1)->lct;
+   lct2 = ((SCIP_NODEDATA*)elem2)->lct;
+
+   return (lct1 - lct2);
+}
+
+
+/** an overload was detected; initialized conflict analysis, add an initial reason
+ *
+ *  @note the conflict analysis is not performend, only the initialized SCIP_Bool pointer is set to TRUE
+ */
+static
+SCIP_RETCODE analyzeConflictOverload(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BTNODE**         leaves,             /**< responsible leaves for the overload */
+   int                   capacity,           /**< cumulative capacity */
+   int                   nleaves,            /**< number of responsible leaves */
+   int                   est,                /**< earliest start time of the ...... */
+   int                   lct,                /**< latest completly time of the .... */
+   int                   reportedenergy,     /**< energy which already reported */
+   SCIP_Bool             propest,            /**< should the earliest start times be propagated, otherwise the latest completion times */
+   int                   shift,              /**< shift applied to all jobs before adding them to the tree */
+   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
+   SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation         /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
+   )
+{
+   int energy;
+   int j;
+
+   /* do nothing if conflict analysis is not applicable */
+   if( !SCIPisConflictAnalysisApplicable(scip) )
+      return SCIP_OKAY;
+
+   /* compute energy of initial time window */
+   energy = (lct - est) * capacity;
+
+   /* sort the start time variables which were added to search tree w.r.t. earliest start time */
+   SCIPsortDownPtr((void**)leaves, compNodeEst, nleaves);
+
+   /* collect the energy of the responsible leaves until the cumulative energy is large enough an overload */
+   for( j = 0; j < nleaves && reportedenergy <= energy; ++j )
+   {
+      SCIP_NODEDATA* nodedata;
+
+      nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(leaves[j]);
+      assert(nodedata != NULL);
+
+      reportedenergy += computeEnergyContribution(leaves[j]);
+
+      /* adjust energy if the earliest start time decrease */
+      if( nodedata->est < est )
+      {
+         energy = (lct - est) * capacity;
+         est = nodedata->est;
+      }
+   }
+   assert(reportedenergy > energy);
+
+   /* initialize conflict analysis */
+   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+   /* report the variables and relax their bounds to final time interval [est,lct) which was been detected to be
+    * overloaded
+    */
+   for( j = nleaves-1; j >= 0; --j )
+   {
+      SCIP_NODEDATA* nodedata;
+
+      nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(leaves[j]);
+      assert(nodedata != NULL);
+      assert(nodedata->var != NULL);
+
+      /* check if bound widening should be used */
+      if( usebdwidening )
+      {
+         if( propest )
+         {
+            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, nodedata->var, NULL, (SCIP_Real)(shift + est  - nodedata->leftadjust)) );
+            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, nodedata->var, NULL, (SCIP_Real)(shift + lct  - nodedata->duration + nodedata->rightadjust)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, nodedata->var, NULL, (SCIP_Real)(shift - est - nodedata->leftadjust)) );
+            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, nodedata->var, NULL, (SCIP_Real)(shift - lct - nodedata->duration + nodedata->rightadjust)) );
+         }
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddConflictLb(scip, nodedata->var, NULL) );
+         SCIP_CALL( SCIPaddConflictUb(scip, nodedata->var, NULL) );
+      }
+
+      if( explanation != NULL )
+         explanation[nodedata->idx] = TRUE;
+   }
+
+   (*initialized) = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** computes a new latest starting time of the job in 'respleaf' due to the energy consumption and stores the
+ *  responsible interval bounds in *est_omega and *lct_omega
+ */
+static
+int computeEstOmegaset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   duration,           /**< duration of the job to move */
+   int                   demand,             /**< demand of the job to move */
+   int                   capacity,           /**< cumulative capacity */
+   int                   est,                /**< earliest start time of the omega set */
+   int                   lct,                /**< latest start time of the omega set */
+   int                   energy              /**< energy of the omega set */
+   )
+{
+   int newest;
+
+   newest = 0;
+
+   assert(scip != NULL);
+
+   if( energy >  (capacity - demand) * (lct - est) )
+   {
+      if( energy + demand * duration > capacity * (lct - est) )
+      {
+         newest =  (int)SCIPfeasCeil(scip, (energy - (SCIP_Real)(capacity - demand) * (lct - est)) / (SCIP_Real)demand);
+         newest += est;
+      }
+   }
+
+   return newest;
+}
+
+/** propagates start time using an edge finding algorithm which is based on binary trees (theta lambda trees)
+ *
+ * @note The algorithm is based on the paper: Petr Vilim, "Edge Finding Filtering Algorithm for Discrete Cumulative
+ *       Resources in O(kn log n)".  *I.P. Gent (Ed.): CP 2009, LNCS 5732, pp. 802–816, 2009.
+ */
+static
+SCIP_RETCODE propagateEdgeFinder(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint which is propagated */
+   SCIP_BT*              tree,               /**< binary tree constaining the theta and lambda sets */
+   SCIP_BTNODE**         leaves,             /**< array of all leaves for each job one */
+   int                   capacity,           /**< cumulative capacity */
+   int                   ncands,             /**< number of candidates */
+   SCIP_Bool             propest,            /**< should the earliest start times be propagated, otherwise the latest completion times */
+   int                   shift,              /**< shift applied to all jobs before adding them to the tree */
+   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
+   SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
+   int*                  nchgbds,            /**< pointer to store the number of bound changes */
+   SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
+   )
+{
+   SCIP_NODEDATA* rootdata;
+   int j;
+
+   assert(!SCIPbtIsEmpty(tree));
+
+   rootdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(SCIPbtGetRoot(tree));
+   assert(rootdata != NULL);
+
+   /* iterate over all added candidate (leaves) in non-increasing order w.r.t. their latest completion time */
+   for( j = ncands-1; j >= 0 && !(*cutoff); --j )
+   {
+      SCIP_NODEDATA* nodedata;
+
+      if( SCIPbtnodeIsRoot(leaves[j]) )
+         break;
+
+      nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(leaves[j]);
+      assert(nodedata->est != -1);
+
+      /* check if the root lambda envelop exeeds the available capacity */
+      while( !(*cutoff) && rootdata->enveloplambda > capacity * nodedata->lct )
+      {
+         SCIP_BTNODE** omegaset;
+         SCIP_BTNODE* leaf;
+         SCIP_NODEDATA* leafdata;
+         int nelements;
+         int energy;
+         int newest;
+         int est;
+         int lct;
+
+         assert(!(*cutoff));
+
+         /* find responsible leaf for the lambda envelope */
+         leaf = findResponsibleLambdaLeafTraceEnvelop(SCIPbtGetRoot(tree));
+         assert(leaf != NULL);
+         assert(SCIPbtnodeIsLeaf(leaf));
+
+         leafdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(leaf);
+         assert(leafdata != NULL);
+         assert(!leafdata->intheta);
+         assert(leafdata->duration > 0);
+         assert(leafdata->est >= 0);
+
+         /* check if the job has to be removed since its latest completion is to large */
+         if( leafdata->est + leafdata->duration >= nodedata->lct )
+         {
+            SCIP_CALL( deleteLambdaLeaf(scip, tree, leaf) );
+
+            /* the root might changed therefore we need to collect the new root node datas */
+            rootdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(SCIPbtGetRoot(tree));
+            assert(rootdata != NULL);
+
+            continue;
+         }
+
+         /* compute omega set */
+         SCIP_CALL( SCIPallocBufferArray(scip, &omegaset, ncands) );
+
+         nelements = 0;
+         est = INT_MAX;
+         lct = INT_MIN;
+         energy = 0;
+
+         /* collect the omega set from theta set */
+         traceLambdaEnvelop(SCIPbtGetRoot(tree), omegaset, &nelements, &est, &lct, &energy);
+         assert(nelements > 0);
+         assert(nelements < ncands);
+
+         newest = computeEstOmegaset(scip, leafdata->duration, leafdata->demand, capacity, est, lct, energy);
+
+         /* if the computed earliest start time is greater than the latest completion time of the omega set we detected an overload */
+         if( newest > lct )
+         {
+            SCIPdebugMessage("an overload was detected duration edge-finder propagattion\n");
+
+            /* analyze over load */
+            SCIP_CALL( analyzeConflictOverload(scip, omegaset, capacity, nelements,  est, lct, 0, propest, shift, usebdwidening, initialized, explanation) );
+            (*cutoff) = TRUE;
+         }
+         else if( newest > 0 )
+         {
+            SCIP_Bool infeasible;
+            SCIP_Bool tightened;
+            INFERINFO inferinfo;
+
+            if( propest )
+            {
+               /* constuct inference information; store used propagation rule and the the time window of the omega set */
+               inferinfo = getInferInfo(PROPRULE_2_EDGEFINDING, est + shift, lct + shift);
+
+               SCIPdebugMessage("variable <%s> adjust lower bound from %g to %d\n",
+                  SCIPvarGetName(leafdata->var), SCIPvarGetLbLocal(leafdata->var), newest + shift);
+
+               SCIP_CALL( SCIPinferVarLbCons(scip, leafdata->var, (SCIP_Real)(newest + shift),
+                     cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
+            }
+            else
+            {
+               /* constuct inference information; store used propagation rule and the the time window of the omega set */
+               inferinfo = getInferInfo(PROPRULE_2_EDGEFINDING, shift - lct, shift - est);
+
+               SCIPdebugMessage("variable <%s> adjust upper bound from %g to %d\n",
+                  SCIPvarGetName(leafdata->var), SCIPvarGetUbLocal(leafdata->var), shift - newest - leafdata->duration);
+
+               SCIP_CALL( SCIPinferVarUbCons(scip, leafdata->var, (SCIP_Real)(shift - newest - leafdata->duration),
+                     cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
+            }
+
+            /* adjust the earliest start time */
+            if( tightened )
+            {
+               leafdata->est = newest;
+               (*nchgbds)++;
+            }
+
+            if( infeasible )
+            {
+               if( SCIPisConflictAnalysisApplicable(scip) )
+               {
+                  int i;
+
+                  SCIPdebugMessage("edge-finder dectected an infeasibility\n");
+
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+                  /* add lower and upper bound of variable which leads to the infeasibilty */
+                  SCIP_CALL( SCIPaddConflictLb(scip, leafdata->var, NULL) );
+                  SCIP_CALL( SCIPaddConflictUb(scip, leafdata->var, NULL) );
+
+                  if( explanation != NULL )
+                     explanation[leafdata->idx] = TRUE;
+
+                  /* add lower and upper bound of variable which lead to the infeasibilty */
+                  for( i = 0; i < nelements; ++i )
+                  {
+                     nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(omegaset[i]);
+                     assert(nodedata != NULL);
+
+                     SCIP_CALL( SCIPaddConflictLb(scip, nodedata->var, NULL) );
+                     SCIP_CALL( SCIPaddConflictUb(scip, nodedata->var, NULL) );
+
+                     if( explanation != NULL )
+                        explanation[nodedata->idx] = TRUE;
+                  }
+
+                  (*initialized) = TRUE;
+               }
+
+               (*cutoff) = TRUE;
+            }
+         }
+
+         /* free omegaset array */
+         SCIPfreeBufferArray(scip, &omegaset);
+
+         /* delete responsible leaf from lambda */
+         SCIP_CALL( deleteLambdaLeaf(scip, tree, leaf) );
+
+         /* the root might changed therefore we need to collect the new root node datas */
+         rootdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(SCIPbtGetRoot(tree));
+         assert(rootdata != NULL);
+      }
+
+      /* move current job j from the theta set into the lambda set */
+      SCIP_CALL( moveNodeToLambda(scip, tree, leaves[j]) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -3573,24 +4571,25 @@ SCIP_RETCODE checkOverload(
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
+   SCIP_Bool             useadjustedjobs,    /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
+   SCIP_Bool             propest,            /**< should the earliest start times be propagated, otherwise the latest completion times */
+   SCIP_Bool             edgefinding,        /**< complete edge-finding, otherwise only overload */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
+   int*                  nchgbds,            /**< pointer to store the number of bound changes */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
    )
 {
-   SCIP_ENVELOP** nodedatas;
+   SCIP_NODEDATA** nodedatas;
+   SCIP_BTNODE** leaves;
    SCIP_BT* tree;
-
-   int* leftadjusts;
-   int* rightadjusts;
-   int* ests;
-   int* lcts;
-   int* perm;
 
    int totalenergy;
    int nnodedatas;
+   int ninsertcands;
    int ncands;
 
+   int shift;
    int j;
 
    assert(scip != NULL);
@@ -3601,25 +4600,43 @@ SCIP_RETCODE checkOverload(
 
    SCIPdebugMessage("check overload of cumulative condition of constraint <%s> (capacity %d)\n", SCIPconsGetName(cons), capacity);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &leftadjusts, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &rightadjusts, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ests, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lcts, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodedatas, 2*nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &leaves, nvars) );
 
    ncands = 0;
    totalenergy = 0;
 
    SCIP_CALL( SCIPbtCreate(&tree, SCIPblkmem(scip)) );
 
+   /* compute the shift which we apply to compute .... latest completion time of all jobs */
+   if( propest )
+      shift = 0;
+   else
+   {
+      shift = 0;
+
+      /* compute the latest completion time of all jobs which define the shift we apply to run the algorithm for the
+       * earliest start time propagation to handle the latest completion times
+       */
+      for( j = 0; j < nvars; ++j )
+      {
+         int lct;
+
+         lct = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[j])) + durations[j];
+         shift = MAX(shift, lct);
+      }
+   }
+
    /* collect earliest and latest completion times and ignore jobs which do not run completion within the effective
     * horizon
     */
    for( j = 0; j < nvars; ++j )
    {
+      SCIP_NODEDATA* nodedata;
       SCIP_VAR* var;
       int duration;
+      int leftadjust;
+      int rightadjust;
       int energy;
       int est;
       int lct;
@@ -3630,8 +4647,8 @@ SCIP_RETCODE checkOverload(
       duration = durations[j];
       assert(duration > 0);
 
-      leftadjusts[j] = 0;
-      rightadjusts[j] = 0;
+      leftadjust = 0;
+      rightadjust = 0;
 
       est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
       lct = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration;
@@ -3639,136 +4656,160 @@ SCIP_RETCODE checkOverload(
       /* adjust the duration, earliest start time, and latest completion time of jobs which do not lie completely in the
        * effective horizon [hmin,hmax)
        */
-      if( est < hmin )
+      if( useadjustedjobs )
       {
-         leftadjusts[j] = (hmin - est);
-         est = hmin;
-      }
-      if( lct > hmax )
-      {
-         rightadjusts[j] = (lct - hmax);
-         lct = hmax;
-      }
+         if( est < hmin )
+         {
+            leftadjust = (hmin - est);
+            est = hmin;
+         }
+         if( lct > hmax )
+         {
+            rightadjust = (lct - hmax);
+            lct = hmax;
+         }
 
-      /* only consider jobs which have a (adjusted) duration greater than zero (the amound which will run defenetly with
-       * the effective time horizon
-       */
-      if( duration - leftadjusts[j] - rightadjusts[j] <= 0 )
-      {
-         nodedatas[j] = NULL;
+         /* only consider jobs which have a (adjusted) duration greater than zero (the amound which will run defenetly
+          * with the effective time horizon
+          */
+         if( duration - leftadjust - rightadjust <= 0 )
+            continue;
+      }
+      else if( est < hmin || lct > hmax )
          continue;
-      }
 
-      energy = demands[j] * (duration - leftadjusts[j] - rightadjusts[j]);
+      energy = demands[j] * (duration - leftadjust - rightadjust);
       assert(energy > 0);
 
       totalenergy += energy;
 
+      /* flip earliest start time and latest completion time */
+      if( !propest )
+      {
+         SCIPswapInts(&est, &lct);
+
+         /* shift earliest start time and latest completion time */
+         lct = shift - lct;
+         est = shift - est;
+      }
+      else
+      {
+         /* shift earliest start time and latest completion time */
+         lct = lct - shift;
+         est = est - shift;
+      }
+      assert(est < lct);
+      assert(est >= 0);
+      assert(lct >= 0);
+
       /* create search node data */
-      SCIP_CALL( SCIPallocBuffer(scip, &nodedatas[j]) ); /*lint !e866*/
+      SCIP_CALL( createNodedata(scip, &nodedata) );
 
       /* initialize search node data */
       /* adjust earliest start time to make it unique in case several jobs have the same earliest start time */
-      nodedatas[j]->key = est + j / (2.0 * nvars);
+      nodedata->key = est + j / (2.0 * nvars);
+      nodedata->var = var;
+      nodedata->est = est;
+      nodedata->lct = lct;
+      nodedata->demand = demands[j];
+      nodedata->duration = duration;
+      nodedata->leftadjust = leftadjust;
+      nodedata->rightadjust = rightadjust;
 
       /* the envelop is the energy of the job plus the total amount of energy which is available in the time period
        * before that job can start, that is [0,est). The envelop is later used to compare the energy consumption of a
        * particular time interval [a,b] against the time interval [0,b].
        */
-      nodedatas[j]->envelop = capacity * est + energy;
-      nodedatas[j]->energy = energy;
+      nodedata->enveloptheta = capacity * est + energy;
+      nodedata->energytheta = energy;
+      nodedata->enveloplambda = -1;
+      nodedata->energylambda = -1;
 
-      ests[ncands] = est;
-      lcts[ncands] = lct;
-      perm[ncands] = j;
+      nodedata->idx = j;
+      nodedata->intheta = TRUE;
+
+      nodedatas[ncands] = nodedata;
       ncands++;
    }
 
-   nnodedatas = nvars;
+   nnodedatas = ncands;
 
-   /* sort the latest completion times */
-   SCIPsortIntIntInt(lcts, ests, perm, ncands);
+   /* sort (non-decreasing) the jobs w.r.t. latest completion times */
+   SCIPsortPtr((void**)nodedatas, compNodedataLct, ncands);
 
-   /* iterate over all jobs in non-decreasing order of their latest completion times and add them to the theta tree
-    * until the root envelop detects an overload
+   ninsertcands = 0;
+
+   /* iterate over all jobs in non-decreasing order of their latest completion times and add them to the theta set until
+    * the root envelop detects an overload
     */
    for( j = 0; j < ncands; ++j )
    {
-      SCIP_BTNODE* root;
-      SCIP_BTNODE* node;
-      SCIP_ENVELOP* data;
-      int idx;
-
-      idx = perm[j];
+      SCIP_BTNODE* leaf;
+      SCIP_NODEDATA* rootdata;
 
       /* check if the new job opens a time window which size is so large that it offers more energy than the total
        * energy of all candidate jobs. If so we skip that one.
        */
-      if( (lcts[j] - ests[j]) * capacity >= totalenergy )
+      if( (nodedatas[j]->lct - nodedatas[j]->est) * capacity >= totalenergy )
       {
          /* set the earliest start time to minus one to mark that candidate to be not used */
-         ests[j] = -1;
+         nodedatas[j]->est = -1;
          continue;
       }
 
       /* create search node */
-      SCIP_CALL( SCIPbtnodeCreate(tree, &node, (void*)nodedatas[idx]) );
+      SCIP_CALL( SCIPbtnodeCreate(tree, &leaf, (void*)nodedatas[j]) );
 
-      /* insert new search node */
-      SCIP_CALL( thetatreeInsert(scip, tree, node, nodedatas, &nnodedatas) );
-
-      /* update envelop */
-      SCIP_CALL( updateEnvelop(scip, node) );
+      /* insert new node into the theta set and updete the envelops */
+      SCIP_CALL( insertThetanode(scip, tree, leaf, nodedatas, &nnodedatas) );
       assert(nnodedatas <= 2*nvars);
 
-      root = SCIPbtGetRoot(tree);
-      data = (SCIP_ENVELOP*)SCIPbtnodeGetData(root);
+      /* move the inserted candidates together */
+      leaves[ninsertcands] = leaf;
+      ninsertcands++;
 
-      /* check for overload */
-      if( data->envelop > capacity * lcts[j] )
+      assert(!SCIPbtIsEmpty(tree));
+      rootdata = (SCIP_NODEDATA*)SCIPbtnodeGetData(SCIPbtGetRoot(tree));
+      assert(rootdata != NULL);
+
+      /* check if the theta set envelops exceeds the available capacity */
+      if( rootdata->enveloptheta > capacity * nodedatas[j]->lct )
       {
-         SCIPdebugMessage("detects cutoff due to overload in time window [?,%d) (ncands %d)\n", lcts[j], ncands+1);
+         SCIPdebugMessage("detects cutoff due to overload in time window [?,%d) (ncands %d)\n", nodedatas[j]->lct, j);
          (*cutoff) = TRUE;
          break;
       }
    }
 
    /* in case an overload was detected and the conflict analysis is applicable, create an initialize explanation */
-   if( *cutoff && SCIPisConflictAnalysisApplicable(scip) )
+   if( *cutoff )
    {
-      SCIP_VAR* var;
-      int ninsertcands;
-      int reportedenergy;
-      int energy;
+      int glbenery;
       int est;
       int lct;
-      int idx;
 
-      /* store the number of candidate inserted into the theta tree (including the once we skipped) */
-      ninsertcands = j+1;
-
-      /* collect the earliest and latest completion time of the last job which led to the overload detection */
-      est = ests[j];
-      lct = lcts[j];
-      energy = (lct - est) * capacity;
-      reportedenergy = 0;
+      glbenery = 0;
+      est = nodedatas[j]->est;
+      lct = nodedatas[j]->lct;
 
       /* scan the remaining candidates for a global contributions within the time window of the last inserted candidate
        * which led to an overload
        */
-      for( j = ninsertcands; j < ncands; ++j )
+      for( j = j+1; j < ncands; ++j )
       {
+         SCIP_NODEDATA* nodedata;
          int duration;
          int glbest;
          int glblct;
 
-         idx = perm[j];
-         duration = durations[idx] - leftadjusts[idx] - rightadjusts[idx];
+         nodedata = nodedatas[j];
+         assert(nodedata != NULL);
 
+         duration = nodedata->duration - nodedata->leftadjust - nodedata->rightadjust;
 
          /* get latest start time */
-         glbest = convertBoundToInt(scip, SCIPvarGetLbGlobal(vars[idx]));
-         glblct = convertBoundToInt(scip, SCIPvarGetUbGlobal(vars[idx])) + duration;
+         glbest = convertBoundToInt(scip, SCIPvarGetLbGlobal(nodedata->var));
+         glblct = convertBoundToInt(scip, SCIPvarGetUbGlobal(nodedata->var)) + duration;
 
          /* check if parts of the jobs run with the time window defined by the last inserted job */
          if( glbest < est )
@@ -3778,109 +4819,32 @@ SCIP_RETCODE checkOverload(
             duration -= (glblct - lct);
 
          if( duration > 0 )
-            reportedenergy +=  duration * demands[idx];
+            glbenery +=   nodedata->demand * duration;
       }
 
-      /* sort the start time variables which were added to search tree w.r.t. earliest start time */
-      SCIPsortDownIntIntInt(ests, lcts, perm, ninsertcands);
-
-      /* collect the energy of those jobs which run within the time frame [est,lct) of the job which led to
-       * infeasibility
-       */
-      for( j = 0; j < ninsertcands && ests[j] >= est && reportedenergy <= energy; ++j )
-      {
-         int duration;
-
-         assert(lcts[j] <= lct);
-
-         idx = perm[j];
-         var = vars[idx];
-
-         duration = durations[idx] - leftadjusts[idx] - rightadjusts[idx];
-
-         /* collect energy which is contributed by the start time variable */
-         reportedenergy += demands[idx] * duration;
-
-         SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
-            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-            SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration, demands[idx]);
-      }
-
-      /* continue with remaining candidates and adjust the earliest start time */
-      for( ; j < ninsertcands && reportedenergy <= energy; ++j )
-      {
-         int duration;
-
-         assert(lcts[j] <= lct);
-
-         idx = perm[j];
-         var = vars[idx];
-         duration = durations[idx] - leftadjusts[idx] - rightadjusts[idx];
-
-         reportedenergy += demands[idx] * duration;
-
-         SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
-            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-            SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration, demands[idx]);
-
-         est = ests[j];
-         assert(est >= 0);
-
-         /* adjust energy */
-         energy = (lct - est) * capacity;
-      }
-      assert(reportedenergy > energy);
-
-      /* shrink number of candidates to once we need to report */
-      ncands = j;
-
-      /* initialize conflict analysis */
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-      /* report the variables and relax their bounds to final time interval [est,lct) which was been detected to be
-       * overloaded
-       */
-      for( j = 0; j < ncands; ++j )
-      {
-         idx = perm[j];
-         var = vars[idx];
-         assert(var != NULL);
-
-         if( usebdwidening )
-         {
-            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, NULL, (SCIP_Real)(est - leftadjusts[idx])) );
-            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, NULL, (SCIP_Real)(lct - durations[idx] + rightadjusts[idx])) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPaddConflictLb(scip, var, NULL) );
-            SCIP_CALL( SCIPaddConflictUb(scip, var, NULL) );
-         }
-
-         if( explanation != NULL )
-            explanation[idx] = TRUE;
-      }
-
-      (*initialized) = TRUE;
+      /* analyze the overload */
+      SCIP_CALL( analyzeConflictOverload(scip, leaves, capacity, ninsertcands, est, lct, glbenery, propest, shift,
+            usebdwidening, initialized, explanation) );
    }
-
+   else if( ninsertcands > 1 && edgefinding )
+   {
+      /* if we have more than one job insterted and edge-finding should be performed we do it */
+      SCIP_CALL( propagateEdgeFinder(scip, cons, tree, leaves, capacity, ninsertcands,
+            propest, shift, usebdwidening, initialized, explanation, nchgbds, cutoff) );
+   }
 
    /* free the search nodes data */
    for( j = nnodedatas - 1; j >= 0; --j )
    {
-      SCIPfreeBufferNull(scip, &nodedatas[j]);
+      freeNodedata(scip, &nodedatas[j]);
    }
 
    /* free theta tree */
    SCIPbtFree(&tree);
 
    /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &leaves);
    SCIPfreeBufferArray(scip, &nodedatas);
-   SCIPfreeBufferArray(scip, &perm);
-   SCIPfreeBufferArray(scip, &lcts);
-   SCIPfreeBufferArray(scip, &ests);
-   SCIPfreeBufferArray(scip, &rightadjusts);
-   SCIPfreeBufferArray(scip, &leftadjusts);
 
    return SCIP_OKAY;
 }
@@ -4053,11 +5017,20 @@ SCIP_RETCODE propagateCumulativeCondition(
    {
       /* check for overload, which may result in a cutoff */
       SCIP_CALL( checkOverload(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-            cons, usebdwidening, initialized, explanation, cutoff) );
+            cons, usebdwidening, conshdlrdata->useadjustedjobs, TRUE, conshdlrdata->edgefinding,
+            initialized, explanation, nchgbds, cutoff) );
 
       if( *cutoff )
          return SCIP_OKAY;
    }
+
+   if( conshdlrdata->edgefinding )
+   {
+      /* check for overload, which may result in a cutoff */
+      SCIP_CALL( checkOverload(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
+            cons, usebdwidening, conshdlrdata->useadjustedjobs, FALSE, TRUE, initialized, explanation, nchgbds, cutoff) );
+   }
+
 
    return SCIP_OKAY;
 }
@@ -4409,7 +5382,7 @@ SCIP_RETCODE propagateAllConss(
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
    SCIP_Bool*            branched            /**< pointer to store if a branching was applied, or NULL to avoid branching */
    )
-{
+{  /*lint --e{715}*/
    SCIP_VAR** vars;
    int* downlocks;
    int* uplocks;
@@ -6962,7 +7935,7 @@ SCIP_RETCODE presolveCons(
       SCIPstatistic( conshdlrdata->ndualfixs += consdata->ndualfixs );
       SCIPstatistic( conshdlrdata->nalwaysruns += consdata->nalwaysruns );
 
-      /* remove jobs which have a duration or demand of zero ????????????? */
+      /* remove jobs which have a demand larger than the capacity */
       SCIP_CALL( removeOversizedJobs(scip, cons, nchgbds, nchgcoefs, naddconss, cutoff) );
 
       if( *cutoff || SCIPconsIsDeleted(cons) )
@@ -7666,7 +8639,7 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
       SCIPvarGetName(infervar), SCIPconsGetName(cons), consdata->capacity, inferInfoGetProprule(intToInferInfo(inferinfo)));
 
    SCIP_CALL( respropCumulativeCondition(scip, consdata->nvars, consdata->vars,
-         consdata->durations, consdata->demands, consdata->capacity,
+         consdata->durations, consdata->demands, consdata->capacity, consdata->hmin, consdata->hmax,
          infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, conshdlrdata->usebdwidening, NULL, result) );
 
    return SCIP_OKAY;
@@ -8016,6 +8989,12 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/overload", "should edge finding be used to detect an overload?",
          &conshdlrdata->overload, FALSE, DEFAULT_OVERLOAD, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/edgefinding", "should edge-finding be executed?",
+         &conshdlrdata->edgefinding, FALSE, DEFAULT_EDGEFINDING, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/useadjustedjobs", "should edge-finding be executed?",
+         &conshdlrdata->useadjustedjobs, FALSE, DEFAULT_USEADJUSTEDJOBS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/usebinvars", "should the binary representation be used?",
@@ -8433,6 +9412,8 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
    int                   inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
@@ -8441,7 +9422,7 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
-   SCIP_CALL( respropCumulativeCondition(scip, nvars, vars, durations, demands, capacity,
+   SCIP_CALL( respropCumulativeCondition(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
          infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, TRUE, explanation, result) );
 
    return SCIP_OKAY;

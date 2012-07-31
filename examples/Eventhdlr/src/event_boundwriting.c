@@ -15,36 +15,46 @@
 
 /**@file   event_boundwriting.c
  * @ingroup EVENTHDLR
- * @brief  event handler for writing primal- and dualbound for all open nodes
+ * @brief  event handler for writing primal and dual bound for all open nodes
  * @author Michael Winkler
  *
  *
- *  This event handler writes in a specified file at a given frequency the dualbounds of all open nodes and the current
- *  primalbound.
+ *  This event handler writes to a specified file at a given frequency the dual bounds of all open nodes and the current
+ *  primal bound.
  *
- *  setting "set misc boundwriting freq 1000" will lead to write at each 1000 nodes the primalbound and the dualbound
- *  front of all opennodes
+ *  setting "set misc boundwriting freq 1000" will lead to write every 1000 nodes the primal bound and the dual bound
+ *  front of all open nodes
  *
- *  setting "set misc boundwriting filename bounds.txt" will write the bounds at the given frequency in the files
- *  ascending from bounds1.txt over bounds2.txt to boundsN.txt were N is the last number for writing bounds (, no
- *  filename means to write in standard out)
+ *  setting "set misc boundwriting filename bounds.txt" will write the bounds to the files
+ *  ascending from bounds1.txt over bounds2.txt to boundsN.txt were N is the last number for writing bounds (no
+ *  filename means to write to standard out)
  *
  *  setting "set misc writesubmipdualbound TRUE" will lead to resolve each open node in a subSCIP until the root in the
- *  subSCIP is solved and as a result will print this resulting dualbound
+ *  subSCIP is solved and as a result will print this resulting dual bound
  *
- *  An output could look as followed (here writesubmipdualbound is set to TRUE):
+ *  An output could look as follows (here writesubmipdualbound is set to TRUE):
  *
  *  PB 201
+ *
  *  5913 34 192.1 193.5
+ *
  *  2884 26 162.1 162.1
  *
- *  The first line above shows the Primalbound. All following lines will show first the nodenumber, second the depth of
- *  this open node, third the dualbound of the open node, and last the dualbound of the root node in a subSCIP of the
+ *  The first line above shows the Primalbound. All following lines will show first the node number, second the depth of
+ *  this open node, third the dual bound of the open node, and last the dual bound of the root node in a subSCIP of the
  *  resolved node.
  *
- *  @note you can write all bounds in onefile by enabling the define 'ONEFILE' below
- *  @note if you want to get a better human readable format for printing enable the define 'LONGSTATS' below
+ *  @note you can write all bounds to a single file by adding the line
+ *  \code
+ *  #define ONEFILE
+ *  \endcode
+ *  and recompiling this example.
  *
+ *  @note If you want to get a better human readable format for printing, define
+ *  \code
+ *  #define LONGSTATS
+ *  \endcode
+ *  and recompile this example.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -340,12 +350,6 @@ SCIP_DECL_EVENTFREE(eventFreeBoundwriting)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of event handler (called when branch and bound process is about to begin) */
-#define eventInitsolBoundwriting NULL
-
-/** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
-#define eventExitsolBoundwriting NULL
-
 /** initialization method of event handler (called after problem was transformed) */
 static
 SCIP_DECL_EVENTINIT(eventInitBoundwriting)
@@ -387,9 +391,6 @@ SCIP_DECL_EVENTEXIT(eventExitBoundwriting)
 
    return SCIP_OKAY;
 }
-
-/** frees specific event data */
-#define eventDeleteBoundwriting NULL
 
 /** execution method of event handler */
 static

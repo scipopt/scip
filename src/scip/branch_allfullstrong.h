@@ -17,6 +17,23 @@
  * @ingroup BRANCHINGRULES
  * @brief  all variables full strong LP branching rule
  * @author Tobias Achterberg
+ *
+ * The all variables full strong branching rule applies strong branching to every non-fixed variable
+ * at the current node of the branch-and-bound search. The rule selects the candidate
+ * which will cause the highest gain of the dual bound in the created sub-tree among all branching variables.
+ *
+ * For calculating the gain, a look-ahead is performed by solving the child node LPs which will result
+ * from branching on a variable.
+ *
+ * For a more mathematical description and a comparison between the strong branching rule and other branching rules
+ * in SCIP, we refer to
+ *
+ * @par
+ * Tobias Achterberg@n
+ * Constraint Integer Programming@n
+ * PhD Thesis, Technische Universität Berlin, 2007@n
+ *
+
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -32,7 +49,7 @@ extern "C" {
 #endif
 
 /** creates the all variables full strong LP branching rule and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeBranchruleAllfullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    );

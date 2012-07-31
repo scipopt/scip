@@ -28,11 +28,11 @@ div.inner {
 /* @group Heading Levels */
 
 h1 {
-    font-size: 150%;
+    font-size: 120%;
 }
 
 h2 {
-    font-size: 120%;
+    font-size: 100%;
 }
 
 h3 {
@@ -470,6 +470,7 @@ table.memberdecls {
 .paramname {
     color: #602020;
     white-space: nowrap;
+    font-weight: bold;
 }
 .paramname em {
     font-style: normal;
@@ -580,11 +581,13 @@ address {
 
 table.doxtable {
     border-collapse:collapse;
+    margin-left: 10px;
 }
 
 table.doxtable td, table.doxtable th {
-    border: 1px solid #2D4068;
+    border: 0px solid #2D4068;
     padding: 3px 7px 2px;
+    vertical-align: top;
 }
 
 table.doxtable th {
@@ -642,7 +645,7 @@ div.summary
     padding-right: 5px;
     width: 50%;
     text-align: right;
-}       
+}
 
 div.summary a
 {
@@ -679,6 +682,46 @@ div.mainheadertitle
     margin:  0px;
 }
 
+dl.note, dl.warning, dl.attention, dl.pre, dl.post, dl.invariant, dl.deprecated, dl.todo, dl.test, dl.bug
+{
+    border-left:4px solid;
+    padding: 0 0 0 6px;
+}
+
+dl.note
+{
+    border-color: #D0D000;
+}
+
+dl.warning, dl.attention
+{
+    border-color: #FF0000;
+}
+
+dl.pre, dl.post, dl.invariant
+{
+    border-color: #00D000;
+}
+
+dl.deprecated
+{
+    border-color: #505050;
+}
+
+dl.todo
+{
+    border-color: #00C0E0;
+}
+
+dl.test
+{
+    border-color: #3030E0;
+}
+
+dl.bug
+{
+    border-color: #C08050;
+}
 td.mainheadertitle
 {
     font-weight: bold;

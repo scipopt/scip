@@ -1671,6 +1671,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    /* remember variable as inference variable, and get corresponding active variable, bound and bound type */
    infervar = var;
    inferboundtype = boundtype;
+
    SCIP_CALL( SCIPvarGetProbvarBound(&var, &newbound, &boundtype) );
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )

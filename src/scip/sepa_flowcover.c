@@ -38,7 +38,7 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        15 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXTRIES            100 /**< maximal number of rows to separate flow cover cuts for per separation round 
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to separate flow cover cuts for per separation round 

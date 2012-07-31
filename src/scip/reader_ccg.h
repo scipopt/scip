@@ -34,14 +34,14 @@ extern "C" {
 #endif
 
 /** includes the ccg file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderCcg(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 
 /* writes problem to file */
-extern
+EXTERN
 SCIP_RETCODE SCIPwriteCcg(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */

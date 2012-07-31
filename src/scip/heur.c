@@ -458,8 +458,8 @@ SCIP_RETCODE SCIPheurExec(
    /* check if the heuristic was (still) delayed */
    if( *result == SCIP_DELAYED || heur->delaypos >= 0 )
    {
-      SCIPdebugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d), heur was %s delayed before, had delaypos %d\n", 
-         heur->name, depth, *ndelayedheurs, *result == SCIP_DELAYED ? "" : "not", heur->delaypos);
+      SCIPdebugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d), heur was%s delayed before, had delaypos %d\n",
+         heur->name, depth, *ndelayedheurs, heur->delaypos >= 0 ? "" : " not", heur->delaypos);
 
       /* mark the heuristic delayed */
       if( heur->delaypos != *ndelayedheurs )

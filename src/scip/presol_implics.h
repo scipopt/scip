@@ -47,7 +47,7 @@ extern "C" {
 #endif
 
 /** creates the implics presolver and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePresolImplics(
    SCIP*                 scip                /**< SCIP data structure */
    );

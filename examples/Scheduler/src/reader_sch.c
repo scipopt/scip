@@ -14,8 +14,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_sch.c
- * @brief  scheduling problem file reader for RCPSP/max problem format
+ * @brief  scheduling problem file reader for RCPSP/max format
  * @author Stefan Heinz
+ *
+ * This reader is capabale of parsing resource-constrained project scheduling problem with minimal and maximal time lags
+ * (RCPSP/max) instances. The <a http://www.wior.uni-karlsruhe.de/LS_Neumann/Forschung/ProGenMax/rcpspmax.html">PSPlib</a>
+ * provides several instances set.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -65,7 +70,6 @@ SCIP_RETCODE getJobId(
 
    return SCIP_OKAY;
 }
-
 
 /** parse job and capacities details */
 static
@@ -198,7 +202,7 @@ SCIP_RETCODE parseDetails(
    return SCIP_OKAY;
 }
 
-/** read file */
+/** read file and create problem */
 static
 SCIP_RETCODE readFile(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -233,9 +237,10 @@ SCIP_RETCODE readFile(
 
       SCIPstrToIntValue(buf, &value, &endptr);
 
-      /* not that format includes to dummy jobs */
+      /* note that this format includes two dummy jobs */
       njobs = value + 2;
 
+      /* get number of resources */
       SCIPstrToIntValue(endptr, &nresources, &endptr);
    }
    else

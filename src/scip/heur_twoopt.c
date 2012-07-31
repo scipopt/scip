@@ -704,12 +704,13 @@ SCIP_RETCODE presolveTwoOpt(
    /* get necessary variable information, i.e. number of binary and integer variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
+   nbinblockvars = 0;
+
    /* if number of binary problem variables exceeds 2, they are subject to 2-optimization algorithm, hence heuristic
     * calls innerPresolve method to detect necessary structures.
     */
    if( nbinvars >= 2 )
    {
-
       SCIP_CALL( innerPresolve(scip, vars, &(heurdata->binvars), nbinvars, &(heurdata->nbinblocks), &maxbinblocksize,
             &nbinblockvars, &(heurdata->binblockstart), &(heurdata->binblockend), heur, heurdata) );
    }

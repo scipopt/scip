@@ -6202,7 +6202,8 @@ SCIP_RETCODE generateClusterCuts(
                   comdemands[k] = coef;
 
                /* insert coefficients of integer variables into deltas array */
-               if( !SCIPisFeasZero(scip, coef) && SCIPcolIsIntegral(rowcols[j]) )
+               /* coefficients should not be too small and not be too big */
+               if( !SCIPisZero(scip, 1.0 / coef) && !SCIPisFeasZero(scip, coef) && SCIPcolIsIntegral(rowcols[j]) )
                {
                   SCIP_Bool exists;
                   int left;
@@ -6364,10 +6365,10 @@ SCIP_RETCODE generateClusterCuts(
             SCIP_Real abscutrhs = 0.0;
             SCIP_Real relviolation = 0.0;
 
-
-            /* do not use too small deltas */
-            if( SCIPisFeasZero(scip, deltas[d]) )
-               continue;
+            /* we should not have too small deltas */
+            assert( !SCIPisFeasZero(scip, deltas[d]) );
+            /* we should not have too large deltas */
+            assert( !SCIPisZero(scip, 1.0/deltas[d]) );
 
             SCIPdebugMessage("applying MIR with delta = %g\n", deltas[d]);
             SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
@@ -6548,6 +6549,11 @@ SCIP_RETCODE generateClusterCuts(
                   SCIP_Bool success;
                   SCIP_Bool cutislocal;
 
+                  /* we should not have too small deltas */
+                  assert( !SCIPisFeasZero(scip, bestdelta) );
+                  /* we should not have too large deltas */
+                  assert( !SCIPisZero(scip, 1.0/bestdelta) );
+
                   SCIPdebugMessage("applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
                   SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
                                          (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/bestdelta, NULL, NULL,
@@ -6591,6 +6597,7 @@ SCIP_RETCODE separateCuts(
    int ncuts;
    int ncols;
    int nrows;
+   int nvars;
    SCIP_Real colrowratio;
    int i;
    SCIP_Bool cutoff;
@@ -6601,10 +6608,21 @@ SCIP_RETCODE separateCuts(
    ncuts = 0;
    cutoff = FALSE;
 
-   /* check for column/row ratio */
+   /* check for number of columns, number of variables, column/row ratio */
    nrows = SCIPgetNLPRows(scip);
    ncols = SCIPgetNLPCols(scip);
+   nvars = SCIPgetNVars(scip);
 
+   /* exit if not all variables are in the LP (e.g. dynamic columns) */
+   /* Notice that in principle we should have most of the columns in the LP to be able to detect a structure */
+   if( ncols != nvars )
+   {
+      MCFdebugMessage("%d variables but %d columns -> exit\n", nvars, ncols );
+
+      return SCIP_OKAY;
+   }
+
+   /* exit if number of columns is too large (expensive detection) */
    if( ncols > MAXCOLS )
    {
       MCFdebugMessage("%d > %d columns -> exit\n", ncols, MAXCOLS );

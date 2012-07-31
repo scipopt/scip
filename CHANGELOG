@@ -155,6 +155,8 @@ interface
   SCIPsparseSolGetNVars(), SCIPsparseSolGetLbs(), SCIPsparseSolGetUbs() in (pub_)misc.{c,h}
 - renamed SCIPgetCountedSparseSolutions() to SCIPgetCountedSparseSols() in cons_countsols.{c,h}
 - SCIPcomputeLPRelIntPoint() takes two new arguments giving a time and iteration limit
+- added a SCIP_CONS* parameter to SCIPcreateConsDisjunction() which can represent the linear relaxation of the whole
+  disjunction constraint as a conjunction constraint, or NULL
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -198,7 +200,7 @@ plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
   for integer variable 0 <= x <= 10 the binary variables y0, y1, y2, and y3 are created, such that
   1 y0 + 2 y1 + 4 y2 + 8 y3 <= 10 and x = 1 y0 + 2 y1 + 4 y2 + 8 y3
-- added nlpdiving heuristic that comprises several civing heuristics using an NLP relaxation
+- added nlpdiving heuristic that comprises several diving heuristics using an NLP relaxation
 - added new presolver gateextraction, which tries to find and-gates/constraints which are linearized
   e.g. (x + y + z >= 1, x + y <= 1 and x + z <= 1 => x == AND(~y,~z)), in special cases it also detects set-partitioning
   constraints e.g. (x + y + z >= 1, x + y <= 1, x + z <= 1 and y + z <= 1 => x + y + z == 1));
@@ -253,6 +255,8 @@ fixed bugs:
 - fixed assert with LPI=none (need to count rows/cols in lpi_none)
 - do not run heur_shiftandpropagate if there is no LP
 - fixed count of propagations in cons_indicator and only try to propagate if variables are not yet fixed
+- fixed some bugs in cons_disjunction.c (wrong assert, forgotten deletion of constraint, wrong SCIPreleaseCons() call)
+- fixed bug in cip reader, wrong use of SCIPstrtok()
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -321,7 +325,7 @@ features:
 - correct initialization of steepest edge weights with SoPlex 1.6.0.4
 - CNF reader now creates feasibility instances per default, usage of an objective has to be set by a parameter
 - make test now also checks instances in wbo, cnf, osil, and fzn format
-- parametes can now be fixed, which means that their value cannot be changed unless they are unfixed, first;
+- parameters can now be fixed, which means that their value cannot be changed unless they are unfixed, first;
   the fixing status of a parameter is copied to sub-SCIPs, which allows to ensure that certain parameters
   are also not changed when, e.g., heuristics change emphasis settings or also specific parameters
 - added dual presolving for and-constraints
@@ -340,6 +344,12 @@ features:
   use SCIPcreate(Empty)RowCons() and SCIPcreate(Empty)RowSepa() to support the statistics.
 - implemented first clique lifting procedure in cons_setppc.c (by default is off)
 - oneopt can now be called before presolving
+- beta-version of a AMPL interface can be found under interfaces/ampl
+- the conjunction and disjunction constraint handlers are now able to parse their CIP output format
+- added a presolving step in the disjunctive constraint handler, removing disjunction, where a sub-constraint was
+  deleted, which means this sub-constraint is redundant, which again means it is always TRUE or will be enforced by
+  another constraint
+- added pre- and post-conditions in doxygen documentation for all methods of scip.<c,h>
 
 Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;

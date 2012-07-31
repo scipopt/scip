@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 /** includes the zpl file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /** creates the handler for bound disjunction constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -90,7 +90,7 @@ SCIP_RETCODE SCIPcreateConsBounddisjunction(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -102,28 +102,28 @@ SCIP_RETCODE SCIPcreateConsBasicBounddisjunction(
    );
 
 /** gets number of variables in bound disjunction constraint */
-extern
+EXTERN
 int SCIPgetNVarsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in bound disjunction constraint */
-extern
+EXTERN
 SCIP_VAR** SCIPgetVarsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of bound types in bound disjunction constraint */
-extern
+EXTERN
 SCIP_BOUNDTYPE* SCIPgetBoundtypesBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of bounds in bound disjunction constraint */
-extern
+EXTERN
 SCIP_Real* SCIPgetBoundsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

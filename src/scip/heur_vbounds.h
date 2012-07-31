@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 /** creates the variable bounds primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurVbounds(
    SCIP*                 scip                /**< SCIP data structure */
    );

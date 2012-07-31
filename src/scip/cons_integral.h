@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the handler for the integrality constraint and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrIntegral(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -1630,7 +1630,7 @@ SCIP_RETCODE propdataInit(
    propdata->glbpropagated = FALSE;
    propdata->glbpseudoobjval = SCIPgetGlobalPseudoObjval(scip);
    propdata->cutoffbound = SCIPgetCutoffbound(scip);
-   assert(SCIPisFeasEQ(scip, propdata->glbpseudoobjval, SCIPgetPseudoObjval(scip)));
+   assert(SCIPgetDepth(scip) > 0 || SCIPisFeasEQ(scip, propdata->glbpseudoobjval, SCIPgetPseudoObjval(scip)));
 
    /* create hash table which is used for resolving bound changes */
    if( nminactvars > 0 )
@@ -2962,6 +2962,8 @@ SCIP_RETCODE propagateLowerboundVar(
    objval = SCIPvarGetObj(var);
    assert(!SCIPisZero(scip, objval));
 
+   (*tightened) = FALSE;
+
    /* get residual pseudo objective activity, that is the pseudo objective activity without the given variable */
    residual = getMaxObjPseudoactivityResidual(scip, propdata, var);
 
@@ -2971,13 +2973,37 @@ SCIP_RETCODE propagateLowerboundVar(
    /* compute potential mew bound */
    newbd = (lowerbound - residual) / objval;
 
+   /**@note In case the variable is integral we force the update of the new bound */
+
    if( objval > 0.0 )
    {
-      SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newbd, FALSE, infeasible, tightened) );
+      SCIP_Real lb;
+
+      lb = SCIPvarGetLbLocal(var);
+
+      if( !SCIPvarIsIntegral(var) )
+      {
+         SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newbd, FALSE, infeasible, tightened) );
+      }
+      else if( SCIPisFeasGT(scip, newbd, lb) )
+      {
+         SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newbd, TRUE, infeasible, tightened) );
+      }
    }
    else
    {
-      SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newbd, FALSE, infeasible, tightened) );
+      SCIP_Real ub;
+
+      ub = SCIPvarGetUbLocal(var);
+
+      if( !SCIPvarIsIntegral(var) )
+      {
+         SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newbd, FALSE, infeasible, tightened) );
+      }
+      else if( SCIPisFeasLT(scip, newbd, ub) )
+      {
+         SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newbd, TRUE, infeasible, tightened) );
+      }
    }
 
    return SCIP_OKAY;
@@ -3058,6 +3084,7 @@ SCIP_RETCODE propagateLowerbound(
          {
             var = maxactvars[v];
             assert(var != NULL);
+            assert(SCIPvarIsBinary(var));
 
             /* check if the variables is already globally fixed; if so continue with the next potential candidate */
             if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5)
@@ -3101,6 +3128,7 @@ SCIP_RETCODE propagateLowerbound(
          {
             var =  maxactvars[v];
             assert(var != NULL);
+            assert(SCIPvarIsBinary(var));
 
             /* check if the variables is already globally fixed; if so continue with the potential candidate */
             if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5)
@@ -3125,6 +3153,7 @@ SCIP_RETCODE propagateLowerbound(
          {
             var = maxactvars[v];
             assert(var != NULL);
+            assert(SCIPvarIsBinary(var));
 
             /* check if the variables is already globally fixed; if so continue with the next potential candidate */
             if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5)

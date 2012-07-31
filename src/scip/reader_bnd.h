@@ -21,7 +21,7 @@
  * This reader allows to read a file containing new bounds for variables of the current problem.  Each line of the file
  * should have format
  *
- *    <variable name> <lower bound> <upper bound>
+ *    \<variable name\> \<lower bound\> \<upper bound\>
  *
  * where infinite bounds can be written as inf, +inf or -inf.  Note that only a subset of the variables may appear in
  * the file.  Lines with unknown variable names are ignored.  The writing functionality is currently not supported.
@@ -40,7 +40,7 @@ extern "C" {
 #endif
 
 /** includes the bnd file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderBnd(
    SCIP*                 scip                /**< SCIP data structure */
    );

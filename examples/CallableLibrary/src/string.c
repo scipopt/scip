@@ -42,14 +42,11 @@
 #define M_PI           3.141592653589793238462643
 #endif
 
-extern
-SCIP_RETCODE runString(void);
-
 
 /* Model parameters */
 
 /** number of possible wire types */
-static const int nwires = 11;
+#define nwires 11
 
 /** diameters of available diameters (in) */
 static const SCIP_Real diameters[] = { 0.207, 0.225, 0.244, 0.263, 0.283, 0.307, 0.331, 0.362, 0.394, 0.4375, 0.500 };
@@ -431,6 +428,7 @@ SCIP_RETCODE setupProblem(
 }
 
 /* runs string example */
+static
 SCIP_RETCODE runString(void)
 {
    SCIP* scip;
@@ -470,4 +468,26 @@ SCIP_RETCODE runString(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    return SCIP_OKAY;
+}
+
+
+/** main method starting SCIP */
+int main(
+   int                        argc,          /**< number of arguments from the shell */
+   char**                     argv           /**< array of shell arguments */
+   )  /*lint --e{715}*/
+{
+   SCIP_RETCODE retcode;
+
+   retcode = runString();
+
+   /* evaluate return code of the SCIP process */
+   if( retcode != SCIP_OKAY )
+   {
+      /* write error back trace */
+      SCIPprintError(retcode);
+      return -1;
+   }
+
+   return 0;
 }

@@ -68,6 +68,7 @@ EXPRINT 	=	cppad
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
+PARASCIP	=	false
 
 CC		=	gcc
 CC_c		=	-c # the trailing space is important

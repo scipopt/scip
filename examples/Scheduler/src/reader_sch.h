@@ -16,6 +16,12 @@
 /**@file   reader_sch.h
  * @brief  scheduling problem file reader for RCPSP/max format
  * @author Stefan Heinz
+ *
+ * This reader is capabale of parsing resource-constrained project scheduling problem with minimal and maximal time lags
+ * (RCPSP/max) instances. The <a http://www.wior.uni-karlsruhe.de/LS_Neumann/Forschung/ProGenMax/rcpspmax.html">PSPlib</a>
+ *  provides several instances
+ * set.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

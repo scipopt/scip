@@ -36,7 +36,7 @@ extern "C" {
 #endif
 
 /** creates the dual fixing presolver and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePresolDualfix(
    SCIP*                 scip                /**< SCIP data structure */
    );

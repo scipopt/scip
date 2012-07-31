@@ -3,7 +3,7 @@
 # This scripts generates the dependences for SCIP
 #
 
-EXAMPLES=(Coloring Binpacking Eventhdlr LOP MIPSolver Queens SamplePricer SamplePricer_C Scheduler Testslack TSP VRP CallableLibrary)
+EXAMPLES=(Coloring Binpacking Eventhdlr LOP MIPSolver Queens Scheduler Testslack TSP VRP CallableLibrary)
 OPTS=(opt dbg opt-gccold)
 
 for EXAMPLE in ${EXAMPLES[@]}

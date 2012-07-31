@@ -23,38 +23,40 @@
  *
  * @page BRANCHING Ryan/Foster branching
  *
- * Ryan/Foster branching is one of the branching rules which are very useful for the used integer programs model. A
- * standard variable branching has the disadvantage that the zero branch is more or less useless. This is the case since
- * we only forbid one packing out of exponential many. The one branch on the other side reduces the problem since
+ * Ryan/Foster branching is a very useful branching rule  for the integer program model in use. A
+ * standard variable branching has the disadvantage that the zero branch is more or less useless because
+ * we only forbid one packing out of exponential many. On the other hand, the branch fixing a packing reduces the problem since
  * certain items are packed. This leads to a very unbalanced search tree.
  *
- * The idea of Ryan/Foster is to branch in a way that we say that on the one branch a certain pair of items are always
- * together and on the other branch they are never together. Note that in both case it is allowed that packings are
- * used which contain none of the two items.
+ * The branching idea of Ryan/Foster is to select a pair of items which is either a) forced to be packed together or b)
+ * not allowed to be packed together. Note that in both cases, it is allowed to use packings
+ * which contain none of the two items.
  *
- * There are two issue to be taken care off:
- * -# How do we select the pair of itmes?
+ * There are two issues to be taken care off:
+ * -# How do we select the pair of items?
  * -# How do we realize such a branching within \SCIP?
  *
  * @section SELECTION How do we select the pair of items?
  *
- * To select a pair of items, we have to know for each packing to items which are contained. Since every packing is a
+ * To select a pair of items, we have to know for each packing the items which are contained. Since every packing is a
  * variable and each item is a set covering constraint, we have to know for each variable in which set covering
- * constraints it appears (this means, has a coefficient of 1.0). Since \SCIP is constraint based, it is not possible to
- * get this information in general. To overcome this issue we use to functionality to add variable data to each
- * variable. This variable data contains the required information. This means, the constraints in which this variable
- * appears (see vardata_binpacking.c for more details). Having this variable data, it is now possible to get the
+ * constraints it appears (this means, has a coefficient of 1.0). Since \SCIP is constraint based, it is in general
+ * not possible to get this information directly. To overcome this issue, we use the functionality to add
+ * \ref vardata_binpacking.c "variable data" to every
+ * variable. This variable data contains the constraints in which this variable appears (see vardata_binpacking.c for more details).
+ * With the help of the variable data, it is now possible to get the
  * information which items belong to which packing. Therefore, we can use the Ryan/Foster idea to select a pair of
  * items.
  *
  * @section SAMEDIFFBRANCHING How do we realize such a branching within SCIP?
  *
- * After we selected a pair of items to branch on, the questions how to realize that with \SCIP. Since \SCIP is
- * constraint based, it is really easy to do that. We implement a constraint handler which handles these
- * informations. Therefore, see cons_samediff.c. This constraint handler does not only stores the branching
- * decisions. It also takes care of the fact that in each node all packing which are not feasible for that node a fixed
- * locally to zero. For more details we refer to the source code of the constraint handler.
- * 
+ * After having selected a pair of items to branch on, the question now is how to realize such a branching with \SCIP.
+ * Since \SCIP is
+ * constraint based, it is really easy to do that. We implement a constraint handler which handles the
+ * information, see cons_samediff.c. This constraint handler does not only store the branching
+ * decisions. Furthermore, it also ensures that all packing which are not feasible at a particular node are
+ * locally fixed to zero. For more details, we refer to the \ref cons_samediff.c "source code of the constraint handler".
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -67,6 +69,10 @@
 #include "probdata_binpacking.h"
 #include "vardata_binpacking.h"
 
+/**@name Branching rule properties
+ *
+ * @{
+ */
 
 #define BRANCHRULE_NAME            "RyanFoster"
 #define BRANCHRULE_DESC            "Ryan/Foster branching rule"
@@ -74,54 +80,21 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
-/*
- * Callback methods of branching rule
+/**@} */
+
+/**@name Callback methods
+ *
+ * @{
  */
-
-/** copy method for branchrule plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_BRANCHCOPY(branchCopyRyanFoster)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
-
-   /* call inclusion method of branchrule */
-   SCIP_CALL( SCIPincludeBranchruleRyanFoster(scip) );
- 
-   return SCIP_OKAY;
-}
-#else
-#define branchCopyRyanFoster NULL
-#endif
-
-/** destructor of branching rule to free user data (called when SCIP is exiting) */
-#define branchFreeRyanFoster NULL
-
-/** initialization method of branching rule (called after problem was transformed) */
-#define branchInitRyanFoster NULL
-
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitRyanFoster NULL
-
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolRyanFoster NULL
-
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolRyanFoster NULL
-
-/** TS: whats this ?*/
-#define branchExecrelRyanFoster NULL
 
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
 {  /*lint --e{715}*/
    SCIP_PROBDATA* probdata;
-      
+
    SCIP_Real** pairweights;
-   
+
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandsfrac;
    int nlpcands;
@@ -137,7 +110,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    int* consids;
    int nconsids;
    int nitems;
-   
+
    int id1;
    int id2;
 
@@ -149,14 +122,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(result != NULL);
-   
+
    SCIPdebugMessage("start branching at node %"SCIP_LONGINT_FORMAT", depth %d\n", SCIPgetNNodes(scip), SCIPgetDepth(scip));
 
    *result = SCIP_DIDNOTRUN;
-   
+
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
-   
+
    nitems = SCIPprobdataGetNItems(probdata);
 
    /* allocate memory for triangle matrix */
@@ -164,11 +137,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    for( i = 0; i < nitems; ++i )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &pairweights[i], nitems) );
-      
+
       for( j = 0; j < nitems; ++j )
          pairweights[i][j] = 0.0;
    }
-      
+
    /* get fractional LP candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands) );
    assert(nlpcands > 0);
@@ -185,7 +158,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
       nconsids = SCIPvardataGetNConsids(vardata);
       assert(nconsids > 0);
 
-      /* loop over all constraints/itmes the variable belongs to */
+      /* loop over all constraints/items the variable belongs to */
       for( i = 0; i < nconsids; ++i )
       {
          id1 = consids[i];
@@ -199,9 +172,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
             assert( SCIPisFeasLE(scip, pairweights[id2][id1], 1.0) );
             assert( SCIPisFeasGE(scip, pairweights[id2][id1], 0.0) );
          }
-      }   
+      }
    }
-   
+
    /* select branching */
    bestvalue = 0.0;
    id1 = -1;
@@ -232,8 +205,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
       SCIPfreeBufferArray(scip, &pairweights[i]);
    }
    SCIPfreeBufferArray(scip, &pairweights);
-   
-   SCIPdebugMessage("branch on order pair <%d,%d> with weight <%g>\n", 
+
+   SCIPdebugMessage("branch on order pair <%d,%d> with weight <%g>\n",
       SCIPprobdataGetIds(probdata)[id1], SCIPprobdataGetIds(probdata)[id2], bestvalue);
 
    /* create the branch-and-bound tree child nodes of the current node */
@@ -257,14 +230,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    return SCIP_OKAY;
 }
 
-/** branching execution method for relaxation solutions */
-#define branchExecrelRyanFoster NULL
+/**@} */
 
-/** branching execution method for not completely fixed pseudo solutions */
-#define branchExecpsRyanFoster NULL
-
-/*
- * branching rule specific interface methods
+/**@name Interface methods
+ *
+ * @{
  */
 
 /** creates the ryan foster branching rule and includes it in SCIP */
@@ -280,13 +250,12 @@ SCIP_RETCODE SCIPincludeBranchruleRyanFoster(
    branchrule = NULL;
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-	 BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+         BRANCHRULE_MAXBOUNDDIST, branchruledata) );
    assert(branchrule != NULL);
 
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpRyanFoster) );
 
-   /* add ryan foster branching rule parameters */
-   /* TODO: (optional) add branching rule specific parameters with SCIPaddTypeParam() here */
-
    return SCIP_OKAY;
 }
+
+/**@} */

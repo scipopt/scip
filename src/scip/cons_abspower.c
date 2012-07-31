@@ -3930,7 +3930,7 @@ SCIP_RETCODE proposeFeasibleSolution(
 
          zval = (consdata->lhs - xtermval)/consdata->zcoef;
          /* bad luck: z would get value outside of its domain */
-         if( SCIPisFeasLT(scip, zval, SCIPvarGetLbGlobal(consdata->z)) || SCIPisFeasGT(scip, zval, SCIPvarGetUbGlobal(consdata->z)) )
+         if( SCIPisInfinity(scip, REALABS(zval)) || SCIPisFeasLT(scip, zval, SCIPvarGetLbGlobal(consdata->z)) || SCIPisFeasGT(scip, zval, SCIPvarGetUbGlobal(consdata->z)) )
             break;
          SCIP_CALL( SCIPsetSolVal(scip, newsol, consdata->z, zval) );
       }
@@ -3940,7 +3940,7 @@ SCIP_RETCODE proposeFeasibleSolution(
       {
          zval = (consdata->rhs - xtermval)/consdata->zcoef;
          /* bad luck: z would get value outside of its domain */
-         if( SCIPisFeasLT(scip, zval, SCIPvarGetLbGlobal(consdata->z)) || SCIPisFeasGT(scip, zval, SCIPvarGetUbGlobal(consdata->z)) )
+         if( SCIPisInfinity(scip, REALABS(zval)) || SCIPisFeasLT(scip, zval, SCIPvarGetLbGlobal(consdata->z)) || SCIPisFeasGT(scip, zval, SCIPvarGetUbGlobal(consdata->z)) )
             break;
          SCIP_CALL( SCIPsetSolVal(scip, newsol, consdata->z, zval) );
       }
@@ -4661,7 +4661,9 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
    {
    case SCIP_EXPR_REALPOWER:
    {
-      /* realpower with exponent > 1.0 can always be absolute power, since it assumes that argument is >= 0.0 */
+      /* realpower with exponent > 1.0 can always be absolute power, since it assumes that argument is >= 0.0
+       * @todo we should also ensure that argument is >= 0.0
+       */
       exponent = SCIPexprgraphGetNodeRealPowerExponent(node);
       if( exponent <= 1.0 )
          return SCIP_OKAY;

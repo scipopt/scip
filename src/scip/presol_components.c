@@ -44,7 +44,7 @@
 #define PRESOL_DELAY               TRUE      /**< should presolver be delayed, if other presolvers found reductions? */
 
 #define DEFAULT_WRITEPROBLEMS     FALSE      /**< should the single components be written as an .lp-file? */
-#define DEFAULT_MAXINTVARS           20      /**< maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
+#define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
 #define DEFAULT_NODELIMIT       10000LL      /**< maximum number of nodes to be solved in subproblems */
 #define DEFAULT_INTFACTOR           1.0      /**< the weight of an integer variable compared to binary variables */
 #define DEFAULT_RELDECREASE         0.2      /**< percentage by which the number of variables has to be decreased after the last component solving
@@ -338,7 +338,7 @@ SCIP_RETCODE copyAndSolveComponent(
       /* do not catch control-C */
       SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-#ifndef SCIP_DEBUG
+#ifndef SCIP_MORE_DEBUG
       /* disable output */
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 #endif
@@ -424,7 +424,7 @@ SCIP_RETCODE copyAndSolveComponent(
       /* solve the subproblem */
       SCIP_CALL( SCIPsolve(subscip) );
 
-#ifdef SCIP_DEBUG
+#ifdef SCIP_MORE_DEBUG
       SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
 
@@ -918,8 +918,11 @@ SCIP_RETCODE splitProblem(
                compfixvals, ncompvars, nbinvars, nintvars, nsolvedprobs, ndeletedvars, ndeletedconss,
                &subscipresult) );
 
-         if( subscipresult == SCIP_CUTOFF )
+         if( subscipresult == SCIP_CUTOFF || subscipresult == SCIP_UNBOUNDED )
+	 {
+	    *result = subscipresult;
             break;
+	 }
 
          if( !presoldata->pluginscopied )
             break;
@@ -1147,11 +1150,11 @@ SCIP_RETCODE presolComponents(
    /* print statistics */
    SCIPstatistic( printStatistics(presoldata) );
 
-   SCIPdebugMessage("%d components, %d solved, %d deleted constraints, %d deleted variables\n",
-      ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars);
+   SCIPdebugMessage("%d components, %d solved, %d deleted constraints, %d deleted variables, result = %d\n",
+      ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars, *result);
 #ifdef NDEBUG
-   SCIPstatisticMessage("%d components, %d solved, %d deleted constraints, %d deleted variables\n",
-      ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars);
+   SCIPstatisticMessage("%d components, %d solved, %d deleted constraints, %d deleted variables, result = %d\n",
+      ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars, *result);
 #endif
 
    presoldata->lastnvars = SCIPgetNVars(scip);

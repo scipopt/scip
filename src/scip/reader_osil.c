@@ -1167,6 +1167,219 @@ SCIP_RETCODE readQuadraticCoefs(
    return SCIP_OKAY;
 }
 
+/** creates an expression from the addition of two given expression, with coefficients, and a constant */
+static
+SCIP_RETCODE exprAdd(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR**           expr,               /**< pointer to store resulting expression */
+   SCIP_Real             coef1,              /**< coefficient of first term */
+   SCIP_EXPR*            term1,              /**< expression of first term */
+   SCIP_Real             coef2,              /**< coefficient of second term */
+   SCIP_EXPR*            term2,              /**< expression of second term */
+   SCIP_Real             constant            /**< constant term to add */
+)
+{
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+
+   if( term1 != NULL && SCIPexprGetOperator(term1) == SCIP_EXPR_CONST )
+   {
+      constant += coef1 * SCIPexprGetOpReal(term1);
+      SCIPexprFreeDeep(blkmem, &term1);
+   }
+
+   if( term2 != NULL && SCIPexprGetOperator(term2) == SCIP_EXPR_CONST )
+   {
+      constant += coef2 * SCIPexprGetOpReal(term2);
+      SCIPexprFreeDeep(blkmem, &term2);
+   }
+
+   if( term1 == NULL && term2 == NULL )
+   {
+      SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_CONST, constant) );
+      return SCIP_OKAY;
+   }
+
+   if( term1 != NULL && SCIPexprGetOperator(term1) == SCIP_EXPR_LINEAR && coef1 != 1.0 )
+   {
+      /* multiply coefficients and constant of linear expression term1 by coef1 */
+      SCIP_Real* coefs;
+      int i;
+
+      coefs = SCIPexprGetLinearCoefs(term1);
+      assert(coefs != NULL);
+
+      for( i = 0; i < SCIPexprGetNChildren(term1); ++i )
+         coefs[i] *= coef1;
+
+      SCIP_CALL( SCIPexprAddToLinear(blkmem, term1, 0, NULL, NULL, (coef1-1.0) * SCIPexprGetLinearConstant(term1)) );
+
+      coef1 = 1.0;
+   }
+
+   if( term2 != NULL && SCIPexprGetOperator(term2) == SCIP_EXPR_LINEAR && coef2 != 1.0 )
+   {
+      /* multiply coefficients and constant of linear expression term2 by coef2 */
+      SCIP_Real* coefs;
+      int i;
+
+      coefs = SCIPexprGetLinearCoefs(term2);
+      assert(coefs != NULL);
+
+      for( i = 0; i < SCIPexprGetNChildren(term2); ++i )
+         coefs[i] *= coef2;
+
+      SCIP_CALL( SCIPexprAddToLinear(blkmem, term2, 0, NULL, NULL, (coef2-1.0) * SCIPexprGetLinearConstant(term2)) );
+
+      coef2 = 1.0;
+   }
+
+   if( term1 == NULL || term2 == NULL )
+   {
+      if( term1 == NULL )
+      {
+         term1 = term2;
+         coef1 = coef2;
+      }
+      if( constant != 0.0 || coef1 != 1.0 )
+      {
+         if( SCIPexprGetOperator(term1) == SCIP_EXPR_LINEAR )
+         {
+            assert(coef1 == 1.0);
+
+            /* add constant to existing linear expression */
+            SCIP_CALL( SCIPexprAddToLinear(blkmem, term1, 0, NULL, NULL, constant) );
+            *expr = term1;
+         }
+         else
+         {
+            /* create new linear expression for coef1 * term1 + constant */
+            SCIP_CALL( SCIPexprCreateLinear(blkmem, expr, 1, &term1, &coef1, constant) );
+         }
+      }
+      else
+      {
+         assert(constant == 0.0);
+         assert(coef1 == 1.0);
+         *expr = term1;
+      }
+
+      return SCIP_OKAY;
+   }
+
+   if( SCIPexprGetOperator(term1) == SCIP_EXPR_LINEAR && SCIPexprGetOperator(term2) == SCIP_EXPR_LINEAR )
+   {
+      assert(coef1 == 1.0);
+      assert(coef2 == 1.0);
+
+      SCIP_CALL( SCIPexprAddToLinear(blkmem, term1, SCIPexprGetNChildren(term2), SCIPexprGetLinearCoefs(term2), SCIPexprGetChildren(term2), SCIPexprGetLinearConstant(term2) + constant) );
+      SCIPexprFreeShallow(blkmem, &term2);
+
+      *expr = term1;
+
+      return SCIP_OKAY;
+   }
+
+   if( SCIPexprGetOperator(term2) == SCIP_EXPR_LINEAR )
+   {
+      /* if only term2 is linear, then swap */
+      SCIP_EXPR* tmp;
+
+      tmp = term2;
+      assert(coef2 == 1.0);
+
+      term2 = term1;
+      coef2 = coef1;
+      term1 = tmp;
+      coef1 = 1.0;
+   }
+
+   if( SCIPexprGetOperator(term1) == SCIP_EXPR_LINEAR )
+   {
+      /* add coef2*term2 as extra child to linear expression term1 */
+      assert(coef1 == 1.0);
+
+      SCIP_CALL( SCIPexprAddToLinear(blkmem, term1, 1, &coef2, &term2, constant) );
+      *expr = term1;
+
+      return SCIP_OKAY;
+   }
+
+   /* both terms are not linear, then create new linear term for sum */
+   {
+      SCIP_Real coefs[2];
+      SCIP_EXPR* children[2];
+
+      coefs[0] = coef1;
+      coefs[1] = coef2;
+      children[0] = term1;
+      children[1] = term2;
+
+      SCIP_CALL( SCIPexprCreateLinear(blkmem, expr, 2, children, coefs, constant) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** creates an expression from the multiplication of an expression with a constant */
+static
+SCIP_RETCODE exprMulConstant(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR**           expr,               /**< buffer to store pointer to created expression */
+   SCIP_EXPR*            term,               /**< term to multiply by factor */
+   SCIP_Real             factor              /**< factor */
+   )
+{
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(term != NULL);
+
+   if( factor == 0.0 )
+   {
+      SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_CONST, 0.0) );
+      return SCIP_OKAY;
+   }
+   if( factor == 1.0 )
+   {
+      *expr = term;
+      return SCIP_OKAY;
+   }
+
+   switch( SCIPexprGetOperator(term) )
+   {
+      case SCIP_EXPR_CONST:
+      {
+         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_CONST, factor * SCIPexprGetOpReal(term)) );
+         SCIPexprFreeDeep(blkmem, &term);
+         break;
+      }
+
+      case SCIP_EXPR_LINEAR:
+      {
+         SCIP_Real* data;
+         int i;
+
+         data = SCIPexprGetLinearCoefs(term);
+         /* loop one more index to multiply also constant of linear expression */
+         for( i = 0; i <= SCIPexprGetNChildren(term); ++i )
+            data[i] *= factor;
+
+         *expr = term;
+         break;
+      }
+
+      default:
+      {
+         SCIP_CALL( SCIPexprCreateLinear(blkmem, expr, 1, &term, &factor, 0.0) );
+         break;
+      }
+
+      /* @todo case SCIP_EXPR_QUADRATIC: */
+   } /*lint !e788 */
+
+   return SCIP_OKAY;
+}
+
 /** transforms OSnL expression tree into SCIP expression */
 static
 SCIP_RETCODE readExpression(
@@ -1412,19 +1625,40 @@ SCIP_RETCODE readExpression(
 
       if( strcmp(exprname, "plus") == 0 )
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_PLUS, arg1, arg2) );
+         SCIP_CALL( exprAdd(SCIPblkmem(scip), expr, 1.0, arg1, 1.0, arg2, 0.0) );
+         /* SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_PLUS, arg1, arg2) ); */
       }
       else if( strcmp(exprname, "minus") == 0 )
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_MINUS, arg1, arg2) );
+         SCIP_CALL( exprAdd(SCIPblkmem(scip), expr, 1.0, arg1, -1.0, arg2, 0.0) );
+         /* SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_MINUS, arg1, arg2) ); */
       }
       else if( strcmp(exprname, "times") == 0 )
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_MUL, arg1, arg2) );
+         if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
+         {
+            SCIP_CALL( exprMulConstant(SCIPblkmem(scip), expr, arg2, SCIPexprGetOpReal(arg1)) );
+         }
+         else if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
+         {
+            SCIP_CALL( exprMulConstant(SCIPblkmem(scip), expr, arg1, SCIPexprGetOpReal(arg2)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_MUL, arg1, arg2) );
+         }
       }
       else if( strcmp(exprname, "divide") == 0 )
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_DIV, arg1, arg2) );
+         if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
+         {
+            assert(SCIPexprGetOpReal(arg2) != 0.0);
+            SCIP_CALL( exprMulConstant(SCIPblkmem(scip), expr, arg1, 1.0/SCIPexprGetOpReal(arg2)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_DIV, arg1, arg2) );
+         }
       }
       else if( strcmp(exprname, "power") == 0 )
       {
@@ -1529,8 +1763,37 @@ SCIP_RETCODE readExpression(
 
       if( *doingfine )
       {
-         /* create sum or product expression */
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, (strcmp(exprname, "sum") == 0) ? SCIP_EXPR_SUM : SCIP_EXPR_PRODUCT, nargs, args) );
+         switch( nargs )
+         {
+            case 0:
+            {
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_CONST, (strcmp(exprname, "sum") == 0) ? 0.0 : 1.0) );
+               break;
+            }
+            case 1:
+            {
+               *expr = args[0];
+               break;
+            }
+            case 2:
+            {
+               if( strcmp(exprname, "sum") == 0 )
+               {
+                  SCIP_CALL( exprAdd(SCIPblkmem(scip), expr, 1.0, args[0], 1.0, args[1], 0.0) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_MUL, args[0], args[1]) );
+               }
+               break;
+            }
+            default:
+            {
+               /* create sum or product expression */
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, (strcmp(exprname, "sum") == 0) ? SCIP_EXPR_SUM : SCIP_EXPR_PRODUCT, nargs, args) );
+               break;
+            }
+         }
       }
       else
       {

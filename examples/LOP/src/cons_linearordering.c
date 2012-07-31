@@ -20,9 +20,9 @@
  * @brief  example constraint handler for linear ordering constraints
  * @author Marc Pfetsch
  *
- * We handle the following inequality system:
- * x[i][j] + x[j][i] == 1           (symmetry equations - added initially)
- * x[i][j] + x[j][k] + x[k][i] <= 2 (triangle inequalities)
+ * We handle the following system of linear constraints:
+ * - \f$ x_{ij} + x_{ji} = 1 \f$            (symmetry equations - added initially)
+ * \f$ x_{ij} + x_{jk} + x_{ki} \leq 2 \f$  (triangle inequalities)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -169,27 +169,6 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLinearOrdering)
 
    return SCIP_OKAY;
 }
-
-/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#define consFreeLinearOrdering NULL
-
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitLinearOrdering NULL
-
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitLinearOrdering NULL
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreLinearOrdering NULL
-
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreLinearOrdering NULL
-
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolLinearOrdering NULL
-
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#define consExitsolLinearOrdering NULL
 
 /** frees specific constraint data */
 static
@@ -812,9 +791,6 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
    return SCIP_OKAY;
 }
 
-/** presolving method of constraint handler */
-#define consPresolLinearOrdering NULL
-
 /** propagation conflict resolving method of constraint handler */
 static
 SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
@@ -944,21 +920,6 @@ SCIP_DECL_CONSLOCK(consLockLinearOrdering)
    return SCIP_OKAY;
 }
 
-/** constraint activation notification method of constraint handler */
-#define consActiveLinearOrdering NULL
-
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveLinearOrdering NULL
-
-/** constraint enabling notification method of constraint handler */
-#define consEnableLinearOrdering NULL
-
-/** constraint disabling notification method of constraint handler */
-#define consDisableLinearOrdering NULL
-
-/** variable deletion method of constraint handler */
-#define consDelVarsLinearOrdering NULL
-
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintLinearOrdering)
@@ -1065,15 +1026,6 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
 
    return SCIP_OKAY;
 }
-
-/** constraint parsing method of constraint handler */
-#define consParseLinearOrdering NULL
-
-/** constraint method of constraint handler which returns the variables (if possible) */
-#define consGetVarsLinearOrdering NULL
-
-/** constraint method of constraint handler which returns the number of variables (if possible) */
-#define consGetNVarsLinearOrdering NULL
 
 /** creates the handler for linear ordering constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(

@@ -38,7 +38,7 @@ extern "C" {
 #endif
 
 /** creates the handler for conjunction constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrConjunction(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -47,7 +47,7 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsConjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -85,7 +85,7 @@ SCIP_RETCODE SCIPcreateConsBasicConjunction(
    );
 
 /** adds constraint to the conjunction of constraints */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddConsElemConjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< conjunction constraint */

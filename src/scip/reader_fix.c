@@ -20,12 +20,12 @@
  * This reader allows to read a file containing fixation values for variables of the current problem. Each line of the
  * file should have format
  *
- *    <variable name> <value to fix>
+ *    \<variable name\> \<value to fix\>
  *
  * Note that only a subset of the variables may need to appear in the file. Lines with unknown variable names are
  * ignored. The writing functionality is currently not supported.
  *
- * @Note The format is equal to the (not xml) solution format of SCIP.
+ * @note The format is equal to the (not xml) solution format of SCIP.
  *
  */
 

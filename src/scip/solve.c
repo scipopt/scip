@@ -1752,7 +1752,10 @@ SCIP_RETCODE SCIPpriceLoop(
       /* check if pricing loop should be aborted */
       if( SCIPsolveIsStopped(set, stat, FALSE) )
       {
-         SCIPmessagePrintWarning(messagehdlr, "pricing has been interrupted -- LP of current node is invalid\n");
+         /* do not print the warning message if we stopped because the problem is solved */
+         if( !SCIPsetIsLE(set, SCIPgetUpperbound(set->scip), SCIPgetLowerbound(set->scip)) )
+            SCIPmessagePrintWarning(messagehdlr, "pricing has been interrupted -- LP of current node is invalid\n");
+
          *aborted = TRUE;
          break;
       }

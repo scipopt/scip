@@ -33,7 +33,7 @@ extern "C" {
 #endif
 
 /** creates the clique separator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeSepaClique(
    SCIP*                 scip                /**< SCIP data structure */
    );

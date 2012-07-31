@@ -127,7 +127,7 @@
     <p class="a"> 
       As long as you use it for academic, non-commercial purposes: No. 
       This will not change. For the other cases, check the explanation of the 
-      <a href="http://zibopt.zib.de/ZIBLicence.shtml">ZIB academic license</a> and always feel free to ask us.
+      <a href="http://scip.zib.de/licence.shtml">ZIB academic license</a> and always feel free to ask us.
       If you want to use SCIP commercially, please write an e-mail to koch@zib.de .
     </p>
     <p class="q">
@@ -188,8 +188,8 @@
     <p class="a">
       If you want to use <a href="http://soplex.zib.de/">SoPlex</a> as the underlying LP-solver, you can try the
       following:
-      First, download the <a href="http://zibopt.zib.de">ZIB Optimization Suite</a>.
-      Then, extract the file, change into the ziboptsuite directory, and enter 'make'.
+      First, download the <a href="http://scip.zib.de">SCIP Optimization Suite</a>.
+      Then, extract the file, change into the scipoptsuite directory, and enter 'make'.
       As long as you have all the necessary libraries installed in your system, it should generate a SCIP
       binary linked to ZIMPL and Soplex. The necessary system libraries are:
     </p>
@@ -199,7 +199,7 @@
         <li>Readline (libreadline.a)</li>
     </ol>
     <p class="a">
-      If you do not have all of these libraries, read the <tt>INSTALL</tt> file in the ZIB Optimization
+      If you do not have all of these libraries, read the <tt>INSTALL</tt> file in the SCIP Optimization
       Suite directory.<br>
       As a summary, the call of <code>make ZIMPL=false ZLIB=false READLINE=false</code> should work on most systems.
     </p>
@@ -274,7 +274,7 @@
       that the solved problem is an LP.
 
       Hence, if you need more, "LP specific", information than the primal solution, you are better off using an LP-Solver
-      directly. If you are using the ZIB Optimization Suite, you could, e.g., use the included LP solver
+      directly. If you are using the SCIP Optimization Suite, you could, e.g., use the included LP solver
       <a href=http://soplex.zib.de>SoPlex</a>.  If you want to solve an LP not from the command line, but within your
       C/C++ program, you could also use SCIP's LP-Interface, see also <a href="#Q4.10">here</a>.
     </p>
@@ -440,10 +440,10 @@
       <a name="Q2.5">How can I input a MINLP into SCIP?</a>
     </p>
     <p class="a">
-      Mixed-integer <b>polynomially</b> constrained programs can be input via the readers for *.zpl and *.pip files.<br>
-      Further, the readers for *.mps and *.lp files support the CPLEX extensions for <b>quadratic</b> constraints and objective.<br>
-      For more general MINLPs, no reader is included in SCIP yet.
-      However, an interface to the modeling language GAMS is available in the <a href="https://projects.coin-or.org/GAMSlinks">COIN-OR/GAMSlinks</a> project.
+      Mixed-integer nonlinear constrained programs can be input via the reader for .osil files and the AMPL interface.
+      An interface to the modeling language GAMS is available in the <a href="https://projects.coin-or.org/GAMSlinks">COIN-OR/GAMSlinks</a> project.<br>
+      Further, mixed-integer <b>polynomially</b> constrained programs can be input via the readers for *.zpl and *.pip files.<br>
+      Finally, the readers for *.mps and *.lp files support the CPLEX extensions for <b>quadratic</b> constraints and objective.
     </p>
 
 

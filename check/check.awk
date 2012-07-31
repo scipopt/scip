@@ -191,8 +191,11 @@ BEGIN {
       lpsname = "spx";
    else if( $13 == "CPLEX" )
       lpsname = "cpx";
-   else if( $13 == "NONE" )
+   else if( $13 == "NONE]" )
+   {
       lpsname = "none";
+      lpsversion = "";
+   }
    else if( $13 == "Clp" )
       lpsname = "clp";
    else if( $13 == "MOSEK" )
@@ -205,7 +208,7 @@ BEGIN {
 #      lpsname = "xprs";
 
     # get LP solver version 
-   if( NF >= 14 ) {
+   if( NF >= 16 ) {
       split($14, v, "]");
       lpsversion = v[1];
    }
@@ -391,7 +394,7 @@ BEGIN {
    firstpb = $4;
 }
 /^  Primal Bound     :/ {
-   if( $4 == "infeasible" ) {
+   if( $4 == "infeasible" || $4 == "infeasible\r" ) {
       pb = +infty;
       db = +infty;
       dbset = 1;

@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /** creates the handler for disjunction constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -48,13 +48,14 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsDisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int                   nconss,             /**< number of initial constraints in disjunction */
    SCIP_CONS**           conss,              /**< initial constraint in disjunction */
+   SCIP_CONS*            relaxcons,          /**< a conjunction constraint containing the linear relaxation of the disjunction constraint, or NULL */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
@@ -84,11 +85,12 @@ SCIP_RETCODE SCIPcreateConsBasicDisjunction(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int                   nconss,             /**< number of initial constraints in disjunction */
-   SCIP_CONS**           conss               /**< initial constraint in disjunction */
+   SCIP_CONS**           conss,              /**< initial constraint in disjunction */
+   SCIP_CONS*            relaxcons           /**< a conjunction constraint containing the linear relaxation of the disjunction constraint, or NULL */
    );
 
 /** adds constraint to the disjunction of constraints */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddConsElemDisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< disjunction constraint */

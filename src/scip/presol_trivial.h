@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 /** creates the trivial presolver and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePresolTrivial(
    SCIP*                 scip                /**< SCIP data structure */
    );

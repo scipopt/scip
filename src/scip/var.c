@@ -6522,9 +6522,10 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    assert(var->scip == set->scip);
 
    /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+   assert(!SCIPsetIsFeasGT(set, newbound, var->glbdom.ub));
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
 
    /* we do not want to exceed the upperbound, which could have happened due to numerics */
    newbound = MIN(newbound, var->glbdom.ub);
@@ -6650,9 +6651,10 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    assert(var->scip == set->scip);
 
    /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+   assert(!SCIPsetIsFeasLT(set, newbound, var->glbdom.lb));
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
 
    /* we do not want to undercut the lowerbound, which could have happened due to numerics */
    newbound = MAX(newbound, var->glbdom.lb);
@@ -7248,9 +7250,10 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    assert(var->scip == set->scip);
 
    /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, var->locdom.ub));
+   assert(!SCIPsetIsFeasGT(set, newbound, var->locdom.ub));
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+   assert(SCIPsetIsLE(set, newbound, var->locdom.ub));
 
    /* we do not want to exceed the upperbound, which could have happened due to numerics */
    newbound = MIN(newbound, var->locdom.ub);
@@ -7365,9 +7368,10 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    assert(var->scip == set->scip);
 
    /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, var->locdom.lb));
+   assert(!SCIPsetIsFeasLT(set, newbound, var->locdom.lb));
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+   assert(SCIPsetIsGE(set, newbound, var->locdom.lb));
 
    /* we do not want to undercut the lowerbound, which could have happened due to numerics */
    newbound = MAX(newbound, var->locdom.lb);
@@ -13092,7 +13096,7 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
          SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir), length) );
       }
       return SCIP_OKAY;
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot update conflict score of a multi-aggregated variable\n");
       return SCIP_INVALIDDATA;
@@ -13100,15 +13104,15 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
    case SCIP_VARSTATUS_NEGATED:
       SCIP_CALL( SCIPvarIncNActiveConflicts(var->negatedvar, stat, SCIPbranchdirOpposite(dir), length) );
       return SCIP_OKAY;
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
 }
 
-/**  gets the number of active conflicts containing this variable in given direction */
-SCIP_Real SCIPvarGetNActiveConflicts(
+/** gets the number of active conflicts containing this variable in given direction */
+SCIP_Longint SCIPvarGetNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -13122,7 +13126,7 @@ SCIP_Real SCIPvarGetNActiveConflicts(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
-         return 0.0;
+         return 0;
       else
          return SCIPvarGetNActiveConflicts(var->data.original.transvar, stat, dir);
 
@@ -13131,31 +13135,31 @@ SCIP_Real SCIPvarGetNActiveConflicts(
       return SCIPhistoryGetNActiveConflicts(var->history, dir);
 
    case SCIP_VARSTATUS_FIXED:
-      return 0.0;
+      return 0;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
          return SCIPvarGetNActiveConflicts(var->data.aggregate.var, stat, dir);
       else
          return SCIPvarGetNActiveConflicts(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
-      return 0.0;
+      return 0;
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetNActiveConflicts(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return 0; /*lint !e527*/
    }
 }
 
-/**  gets the number of active conflicts containing this variable in given direction
+/** gets the number of active conflicts containing this variable in given direction
  *  in the current run
  */
-SCIP_Real SCIPvarGetNActiveConflictsCurrentRun(
+SCIP_Longint SCIPvarGetNActiveConflictsCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -13169,7 +13173,7 @@ SCIP_Real SCIPvarGetNActiveConflictsCurrentRun(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
-         return 0.0;
+         return 0;
       else
          return SCIPvarGetNActiveConflictsCurrentRun(var->data.original.transvar, stat, dir);
 
@@ -13178,28 +13182,28 @@ SCIP_Real SCIPvarGetNActiveConflictsCurrentRun(
       return SCIPhistoryGetNActiveConflicts(var->historycrun, dir);
 
    case SCIP_VARSTATUS_FIXED:
-      return 0.0;
+      return 0;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
          return SCIPvarGetNActiveConflictsCurrentRun(var->data.aggregate.var, stat, dir);
       else
          return SCIPvarGetNActiveConflictsCurrentRun(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
-      return 0.0;
+      return 0;
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetNActiveConflictsCurrentRun(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return 0; /*lint !e527*/
    }
 }
 
-/**  gets the average conflict length in given direction due to branching on the variable */
+/** gets the average conflict length in given direction due to branching on the variable */
 SCIP_Real SCIPvarGetAvgConflictlength(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -13218,7 +13222,7 @@ SCIP_Real SCIPvarGetAvgConflictlength(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-         return  SCIPhistoryGetAvgConflictlength(var->history, dir);
+         return SCIPhistoryGetAvgConflictlength(var->history, dir);
    case SCIP_VARSTATUS_FIXED:
       return 0.0;
 
@@ -13227,13 +13231,13 @@ SCIP_Real SCIPvarGetAvgConflictlength(
          return SCIPvarGetAvgConflictlength(var->data.aggregate.var, dir);
       else
          return SCIPvarGetAvgConflictlength(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetAvgConflictlength(var->negatedvar, SCIPbranchdirOpposite(dir));
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
@@ -13657,7 +13661,7 @@ SCIP_Real SCIPvarGetAvgBranchdepthCurrentRun(
    }
 }
 
-/** returns the average number of inferences found after branching on the variable in given direction */
+/** returns the variable's VSIDS score */
 SCIP_Real SCIPvarGetVSIDS_rec(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -13706,9 +13710,7 @@ SCIP_Real SCIPvarGetVSIDS_rec(
    }
 }
 
-/** returns the average number of inferences found after branching on the variable in given direction
- *  in the current run
- */
+/** returns the variable's VSIDS score only using conflicts of the current run */
 SCIP_Real SCIPvarGetVSIDSCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -16000,7 +16002,7 @@ SCIP_Real SCIPvarGetPseudoSol(
       return SCIPvarGetPseudoSol_rec(var);
 }
 
-/** returns the average number of inferences found after branching on the variable in given direction */
+/** returns the variable's VSIDS score */
 SCIP_Real SCIPvarGetVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */

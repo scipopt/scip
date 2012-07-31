@@ -40,7 +40,7 @@ extern "C" {
 #endif
 
 /** creates the pscostdiving heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurPscostdiving(
    SCIP*                 scip                /**< SCIP data structure */
    );

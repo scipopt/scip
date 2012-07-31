@@ -242,7 +242,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    if( maxval > INT_MAX )
       maxabsval = 0;
    else if( maxval < 1.0 )
-      maxabsval = (int) 10000*maxval; /*lint !e524*/
+      maxabsval = (int) (10000*maxval);
    else
       maxabsval = (int) maxval;
 

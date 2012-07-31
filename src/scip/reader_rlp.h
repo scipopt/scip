@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** includes the rlp file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderRlp(
    SCIP*                 scip                /**< SCIP data structure */
    );

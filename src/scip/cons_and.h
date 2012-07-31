@@ -43,7 +43,7 @@ extern "C" {
 #endif
 
 /** creates the handler for and constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrAnd(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -52,7 +52,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -93,7 +93,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -104,21 +104,21 @@ SCIP_RETCODE SCIPcreateConsBasicAnd(
    );
 
 /** gets number of variables in and constraint */
-extern
+EXTERN
 int SCIPgetNVarsAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in and constraint */
-extern
+EXTERN
 SCIP_VAR** SCIPgetVarsAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the resultant variable in and constraint */
-extern
+EXTERN
 SCIP_VAR* SCIPgetResultantAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

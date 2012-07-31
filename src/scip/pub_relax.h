@@ -34,76 +34,76 @@ extern "C" {
 #endif
 
 /** compares two relaxation handlers w. r. to their priority */
-extern
+EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPrelaxComp);
 
 /** comparison method for sorting relaxators w.r.t. to their name */
-extern
+EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPrelaxCompName);
 
 /** gets user data of relaxation handler */
-extern
+EXTERN
 SCIP_RELAXDATA* SCIPrelaxGetData(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** sets user data of relaxation handler; user has to free old data in advance! */
-extern
+EXTERN
 void SCIPrelaxSetData(
    SCIP_RELAX*           relax,              /**< relaxation handler */
    SCIP_RELAXDATA*       relaxdata           /**< new relaxation handler user data */
    );
 
 /** gets name of relaxation handler */
-extern
+EXTERN
 const char* SCIPrelaxGetName(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets description of relaxation handler */
-extern
+EXTERN
 const char* SCIPrelaxGetDesc(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets priority of relaxation handler */
-extern
+EXTERN
 int SCIPrelaxGetPriority(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets frequency of relaxation handler */
-extern
+EXTERN
 int SCIPrelaxGetFreq(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets time in seconds used in this relaxator for setting up for next stages */
-extern
+EXTERN
 SCIP_Real SCIPrelaxGetSetupTime(
    SCIP_RELAX*           relax               /**< relaxator */
    );
 
 /** gets time in seconds used in this relaxation handler */
-extern
+EXTERN
 SCIP_Real SCIPrelaxGetTime(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the total number of times, the relaxation handler was called */
-extern
+EXTERN
 SCIP_Longint SCIPrelaxGetNCalls(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** is relaxation handler initialized? */
-extern
+EXTERN
 SCIP_Bool SCIPrelaxIsInitialized(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** marks the current relaxation unsolved, s.t. the relaxation handler is called again in the next solving round */
-extern
+EXTERN
 void SCIPrelaxMarkUnsolved(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );

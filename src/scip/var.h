@@ -1231,7 +1231,7 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
-/** increases the conflict score of the variable by the given weight */
+/** increases the VSIDS of the variable by the given weight */
 extern
 SCIP_RETCODE SCIPvarIncVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
@@ -1255,17 +1255,17 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_Real             length              /**< length of the conflict */
    );
 
-/**  gets the number of active conflicts containing this variable in given direction */
-SCIP_Real SCIPvarGetNActiveConflicts(
+/** gets the number of active conflicts containing this variable in given direction */
+SCIP_Longint SCIPvarGetNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
-/**  gets the number of active conflicts containing this variable in given direction
+/** gets the number of active conflicts containing this variable in given direction
  *  in the current run
  */
-SCIP_Real SCIPvarGetNActiveConflictsCurrentRun(
+SCIP_Longint SCIPvarGetNActiveConflictsCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1312,7 +1312,7 @@ SCIP_RETCODE SCIPvarIncCutoffSum(
    SCIP_Real             weight              /**< weight of this update in cutoff score */
    );
 
-/** returns the average number of inferences found after branching on the variable in given direction */
+/** returns the variable's VSIDS score */
 extern
 SCIP_Real SCIPvarGetVSIDS_rec(
    SCIP_VAR*             var,                /**< problem variable */
@@ -1320,9 +1320,7 @@ SCIP_Real SCIPvarGetVSIDS_rec(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
-/** returns the average number of inferences found after branching on the variable in given direction
- *  in the current run
- */
+/** returns the variable's VSIDS score only using conflicts of the current run */
 extern
 SCIP_Real SCIPvarGetVSIDSCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
@@ -1404,7 +1402,7 @@ SCIP_RETCODE SCIPvarDropEvent(
    int                   filterpos           /**< position of event filter entry returned by SCIPvarCatchEvent(), or -1 */
    );
 
-/** returns the average number of inferences found after branching on the variable in given direction */
+/** returns the variable's VSIDS score */
 extern
 SCIP_Real SCIPvarGetVSIDS(
    SCIP_VAR*             var,                /**< problem variable */

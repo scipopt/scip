@@ -42,7 +42,7 @@ extern "C" {
 #endif
 
 /** creates the handler for logic or constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrLogicor(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -51,7 +51,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -91,7 +91,7 @@ SCIP_RETCODE SCIPcreateConsLogicor(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -101,7 +101,7 @@ SCIP_RETCODE SCIPcreateConsBasicLogicor(
    );
 
 /** adds coefficient in logic or constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddCoefLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< logicor constraint */
@@ -109,28 +109,28 @@ SCIP_RETCODE SCIPaddCoefLogicor(
    );
 
 /** gets number of variables in logic or constraint */
-extern
+EXTERN
 int SCIPgetNVarsLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in logic or constraint */
-extern
+EXTERN
 SCIP_VAR** SCIPgetVarsLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual solution of the logic or constraint in the current LP */
-extern
+EXTERN
 SCIP_Real SCIPgetDualsolLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual Farkas value of the logic or constraint in the current infeasible LP */
-extern
+EXTERN
 SCIP_Real SCIPgetDualfarkasLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -139,7 +139,7 @@ SCIP_Real SCIPgetDualfarkasLogicor(
 /** returns the linear relaxation of the given logic or constraint; may return NULL if no LP row was yet created;
  *  the user must not modify the row!
  */
-extern
+EXTERN
 SCIP_ROW* SCIPgetRowLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

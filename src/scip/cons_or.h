@@ -43,7 +43,7 @@ extern "C" {
 #endif
 
 /** creates the handler for or constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrOr(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -52,7 +52,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -93,7 +93,7 @@ SCIP_RETCODE SCIPcreateConsOr(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -104,21 +104,21 @@ SCIP_RETCODE SCIPcreateConsBasicOr(
    );
 
 /** gets number of variables in or constraint */
-extern
+EXTERN
 int SCIPgetNVarsOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in or constraint */
-extern
+EXTERN
 SCIP_VAR** SCIPgetVarsOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the resultant variable in or constraint */
-extern
+EXTERN
 SCIP_VAR* SCIPgetResultantOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

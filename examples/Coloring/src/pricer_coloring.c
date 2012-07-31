@@ -815,11 +815,6 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
 
 }
 
-
-/* define not used callbacks as NULL */
-#define pricerInitColoring NULL
-#define pricerExitColoring NULL
-
 /** method to call, when the maximal number of variables priced in each round is changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdMaxvarsround)
@@ -894,10 +889,9 @@ SCIP_RETCODE SCIPincludePricerColoring(
          pricerRedcostColoring, pricerFarkasColoring, pricerdata) );
    assert(pricer != NULL);
    
+   /* include non-fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetPricerCopy(scip, pricer, pricerCopyColoring) );
    SCIP_CALL( SCIPsetPricerFree(scip, pricer, pricerFreeColoring) );
-   SCIP_CALL( SCIPsetPricerInit(scip, pricer, pricerInitColoring) );
-   SCIP_CALL( SCIPsetPricerExit(scip, pricer, pricerExitColoring) );
    SCIP_CALL( SCIPsetPricerInitsol(scip, pricer, pricerInitsolColoring) );
    SCIP_CALL( SCIPsetPricerExitsol(scip, pricer, pricerExitsolColoring) );
 

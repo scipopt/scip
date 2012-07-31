@@ -171,9 +171,7 @@ SCIP_RETCODE getStatistic(
    )
 {
    char* buf;
-   char* name;
-   char* s;
-   
+
    buf = cipinput->strbuf;
 
    if( strncmp(buf, "OBJECTIVE", 9) == 0 )
@@ -183,26 +181,34 @@ SCIP_RETCODE getStatistic(
    }
 
    SCIPdebugMessage("parse statistic\n");
-   
+
    if( strncmp(buf, "  Problem name", 14) == 0 )
    {
-      if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
+      char* name;
+      char* s;
+
+      name = strchr(buf, ':');
+
+      if( name == NULL )
       {
          SCIPwarningMessage(scip, "did not find problem name\n");
          return SCIP_OKAY;  /* no error, might work with empty problem name */
       }
-      
+
+      /* skip ':' */
+      ++name;
+
       /* remove tabs new line form string */
       if( NULL != (s = strpbrk(name, "#\r\n")) )
          *s = '\0';
-      
+
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
          name++;
-         
+
       /* set problem name */
       SCIP_CALL( SCIPsetProbName(scip, name) );
-         
+
       SCIPdebugMessage("problem name <%s>\n", name);
    }
 
@@ -234,70 +240,85 @@ SCIP_RETCODE getObjective(
       cipinput->section = CIP_CONSTRAINTS;
    else if( strncmp(buf, "END", 3) == 0 )
       cipinput->section = CIP_END;
-   
+
    if( cipinput->section != CIP_OBJECTIVE )
       return SCIP_OKAY;
 
    SCIPdebugMessage("parse objective information\n");
-   
+
    if( strncmp(buf, "  Sense", 7) == 0 )
    {
       SCIP_OBJSENSE objsense;
-      
-      if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
+
+      name = strchr(buf, ':');
+
+      if( name == NULL )
       {
          SCIPwarningMessage(scip, "did not find objective sense\n");
          return SCIP_OKAY; /* no error - might work with default */
       }
-      
+
+      /* skip ':' */
+      ++name;
+
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
          name++;
-      
+
       if( strncmp(name, "minimize", 3) == 0 )
          objsense = SCIP_OBJSENSE_MINIMIZE;
       else if( strncmp(name, "maximize", 3) == 0 )
          objsense = SCIP_OBJSENSE_MAXIMIZE;
       else
       {
-         SCIPwarningMessage(scip, "unknown objective sense\n");
+         SCIPwarningMessage(scip, "unknown objective sense, %s\n", name);
          return SCIP_OKAY; /* no error - might work with default */
       }
 
       /* set problem name */
       SCIP_CALL( SCIPsetObjsense(scip, objsense) );
-      SCIPdebugMessage("objective sense <%s>\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");         
+      SCIPdebugMessage("objective sense <%s>\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
    }
    else if( strncmp(buf, "  Offset", 7) == 0 )
    {
       char* endptr;
 
-      if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
+      name = strchr(buf, ':');
+
+      if( name == NULL )
       {
          SCIPwarningMessage(scip, "did not find offset\n");
          return SCIP_OKAY;
       }
 
+      /* skip ':' */
+      ++name;
+
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
          name++;
-         
+
       *objoffset += strtod(name, &endptr);
    }
    else if( strncmp(buf, "  Scale", 7) == 0 )
    {
       char* endptr;
 
-      if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
+      name = strchr(buf, ':');
+
+      if( name == NULL )
       {
          SCIPwarningMessage(scip, "did not find scale\n");
          return SCIP_OKAY;
       }
 
+      /* skip ':' */
+      ++name;
+
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
          name++;
-         
+
       *objscale *= strtod(name, &endptr);
    }
 

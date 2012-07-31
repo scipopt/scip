@@ -1,5 +1,5 @@
 <div id="authors">
-             
+
     <h2><a name="main"></a>Current main developers</h2>
 
         <table class="desc">
@@ -28,7 +28,7 @@
 	    </tr>
 	    <tr>
 	      <td>
-		<a href="http://www.math.tu-bs.de/~pfetsch/">Marc Pfetsch</a>
+		<a href="http://www.mathematik.tu-darmstadt.de/~pfetsch/index.en.html">Marc Pfetsch</a>
 	      </td>
 	      <td>
 		Special math programming constraints, former project head
@@ -87,7 +87,7 @@
 	      <td>
                 Project head
 	      </td>
-	    </tr>		   
+	    </tr>
 	    <tr>
 	      <td>
 		<a href="http://www.mso.math.uni-erlangen.de/optimization/edom/team/martin-alexander/prof-dr-alexander-martin.html">Alexander Martin</a>
@@ -96,13 +96,37 @@
 		Developer of SIP &ndash; the predecessor of SCIP
 	      </td>
 	    </tr>
+            <tr>
+	      <td>
+		<a href="http://www.zib.de/en/people/staff/member.html?mail=miltenberger">Matthias Miltenberger</a>
+	      </td>
+	      <td>
+                Probing propagator
+	      </td>
+	    </tr>
 	    <tr>
 	      <td>
-              Robert Waniek 
+		Felipe Serrano
+	      </td>
+	      <td>
+                nonlinear development
+	      </td>
+	    </tr>
+	    <tr>
+	      <td>
+              Robert Waniek
 	      </td>
 	      <td>
                 Former student assistant
               </td>
+	    </tr>
+	    <tr>
+	      <td>
+		<a href="http://www.am.uni-erlangen.de/optimization/edom/team/weninger-dieter/dieter-weninger.html">Dieter Weninger</a>
+	      </td>
+	      <td>
+                Presolvers for independent components and dominated columns
+	      </td>
 	    </tr>
 	    <tr>
 	      <td>
@@ -130,6 +154,16 @@
 	    </tr>
            <tr>
 	      <td>
+		 <a href="http://www.mie.utoronto.ca/faculty/beck/">Chris Beck</a>
+	      </td>
+	      <td>
+                 Logic-based Bender's decomposition
+	      </td>
+	      <td>
+	      </td>
+	    </tr>
+           <tr>
+	      <td>
 		 Livio Bertacco
 	      </td>
 	      <td>
@@ -138,7 +172,7 @@
 	    </tr>
             <tr>
 	      <td>
-                <a href="http://univis.uni-magdeburg.de/form?__s=2&dsc=anew/tel_view&pers=fma/imo/imo/bleyan&anonymous=1&dir=fma/imo&ref=pande&sem=2011w&__e=258">Andreas Bley</a>
+                <a href="http://www3.math.tu-berlin.de/coga/people/bley/">Andreas Bley</a>
 	      </td>
 	      <td>
                  VRP example
@@ -148,7 +182,7 @@
 	    </tr>
             <tr>
 	      <td width="180px">
-		<a href="http://www.dii.uchile.cl/~daespino/">Daniel Espinoza</a> 
+		<a href="http://www.dii.uchile.cl/~daespino/">Daniel Espinoza</a>
 	      </td>
 	      <td>
                  Interface to <a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a>
@@ -206,18 +240,20 @@
 	    </tr>
             <tr>
 	      <td>
-		<a href="http://www.zib.de/en/people/staff/member.html?mail=miltenberger">Matthias Miltenberger</a>
-	      </td>
-	      <td>
-                Probing propagator
-	      </td>
-	    </tr>
-            <tr>
-	      <td>
                  Michael Perregaard
 	      </td>
 	      <td>
                  Interface to <a href="http://www.dashoptimization.com/home/products/products_optimizer.html">FICO/Xpress</a>
+	      </td>
+	    </tr>
+            <tr>
+	      <td>
+                Fr&eacute;d&eacute;ric Pythoud
+	      </td>
+	      <td>
+                 Superindicator constraint handler
+	      </td>
+	      <td>
 	      </td>
 	    </tr>
             <tr>
@@ -278,7 +314,7 @@
 	    </tr>
             <tr>
 	      <td>
-		<a href="http://www.zib.de/en/people/staff/member.html?mail=steffy">Dan Steffy</a>
+		<a href="https://files.oakland.edu/users/steffy/web/">Dan Steffy</a>
 	      </td>
 	      <td>
                 Exact integer programming
@@ -293,7 +329,17 @@
 	      </td>
 	      <td>
 	      </td>
-	    </tr> 
+	    </tr>
+            <tr>
+	      <td>
+                Stefan Weltge
+	      </td>
+	      <td>
+                 OBBT propagator
+	      </td>
+	      <td>
+	      </td>
+	    </tr>
 	</table>
 </div>
 

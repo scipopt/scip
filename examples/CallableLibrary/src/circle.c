@@ -38,9 +38,6 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 
-extern
-SCIP_RETCODE runCircle(void);
-
 /** number of points to enclose by a circle */
 static const int npoints = 10;
 
@@ -101,6 +98,7 @@ SCIP_RETCODE setupProblem(
 }
 
 /* runs circle enclosing example */
+static
 SCIP_RETCODE runCircle(void)
 {
    SCIP* scip;
@@ -133,4 +131,25 @@ SCIP_RETCODE runCircle(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    return SCIP_OKAY;
+}
+
+/** main method starting SCIP */
+int main(
+   int                        argc,          /**< number of arguments from the shell */
+   char**                     argv           /**< array of shell arguments */
+   )  /*lint --e{715}*/
+{
+   SCIP_RETCODE retcode;
+
+   retcode = runCircle();
+
+   /* evaluate return code of the SCIP process */
+   if( retcode != SCIP_OKAY )
+   {
+      /* write error back trace */
+      SCIPprintError(retcode);
+      return -1;
+   }
+
+   return 0;
 }

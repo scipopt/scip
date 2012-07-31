@@ -4534,7 +4534,8 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefpl
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
  src/nlpi/nlpi_ipopt.h src/scip/debug.h
 $(LIBOBJDIR)/scip/scipgithash.o: src/scip/scipgithash.c src/scip/scipgithash.h \
- src/scip/githash.c
+ src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
+ src/scip/type_message.h src/scip/githash.c
 $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \

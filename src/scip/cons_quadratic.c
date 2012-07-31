@@ -2958,6 +2958,7 @@ SCIP_RETCODE removeFixedVariables(
    {
       assert(consdata->bilinterms[i].var1 != consdata->bilinterms[i].var2);
       assert(consdata->bilinterms[i].coef != 0.0);
+      assert(SCIPvarCompare(consdata->bilinterms[i].var1, consdata->bilinterms[i].var2) < 0);
    }
 #endif
 
@@ -3487,7 +3488,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
              */
             if( integral )
             {
-               scale = gcd;
+               scale = (SCIP_Real)gcd;
                assert(scale >= 1.0);
             }
             else if( nxvars == 1 )
@@ -9501,6 +9502,14 @@ SCIP_DECL_CONSTRANS(consTransQuadratic)
    {
       SCIP_CALL( SCIPgetTransformedVar(scip, targetdata->bilinterms[i].var1, &targetdata->bilinterms[i].var1) );
       SCIP_CALL( SCIPgetTransformedVar(scip, targetdata->bilinterms[i].var2, &targetdata->bilinterms[i].var2) );
+
+      if( SCIPvarCompare(targetdata->bilinterms[i].var1, targetdata->bilinterms[i].var2) > 0 )
+      {
+         SCIP_VAR* tmp;
+         tmp = targetdata->bilinterms[i].var2;
+         targetdata->bilinterms[i].var2 = targetdata->bilinterms[i].var1;
+         targetdata->bilinterms[i].var1 = tmp;
+      }
    }
 
    /* create target constraint */
@@ -11747,6 +11756,15 @@ SCIP_RETCODE SCIPaddBilinTermQuadratic(
       var1pos = consdata->nquadvars-1;
    }
 
+   if( !consdata->quadvarssorted )
+   {
+      SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
+      /* sorting may change the position of var1 */
+      SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var1, &var1pos) );
+      assert(var1pos >= 0);
+   }
+
+   assert(consdata->quadvarssorted);
    SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var2, &var2pos) );
    if( var2pos < 0 )
    {

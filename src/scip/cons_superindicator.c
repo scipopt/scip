@@ -2003,13 +2003,26 @@ SCIP_RETCODE SCIPcreateConsSuperindicator(
 
    /* only allow types of slack constraints that can be handled */
    if( conshdlrdata->checkslacktype &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "abspower") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "and") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "bivariate") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "bounddisjunction") != 0 &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "cumulative") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "conjunction") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "disjunction") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "knapsack") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "linear") != 0 &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "varbound") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "linking") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "logicor") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "nonlinear") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "or") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "quadratic") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "soc") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "SOS1") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "SOS2") != 0 &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "superindicator") != 0 )
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "cumulative") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "varbound") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "superindicator") != 0
+      )
    {
       if( conshdlrdata->nrejects < 5 )
       {

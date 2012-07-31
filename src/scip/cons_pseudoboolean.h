@@ -40,7 +40,7 @@ extern "C" {
 #endif
 
 /** creates the handler for pseudoboolean constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -52,7 +52,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -105,7 +105,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -128,7 +128,7 @@ SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
    );
 
 /** adds linear term pseudo boolean constraint (if it is not zero) */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddCoefPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -137,7 +137,7 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
    );
 
 /** adds nonlinear term to pseudo boolean constraint (if it is not zero) */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddTermPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -147,42 +147,42 @@ SCIP_RETCODE SCIPaddTermPseudoboolean(
    );
 
 /** gets left hand side of pseudo boolean constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetLhsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets right hand side of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetRhsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets indicator variable of pseudoboolean constraint, or NULL if there is no */
-extern
+EXTERN
 SCIP_VAR* SCIPgetIndVarPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets linear variables of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_VAR** SCIPgetLinearVarsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets linear coefficients of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_Real* SCIPgetLinearValsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets number of linear variables of pseudoboolean constraint */
-extern
+EXTERN
 int SCIPgetNLinearVarsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -192,7 +192,7 @@ int SCIPgetNLinearVarsPseudoboolean(
  *  'termvarssize' (size of array for all non-linear term variables) is big enough, or will return the needed size for
  *  the array for all non-linear variables in termvarssize otherwise, of a given pseudoboolean constraint
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPgetTermVarsDataPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -202,21 +202,21 @@ SCIP_RETCODE SCIPgetTermVarsDataPseudoboolean(
    );
 
 /** gets non-linear coefficients of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_Real* SCIPgetTermValsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets number of non-linear coefficients of pseudoboolean constraint */
-extern
+EXTERN
 int SCIPgetNTermValsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** changes left hand side of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPchgLhsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -224,7 +224,7 @@ SCIP_RETCODE SCIPchgLhsPseudoboolean(
    );
 
 /** changes right hand side of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPchgRhsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */

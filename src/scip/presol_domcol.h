@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 /** creates the dominated column presolver and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePresolDomcol(
    SCIP*                 scip                /**< SCIP data structure */
    );

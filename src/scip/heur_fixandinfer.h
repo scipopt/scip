@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the fix-and-infer primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurFixandinfer(
    SCIP*                 scip                /**< SCIP data structure */
    );

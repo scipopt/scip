@@ -35,32 +35,32 @@ extern "C" {
 #endif
 
 /** dialog execution method for the count command */
-extern
+EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve);
 
 /** dialog execution method for the count command */
-extern
+EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount);
 
 /** execution method of dialog for writing all solutions */
-extern
+EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions);
 
 /** creates the handler for countsol constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /* execute counting */
-extern
+EXTERN
 SCIP_RETCODE SCIPcount(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 #if 0
 /* returns TRUE if the counting process was correct; otherwise FALSE */
-extern
+EXTERN
 SCIP_Bool SCIPisCountValid(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -69,14 +69,14 @@ SCIP_Bool SCIPisCountValid(
 /** returns number of feasible solutions found as SCIP_Longint; if the number does not fit into
  *  a SCIP_Longint the valid flag is set to FALSE
  */
-extern
+EXTERN
 SCIP_Longint SCIPgetNCountedSols(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            valid               /**< pointer to store if the return value is valid */
    );
 
 /** returns number of counted solutions as string */
-extern
+EXTERN
 void SCIPgetNCountedSolsstr(
    SCIP*                 scip,               /**< SCIP data structure */
    char**                buffer,             /**< buffer to store the number for counted solutions */
@@ -85,7 +85,7 @@ void SCIPgetNCountedSolsstr(
    );
 
 /** returns number of counted feasible subtrees */
-extern
+EXTERN
 SCIP_Longint SCIPgetNCountedFeasSubtrees(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -98,7 +98,7 @@ SCIP_Longint SCIPgetNCountedFeasSubtrees(
  *        during presolving. For none active variables the value has to be computed depending on their aggregation
  *        type. See for more details about that \ref COLLECTALLFEASEBLES.
  */
-extern
+EXTERN
 void SCIPgetCountedSparseSols(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< pointer to variable array defining to variable order */
@@ -108,7 +108,7 @@ void SCIPgetCountedSparseSols(
    );
 
 /** setting SCIP parameters for such that a valid counting process is possible */
-extern
+EXTERN
 SCIP_RETCODE SCIPsetParamsCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    );

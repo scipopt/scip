@@ -748,7 +748,8 @@ SCIP_RETCODE analyzeGenVBoundConflict(
       SCIP_Real bound;
 
       /* get minimal right-hand side bound that leads to infeasibility */
-      infeasthreshold = MAX(REALABS(SCIPvarGetUbLocal(genvbound->var)), 1.0) * 2 * SCIPfeastol(scip);
+      bound = REALABS(SCIPvarGetUbLocal(genvbound->var));
+      infeasthreshold = MAX(bound, 1.0) * 2 * SCIPfeastol(scip);
       bound = SCIPvarGetUbLocal(genvbound->var) + infeasthreshold;
 
       /* add right-hand side variables that force the lower bound of the left-hand side variable above its upper bound
@@ -781,7 +782,8 @@ SCIP_RETCODE analyzeGenVBoundConflict(
       SCIP_Real bound;
 
       /* get minimal right-hand side bound that leads to infeasibility */
-      infeasthreshold = MAX(REALABS(SCIPvarGetLbLocal(genvbound->var)), 1.0) * 2 * SCIPfeastol(scip);
+      bound = REALABS(SCIPvarGetLbLocal(genvbound->var));
+      infeasthreshold = MAX(bound, 1.0) * 2 * SCIPfeastol(scip);
       bound = -SCIPvarGetLbLocal(genvbound->var) + infeasthreshold;
 
       /* add right-hand side variables that force the upper bound of the left-hand side variable below its lower bound

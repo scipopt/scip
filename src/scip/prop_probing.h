@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the probing propagator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePropProbing(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPincludePropProbing(
  *  need to be provided, but if they are omitted and probingvar is a binary variable, then already
  *  existing implications may be added.
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPanalyzeDeductionsProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             probingvar,         /**< the probing variable */

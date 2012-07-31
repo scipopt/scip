@@ -43,7 +43,7 @@ extern "C" {
 #endif
 
 /** creates the NLP local search primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -52,7 +52,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
  * 
  * Is called, for example, by a constraint handler that handles nonlinear constraints when a check on feasibility of a solution fails.
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< subNLP heuristic */
@@ -61,7 +61,7 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
    );
 
 /** main procedure of the subNLP heuristic */
-extern
+EXTERN
 SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    );
 
 /** for a given solution, resolves the corresponding subNLP and updates solution values for continuous variables, if NLP solution is feasible in original problem */
-extern
+EXTERN
 SCIP_RETCODE SCIPresolveSolHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
@@ -87,7 +87,7 @@ SCIP_RETCODE SCIPresolveSolHeurSubNlp(
 /** adds all known linear constraint to the NLP, if initialized and not done already
  * This function is temporary and will hopefully become obsolete in the near future.
  */ 
-extern
+EXTERN
 SCIP_RETCODE SCIPaddLinearConsToNlpHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
@@ -96,28 +96,28 @@ SCIP_RETCODE SCIPaddLinearConsToNlpHeurSubNlp(
    );
    
 /** gets sub-SCIP used by NLP heuristic, or NULL if none */
-extern
+EXTERN
 SCIP* SCIPgetSubScipHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur                /**< heuristic data structure                                       */
    );
 
 /** gets mapping of SCIP variables to sub-SCIP variables */
-extern
+EXTERN
 SCIP_VAR** SCIPgetVarMappingScip2SubScipHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur                /**< heuristic data structure                                       */
    );
 
 /** gets mapping of sub-SCIP variables to SCIP variables */
-extern
+EXTERN
 SCIP_VAR** SCIPgetVarMappingSubScip2ScipHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur                /**< heuristic data structure                                       */
    );
 
 /** gets startpoint candidate to be used in next call to NLP heuristic, or NULL if none */
-extern
+EXTERN
 SCIP_SOL* SCIPgetStartCandidateHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur                /**< heuristic data structure                                       */

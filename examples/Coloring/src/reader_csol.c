@@ -414,9 +414,6 @@ SCIP_DECL_READERWRITE(readerWriteCsol)
    return SCIP_OKAY;
 }
 
-/* define not used callbacks as NULL */
-#define readerFreeCsol NULL
-
 
 /*
  * reader specific interface methods
