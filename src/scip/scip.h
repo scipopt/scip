@@ -7407,56 +7407,130 @@ SCIP_RETCODE SCIPgetConsNVars(
 /**@name LP Methods */
 /**@{ */
 
-/** returns, whether the LP was or is to be solved in the current node */
+/** returns, whether the LP was or is to be solved in the current node
+ *
+ *  @return whether the LP was or is to be solved in the current node.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Bool SCIPhasCurrentNodeLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns, whether the LP of the current node is already constructed */
+/** returns, whether the LP of the current node is already constructed
+ *
+ *  @return whether the LP of the current node is already constructed.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Bool SCIPisLPConstructed(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** makes sure that the LP of the current node is loaded and may be accessed through the LP information methods */
+/** makes sure that the LP of the current node is loaded and may be accessed through the LP information methods
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPconstructLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
-/** makes sure that the LP of the current node is flushed */
+/** makes sure that the LP of the current node is flushed
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPflushLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets solution status of current LP */
+/** gets solution status of current LP
+ *
+ *  @return the solution status of current LP.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_LPSOLSTAT SCIPgetLPSolstat(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+/** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound
+ *
+ *  @return whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Bool SCIPisLPRelax(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets objective value of current LP (which is the sum of column and loose objective value) */
+/** gets objective value of current LP (which is the sum of column and loose objective value)
+ *
+ *  @return the objective value of current LP (which is the sum of column and loose objective value).
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Real SCIPgetLPObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets part of objective value of current LP that results from COLUMN variables only */
+/** gets part of objective value of current LP that results from COLUMN variables only
+ *
+ *  @return the part of objective value of current LP that results from COLUMN variables only.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Real SCIPgetLPColumnObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets part of objective value of current LP that results from LOOSE variables only */
+/** gets part of objective value of current LP that results from LOOSE variables only
+ *
+ *  @return part of objective value of current LP that results from LOOSE variables only.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Real SCIPgetLPLooseObjval(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7464,6 +7538,19 @@ SCIP_Real SCIPgetLPLooseObjval(
 
 /** gets the global pseudo objective value; that is all variables set to their best  (w.r.t. the objective
  *  function) global bound
+ *
+ *  @return the global pseudo objective value; that is all variables set to their best  (w.r.t. the objective
+ *  function) global bound.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_Real SCIPgetGlobalPseudoObjval(
@@ -7472,19 +7559,51 @@ SCIP_Real SCIPgetGlobalPseudoObjval(
 
 /** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
  *  objective function) local bound
+ *
+ *  @return the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
+ *  objective function) local bound.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_Real SCIPgetPseudoObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
+/** returns whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound
+ *
+ *  @return whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Bool SCIPisRootLPRelax(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the objective value of the root node LP; returns SCIP_INVALID if the root node LP was not (yet) solved */
+/** gets the objective value of the root node LP or SCIP_INVALID if the root node LP was not (yet) solved
+ *
+ *  @return the objective value of the root node LP or SCIP_INVALID if the root node LP was not (yet) solved.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Real SCIPgetLPRootObjval(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7492,6 +7611,17 @@ SCIP_Real SCIPgetLPRootObjval(
 
 /** gets part of the objective value of the root node LP that results from COLUMN variables only;
  *  returns SCIP_INVALID if the root node LP was not (yet) solved
+ *
+ *  @return the part of the objective value of the root node LP that results from COLUMN variables only;
+ *  or SCIP_INVALID if the root node LP was not (yet) solved.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_Real SCIPgetLPRootColumnObjval(
@@ -7500,13 +7630,33 @@ SCIP_Real SCIPgetLPRootColumnObjval(
 
 /** gets part of the objective value of the root node LP that results from LOOSE variables only;
  *  returns SCIP_INVALID if the root node LP was not (yet) solved
+ *
+ *  @return the part of the objective value of the root node LP that results from LOOSE variables only;
+ *  or SCIP_INVALID if the root node LP was not (yet) solved.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_Real SCIPgetLPRootLooseObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets current LP columns along with the current number of LP columns */
+/** gets current LP columns along with the current number of LP columns
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPgetLPColsData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7514,19 +7664,44 @@ SCIP_RETCODE SCIPgetLPColsData(
    int*                  ncols               /**< pointer to store the number of LP columns, or NULL */
    );
 
-/** gets current LP columns */
+/** gets current LP columns
+ *
+ *  @return the current LP columns.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_COL** SCIPgetLPCols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets current number of LP columns */
+/** gets current number of LP columns
+ *
+ *  @return the current number of LP columns.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNLPCols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets current LP rows along with the current number of LP rows */
+/** gets current LP rows along with the current number of LP rows
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPgetLPRowsData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7534,13 +7709,29 @@ SCIP_RETCODE SCIPgetLPRowsData(
    int*                  nrows               /**< pointer to store the number of LP rows, or NULL */
    );
 
-/** gets current LP rows */
+/** gets current LP rows
+ *
+ *  @return the current LP rows.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_ROW** SCIPgetLPRows(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets current number of LP rows */
+/** gets current number of LP rows
+ *
+ *  @return the current number of LP rows.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 int SCIPgetNLPRows(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7548,26 +7739,60 @@ int SCIPgetNLPRows(
 
 /** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present
  *  in the LP, and FALSE, if there are additional already existing columns, that may be added to the LP in pricing
+ *
+ *  @return TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present
+ *  in the LP, and FALSE, if there are additional already existing columns, that may be added to the LP in pricing.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_Bool SCIPallColsInLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether the current LP solution is basic, i.e. is defined by a valid simplex basis */
+/** returns whether the current LP solution is basic, i.e. is defined by a valid simplex basis
+ *
+ *  @return whether the current LP solution is basic, i.e. is defined by a valid simplex basis.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_Bool SCIPisLPSolBasic(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
+/** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPgetLPBasisInd(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  basisind            /**< pointer to store the basis indices */
    );
 
-/** gets a row from the inverse basis matrix B^-1 */
+/** gets a row from the inverse basis matrix B^-1
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPgetLPBInvRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7575,7 +7800,16 @@ SCIP_RETCODE SCIPgetLPBInvRow(
    SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
    );
 
-/** gets a column from the inverse basis matrix B^-1 */
+/** gets a column from the inverse basis matrix B^-1
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPgetLPBInvCol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7587,7 +7821,16 @@ SCIP_RETCODE SCIPgetLPBInvCol(
    SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
    );
 
-/** gets a row from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A) */
+/** gets a row from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPgetLPBInvARow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7598,6 +7841,14 @@ SCIP_RETCODE SCIPgetLPBInvARow(
 
 /** gets a column from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A),
  *  i.e., it computes B^-1 * A_c with A_c being the c'th column of A
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_RETCODE SCIPgetLPBInvACol(
@@ -7608,6 +7859,14 @@ SCIP_RETCODE SCIPgetLPBInvACol(
 
 /** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding
  *  LP row are swapped in the summation
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_RETCODE SCIPsumLPRows(
@@ -7618,8 +7877,16 @@ SCIP_RETCODE SCIPsumLPRows(
    SCIP_Real*            sumrhs              /**< pointer to store the right hand side of the row summation */
    );
 
-/* calculates a MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
- * rows cannot participate in a MIR cut.
+/** calculates a MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
+ *  rows cannot participate in a MIR cut.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_RETCODE SCIPcalcMIR(
@@ -7649,9 +7916,16 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
    );
 
-
-/* calculates a strong CG cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
- * rows cannot participate in a MIR cut.
+/** calculates a strong CG cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
+ *  rows cannot participate in a MIR cut.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_RETCODE SCIPcalcStrongCG(
@@ -7672,14 +7946,32 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
    );
 
-/** writes current LP to a file */
+/** writes current LP to a file
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPwriteLP(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name */
    );
 
-/** writes MIP relaxation of the current branch-and-bound node to a file */
+/** writes MIP relaxation of the current branch-and-bound node to a file
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 EXTERN
 SCIP_RETCODE SCIPwriteMIP(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7702,6 +7994,22 @@ SCIP_RETCODE SCIPwriteMIP(
  *           appropriate SCIPlpiSolve...() call in order to reinstall the internal solution status.
  *
  *  @warning Make also sure, that all parameter values that you have changed are set back to their original values.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_RETCODE SCIPgetLPI(
@@ -7712,6 +8020,23 @@ SCIP_RETCODE SCIPgetLPI(
 /** Displays quality information about the current LP solution. An LP solution need to be available. Information printed
  *  is subject to what the LP solver supports
  *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ *
  *  @note The printing process is done via the message handler system.
  */
 EXTERN
@@ -7721,7 +8046,21 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
    );
 
 /** compute relative interior point to current LP
- * @see SCIPlpComputeRelIntPoint
+ *  @see SCIPlpComputeRelIntPoint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
 SCIP_RETCODE SCIPcomputeLPRelIntPoint(
