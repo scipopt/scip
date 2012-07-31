@@ -489,7 +489,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
    nconss = 0;
    sconss = 10;
    SCIP_CALL( SCIPallocBufferArray(scip, &conss, sconss) );
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &copystr, str, strlen(str)+1) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &copystr, str, (int)strlen(str)+1) );
 
    /* find '(' at the beginning, string should start with 'conjunction(' */
    saveptr = strpbrk(copystr, "("); /*lint !e158*/
