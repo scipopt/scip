@@ -26534,7 +26534,24 @@ SCIP_Real SCIPgetPrimalRayVal(
  * event methods
  */
 
-/** catches a global (not variable or row dependent) event */
+/** catches a global (not variable or row dependent) event
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 SCIP_RETCODE SCIPcatchEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTTYPE        eventtype,          /**< event type mask to select events to catch */
@@ -26551,7 +26568,24 @@ SCIP_RETCODE SCIPcatchEvent(
    return SCIP_OKAY;
 }
 
-/** drops a global event (stops to track event) */
+/** drops a global event (stops to track event)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 SCIP_RETCODE SCIPdropEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTTYPE        eventtype,          /**< event type mask of dropped event */
@@ -26568,7 +26602,24 @@ SCIP_RETCODE SCIPdropEvent(
    return SCIP_OKAY;
 }
 
-/** catches an objective value or domain change event on the given transformed variable */
+/** catches an objective value or domain change event on the given transformed variable
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 SCIP_RETCODE SCIPcatchVarEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< transformed variable to catch event for */
@@ -26597,7 +26648,24 @@ SCIP_RETCODE SCIPcatchVarEvent(
    return SCIP_OKAY;
 }
 
-/** drops an objective value or domain change event (stops to track event) on the given transformed variable */
+/** drops an objective value or domain change event (stops to track event) on the given transformed variable
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 SCIP_RETCODE SCIPdropVarEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< transformed variable to drop event for */
@@ -26620,7 +26688,24 @@ SCIP_RETCODE SCIPdropVarEvent(
    return SCIP_OKAY;
 }
 
-/** catches a row coefficient, constant, or side change event on the given row */
+/** catches a row coefficient, constant, or side change event on the given row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 SCIP_RETCODE SCIPcatchRowEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< linear row to catch event for */
@@ -26643,7 +26728,24 @@ SCIP_RETCODE SCIPcatchRowEvent(
    return SCIP_OKAY;
 }
 
-/** drops a row coefficient, constant, or side change event (stops to track event) on the given row */
+/** drops a row coefficient, constant, or side change event (stops to track event) on the given row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 SCIP_RETCODE SCIPdropRowEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< linear row to drop event for */
@@ -26656,7 +26758,7 @@ SCIP_RETCODE SCIPdropRowEvent(
    SCIP_CALL( checkStage(scip, "SCIPdropRowEvent", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    SCIP_CALL( SCIProwDropEvent(row, scip->mem->probmem, scip->set, eventtype, eventhdlr, eventdata, filterpos) );
-   
+
    return SCIP_OKAY;
 }
 
