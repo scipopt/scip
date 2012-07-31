@@ -3659,6 +3659,15 @@ SCIP_CONS** SCIPgetOrigConss(
  *  If the constraint is valid at the same node as it is inserted (the usual case), one should pass NULL as "validnode".
  *  If the "validnode" is the root node, it is automatically upgraded into a global constraint, but still only added to
  *  the given node. If a local constraint is added to the root node, it is added to the global problem instead.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
 SCIP_RETCODE SCIPaddConsNode(
@@ -3677,6 +3686,15 @@ SCIP_RETCODE SCIPaddConsNode(
  *  If the "validnode" is the root node, it is automatically upgraded into a global constraint, but still only added to
  *  the given node. If a local constraint is added to the root node, it is added to the global problem instead.
  *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
  *  @note The same constraint cannot be added twice to the branching tree with different "validnode" parameters. This is
  *        the case due internal data structures and performance issues. In such a case you should try to realize your
  *        issue using the method SCIPdisableCons() and SCIPenableCons() and control these via the event system of SCIP.
@@ -3694,6 +3712,15 @@ SCIP_RETCODE SCIPaddConsLocal(
  *  is automatically enabled again, and after entering the node's subtree, it is automatically disabled;
  *  this may improve performance because redundant checks on this constraint are avoided, but it consumes memory;
  *  alternatively, use SCIPdisableCons()
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
 SCIP_RETCODE SCIPdelConsNode(
@@ -3710,6 +3737,16 @@ SCIP_RETCODE SCIPdelConsNode(
  *  disabled again;
  *  this may improve performance because redundant checks on this constraint are avoided, but it consumes memory;
  *  alternatively, use SCIPdisableCons()
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
 SCIP_RETCODE SCIPdelConsLocal(
@@ -3717,38 +3754,68 @@ SCIP_RETCODE SCIPdelConsLocal(
    SCIP_CONS*            cons                /**< constraint to locally delete */
    );
 
-/** gets estimate of best primal solution w.r.t. original problem contained in current subtree */
+/** gets estimate of best primal solution w.r.t. original problem contained in current subtree
+ *  @return estimate of best primal solution w.r.t. original problem contained in current subtree
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetLocalOrigEstimate(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets estimate of best primal solution w.r.t. transformed problem contained in current subtree */
+/** gets estimate of best primal solution w.r.t. transformed problem contained in current subtree
+ *  @return estimate of best primal solution w.r.t. transformed problem contained in current subtree
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetLocalTransEstimate(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets dual bound of current node */
+/** gets dual bound of current node
+ *  @return dual bound of current node
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetLocalDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets lower bound of current node in transformed problem */
+/** gets lower bound of current node in transformed problem
+ *  @return lower bound  of current node in transformed problem
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetLocalLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets dual bound of given node */
+/** gets dual bound of given node
+ *  @return dual bound of a given node
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetNodeDualbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node to get dual bound for */
    );
 
-/** gets lower bound of given node in transformed problem */
+/** gets lower bound of given node in transformed problem
+ *  @return lower bound  of given node in transformed problem
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_Real SCIPgetNodeLowerbound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3757,6 +3824,15 @@ SCIP_Real SCIPgetNodeLowerbound(
 
 /** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound,
  *  sets the current node's dual bound to the new value
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
 SCIP_RETCODE SCIPupdateLocalDualbound(
@@ -3766,6 +3842,12 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
 
 /** if given value is larger than the current node's lower bound (in transformed problem), sets the current node's
  *  lower bound to the new value
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
 SCIP_RETCODE SCIPupdateLocalLowerbound(
@@ -3775,6 +3857,12 @@ SCIP_RETCODE SCIPupdateLocalLowerbound(
 
 /** if given value is tighter (larger for minimization, smaller for maximization) than the node's dual bound,
  *  sets the node's dual bound to the new value
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
 SCIP_RETCODE SCIPupdateNodeDualbound(
@@ -3785,6 +3873,11 @@ SCIP_RETCODE SCIPupdateNodeDualbound(
 
 /** if given value is larger than the node's lower bound (in transformed problem), sets the node's lower bound
  *  to the new value
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
 SCIP_RETCODE SCIPupdateNodeLowerbound(
@@ -3793,7 +3886,14 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    );
 
-/** change the node selection priority of the given child */
+/** change the node selection priority of the given child
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPchgChildPrio(
    SCIP*                 scip,               /**< SCIP data structure */
