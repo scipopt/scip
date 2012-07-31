@@ -4314,13 +4314,7 @@ $(LIBOBJDIR)/scip/reader_zpl.o: src/scip/reader_zpl.c src/scip/reader_zpl.h src/
  src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
  src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
- src/scip/struct_event.h src/scip/cons_linear.h src/scip/cons_sos1.h \
- src/scip/cons_sos2.h src/scip/cons_indicator.h src/scip/cons_quadratic.h \
- src/scip/cons_nonlinear.h lib/zimplinc/zimpl/bool.h \
- lib/zimplinc/zimpl/ratlptypes.h lib/zimplinc/zimpl/mme.h \
- lib/zimplinc/zimpl/numb.h lib/zimplinc/zimpl/bound.h \
- lib/zimplinc/zimpl/mono.h lib/zimplinc/zimpl/term.h \
- lib/zimplinc/zimpl/xlpglue.h lib/zimplinc/zimpl/zimpllib.h
+ src/scip/struct_event.h
 $(LIBOBJDIR)/scip/sepa_cgmip.o: src/scip/sepa_cgmip.c src/scip/sepa_cgmip.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/scip/struct_message.h \
@@ -5796,7 +5790,8 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefpl
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
  src/nlpi/nlpi_ipopt.h src/scip/debug.h
 $(LIBOBJDIR)/scip/scipgithash.o: src/scip/scipgithash.c src/scip/scipgithash.h \
- src/scip/githash.c
+ src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
+ src/scip/type_message.h src/scip/struct_message.h src/scip/githash.c
 $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/scip/struct_message.h src/blockmemshell/memory.h \
