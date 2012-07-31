@@ -30068,7 +30068,24 @@ SCIP_RETCODE SCIPprintNodeRootPath(
  * statistic methods
  */
 
-/** gets number of branch and bound runs performed, including the current run */
+/** gets number of branch and bound runs performed, including the current run
+ *
+ *  @return the number of branch and bound runs performed, including the current run
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 int SCIPgetNRuns(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30078,7 +30095,24 @@ int SCIPgetNRuns(
    return scip->stat->nruns;
 }
 
-/** gets number of processed nodes in current run, including the focus node */
+/** gets number of processed nodes in current run, including the focus node
+ *
+ *  @return the number of processed nodes in current run, including the focus node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 SCIP_Longint SCIPgetNNodes(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30088,7 +30122,24 @@ SCIP_Longint SCIPgetNNodes(
    return scip->stat->nnodes;
 }
 
-/** gets total number of processed nodes in all runs, including the focus node */
+/** gets total number of processed nodes in all runs, including the focus node
+ *
+ *  @return the total number of processed nodes in all runs, including the focus node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 SCIP_Longint SCIPgetNTotalNodes(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30098,7 +30149,15 @@ SCIP_Longint SCIPgetNTotalNodes(
    return scip->stat->ntotalnodes;
 }
 
-/** gets number of nodes left in the tree (children + siblings + leaves) */
+/** gets number of nodes left in the tree (children + siblings + leaves)
+ *
+ *  @return the number of nodes left in the tree (children + siblings + leaves)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 int SCIPgetNNodesLeft(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30108,7 +30167,15 @@ int SCIPgetNNodesLeft(
    return SCIPtreeGetNNodes(scip->tree);
 }
 
-/** gets total number of LPs solved so far */
+/** gets total number of LPs solved so far
+ *
+ *  @return the total number of LPs solved so far
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30118,7 +30185,15 @@ SCIP_Longint SCIPgetNLPs(
    return scip->stat->nlps;
 }
 
-/** gets total number of iterations used so far in primal and dual simplex and barrier algorithm */
+/** gets total number of iterations used so far in primal and dual simplex and barrier algorithm
+ *
+ *  @return the total number of iterations used so far in primal and dual simplex and barrier algorithm
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30128,7 +30203,15 @@ SCIP_Longint SCIPgetNLPIterations(
    return scip->stat->nlpiterations;
 }
 
-/** gets total number of iterations used so far in primal and dual simplex and barrier algorithm for the root node */
+/** gets total number of iterations used so far in primal and dual simplex and barrier algorithm for the root node
+ *
+ *  @return the total number of iterations used so far in primal and dual simplex and barrier algorithm for the root node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNRootLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30138,7 +30221,15 @@ SCIP_Longint SCIPgetNRootLPIterations(
    return scip->stat->nrootlpiterations;
 }
 
-/** gets total number of primal LPs solved so far */
+/** gets total number of primal LPs solved so far
+ *
+ *  @return the total number of primal LPs solved so far
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNPrimalLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30148,7 +30239,15 @@ SCIP_Longint SCIPgetNPrimalLPs(
    return scip->stat->nprimallps;
 }
 
-/** gets total number of iterations used so far in primal simplex */
+/** gets total number of iterations used so far in primal simplex
+ *
+ *  @return total number of iterations used so far in primal simplex
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNPrimalLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30158,7 +30257,15 @@ SCIP_Longint SCIPgetNPrimalLPIterations(
    return scip->stat->nprimallpiterations;
 }
 
-/** gets total number of dual LPs solved so far */
+/** gets total number of dual LPs solved so far
+ *
+ *  @return the total number of dual LPs solved so far
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNDualLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30168,7 +30275,15 @@ SCIP_Longint SCIPgetNDualLPs(
    return scip->stat->nduallps;
 }
 
-/** gets total number of iterations used so far in dual simplex */
+/** gets total number of iterations used so far in dual simplex
+ *
+ *  @return the total number of iterations used so far in dual simplex
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNDualLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30178,7 +30293,15 @@ SCIP_Longint SCIPgetNDualLPIterations(
    return scip->stat->nduallpiterations;
 }
 
-/** gets total number of barrier LPs solved so far */
+/** gets total number of barrier LPs solved so far
+ *
+ *  @return the total number of barrier LPs solved so far
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNBarrierLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30188,7 +30311,15 @@ SCIP_Longint SCIPgetNBarrierLPs(
    return scip->stat->nbarrierlps;
 }
 
-/** gets total number of iterations used so far in barrier algorithm */
+/** gets total number of iterations used so far in barrier algorithm
+ *
+ *  @return the total number of iterations used so far in barrier algorithm
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNBarrierLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30198,7 +30329,15 @@ SCIP_Longint SCIPgetNBarrierLPIterations(
    return scip->stat->nbarrierlpiterations;
 }
 
-/** gets total number of LPs solved so far that were resolved from an advanced start basis */
+/** gets total number of LPs solved so far that were resolved from an advanced start basis
+ *
+ *  @return the total number of LPs solved so far that were resolved from an advanced start basis
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30210,6 +30349,14 @@ SCIP_Longint SCIPgetNResolveLPs(
 
 /** gets total number of simplex iterations used so far in primal and dual simplex calls where an advanced start basis
  *  was available
+ *
+ *  @return the total number of simplex iterations used so far in primal and dual simplex calls where an advanced start
+ *          basis was available
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Longint SCIPgetNResolveLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
@@ -30220,7 +30367,15 @@ SCIP_Longint SCIPgetNResolveLPIterations(
    return scip->stat->nprimalresolvelpiterations + scip->stat->ndualresolvelpiterations;
 }
 
-/** gets total number of primal LPs solved so far that were resolved from an advanced start basis */
+/** gets total number of primal LPs solved so far that were resolved from an advanced start basis
+ *
+ *  @return the total number of primal LPs solved so far that were resolved from an advanced start basis
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNPrimalResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30232,6 +30387,14 @@ SCIP_Longint SCIPgetNPrimalResolveLPs(
 
 /** gets total number of simplex iterations used so far in primal simplex calls where an advanced start basis
  *  was available
+ *
+ *  @return the total number of simplex iterations used so far in primal simplex calls where an advanced start
+ *          basis was available
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Longint SCIPgetNPrimalResolveLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
@@ -30242,7 +30405,15 @@ SCIP_Longint SCIPgetNPrimalResolveLPIterations(
    return scip->stat->nprimalresolvelpiterations;
 }
 
-/** gets total number of dual LPs solved so far that were resolved from an advanced start basis */
+/** gets total number of dual LPs solved so far that were resolved from an advanced start basis
+ *
+ *  @return the total number of dual LPs solved so far that were resolved from an advanced start basis
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNDualResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30254,6 +30425,14 @@ SCIP_Longint SCIPgetNDualResolveLPs(
 
 /** gets total number of simplex iterations used so far in dual simplex calls where an advanced start basis
  *  was available
+ *
+ *  @return the total number of simplex iterations used so far in dual simplex calls where an advanced start
+ *          basis was available
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Longint SCIPgetNDualResolveLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
@@ -30264,7 +30443,15 @@ SCIP_Longint SCIPgetNDualResolveLPIterations(
    return scip->stat->ndualresolvelpiterations;
 }
 
-/** gets total number of LPs solved so far for node relaxations */
+/** gets total number of LPs solved so far for node relaxations
+ *
+ *  @return the total number of LPs solved so far for node relaxations
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNNodeLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30274,7 +30461,15 @@ SCIP_Longint SCIPgetNNodeLPs(
    return scip->stat->nnodelps;
 }
 
-/** gets total number of simplex iterations used so far for node relaxations */
+/** gets total number of simplex iterations used so far for node relaxations
+ *
+ *  @return the total number of simplex iterations used so far for node relaxations
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNNodeLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30284,7 +30479,15 @@ SCIP_Longint SCIPgetNNodeLPIterations(
    return scip->stat->nnodelpiterations;
 }
 
-/** gets total number of LPs solved so far for initial LP in node relaxations */
+/** gets total number of LPs solved so far for initial LP in node relaxations
+ *
+ *  @return the total number of LPs solved so far for initial LP in node relaxations
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNNodeInitLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30294,7 +30497,15 @@ SCIP_Longint SCIPgetNNodeInitLPs(
    return scip->stat->ninitlps;
 }
 
-/** gets total number of simplex iterations used so far for initial LP in node relaxations */
+/** gets total number of simplex iterations used so far for initial LP in node relaxations
+ *
+ *  @return the total number of simplex iterations used so far for initial LP in node relaxations
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNNodeInitLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30304,7 +30515,15 @@ SCIP_Longint SCIPgetNNodeInitLPIterations(
    return scip->stat->ninitlpiterations;
 }
 
-/** gets total number of LPs solved so far during diving and probing */
+/** gets total number of LPs solved so far during diving and probing
+ *
+ *  @return total number of LPs solved so far during diving and probing
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNDivingLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30314,7 +30533,15 @@ SCIP_Longint SCIPgetNDivingLPs(
    return scip->stat->ndivinglps;
 }
 
-/** gets total number of simplex iterations used so far during diving and probing */
+/** gets total number of simplex iterations used so far during diving and probing
+ *
+ *  @return the total number of simplex iterations used so far during diving and probing
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNDivingLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30324,7 +30551,15 @@ SCIP_Longint SCIPgetNDivingLPIterations(
    return scip->stat->ndivinglpiterations;
 }
 
-/** gets total number of times, strong branching was called (each call represents solving two LPs) */
+/** gets total number of times, strong branching was called (each call represents solving two LPs)
+ *
+ *  @return the total number of times, strong branching was called (each call represents solving two LPs)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNStrongbranchs(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30334,7 +30569,15 @@ SCIP_Longint SCIPgetNStrongbranchs(
    return scip->stat->nstrongbranchs;
 }
 
-/** gets total number of simplex iterations used so far in strong branching */
+/** gets total number of simplex iterations used so far in strong branching
+ *
+ *  @return the total number of simplex iterations used so far in strong branching
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNStrongbranchLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30344,7 +30587,15 @@ SCIP_Longint SCIPgetNStrongbranchLPIterations(
    return scip->stat->nsblpiterations;
 }
 
-/** gets total number of times, strong branching was called at the root node (each call represents solving two LPs) */
+/** gets total number of times, strong branching was called at the root node (each call represents solving two LPs)
+ *
+ *  @return the total number of times, strong branching was called at the root node (each call represents solving two LPs)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNRootStrongbranchs(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30354,7 +30605,15 @@ SCIP_Longint SCIPgetNRootStrongbranchs(
    return scip->stat->nrootstrongbranchs;
 }
 
-/** gets total number of simplex iterations used so far in strong branching at the root node */
+/** gets total number of simplex iterations used so far in strong branching at the root node
+ *
+ *  @return the total number of simplex iterations used so far in strong branching at the root node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Longint SCIPgetNRootStrongbranchLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30364,7 +30623,13 @@ SCIP_Longint SCIPgetNRootStrongbranchLPIterations(
    return scip->stat->nrootsblpiterations;
 }
 
-/** gets number of pricing rounds performed so far at the current node */
+/** gets number of pricing rounds performed so far at the current node
+ *
+ *  @return the number of pricing rounds performed so far at the current node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 int SCIPgetNPriceRounds(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30374,7 +30639,15 @@ int SCIPgetNPriceRounds(
    return scip->stat->npricerounds;
 }
 
-/** get current number of variables in the pricing store */
+/** get current number of variables in the pricing store
+ *
+ *  @return the current number of variables in the pricing store
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 int SCIPgetNPricevars(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30384,7 +30657,15 @@ int SCIPgetNPricevars(
    return SCIPpricestoreGetNVars(scip->pricestore);
 }
 
-/** get total number of pricing variables found so far */
+/** get total number of pricing variables found so far
+ *
+ *  @return the total number of pricing variables found so far
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 int SCIPgetNPricevarsFound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30394,7 +30675,15 @@ int SCIPgetNPricevarsFound(
    return SCIPpricestoreGetNVarsFound(scip->pricestore);
 }
 
-/** get total number of pricing variables applied to the LPs */
+/** get total number of pricing variables applied to the LPs
+ *
+ *  @return the total number of pricing variables applied to the LPs
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 int SCIPgetNPricevarsApplied(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30404,7 +30693,13 @@ int SCIPgetNPricevarsApplied(
    return SCIPpricestoreGetNVarsApplied(scip->pricestore);
 }
 
-/** gets number of separation rounds performed so far at the current node */
+/** gets number of separation rounds performed so far at the current node
+ *
+ *  @return the number of separation rounds performed so far at the current node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 int SCIPgetNSepaRounds(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30414,7 +30709,15 @@ int SCIPgetNSepaRounds(
    return scip->stat->nseparounds;
 }
 
-/** get total number of cuts found so far */
+/** get total number of cuts found so far
+ *
+ *  @return the total number of cuts found so far
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 int SCIPgetNCutsFound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30424,7 +30727,15 @@ int SCIPgetNCutsFound(
    return SCIPsepastoreGetNCutsFound(scip->sepastore);
 }
 
-/** get number of cuts found so far in current separation round */
+/** get number of cuts found so far in current separation round
+ *
+ *  @return the number of cuts found so far in current separation round
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 int SCIPgetNCutsFoundRound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30434,7 +30745,15 @@ int SCIPgetNCutsFoundRound(
    return SCIPsepastoreGetNCutsFoundRound(scip->sepastore);
 }
 
-/** get total number of cuts applied to the LPs */
+/** get total number of cuts applied to the LPs
+ *
+ *  @return the total number of cuts applied to the LPs
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 int SCIPgetNCutsApplied(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30444,7 +30763,21 @@ int SCIPgetNCutsApplied(
    return SCIPsepastoreGetNCutsApplied(scip->sepastore);
 }
 
-/** get total number of constraints found in conflict analysis (conflict and reconvergence constraints) */
+/** get total number of constraints found in conflict analysis (conflict and reconvergence constraints)
+ *
+ *  @return the total number of constraints found in conflict analysis (conflict and reconvergence constraints)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 SCIP_Longint SCIPgetNConflictConssFound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30463,7 +30796,21 @@ SCIP_Longint SCIPgetNConflictConssFound(
       + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict);
 }
 
-/** get number of conflict constraints found so far at the current node */
+/** get number of conflict constraints found so far at the current node
+ *
+ *  @return the number of conflict constraints found so far at the current node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 int SCIPgetNConflictConssFoundNode(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30473,7 +30820,21 @@ int SCIPgetNConflictConssFoundNode(
    return SCIPconflictGetNConflicts(scip->conflict);
 }
 
-/** get total number of conflict constraints added to the problem */
+/** get total number of conflict constraints added to the problem
+ *
+ *  @return the total number of conflict constraints added to the problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 SCIP_Longint SCIPgetNConflictConssApplied(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30485,6 +30846,20 @@ SCIP_Longint SCIPgetNConflictConssApplied(
 
 /** gets depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
  *  such that the depth includes the probing path
+ *
+ *  @return the depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
+ *  such that the depth includes the probing path
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
  */
 int SCIPgetDepth(
    SCIP*                 scip                /**< SCIP data structure */
@@ -30497,6 +30872,20 @@ int SCIPgetDepth(
 
 /** gets depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
  *  branching tree, excluding the nodes of the probing path
+ *
+ *  @return the depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
+ *  branching tree, excluding the nodes of the probing path
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
  */
 int SCIPgetFocusDepth(
    SCIP*                 scip                /**< SCIP data structure */
@@ -30507,7 +30896,21 @@ int SCIPgetFocusDepth(
    return SCIPtreeGetFocusDepth(scip->tree);
 }
 
-/** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes) */
+/** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
+ *
+ *  @return the maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 int SCIPgetMaxDepth(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30517,7 +30920,21 @@ int SCIPgetMaxDepth(
    return scip->stat->maxdepth;
 }
 
-/** gets maximal depth of all processed nodes over all branch and bound runs */
+/** gets maximal depth of all processed nodes over all branch and bound runs
+ *
+ *  @return the maximal depth of all processed nodes over all branch and bound runs
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 int SCIPgetMaxTotalDepth(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30527,7 +30944,21 @@ int SCIPgetMaxTotalDepth(
    return scip->stat->maxtotaldepth;
 }
 
-/** gets total number of backtracks, i.e. number of times, the new node was selected from the leaves queue */
+/** gets total number of backtracks, i.e. number of times, the new node was selected from the leaves queue
+ *
+ *  @return the total number of backtracks, i.e. number of times, the new node was selected from the leaves queue
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 SCIP_Longint SCIPgetNBacktracks(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30537,7 +30968,14 @@ SCIP_Longint SCIPgetNBacktracks(
    return scip->stat->nbacktracks;
 }
 
-/** gets current plunging depth (successive times, a child was selected as next node) */
+/** gets current plunging depth (successive times, a child was selected as next node)
+ *
+ *  @return the current plunging depth (successive times, a child was selected as next node)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 int SCIPgetPlungeDepth(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30547,7 +30985,14 @@ int SCIPgetPlungeDepth(
    return scip->stat->plungedepth;
 }
 
-/** gets total number of active constraints at the current node */
+/** gets total number of active constraints at the current node
+ *
+ *  @return the total number of active constraints at the current node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 int SCIPgetNActiveConss(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30557,7 +31002,14 @@ int SCIPgetNActiveConss(
    return scip->stat->nactiveconss;
 }
 
-/** gets total number of enabled constraints at the current node */
+/** gets total number of enabled constraints at the current node
+ *
+ *  @return the total number of enabled constraints at the current node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 int SCIPgetNEnabledConss(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30567,7 +31019,15 @@ int SCIPgetNEnabledConss(
    return scip->stat->nenabledconss;
 }
 
-/** gets average dual bound of all unprocessed nodes for original problem */
+/** gets average dual bound of all unprocessed nodes for original problem
+ *
+ *  @return the average dual bound of all unprocessed nodes for original problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30578,7 +31038,15 @@ SCIP_Real SCIPgetAvgDualbound(
       SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound));
 }
 
-/** gets average lower (dual) bound of all unprocessed nodes in transformed problem */
+/** gets average lower (dual) bound of all unprocessed nodes in transformed problem
+ *
+ *  @return the average lower (dual) bound of all unprocessed nodes in transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30588,7 +31056,18 @@ SCIP_Real SCIPgetAvgLowerbound(
    return SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound);
 }
 
-/** gets global dual bound */
+/** gets global dual bound
+ *
+ *  @return the global dual bound
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30598,7 +31077,18 @@ SCIP_Real SCIPgetDualbound(
    return getDualbound(scip);
 }
 
-/** gets global lower (dual) bound in transformed problem */
+/** gets global lower (dual) bound in transformed problem
+ *
+ *  @return the global lower (dual) bound in transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30608,7 +31098,18 @@ SCIP_Real SCIPgetLowerbound(
    return getLowerbound(scip);
 }
 
-/** gets dual bound of the root node for the original problem */
+/** gets dual bound of the root node for the original problem
+ *
+ *  @return the dual bound of the root node for the original problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetDualboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30621,7 +31122,18 @@ SCIP_Real SCIPgetDualboundRoot(
       return SCIPprobExternObjval(scip->transprob, scip->set, scip->stat->rootlowerbound);
 }
 
-/** gets lower (dual) bound in transformed problem of the root node */
+/** gets lower (dual) bound in transformed problem of the root node
+ *
+ *  @return the lower (dual) bound in transformed problem of the root node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetLowerboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30636,7 +31148,21 @@ SCIP_Real SCIPgetLowerboundRoot(
    return SCIPnodeGetLowerbound(scip->tree->root);
 }
 
-/** gets global primal bound (objective value of best solution or user objective limit) for the original problem */
+/** gets global primal bound (objective value of best solution or user objective limit) for the original problem
+ *
+ *  @return the global primal bound (objective value of best solution or user objective limit) for the original problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 SCIP_Real SCIPgetPrimalbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30646,7 +31172,21 @@ SCIP_Real SCIPgetPrimalbound(
    return getPrimalbound(scip);
 }
 
-/** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit) */
+/** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
+ *
+ *  @return the global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 SCIP_Real SCIPgetUpperbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30660,6 +31200,19 @@ SCIP_Real SCIPgetUpperbound(
  *  cannot contain a better feasible solution; usually, this bound is equal to the upper bound, but if the
  *  objective value is always integral, the cutoff bound is (nearly) one less than the upper bound;
  *  additionally, due to objective function domain propagation, the cutoff bound can be further reduced
+ *
+ *  @return global cutoff bound in transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
  */
 SCIP_Real SCIPgetCutoffbound(
    SCIP*                 scip                /**< SCIP data structure */
@@ -30671,6 +31224,16 @@ SCIP_Real SCIPgetCutoffbound(
 }
 
 /** updates the cutoff bound
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
  *
  *  @note the given cutoff bound has to better or equal to known one (SCIPgetCutoffbound())
  */
@@ -30692,6 +31255,19 @@ SCIP_RETCODE SCIPupdateCutoffbound(
 
 /** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
  *  was set from the user as objective limit
+ *
+ *  @return TRUE if the current primal bound is justified with a feasible primal solution, otherwise FALSE
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
  */
 SCIP_Bool SCIPisPrimalboundSol(
    SCIP*                 scip                /**< SCIP data structure */
@@ -30704,6 +31280,14 @@ SCIP_Bool SCIPisPrimalboundSol(
 
 /** gets current gap |(primalbound - dualbound)/min(|primalbound|,|dualbound|)| if both bounds have same sign,
  *  or infinity, if they have opposite sign
+ *
+ *  @return the current gap |(primalbound - dualbound)/min(|primalbound|,|dualbound|)| if both bounds have same sign,
+ *  or infinity, if they have opposite sign
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Real SCIPgetGap(
    SCIP*                 scip                /**< SCIP data structure */
@@ -30742,6 +31326,14 @@ SCIP_Real SCIPgetGap(
 
 /** gets current gap |(upperbound - lowerbound)/min(|upperbound|,|lowerbound|)| in transformed problem if both bounds
  *  have same sign, or infinity, if they have opposite sign
+ *
+ *  @return current gap |(upperbound - lowerbound)/min(|upperbound|,|lowerbound|)| in transformed problem if both bounds
+ *  have same sign, or infinity, if they have opposite sign
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Real SCIPgetTransGap(
    SCIP*                 scip                /**< SCIP data structure */
@@ -30775,7 +31367,21 @@ SCIP_Real SCIPgetTransGap(
       return REALABS((upperbound - lowerbound)/MIN(REALABS(lowerbound),REALABS(upperbound)));
 }
 
-/** gets number of feasible primal solutions found so far */
+/** gets number of feasible primal solutions found so far
+ *
+ *  @return the number of feasible primal solutions found so far
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 SCIP_Longint SCIPgetNSolsFound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30785,7 +31391,21 @@ SCIP_Longint SCIPgetNSolsFound(
    return scip->primal->nsolsfound;
 }
 
-/** gets number of feasible primal solutions found so far, that improved the primal bound at the time they were found */
+/** gets number of feasible primal solutions found so far, that improved the primal bound at the time they were found
+ *
+ *  @return the number of feasible primal solutions found so far, that improved the primal bound at the time they were found
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 SCIP_Longint SCIPgetNBestSolsFound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30795,7 +31415,14 @@ SCIP_Longint SCIPgetNBestSolsFound(
    return scip->primal->nbestsolsfound;
 }
 
-/** gets the average pseudo cost value for the given direction over all variables */
+/** gets the average pseudo cost value for the given direction over all variables
+ *
+ *  @return the average pseudo cost value for the given direction over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgPseudocost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
@@ -30808,6 +31435,13 @@ SCIP_Real SCIPgetAvgPseudocost(
 
 /** gets the average pseudo cost value for the given direction over all variables,
  *  only using the pseudo cost information of the current run
+ *
+ *  @return the average pseudo cost value for the given direction over all variables,
+ *  only using the pseudo cost information of the current run
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Real SCIPgetAvgPseudocostCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -30819,7 +31453,14 @@ SCIP_Real SCIPgetAvgPseudocostCurrentRun(
    return SCIPhistoryGetPseudocost(scip->stat->glbhistorycrun, solvaldelta);
 }
 
-/** gets the average number of pseudo cost updates for the given direction over all variables */
+/** gets the average number of pseudo cost updates for the given direction over all variables
+ *
+ *  @return the average number of pseudo cost updates for the given direction over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgPseudocostCount(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -30833,6 +31474,13 @@ SCIP_Real SCIPgetAvgPseudocostCount(
 
 /** gets the average number of pseudo cost updates for the given direction over all variables,
  *  only using the pseudo cost information of the current run
+ *
+ *  @return the average number of pseudo cost updates for the given direction over all variables,
+ *  only using the pseudo cost information of the current run
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Real SCIPgetAvgPseudocostCountCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -30845,7 +31493,14 @@ SCIP_Real SCIPgetAvgPseudocostCountCurrentRun(
       / MAX(scip->transprob->nbinvars + scip->transprob->nintvars, 1);
 }
 
-/** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5 */
+/** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5
+ *
+ *  @return the average pseudo cost score value over all variables, assuming a fractionality of 0.5
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgPseudocostScore(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30863,6 +31518,13 @@ SCIP_Real SCIPgetAvgPseudocostScore(
 
 /** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5,
  *  only using the pseudo cost information of the current run
+ *
+ *  @return the average pseudo cost score value over all variables, assuming a fractionality of 0.5,
+ *  only using the pseudo cost information of the current run
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Real SCIPgetAvgPseudocostScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
@@ -30879,7 +31541,14 @@ SCIP_Real SCIPgetAvgPseudocostScoreCurrentRun(
    return SCIPbranchGetScore(scip->set, NULL, pscostdown, pscostup);
 }
 
-/** gets the average conflict score value over all variables */
+/** gets the average conflict score value over all variables
+ *
+ *  @return the average conflict score value over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgConflictScore(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30897,7 +31566,14 @@ SCIP_Real SCIPgetAvgConflictScore(
    return SCIPbranchGetScore(scip->set, NULL, conflictscoredown, conflictscoreup);
 }
 
-/** gets the average conflict score value over all variables, only using the pseudo cost information of the current run */
+/** gets the average conflict score value over all variables, only using the pseudo cost information of the current run
+ *
+ *  @return the average conflict score value over all variables, only using the pseudo cost information of the current run
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgConflictScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30915,7 +31591,14 @@ SCIP_Real SCIPgetAvgConflictScoreCurrentRun(
    return SCIPbranchGetScore(scip->set, NULL, conflictscoredown, conflictscoreup);
 }
 
-/** gets the average inference score value over all variables */
+/** gets the average inference score value over all variables
+ *
+ *  @return the average inference score value over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgConflictlengthScore(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30931,7 +31614,14 @@ SCIP_Real SCIPgetAvgConflictlengthScore(
    return SCIPbranchGetScore(scip->set, NULL, conflictlengthdown, conflictlengthup);
 }
 
-/** gets the average conflictlength score value over all variables, only using the pseudo cost information of the current run */
+/** gets the average conflictlength score value over all variables, only using the pseudo cost information of the current run
+ *
+ *  @return the average conflictlength score value over all variables, only using the pseudo cost information of the current run
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgConflictlengthScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30947,7 +31637,14 @@ SCIP_Real SCIPgetAvgConflictlengthScoreCurrentRun(
    return SCIPbranchGetScore(scip->set, NULL, conflictlengthdown, conflictlengthup);
 }
 
-/** returns the average number of inferences found after branching in given direction over all variables */
+/** returns the average number of inferences found after branching in given direction over all variables
+ *
+ *  @return the average number of inferences found after branching in given direction over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgInferences(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -30960,6 +31657,13 @@ SCIP_Real SCIPgetAvgInferences(
 
 /** returns the average number of inferences found after branching in given direction over all variables,
  *  only using the pseudo cost information of the current run
+ *
+ *  @return the average number of inferences found after branching in given direction over all variables,
+ *          only using the pseudo cost information of the current run
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Real SCIPgetAvgInferencesCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -30971,7 +31675,14 @@ SCIP_Real SCIPgetAvgInferencesCurrentRun(
    return SCIPhistoryGetAvgInferences(scip->stat->glbhistorycrun, dir);
 }
 
-/** gets the average inference score value over all variables */
+/** gets the average inference score value over all variables
+ *
+ *  @return the average inference score value over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgInferenceScore(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -30989,6 +31700,13 @@ SCIP_Real SCIPgetAvgInferenceScore(
 
 /** gets the average inference score value over all variables, only using the inference information information of the
  *  current run
+ *
+ *  @return the average inference score value over all variables, only using the inference information information of the
+ *          current run
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Real SCIPgetAvgInferenceScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
@@ -31005,7 +31723,14 @@ SCIP_Real SCIPgetAvgInferenceScoreCurrentRun(
    return SCIPbranchGetScore(scip->set, NULL, inferencesdown, inferencesup);
 }
 
-/** returns the average number of cutoffs found after branching in given direction over all variables */
+/** returns the average number of cutoffs found after branching in given direction over all variables
+ *
+ *  @return the average number of cutoffs found after branching in given direction over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgCutoffs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -31018,6 +31743,13 @@ SCIP_Real SCIPgetAvgCutoffs(
 
 /** returns the average number of cutoffs found after branching in given direction over all variables,
  *  only using the pseudo cost information of the current run
+ *
+ *  @return the average number of cutoffs found after branching in given direction over all variables,
+ *          only using the pseudo cost information of the current run
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Real SCIPgetAvgCutoffsCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -31029,7 +31761,14 @@ SCIP_Real SCIPgetAvgCutoffsCurrentRun(
    return SCIPhistoryGetAvgCutoffs(scip->stat->glbhistorycrun, dir);
 }
 
-/** gets the average cutoff score value over all variables */
+/** gets the average cutoff score value over all variables
+ *
+ *  @return the average cutoff score value over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgCutoffScore(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -31045,7 +31784,14 @@ SCIP_Real SCIPgetAvgCutoffScore(
    return SCIPbranchGetScore(scip->set, NULL, cutoffsdown, cutoffsup);
 }
 
-/** gets the average cutoff score value over all variables, only using the pseudo cost information of the current run */
+/** gets the average cutoff score value over all variables, only using the pseudo cost information of the current run
+ *
+ *  @return the average cutoff score value over all variables, only using the pseudo cost information of the current run
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -31110,7 +31856,25 @@ SCIP_RETCODE printProblem(
    }  /*lint !e788*/
 }
 
-/** outputs original problem to file stream */
+/** outputs original problem to file stream
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 SCIP_RETCODE SCIPprintOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -31138,7 +31902,23 @@ SCIP_RETCODE SCIPprintOrigProblem(
    return SCIP_OKAY;
 }
 
-/** outputs transformed problem of the current node to file stream */
+/** outputs transformed problem of the current node to file stream
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 SCIP_RETCODE SCIPprintTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -31976,13 +32756,28 @@ void printTimingStatistics(
    }
 }
 
-/** outputs solving statistics */
+/** outputs solving statistics
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_RETCODE SCIPprintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPprintStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPprintStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Status        : ");
    SCIP_CALL( SCIPprintStage(scip, file) );
@@ -32064,7 +32859,22 @@ SCIP_RETCODE SCIPprintStatistics(
    }  /*lint !e788*/
 }
 
-/** outputs history statistics about branchings on variables */
+/** outputs history statistics about branchings on variables
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_RETCODE SCIPprintBranchingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -32074,7 +32884,7 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
    int totalnstrongbranchs;
    int v;
 
-   SCIP_CALL( checkStage(scip, "SCIPprintBranchingStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPprintBranchingStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -32168,7 +32978,14 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
    }  /*lint !e788*/
 }
 
-/** outputs node information display line */
+/** outputs node information display line
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPprintDisplayLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -32185,7 +33002,19 @@ SCIP_RETCODE SCIPprintDisplayLine(
    return SCIP_OKAY;
 }
 
-/** gets total number of implications between variables that are stored in the implication graph */
+/** gets total number of implications between variables that are stored in the implication graph
+ *
+ *  @return the total number of implications between variables that are stored in the implication graph
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 int SCIPgetNImplications(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -32195,7 +33024,22 @@ int SCIPgetNImplications(
    return scip->stat->nimplications;
 }
 
-/** stores conflict graph of binary variables' implications into a file, which can be used as input for the DOT tool */
+/** stores conflict graph of binary variables' implications into a file, which can be used as input for the DOT tool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name, or NULL for stdout */
