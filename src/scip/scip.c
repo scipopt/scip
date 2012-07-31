@@ -22155,7 +22155,15 @@ SCIP_RETCODE SCIPgetNLPI(
 /**@{ */
 
 /** initiates NLP diving
- * making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), SCIPchgVarsBoundsDiveNLP(), and SCIPsolveDiveNLP() available */
+ * making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), SCIPchgVarsBoundsDiveNLP(), and SCIPsolveDiveNLP() available
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPstartDiveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -22174,7 +22182,15 @@ SCIP_RETCODE SCIPstartDiveNLP(
 }
 
 /** ends NLP diving
- * resets changes made by SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), and SCIPchgVarsBoundsDiveNLP() */
+ * resets changes made by SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), and SCIPchgVarsBoundsDiveNLP()
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPendDiveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -22192,7 +22208,15 @@ SCIP_RETCODE SCIPendDiveNLP(
    return SCIP_OKAY;
 }
 
-/** changes linear objective coefficient of a variable in diving NLP */
+/** changes linear objective coefficient of a variable in diving NLP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPchgVarObjDiveNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable which coefficient to change */
@@ -22212,7 +22236,15 @@ SCIP_RETCODE SCIPchgVarObjDiveNLP(
    return SCIP_OKAY;
 }
 
-/** changes bounds of a variable in diving NLP */
+/** changes bounds of a variable in diving NLP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPchgVarBoundsDiveNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable which bounds to change */
@@ -22233,7 +22265,15 @@ SCIP_RETCODE SCIPchgVarBoundsDiveNLP(
    return SCIP_OKAY;
 }
 
-/** changes bounds of a set of variables in diving NLP */
+/** changes bounds of a set of variables in diving NLP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPchgVarsBoundsDiveNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables which bounds to changes */
@@ -22255,7 +22295,15 @@ SCIP_RETCODE SCIPchgVarsBoundsDiveNLP(
    return SCIP_OKAY;
 }
 
-/** solves diving NLP */
+/** solves diving NLP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPsolveDiveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
