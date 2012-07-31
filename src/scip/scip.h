@@ -198,7 +198,7 @@ void SCIPprintError(
  *        message handler or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
  *        file and turn off/on the display output, respectively.
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @post After calling this method \SCIP reached the solving stage \ref SCIP_STAGE_INIT
@@ -212,7 +212,7 @@ SCIP_RETCODE SCIPcreate(
 
 /** frees SCIP data structures
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if \SCIP is in one of the following stages:
