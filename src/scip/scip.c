@@ -27579,7 +27579,11 @@ SCIP_Real SCIPgetHugeValue(
    return SCIPsetGetHugeValue(scip->set);
 }
 
-/** creates a dynamic array of real values */
+/** creates a dynamic array of real values
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPcreateRealarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REALARRAY**      realarray           /**< pointer to store the real array */
@@ -27592,7 +27596,11 @@ SCIP_RETCODE SCIPcreateRealarray(
    return SCIP_OKAY;
 }
 
-/** frees a dynamic array of real values */
+/** frees a dynamic array of real values
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPfreeRealarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REALARRAY**      realarray           /**< pointer to the real array */
@@ -27605,7 +27613,11 @@ SCIP_RETCODE SCIPfreeRealarray(
    return SCIP_OKAY;
 }
 
-/** extends dynamic array to be able to store indices from minidx to maxidx */
+/** extends dynamic array to be able to store indices from minidx to maxidx
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPextendRealarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REALARRAY*       realarray,          /**< dynamic real array */
@@ -27620,7 +27632,11 @@ SCIP_RETCODE SCIPextendRealarray(
    return SCIP_OKAY;
 }
 
-/** clears a dynamic real array */
+/** clears a dynamic real array
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPclearRealarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REALARRAY*       realarray           /**< dynamic real array */
@@ -27633,7 +27649,10 @@ SCIP_RETCODE SCIPclearRealarray(
    return SCIP_OKAY;
 }
 
-/** gets value of entry in dynamic array */
+/** gets value of entry in dynamic array
+ *
+ *  @return  value of entry in dynamic array
+ */
 SCIP_Real SCIPgetRealarrayVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REALARRAY*       realarray,          /**< dynamic real array */
@@ -27645,7 +27664,11 @@ SCIP_Real SCIPgetRealarrayVal(
    return SCIPrealarrayGetVal(realarray, idx);
 }
 
-/** sets value of entry in dynamic array */
+/** sets value of entry in dynamic array
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPsetRealarrayVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REALARRAY*       realarray,          /**< dynamic real array */
@@ -27660,7 +27683,11 @@ SCIP_RETCODE SCIPsetRealarrayVal(
    return SCIP_OKAY;
 }
 
-/** increases value of entry in dynamic array */
+/** increases value of entry in dynamic array
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPincRealarrayVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REALARRAY*       realarray,          /**< dynamic real array */
@@ -27675,7 +27702,10 @@ SCIP_RETCODE SCIPincRealarrayVal(
    return SCIP_OKAY;
 }
 
-/** returns the minimal index of all stored non-zero elements */
+/** returns the minimal index of all stored non-zero elements
+ *
+ *  @return the minimal index of all stored non-zero elements
+ */
 int SCIPgetRealarrayMinIdx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REALARRAY*       realarray           /**< dynamic real array */
@@ -27686,7 +27716,10 @@ int SCIPgetRealarrayMinIdx(
    return SCIPrealarrayGetMinIdx(realarray);
 }
 
-/** returns the maximal index of all stored non-zero elements */
+/** returns the maximal index of all stored non-zero elements
+ *
+ *  @return the maximal index of all stored non-zero elements
+ */
 int SCIPgetRealarrayMaxIdx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REALARRAY*       realarray           /**< dynamic real array */
@@ -27697,7 +27730,11 @@ int SCIPgetRealarrayMaxIdx(
    return SCIPrealarrayGetMaxIdx(realarray);
 }
 
-/** creates a dynamic array of int values */
+/** creates a dynamic array of int values
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPcreateIntarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTARRAY**       intarray            /**< pointer to store the int array */
@@ -27710,7 +27747,11 @@ SCIP_RETCODE SCIPcreateIntarray(
    return SCIP_OKAY;
 }
 
-/** frees a dynamic array of int values */
+/** frees a dynamic array of int values
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPfreeIntarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTARRAY**       intarray            /**< pointer to the int array */
@@ -27723,7 +27764,11 @@ SCIP_RETCODE SCIPfreeIntarray(
    return SCIP_OKAY;
 }
 
-/** extends dynamic array to be able to store indices from minidx to maxidx */
+/** extends dynamic array to be able to store indices from minidx to maxidx
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPextendIntarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTARRAY*        intarray,           /**< dynamic int array */
@@ -27738,7 +27783,11 @@ SCIP_RETCODE SCIPextendIntarray(
    return SCIP_OKAY;
 }
 
-/** clears a dynamic int array */
+/** clears a dynamic int array
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPclearIntarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTARRAY*        intarray            /**< dynamic int array */
@@ -27751,7 +27800,10 @@ SCIP_RETCODE SCIPclearIntarray(
    return SCIP_OKAY;
 }
 
-/** gets value of entry in dynamic array */
+/** gets value of entry in dynamic array
+ *
+ *  @return value of entry in dynamic array
+ */
 int SCIPgetIntarrayVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTARRAY*        intarray,           /**< dynamic int array */
@@ -27763,7 +27815,11 @@ int SCIPgetIntarrayVal(
    return SCIPintarrayGetVal(intarray, idx);
 }
 
-/** sets value of entry in dynamic array */
+/** sets value of entry in dynamic array
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPsetIntarrayVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTARRAY*        intarray,           /**< dynamic int array */
@@ -27778,7 +27834,11 @@ SCIP_RETCODE SCIPsetIntarrayVal(
    return SCIP_OKAY;
 }
 
-/** increases value of entry in dynamic array */
+/** increases value of entry in dynamic array
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPincIntarrayVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTARRAY*        intarray,           /**< dynamic int array */
@@ -27793,7 +27853,10 @@ SCIP_RETCODE SCIPincIntarrayVal(
    return SCIP_OKAY;
 }
 
-/** returns the minimal index of all stored non-zero elements */
+/** returns the minimal index of all stored non-zero elements
+ *
+ *  @return the minimal index of all stored non-zero elements
+ */
 int SCIPgetIntarrayMinIdx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTARRAY*        intarray            /**< dynamic int array */
@@ -27804,7 +27867,10 @@ int SCIPgetIntarrayMinIdx(
    return SCIPintarrayGetMinIdx(intarray);
 }
 
-/** returns the maximal index of all stored non-zero elements */
+/** returns the maximal index of all stored non-zero elements
+ *
+ *  @return the maximal index of all stored non-zero elements
+ */
 int SCIPgetIntarrayMaxIdx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTARRAY*        intarray            /**< dynamic int array */
@@ -27815,7 +27881,11 @@ int SCIPgetIntarrayMaxIdx(
    return SCIPintarrayGetMaxIdx(intarray);
 }
 
-/** creates a dynamic array of bool values */
+/** creates a dynamic array of bool values
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPcreateBoolarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BOOLARRAY**      boolarray           /**< pointer to store the bool array */
@@ -27828,7 +27898,11 @@ SCIP_RETCODE SCIPcreateBoolarray(
    return SCIP_OKAY;
 }
 
-/** frees a dynamic array of bool values */
+/** frees a dynamic array of bool values
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPfreeBoolarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BOOLARRAY**      boolarray           /**< pointer to the bool array */
@@ -27841,7 +27915,11 @@ SCIP_RETCODE SCIPfreeBoolarray(
    return SCIP_OKAY;
 }
 
-/** extends dynamic array to be able to store indices from minidx to maxidx */
+/** extends dynamic array to be able to store indices from minidx to maxidx
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPextendBoolarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BOOLARRAY*       boolarray,          /**< dynamic bool array */
@@ -27856,7 +27934,11 @@ SCIP_RETCODE SCIPextendBoolarray(
    return SCIP_OKAY;
 }
 
-/** clears a dynamic bool array */
+/** clears a dynamic bool array
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPclearBoolarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BOOLARRAY*       boolarray           /**< dynamic bool array */
@@ -27869,7 +27951,10 @@ SCIP_RETCODE SCIPclearBoolarray(
    return SCIP_OKAY;
 }
 
-/** gets value of entry in dynamic array */
+/** gets value of entry in dynamic array
+ *
+ *  @return value of entry in dynamic array at position idx
+ */
 SCIP_Bool SCIPgetBoolarrayVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BOOLARRAY*       boolarray,          /**< dynamic bool array */
@@ -27881,7 +27966,11 @@ SCIP_Bool SCIPgetBoolarrayVal(
    return SCIPboolarrayGetVal(boolarray, idx);
 }
 
-/** sets value of entry in dynamic array */
+/** sets value of entry in dynamic array
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPsetBoolarrayVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BOOLARRAY*       boolarray,          /**< dynamic bool array */
@@ -27896,7 +27985,10 @@ SCIP_RETCODE SCIPsetBoolarrayVal(
    return SCIP_OKAY;
 }
 
-/** returns the minimal index of all stored non-zero elements */
+/** returns the minimal index of all stored non-zero elements
+ *
+ *  @return the minimal index of all stored non-zero elements
+ */
 int SCIPgetBoolarrayMinIdx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BOOLARRAY*       boolarray           /**< dynamic bool array */
@@ -27907,7 +27999,10 @@ int SCIPgetBoolarrayMinIdx(
    return SCIPboolarrayGetMinIdx(boolarray);
 }
 
-/** returns the maximal index of all stored non-zero elements */
+/** returns the maximal index of all stored non-zero elements
+ *
+ *  @return the maximal index of all stored non-zero elements
+ */
 int SCIPgetBoolarrayMaxIdx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BOOLARRAY*       boolarray           /**< dynamic bool array */
@@ -27918,7 +28013,11 @@ int SCIPgetBoolarrayMaxIdx(
    return SCIPboolarrayGetMaxIdx(boolarray);
 }
 
-/** creates a dynamic array of pointers */
+/** creates a dynamic array of pointers
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPcreatePtrarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PTRARRAY**       ptrarray            /**< pointer to store the int array */
@@ -27931,7 +28030,11 @@ SCIP_RETCODE SCIPcreatePtrarray(
    return SCIP_OKAY;
 }
 
-/** frees a dynamic array of pointers */
+/** frees a dynamic array of pointers
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPfreePtrarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PTRARRAY**       ptrarray            /**< pointer to the int array */
@@ -27944,7 +28047,11 @@ SCIP_RETCODE SCIPfreePtrarray(
    return SCIP_OKAY;
 }
 
-/** extends dynamic array to be able to store indices from minidx to maxidx */
+/** extends dynamic array to be able to store indices from minidx to maxidx
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPextendPtrarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PTRARRAY*        ptrarray,           /**< dynamic int array */
@@ -27959,7 +28066,11 @@ SCIP_RETCODE SCIPextendPtrarray(
    return SCIP_OKAY;
 }
 
-/** clears a dynamic pointer array */
+/** clears a dynamic pointer array
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPclearPtrarray(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PTRARRAY*        ptrarray            /**< dynamic int array */
@@ -27984,7 +28095,11 @@ void* SCIPgetPtrarrayVal(
    return SCIPptrarrayGetVal(ptrarray, idx);
 }
 
-/** sets value of entry in dynamic array */
+/** sets value of entry in dynamic array
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPsetPtrarrayVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PTRARRAY*        ptrarray,           /**< dynamic int array */
@@ -27999,7 +28114,10 @@ SCIP_RETCODE SCIPsetPtrarrayVal(
    return SCIP_OKAY;
 }
 
-/** returns the minimal index of all stored non-zero elements */
+/** returns the minimal index of all stored non-zero elements
+ *
+ *  @return the minimal index of all stored non-zero elements
+ */
 int SCIPgetPtrarrayMinIdx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
@@ -28010,7 +28128,10 @@ int SCIPgetPtrarrayMinIdx(
    return SCIPptrarrayGetMinIdx(ptrarray);
 }
 
-/** returns the maximal index of all stored non-zero elements */
+/** returns the maximal index of all stored non-zero elements
+ *
+ *  @return the maximal index of all stored non-zero elements
+ */
 int SCIPgetPtrarrayMaxIdx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
