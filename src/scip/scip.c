@@ -6542,7 +6542,11 @@ void SCIPprintExternalCodes(
  * user interactive dialog methods
  */
 
-/** creates and includes dialog */
+/** creates and includes dialog
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPincludeDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
@@ -6574,7 +6578,10 @@ SCIP_RETCODE SCIPincludeDialog(
    return SCIP_OKAY;
 }
 
-/** returns if the dialog already exists */
+/** returns if the dialog already exists
+ *
+ *  @return TRUE is returned if the dialog exits, otherwise FALSE.
+ */
 SCIP_Bool SCIPexistsDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG*          dialog              /**< dialog */
@@ -6587,7 +6594,11 @@ SCIP_Bool SCIPexistsDialog(
    return SCIPsetExistsDialog(scip->set, dialog);
 }
 
-/** captures a dialog */
+/** captures a dialog
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPcaptureDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG*          dialog              /**< dialog */
@@ -6600,7 +6611,11 @@ SCIP_RETCODE SCIPcaptureDialog(
    return SCIP_OKAY;
 }
 
-/** releases a dialog */
+/** releases a dialog
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPreleaseDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG**         dialog              /**< pointer to the dialog */
@@ -6613,7 +6628,11 @@ SCIP_RETCODE SCIPreleaseDialog(
    return SCIP_OKAY;
 }
 
-/** makes given dialog the root dialog of SCIP's interactive user shell; captures dialog and releases former root dialog */
+/** makes given dialog the root dialog of SCIP's interactive user shell; captures dialog and releases former root dialog
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPsetRootDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG*          dialog              /**< dialog to be the root */
@@ -6626,7 +6645,10 @@ SCIP_RETCODE SCIPsetRootDialog(
    return SCIP_OKAY;
 }
 
-/** returns the root dialog of SCIP's interactive user shell */
+/** returns the root dialog of SCIP's interactive user shell
+ *
+ *  @return the root dialog of SCIP's interactive user shell is returned.
+ */
 SCIP_DIALOG* SCIPgetRootDialog(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -6636,7 +6658,11 @@ SCIP_DIALOG* SCIPgetRootDialog(
    return SCIPdialoghdlrGetRoot(scip->dialoghdlr);
 }
 
-/** adds a sub dialog to the given dialog as menu entry and captures it */
+/** adds a sub dialog to the given dialog as menu entry and captures it
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPaddDialogEntry(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG*          dialog,             /**< dialog to extend, or NULL for root dialog */
@@ -6653,7 +6679,11 @@ SCIP_RETCODE SCIPaddDialogEntry(
    return SCIP_OKAY;
 }
 
-/** adds a single line of input which is treated as if the user entered the command line */
+/** adds a single line of input which is treated as if the user entered the command line
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPaddDialogInputLine(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           inputline           /**< input line to add */
@@ -6666,7 +6696,11 @@ SCIP_RETCODE SCIPaddDialogInputLine(
    return SCIP_OKAY;
 }
 
-/** adds a single line of input to the command history which can be accessed with the cursor keys */
+/** adds a single line of input to the command history which can be accessed with the cursor keys
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPaddDialogHistoryLine(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           inputline           /**< input line to add */
@@ -6679,7 +6713,27 @@ SCIP_RETCODE SCIPaddDialogHistoryLine(
    return SCIP_OKAY;
 }
 
-/** starts interactive mode of SCIP by executing the root dialog */
+/** starts interactive mode of SCIP by executing the root dialog
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @post After calling this method \SCIP reaches one of the following stages depending on if and when the
+ *        interactive shell was closed:
+ *        - \ref SCIP_STAGE_PROBLEM if the interactive shell was closed after the problem was created
+ *        - \ref SCIP_STAGE_TRANSFORMED if the interactive shell was closed after the problem was transformed
+ *        - \ref SCIP_STAGE_PRESOLVING if the interactive shell was closed  during presolving
+ *        - \ref SCIP_STAGE_PRESOLVED if the interactive shell was closed after presolve
+ *        - \ref SCIP_STAGE_SOLVING if the interactive shell was closed during the tree search
+ *        - \ref SCIP_STAGE_SOLVED if the interactive shell was closed after the problem was solved
+ *        - \ref SCIP_STAGE_FREE if the interactive shell was closed after the problem was freed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 SCIP_RETCODE SCIPstartInteraction(
    SCIP*                 scip                /**< SCIP data structure */
    )
