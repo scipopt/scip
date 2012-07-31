@@ -609,7 +609,7 @@ void SCIPprintError(
  *        message handler or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
  *        file and turn off/on the display output, respectively.
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @post After calling this method \SCIP reached the solving stage \ref SCIP_STAGE_INIT
@@ -669,7 +669,7 @@ SCIP_RETCODE SCIPcreate(
 
 /** frees SCIP data structures
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if \SCIP is in one of the following stages:
@@ -737,7 +737,7 @@ SCIP_STAGE SCIPgetStage(
  *
  *  @note If the message handler is set to a NULL pointer nothing will be printed
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
@@ -841,7 +841,7 @@ SCIP_STATUS SCIPgetStatus(
 
 /** outputs solution status
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  See \ref SCIP_Status "SCIP_STATUS" for a complete list of all possible solving status.
@@ -6544,7 +6544,7 @@ void SCIPprintExternalCodes(
 
 /** creates and includes dialog
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPincludeDialog(
@@ -6596,7 +6596,7 @@ SCIP_Bool SCIPexistsDialog(
 
 /** captures a dialog
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPcaptureDialog(
@@ -6613,7 +6613,7 @@ SCIP_RETCODE SCIPcaptureDialog(
 
 /** releases a dialog
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPreleaseDialog(
@@ -6630,7 +6630,7 @@ SCIP_RETCODE SCIPreleaseDialog(
 
 /** makes given dialog the root dialog of SCIP's interactive user shell; captures dialog and releases former root dialog
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPsetRootDialog(
@@ -6660,7 +6660,7 @@ SCIP_DIALOG* SCIPgetRootDialog(
 
 /** adds a sub dialog to the given dialog as menu entry and captures it
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPaddDialogEntry(
@@ -6681,7 +6681,7 @@ SCIP_RETCODE SCIPaddDialogEntry(
 
 /** adds a single line of input which is treated as if the user entered the command line
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPaddDialogInputLine(
@@ -6698,7 +6698,7 @@ SCIP_RETCODE SCIPaddDialogInputLine(
 
 /** adds a single line of input to the command history which can be accessed with the cursor keys
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPaddDialogHistoryLine(
@@ -6715,7 +6715,7 @@ SCIP_RETCODE SCIPaddDialogHistoryLine(
 
 /** starts interactive mode of SCIP by executing the root dialog
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code in passed. see \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if \SCIP is in one of the following stages:
@@ -7592,7 +7592,7 @@ SCIP_Real SCIPgetObjNorm(
 
 /** adds variable to the problem
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if \SCIP is in one of the following stages:
@@ -7664,7 +7664,7 @@ SCIP_RETCODE SCIPaddVar(
 
 /** adds variable to the problem and uses it as pricing candidate to enter the LP
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if \SCIP is in one of the following stages:
@@ -7713,7 +7713,7 @@ SCIP_RETCODE SCIPaddPricedVar(
 
 /** removes variable from the problem
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if \SCIP is in one of the following stages:
@@ -7798,7 +7798,7 @@ SCIP_RETCODE SCIPdelVar(
 /** gets variables of the problem along with the numbers of different variable types; data may become invalid after
  *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar()
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if \SCIP is in one of the following stages:
@@ -9143,7 +9143,7 @@ SCIP_RETCODE checkSolOrig(
 
 /** initializes solving data structures and transforms problem
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called at any solving stage except \ref SCIP_STAGE_INIT and \ref SCIP_STAGE_TRANSFORMING
@@ -10512,7 +10512,7 @@ SCIP_RETCODE SCIPpresolve(
 
 /** transforms, presolves, and solves problem
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if \SCIP is in one of the following stages:
