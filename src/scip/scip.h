@@ -10110,7 +10110,16 @@ SCIP_RETCODE SCIPsolveDiveNLP(
 /**@name NLP Nonlinear Row Methods */
 /**@{ */
 
-/** creates and captures an NLP row */
+/** creates and captures an NLP row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10129,7 +10138,16 @@ SCIP_RETCODE SCIPcreateNlRow(
    SCIP_Real             rhs                 /**< right hand side */
    );
 
-/** creates and captures an NLP nonlinear row without any coefficients */
+/** creates and captures an NLP nonlinear row without any coefficients
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateEmptyNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10139,7 +10157,16 @@ SCIP_RETCODE SCIPcreateEmptyNlRow(
    SCIP_Real             rhs                 /**< right hand side */
    );
 
-/** creates and captures an NLP row from a linear row */
+/** creates and captures an NLP row from a linear row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateNlRowFromRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10147,21 +10174,49 @@ SCIP_RETCODE SCIPcreateNlRowFromRow(
    SCIP_ROW*             row                 /**< the linear row to copy */
    );
 
-/** increases usage counter of NLP nonlinear row */
+/** increases usage counter of NLP nonlinear row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcaptureNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow               /**< nonlinear row to capture */
    );
 
-/** decreases usage counter of NLP nonlinear row, and frees memory if necessary */
+/** decreases usage counter of NLP nonlinear row, and frees memory if necessary
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 EXTERN
 SCIP_RETCODE SCIPreleaseNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW**          nlrow               /**< nonlinear row to release */
    );
 
-/** changes left hand side of NLP nonlinear row */
+/** changes left hand side of NLP nonlinear row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPchgNlRowLhs(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10169,7 +10224,16 @@ SCIP_RETCODE SCIPchgNlRowLhs(
    SCIP_Real             lhs                 /**< new left hand side */
    );
 
-/** changes right hand side of NLP nonlinear row */
+/** changes right hand side of NLP nonlinear row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPchgNlRowRhs(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10177,7 +10241,16 @@ SCIP_RETCODE SCIPchgNlRowRhs(
    SCIP_Real             rhs                 /**< new right hand side */
    );
 
-/** changes constant of NLP nonlinear row */
+/** changes constant of NLP nonlinear row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPchgNlRowConstant(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10185,7 +10258,16 @@ SCIP_RETCODE SCIPchgNlRowConstant(
    SCIP_Real             constant            /**< new value for constant */
    );
 
-/** adds variable with a linear coefficient to the nonlinear row */
+/** adds variable with a linear coefficient to the nonlinear row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPaddLinearCoefToNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10194,7 +10276,16 @@ SCIP_RETCODE SCIPaddLinearCoefToNlRow(
    SCIP_Real             val                 /**< value of coefficient in linear part of row */
    );
 
-/** adds variables with linear coefficients to the row */
+/** adds variables with linear coefficients to the row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10206,7 +10297,16 @@ SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
 
 /** changes linear coefficient of a variables in a row
  * setting the coefficient to 0.0 means that it is removed from the row
- * the variable does not need to exists before */
+ * the variable does not need to exists before
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPchgNlRowLinearCoef(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10216,7 +10316,16 @@ SCIP_RETCODE SCIPchgNlRowLinearCoef(
    );
 
 /** adds quadratic variable to the nonlinear row
- * after adding a quadratic variable, it can be used to add quadratic elements */
+ * after adding a quadratic variable, it can be used to add quadratic elements
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPaddQuadVarToNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10225,7 +10334,16 @@ SCIP_RETCODE SCIPaddQuadVarToNlRow(
    );
 
 /** adds quadratic variables to the nonlinear row
- * after adding quadratic variables, they can be used to add quadratic elements */
+ * after adding quadratic variables, they can be used to add quadratic elements
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPaddQuadVarsToNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10235,7 +10353,16 @@ SCIP_RETCODE SCIPaddQuadVarsToNlRow(
    );
 
 /** add a quadratic element to the nonlinear row
- * variable indices of the quadratic element need to be relative to quadratic variables array of row */
+ * variable indices of the quadratic element need to be relative to quadratic variables array of row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPaddQuadElementToNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10244,7 +10371,16 @@ SCIP_RETCODE SCIPaddQuadElementToNlRow(
    );
 
 /** adds quadratic elements to the nonlinear row
- * variable indices of the quadratic elements need to be relative to quadratic variables array of row */
+ * variable indices of the quadratic elements need to be relative to quadratic variables array of row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPaddQuadElementsToNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10255,7 +10391,16 @@ SCIP_RETCODE SCIPaddQuadElementsToNlRow(
 
 /** changes coefficient in quadratic part of a row
  * setting the coefficient in the quadelement to 0.0 means that it is removed from the row
- * the element does not need to exists before */
+ * the element does not need to exists before
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPchgNlRowQuadElement(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10263,7 +10408,16 @@ SCIP_RETCODE SCIPchgNlRowQuadElement(
    SCIP_QUADELEM         quadelement         /**< new quadratic element, or update for existing one */
    );
 
-/** sets or deletes expression tree in the nonlinear row */
+/** sets or deletes expression tree in the nonlinear row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPsetNlRowExprtree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10271,7 +10425,16 @@ SCIP_RETCODE SCIPsetNlRowExprtree(
    SCIP_EXPRTREE*        exprtree            /**< expression tree, or NULL */
    );
 
-/** sets a parameter of expression tree in the nonlinear row */
+/** sets a parameter of expression tree in the nonlinear row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPsetNlRowExprtreeParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10280,7 +10443,16 @@ SCIP_RETCODE SCIPsetNlRowExprtreeParam(
    SCIP_Real             paramval            /**< new value of parameter in expression tree */
    );
 
-/** sets parameters of expression tree in the nonlinear row */
+/** sets parameters of expression tree in the nonlinear row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPsetNlRowExprtreeParams(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10288,14 +10460,31 @@ SCIP_RETCODE SCIPsetNlRowExprtreeParams(
    SCIP_Real*            paramvals           /**< new values of parameter in expression tree */
    );
 
-/** recalculates the activity of a nonlinear row in the last NLP solution */
+/** recalculates the activity of a nonlinear row in the last NLP solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPrecalcNlRowNLPActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
    );
 
-/** returns the activity of a nonlinear row in the last NLP solution */
+/** returns the activity of a nonlinear row in the last NLP solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPgetNlRowNLPActivity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10303,7 +10492,15 @@ SCIP_RETCODE SCIPgetNlRowNLPActivity(
    SCIP_Real*            activity            /**< buffer to store activity value */
    );
 
-/** gives the feasibility of a nonlinear row in the last NLP solution: negative value means infeasibility */
+/** gives the feasibility of a nonlinear row in the last NLP solution: negative value means infeasibility
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPgetNlRowNLPFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10311,14 +10508,30 @@ SCIP_RETCODE SCIPgetNlRowNLPFeasibility(
    SCIP_Real*            feasibility         /**< buffer to store feasibility value */
    );
 
-/** recalculates the activity of a nonlinear row for the current pseudo solution */
+/** recalculates the activity of a nonlinear row for the current pseudo solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPrecalcNlRowPseudoActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
    );
 
-/** gives the activity of a nonlinear row for the current pseudo solution */
+/** gives the activity of a nonlinear row for the current pseudo solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPgetNlRowPseudoActivity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10326,7 +10539,15 @@ SCIP_RETCODE SCIPgetNlRowPseudoActivity(
    SCIP_Real*            pseudoactivity      /**< buffer to store pseudo activity value */
    );
 
-/** gives the feasibility of a nonlinear row for the current pseudo solution: negative value means infeasibility */
+/** gives the feasibility of a nonlinear row for the current pseudo solution: negative value means infeasibility
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPgetNlRowPseudoFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10334,14 +10555,30 @@ SCIP_RETCODE SCIPgetNlRowPseudoFeasibility(
    SCIP_Real*            pseudofeasibility   /**< buffer to store pseudo feasibility value */
    );
 
-/** recalculates the activity of a nonlinear row in the last NLP or pseudo solution */
+/** recalculates the activity of a nonlinear row in the last NLP or pseudo solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPrecalcNlRowActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
    );
 
-/** gives the activity of a nonlinear row in the last NLP or pseudo solution */
+/** gives the activity of a nonlinear row in the last NLP or pseudo solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPgetNlRowActivity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10349,7 +10586,15 @@ SCIP_RETCODE SCIPgetNlRowActivity(
    SCIP_Real*            activity            /**< buffer to store activity value */
    );
 
-/** gives the feasibility of a nonlinear row in the last NLP or pseudo solution */
+/** gives the feasibility of a nonlinear row in the last NLP or pseudo solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPgetNlRowFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10357,7 +10602,15 @@ SCIP_RETCODE SCIPgetNlRowFeasibility(
    SCIP_Real*            feasibility         /**< buffer to store feasibility value */
    );
 
-/** gives the activity of a nonlinear row for the given primal solution or NLP solution or pseudo solution */
+/** gives the activity of a nonlinear row for the given primal solution or NLP solution or pseudo solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPgetNlRowSolActivity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10366,7 +10619,15 @@ SCIP_RETCODE SCIPgetNlRowSolActivity(
    SCIP_Real*            activity            /**< buffer to store activity value */
    );
 
-/** gives the feasibility of a nonlinear row for the given primal solution */
+/** gives the feasibility of a nonlinear row for the given primal solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPgetNlRowSolFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10375,7 +10636,16 @@ SCIP_RETCODE SCIPgetNlRowSolFeasibility(
    SCIP_Real*            feasibility         /**< buffer to store feasibility value */
    );
 
-/** gives the minimal and maximal activity of a nonlinear row w.r.t. the variable's bounds */
+/** gives the minimal and maximal activity of a nonlinear row w.r.t. the variable's bounds
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPgetNlRowActivityBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10384,7 +10654,16 @@ SCIP_RETCODE SCIPgetNlRowActivityBounds(
    SCIP_Real*            maxactivity         /**< buffer to store maximal activity, or NULL */
    );
 
-/** output nonlinear row to file stream */
+/** output nonlinear row to file stream
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPprintNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
