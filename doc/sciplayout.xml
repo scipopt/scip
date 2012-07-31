@@ -3,7 +3,7 @@
   <navindex>
     <tab type="mainpage" visible="yes" title="Overview"/>
     <tab type="modules" visible="yes" title="Plugin Types"/>
-    <tab type="classes" visible="yes" title="C++ Wrapper Classes">
+    <tab type="classes" visible="no" title="">
       <tab type="classes" visible="no" title="Wrapper Classes"/>
       <tab type="classindex" visible="$ALPHABETICAL_INDEX" title=""/> 
       <tab type="hierarchy" visible="no" title=""/>
@@ -18,6 +18,7 @@
       <tab type="namespaces" visible="no" title=""/>
       <tab type="namespacemembers" visible="no" title=""/>
     </tab>
+    <tab type="user" url="@ref INTERFACES" title="Interfaces"/>
     <tab type="user" url="@ref EXAMPLES" title="Examples"/>
   </navindex>
 

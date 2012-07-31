@@ -658,7 +658,8 @@ FILE_PATTERNS          = scip*.h \
                          exprinterpret* \
                          obj*.h \
                          def.h \
-                         xternal.c
+                         xternal.c \
+			 interfaces.dxy
 
 # The RECURSIVE tag can be used to turn specify whether or not subdirectories
 # should be searched for input files as well. Possible values are YES and NO.
