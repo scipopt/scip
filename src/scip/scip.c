@@ -13635,7 +13635,7 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
  *  lazy bounds are bounds, that are enforced by constraints and the objective function; hence, these bounds do not need
  *  to be put into the LP explicitly.
  *
- *  @note lazy bounds are useful for branch-and-price since the the corresponding variable bounds are not part of the LP
+ *  @note lazy bounds are useful for branch-and-price since the corresponding variable bounds are not part of the LP
  */
 SCIP_RETCODE SCIPchgVarLbLazy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13658,7 +13658,7 @@ SCIP_RETCODE SCIPchgVarLbLazy(
  *  lazy bounds are bounds, that are enforced by constraints and the objective function; hence, these bounds do not need
  *  to be put into the LP explicitly.
  *
- *  @note lazy bounds are useful for branch-and-price since the the corresponding variable bounds are not part of the LP
+ *  @note lazy bounds are useful for branch-and-price since the corresponding variable bounds are not part of the LP
  */
 SCIP_RETCODE SCIPchgVarUbLazy(
    SCIP*                 scip,               /**< SCIP data structure */
