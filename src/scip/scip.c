@@ -23092,6 +23092,12 @@ SCIP_RETCODE SCIPevalExprtreeLocalBounds(
 
 /** returns efficacy of the cut with respect to the given primal solution or the current LP solution:
  *  e = -feasibility/norm
+ *
+ *  @return the efficacy of the cut with respect to the given primal solution or the current LP solution:
+ *          e = -feasibility/norm
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_Real SCIPgetCutEfficacy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -23109,6 +23115,12 @@ SCIP_Real SCIPgetCutEfficacy(
 
 /** returns whether the cut's efficacy with respect to the given primal solution or the current LP solution is greater
  *  than the minimal cut efficacy
+ *
+ *  @return TRUE if the cut's efficacy with respect to the given primal solution or the current LP solution is greater
+ *          than the minimal cut efficacy, otherwise FALSE
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_Bool SCIPisCutEfficacious(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -23124,7 +23136,10 @@ SCIP_Bool SCIPisCutEfficacious(
       return SCIProwIsSolEfficacious(cut, scip->set, scip->stat, sol, (SCIPtreeGetCurrentDepth(scip->tree) == 0));
 }
 
-/** checks, if the given cut's efficacy is larger than the minimal cut efficacy */
+/** checks, if the given cut's efficacy is larger than the minimal cut efficacy
+ *
+ *  @return TRUE if the given cut's efficacy is larger than the minimal cut efficacy, otherwise FALSE
+ */
 SCIP_Bool SCIPisEfficacious(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             efficacy            /**< efficacy of the cut */
@@ -23135,7 +23150,10 @@ SCIP_Bool SCIPisEfficacious(
    return SCIPsetIsEfficacious(scip->set, (SCIPtreeGetCurrentDepth(scip->tree) == 0), efficacy);
 }
 
-/** calculates the efficacy norm of the given vector, which depends on the "separating/efficacynorm" parameter */
+/** calculates the efficacy norm of the given vector, which depends on the "separating/efficacynorm" parameter
+ *
+ *  @return the efficacy norm of the given vector, which depends on the "separating/efficacynorm" parameter
+ */
 SCIP_Real SCIPgetVectorEfficacyNorm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            vals,               /**< array of values */
@@ -23186,7 +23204,14 @@ SCIP_Real SCIPgetVectorEfficacyNorm(
    return norm;
 }
 
-/** adds cut to separation storage */
+/** adds cut to separation storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
@@ -23204,7 +23229,14 @@ SCIP_RETCODE SCIPaddCut(
    return SCIP_OKAY;
 }
 
-/** if not already existing, adds row to global cut pool */
+/** if not already existing, adds row to global cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPaddPoolCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< cutting plane to add */
@@ -23217,7 +23249,14 @@ SCIP_RETCODE SCIPaddPoolCut(
    return SCIP_OKAY;
 }
 
-/** removes the row from the global cut pool */
+/** removes the row from the global cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPdelPoolCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< cutting plane to add */
@@ -23230,7 +23269,15 @@ SCIP_RETCODE SCIPdelPoolCut(
    return SCIP_OKAY;
 }
 
-/** gets current cuts in the global cut pool */
+/** gets current cuts in the global cut pool
+ *
+ *  @return the current cuts in the global cut pool
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 SCIP_CUT** SCIPgetPoolCuts(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -23240,7 +23287,15 @@ SCIP_CUT** SCIPgetPoolCuts(
    return SCIPcutpoolGetCuts(scip->cutpool);
 }
 
-/** gets current number of rows in the global cut pool */
+/** gets current number of rows in the global cut pool
+ *
+ *  @return the current number of rows in the global cut pool
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 int SCIPgetNPoolCuts(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -23250,7 +23305,15 @@ int SCIPgetNPoolCuts(
    return SCIPcutpoolGetNCuts(scip->cutpool);
 }
 
-/** gets the global cut pool used by SCIP */
+/** gets the global cut pool used by SCIP
+ *
+ *  @return the global cut pool used by SCIP
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
 SCIP_CUTPOOL* SCIPgetGlobalCutpool(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -23260,7 +23323,21 @@ SCIP_CUTPOOL* SCIPgetGlobalCutpool(
    return scip->cutpool;
 }
 
-/** creates a cut pool */
+/** creates a cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPcreateCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL**        cutpool,            /**< pointer to store cut pool */
@@ -23274,7 +23351,24 @@ SCIP_RETCODE SCIPcreateCutpool(
    return SCIP_OKAY;
 }
 
-/** frees a cut pool */
+/** frees a cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 SCIP_RETCODE SCIPfreeCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL**        cutpool             /**< pointer to store cut pool */
@@ -23287,7 +23381,15 @@ SCIP_RETCODE SCIPfreeCutpool(
    return SCIP_OKAY;
 }
 
-/** if not already existing, adds row to a cut pool and captures it */
+/** if not already existing, adds row to a cut pool and captures it
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPaddRowCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
@@ -23301,7 +23403,15 @@ SCIP_RETCODE SCIPaddRowCutpool(
    return SCIP_OKAY;
 }
 
-/** adds row to a cut pool and captures it; doesn't check for multiple cuts */
+/** adds row to a cut pool and captures it; doesn't check for multiple cuts
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPaddNewRowCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
@@ -23315,7 +23425,16 @@ SCIP_RETCODE SCIPaddNewRowCutpool(
    return SCIP_OKAY;
 }
 
-/** removes the LP row from a cut pool */
+/** removes the LP row from a cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_RETCODE SCIPdelRowCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
@@ -23329,7 +23448,14 @@ SCIP_RETCODE SCIPdelRowCutpool(
    return SCIP_OKAY;
 }
 
-/** separates cuts from a cut pool */
+/** separates cuts from a cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPseparateCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
@@ -23359,6 +23485,12 @@ SCIP_RETCODE SCIPseparateCutpool(
  *  separation storage;
  *  it is possible to call SCIPseparateSol() multiple times with different solutions and evaluate the found cuts
  *  afterwards
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPseparateSol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -23383,7 +23515,15 @@ SCIP_RETCODE SCIPseparateSol(
    return SCIP_OKAY;
 }
 
-/** gets the array of cuts currently stored in the separation storage */
+/** gets the array of cuts currently stored in the separation storage
+ *
+ *  @return the array of cuts currently stored in the separation storage
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_ROW** SCIPgetCuts(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -23393,7 +23533,15 @@ SCIP_ROW** SCIPgetCuts(
    return SCIPsepastoreGetCuts(scip->sepastore);
 }
 
-/** get current number of cuts in the separation storage */
+/** get current number of cuts in the separation storage
+ *
+ *  @return the current number of cuts in the separation storage
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 int SCIPgetNCuts(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -23403,7 +23551,14 @@ int SCIPgetNCuts(
    return SCIPsepastoreGetNCuts(scip->sepastore);
 }
 
-/** clears the separation storage */
+/** clears the separation storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPclearCuts(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -23415,7 +23570,14 @@ SCIP_RETCODE SCIPclearCuts(
    return SCIP_OKAY;
 }
 
-/** removes cuts that are inefficacious w.r.t. the current LP solution from separation storage without adding the cuts to the LP */
+/** removes cuts that are inefficacious w.r.t. the current LP solution from separation storage without adding the cuts to the LP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPremoveInefficaciousCuts(
    SCIP*                 scip                /**< SCIP data structure */
    )
