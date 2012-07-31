@@ -9146,10 +9146,22 @@ SCIP_RETCODE checkSolOrig(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called at any solving stage except \ref SCIP_STAGE_INIT and \ref SCIP_STAGE_TRANSFORMING
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *       - \ref SCIP_STAGE_FREE
  *
- *  @post If \SCIP was already beyond the \ref SCIP_STAGE_TRANSFORMED nothing happens. Otherwise, \SCIP reaches the
- *        solving stage \ref SCIP_STAGE_TRANSFORMED after calling that method.
+ *  @post When calling this method in the \ref SCIP_STAGE_PROBLEM stage, the \SCIP stage is changed to \ref
+ *        SCIP_STAGE_TRANSFORMED; otherwise, the stage is not changed
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -10374,7 +10386,24 @@ SCIP_RETCODE displayRelevantStats(
    return SCIP_OKAY;
 }
 
-/** transforms and presolves problem */
+/** transforms and presolves problem
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *
+ *  @post After calling this method \SCIP reaches one of the following stages:
+ *        - \ref SCIP_STAGE_PRESOLVING if the presolving process was interrupted
+ *        - \ref SCIP_STAGE_PRESOLVED if the presolving process was finished and did not solve the problem
+ *        - \ref SCIP_STAGE_SOLVED if the problem was solved during presolving
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 SCIP_RETCODE SCIPpresolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -10520,11 +10549,13 @@ SCIP_RETCODE SCIPpresolve(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  *
  *  @post After calling this method \SCIP reaches one of the following stages depending on if and when the solution
  *        process was interrupted:
  *        - \ref SCIP_STAGE_PRESOLVING if the solution process was interrupted during presolving
- *        - \ref SCIP_STAGE_SOLVING if the the solution process was interrupted during the tree search
+ *        - \ref SCIP_STAGE_SOLVING if the solution process was interrupted during the tree search
  *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
@@ -10663,6 +10694,23 @@ SCIP_RETCODE SCIPsolve(
 
 /** frees branch and bound tree and all solution process data; statistics, presolving data and transformed problem is
  *  preserved
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @post If this method is called in \SCIP stage \ref SCIP_STAGE_INIT or \ref SCIP_STAGE_PROBLEM, the stage of
+ *        \SCIP is not changed; otherwise, the \SCIP stage is changed to \ref SCIP_STAGE_TRANSFORMED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 SCIP_RETCODE SCIPfreeSolve(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10711,7 +10759,26 @@ SCIP_RETCODE SCIPfreeSolve(
    }  /*lint !e788*/
 }
 
-/** frees all solution process data including presolving and transformed problem, only original problem is kept */
+/** frees all solution process data including presolving and transformed problem, only original problem is kept
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @post After calling this method \SCIP reaches one of the following stages:
+ *        - \ref SCIP_STAGE_INIT if the method was called from \SCIP stage \ref SCIP_STAGE_INIT
+ *        - \ref SCIP_STAGE_PROBLEM if the method was called from any other of the allowed stages
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 SCIP_RETCODE SCIPfreeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -10760,7 +10827,27 @@ SCIP_RETCODE SCIPfreeTransform(
    }  /*lint !e788*/
 }
 
-/** interrupts solving process as soon as possible (e.g., after the current node has been solved) */
+/** informs \SCIP that the solving process should be interrupted as soon as possible (e.g., after the current node has
+ *   been solved)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note the \SCIP stage does not get changed
+ */
 SCIP_RETCODE SCIPinterruptSolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -10773,7 +10860,20 @@ SCIP_RETCODE SCIPinterruptSolve(
    return SCIP_OKAY;
 }
 
-/** restarts solving process as soon as possible (e.g., after the current node has been solved) */
+/** informs SCIP that the solving process should be restarted as soon as possible (e.g., after the current node has
+ *  been solved)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note the \SCIP stage does not get changed
+ */
 SCIP_RETCODE SCIPrestartSolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -10786,7 +10886,21 @@ SCIP_RETCODE SCIPrestartSolve(
    return SCIP_OKAY;
 }
 
-/** whether we are in the restarting phase */
+/** returns whether we are in the restarting phase
+ *
+ *  @return TRUE, if we are in the restarting phase; FALSE, otherwise
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 SCIP_Bool SCIPisInRestart(
    SCIP*                 scip                /**< SCIP data structure */
    )
