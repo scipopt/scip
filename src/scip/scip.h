@@ -3731,8 +3731,8 @@ SCIP_RETCODE SCIPpresolve(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_PRESOLVED
  *
- *  @post After calling this method \SCIP reaches one of the following stages depending if and when the solution process
- *        was interrupted:
+ *  @post After calling this method \SCIP reaches one of the following stages depending on if and when the solution
+ *        process was interrupted:
  *        - \ref SCIP_STAGE_PRESOLVING if the solution process was interrupted during presolving
  *        - \ref SCIP_STAGE_SOLVING if the the solution process was interrupted during the tree search
  *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
