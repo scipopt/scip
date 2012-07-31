@@ -7804,7 +7804,23 @@ SCIP_VAR** SCIPgetVars(
    }  /*lint !e788*/
 }
 
-/** gets number of active problem variables */
+/** gets number of active problem variables
+ *
+ *  @return the number of active problem variables
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note SCIP stage does not get change
+ */
 int SCIPgetNVars(
    SCIP*                 scip                /**< SCIP data structure */
    )

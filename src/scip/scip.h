@@ -3309,7 +3309,23 @@ SCIP_VAR** SCIPgetVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of active problem variables */
+/** gets number of active problem variables
+ *
+ *  @return the number of active problem variables
+ *
+ *  @pre This method can be called if \SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note SCIP stage does not get change
+ */
 EXTERN
 int SCIPgetNVars(
    SCIP*                 scip                /**< SCIP data structure */
@@ -3733,6 +3749,7 @@ SCIP_RETCODE SCIPpresolve(
  *
  *  @post After calling this method \SCIP reaches one of the following stages depending on if and when the solution
  *        process was interrupted:
+
  *        - \ref SCIP_STAGE_PRESOLVING if the solution process was interrupted during presolving
  *        - \ref SCIP_STAGE_SOLVING if the the solution process was interrupted during the tree search
  *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
