@@ -21083,6 +21083,14 @@ SCIP_RETCODE SCIPprintRow(
  * If the NLP relaxation is enabled, then SCIP will construct the NLP relaxation when the solving process is about to begin.
  * To check whether an NLP is existing, use SCIPisNLPConstructed().
  *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
  * @see SCIPenableNLP
  */
 extern
@@ -21100,6 +21108,14 @@ SCIP_Bool SCIPisNLPEnabled(
  * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
  *
  * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
  */
 extern
 void SCIPenableNLP(
@@ -21111,7 +21127,12 @@ void SCIPenableNLP(
    scip->set->nlpenabled = TRUE;
 }
 
-/** returns, whether an NLP has been constructed */
+/** returns, whether an NLP has been constructed
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_Bool SCIPisNLPConstructed(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -21122,6 +21143,10 @@ SCIP_Bool SCIPisNLPConstructed(
 }
 
 /** returns whether the NLP has a continuous variable in a nonlinear term
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_Bool SCIPhasNLPContinuousNonlinearity(
    SCIP*                 scip                /**< SCIP data structure */
@@ -21139,7 +21164,12 @@ SCIP_Bool SCIPhasNLPContinuousNonlinearity(
    return SCIPnlpHasContinuousNonlinearity(scip->nlp);
 }
 
-/** gets current NLP variables along with the current number of NLP variables */
+/** gets current NLP variables along with the current number of NLP variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPgetNLPVarsData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< pointer to store the array of NLP variables, or NULL */
@@ -21164,7 +21194,12 @@ SCIP_RETCODE SCIPgetNLPVarsData(
    return SCIP_OKAY;
 }
 
-/** gets array with variables of the NLP */
+/** gets array with variables of the NLP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_VAR** SCIPgetNLPVars(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -21181,7 +21216,12 @@ SCIP_VAR** SCIPgetNLPVars(
    return SCIPnlpGetVars(scip->nlp);
 }
 
-/** gets current number of variables in NLP */
+/** gets current number of variables in NLP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 int SCIPgetNNLPVars(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -21198,7 +21238,12 @@ int SCIPgetNNLPVars(
    return SCIPnlpGetNVars(scip->nlp);
 }
 
-/** computes for each variables the number of NLP rows in which the variable appears in a nonlinear var */
+/** computes for each variables the number of NLP rows in which the variable appears in a nonlinear var
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPgetNLPVarsNonlinearity(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
@@ -21217,7 +21262,12 @@ SCIP_RETCODE SCIPgetNLPVarsNonlinearity(
    return SCIP_OKAY;
 }
 
-/** gives dual solution values associated with lower bounds of NLP variables */
+/** returns dual solution values associated with lower bounds of NLP variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_Real* SCIPgetNLPVarsLbDualsol(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -21234,7 +21284,12 @@ SCIP_Real* SCIPgetNLPVarsLbDualsol(
    return SCIPnlpGetVarsLbDualsol(scip->nlp);
 }
 
-/** gives dual solution values associated with upper bounds of NLP variables */
+/** returns dual solution values associated with upper bounds of NLP variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_Real* SCIPgetNLPVarsUbDualsol(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -21251,7 +21306,12 @@ SCIP_Real* SCIPgetNLPVarsUbDualsol(
    return SCIPnlpGetVarsUbDualsol(scip->nlp);
 }
 
-/** gets current NLP nonlinear rows along with the current number of NLP nonlinear rows */
+/** gets current NLP nonlinear rows along with the current number of NLP nonlinear rows
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPgetNLPNlRowsData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW***         nlrows,             /**< pointer to store the array of NLP nonlinear rows, or NULL */
@@ -21274,7 +21334,12 @@ SCIP_RETCODE SCIPgetNLPNlRowsData(
    return SCIP_OKAY;
 }
 
-/** gets array with nonlinear rows of the NLP */
+/** gets array with nonlinear rows of the NLP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_NLROW** SCIPgetNLPNlRows(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -21291,7 +21356,12 @@ SCIP_NLROW** SCIPgetNLPNlRows(
    return SCIPnlpGetNlRows(scip->nlp);
 }
 
-/** gets current number of nonlinear rows in NLP */
+/** gets current number of nonlinear rows in NLP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 int SCIPgetNNLPNlRows(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -21308,8 +21378,12 @@ int SCIPgetNNLPNlRows(
    return SCIPnlpGetNNlRows(scip->nlp);
 }
 
-/** adds a nonlinear row to the NLP
- * row is captured by NLP */
+/** adds a nonlinear row to the NLP. This row is captured by the NLP.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPaddNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow               /**< nonlinear row to add to NLP */
@@ -21328,7 +21402,12 @@ SCIP_RETCODE SCIPaddNlRow(
    return SCIP_OKAY;
 }
 
-/** makes sure that the NLP of the current node is flushed */
+/** makes sure that the NLP of the current node is flushed
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPflushNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -21346,7 +21425,15 @@ SCIP_RETCODE SCIPflushNLP(
    return SCIP_OKAY;
 }
 
-/** sets or clears initial primal guess for NLP solution (start point for NLP solver) */
+/** sets or clears initial primal guess for NLP solution (start point for NLP solver)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPsetNLPInitialGuess(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            initialguess        /**< values of initial guess (corresponding to variables from SCIPgetNLPVarsData), or NULL to use no start point */
@@ -21365,7 +21452,15 @@ SCIP_RETCODE SCIPsetNLPInitialGuess(
    return SCIP_OKAY;
 }
 
-/** sets initial primal guess for NLP solution (start point for NLP solver) */
+/** sets initial primal guess for NLP solution (start point for NLP solver)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPsetNLPInitialGuessSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< solution which values should be taken as initial guess, or NULL for LP solution */
@@ -21389,7 +21484,15 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
    return SCIP_OKAY;
 }
 
-/** solves the current NLP */
+/** solves the current NLP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPsolveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -21407,7 +21510,12 @@ SCIP_RETCODE SCIPsolveNLP(
    return SCIP_OKAY;
 }
 
-/** gets solution status of current NLP */
+/** gets solution status of current NLP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_NLPSOLSTAT SCIPgetNLPSolstat(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -21421,10 +21529,17 @@ SCIP_NLPSOLSTAT SCIPgetNLPSolstat(
       return SCIP_NLPSOLSTAT_UNKNOWN; /*lint !e527*/
    }
 
-   return SCIPnlpGetSolstat(scip->nlp);
+   SCIP_CALL( SCIPnlpGetSolstat(scip->nlp) );
+
+   return SCIP_OKAY;
 }
 
-/** gets termination status of last NLP solve */
+/** gets termination status of last NLP solve
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_NLPTERMSTAT SCIPgetNLPTermstat(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -21438,10 +21553,20 @@ SCIP_NLPTERMSTAT SCIPgetNLPTermstat(
       return SCIP_NLPTERMSTAT_OTHER; /*lint !e527*/
    }
 
-   return SCIPnlpGetTermstat(scip->nlp);
+   SCIP_CALL( SCIPnlpGetTermstat(scip->nlp) );
+
+   return SCIP_OKAY;
 }
 
-/** gives statistics (number of iterations, solving time, ...) of last NLP solve */
+/** gives statistics (number of iterations, solving time, ...) of last NLP solve
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPgetNLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPSTATISTICS*   statistics          /**< pointer to store statistics */
@@ -21455,10 +21580,17 @@ SCIP_RETCODE SCIPgetNLPStatistics(
       return SCIP_INVALIDCALL;
    }
 
-   return SCIPnlpGetStatistics(scip->nlp, statistics);
+   SCIP_CALL( SCIPnlpGetStatistics(scip->nlp, statistics) );
+
+   return SCIP_OKAY;
 }
 
-/** gets objective value of current NLP */
+/** gets objective value of current NLP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_Real SCIPgetNLPObjval(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -21467,7 +21599,8 @@ SCIP_Real SCIPgetNLPObjval(
 
    if( scip->nlp != NULL )
    {
-      return SCIPnlpGetObjval(scip->nlp);
+      SCIP_CALL( SCIPnlpGetObjval(scip->nlp) );
+      return SCIP_OKAY;
    }
    else
    {
@@ -21477,7 +21610,12 @@ SCIP_Real SCIPgetNLPObjval(
 }
 
 /** indicates whether a feasible solution for the current NLP is available
- * thus, returns whether the solution status <= feasible  */
+ * thus, returns whether the solution status <= feasible
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_Bool SCIPhasNLPSolution(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -21491,10 +21629,20 @@ SCIP_Bool SCIPhasNLPSolution(
       return FALSE; /*lint !e527*/
    }
 
-   return SCIPnlpHasSolution(scip->nlp);
+   SCIP_CALL( SCIPnlpHasSolution(scip->nlp) );
+
+   return SCIP_OKAY;
 }
 
-/** gets fractional variables of last NLP solution along with solution values and fractionalities */
+/** gets fractional variables of last NLP solution along with solution values and fractionalities
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPgetNLPFracVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           fracvars,           /**< pointer to store the array of NLP fractional variables, or NULL */
@@ -21517,7 +21665,15 @@ SCIP_RETCODE SCIPgetNLPFracVars(
    return SCIP_OKAY;
 }
 
-/** gets integer parameter of NLP */
+/** gets integer parameter of NLP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPgetNLPIntPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
@@ -21537,7 +21693,15 @@ SCIP_RETCODE SCIPgetNLPIntPar(
    return SCIP_OKAY;
 }
 
-/** sets integer parameter of NLP */
+/** sets integer parameter of NLP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPsetNLPIntPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
@@ -21557,7 +21721,15 @@ SCIP_RETCODE SCIPsetNLPIntPar(
    return SCIP_OKAY;
 }
 
-/** gets floating point parameter of NLP */
+/** gets floating point parameter of NLP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPgetNLPRealPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
@@ -21577,7 +21749,15 @@ SCIP_RETCODE SCIPgetNLPRealPar(
    return SCIP_OKAY;
 }
 
-/** sets floating point parameter of NLP */
+/** sets floating point parameter of NLP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPsetNLPRealPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
@@ -21597,7 +21777,15 @@ SCIP_RETCODE SCIPsetNLPRealPar(
    return SCIP_OKAY;
 }
 
-/** gets string parameter of NLP */
+/** gets string parameter of NLP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPgetNLPStringPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
@@ -21617,7 +21805,15 @@ SCIP_RETCODE SCIPgetNLPStringPar(
    return SCIP_OKAY;
 }
 
-/** sets string parameter of NLP */
+/** sets string parameter of NLP
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPsetNLPStringPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
@@ -21637,7 +21833,15 @@ SCIP_RETCODE SCIPsetNLPStringPar(
    return SCIP_OKAY;
 }
 
-/** writes current NLP to a file */
+/** writes current NLP to a file
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPwriteNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name */
@@ -21667,6 +21871,13 @@ SCIP_RETCODE SCIPwriteNLP(
  *           SCIPnlpiSolve() in order to reinstall the internal solution status.
  *
  *  @warning Make also sure, that all parameter values that you have changed are set back to their original values.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPgetNLPI(
    SCIP*                 scip,               /**< SCIP data structure */
