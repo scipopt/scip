@@ -6522,9 +6522,10 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    assert(var->scip == set->scip);
 
    /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+   assert(!SCIPsetIsFeasGT(set, newbound, var->glbdom.ub));
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
 
    /* we do not want to exceed the upperbound, which could have happened due to numerics */
    newbound = MIN(newbound, var->glbdom.ub);
@@ -6650,9 +6651,10 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    assert(var->scip == set->scip);
 
    /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+   assert(!SCIPsetIsFeasLT(set, newbound, var->glbdom.lb));
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
 
    /* we do not want to undercut the lowerbound, which could have happened due to numerics */
    newbound = MAX(newbound, var->glbdom.lb);
@@ -7248,9 +7250,10 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    assert(var->scip == set->scip);
 
    /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, var->locdom.ub));
+   assert(!SCIPsetIsFeasGT(set, newbound, var->locdom.ub));
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+   assert(SCIPsetIsLE(set, newbound, var->locdom.ub));
 
    /* we do not want to exceed the upperbound, which could have happened due to numerics */
    newbound = MIN(newbound, var->locdom.ub);
@@ -7365,9 +7368,10 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    assert(var->scip == set->scip);
 
    /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, var->locdom.lb));
+   assert(!SCIPsetIsFeasLT(set, newbound, var->locdom.lb));
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+   assert(SCIPsetIsGE(set, newbound, var->locdom.lb));
 
    /* we do not want to undercut the lowerbound, which could have happened due to numerics */
    newbound = MAX(newbound, var->locdom.lb);
