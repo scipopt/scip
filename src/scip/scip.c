@@ -27468,7 +27468,7 @@ SCIP_Bool SCIPisHugeValue(
 }
 
 /** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity computation) */
-SCIP_Bool SCIPgetHugeValue(
+SCIP_Real SCIPgetHugeValue(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {

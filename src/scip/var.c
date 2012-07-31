@@ -13096,7 +13096,7 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
          SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir), length) );
       }
       return SCIP_OKAY;
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot update conflict score of a multi-aggregated variable\n");
       return SCIP_INVALIDDATA;
@@ -13104,15 +13104,15 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
    case SCIP_VARSTATUS_NEGATED:
       SCIP_CALL( SCIPvarIncNActiveConflicts(var->negatedvar, stat, SCIPbranchdirOpposite(dir), length) );
       return SCIP_OKAY;
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
 }
 
-/**  gets the number of active conflicts containing this variable in given direction */
-SCIP_Real SCIPvarGetNActiveConflicts(
+/** gets the number of active conflicts containing this variable in given direction */
+SCIP_Longint SCIPvarGetNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -13126,7 +13126,7 @@ SCIP_Real SCIPvarGetNActiveConflicts(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
-         return 0.0;
+         return 0;
       else
          return SCIPvarGetNActiveConflicts(var->data.original.transvar, stat, dir);
 
@@ -13135,31 +13135,31 @@ SCIP_Real SCIPvarGetNActiveConflicts(
       return SCIPhistoryGetNActiveConflicts(var->history, dir);
 
    case SCIP_VARSTATUS_FIXED:
-      return 0.0;
+      return 0;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
          return SCIPvarGetNActiveConflicts(var->data.aggregate.var, stat, dir);
       else
          return SCIPvarGetNActiveConflicts(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
-      return 0.0;
+      return 0;
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetNActiveConflicts(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return 0; /*lint !e527*/
    }
 }
 
-/**  gets the number of active conflicts containing this variable in given direction
+/** gets the number of active conflicts containing this variable in given direction
  *  in the current run
  */
-SCIP_Real SCIPvarGetNActiveConflictsCurrentRun(
+SCIP_Longint SCIPvarGetNActiveConflictsCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -13173,7 +13173,7 @@ SCIP_Real SCIPvarGetNActiveConflictsCurrentRun(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
-         return 0.0;
+         return 0;
       else
          return SCIPvarGetNActiveConflictsCurrentRun(var->data.original.transvar, stat, dir);
 
@@ -13182,28 +13182,28 @@ SCIP_Real SCIPvarGetNActiveConflictsCurrentRun(
       return SCIPhistoryGetNActiveConflicts(var->historycrun, dir);
 
    case SCIP_VARSTATUS_FIXED:
-      return 0.0;
+      return 0;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
          return SCIPvarGetNActiveConflictsCurrentRun(var->data.aggregate.var, stat, dir);
       else
          return SCIPvarGetNActiveConflictsCurrentRun(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
-      return 0.0;
+      return 0;
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetNActiveConflictsCurrentRun(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return 0; /*lint !e527*/
    }
 }
 
-/**  gets the average conflict length in given direction due to branching on the variable */
+/** gets the average conflict length in given direction due to branching on the variable */
 SCIP_Real SCIPvarGetAvgConflictlength(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -13222,7 +13222,7 @@ SCIP_Real SCIPvarGetAvgConflictlength(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-         return  SCIPhistoryGetAvgConflictlength(var->history, dir);
+         return SCIPhistoryGetAvgConflictlength(var->history, dir);
    case SCIP_VARSTATUS_FIXED:
       return 0.0;
 
@@ -13231,13 +13231,13 @@ SCIP_Real SCIPvarGetAvgConflictlength(
          return SCIPvarGetAvgConflictlength(var->data.aggregate.var, dir);
       else
          return SCIPvarGetAvgConflictlength(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetAvgConflictlength(var->negatedvar, SCIPbranchdirOpposite(dir));
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();

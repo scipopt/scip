@@ -1255,17 +1255,17 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_Real             length              /**< length of the conflict */
    );
 
-/**  gets the number of active conflicts containing this variable in given direction */
-SCIP_Real SCIPvarGetNActiveConflicts(
+/** gets the number of active conflicts containing this variable in given direction */
+SCIP_Longint SCIPvarGetNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
-/**  gets the number of active conflicts containing this variable in given direction
+/** gets the number of active conflicts containing this variable in given direction
  *  in the current run
  */
-SCIP_Real SCIPvarGetNActiveConflictsCurrentRun(
+SCIP_Longint SCIPvarGetNActiveConflictsCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */

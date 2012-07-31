@@ -3629,7 +3629,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* copy Longint array to SCIP_Real array */
          SCIP_CALL( SCIPallocBufferArray(scip, &vals, nconsvars ) );
          for( i = 0; i < nconsvars; ++i )
-            vals[i] = weights[i];
+            vals[i] = (SCIP_Real)weights[i];
 
          rhss[c] = SCIPgetCapacityKnapsack(scip, cons);
 

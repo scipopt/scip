@@ -638,7 +638,7 @@ SCIP_RETCODE initMatrix(
                }
 
                for( v = 0; v < nvars; v++ )
-                  consvals[v] = weights[v];
+                  consvals[v] = (SCIP_Real)weights[v];
 
                SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsKnapsack(scip, cons), consvals,
                      SCIPgetNVarsKnapsack(scip, cons), -SCIPinfinity(scip),

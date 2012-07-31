@@ -220,7 +220,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
          scalar /= 2;
          assert(scalar > 0);
 
-         newbinvarcoeffs[v2] = scalar;
+         newbinvarcoeffs[v2] = (SCIP_Real)scalar;
          weights[v2] = scalar;
       }
 
