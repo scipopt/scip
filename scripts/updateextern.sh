@@ -21,7 +21,7 @@ echo ""
 echo "This script changes all "extern" to "EXTERN" in the header of public callable methods"
 echo ""
 
-FILES="src/scip/scip.h src/nlpi/pub_expr.h src/nlpi/nlpi.h src/nlpi/exprinterpret.h"
+FILES="src/scip/scip*.h src/nlpi/pub_expr.h src/nlpi/nlpi.h src/nlpi/exprinterpret.h"
 
 # collect all header files related to plugins
 for PLUGINTYPE in ${PLUGINTYPES[@]}

@@ -160,7 +160,7 @@ extern "C" {
 #endif
 
 /** includes default SCIP plugins into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    );
