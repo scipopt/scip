@@ -29,9 +29,9 @@ III  Examples
 I Brief installation description
 ********************************
 
-The easiest way to install SCIP is to use the ZIB Optimization Suite which
+The easiest way to install SCIP is to use the SCIP Optimization Suite which
 contains SCIP, SoPlex, and ZIMPL. For that we refer to the INSTALL file of
-the ZIB Optimization Suite (In case of the ZIB Optimization Suite, there is
+the SCIP Optimization Suite (In case of the SCIP Optimization Suite, there is
 no need to specify any directories, the compiling process is fully
 automated).
 

@@ -888,7 +888,7 @@
  * href="http://scip.zib.de/download.shtml">SCIP download section</a>, download the latest release (version 3.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
- * ziboptsuite-[version]/scip-[version]/check/instances/MIP/stein27.mps.
+ * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.mps.
  *
  * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/download.shtml">SCIP download
  * section</a> and download an appropriate binary for your operating system. To follow this tutorial, we recommend downloading the instance
