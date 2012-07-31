@@ -355,10 +355,17 @@ SCIP_Bool SCIPisStopped(
 /**@name Message Output Methods */
 /**@{ */
 
-/** Installs the given message handler, such that all messages are passed to this handler. A message handler can be
+/** installs the given message handler, such that all messages are passed to this handler. A messages handler can be
  *  created via SCIPmessagehdlrCreate().
  *
- *  @note The currently installed message handler gets freed if this SCIP instance is its last user (w.r.t. capture/release).
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code in passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note The currently installed messages handler gets freed if this SCIP instance is its last user (w.r.t. capture/release).
  */
 EXTERN
 SCIP_RETCODE SCIPsetMessagehdlr(
@@ -366,7 +373,10 @@ SCIP_RETCODE SCIPsetMessagehdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
    );
 
-/** returns the currently installed message handler, or NULL if messages are currently suppressed */
+/** returns the currently installed message handler
+ *
+ *  @return the currently installed message handler, or NULL if messages are currently suppressed
+ */
 EXTERN
 SCIP_MESSAGEHDLR* SCIPgetMessagehdlr(
    SCIP*                 scip                /**< SCIP data structure */
@@ -422,7 +432,12 @@ void SCIPverbMessage(
    ...                                       /**< format arguments line in printf() function */
    );
 
-/** returns the current message verbosity level */
+/** returns the current message verbosity level
+ *
+ *  @return message verbosity level of SCIP
+ *
+ *  @see \ref SCIP_Verblevel "SCIP_VERBLEVEL" for a list of all verbosity levels
+ */
 EXTERN
 SCIP_VERBLEVEL SCIPgetVerbLevel(
    SCIP*                 scip                /**< SCIP data structure */
