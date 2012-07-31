@@ -90,18 +90,26 @@
 	    </tr>
 	    <tr>
 	      <td>
-		Felipe Serrano
-	      </td>
-	      <td>
-                nonlinear development
-	      </td>
-	    </tr>
-	    <tr>
-	      <td>
 		<a href="http://www.mso.math.uni-erlangen.de/optimization/edom/team/martin-alexander/prof-dr-alexander-martin.html">Alexander Martin</a>
 	      </td>
 	      <td>
 		Developer of SIP &ndash; the predecessor of SCIP
+	      </td>
+	    </tr>
+            <tr>
+	      <td>
+		<a href="http://www.zib.de/en/people/staff/member.html?mail=miltenberger">Matthias Miltenberger</a>
+	      </td>
+	      <td>
+                Probing propagator
+	      </td>
+	    </tr>
+	    <tr>
+	      <td>
+		Felipe Serrano
+	      </td>
+	      <td>
+                nonlinear development
 	      </td>
 	    </tr>
 	    <tr>
@@ -228,14 +236,6 @@
                  Constraint Handler for bivariate nonlinear constraints
 	      </td>
 	      <td>
-	      </td>
-	    </tr>
-            <tr>
-	      <td>
-		<a href="http://www.zib.de/en/people/staff/member.html?mail=miltenberger">Matthias Miltenberger</a>
-	      </td>
-	      <td>
-                Probing propagator
 	      </td>
 	    </tr>
             <tr>
