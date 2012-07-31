@@ -13661,7 +13661,7 @@ SCIP_Real SCIPvarGetAvgBranchdepthCurrentRun(
    }
 }
 
-/** returns the average number of inferences found after branching on the variable in given direction */
+/** returns the variable's VSIDS score */
 SCIP_Real SCIPvarGetVSIDS_rec(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -13710,9 +13710,7 @@ SCIP_Real SCIPvarGetVSIDS_rec(
    }
 }
 
-/** returns the average number of inferences found after branching on the variable in given direction
- *  in the current run
- */
+/** returns the variable's VSIDS score only using conflicts of the current run */
 SCIP_Real SCIPvarGetVSIDSCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -16004,7 +16002,7 @@ SCIP_Real SCIPvarGetPseudoSol(
       return SCIPvarGetPseudoSol_rec(var);
 }
 
-/** returns the average number of inferences found after branching on the variable in given direction */
+/** returns the variable's VSIDS score */
 SCIP_Real SCIPvarGetVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
