@@ -1118,7 +1118,6 @@ SCIP_RETCODE hashmaplistAppend(
    SCIP_HASHMAPLIST* newlist;
 
    assert(hashmaplist != NULL);
-   assert(origin != NULL);
 
    if( blkmem != NULL )
    {
@@ -1176,8 +1175,6 @@ SCIP_HASHMAPLIST* hashmaplistFind(
    void*                 origin              /**< origin to find */
    )
 {
-   assert(origin != NULL);
-
    while( hashmaplist != NULL )
    {
       if( hashmaplist->origin == origin )
@@ -1245,7 +1242,6 @@ SCIP_RETCODE hashmaplistRemove(
    SCIP_HASHMAPLIST* nextlist;
 
    assert(hashmaplist != NULL);
-   assert(origin != NULL);
 
    while( *hashmaplist != NULL && (*hashmaplist)->origin != origin )
    {
@@ -1329,7 +1325,6 @@ SCIP_RETCODE SCIPhashmapInsert(
    assert(hashmap != NULL);
    assert(hashmap->lists != NULL);
    assert(hashmap->nlists > 0);
-   assert(origin != NULL);
 
    /* get the hash value */
    hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
@@ -1351,7 +1346,6 @@ void* SCIPhashmapGetImage(
    assert(hashmap != NULL);
    assert(hashmap->lists != NULL);
    assert(hashmap->nlists > 0);
-   assert(origin != NULL);
 
    /* get the hash value */
    hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
@@ -1374,7 +1368,6 @@ SCIP_RETCODE SCIPhashmapSetImage(
    assert(hashmap != NULL);
    assert(hashmap->lists != NULL);
    assert(hashmap->nlists > 0);
-   assert(origin != NULL);
 
    /* get the hash value */
    hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
@@ -1396,7 +1389,6 @@ SCIP_Bool SCIPhashmapExists(
    assert(hashmap != NULL);
    assert(hashmap->lists != NULL);
    assert(hashmap->nlists > 0);
-   assert(origin != NULL);
 
    /* get the hash value */
    hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
@@ -1415,7 +1407,6 @@ SCIP_RETCODE SCIPhashmapRemove(
    assert(hashmap != NULL);
    assert(hashmap->lists != NULL);
    assert(hashmap->nlists > 0);
-   assert(origin != NULL);
 
    /* get the hash value */
    hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
