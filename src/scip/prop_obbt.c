@@ -1095,6 +1095,12 @@ SCIP_RETCODE applyObbt(
    if( propdata->applyfilterrounds )
    {
       SCIP_CALL( filterBounds(scip, propdata, itlimit) );
+      /* update iteration limit */
+      if( itlimit > 0 )
+      {
+         itlimit = itlimit - ( SCIPgetNLPIterations(scip) - nolditerations );
+         itlimit = MAX(itlimit, 0);
+      }
    }
 #ifdef SCIP_STATISTIC
    else
@@ -1104,12 +1110,6 @@ SCIP_RETCODE applyObbt(
 #endif
 
    /**@todo maybe endDive, startDive, addObjCutoff to restore old LP basis information here */
-
-   if( itlimit > 0 )
-   {
-      itlimit = itlimit - ( SCIPgetNLPIterations(scip) - nolditerations );
-      itlimit = MAX(itlimit, 0);
-   }
 
    /* try to find new bounds and store them in the bound data structure */
    SCIP_CALL( findNewBounds(scip, propdata, itlimit) );
