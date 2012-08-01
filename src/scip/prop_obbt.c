@@ -50,6 +50,8 @@
 #define DEFAULT_CREATE_GENVBOUNDS        TRUE      /**< should obbt try to provide genvbounds if possible? */
 #define DEFAULT_FILTERING_NORM           TRUE      /**< should coefficients in filtering be normalized w.r.t. the
                                                     *   domains sizes? */
+#define DEFAULT_APPLY_FILTERROUNDS       TRUE      /**< try to filter bounds in so-called filter rounds by solving
+                                                    *   auxiliary LPs? */
 #define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
                                                     *   round */
 #define DEFAULT_ITLIMITFACTOR             5.0      /**< multiple of root node LP iterations used as total LP iteration
@@ -95,6 +97,7 @@ struct SCIP_PropData
    SCIP_Longint          lastnode;           /**< number of last node where obbt was performed */
    SCIP_Real             itlimitfactor;      /**< LP iteration limit for obbt will be this factor times total LP
                                               *   iterations in root node */
+   SCIP_Bool             applyfilterrounds;  /**< apply filter rounds? */
    SCIP_Bool             creategenvbounds;   /**< should obbt try to provide genvbounds if possible? */
    SCIP_Bool             normalize;          /**< should coefficients in filtering be normalized w.r.t. the domains
                                               *   sizes? */
@@ -470,7 +473,7 @@ SCIP_RETCODE filterBounds(
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   SCIPdebugMessage("filter bounds\n");
+   SCIPdebugMessage("start filter rounds\n");
 
    /*
     * 1.) Try first to filter lower bounds of interesting variables, whose bounds are not already filtered
@@ -1011,7 +1014,10 @@ SCIP_RETCODE applyObbt(
    SCIP_CALL( addObjCutoff(scip, propdata) );
 
    /* apply filtering */
-   SCIP_CALL( filterBounds(scip, propdata, itlimit) );
+   if( propdata->applyfilterrounds )
+   {
+      SCIP_CALL( filterBounds(scip, propdata, itlimit) );
+   }
 
    /**@todo maybe endDive, startDive, addObjCutoff to restore old LP basis information here */
 
@@ -1532,6 +1538,10 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/normalize",
          "should coefficients in filtering be normalized w.r.t. the domains sizes?",
          &propdata->normalize, TRUE, DEFAULT_FILTERING_NORM, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/applyfilterrounds",
+         "try to filter bounds in so-called filter rounds by solving auxiliary LPs?",
+         &propdata->applyfilterrounds, TRUE, DEFAULT_APPLY_FILTERROUNDS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/minfilter",
          "minimal number of filtered bounds to apply another filter round",
