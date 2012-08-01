@@ -141,6 +141,7 @@ SCIP_RETCODE solveLP(
    {
       SCIPwarningMessage(scip, "   error while solving LP in obbt propagator; LP solve terminated with code <%d>\n", retcode);
       SCIPwarningMessage(scip, "   this does not affect the remaining solution procedure --> continue\n");
+      SCIPstatisticMessage("an error occured while solving an lp\n");
 
       *error = TRUE;
 
@@ -339,6 +340,7 @@ SCIP_RETCODE filterExistingLP(
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIPdebugMessage("can't filter using existing lp solution since it was not solved to optimality\n");
+      SCIPstatisticMessage("can't filter using existing lp solution since it was not solved to optimality\n");
       return SCIP_OKAY;
    }
 
@@ -461,6 +463,10 @@ SCIP_RETCODE filterBounds(
    int i;
    int nfiltered;
    int nvars;
+#ifdef SCIP_STATISTIC
+   int statnfilterlps;
+   int statnfilteredtotal;
+#endif
 
    assert(scip != NULL);
    assert(SCIPinDive(scip));
@@ -469,11 +475,16 @@ SCIP_RETCODE filterBounds(
 
    nolditerations = SCIPgetNLPIterations(scip);
    nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
+#ifdef SCIP_STATISTIC
+   statnfilterlps = 0;
+   statnfilteredtotal = 0;
+#endif
 
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    SCIPdebugMessage("start filter rounds\n");
+   SCIPstatisticMessage("start filter rounds\n");
 
    /*
     * 1.) Try first to filter lower bounds of interesting variables, whose bounds are not already filtered
@@ -497,7 +508,12 @@ SCIP_RETCODE filterBounds(
    {
       SCIPdebugMessage("doing a lower bounds round\n");
       SCIP_CALL( filterRound(scip, propdata, nleftiterations, &nfiltered) );
+#ifdef SCIP_STATISTIC
+      statnfilterlps++;
+      statnfilteredtotal += nfiltered;
+#endif
       SCIPdebugMessage("filtered %d more bounds in lower bounds round\n", nfiltered);
+      SCIPdebugMessage("lp iteration count: %lld\n", SCIPgetNLPIterations(scip));
 
       /* update iterations left */
       nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
@@ -526,12 +542,24 @@ SCIP_RETCODE filterBounds(
    {
       SCIPdebugMessage("doing an upper bounds round\n");
       SCIP_CALL( filterRound(scip, propdata, nleftiterations, &nfiltered) );
+#ifdef SCIP_STATISTIC
+      statnfilterlps++;
+      statnfilteredtotal += nfiltered;
+#endif
       SCIPdebugMessage("filtered %d more bounds in upper bounds round\n", nfiltered);
+      SCIPdebugMessage("lp iteration count: %lld\n", SCIPgetNLPIterations(scip));
 
       /* update iterations left */
       nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
    }
    while( nfiltered >= propdata->nminfilter && ( nleftiterations == -1 ||  nleftiterations > 0 ) );
+
+#ifdef SCIP_STATISTIC
+   SCIPstatisticMessage("solved filter lps: %d\n", statnfilterlps);
+   SCIPstatisticMessage("lp iterations of filter lps: %lld\n", SCIPgetNLPIterations(scip) - nolditerations);
+   SCIPstatisticMessage("filtered bounds in filter rounds: %d\n", statnfilteredtotal);
+   SCIPstatisticMessage("end filter rounds\n");
+#endif
 
    return SCIP_OKAY;
 }
@@ -827,6 +855,10 @@ SCIP_RETCODE findNewBounds(
    int i;
    int obbtround;
    int nvars;                                /* number of the problems variables */
+#ifdef SCIP_STATISTIC
+   int statnlps;
+   int statnfilteredexisting;
+#endif
 
    assert(scip != NULL);
    assert(SCIPinDive(scip));
@@ -834,9 +866,14 @@ SCIP_RETCODE findNewBounds(
    assert(itlimit == -1 || itlimit >= 0);
 
    SCIPdebugMessage("solve LPs...\n");
+   SCIPstatisticMessage("start obbt\n");
 
    nolditerations = SCIPgetNLPIterations(scip);
    nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
+#ifdef SCIP_STATISTIC
+   statnlps = 0;
+   statnfilteredexisting = 0;
+#endif
 
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -901,6 +938,11 @@ SCIP_RETCODE findNewBounds(
 
             /* solve LP */
             SCIP_CALL( solveLP(scip, nleftiterations, &error, &optimal) );
+#ifdef SCIP_STATISTIC
+            statnlps++;
+#endif
+            SCIPdebugMessage("solved lp\n");
+            SCIPdebugMessage("lp iteration count: %lld\n", SCIPgetNLPIterations(scip));
 
             /* update iterations left */
             nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
@@ -910,6 +952,7 @@ SCIP_RETCODE findNewBounds(
             if( error )
             {
                SCIPfreeBufferArray(scip, &nextindices);
+               SCIPstatisticMessage("aborting since lp error\n");
                return SCIP_OKAY;
             }
 
@@ -926,6 +969,9 @@ SCIP_RETCODE findNewBounds(
                if( nfiltered > 0 )
                {
                   SCIPdebugMessage("      filtered %d more bounds using existing lp solution\n", nfiltered);
+#ifdef SCIP_STATISTIC
+                  statnfilteredexisting += nfiltered;
+#endif
                }
 
                /* store this value in the bound data structure */
@@ -953,6 +999,13 @@ SCIP_RETCODE findNewBounds(
       }
    }
 
+#ifdef SCIP_STATISTIC
+   SCIPstatisticMessage("solved obbt lps: %d\n", statnlps);
+   SCIPstatisticMessage("lp iterations in obbt: %lld\n", SCIPgetNLPIterations(scip) - nolditerations);
+   SCIPstatisticMessage("filtered bounds in obbt: %d\n", statnfilteredexisting);
+   SCIPstatisticMessage("end obbt\n");
+#endif
+
    SCIPfreeBufferArray(scip, &nextindices);
    return SCIP_OKAY;
 }
@@ -969,25 +1022,47 @@ SCIP_RETCODE applyObbt(
    SCIP_Longint nolditerations;
    int nfiltered;
    int i;
+#ifdef SCIP_STATISTIC
+   int statnfilteredfixed;
+#endif
 
    assert(scip != NULL);
    assert(propdata != NULL);
    assert(itlimit == -1 || itlimit >= 0);
 
+   SCIPstatisticMessage("start apply obbt\n");
+
    *result = SCIP_DIDNOTFIND;
    nolditerations = SCIPgetNLPIterations(scip);
    nfiltered = 0;
+#ifdef SCIP_STATISTIC
+   statnfilteredfixed = 0;
+#endif
 
    /* reset bound data structure flags; fixed variables are marked as filtered */
    for( i = 0; i < propdata->nbounds; i++ )
    {
-      propdata->bounds[i]->filtered = varIsFixedLocal(scip, propdata->bounds[i]->var);
+      if( varIsFixedLocal(scip, propdata->bounds[i]->var) )
+      {
+         propdata->bounds[i]->filtered = TRUE;
+#ifdef SCIP_STATISTIC
+         statnfilteredfixed++;
+#endif
+      }
+      else
+      {
+         propdata->bounds[i]->filtered = FALSE;
+      }
       propdata->bounds[i]->found = FALSE;
    }
+#ifdef SCIP_STATISTIC
+   SCIPstatisticMessage("filtered bounds of fixed variables: %d\n", statnfilteredfixed);
+#endif
 
    /* filter variables via inspecting present LP solution */
    SCIP_CALL( filterExistingLP(scip, propdata, &nfiltered) );
    SCIPdebugMessage("filtered %d bounds via inspecting present LP solution\n", nfiltered);
+   SCIPstatisticMessage("filtered bounds with root lp solution: %d\n", nfiltered);
 
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
@@ -1000,6 +1075,12 @@ SCIP_RETCODE applyObbt(
    {
       SCIP_CALL( filterBounds(scip, propdata, itlimit) );
    }
+#ifdef SCIP_STATISTIC
+   else
+   {
+      SCIPstatisticMessage("filter rounds are disabled\n");
+   }
+#endif
 
    /**@todo maybe endDive, startDive, addObjCutoff to restore old LP basis information here */
 
@@ -1024,6 +1105,12 @@ SCIP_RETCODE applyObbt(
 
    /* apply buffered bound changes */
    SCIP_CALL( applyBoundChgs(scip, propdata, result) );
+
+   SCIPstatisticMessage("end apply obbt\n");
+
+#ifdef OBBT_FILTERING_RUN
+   *result = SCIP_CUTOFF;
+#endif
 
    return SCIP_OKAY;
 }
@@ -1209,6 +1296,7 @@ SCIP_RETCODE initBounds(
    assert(propdata != NULL);
 
    SCIPdebugMessage("initialize bounds\n");
+   SCIPstatisticMessage("initialize bounds\n");
 
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -1284,6 +1372,7 @@ SCIP_RETCODE initBounds(
    }
 
    SCIPdebugMessage("problem has %d/%d interesting bounds\n", propdata->nbounds, 2 * nvars);
+   SCIPstatisticMessage("problem has %d/%d interesting bounds\n", propdata->nbounds, 2 * nvars);
 
    if( propdata->nbounds > 0 )
    {
@@ -1348,10 +1437,13 @@ SCIP_DECL_PROPEXEC(propExecObbt)
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip) || SCIPinProbing(scip) )
       return SCIP_OKAY;
 
+   SCIPstatisticMessage("propExecObbt called\n");
+
    /* only run for nonlinear problems, i.e., if NLP is constructed */
    if( !SCIPisNLPConstructed(scip) )
    {
       SCIPdebugMessage("NLP not constructed, skipping obbt\n");
+      SCIPstatisticMessage("NLP not constructed\n");
       return SCIP_OKAY;
    }
 
@@ -1361,6 +1453,7 @@ SCIP_DECL_PROPEXEC(propExecObbt)
    if( !SCIPallColsInLP(scip) )
    {
       SCIPdebugMessage("not all columns in LP, skipping obbt\n");
+      SCIPstatisticMessage("not all columns in LP\n");
       return SCIP_OKAY;
    }
 
@@ -1408,6 +1501,7 @@ SCIP_DECL_PROPEXEC(propExecObbt)
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
    {
       SCIPdebugMessage("aborting since no optimal LP solution is at hand\n");
+      SCIPstatisticMessage("no optimal lp solution at hand\n");
       return SCIP_OKAY;
    }
 
