@@ -23756,9 +23756,7 @@ SCIP_NLPSOLSTAT SCIPgetNLPSolstat(
       return SCIP_NLPSOLSTAT_UNKNOWN; /*lint !e527*/
    }
 
-   SCIP_CALL( SCIPnlpGetSolstat(scip->nlp) );
-
-   return SCIP_OKAY;
+   return SCIPnlpGetSolstat(scip->nlp);
 }
 
 /** gets termination status of last NLP solve
@@ -23780,9 +23778,7 @@ SCIP_NLPTERMSTAT SCIPgetNLPTermstat(
       return SCIP_NLPTERMSTAT_OTHER; /*lint !e527*/
    }
 
-   SCIP_CALL( SCIPnlpGetTermstat(scip->nlp) );
-
-   return SCIP_OKAY;
+   return SCIPnlpGetTermstat(scip->nlp);
 }
 
 /** gives statistics (number of iterations, solving time, ...) of last NLP solve
@@ -23826,8 +23822,7 @@ SCIP_Real SCIPgetNLPObjval(
 
    if( scip->nlp != NULL )
    {
-      SCIP_CALL( SCIPnlpGetObjval(scip->nlp) );
-      return SCIP_OKAY;
+      return SCIPnlpGetObjval(scip->nlp);
    }
    else
    {
@@ -23856,9 +23851,7 @@ SCIP_Bool SCIPhasNLPSolution(
       return FALSE; /*lint !e527*/
    }
 
-   SCIP_CALL( SCIPnlpHasSolution(scip->nlp) );
-
-   return SCIP_OKAY;
+   return SCIPnlpHasSolution(scip->nlp);
 }
 
 /** gets fractional variables of last NLP solution along with solution values and fractionalities
