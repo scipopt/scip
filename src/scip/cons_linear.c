@@ -11499,9 +11499,121 @@ SCIP_RETCODE SCIPcreateConsLinear(
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->eventhdlr != NULL);
 
-   /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, vals, lhs, rhs) );
-   assert(consdata != NULL);
+   /* for the solving process we need linear rows, containing only active variables; therefore when creating a linear
+    * constraint after presolving we have to ensure that it holds active variables
+    */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE )
+   {
+      SCIP_VAR** consvars;
+      SCIP_Real* consvals;
+      SCIP_Real constant = 0.0;
+      int nconsvars;
+      int requiredsize;
+
+      nconsvars = nvars;
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &consvars, vars, nconsvars) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &consvals, vals, nconsvars) );
+
+      /* get active variables for new constraint */
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize, TRUE) );
+
+      /* if space was not enough we need to resize the buffers */
+      if( requiredsize > nconsvars )
+      {
+         SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
+
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize, TRUE) );
+         assert(requiredsize <= nconsvars);
+      }
+
+      /* adjust sides and check that we do not subtract infinity values */
+      if( SCIPisInfinity(scip, REALABS(constant)) )
+      {
+	 if( constant < 0.0 )
+	 {
+	    if( SCIPisInfinity(scip, lhs) )
+	    {
+	       SCIPfreeBufferArray(scip, &consvals);
+	       SCIPfreeBufferArray(scip, &consvars);
+
+	       SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
+
+	       SCIPABORT();
+	       return SCIP_INVALIDDATA; /*lint !e527*/
+	    }
+	    if( SCIPisInfinity(scip, rhs) )
+	    {
+	       SCIPfreeBufferArray(scip, &consvals);
+	       SCIPfreeBufferArray(scip, &consvars);
+
+	       SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
+
+	       SCIPABORT();
+	       return SCIP_INVALIDDATA; /*lint !e527*/
+	    }
+
+	    lhs = -SCIPinfinity(scip);
+	    rhs = -SCIPinfinity(scip);
+	 }
+	 else
+	 {
+	    if( SCIPisInfinity(scip, -lhs) )
+	    {
+	       SCIPfreeBufferArray(scip, &consvals);
+	       SCIPfreeBufferArray(scip, &consvars);
+
+	       SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
+
+	       SCIPABORT();
+	       return SCIP_INVALIDDATA; /*lint !e527*/
+	    }
+	    if( SCIPisInfinity(scip, -rhs) )
+	    {
+	       SCIPfreeBufferArray(scip, &consvals);
+	       SCIPfreeBufferArray(scip, &consvars);
+
+	       SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
+
+	       SCIPABORT();
+	       return SCIP_INVALIDDATA; /*lint !e527*/
+	    }
+
+	    lhs = SCIPinfinity(scip);
+	    rhs = SCIPinfinity(scip);
+	 }
+      }
+      else
+      {
+	 if( !SCIPisInfinity(scip, REALABS(lhs)) )
+	    lhs -= constant;
+	 if( !SCIPisInfinity(scip, REALABS(rhs)) )
+	    rhs -= constant;
+
+	 if( SCIPisInfinity(scip, -lhs) )
+	    lhs = -SCIPinfinity(scip);
+	 else if( SCIPisInfinity(scip, lhs) )
+	    lhs = SCIPinfinity(scip);
+
+	 if( SCIPisInfinity(scip, rhs) )
+	    rhs = SCIPinfinity(scip);
+	 else if( SCIPisInfinity(scip, -rhs) )
+	    rhs = -SCIPinfinity(scip);
+      }
+
+      /* create constraint data */
+      SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nconsvars, consvars, consvals, lhs, rhs) );
+      assert(consdata != NULL);
+
+      SCIPfreeBufferArray(scip, &consvals);
+      SCIPfreeBufferArray(scip, &consvars);
+   }
+   else
+   {
+      /* create constraint data */
+      SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, vals, lhs, rhs) );
+      assert(consdata != NULL);
+   }
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -11677,7 +11789,139 @@ SCIP_RETCODE SCIPaddCoefLinear(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( addCoef(scip, cons, var, val) );
+   /* for the solving process we need linear rows, containing only active variables; therefore when creating a linear
+    * constraint after presolving we have to ensure that it holds active variables
+    */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE )
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_VAR** consvars;
+      SCIP_Real* consvals;
+      SCIP_Real constant = 0.0;
+      SCIP_Real rhs;
+      SCIP_Real lhs;
+      int nconsvars;
+      int requiredsize;
+      int v;
+
+      nconsvars = 1;
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
+      consvars[0] = var;
+      consvals[0] = val;
+
+      /* get active variables for new constraint */
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize, TRUE) );
+
+      /* if space was not enough we need to resize the buffers */
+      if( requiredsize > nconsvars )
+      {
+         SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
+
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize, TRUE) );
+         assert(requiredsize <= nconsvars);
+      }
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      lhs = consdata->lhs;
+      rhs = consdata->rhs;
+
+      /* adjust sides and check that we do not subtract infinity values */
+      /* constant is infinite */
+      if( SCIPisInfinity(scip, REALABS(constant)) )
+      {
+	 if( constant < 0.0 )
+	 {
+	    if( SCIPisInfinity(scip, lhs) )
+	    {
+	       SCIPfreeBufferArray(scip, &consvals);
+	       SCIPfreeBufferArray(scip, &consvars);
+
+	       SCIPerrorMessage("adding variable <%s> leads to inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+
+	       SCIPABORT();
+	       return SCIP_INVALIDDATA; /*lint !e527*/
+	    }
+	    if( SCIPisInfinity(scip, rhs) )
+	    {
+	       SCIPfreeBufferArray(scip, &consvals);
+	       SCIPfreeBufferArray(scip, &consvars);
+
+	       SCIPerrorMessage("adding variable <%s> leads to inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+
+	       SCIPABORT();
+	       return SCIP_INVALIDDATA; /*lint !e527*/
+	    }
+
+	    lhs = -SCIPinfinity(scip);
+	    rhs = -SCIPinfinity(scip);
+	 }
+	 else
+	 {
+	    if( SCIPisInfinity(scip, -lhs) )
+	    {
+	       SCIPfreeBufferArray(scip, &consvals);
+	       SCIPfreeBufferArray(scip, &consvars);
+
+	       SCIPerrorMessage("adding variable <%s> leads to inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+
+	       SCIPABORT();
+	       return SCIP_INVALIDDATA; /*lint !e527*/
+	    }
+	    if( SCIPisInfinity(scip, -rhs) )
+	    {
+	       SCIPfreeBufferArray(scip, &consvals);
+	       SCIPfreeBufferArray(scip, &consvars);
+
+	       SCIPerrorMessage("adding variable <%s> leads to inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+
+	       SCIPABORT();
+	       return SCIP_INVALIDDATA; /*lint !e527*/
+	    }
+
+	    lhs = SCIPinfinity(scip);
+	    rhs = SCIPinfinity(scip);
+	 }
+      }
+      /* constant is not infinite */
+      else
+      {
+	 if( !SCIPisInfinity(scip, REALABS(lhs)) )
+	    lhs -= constant;
+	 if( !SCIPisInfinity(scip, REALABS(rhs)) )
+	    rhs -= constant;
+
+	 if( SCIPisInfinity(scip, -lhs) )
+	    lhs = -SCIPinfinity(scip);
+	 else if( SCIPisInfinity(scip, lhs) )
+	    lhs = SCIPinfinity(scip);
+
+	 if( SCIPisInfinity(scip, rhs) )
+	    rhs = SCIPinfinity(scip);
+	 else if( SCIPisInfinity(scip, -rhs) )
+	    rhs = -SCIPinfinity(scip);
+      }
+
+      /* add all active variables to constraint */
+      for( v = nconsvars; v >= 0; --v )
+      {
+	 SCIP_CALL( addCoef(scip, cons, consvars[v], consvals[v]) );
+      }
+
+      /* update left and right hand sides */
+      SCIP_CALL( chgLhs(scip, cons, lhs));
+      SCIP_CALL( chgRhs(scip, cons, rhs));
+
+      SCIPfreeBufferArray(scip, &consvals);
+      SCIPfreeBufferArray(scip, &consvars);
+   }
+   else
+   {
+      SCIP_CALL( addCoef(scip, cons, var, val) );
+   }
 
    return SCIP_OKAY;
 }
