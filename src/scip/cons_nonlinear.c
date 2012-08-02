@@ -7993,7 +7993,9 @@ SCIP_DECL_CONSCOPY(consCopyNonlinear)
    SCIP_CONSDATA*    consdata;
    SCIP_CONSDATA*    targetconsdata;
    SCIP_VAR**        linvars;
+   SCIP_Real*        nonlincoefs;
    SCIP_EXPRTREE**   exprtrees;
+   int               nexprtrees;
    int i;
    int j;
 
@@ -8023,12 +8025,18 @@ SCIP_DECL_CONSCOPY(consCopyNonlinear)
       }
    }
 
+   nexprtrees = 0;
+   nonlincoefs = NULL;
+
    if( *valid && consdata->nexprtrees > 0 )
    {
       SCIP_VAR** nonlinvars;
 
-      SCIP_CALL( SCIPallocBufferArray(sourcescip, &exprtrees, consdata->nexprtrees) );
-      BMSclearMemoryArray(exprtrees, consdata->nexprtrees);
+      nonlincoefs = consdata->nonlincoefs;
+      nexprtrees = consdata->nexprtrees;
+
+      SCIP_CALL( SCIPallocBufferArray(sourcescip, &exprtrees, nexprtrees) );
+      BMSclearMemoryArray(exprtrees, nexprtrees);
       SCIP_CALL( SCIPallocBufferArray(sourcescip, &nonlinvars, SCIPexprtreeGetNVars(consdata->exprtrees[0])) );
 
       for( j = 0; j < consdata->nexprtrees; ++j )
@@ -8052,11 +8060,31 @@ SCIP_DECL_CONSCOPY(consCopyNonlinear)
       SCIPfreeBufferArray(sourcescip, &nonlinvars);
    }
 
+   if( *valid && consdata->nexprtrees == 0 && consdata->exprgraphnode != NULL )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_VAR** nonlinvars;
+
+      conshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
+
+      nexprtrees = 1;
+      SCIP_CALL( SCIPallocBufferArray(sourcescip, &exprtrees, 1) );
+
+      SCIP_CALL( SCIPexprgraphGetTree(conshdlrdata->exprgraph, consdata->exprgraphnode, &exprtrees[0]) );
+
+      nonlinvars = SCIPexprtreeGetVars(exprtrees[0]);
+      for( i = 0; i < SCIPexprtreeGetNVars(exprtrees[0]); ++i )
+      {
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, nonlinvars[i], &nonlinvars[i], varmap, consmap, global, valid) );
+         assert(!*valid || nonlinvars[i] != NULL);
+      }
+   }
+
    if( *valid )
    {
       SCIP_CALL( SCIPcreateConsNonlinear(scip, cons, name ? name : SCIPconsGetName(sourcecons),
             consdata->nlinvars, linvars, consdata->lincoefs,
-            consdata->nexprtrees, exprtrees, consdata->nonlincoefs,
+            nexprtrees, exprtrees, nonlincoefs,
             consdata->lhs, consdata->rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 

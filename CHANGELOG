@@ -4,6 +4,7 @@ SCIP next version
 fixed bugs:
 - fixed bug when adding linear constraints with non active variables in solving process, during propagation this
   resulted in changing the row, which is not possible for unmodifiable constraints/locked rows
+- fixed bug in copying nonlinear constraints during presolve (nonlinear part was not copied)
 
 SCIP version 3.0.0
 ==================
