@@ -24,6 +24,7 @@
 #include <stdarg.h>
 
 #include "scip/pub_fileio.h"
+#include "scip/pub_misc.h"
 
 
 #define BUFFER_LEN 8192
