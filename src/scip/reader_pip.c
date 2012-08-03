@@ -1339,7 +1339,7 @@ SCIP_RETCODE readObjective(
                SCIP_VARTYPE_CONTINUOUS, initial, removable, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, quadobjvar) );
 
-         if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
+         if ( pipinput->objsense == SCIP_OBJSENSE_MINIMIZE )
          {
             lhs = -SCIPinfinity(scip);
             rhs = -constant;
@@ -1408,7 +1408,7 @@ SCIP_RETCODE readObjective(
 
          minusone = -1.0;
 
-         if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
+         if ( pipinput->objsense == SCIP_OBJSENSE_MINIMIZE )
          {
             lhs = -SCIPinfinity(scip);
             rhs = 0.0;
