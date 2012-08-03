@@ -1633,10 +1633,10 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SCIPdebugMessage("calling Clp primal(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
-
    assert(lpi != 0);
    assert(lpi->clp != 0);
+
+   SCIPdebugMessage("calling Clp primal(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
 
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
    char filename[255];
@@ -1706,10 +1706,10 @@ SCIP_RETCODE SCIPlpiSolveDual(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SCIPdebugMessage("calling Clp dual(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
-
    assert(lpi != 0);
    assert(lpi->clp != 0);
+
+   SCIPdebugMessage("calling Clp dual(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
 
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
    char filename[255];
@@ -1782,10 +1782,10 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_Bool             crossover            /**< perform crossover */
    )
 {
-   SCIPdebugMessage("calling Clp barrier(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
-
    assert(lpi != 0);
    assert(lpi->clp != 0);
+
+   SCIPdebugMessage("calling Clp barrier(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
 
    invalidateSolution(lpi);
 
