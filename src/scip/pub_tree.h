@@ -42,11 +42,11 @@ extern "C" {
  */
 
 /** node comparator for best lower bound */
-extern
+EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPnodeCompLowerbound);
 
 /** returns the set of variable branchings that were performed in the parent node to create this node */
-extern
+EXTERN
 void SCIPnodeGetParentBranchings(
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR**            branchvars,         /**< array of variables on which the branching has been performed in the parent node */
@@ -58,7 +58,7 @@ void SCIPnodeGetParentBranchings(
    );
 
 /** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node */
-extern
+EXTERN
 void SCIPnodeGetAncestorBranchings(
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
@@ -70,7 +70,7 @@ void SCIPnodeGetAncestorBranchings(
    );
 
 /** outputs the path into given file stream in GML format */
-extern
+EXTERN
 SCIP_RETCODE SCIPnodePrintAncestorBranchings(
    SCIP_NODE*            node,               /**< node data */
    FILE*                 file                /**< file to output the path */
@@ -79,7 +79,7 @@ SCIP_RETCODE SCIPnodePrintAncestorBranchings(
 /** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node
  *  sorted by the nodes, starting from the current node going up to the root
  */
-extern
+EXTERN
 void SCIPnodeGetAncestorBranchingPath(
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
@@ -98,14 +98,14 @@ void SCIPnodeGetAncestorBranchingPath(
 
 
 /** checks for two nodes whether they share the same root path, i.e., whether one is an ancestor of the other */
-extern
+EXTERN
 SCIP_Bool SCIPnodesSharePath(
    SCIP_NODE*            node1,              /**< node data */
    SCIP_NODE*            node2               /**< node data */
    );
 
 /** finds the common ancestor node of two given nodes */
-extern
+EXTERN
 SCIP_NODE* SCIPnodesGetCommonAncestor(
    SCIP_NODE*            node1,              /**< node data */
    SCIP_NODE*            node2               /**< node data */
@@ -119,31 +119,31 @@ SCIP_NODE* SCIPnodesGetCommonAncestor(
  */
 
 /** gets the type of the node */
-extern
+EXTERN
 SCIP_NODETYPE SCIPnodeGetType(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets successively assigned number of the node */
-extern
+EXTERN
 SCIP_Longint SCIPnodeGetNumber(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets the depth of the node */
-extern
+EXTERN
 int SCIPnodeGetDepth(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets the lower bound of the node */
-extern
+EXTERN
 SCIP_Real SCIPnodeGetLowerbound(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets the estimated value of the best feasible solution in subtree of the node */
-extern
+EXTERN
 SCIP_Real SCIPnodeGetEstimate(
    SCIP_NODE*            node                /**< node */
    );
@@ -151,25 +151,25 @@ SCIP_Real SCIPnodeGetEstimate(
 /** gets the domain change information of the node, i.e., the information about the differences in the
  *  variables domains to the parent node
  */
-extern
+EXTERN
 SCIP_DOMCHG* SCIPnodeGetDomchg(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets the parent node of a node in the branch-and-bound tree, if any */
-extern
+EXTERN
 SCIP_NODE* SCIPnodeGetParent(
    SCIP_NODE*            node                /**< node */
    );
 
 /** returns whether node is in the path to the current node */
-extern
+EXTERN
 SCIP_Bool SCIPnodeIsActive(
    SCIP_NODE*            node                /**< node */
    );
 
 /** returns whether the node is marked to be propagated again */
-extern
+EXTERN
 SCIP_Bool SCIPnodeIsPropagatedAgain(
    SCIP_NODE*            node                /**< node data */
    );

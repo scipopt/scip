@@ -1,20 +1,18 @@
 #!/usr/bin/env bash
 #
-# This scripts generates the dependences for SCIP
+# run with bash -e makeall.sh to stop on errors
 #
 
 EXAMPLES=(Coloring Binpacking Eventhdlr LOP MIPSolver Queens Scheduler Testslack TSP VRP CallableLibrary)
-OPTS=(opt dbg opt-gccold)
 
 for EXAMPLE in ${EXAMPLES[@]}
 do
+    echo
     echo ===== $EXAMPLE =====
     echo
-    cd $EXAMPLE
-    for OPT in ${OPTS[@]}
-    do
-	make OPT=$OPT ZIMPL=false LPS=none depend
-    done
-    cd ..
+    if (! make -C $EXAMPLE doc )
+    then
+	exit $STATUS
+    fi
     echo
 done

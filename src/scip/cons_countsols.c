@@ -481,7 +481,6 @@ CUTOFF_CONSTRAINT(addIntegerCons)
    int nconsvars;
    SCIP_VAR* var;
    SCIP_Real value;
-   SCIP_Longint lb,ub,valueInt;
 
    SCIP_CONS* cons;
 
@@ -527,32 +526,36 @@ CUTOFF_CONSTRAINT(addIntegerCons)
       }
       else
       {
+         SCIP_Real lb;
+         SCIP_Real ub;
+         SCIP_Real valueInt;
+
          assert( SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)) );
          assert( SCIPisFeasIntegral(scip, SCIPvarGetUbLocal(var)) );
          assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, var)) );
 
-         lb = (SCIP_Longint) SCIPfeasCeil(scip, SCIPvarGetLbLocal(var));
-         ub = (SCIP_Longint) SCIPfeasCeil(scip, SCIPvarGetUbLocal(var));
-         valueInt = (SCIP_Longint) SCIPfeasCeil(scip, SCIPgetSolVal(scip, sol, var));
+         lb = SCIPvarGetLbLocal(var);
+         ub = SCIPvarGetUbLocal(var);
+         valueInt = SCIPgetSolVal(scip, sol, var);
 
-         if( valueInt == lb )
+         if( SCIPisFeasEQ(scip, valueInt, lb) )
          {
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_LOWER;
-            bounds[nconsvars] = lb + 1;
+            bounds[nconsvars] = lb + 1.0;
          }
-         else if( valueInt == ub )
+         else if( SCIPisFeasEQ(scip, valueInt, ub) )
          {
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_UPPER;
-            bounds[nconsvars] = ub - 1;
+            bounds[nconsvars] = ub - 1.0;
          }
          else
          {
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_LOWER;
-            bounds[nconsvars] = valueInt + 1;
+            bounds[nconsvars] = valueInt + 1.0;
             consvars[nconsvars] = var;
             ++nconsvars;
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_UPPER;
-            bounds[nconsvars] = valueInt - 1;
+            bounds[nconsvars] = valueInt - 1.0;
          }
       }
 

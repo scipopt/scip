@@ -810,7 +810,6 @@ public:
       /* restore verbosity */
       Param::setVerbose(verbosity);
 
-      assert(SPxSolver::isInitialized());
       return m_stat;
    }
 
@@ -1047,7 +1046,6 @@ public:
          if( (objval > m_objUpLimit) || (objval < m_objLoLimit) )
             m_stat = ABORT_VALUE;
       }
-      assert(SPxSolver::isInitialized());
 
       return m_stat;
    }
@@ -1129,6 +1127,12 @@ public:
 
    Status getStatus() const
    {
+      return m_stat;
+   }
+
+   Status updateStatus()
+   {
+      m_stat = SPxSolver::status();
       return m_stat;
    }
 
@@ -3853,6 +3857,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    }
 
    SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );
+   lpi->spx->updateStatus();
 
    delete[] spxcstat;
    delete[] spxrstat;

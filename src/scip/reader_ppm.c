@@ -590,9 +590,9 @@ SCIP_RETCODE SCIPwritePpm(
            consvars = SCIPgetVarsLinear(scip, cons);
            nconsvars = SCIPgetNVarsLinear(scip, cons);
            assert( consvars != NULL || nconsvars == 0 );
-           
-           if( nconsvars > 0 ) 
-           { 
+
+           if( nconsvars > 0 )
+           {
               SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, SCIPgetValsLinear(scip, cons),
                     nconsvars, nvars, transformed, &maxcoef, printbool) );
            }
@@ -603,9 +603,9 @@ SCIP_RETCODE SCIPwritePpm(
            nconsvars = SCIPgetNVarsSetppc(scip, cons);
            assert( consvars != NULL || nconsvars == 0 );
 
-           if( nconsvars > 0 ) 
+           if( nconsvars > 0 )
            {
-              SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, NULL, 
+              SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, NULL,
                     nconsvars, nvars, transformed, &maxcoef, printbool) );
            }
         }
@@ -614,10 +614,10 @@ SCIP_RETCODE SCIPwritePpm(
            consvars = SCIPgetVarsLogicor(scip, cons);
            nconsvars = SCIPgetNVarsLogicor(scip, cons);
            assert( consvars != NULL || nconsvars == 0 );
-           
-           if( nconsvars > 0 ) 
-           { 
-              SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, NULL, 
+
+           if( nconsvars > 0 )
+           {
+              SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, NULL,
                     nconsvars, nvars, transformed, &maxcoef, printbool) );
            }
         }
@@ -628,15 +628,15 @@ SCIP_RETCODE SCIPwritePpm(
            consvars = SCIPgetVarsKnapsack(scip, cons);
            nconsvars = SCIPgetNVarsKnapsack(scip, cons);
            assert( consvars != NULL || nconsvars == 0 );
-           
+
            /* copy Longint array to SCIP_Real array */
            weights = SCIPgetWeightsKnapsack(scip, cons);
            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
            for( v = 0; v < nconsvars; ++v )
-              consvals[v] = weights[v];
-           
-           if( nconsvars > 0 ) 
-           { 
+              consvals[v] = (SCIP_Real)weights[v];
+
+           if( nconsvars > 0 )
+           {
               SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, consvals, nconsvars, nvars, transformed, &maxcoef, printbool) );
            }
 

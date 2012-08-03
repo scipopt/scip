@@ -34,136 +34,136 @@ extern "C" {
 #endif
 
 /** compares two presolvers w. r. to their priority */
-extern
+EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPpresolComp);
 
 /** comparison method for sorting presolvers w.r.t. to their name */
-extern
+EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPpresolCompName);
 
 /** gets user data of presolver */
-extern
+EXTERN
 SCIP_PRESOLDATA* SCIPpresolGetData(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** sets user data of presolver; user has to free old data in advance! */
-extern
+EXTERN
 void SCIPpresolSetData(
    SCIP_PRESOL*          presol,             /**< presolver */
    SCIP_PRESOLDATA*      presoldata          /**< new presolver user data */
    );
 
 /** gets name of presolver */
-extern
+EXTERN
 const char* SCIPpresolGetName(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets description of presolver */
-extern
+EXTERN
 const char* SCIPpresolGetDesc(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets priority of presolver */
-extern
+EXTERN
 int SCIPpresolGetPriority(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** should presolver be delayed, if other presolvers found reductions? */
-extern
+EXTERN
 SCIP_Bool SCIPpresolIsDelayed(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** was presolver delayed at the last call? */
-extern
+EXTERN
 SCIP_Bool SCIPpresolWasDelayed(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** is presolver initialized? */
-extern
+EXTERN
 SCIP_Bool SCIPpresolIsInitialized(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets time in seconds used in this presolver for setting up for next stages */
-extern
+EXTERN
 SCIP_Real SCIPpresolGetSetupTime(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets time in seconds used in this presolver */
-extern
+EXTERN
 SCIP_Real SCIPpresolGetTime(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of variables fixed in presolver */
-extern
+EXTERN
 int SCIPpresolGetNFixedVars(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of variables aggregated in presolver */
-extern
+EXTERN
 int SCIPpresolGetNAggrVars(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of variable types changed in presolver */
-extern
+EXTERN
 int SCIPpresolGetNChgVarTypes(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of bounds changed in presolver */
-extern
+EXTERN
 int SCIPpresolGetNChgBds(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of holes added to domains of variables in presolver */
-extern
+EXTERN
 int SCIPpresolGetNAddHoles(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of constraints deleted in presolver */
-extern
+EXTERN
 int SCIPpresolGetNDelConss(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of constraints added in presolver */
-extern
+EXTERN
 int SCIPpresolGetNAddConss(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of constraints upgraded in presolver */
-extern
+EXTERN
 int SCIPpresolGetNUpgdConss(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of coefficients changed in presolver */
-extern
+EXTERN
 int SCIPpresolGetNChgCoefs(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of constraint sides changed in presolver */
-extern
+EXTERN
 int SCIPpresolGetNChgSides(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of times the presolver was called and tried to find reductions */
-extern
+EXTERN
 int SCIPpresolGetNCalls(
    SCIP_PRESOL*          presol              /**< presolver */
    );

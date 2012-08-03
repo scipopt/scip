@@ -50,9 +50,11 @@ MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 #-----------------------------------------------------------------------------
 
 FLAGS += -Isolvers
-LDFLAGS += solvers/amplsolver.$(STATICLIBEXT)
-ifeq ($(OSTYPE),linux)
-LDFLAGS += $(LINKCC_l)dl$(LINKLIBSUFFIX)
+
+ifeq ($(OSTYPE),mingw)
+LDFLAGS += solvers/amplsolv.$(STATICLIBEXT)
+else
+LDFLAGS += solvers/amplsolver.$(STATICLIBEXT) $(LINKCC_l)dl$(LINKLIBSUFFIX)
 endif
 
 #-----------------------------------------------------------------------------

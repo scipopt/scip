@@ -28,7 +28,7 @@
 	    </tr>
 	    <tr>
 	      <td>
-		<a href="http://www.math.tu-bs.de/~pfetsch/">Marc Pfetsch</a>
+		<a href="http://www.mathematik.tu-darmstadt.de/~pfetsch/index.en.html">Marc Pfetsch</a>
 	      </td>
 	      <td>
 		Special math programming constraints, former project head
@@ -96,6 +96,22 @@
 		Developer of SIP &ndash; the predecessor of SCIP
 	      </td>
 	    </tr>
+            <tr>
+	      <td>
+		<a href="http://www.zib.de/en/people/staff/member.html?mail=miltenberger">Matthias Miltenberger</a>
+	      </td>
+	      <td>
+                Probing propagator
+	      </td>
+	    </tr>
+	    <tr>
+	      <td>
+		Felipe Serrano
+	      </td>
+	      <td>
+                nonlinear development
+	      </td>
+	    </tr>
 	    <tr>
 	      <td>
               Robert Waniek
@@ -138,6 +154,16 @@
 	    </tr>
            <tr>
 	      <td>
+		 <a href="http://www.mie.utoronto.ca/faculty/beck/">Chris Beck</a>
+	      </td>
+	      <td>
+                 Logic-based Bender's decomposition
+	      </td>
+	      <td>
+	      </td>
+	    </tr>
+           <tr>
+	      <td>
 		 Livio Bertacco
 	      </td>
 	      <td>
@@ -146,7 +172,7 @@
 	    </tr>
             <tr>
 	      <td>
-                <a href="http://univis.uni-magdeburg.de/form?__s=2&dsc=anew/tel_view&pers=fma/imo/imo/bleyan&anonymous=1&dir=fma/imo&ref=pande&sem=2011w&__e=258">Andreas Bley</a>
+                <a href="http://www3.math.tu-berlin.de/coga/people/bley/">Andreas Bley</a>
 	      </td>
 	      <td>
                  VRP example
@@ -210,14 +236,6 @@
                  Constraint Handler for bivariate nonlinear constraints
 	      </td>
 	      <td>
-	      </td>
-	    </tr>
-            <tr>
-	      <td>
-		<a href="http://www.zib.de/en/people/staff/member.html?mail=miltenberger">Matthias Miltenberger</a>
-	      </td>
-	      <td>
-                Probing propagator
 	      </td>
 	    </tr>
             <tr>
@@ -296,7 +314,7 @@
 	    </tr>
             <tr>
 	      <td>
-		<a href="http://www.zib.de/en/people/staff/member.html?mail=steffy">Dan Steffy</a>
+		<a href="https://files.oakland.edu/users/steffy/web/">Dan Steffy</a>
 	      </td>
 	      <td>
                 Exact integer programming

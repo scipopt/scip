@@ -48,25 +48,25 @@ extern "C" {
  */
 
 /** gets number of locks for rounding down */
-extern
+EXTERN
 int SCIPvarGetNLocksDown(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets number of locks for rounding up */
-extern
+EXTERN
 int SCIPvarGetNLocksUp(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** is it possible, to round variable down and stay feasible? */
-extern
+EXTERN
 SCIP_Bool SCIPvarMayRoundDown(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** is it possible, to round variable up and stay feasible? */
-extern
+EXTERN
 SCIP_Bool SCIPvarMayRoundUp(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -76,7 +76,7 @@ SCIP_Bool SCIPvarMayRoundUp(
  *  smaller than, and +1 if first is greater than second variable index; returns 0 if both indices
  *  are equal, which means both variables are equal
  */
-extern
+EXTERN
 int SCIPvarCompareActiveAndNegated(
    SCIP_VAR*             var1,               /**< first problem variable */
    SCIP_VAR*             var2                /**< second problem variable */
@@ -85,46 +85,46 @@ int SCIPvarCompareActiveAndNegated(
 /** comparison method for sorting active and negated variables by non-decreasing index, active and negated 
  *  variables are handled as the same variables
  */
-extern
+EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPvarCompActiveAndNegated);
 
 /** compares the index of two variables, returns -1 if first is smaller than, and +1 if first is greater than second
  *  variable index; returns 0 if both indices are equal, which means both variables are equal
  */
-extern
+EXTERN
 int SCIPvarCompare(
    SCIP_VAR*             var1,               /**< first problem variable */
    SCIP_VAR*             var2                /**< second problem variable */
    );
 
 /** comparison method for sorting variables by non-decreasing index */
-extern
+EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPvarComp);
 
 /** hash key retrieval function for variables */
-extern
+EXTERN
 SCIP_DECL_HASHGETKEY(SCIPvarGetHashkey);
 
 /** returns TRUE iff the indices of both variables are equal */
-extern
+EXTERN
 SCIP_DECL_HASHKEYEQ(SCIPvarIsHashkeyEq);
 
 /** returns the hash value of the key */
-extern
+EXTERN
 SCIP_DECL_HASHKEYVAL(SCIPvarGetHashkeyVal);
 
 
 /** gets corresponding active, fixed, or multi-aggregated problem variables of given variables,
  *  @note the content of the given array will/might change
  */
-extern
+EXTERN
 void SCIPvarsGetProbvar(
    SCIP_VAR**            vars,               /**< array of problem variables */
    int                   nvars               /**< number of variables */
    );
 
 /** gets corresponding active, fixed, or multi-aggregated problem variable of a variable */
-extern
+EXTERN
 SCIP_VAR* SCIPvarGetProbvar(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -132,7 +132,7 @@ SCIP_VAR* SCIPvarGetProbvar(
 /** gets corresponding active, fixed, or multi-aggregated problem variables of binary variables and
  *  updates the given negation status of each variable
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPvarsGetProbvarBinary(
    SCIP_VAR***           vars,               /**< pointer to binary problem variables */
    SCIP_Bool**           negatedarr,         /**< pointer to corresponding array to update the negation status */
@@ -142,7 +142,7 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
 /** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and
  *  updates the given negation status
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPvarGetProbvarBinary(
    SCIP_VAR**            var,                /**< pointer to binary problem variable */
    SCIP_Bool*            negated             /**< pointer to update the negation status */
@@ -151,7 +151,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
 /** transforms given variable, boundtype and bound to the corresponding active, fixed, or multi-aggregated variable
  *  values
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPvarGetProbvarBound(
    SCIP_VAR**            var,                /**< pointer to problem variable */
    SCIP_Real*            bound,              /**< pointer to bound value to transform */
@@ -161,7 +161,7 @@ SCIP_RETCODE SCIPvarGetProbvarBound(
 /** transforms given variable and domain hole to the corresponding active, fixed, or multi-aggregated variable
  *  values
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPvarGetProbvarHole(
    SCIP_VAR**            var,                /**< pointer to problem variable */
    SCIP_Real*            left,               /**< pointer to left bound of open interval in hole to transform */
@@ -171,7 +171,7 @@ SCIP_RETCODE SCIPvarGetProbvarHole(
 /** retransforms given variable, scalar and constant to the corresponding original variable, scalar
  *  and constant, if possible; if the retransformation is impossible, NULL is returned as variable
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPvarGetOrigvarSum(
    SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
    SCIP_Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
@@ -179,13 +179,13 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
    );
 
 /** returns whether the given variable is the direct counterpart of an original problem variable */
-extern
+EXTERN
 SCIP_Bool SCIPvarIsTransformedOrigvar(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns the number of times, a bound of the variable was changed in given direction due to branching */
-extern
+EXTERN
 SCIP_Longint SCIPvarGetNBranchings(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -194,14 +194,14 @@ SCIP_Longint SCIPvarGetNBranchings(
 /** returns the number of times, a bound of the variable was changed in given direction due to branching
  *  in the current run
  */
-extern
+EXTERN
 SCIP_Longint SCIPvarGetNBranchingsCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the number of inferences branching on this variable in given direction triggered */
-extern
+EXTERN
 SCIP_Real SCIPvarGetInferenceSum(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -210,28 +210,28 @@ SCIP_Real SCIPvarGetInferenceSum(
 /** returns the number of inferences branching on this variable in given direction triggered
  *  in the current run
  */
-extern
+EXTERN
 SCIP_Real SCIPvarGetInferenceSumCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the number of cutoffs branching on this variable in given direction produced */
-extern
+EXTERN
 SCIP_Real SCIPvarGetCutoffSum(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the number of cutoffs branching on this variable in given direction produced in the current run */
-extern
+EXTERN
 SCIP_Real SCIPvarGetCutoffSumCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the average depth of bound changes in given direction due to branching on the variable */
-extern
+EXTERN
 SCIP_Real SCIPvarGetAvgBranchdepth(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -240,7 +240,7 @@ SCIP_Real SCIPvarGetAvgBranchdepth(
 /** returns the average depth of bound changes in given direction due to branching on the variable
  *  in the current run
  */
-extern
+EXTERN
 SCIP_Real SCIPvarGetAvgBranchdepthCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -250,7 +250,7 @@ SCIP_Real SCIPvarGetAvgBranchdepthCurrentRun(
  *  implications that are represented as cliques in the clique table are not regarded (use SCIPvarsHaveCommonClique());
  *  both variables must be active, variable x must be binary
  */
-extern
+EXTERN
 SCIP_Bool SCIPvarHasImplic(
    SCIP_VAR*             var,                /**< problem variable x */
    SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
@@ -262,7 +262,7 @@ SCIP_Bool SCIPvarHasImplic(
  *  implications that are represented as cliques in the clique table are not regarded (use SCIPvarsHaveCommonClique());
  *  both variables must be active binary variables
  */
-extern
+EXTERN
 SCIP_Bool SCIPvarHasBinaryImplic(
    SCIP_VAR*             var,                /**< problem variable x */
    SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
@@ -275,7 +275,7 @@ SCIP_Bool SCIPvarHasBinaryImplic(
  *  if regardimplics is FALSE, only the cliques in the clique table are looked at;
  *  if regardimplics is TRUE, both the cliques and the implications of the implication graph are regarded
  */
-extern
+EXTERN
 SCIP_Bool SCIPvarsHaveCommonClique(
    SCIP_VAR*             var1,               /**< first variable */
    SCIP_Bool             value1,             /**< value of first variable */
@@ -287,12 +287,25 @@ SCIP_Bool SCIPvarsHaveCommonClique(
 /** gets corresponding objective value of active, fixed, or multi-aggregated problem variable of given variable
  *  e.g. obj(x) = 1 this method returns for ~x the value -1
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPvarGetAggregatedObj(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real*            aggrobj             /**< pointer to store the aggregated objective value */
    );
 
+/** sets the initial flag of a variable; only possible for original or loose variables */
+EXTERN
+SCIP_RETCODE SCIPvarSetInitial(
+   SCIP_VAR*            var,
+   SCIP_Bool            initial
+   );
+
+/** sets the removable flag of a variable; only possible for original or loose variables */
+EXTERN
+SCIP_RETCODE SCIPvarSetRemovable(
+   SCIP_VAR*            var,
+   SCIP_Bool            removable
+   );
 
 #ifndef NDEBUG
 
@@ -301,98 +314,84 @@ SCIP_RETCODE SCIPvarGetAggregatedObj(
  */
 
 /** get name of variable */
-extern
+EXTERN
 const char* SCIPvarGetName(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets number of times, the variable is currently captured */
-extern
+EXTERN
 int SCIPvarGetNUses(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns the user data of the variable */
-extern
+EXTERN
 SCIP_VARDATA* SCIPvarGetData(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** sets the user data for the variable */
-extern
+EXTERN
 void SCIPvarSetData(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_VARDATA*         vardata             /**< user variable data */
    );
 
 /** sets method to free user data for the original variable */
-extern
+EXTERN
 void SCIPvarSetDelorigData(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_DECL_VARDELORIG  ((*vardelorig))     /**< frees user data of original variable */
    );
 
 /** sets method to transform user data of the variable */
-extern
+EXTERN
 void SCIPvarSetTransData(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_DECL_VARTRANS    ((*vartrans))       /**< creates transformed user data by transforming original user data */
    );
 
 /** sets method to free transformed user data for the variable */
-extern
+EXTERN
 void SCIPvarSetDeltransData(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_DECL_VARDELTRANS ((*vardeltrans))    /**< frees user data of transformed variable */
    );
 
 /** sets method to copy this variable into sub-SCIPs */
-extern
+EXTERN
 void SCIPvarSetCopyData(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_DECL_VARCOPY     ((*varcopy))        /**< copy method of the variable */
    );
 
-/** sets the initial flag of a variable; only possible for original or loose variables */
-extern
-SCIP_RETCODE SCIPvarSetInitial(
-   SCIP_VAR*            var,
-   SCIP_Bool            initial
-   );
-
-/** sets the removable flag of a variable; only possible for original or loose variables */
-extern
-SCIP_RETCODE SCIPvarSetRemovable(
-   SCIP_VAR*            var,
-   SCIP_Bool            removable
-   );
-
 /** gets status of variable */
-extern
+EXTERN
 SCIP_VARSTATUS SCIPvarGetStatus(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns whether the variable belongs to the original problem */
-extern
+EXTERN
 SCIP_Bool SCIPvarIsOriginal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns whether the variable belongs to the transformed problem */
-extern
+EXTERN
 SCIP_Bool SCIPvarIsTransformed(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns whether the variable was created by negation of a different variable */
-extern
+EXTERN
 SCIP_Bool SCIPvarIsNegated(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets type of variable */
-extern
+EXTERN
 SCIP_VARTYPE SCIPvarGetType(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -403,31 +402,31 @@ SCIP_VARTYPE SCIPvarGetType(
  *      (i)  the lazy lower bound or the global lower bound is greater or equal to zero
  *      (ii) the lazy upper bound or the global upper bound is less tor equal to one 
  */
-extern
+EXTERN
 SCIP_Bool SCIPvarIsBinary(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns whether variable is of integral type (binary, integer, or implicit integer) */
-extern
+EXTERN
 SCIP_Bool SCIPvarIsIntegral(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns whether variable's column should be present in the initial root LP */
-extern
+EXTERN
 SCIP_Bool SCIPvarIsInitial(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns whether variable's column is removable from the LP (due to aging or cleanup) */
-extern
+EXTERN
 SCIP_Bool SCIPvarIsRemovable(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns whether the variable was deleted from the problem */
-extern
+EXTERN
 SCIP_Bool SCIPvarIsDeleted(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -435,223 +434,223 @@ SCIP_Bool SCIPvarIsDeleted(
 /** marks the variable to be deletable, i.e., it may be deleted completely from the problem;
  *  method can only be called before the variable is added to the problem by SCIPaddVar() or SCIPaddPricedVar()
  */
-extern
+EXTERN
 void SCIPvarMarkDeletable(
    SCIP_VAR*             var
    );
 
 /** marks the variable to be not deletable from the problem */
-extern
+EXTERN
 void SCIPvarMarkNotDeletable(
    SCIP_VAR*             var
    );
 
 /** returns whether variable is allowed to be deleted completely from the problem */
-extern
+EXTERN
 SCIP_Bool SCIPvarIsDeletable(
    SCIP_VAR*             var
    );
 
 /** returns whether variable is an active (neither fixed nor aggregated) variable */
-extern
+EXTERN
 SCIP_Bool SCIPvarIsActive(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets unique index of variable */
-extern
+EXTERN
 int SCIPvarGetIndex(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets position of variable in problem, or -1 if variable is not active */
-extern
+EXTERN
 int SCIPvarGetProbindex(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets transformed variable of ORIGINAL variable */
-extern
+EXTERN
 SCIP_VAR* SCIPvarGetTransVar(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets column of COLUMN variable */
-extern
+EXTERN
 SCIP_COL* SCIPvarGetCol(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns whether the variable is a COLUMN variable that is member of the current LP */
-extern
+EXTERN
 SCIP_Bool SCIPvarIsInLP(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets aggregation variable y of an aggregated variable x = a*y + c */
-extern
+EXTERN
 SCIP_VAR* SCIPvarGetAggrVar(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets aggregation scalar a of an aggregated variable x = a*y + c */
-extern
+EXTERN
 SCIP_Real SCIPvarGetAggrScalar(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets aggregation constant c of an aggregated variable x = a*y + c */
-extern
+EXTERN
 SCIP_Real SCIPvarGetAggrConstant(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets number n of aggregation variables of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
-extern
+EXTERN
 int SCIPvarGetMultaggrNVars(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets vector of aggregation variables y of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
-extern
+EXTERN
 SCIP_VAR** SCIPvarGetMultaggrVars(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets vector of aggregation scalars a of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
-extern
+EXTERN
 SCIP_Real* SCIPvarGetMultaggrScalars(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets aggregation constant c of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
-extern
+EXTERN
 SCIP_Real SCIPvarGetMultaggrConstant(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets the negation of the given variable; may return NULL, if no negation is existing yet */
-extern
+EXTERN
 SCIP_VAR* SCIPvarGetNegatedVar(
    SCIP_VAR*             var                 /**< negated problem variable */
    );
 
 /** gets the negation variable x of a negated variable x' = offset - x */
-extern
+EXTERN
 SCIP_VAR* SCIPvarGetNegationVar(
    SCIP_VAR*             var                 /**< negated problem variable */
    );
 
 /** gets the negation offset of a negated variable x' = offset - x */
-extern
+EXTERN
 SCIP_Real SCIPvarGetNegationConstant(
    SCIP_VAR*             var                 /**< negated problem variable */
    );
 
 /** gets objective function value of variable */
-extern
+EXTERN
 SCIP_Real SCIPvarGetObj(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets original lower bound of original problem variable (i.e. the bound set in problem creation) */
-extern
+EXTERN
 SCIP_Real SCIPvarGetLbOriginal(
    SCIP_VAR*             var                 /**< original problem variable */
    );
 
 /** gets original upper bound of original problem variable (i.e. the bound set in problem creation) */
-extern
+EXTERN
 SCIP_Real SCIPvarGetUbOriginal(
    SCIP_VAR*             var                 /**< original problem variable */
    );
 
 /** gets the original hole list of an original variable */
-extern
+EXTERN
 SCIP_HOLELIST* SCIPvarGetHolelistOriginal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets global lower bound of variable */
-extern
+EXTERN
 SCIP_Real SCIPvarGetLbGlobal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets global upper bound of variable */
-extern
+EXTERN
 SCIP_Real SCIPvarGetUbGlobal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets the global hole list of an active variable */
-extern
+EXTERN
 SCIP_HOLELIST* SCIPvarGetHolelistGlobal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets best global bound of variable with respect to the objective function */
-extern
+EXTERN
 SCIP_Real SCIPvarGetBestBoundGlobal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets worst global bound of variable with respect to the objective function */
-extern
+EXTERN
 SCIP_Real SCIPvarGetWorstBoundGlobal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets current lower bound of variable */
-extern
+EXTERN
 SCIP_Real SCIPvarGetLbLocal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets current upper bound of variable */
-extern
+EXTERN
 SCIP_Real SCIPvarGetUbLocal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets the current hole list of an active variable */
-extern
+EXTERN
 SCIP_HOLELIST* SCIPvarGetHolelistLocal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets best local bound of variable with respect to the objective function */
-extern
+EXTERN
 SCIP_Real SCIPvarGetBestBoundLocal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets worst local bound of variable with respect to the objective function */
-extern
+EXTERN
 SCIP_Real SCIPvarGetWorstBoundLocal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets type (lower or upper) of best bound of variable with respect to the objective function */
-extern
+EXTERN
 SCIP_BOUNDTYPE SCIPvarGetBestBoundType(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets type (lower or upper) of worst bound of variable with respect to the objective function */
-extern
+EXTERN
 SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets lazy lower bound of variable */
-extern
+EXTERN
 SCIP_Real SCIPvarGetLbLazy(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets lazy upper bound of variable */
-extern
+EXTERN
 SCIP_Real SCIPvarGetUbLazy(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -659,7 +658,7 @@ SCIP_Real SCIPvarGetUbLazy(
 /** gets the branch factor of the variable; this value can be used in the branching methods to scale the score
  *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
-extern
+EXTERN
 SCIP_Real SCIPvarGetBranchFactor(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -667,19 +666,19 @@ SCIP_Real SCIPvarGetBranchFactor(
 /** gets the branch priority of the variable; variables with higher priority should always be preferred to variables
  *  with lower priority
  */
-extern
+EXTERN
 int SCIPvarGetBranchPriority(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets the preferred branch direction of the variable (downwards, upwards, or auto) */
-extern
+EXTERN
 SCIP_BRANCHDIR SCIPvarGetBranchDirection(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets number of variable lower bounds x >= b_i*z_i + d_i of given variable x */
-extern
+EXTERN
 int SCIPvarGetNVlbs(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -687,25 +686,25 @@ int SCIPvarGetNVlbs(
 /** gets array with bounding variables z_i in variable lower bounds x >= b_i*z_i + d_i of given variable x;
  *  the variable bounds are sorted by increasing variable index of the bounding variable z_i (see SCIPvarGetIndex())
  */
-extern
+EXTERN
 SCIP_VAR** SCIPvarGetVlbVars(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets array with bounding coefficients b_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
-extern
+EXTERN
 SCIP_Real* SCIPvarGetVlbCoefs(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets array with bounding constants d_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
-extern
+EXTERN
 SCIP_Real* SCIPvarGetVlbConstants(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets number of variable upper bounds x <= b_i*z_i + d_i of given variable x */
-extern
+EXTERN
 int SCIPvarGetNVubs(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -713,19 +712,19 @@ int SCIPvarGetNVubs(
 /** gets array with bounding variables z_i in variable upper bounds x <= b_i*z_i + d_i of given variable x;
  *  the variable bounds are sorted by increasing variable index of the bounding variable z_i (see SCIPvarGetIndex())
  */
-extern
+EXTERN
 SCIP_VAR** SCIPvarGetVubVars(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets array with bounding coefficients b_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
-extern
+EXTERN
 SCIP_Real* SCIPvarGetVubCoefs(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets array with bounding constants d_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
-extern
+EXTERN
 SCIP_Real* SCIPvarGetVubConstants(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -733,7 +732,7 @@ SCIP_Real* SCIPvarGetVubConstants(
 /** gets number of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem variable x, 
  *  there are no implications for nonbinary variable x
  */
-extern
+EXTERN
 int SCIPvarGetNImpls(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
@@ -742,7 +741,7 @@ int SCIPvarGetNImpls(
 /** gets number of implications  y <= 0 or y >= 1 for x == 0 or x == 1 of given active problem variable x with binary y, 
  *  there are no implications for nonbinary variable x
  */
-extern
+EXTERN
 int SCIPvarGetNBinImpls(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
@@ -754,7 +753,7 @@ int SCIPvarGetNBinImpls(
  *  implied variables, and as a second criteria, the implied variables are sorted by increasing variable index
  *  (see SCIPvarGetIndex())
  */
-extern
+EXTERN
 SCIP_VAR** SCIPvarGetImplVars(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
@@ -764,7 +763,7 @@ SCIP_VAR** SCIPvarGetImplVars(
  *  variable x (SCIP_BOUNDTYPE_UPPER if y <= b, SCIP_BOUNDTYPE_LOWER if y >= b), 
  *  there are no implications for nonbinary variable x
  */
-extern
+EXTERN
 SCIP_BOUNDTYPE* SCIPvarGetImplTypes(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
@@ -773,7 +772,7 @@ SCIP_BOUNDTYPE* SCIPvarGetImplTypes(
 /** gets array with implication bounds b of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem
  *  variable x, there are no implications for nonbinary variable x
  */
-extern
+EXTERN
 SCIP_Real* SCIPvarGetImplBounds(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
@@ -784,60 +783,60 @@ SCIP_Real* SCIPvarGetImplBounds(
  *  If an implication is a shortcut, i.e., it was added as part of the transitive closure of another implication,
  *  its id is negative, otherwise it is nonnegative.
  */
-extern
+EXTERN
 int* SCIPvarGetImplIds(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    );
 
 /** gets number of cliques, the active variable is contained in */
-extern
+EXTERN
 int SCIPvarGetNCliques(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_Bool             varfixing           /**< FALSE for cliques containing x == 0, TRUE for x == 1 */
    );
 
 /** gets array of cliques, the active variable is contained in */
-extern
+EXTERN
 SCIP_CLIQUE** SCIPvarGetCliques(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_Bool             varfixing           /**< FALSE for cliques containing x == 0, TRUE for x == 1 */
    );
 
 /** gets primal LP solution value of variable */
-extern
+EXTERN
 SCIP_Real SCIPvarGetLPSol(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets primal NLP solution value of variable */
-extern
+EXTERN
 SCIP_Real SCIPvarGetNLPSol(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** return lower bound change info at requested position */
-extern
+EXTERN
 SCIP_BDCHGINFO* SCIPvarGetBdchgInfoLb(
    SCIP_VAR*             var,                /**< problem variable */
    int                   pos                 /**< requested position */
    );
 
 /** gets the number of lower bound change info array */
-extern
+EXTERN
 int SCIPvarGetNBdchgInfosLb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** return upper bound change info at requested position */
-extern
+EXTERN
 SCIP_BDCHGINFO* SCIPvarGetBdchgInfoUb(
    SCIP_VAR*             var,                /**< problem variable */
    int                   pos                 /**< requested position */
    );
 
 /** gets the number upper bound change info array */
-extern
+EXTERN
 int SCIPvarGetNBdchgInfosUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -940,25 +939,25 @@ int SCIPvarGetNBdchgInfosUb(
 #endif
 
 /** gets primal LP solution value of variable */
-extern
+EXTERN
 SCIP_Real SCIPvarGetLPSol_rec(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets primal NLP solution value of variable */
-extern
+EXTERN
 SCIP_Real SCIPvarGetNLPSol_rec(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets pseudo solution value of variable at current node */
-extern
+EXTERN
 SCIP_Real SCIPvarGetPseudoSol(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** gets current LP or pseudo solution value of variable */
-extern
+EXTERN
 SCIP_Real SCIPvarGetSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
@@ -967,7 +966,7 @@ SCIP_Real SCIPvarGetSol(
 /** returns the solution of the variable in the last root node's relaxation, if the root relaxation is not yet
  *  completely solved, zero is returned
  */
-extern
+EXTERN
 SCIP_Real SCIPvarGetRootSol(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -975,7 +974,7 @@ SCIP_Real SCIPvarGetRootSol(
 /** returns the best solution (w.r.t. root reduced cost propagation) of the variable in the root node's relaxation, if
  *  the root relaxation is not yet completely solved, zero is returned
  */
-extern
+EXTERN
 SCIP_Real SCIPvarGetBestRootSol(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -984,7 +983,7 @@ SCIP_Real SCIPvarGetBestRootSol(
  *  if the root relaxation is not yet completely solved, or the variable was no column of the root LP, SCIP_INVALID is
  *  returned
  */
-extern
+EXTERN
 SCIP_Real SCIPvarGetBestRootRedcost(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -993,13 +992,13 @@ SCIP_Real SCIPvarGetBestRootRedcost(
  *  reduced cost which is accessible via SCIPvarGetRootRedcost() or the variable was no column of the root LP,
  *  SCIP_INVALID is returned
  */
-extern
+EXTERN
 SCIP_Real SCIPvarGetBestRootLPObjval(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** set the given solution as the best root solution w.r.t. root reduced cost propagation in the variables */
-extern
+EXTERN
 void SCIPvarSetBestRootSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             rootsol,            /**< root solution value */
@@ -1008,7 +1007,7 @@ void SCIPvarSetBestRootSol(
    );
 
 /** returns a weighted average solution value of the variable in all feasible primal solutions found so far */
-extern
+EXTERN
 SCIP_Real SCIPvarGetAvgSol(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -1017,7 +1016,7 @@ SCIP_Real SCIPvarGetAvgSol(
  *  after the bound change with the given index was applied;
  *  returns NULL, if no change to the lower bound was applied up to this point of time
  */
-extern
+EXTERN
 SCIP_BDCHGINFO* SCIPvarGetLbchgInfo(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
@@ -1028,7 +1027,7 @@ SCIP_BDCHGINFO* SCIPvarGetLbchgInfo(
  *  after the bound change with the given index was applied;
  *  returns NULL, if no change to the upper bound was applied up to this point of time
  */
-extern
+EXTERN
 SCIP_BDCHGINFO* SCIPvarGetUbchgInfo(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
@@ -1039,7 +1038,7 @@ SCIP_BDCHGINFO* SCIPvarGetUbchgInfo(
  *  before or after the bound change with the given index was applied;
  *  returns NULL, if no change to the lower/upper bound was applied up to this point of time
  */
-extern
+EXTERN
 SCIP_BDCHGINFO* SCIPvarGetBdchgInfo(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
@@ -1050,7 +1049,7 @@ SCIP_BDCHGINFO* SCIPvarGetBdchgInfo(
 /** returns lower bound of variable directly before or after the bound change given by the bound change index
  *  was applied
  */
-extern
+EXTERN
 SCIP_Real SCIPvarGetLbAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
@@ -1060,7 +1059,7 @@ SCIP_Real SCIPvarGetLbAtIndex(
 /** returns upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
  */
-extern
+EXTERN
 SCIP_Real SCIPvarGetUbAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
@@ -1070,7 +1069,7 @@ SCIP_Real SCIPvarGetUbAtIndex(
 /** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
  */
-extern
+EXTERN
 SCIP_Real SCIPvarGetBdAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
@@ -1079,7 +1078,7 @@ SCIP_Real SCIPvarGetBdAtIndex(
    );
 
 /** returns whether the binary variable was fixed at the time given by the bound change index */
-extern
+EXTERN
 SCIP_Bool SCIPvarWasFixedAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
@@ -1087,7 +1086,7 @@ SCIP_Bool SCIPvarWasFixedAtIndex(
    );
 
 /** returns the last bound change index, at which the bounds of the given variable were tightened */
-extern
+EXTERN
 SCIP_BDCHGIDX* SCIPvarGetLastBdchgIndex(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -1096,7 +1095,7 @@ SCIP_BDCHGIDX* SCIPvarGetLastBdchgIndex(
  *  returns -2, if the variable's bounds are still the global bounds
  *  returns -1, if the variable was fixed in presolving
  */
-extern
+EXTERN
 int SCIPvarGetLastBdchgDepth(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -1105,7 +1104,7 @@ int SCIPvarGetLastBdchgDepth(
  *  returns FALSE, if the first variable is not fixed, and returns TRUE, if the first variable is fixed, but the
  *  second one is not fixed
  */
-extern
+EXTERN
 SCIP_Bool SCIPvarWasFixedEarlier(
    SCIP_VAR*             var1,               /**< first binary variable */
    SCIP_VAR*             var2                /**< second binary variable */
@@ -1121,105 +1120,105 @@ SCIP_Bool SCIPvarWasFixedEarlier(
  *  if a bound change index is NULL, the bound change index represents the current time, i.e. the time after the
  *  last bound change was applied to the current node
  */
-extern
+EXTERN
 SCIP_Bool SCIPbdchgidxIsEarlier(
    SCIP_BDCHGIDX*        bdchgidx1,          /**< first bound change index, or NULL */
    SCIP_BDCHGIDX*        bdchgidx2           /**< second bound change index, or NULL */
    );
 
 /** returns whether first bound change index belongs to an earlier applied bound change than second one */
-extern
+EXTERN
 SCIP_Bool SCIPbdchgidxIsEarlierNonNull(
    SCIP_BDCHGIDX*        bdchgidx1,          /**< first bound change index */
    SCIP_BDCHGIDX*        bdchgidx2           /**< second bound change index */
    );
 
 /** returns old bound that was overwritten for given bound change information */
-extern
+EXTERN
 SCIP_Real SCIPbdchginfoGetOldbound(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns new bound installed for given bound change information */
-extern
+EXTERN
 SCIP_Real SCIPbdchginfoGetNewbound(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns variable that belongs to the given bound change information */
-extern
+EXTERN
 SCIP_VAR* SCIPbdchginfoGetVar(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns whether the bound change information belongs to a branching decision or a deduction */
-extern
+EXTERN
 SCIP_BOUNDCHGTYPE SCIPbdchginfoGetChgtype(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns whether the bound change information belongs to a lower or upper bound change */
-extern
+EXTERN
 SCIP_BOUNDTYPE SCIPbdchginfoGetBoundtype(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns depth level of given bound change information */
-extern
+EXTERN
 int SCIPbdchginfoGetDepth(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns bound change position in its depth level of given bound change information */
-extern
+EXTERN
 int SCIPbdchginfoGetPos(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns bound change index of given bound change information */
-extern
+EXTERN
 SCIP_BDCHGIDX* SCIPbdchginfoGetIdx(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns inference variable of given bound change information */
-extern
+EXTERN
 SCIP_VAR* SCIPbdchginfoGetInferVar(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns inference constraint of given bound change information */
-extern
+EXTERN
 SCIP_CONS* SCIPbdchginfoGetInferCons(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns inference propagator of given bound change information, or NULL if no propagator was responsible */
-extern
+EXTERN
 SCIP_PROP* SCIPbdchginfoGetInferProp(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns inference user information of given bound change information */
-extern
+EXTERN
 int SCIPbdchginfoGetInferInfo(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns inference bound of inference variable of given bound change information */
-extern
+EXTERN
 SCIP_BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns whether the bound change information belongs to a redundant bound change */
-extern
+EXTERN
 SCIP_Bool SCIPbdchginfoIsRedundant(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 /** returns whether the bound change has an inference reason (constraint or propagator), that can be resolved */
-extern
+EXTERN
 SCIP_Bool SCIPbdchginfoHasInferenceReason(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
@@ -1227,69 +1226,69 @@ SCIP_Bool SCIPbdchginfoHasInferenceReason(
 /** for two bound change informations belonging to the same variable and bound, returns whether the first bound change
  *  has a tighter new bound as the second bound change
  */
-extern
+EXTERN
 SCIP_Bool SCIPbdchginfoIsTighter(
    SCIP_BDCHGINFO*       bdchginfo1,         /**< first bound change information */
    SCIP_BDCHGINFO*       bdchginfo2          /**< second bound change information */
    );
 
 /** returns the new value of the bound in the bound change data */
-extern
+EXTERN
 SCIP_Real SCIPboundchgGetNewbound(
    SCIP_BOUNDCHG*        boundchg            /**< bound change data */
    );
 
 /** returns the variable of the bound change in the bound change data */
-extern
+EXTERN
 SCIP_VAR* SCIPboundchgGetVar(
    SCIP_BOUNDCHG*        boundchg            /**< bound change data */
    );
 
 /** returns the bound change type of the bound change in the bound change data */
-extern
+EXTERN
 SCIP_BOUNDCHGTYPE SCIPboundchgGetBoundchgtype(
    SCIP_BOUNDCHG*        boundchg            /**< bound change data */
    );
 
 /** returns the bound type of the bound change in the bound change data */
-extern
+EXTERN
 SCIP_BOUNDTYPE SCIPboundchgGetBoundtype(
    SCIP_BOUNDCHG*        boundchg            /**< bound change data */
    );
 
 /** returns whether the bound change is redundant due to a more global bound that is at least as strong */
-extern
+EXTERN
 SCIP_Bool SCIPboundchgIsRedundant(
    SCIP_BOUNDCHG*        boundchg            /**< bound change data */
    );
 
 /** returns the number of bound changes in the domain change data */
-extern
+EXTERN
 int SCIPdomchgGetNBoundchgs(
    SCIP_DOMCHG*          domchg              /**< domain change data */
    );
 
 /** returns a particular bound change in the domain change data */
-extern
+EXTERN
 SCIP_BOUNDCHG* SCIPdomchgGetBoundchg(
    SCIP_DOMCHG*          domchg,             /**< domain change data */
    int                   pos                 /**< position of the bound change in the domain change data */
    );
 
 /** returns left bound of open interval in hole */
-extern
+EXTERN
 SCIP_Real SCIPholelistGetLeft(
    SCIP_HOLELIST*        holelist            /**< hole list pointer to hole of interest */
    );
 
 /** returns right bound of open interval in hole */
-extern
+EXTERN
 SCIP_Real SCIPholelistGetRight(
    SCIP_HOLELIST*        holelist            /**< hole list pointer to hole of interest */
    );
 
 /** returns next hole in list or NULL */
-extern
+EXTERN
 SCIP_HOLELIST* SCIPholelistGetNext(
    SCIP_HOLELIST*        holelist            /**< hole list pointer to hole of interest */
    );

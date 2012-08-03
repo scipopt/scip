@@ -66,7 +66,7 @@
  * therein for more details.
  *
  * @subsection CREATING Creating the problem
- * 
+ *
  * After parsing the file the final task for the reader is to create the problem. In our case, we pass the collected data
  * to the \ref probdata_binpacking.h "main problem data plugin". For this, we use the interface methods
  * SCIPprobdataCreate() which is provided by the
@@ -86,13 +86,21 @@
 #include "probdata_binpacking.h"
 #include "reader_bpa.h"
 
+/**@name Reader properties
+ *
+ * @{
+ */
+
 #define READER_NAME             "bpareader"
 #define READER_DESC             "file reader for binpacking data format"
 #define READER_EXTENSION        "bpa"
 
+/**@} */
 
-/*
- * Callback methods of reader
+
+/**@name Callback methods
+ *
+ * @{
  */
 
 /** problem reading method of reader */
@@ -147,7 +155,7 @@ SCIP_DECL_READERREAD(readerReadBpa)
 
       SCIPdebugMessage("problem name <%s>\n", name);
    }
-   
+
    /* read problem dimension */
    if( !SCIPfeof(file) )
    {
@@ -166,16 +174,16 @@ SCIP_DECL_READERREAD(readerReadBpa)
 
       SCIPdebugMessage("capacity = <%d>, number of items = <%d>, best known solution = <%d>\n", capacity, nitems, bestsolvalue);
    }
-   
+
 
    /* allocate buffer memory for storing the weights and ids temporary */
    SCIP_CALL( SCIPallocBufferArray(scip, &weights, nitems) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ids, nitems) );
-   
+
    /* pasre weights */
    nweights = 0;
    error = FALSE;
-   
+
    while( !SCIPfeof(file) && !error )
    {
       /* get next line */
@@ -206,10 +214,10 @@ SCIP_DECL_READERREAD(readerReadBpa)
       SCIPwarningMessage(scip, "set nitems from <%d> to <%d> since the file <%s> only contains <%d> weights\n", nitems, weights, filename, weights);
       nitems = nweights;
    }
-   
+
    if( !error )
    {
-      /* create a new problem in SCIP */  
+      /* create a new problem in SCIP */
       SCIP_CALL( SCIPprobdataCreate(scip, name, ids, weights, nitems, (SCIP_Longint)capacity) );
    }
 
@@ -219,14 +227,18 @@ SCIP_DECL_READERREAD(readerReadBpa)
 
    if( error )
       return SCIP_READERROR;
-   
+
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
 
-/*
- * reader specific interface methods
+/**@} */
+
+
+/**@name Interface methods
+ *
+ * @{
  */
 
 /** includes the bpa file reader in SCIP */
@@ -239,12 +251,14 @@ SCIP_RETCODE SCIPincludeReaderBpa(
 
    /* create binpacking reader data */
    readerdata = NULL;
-   
+
    /* include binpacking reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
    assert(reader != NULL);
 
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadBpa) );
-   
+
    return SCIP_OKAY;
 }
+
+/**@} */

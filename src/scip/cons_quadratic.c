@@ -3488,7 +3488,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
              */
             if( integral )
             {
-               scale = gcd;
+               scale = (SCIP_Real)gcd;
                assert(scale >= 1.0);
             }
             else if( nxvars == 1 )

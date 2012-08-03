@@ -29,9 +29,9 @@ III  Examples
 I Brief installation description
 ********************************
 
-The easiest way to install SCIP is to use the ZIB Optimization Suite which
+The easiest way to install SCIP is to use the SCIP Optimization Suite which
 contains SCIP, SoPlex, and ZIMPL. For that we refer to the INSTALL file of
-the ZIB Optimization Suite (In case of the ZIB Optimization Suite, there is
+the SCIP Optimization Suite (In case of the SCIP Optimization Suite, there is
 no need to specify any directories, the compiling process is fully
 automated).
 
@@ -56,6 +56,14 @@ Beside that, SCIP needs the some soft-link targets for ZIMPL
 
 You will need either the .a or the .so files and can skip the others by
 just pressing return.
+
+The most common compiling issue is that some libraries are missing on
+your system or that they are outdated. SCIP per default requires zlib,
+gmp and readline.  Try compiling with:
+make ZLIB=false READLINE=false ZIMPL=false
+or, better, install them. Note that under Linux-based systems, you
+need to install the developer-versions of gmp/zlib/readline, in order
+to also have the header-files available.
 
 II Detailed installation description
 ************************************

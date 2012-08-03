@@ -24,13 +24,16 @@
 
 #include "scip/prop_xyz.h"
 
-
+/* fundamental propagator properties */
 #define PROP_NAME              "xyz"
 #define PROP_DESC              "propagator template"
 #define PROP_PRIORITY                 0 /**< propagator priority */ 
 #define PROP_FREQ                    10 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define PROP_TIMING             SCIP_PROPTIMING_BEFORELP/**< propagation timing mask */
+
+/* optional propagator properties
+ * TODO: remove those properties if propagator does not support presolving */
 #define PROP_PRESOL_PRIORITY          0 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
 #define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
 #define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no

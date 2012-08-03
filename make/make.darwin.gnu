@@ -1,5 +1,5 @@
 ARFLAGS		=	crs
-LDFLAGS		+=
+LDFLAGS		+=      $(LINKCC_L)/opt/local/lib
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=
