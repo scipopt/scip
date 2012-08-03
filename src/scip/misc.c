@@ -6526,8 +6526,8 @@ int SCIPmemccpy(
 
 /** prints an error message containing of the given string followed by a string describing the current system error;
  *  prefers to use the strerror_r method, which is threadsafe; on systems where this method does not exist,
- *  NO_STRERROR_R should be defined (see INSTALL), in this case, srerror is used which is not guaranteed to be
- *  threadsafe (on SUN-systems, it actually is) 
+ *  NO_STRERROR_R should be defined (see INSTALL), in this case, strerror is used which is not guaranteed to be
+ *  threadsafe (on SUN-systems, it actually is)
  */
 void SCIPprintSysError(
    const char*           message             /**< first part of the error message, e.g. the filename */
@@ -6538,7 +6538,13 @@ void SCIPprintSysError(
    buf = strerror(errno);
 #else
    char buf[SCIP_MAXSTRLEN];
+
+#if defined(_WIN32) || defined(_WIN64)
+   (void) strerror_s(buf, SCIP_MAXSTRLEN, errno);
+#else
    (void) strerror_r(errno, buf, SCIP_MAXSTRLEN);
+#endif
+
    buf[SCIP_MAXSTRLEN - 1] = '\0';
 #endif
    SCIPmessagePrintError("%s: %s\n", message, buf);
@@ -6601,8 +6607,14 @@ int SCIPsnprintf(
    assert(len > 0);
 
    va_start(ap, s); /*lint !e826*/
+
+#if defined(_WIN32) || defined(_WIN64)
+   n = _vsnprintf(t, (size_t) len, s, ap);
+#else
    n = vsnprintf(t, (size_t) len, s, ap);
+#endif
    va_end(ap);
+
    if( n < 0 || n >= len )
    {
 #ifndef NDEBUG
