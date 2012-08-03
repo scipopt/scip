@@ -28,6 +28,11 @@
 #include "scip/bitencode.h"
 #include <string.h>
 
+/* do defines for windows directly her to make the lpi more independent*/
+#if defined(_WIN32) || defined(_WIN64)
+#define snprintf _snprintf
+#endif
+
 #define scipmskobjsen MSKobjsensee
 #define SENSE2MOSEK(objsen) (((objsen)==SCIP_OBJSEN_MINIMIZE)?(MSK_OBJECTIVE_SENSE_MINIMIZE):(MSK_OBJECTIVE_SENSE_MAXIMIZE))
 

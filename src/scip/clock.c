@@ -83,7 +83,7 @@ void sec2cputime(
 
    assert(cputime != NULL);
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
    clocks_per_second = 100;
 #else
 #ifndef CLK_TCK

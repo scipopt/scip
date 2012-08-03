@@ -43,13 +43,20 @@
 #endif
 
 /*
- * Define the marco EXTERN depending if the OS is Windows or not
+ * Define the marco EXTERN and some functions depending if the OS is Windows or not
  */
 #if defined(_WIN32) || defined(_WIN64)
+
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#define getcwd _getcwd
+
 #define EXTERN __declspec(dllexport)
+
 #else
 #define EXTERN extern
 #endif
+
 
 
 #include "scip/type_retcode.h"
@@ -172,13 +179,6 @@ extern "C" {
  */
 
 #define SCIP_MAXSTRLEN             1024 /**< maximum string length in SCIP */
-#if defined(_WIN32) || defined(_WIN64)
-#define snprintf _snprintf
-#define vsnprintf _vsnprintf
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
-#endif
-
 
 /*
  * Memory settings
@@ -265,7 +265,7 @@ extern "C" {
  * Define to mark deprecated API functions
  */
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(_WIN64)
 #  define SCIP_DEPRECATED __declspec(deprecated)
 #elif defined(__GNUC__) && defined(__linux__)
 #  define SCIP_DEPRECATED __attribute__ ((deprecated))

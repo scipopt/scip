@@ -76,6 +76,10 @@
 #include "scip/bitencode.h"
 #include "scip/pub_message.h"
 
+/* do defines for windows directly her to make the lpi more independent*/
+#if defined(_WIN32) || defined(_WIN64)
+#define snprintf _snprintf
+#endif
 
 /* for debugging: alternatingly write files "debug_[p|d]_[0|1].mps" after each run - use with care! */
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
