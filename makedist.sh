@@ -68,9 +68,8 @@ $NAME/examples/Binpacking/src/depend.* \
 $NAME/examples/Binpacking/src/*.c $NAME/examples/Binpacking/src/*.h \
 $NAME/examples/Binpacking/data/*.bpa \
 $NAME/examples/CallableLibrary/Makefile $NAME/examples/CallableLibrary/INSTALL \
-$NAME/examples/CallableLibrary/doc/sciplib.dxy $NAME/examples/CallableLibrary/doc/header.html \
-$NAME/examples/CallableLibrary/doc/layout.xml $NAME/examples/CallableLibrary/doc/sciplib.dxy \
-$NAME/examples/CallableLibrary/doc/xternal.c \
+$NAME/examples/CallableLibrary/doc/scip.dxy $NAME/examples/CallableLibrary/doc/header.html \
+$NAME/examples/CallableLibrary/doc/layout.xml $NAME/examples/CallableLibrary/doc/xternal.c \
 $NAME/examples/CallableLibrary/src/depend.* $NAME/examples/CallableLibrary/src/*.c \
 $NAME/examples/Coloring/* $NAME/examples/Coloring/doc/* $NAME/examples/Coloring/data/* \
 $NAME/examples/Coloring/check/testset/short.test $NAME/examples/Coloring/check/testset/short.solu \
@@ -108,12 +107,12 @@ $NAME/examples/VRP/Makefile  $NAME/examples/VRP/INSTALL  \
 $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
 $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
-$NAME/examples/VRP/check/check.sh $NAME/examples/VRP/check/testset/{short,vrp}.* \
+$NAME/examples/VRP/check/check.sh $NAME/examples/VRP/check/testset/* \
 $NAME/interfaces/matlab/* \
 $NAME/interfaces/ampl/Makefile $NAME/interfaces/ampl/INSTALL $NAME/interfaces/ampl/get.ASL \
-$NAME/interfaces/ampl/src/*.{c,h} $NAME/interfaces/ampl/src/depend.* \
-$NAME/interfaces/ampl/check/check.sh $NAME/interfaces/ampl/check/testset/short.test \
-$NAME/interfaces/ampl/check/instances/MINLP/*.{col,row,nl} \
+$NAME/interfaces/ampl/src/* $NAME/interfaces/ampl/check/check.sh \
+$NAME/interfaces/ampl/check/testset/short.test $NAME/interfaces/ampl/check/instances/MINLP/*.col \
+$NAME/interfaces/ampl/check/instances/MINLP/*.row $NAME/interfaces/ampl/check/instances/MINLP/*.nl \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \
