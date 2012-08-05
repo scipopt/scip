@@ -440,9 +440,9 @@
       <a name="Q2.5">How can I input a MINLP into SCIP?</a>
     </p>
     <p class="a">
-      Mixed-integer nonlinear constrained programs can be input via the reader for .osil files and the AMPL interface.
+      Mixed-integer nonlinear constrained programs can be input via the reader for OSiL and ZIMPL files and the AMPL interface.
       An interface to the modeling language GAMS is available in the <a href="https://projects.coin-or.org/GAMSlinks">COIN-OR/GAMSlinks</a> project.<br>
-      Further, mixed-integer <b>polynomially</b> constrained programs can be input via the readers for *.zpl and *.pip files.<br>
+      Further, mixed-integer <b>polynomially</b> constrained programs can be input via the readers for PIP files.<br>
       Finally, the readers for *.mps and *.lp files support the CPLEX extensions for <b>quadratic</b> constraints and objective.
     </p>
 
