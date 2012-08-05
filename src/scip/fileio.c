@@ -58,10 +58,17 @@ int SCIPfprintf(SCIP_FILE *stream, const char *format, ...)
 {
    char buffer[BUFFER_LEN];
    va_list ap;
+   int n;
 
    va_start(ap, format); /*lint !e826*/
-   (void) SCIPsnprintf(buffer, BUFFER_LEN, format, ap);
+#if defined(_WIN32) || defined(_WIN64)
+   n = _vsnprintf(t, (size_t) len, s, ap);
+#else
+   n = vsnprintf(buffer, BUFFER_LEN, format, ap);
+#endif
    va_end(ap);
+   if( n < 0 || n > BUFFER_LEN)
+      buffer[BUFFER_LEN-1] = '\0';
 
    return gzputs((gzFile)stream, buffer);
 }
