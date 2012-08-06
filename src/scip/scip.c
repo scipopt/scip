@@ -14400,7 +14400,7 @@ SCIP_Real SCIPgetVarImplRedcost(
       return SCIPgetVarImplRedcost(scip, var->data.original.transvar, varfixing);
 
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPvarGetImplRedcost(var, varfixing, scip->stat, scip->lp);
+      return SCIPvarGetImplRedcost(var, scip->set, varfixing, scip->stat, scip->lp);
 
    case SCIP_VARSTATUS_LOOSE:
       return SCIP_INVALID;
