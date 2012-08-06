@@ -14400,7 +14400,7 @@ SCIP_Real SCIPgetVarImplRedcost(
       return SCIPgetVarImplRedcost(scip, var->data.original.transvar, varfixing);
 
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPvarGetImplRedcost(var, varfixing, scip->stat, scip->lp);
+      return SCIPvarGetImplRedcost(var, scip->set, varfixing, scip->stat, scip->lp);
 
    case SCIP_VARSTATUS_LOOSE:
       return SCIP_INVALID;
@@ -28444,7 +28444,9 @@ SCIP_RETCODE SCIPincSolVal(
  *
  *  @return value of variable in primal CIP solution, or in current LP/pseudo solution
  *
- *  @pre This method can be called if SCIP is in one of the following stages:
+ *  @pre In case the solution pointer @p sol is @b NULL, that means it is asked for the LP or pseudo solution, this method
+ *       can only be called if @p scip is in the solving stage \ref SCIP_STAGE_SOLVING. In any other case, this method
+ *       can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -28468,11 +28470,9 @@ SCIP_Real SCIPgetSolVal(
 
    if( sol != NULL )
       return SCIPsolGetVal(sol, scip->set, scip->stat, var);
-   else
-   {
-      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-      return SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(scip->tree));
-   }
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   return SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(scip->tree));
 }
 
 /** gets values of multiple variables in primal CIP solution
