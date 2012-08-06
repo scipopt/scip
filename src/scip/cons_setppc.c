@@ -1001,22 +1001,47 @@ SCIP_RETCODE delCoefPos(
    return SCIP_OKAY;
 }
 
-/** in case a part (more than one variable) in the setppc constraint is independent of every else, we can perform dual
- *  reductions;
+/** in case a part (more than one variable) in the setppc constraint is independent of every else (is locked only by
+ * this constraint), we can perform dual reductions;
  *
  *  (1) set covering
- *      - fix the variable with the smallest object coefficient to one if the constraint is not modifiable and all
- *        variable are independant
+ *
  *      - fix all independant variables with negative object coefficient to one
- *      - fix all remaining independant variables to zero 
+ *      - fix all remaining independant variables to zero
+ *
+ *      (i) all variables are independent and the constraint is not modifiable
+ *
+ *          - fix the variable with the smallest object coefficient to one
+ *
+ *     (ii) a variable x has exactly 0 uplocks and arbitrary downlocks and a variable y has exactly 1 downlock and
+ *          arbitrary uplocks and obj(x) <= obj(y) and obj(y) >= 0
+ *
+ *          - fix y to 0, because it is dominated by x
+ *
  *  (2) set partitioning
- *      - fix the variable with the smallest object coefficient to one if the constraint is not modifiable and all
- *        variables are independant
- *      - fix all remaining independant variables to zero
+ *
+ *      (i) all variables are independent and the constraint is not modifiable
+ *
+ *          - fix the variable with the smallest object coefficient to one
+ *          - fix all remaining independant variables to zero
+ *
+ *     (ii) a variable x has exactly 1 uplock and arbitrary downlocks and a variable y has exactly 1 downlock and
+ *          arbitrary uplocks and obj(x) <= obj(y)
+ *
+ *          - fix y to 0, because it is dominated by x
+ *
  *  (3) set packing
- *      - fix the variable with the smallest object coefficient to one if the object coefficient is negative or zero
- *        otherwise fix it to one, but only if the constraint is not modifiable and all variables are independant
- *      - fix all remaining independant variables to zero
+ *
+ *      (i) all variables are independent and the constraint is not modifiable
+ *
+ *          - fix the variable with the smallest object coefficient to one if the object coefficient is negative or zero
+ *          - fix all remaining independant variables to zero
+ *
+ *     (ii) a variable x has exactly 1 uplock and arbitrary downlocks and a variable y has exactly 0 downlocks and
+ *          arbitrary uplocks and obj(x) <= obj(y)
+ *
+ *          - fix y to 0, because it is dominated by x
+ *
  *
  * Note: the following dual reduction for set covering and set packing constraints is already performed by the presolver
  *       "dualfix"
@@ -1024,8 +1049,12 @@ SCIP_RETCODE delCoefPos(
  *           - if a variable in a set covering constraint is only locked by that constraint and has negative or zero
  *             objective coefficient than it can be fixed to one
  *       (2) in case of a set packing constraint the following dual reduction can be performed:
- *           - if a variable in a set covering constraint is only locked by that constraint and has position or zero 
+ *           - if a variable in a set packing constraint is only locked by that constraint and has positive or zero
  *             objective coefficient than it can be fixed to zero
+ *
+ * Note: all dual reduction (ii) could also be performed by the "domcol" presolver, but cause the pairwise comparison of
+ *       columns is only done heuristically (and here it should be even cheaper) we perform them here (too)
+ *
  */
 static
 SCIP_RETCODE dualPresolving(
@@ -1039,6 +1068,7 @@ SCIP_RETCODE dualPresolving(
    SCIP_CONSDATA* consdata;
    SCIP_SETPPCTYPE setppctype;
    SCIP_VAR** vars;
+   SCIP_VAR* activevar;
    SCIP_VAR* var;
    SCIP_Real bestobjval;
    SCIP_Real objval;
@@ -1046,13 +1076,14 @@ SCIP_RETCODE dualPresolving(
    SCIP_Bool infeasible;
    SCIP_Bool fixed;
    SCIP_Bool negated;
-   int nfixables;
+   int noldfixed;
+   int nposfixings;
    int nlockdowns;
    int nlockups;
    int nvars;
    int idx;
    int v;
-   
+
    assert(scip != NULL);
    assert(cons != NULL);
    assert(nfixedvars != NULL);
@@ -1061,11 +1092,11 @@ SCIP_RETCODE dualPresolving(
 
    /* constraints for which the check flag is set to FALSE, did not contribute to the lock numbers; therefore, we cannot
     * use the locks to decide for a dual reduction using this constraint; for example after a restart the cuts which are
-    * added to the problems have the check flag set to FALSE 
+    * added to the problems have the check flag set to FALSE
     */
    if( !SCIPconsIsChecked(cons) )
       return SCIP_OKAY;
-   
+
    assert(SCIPconsIsActive(cons));
 
    consdata = SCIPconsGetData(cons);
@@ -1074,11 +1105,11 @@ SCIP_RETCODE dualPresolving(
    /* all fixed variables should be removed at that point */
    assert(consdata->nfixedones == 0);
    assert(consdata->nfixedzeros == 0);
-   
+
    nvars = consdata->nvars;
-   
+
    /* we don't want to consider small constraints (note that the constraints can be modifiable, so we can't delete this
-    * constraint) 
+    * constraint)
     */
    if( nvars < 2 )
       return SCIP_OKAY;
@@ -1087,7 +1118,7 @@ SCIP_RETCODE dualPresolving(
    vars = consdata->vars;
    idx = -1;
    bestobjval = SCIP_INVALID;
-   
+
    /* collect the rounding locks depending on the setppc type */
    switch( setppctype )
    {
@@ -1109,10 +1140,10 @@ SCIP_RETCODE dualPresolving(
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
-   nfixables = 0;
+   nposfixings = 0;
 
    /* check if we can apply the dual reduction; therefore count the number of variables where the setppc has the only
-    * locks on this constraint 
+    * locks on this constraint
     */
    for( v = 0; v < nvars; ++v )
    {
@@ -1121,196 +1152,170 @@ SCIP_RETCODE dualPresolving(
 
       /* the variable should not be (globally) fixed */
       assert(SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5);
-      
-      /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
+
+      if( SCIPvarGetNLocksDown(var) >= nlockdowns && SCIPvarGetNLocksUp(var) == nlockups )
+      {
+	 activevar = var;
+	 negated = FALSE;
+
+	 /* get the active variable */
+	 SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
+	 assert(SCIPvarIsActive(activevar));
+
+	 if( negated )
+	    objval = -SCIPvarGetObj(activevar);
+	 else
+	    objval = SCIPvarGetObj(activevar);
+
+	 /* check if the current variable has a smaller objective coefficient */
+	 if( idx == -1 || objval < bestobjval )
+	 {
+	    idx = v;
+	    bestobjval = objval;
+	 }
+      }
+
+      /* in case another constraint has also downlocks on that variable we cannot perform a dual reduction on these
        * variables
        */
-      if( SCIPvarGetNLocksDown(var) > nlockdowns || SCIPvarGetNLocksUp(var) > nlockups ) 
-         continue;
-
-      ++nfixables;
-      negated = FALSE;
-      
-      /* get the active variable */
-      SCIP_CALL( SCIPvarGetProbvarBinary(&var, &negated) );
-      assert(SCIPvarIsActive(var));
-
-      if( negated )
-         objval = -SCIPvarGetObj(var);
-      else
-         objval = SCIPvarGetObj(var);
-      
-      /* check if the current variable has a smaller objective coefficient */
-      if( SCIPisLT(scip, objval, bestobjval) )
-      {
-         idx = v;
-         bestobjval = objval;
-      }
+      if( SCIPvarGetNLocksDown(var) == nlockdowns && SCIPvarGetNLocksUp(var) >= nlockups )
+	 ++nposfixings;
    }
 
-   if( nfixables < 2 )
+   if( idx == -1 || nposfixings == 0 )
       return SCIP_OKAY;
+
+   SCIPdebugMessage("dual fixing constraint: \n");
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, "\n") );
 
    assert(idx >= 0 && idx < nvars);
    assert(bestobjval < SCIPinfinity(scip));
-   
+
    *result = SCIP_SUCCESS;
+   noldfixed = *nfixedvars;
 
-   /* in case of set packing and set partitioning we fix the remaining variables to zero; Note that this would be also
-    * done by the "dualfix" presolver or in the next presolving round of the setppc constraint handler; for performance
-    * reasons we do it directly
-    */
-   if( setppctype != SCIP_SETPPCTYPE_COVERING ) 
-   { 
+   /* in case of set packing and set partitioning we fix the dominated variables to zero */
+   if( setppctype != SCIP_SETPPCTYPE_COVERING )
+   {
       /* first part of all variables */
-      for( v = 0; v < idx; ++v ) 
+      for( v = 0; v < nvars; ++v )
       {
+	 if( v == idx )
+	    continue;
+
          var = vars[v];
          assert(var != NULL);
 
-         /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
+         /* in case another constraint has also downlocks on that variable we cannot perform a dual reduction on these
           * variables
           */
-         if( SCIPvarGetNLocksDown(var) > nlockdowns || SCIPvarGetNLocksUp(var) > nlockups ) 
-            continue;
+         if( SCIPvarGetNLocksDown(var) == nlockdowns && SCIPvarGetNLocksUp(var) >= nlockups )
+         {
+	    activevar = var;
+	    negated = FALSE;
 
-         SCIP_CALL( SCIPfixVar(scip, var, 0.0, &infeasible, &fixed) ); 
-         assert(!infeasible); 
-         assert(fixed);
-   
-         SCIPdebugMessage(" -> fixed <%s> == 0.0\n", SCIPvarGetName(var));
-         ++(*nfixedvars);
-      }
+	    /* get the active variable */
+	    SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
+	    assert(SCIPvarIsActive(activevar));
 
-      /* second part of all variables */
-      for( v = idx + 1; v < nvars; ++v )
-      {
-         var = vars[v];
-         assert(var != NULL);
+	    if( negated )
+	       objval = -SCIPvarGetObj(activevar);
+	    else
+	       objval = SCIPvarGetObj(activevar);
 
-         /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
-          * variables
-          */
-         if( SCIPvarGetNLocksDown(var) > nlockdowns || SCIPvarGetNLocksUp(var) > nlockups ) 
-            continue;
+	    if( objval >= bestobjval )
+	    {
+	       SCIP_CALL( SCIPfixVar(scip, var, 0.0, &infeasible, &fixed) );
+	       assert(!infeasible);
+	       assert(fixed);
 
-         SCIP_CALL( SCIPfixVar(scip, var, 0.0, &infeasible, &fixed) );
-         assert(!infeasible);
-         assert(fixed);
-   
-         SCIPdebugMessage(" -> fixed <%s> == 0.0\n", SCIPvarGetName(var));
-         ++(*nfixedvars);
+	       SCIPdebugMessage(" -> dual-fixed dominated variable <%s> == 0.0\n", SCIPvarGetName(var));
+	       ++(*nfixedvars);
+	    }
+	 }
       }
    }
    /* if we got a set covering constraint and not all variables are locked from this constraint it might not get
     * redundant (which is case if it is not possible to fix at least one variable to one), we fix all redundant
     * variables to their best bound
     */
-   else if( nfixables != nvars )
+   else
    {
-      SCIP_VAR* activevar;
-
       /* first part of all variables */
-      for( v = 0; v < idx; ++v ) 
+      for( v = 0; v < nvars; ++v )
       {
+	 if( v == idx )
+	    continue;
+
          var = vars[v];
          assert(var != NULL);
 
-         /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
+         /* in case another constraint has also downlocks on that variable we cannot perform a dual reduction on these
           * variables
           */
-         if( SCIPvarGetNLocksDown(var) > nlockdowns || SCIPvarGetNLocksUp(var) > nlockups ) 
-            continue;
+         if( SCIPvarGetNLocksDown(var) == nlockdowns && SCIPvarGetNLocksUp(var) >= nlockups )
+	 {
+	    activevar = var;
+	    negated = FALSE;
 
-         activevar = var;
-         negated = FALSE;
+	    /* get the active variable */
+	    SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
+	    assert(SCIPvarIsActive(activevar));
+	    assert(SCIPvarGetNLocksDown(var) == SCIPvarGetNLocksDown(activevar) && SCIPvarGetNLocksUp(var) == SCIPvarGetNLocksUp(activevar));
 
-         /* get the active variable */
-         SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
-         assert(SCIPvarIsActive(activevar));
-         
-         if( negated )
-            objval = -SCIPvarGetObj(activevar);
-         else
-            objval = SCIPvarGetObj(activevar);
+	    if( negated )
+	       objval = -SCIPvarGetObj(activevar);
+	    else
+	       objval = SCIPvarGetObj(activevar);
 
-         if( objval > 0.0 )
-            fixval = 0.0;
-         else
-            fixval = 1.0;
-                 
-         SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) ); 
-         assert(!infeasible); 
-         assert(fixed);
-   
-         SCIPdebugMessage(" -> fixed <%s> == %g\n", SCIPvarGetName(var), fixval);
-         ++(*nfixedvars);
-      }
+	    if( objval > 0.0 )
+	       fixval = 0.0;
+	    else
+	       fixval = 1.0;
 
-      /* second part of all variables */
-      for( v = idx + 1; v < nvars; ++v )
-      {
-         var = vars[v];
-         assert(var != NULL);
+	    /* if variables has a negative objective contribution, and is uplocked by another constraint we cannot fix
+	     * the variables to 1
+	     */
+	    if( (fixval == 1.0 && SCIPvarGetNLocksUp(var) > nlockups) || objval < bestobjval )
+	       continue;
 
-         /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
-          * variables
-          */
-         if( SCIPvarGetNLocksDown(var) > nlockdowns || SCIPvarGetNLocksUp(var) > nlockups ) 
-            continue;
+	    SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
+	    assert(!infeasible);
+	    assert(fixed);
 
-         activevar = var;
-         negated = FALSE;
-
-         /* get the active variable */
-         SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
-         assert(SCIPvarIsActive(activevar));
-         
-         if( negated )
-            objval = -SCIPvarGetObj(activevar);
-         else
-            objval = SCIPvarGetObj(activevar);
-
-         if( objval > 0.0 )
-            fixval = 0.0;
-         else
-            fixval = 1.0;
-         
-         SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
-         assert(!infeasible);
-         assert(fixed);
-   
-         SCIPdebugMessage(" -> fixed <%s> == %g\n", SCIPvarGetName(var), fixval);
-         ++(*nfixedvars);
+	    SCIPdebugMessage(" -> dual-fixed dominated variable <%s> == %g\n", SCIPvarGetName(var), fixval);
+	    ++(*nfixedvars);
+	 }
       }
    }
 
-   /* if all variable have our appreciated number of locks and the constraint is not modifiable, or if we have a set
-    * covering constraint and the bestobjval is less than or equal to zero, we can fix the variable with the smallest
-    * objective coefficient and the constraint gets redundant
+   /* if all variable but the domination variable is fixed and the constraint is not modifiables or the constraint is a
+    * covering constraint and the bestobjval is less than or equal to zero, we can fix the domination variable (with best
+    * objective coefficient) and the constraint gets redundant
     */
-   if( (nfixables == nvars && !SCIPconsIsModifiable(cons)) || (setppctype == SCIP_SETPPCTYPE_COVERING && bestobjval <= 0.0) )
+   if( ((*nfixedvars - noldfixed == nvars - 1) && !SCIPconsIsModifiable(cons)) || (setppctype == SCIP_SETPPCTYPE_COVERING && bestobjval <= 0.0) )
    {
       /* in case of a set packing constraint with position objective values, all variables can be fixed to zero; in all
-       * other cases the variable with the smallest objective values is fixed to one 
+       * other cases the variable with the smallest objective values is fixed to one
        */
       if( setppctype == SCIP_SETPPCTYPE_PACKING && bestobjval > 0.0 )
          fixval = 0.0;
       else
          fixval = 1.0;
-      
+
       SCIP_CALL( SCIPfixVar(scip, vars[idx], fixval, &infeasible, &fixed) );
       assert(!infeasible);
       assert(fixed);
-      
-      SCIPdebugMessage(" -> fixed <%s> == %g\n", SCIPvarGetName(vars[idx]), fixval);
+
+      SCIPdebugMessage(" -> dual-fixed best variable <%s> == %g\n", SCIPvarGetName(vars[idx]), fixval);
       ++(*nfixedvars);
 
       /* remove constraint since i*/
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
    }
-   
+
    return SCIP_OKAY;
 }
 
