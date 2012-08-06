@@ -1213,7 +1213,7 @@ SCIP_RETCODE tightenVarLb(
    SCIP_Bool             global,             /**< is the bound globally valid? */
    SCIP_VAR*             vbdvar,             /**< variable which is the reason for the lower bound change */
    SCIP_BOUNDTYPE        boundtype,          /**< bound which is the reason for the lower bound change */
-   SCIP_Bool             force,              /**< should domain changes be forced */
+   SCIP_Bool             force,              /**< should domain changes for continuous variables be forced */
    SCIP_Real             coef,               /**< coefficient in vbound constraint causing the propagation;
                                               *   or 0.0 if propagation is caused by clique or implication */
    SCIP_Real             constant,           /**< constant in vbound constraint causing the propagation;
@@ -1224,6 +1224,7 @@ SCIP_RETCODE tightenVarLb(
    )
 {
    INFERINFO inferinfo;
+   SCIP_Real lb;
    SCIP_Bool tightened;
    SCIP_Bool infeasible;
 
@@ -1233,6 +1234,14 @@ SCIP_RETCODE tightenVarLb(
    assert(var != NULL);
    assert(nchgbds != NULL);
    assert(result != NULL);
+
+   lb = SCIPvarGetLbLocal(var);
+
+   /* check that the new upper bound is better */
+   if( (SCIPvarIsIntegral(var) && newlb - lb > 0.5) || (force && SCIPisGT(scip, newlb, lb)) )
+      force = TRUE;
+   else
+      force = FALSE;
 
    /* try to tighten the lower bound */
    if( global )
@@ -1288,7 +1297,7 @@ SCIP_RETCODE tightenVarUb(
    SCIP_Bool             global,             /**< is the bound globally valid? */
    SCIP_VAR*             vbdvar,             /**< variable which is the reason for the upper bound change */
    SCIP_BOUNDTYPE        boundtype,          /**< bound which is the reason for the upper bound change */
-   SCIP_Bool             force,              /**< should domain changes be forced */
+   SCIP_Bool             force,              /**< should domain changes for continuous variables be forced */
    SCIP_Real             coef,               /**< coefficient in vbound constraint causing the propagation;
                                               *   or 0.0 if propagation is caused by clique or implication */
    SCIP_Real             constant,           /**< constant in vbound constraint causing the propagation;
@@ -1299,6 +1308,7 @@ SCIP_RETCODE tightenVarUb(
    )
 {
    INFERINFO inferinfo;
+   SCIP_Real ub;
    SCIP_Bool tightened;
    SCIP_Bool infeasible;
 
@@ -1308,6 +1318,14 @@ SCIP_RETCODE tightenVarUb(
    assert(var != NULL);
    assert(nchgbds != NULL);
    assert(result != NULL);
+
+   ub = SCIPvarGetUbLocal(var);
+
+   /* check that the new upper bound is better */
+   if( (SCIPvarIsIntegral(var) && ub - newub > 0.5) || (force && SCIPisLT(scip, newub, ub)) )
+      force = TRUE;
+   else
+      force = FALSE;
 
    /* try to tighten the upper bound */
    if( global )
@@ -1357,7 +1375,7 @@ static
 SCIP_RETCODE propagateVbounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< vbounds propagator */
-   SCIP_Bool             force,              /**< should domain changes be forced */
+   SCIP_Bool             force,              /**< should domain changes for continuous variables be forced */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation */
    )
 {
@@ -1911,8 +1929,8 @@ SCIP_Bool SCIPisPropagatedVbounds(
 /** performs propagation of variables lower and upper bounds */
 SCIP_RETCODE SCIPexecPropVbounds(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             force,              /**< should domain changes be forced */
-   SCIP_RESULT*          result               /**< pointer to store result */
+   SCIP_Bool             force,              /**< should domain changes for continuous variables be forced */
+   SCIP_RESULT*          result              /**< pointer to store result */
    )
 {
    SCIP_PROP* prop;
