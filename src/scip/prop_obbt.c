@@ -54,7 +54,8 @@
                                                     *   auxiliary LPs? */
 #define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
                                                     *   round */
-#define DEFAULT_FILTERMETHOD              'g'      /**< method for filtering rounds ('g'reedy, 'n'earest bound) */
+#define DEFAULT_FILTERMETHOD              'g'      /**< method for filtering rounds ('g'reedy, 'n'earest bound,
+                                                    *   'f'arthest bound) */
 #define DEFAULT_ITLIMITFACTOR             5.0      /**< multiple of root node LP iterations used as total LP iteration
                                                     *   limit for obbt (<= 0: no limit ) */
 #define DEFAULT_ITLIMITRESOLVE             50      /**< iteration limit used for (re-)solving the root LP */
@@ -107,7 +108,8 @@ struct SCIP_PropData
    SCIP_Bool             normalize;          /**< should coefficients in filtering be normalized w.r.t. the domains
                                               *   sizes? */
    SCIP_Bool             needsolvedlp;       /**< apply obbt only if the root LP is solved to optimality? */
-   char                  filtermethod;       /**< method for filtering rounds ('g'reedy, 'n'earest bound) */
+   char                  filtermethod;       /**< method for filtering rounds ('g'reedy, 'n'earest bound, 'f'arthest
+                                              *   bound) */
    int                   maxlookahead;       /**< maximal number of bounds evaluated without success per group
                                               *   (-1: no limit) */
    int                   nbounds;            /**< length of interesting bounds array */
@@ -564,7 +566,7 @@ SCIP_RETCODE filterBounds(
       }
       while( nfiltered >= propdata->nminfilter && ( nleftiterations == -1 ||  nleftiterations > 0 ) );
    }
-   /* nearest bound filtering */
+   /* nearest / farthest bound filtering */
    else
    {
       for( i = 0; i < nvars; i++ )
@@ -582,6 +584,7 @@ SCIP_RETCODE filterBounds(
             SCIP_Real solval;
             SCIP_Real lblocal;
             SCIP_Real ublocal;
+            SCIP_Real coef;
 
             bound = propdata->bounds[i];
 
@@ -589,20 +592,26 @@ SCIP_RETCODE filterBounds(
             lblocal = SCIPvarGetLbLocal(bound->var);
             ublocal = SCIPvarGetUbLocal(bound->var);
 
-            SCIP_CALL( SCIPchgVarObjDive(scip, propdata->bounds[i]->var,
-                  ( solval - lblocal < ublocal - solval ) ? 1.0 : -1.0 ) );
+            /* nearest bound */
+            if( propdata->filtermethod == 'n')
+               coef = ( solval - lblocal < ublocal - solval ) ? 1.0 : -1.0 ;
+            /* farthest bound */
+            else
+               coef = ( solval - lblocal < ublocal - solval ) ? -1.0 : 1.0 ;
+
+            SCIP_CALL( SCIPchgVarObjDive(scip, propdata->bounds[i]->var, coef) );
          }
       }
 
       do
       {
-         SCIPdebugMessage("doing a nearest bound round\n");
+         SCIPdebugMessage("doing a %s bound round\n", propdata->filtermethod == 'n' ? "nearest" : "farthest");
          SCIP_CALL( filterRound(scip, propdata, nleftiterations, &nfiltered) );
 #ifdef SCIP_STATISTIC
          statnfilterlps++;
          statnfilteredtotal += nfiltered;
 #endif
-         SCIPdebugMessage("filtered %d more bounds in nearest bound round\n", nfiltered);
+         SCIPdebugMessage("filtered %d more bounds in %s bound round\n", nfiltered, propdata->filtermethod == 'n' ? "nearest" : "farthest");
          SCIPdebugMessage("lp iteration count: %lld\n", SCIPgetNLPIterations(scip));
 
          /* update iterations left */
@@ -1734,8 +1743,8 @@ SCIP_RETCODE SCIPincludePropObbt(
          &propdata->itlimitresolve, TRUE, DEFAULT_ITLIMITRESOLVE, -1, SCIP_LONGINT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "propagating/"PROP_NAME"/filtermethod",
-         "method for filtering rounds ('g'reedy, 'n'earest bound)",
-         &propdata->filtermethod, TRUE, DEFAULT_FILTERMETHOD, "gn", NULL, NULL) );
+         "method for filtering rounds ('g'reedy, 'n'earest bound, 'f'arthest bound)",
+         &propdata->filtermethod, TRUE, DEFAULT_FILTERMETHOD, "gnf", NULL, NULL) );
 
    return SCIP_OKAY;
 }
