@@ -155,6 +155,7 @@ include make/make.$(BASE)
 -include make/local/make.$(HOSTNAME)
 -include make/local/make.$(HOSTNAME).$(COMP)
 -include make/local/make.$(HOSTNAME).$(COMP).$(OPT)
+-include make/local/make.local
 #-----------------------------------------------------------------------------
 
 FLAGS		+=	$(USRFLAGS)
