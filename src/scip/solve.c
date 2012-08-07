@@ -1861,6 +1861,42 @@ SCIP_RETCODE SCIPpriceLoop(
    return SCIP_OKAY;
 }
 
+/** separates cuts of the cut pool */
+static
+SCIP_RETCODE cutpoolSeparate(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   int                   actdepth,           /**< the depth of the focus node */
+   SCIP_Bool*            enoughcuts,         /**< pointer to store if enough cuts were found in current separation round */
+   SCIP_Bool*            cutoff              /**< pointer to store if an cutoff was detected */
+   )
+{
+   if( (set->sepa_poolfreq == 0 && actdepth == 0)
+      || (set->sepa_poolfreq > 0 && actdepth % set->sepa_poolfreq == 0) )
+   {
+      SCIP_RESULT result;
+
+      /* in case of the "normal" cutpool the sepastore should be empty since the cutpool is called as first separator;
+       * in case of the delayed cutpool the sepastore should be also empty because the delayed cutpool is only called if
+       * the sepastore is empty after all separators and the the "normal" cutpool were called without success;
+       */
+      assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+
+      SCIP_CALL( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, &result) );
+      *cutoff = *cutoff || (result == SCIP_CUTOFF);
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** solve the current LP of a node with a price-and-cut loop */
 static
 SCIP_RETCODE priceAndCutLoop(
@@ -1889,7 +1925,6 @@ SCIP_RETCODE priceAndCutLoop(
    )
 {
    SCIP_NODE* focusnode;
-   SCIP_RESULT result;
    SCIP_EVENT event;
    SCIP_LPSOLSTAT stalllpsolstat;
    SCIP_Real loclowerbound;
@@ -2117,18 +2152,11 @@ SCIP_RETCODE priceAndCutLoop(
          /* global cut pool separation */
          if( !enoughcuts && !delayedsepa )
          {
-            if( (set->sepa_poolfreq == 0 && actdepth == 0)
-               || (set->sepa_poolfreq > 0 && actdepth % set->sepa_poolfreq == 0) )
+            SCIP_CALL( cutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, actdepth, &enoughcuts, cutoff) );
+
+            if( *cutoff )
             {
-               SCIPdebugMessage("global cut pool separation\n");
-               assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-               SCIP_CALL( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, &result) );
-               *cutoff = *cutoff || (result == SCIP_CUTOFF);
-               enoughcuts = enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
-               if( *cutoff )
-               {
-                  SCIPdebugMessage(" -> global cut pool detected cutoff\n");
-               }
+               SCIPdebugMessage(" -> global cut pool detected cutoff\n");
             }
          }
          assert(lp->flushed);
@@ -2160,19 +2188,11 @@ SCIP_RETCODE priceAndCutLoop(
          /* delayed global cut pool separation */
          if( SCIPsepastoreGetNCuts(sepastore) == 0 )
          {
-            if( (set->sepa_poolfreq == 0 && actdepth == 0)
-               || (set->sepa_poolfreq > 0 && actdepth % set->sepa_poolfreq == 0) )
-            {
-               SCIPdebugMessage("delayed global cut pool separation\n");
-               assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+            SCIP_CALL( cutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, actdepth, &enoughcuts, cutoff) );
 
-               SCIP_CALL( SCIPcutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, &result) );
-               *cutoff = *cutoff || (result == SCIP_CUTOFF);
-               enoughcuts = enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
-               if( *cutoff )
-               {
-                  SCIPdebugMessage(" -> delayed global cut pool detected cutoff\n");
-               }
+            if( *cutoff )
+            {
+               SCIPdebugMessage(" -> delayed global cut pool detected cutoff\n");
             }
          }
          assert(lp->flushed);
