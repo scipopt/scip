@@ -115,6 +115,20 @@ HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 # we add 10% to the hard memory limit and additional 100MB to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
 
+# check whether there is enough memory on the host system, otherwise we need to submit from the target system
+if test "$QUEUETYPE" = "srun"
+then
+    HOSTMEM=`ulimit -m`
+    if test "$HOSTMEM" != "unlimited"
+    then
+        if [ `expr $HARDMEMLIMIT \* 1024` -gt $HOSTMEM ]
+        then
+            echo "Not enough memory on host system - please submit from target system (e.g. ssh opt201)."
+            exit
+        fi
+    fi
+fi
+
 # in case of qsub queue the memory is measured in kB and in case of srun the time needs to be formatted
 if test  "$QUEUETYPE" = "qsub"
 then
@@ -168,13 +182,19 @@ echo > $EVALFILE
 #define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
 CLUSTERQUEUE=$QUEUE
 
-if test $CLUSTERQUEUE = "low"
+ACCOUNT="mip"
+
+if test $CLUSTERQUEUE = "opt"
 then
-    CLUSTERQUEUE="mip-low,gas-low"
-elif test $CLUSTERQUEUE = "opt"
+    CLUSTERQUEUE="opt,opt-long"
+elif test $CLUSTERQUEUE = "opt-low"
 then
-    CLUSTERQUEUE="mip-low,gas-low,traffic-low"
+    ACCOUNT="opt-low"
+elif test $CLUSTERQUEUE = "mip-dbg"
+then
+    ACCOUNT="mip-dbg"
 fi
+
 
 # counter to define file names for a test set uniquely
 COUNT=0
@@ -268,7 +288,7 @@ do
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
+	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
       else
           # -V to copy all environment variables
 	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null runcluster.sh
