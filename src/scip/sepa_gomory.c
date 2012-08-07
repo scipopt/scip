@@ -68,6 +68,7 @@
 #define DEFAULT_MAKEINTEGRAL       TRUE /**< try to scale all cuts to integral coefficients */
 #define DEFAULT_FORCECUTS         FALSE /**< if conversion to integral coefficients failed still use the cut */
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack */
+#define DEFAULT_DELAYEDCUTS       FALSE /**< should cuts be added to the delayed cut pool? */
 
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
 #define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
@@ -93,6 +94,7 @@ struct SCIP_SepaData
    SCIP_Bool             makeintegral;       /**< try to scale all cuts to integral coefficients */
    SCIP_Bool             forcecuts;          /**< if conversion to integral coefficients failed still use the cut */
    SCIP_Bool             separaterows;       /**< separate rows with integral slack */
+   SCIP_Bool             delayedcuts;        /**< should cuts be added to the delayed cut pool? */
 };
 
 
@@ -420,12 +422,21 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                /* flush all changes before adding the cut */
                SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-               SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
-
                /* add global cuts which are not implicit bound changes to the cut pool */
                if( !cutislocal && SCIProwGetNNonz(cut) > 1 )
                {
-                  SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                  if( sepadata->delayedcuts )
+                  {
+                     SCIP_CALL( SCIPaddDelayedPoolCut(scip, cut) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                  }
+               }
+               else
+               {
+                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
                }
 
                *result = SCIP_SEPARATED;
@@ -516,6 +527,10 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          "separating/gomory/separaterows",
          "separate rows with integral slack",
          &sepadata->separaterows, TRUE, DEFAULT_SEPARATEROWS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/gomory/delayedcuts",
+         "should cuts be added to the delayed cut pool?",
+         &sepadata->delayedcuts, TRUE, DEFAULT_DELAYEDCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
