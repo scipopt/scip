@@ -22,7 +22,6 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include "string.h"
 
 #include "scip/def.h"
 #include "scip/set.h"
