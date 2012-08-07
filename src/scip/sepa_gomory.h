@@ -17,6 +17,8 @@
  * @ingroup SEPARATORS
  * @brief  Gomory MIR Cuts
  * @author Tobias Achterberg
+ * @author Stefan Heinz
+ * @author Domenico Salvagnin
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
