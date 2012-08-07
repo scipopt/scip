@@ -76,6 +76,10 @@
 #include "scip/bitencode.h"
 #include "scip/pub_message.h"
 
+/* do defines for windows directly her to make the lpi more independent*/
+#if defined(_WIN32) || defined(_WIN64)
+#define snprintf _snprintf
+#endif
 
 /* for debugging: alternatingly write files "debug_[p|d]_[0|1].mps" after each run - use with care! */
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
@@ -1629,10 +1633,10 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SCIPdebugMessage("calling Clp primal(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
-
    assert(lpi != 0);
    assert(lpi->clp != 0);
+
+   SCIPdebugMessage("calling Clp primal(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
 
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
    char filename[255];
@@ -1702,10 +1706,10 @@ SCIP_RETCODE SCIPlpiSolveDual(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SCIPdebugMessage("calling Clp dual(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
-
    assert(lpi != 0);
    assert(lpi->clp != 0);
+
+   SCIPdebugMessage("calling Clp dual(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
 
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
    char filename[255];
@@ -1778,10 +1782,10 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_Bool             crossover            /**< perform crossover */
    )
 {
-   SCIPdebugMessage("calling Clp barrier(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
-
    assert(lpi != 0);
    assert(lpi->clp != 0);
+
+   SCIPdebugMessage("calling Clp barrier(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
 
    invalidateSolution(lpi);
 

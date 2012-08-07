@@ -12005,6 +12005,7 @@ SCIP_Real SCIPvarGetRedcost(
  */
 SCIP_Real SCIPvarGetImplRedcost(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */
@@ -12014,6 +12015,7 @@ SCIP_Real SCIPvarGetImplRedcost(
    SCIP_VAR* implvar;
    SCIP_BOUNDTYPE* boundtypes;
    SCIP_Real implredcost;
+   SCIP_Real redcost;
    int nbinvars;
    int v;
 
@@ -12041,9 +12043,12 @@ SCIP_Real SCIPvarGetImplRedcost(
       assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
 
       if( (SCIP_Bool)boundtypes[v] != varfixing )
-         implredcost += SCIPvarGetRedcost(implvar, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
+         redcost = SCIPvarGetRedcost(implvar, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
       else
-         implredcost -= SCIPvarGetRedcost(implvar, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
+         redcost = -SCIPvarGetRedcost(implvar, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
+
+      if( !SCIPsetIsFeasZero(set, redcost) )
+         implredcost += redcost;
    }
 
    return implredcost;

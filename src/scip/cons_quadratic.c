@@ -10597,7 +10597,6 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
 
    assert(scip != NULL);
    assert(conss != NULL || nconss == 0);
-   assert(sol != NULL);
    assert(result != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
