@@ -231,11 +231,12 @@ SCIP_RETCODE checkAllConss(
       for( i = 0; i < consdata->nconss && *result == SCIP_FEASIBLE; ++i )
       {
          SCIP_CALL( SCIPcheckCons(scip, consdata->conss[i], sol, checkintegrality, checklprows, printreason, result) );
+	 assert(*result == SCIP_FEASIBLE || *result == SCIP_INFEASIBLE);
       }
 
       if( printreason && *result == SCIP_INFEASIBLE )
       {
-	 SCIPinfoMessage(scip, NULL, "conjunction constraint %s is violated, at least the sub-constraint %s is violated by this given solution\n", SCIPconsGetName(conss[c]), SCIPconsGetName(consdata->conss[i]));
+	 SCIPinfoMessage(scip, NULL, "conjunction constraint %s is violated, at least the sub-constraint %s is violated by this given solution\n", SCIPconsGetName(conss[c]), SCIPconsGetName(consdata->conss[i-1]));
 	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
       }
    }

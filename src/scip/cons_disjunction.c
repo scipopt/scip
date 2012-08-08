@@ -232,6 +232,12 @@ SCIP_RETCODE branchCons(
       /* create the branch-and-bound tree child nodes of the current node */
       SCIP_CALL( SCIPcreateChild(scip, &child, 0.0, estimate) );
 
+      /* if disjunctive constraint needs to be checked, the upgraded constraint also needs to be checked */
+      if( SCIPconsIsChecked(cons) )
+      {
+	 SCIP_CALL( SCIPsetConsChecked(scip, conss[i], TRUE) );
+      }
+
       /* add constraints to nodes */
       SCIP_CALL( SCIPaddConsNode(scip, child, conss[i], NULL) );
 
@@ -752,7 +758,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 	    SCIPdebugMessage("disjunctive parsing token(constraint): %s\n", token);
 
 	    /* parsing a constraint, part of the disjunction */
-	    SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, FALSE, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
+	    SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, FALSE, propagate, TRUE, modifiable, dynamic, removable, stickingatnode, success) );
 
 	    SCIPfreeBufferArray(scip, &token);
 
@@ -814,7 +820,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
       SCIPdebugMessage("disjunctive parsing token(constraint): %s\n", token);
 
       /* parsing a constraint, part of the disjunction */
-      SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, FALSE, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
+      SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, FALSE, propagate, TRUE, modifiable, dynamic, removable, stickingatnode, success) );
 
       if( *success )
 	 ++nconss;

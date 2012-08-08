@@ -9,6 +9,8 @@ fixed bugs:
 - fixed small issue in pseudo objective propagator w.r.t. propagating the lower bound globally
 - fixed issue with applying the effective root depth during the search
 - fixed bugs in parsing dis-/conjunctive constraints
+- fixed minor bug in conjunctive constraint handler printing wrong constraint
+- fixed bug in disjunctive constraint handler when enforcing a constraint
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
