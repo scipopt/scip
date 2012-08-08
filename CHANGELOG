@@ -12,6 +12,10 @@ fixed bugs:
 features:
 - added new dual presolving for setppc-constraints
 
+interface
+- SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
+  the rank of a cut can be changed (deafult rank is 0)
+
 SCIP version 3.0.0
 ==================
 
