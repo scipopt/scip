@@ -8,6 +8,7 @@ fixed bugs:
 - fixed issue with deleting varbound constraints in case the bound change was not applied
 - fixed small issue in pseudo objective propagator w.r.t. propagating the lower bound globally
 - fixed issue with applying the effective root depth during the search
+- fixed bugs in parsing dis-/conjunctive constraints
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round

@@ -598,7 +598,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
    }
 
    /* find end of conjunction constraint */
-   saveptr = strchr(nexttokenstart, ')');
+   saveptr = strrchr(nexttokenstart, ')');
 
    if( saveptr == NULL )
    {
