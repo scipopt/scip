@@ -557,9 +557,9 @@ $(LIBOBJDIR)/scip/cons_cumulative.o: src/scip/cons_cumulative.c src/scip/cons_cu
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -1474,9 +1474,9 @@ $(LIBOBJDIR)/scip/heur_crossover.o: src/scip/heur_crossover.c src/scip/scip.h \
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -1561,9 +1561,9 @@ $(LIBOBJDIR)/scip/heur_dins.o: src/scip/heur_dins.c src/scip/scip.h src/scip/def
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -1648,9 +1648,9 @@ $(LIBOBJDIR)/scip/heur_feaspump.o: src/scip/heur_feaspump.c src/scip/heur_feaspu
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -1977,9 +1977,9 @@ $(LIBOBJDIR)/scip/heur_localbranching.o: src/scip/heur_localbranching.c src/scip
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -2064,9 +2064,9 @@ $(LIBOBJDIR)/scip/heur_mutation.o: src/scip/heur_mutation.c src/scip/scip.h src/
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -2324,9 +2324,9 @@ $(LIBOBJDIR)/scip/heur_rens.o: src/scip/heur_rens.c src/scip/scip.h src/scip/def
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -2411,9 +2411,9 @@ $(LIBOBJDIR)/scip/heur_rins.o: src/scip/heur_rins.c src/scip/scip.h src/scip/def
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -2809,9 +2809,9 @@ $(LIBOBJDIR)/scip/heur_undercover.o: src/scip/heur_undercover.c src/scip/scip.h 
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -2896,9 +2896,9 @@ $(LIBOBJDIR)/scip/heur_vbounds.o: src/scip/heur_vbounds.c src/scip/scip.h src/sc
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -3299,40 +3299,6 @@ $(LIBOBJDIR)/scip/presol_domcol.o: src/scip/presol_domcol.c src/scip/cons_knapsa
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons_linear.h src/scip/cons_logicor.h \
  src/scip/cons_setppc.h src/scip/cons_varbound.h src/scip/presol_domcol.h
-$(LIBOBJDIR)/scip/presol_dualfix.o: src/scip/presol_dualfix.c src/scip/presol_dualfix.h \
- src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
- src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
- src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
- src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
- src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
- src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
- src/scip/type_cons.h src/scip/type_sol.h src/scip/type_dialog.h \
- src/scip/type_disp.h src/scip/type_heur.h src/scip/type_nodesel.h \
- src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
- src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
- src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_branch.h \
- src/scip/pub_conflict.h src/scip/pub_cons.h src/scip/struct_cons.h \
- src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
- src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_fileio.h \
- src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
- src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
- src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
- src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
- src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
- src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
- src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
- src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
- src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
- src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
- src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
- src/scip/type_primal.h src/scip/type_pricestore.h \
- src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
- src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
- src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
- src/scip/struct_event.h
 $(LIBOBJDIR)/scip/presol_gateextraction.o: src/scip/presol_gateextraction.c \
  src/scip/presol_gateextraction.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
@@ -3439,6 +3405,40 @@ $(LIBOBJDIR)/scip/presol_inttobinary.o: src/scip/presol_inttobinary.c \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h
 $(LIBOBJDIR)/scip/presol_trivial.o: src/scip/presol_trivial.c src/scip/presol_trivial.h \
+ src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
+ src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
+ src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
+ src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
+ src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
+ src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
+ src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
+ src/scip/type_cons.h src/scip/type_sol.h src/scip/type_dialog.h \
+ src/scip/type_disp.h src/scip/type_heur.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
+ src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_branch.h \
+ src/scip/pub_conflict.h src/scip/pub_cons.h src/scip/struct_cons.h \
+ src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
+ src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_fileio.h \
+ src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
+ src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
+ src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h
+$(LIBOBJDIR)/scip/prop_dualfix.o: src/scip/prop_dualfix.c src/scip/prop_dualfix.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
@@ -4384,9 +4384,9 @@ $(LIBOBJDIR)/scip/sepa_cgmip.o: src/scip/sepa_cgmip.c src/scip/sepa_cgmip.h src/
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -4778,9 +4778,9 @@ $(LIBOBJDIR)/scip/sepa_rapidlearning.o: src/scip/sepa_rapidlearning.c \
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -4898,9 +4898,9 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -5192,7 +5192,11 @@ $(LIBOBJDIR)/scip/event.o: src/scip/event.c src/scip/def.h src/scip/type_retcode
  src/scip/history.h src/scip/struct_history.h src/scip/primal.h \
  src/scip/struct_primal.h src/scip/branch.h src/scip/type_sepastore.h \
  src/scip/pub_branch.h
-$(LIBOBJDIR)/scip/fileio.o: src/scip/fileio.c src/scip/pub_fileio.h
+$(LIBOBJDIR)/scip/fileio.o: src/scip/fileio.c src/scip/pub_fileio.h src/scip/pub_misc.h \
+ src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
+ src/scip/type_message.h src/scip/struct_message.h \
+ src/blockmemshell/memory.h src/scip/type_misc.h src/scip/type_var.h \
+ src/scip/struct_misc.h
 $(LIBOBJDIR)/scip/heur.o: src/scip/heur.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/set.h src/blockmemshell/memory.h src/scip/buffer.h \
@@ -5771,9 +5775,9 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefpl
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -5861,9 +5865,9 @@ $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def
  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
  src/scip/presol_components.h src/scip/presol_convertinttobin.h \
- src/scip/presol_domcol.h src/scip/presol_dualfix.h \
- src/scip/presol_gateextraction.h src/scip/presol_implics.h \
- src/scip/presol_inttobinary.h src/scip/presol_trivial.h \
+ src/scip/presol_domcol.h src/scip/presol_gateextraction.h \
+ src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+ src/scip/presol_trivial.h src/scip/prop_dualfix.h \
  src/scip/prop_genvbounds.h src/scip/prop_obbt.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
