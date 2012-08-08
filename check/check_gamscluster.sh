@@ -238,6 +238,25 @@ if test $SETCUTOFF = 1 ; then
   fi
 fi
 
+#define account and clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
+
+if test $QUEUE = "opt"
+then
+  CLUSTERQUEUE="opt,opt-long"
+  ACCOUNT="mip"
+elif test $QUEUE = "opt-low"
+then
+  CLUSTERQUEUE="opt-low"
+  ACCOUNT="opt-low"
+elif test $QUEUE = "mip-dbg"
+then
+  CLUSTERQUEUE="mip-dbg"
+  ACCOUNT="mip-dbg"
+else
+  CLUSTERQUEUE=$QUEUE
+  ACCOUNT="mip"
+fi
+
 # counter to define file names for a test set uniquely 
 COUNT=1
 # dependencies of finish-job, if run through slurm
@@ -358,7 +377,7 @@ do
     case $QUEUETYPE in
       srun )
         # hard timelimit could be set via --time=0:${HARDTIMELIMIT}
-        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $QUEUE ${EXCLUSIVE} --output=/dev/null rungamscluster.sh`
+        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT ${EXCLUSIVE} --output=/dev/null rungamscluster.sh`
         echo $sbatchret
         FINISHDEPEND=$FINISHDEPEND:`echo $sbatchret | cut -d " " -f 4`
         ;;
@@ -381,8 +400,8 @@ done
 #TODO call finishgamscluster also in qsub runs
 case $QUEUETYPE in
   srun )
-    sbatch --job-name=GAMSFINISH -p $QUEUE --output=/dev/null -d $FINISHDEPEND finishgamscluster.sh
+    sbatch --job-name=GAMSFINISH -p $CLUSTERQUEUE -A $ACCOUNT --output=/dev/null -d $FINISHDEPEND finishgamscluster.sh
     echo
-    squeue -p $QUEUE
+    squeue -p $CLUSTERQUEUE
     ;;
 esac
