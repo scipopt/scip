@@ -828,7 +828,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
    }
 
    /* find end of disjunction constraint */
-   saveptr = strchr(nexttokenstart, ')');
+   saveptr = strrchr(nexttokenstart, ')');
 
    if( saveptr == NULL )
    {
