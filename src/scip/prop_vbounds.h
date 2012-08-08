@@ -48,7 +48,7 @@ SCIP_Bool SCIPisPropagatedVbounds(
 EXTERN
 SCIP_RETCODE SCIPexecPropVbounds(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             force,              /**< should domain changes be forced */
+   SCIP_Bool             force,              /**< should domain changes for continuous variables be forced */
    SCIP_RESULT*          result              /**< pointer to store result */
    );
 

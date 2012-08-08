@@ -1861,6 +1861,42 @@ SCIP_RETCODE SCIPpriceLoop(
    return SCIP_OKAY;
 }
 
+/** separates cuts of the cut pool */
+static
+SCIP_RETCODE cutpoolSeparate(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   int                   actdepth,           /**< the depth of the focus node */
+   SCIP_Bool*            enoughcuts,         /**< pointer to store if enough cuts were found in current separation round */
+   SCIP_Bool*            cutoff              /**< pointer to store if an cutoff was detected */
+   )
+{
+   if( (set->sepa_poolfreq == 0 && actdepth == 0)
+      || (set->sepa_poolfreq > 0 && actdepth % set->sepa_poolfreq == 0) )
+   {
+      SCIP_RESULT result;
+
+      /* in case of the "normal" cutpool the sepastore should be empty since the cutpool is called as first separator;
+       * in case of the delayed cutpool the sepastore should be also empty because the delayed cutpool is only called if
+       * the sepastore is empty after all separators and the the "normal" cutpool were called without success;
+       */
+      assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+
+      SCIP_CALL( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, &result) );
+      *cutoff = *cutoff || (result == SCIP_CUTOFF);
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** solve the current LP of a node with a price-and-cut loop */
 static
 SCIP_RETCODE priceAndCutLoop(
@@ -1875,6 +1911,7 @@ SCIP_RETCODE priceAndCutLoop(
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_CUTPOOL*         cutpool,            /**< global cut pool */
+   SCIP_CUTPOOL*         delayedcutpool,     /**< global delayed cut pool */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -1888,7 +1925,6 @@ SCIP_RETCODE priceAndCutLoop(
    )
 {
    SCIP_NODE* focusnode;
-   SCIP_RESULT result;
    SCIP_EVENT event;
    SCIP_LPSOLSTAT stalllpsolstat;
    SCIP_Real loclowerbound;
@@ -1917,6 +1953,7 @@ SCIP_RETCODE priceAndCutLoop(
    assert(pricestore != NULL);
    assert(sepastore != NULL);
    assert(cutpool != NULL);
+   assert(delayedcutpool != NULL);
    assert(primal != NULL);
    assert(cutoff != NULL);
    assert(unbounded != NULL);
@@ -2115,18 +2152,11 @@ SCIP_RETCODE priceAndCutLoop(
          /* global cut pool separation */
          if( !enoughcuts && !delayedsepa )
          {
-            if( (set->sepa_poolfreq == 0 && actdepth == 0)
-               || (set->sepa_poolfreq > 0 && actdepth % set->sepa_poolfreq == 0) )
+            SCIP_CALL( cutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, actdepth, &enoughcuts, cutoff) );
+
+            if( *cutoff )
             {
-               SCIPdebugMessage("global cut pool separation\n");
-               assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-               SCIP_CALL( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, &result) );
-               *cutoff = *cutoff || (result == SCIP_CUTOFF);
-               enoughcuts = enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
-               if( *cutoff )
-               {
-                  SCIPdebugMessage(" -> global cut pool detected cutoff\n");
-               }
+               SCIPdebugMessage(" -> global cut pool detected cutoff\n");
             }
          }
          assert(lp->flushed);
@@ -2154,6 +2184,21 @@ SCIP_RETCODE priceAndCutLoop(
                assert(SCIPbufferGetNUsed(set->buffer) == 0);
             }
          }
+
+         /* delayed global cut pool separation */
+         if( SCIPsepastoreGetNCuts(sepastore) == 0 )
+         {
+            SCIP_CALL( cutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, actdepth, &enoughcuts, cutoff) );
+
+            if( *cutoff )
+            {
+               SCIPdebugMessage(" -> delayed global cut pool detected cutoff\n");
+            }
+         }
+         assert(lp->flushed);
+         assert(lp->solved);
+         assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+
          assert(*cutoff || *lperror || SCIPlpIsSolved(lp));
          assert(!SCIPlpIsSolved(lp)
             || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
@@ -2409,6 +2454,7 @@ SCIP_RETCODE solveNodeLP(
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_CUTPOOL*         cutpool,            /**< global cut pool */
+   SCIP_CUTPOOL*         delayedcutpool,     /**< global delayed cut pool */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -2512,7 +2558,7 @@ SCIP_RETCODE solveNodeLP(
    if( !(*cutoff) && !(*lperror) )
    {
       /* solve the LP with price-and-cut*/
-      SCIP_CALL( priceAndCutLoop(blkmem, set, messagehdlr, stat, transprob, primal, tree, lp, pricestore, sepastore, cutpool,
+      SCIP_CALL( priceAndCutLoop(blkmem, set, messagehdlr, stat, transprob, primal, tree, lp, pricestore, sepastore, cutpool, delayedcutpool,
             branchcand, conflict, eventfilter, eventqueue, initiallpsolved, cutoff, unbounded, lperror, pricingaborted) );
    }
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
@@ -2998,6 +3044,7 @@ SCIP_RETCODE propAndSolve(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CUTPOOL*         cutpool,            /**< global cut pool */
+   SCIP_CUTPOOL*         delayedcutpool,     /**< global delayed cut pool */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -3033,6 +3080,7 @@ SCIP_RETCODE propAndSolve(
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
    assert(branchcand != NULL);
    assert(cutpool != NULL);
+   assert(delayedcutpool != NULL);
    assert(conflict != NULL);
    assert(SCIPconflictGetNConflicts(conflict) == 0);
    assert(eventfilter != NULL);
@@ -3120,7 +3168,7 @@ SCIP_RETCODE propAndSolve(
 
       /* solve the node's LP */
       SCIP_CALL( solveNodeLP(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp, pricestore, sepastore,
-            cutpool, branchcand, conflict, eventfilter, eventqueue, *initiallpsolved, cutoff, unbounded, 
+            cutpool, delayedcutpool, branchcand, conflict, eventfilter, eventqueue, *initiallpsolved, cutoff, unbounded, 
             lperror, pricingaborted) );
       *initiallpsolved = TRUE;
       SCIPdebugMessage(" -> LP status: %d, LP obj: %g, iter: %"SCIP_LONGINT_FORMAT", count: %"SCIP_LONGINT_FORMAT"\n",
@@ -3247,6 +3295,7 @@ SCIP_RETCODE solveNode(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CUTPOOL*         cutpool,            /**< global cut pool */
+   SCIP_CUTPOOL*         delayedcutpool,     /**< global delayed cut pool */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -3380,7 +3429,7 @@ SCIP_RETCODE solveNode(
 
       /* propagate domains before lp solving and solve relaxation and lp */
       SCIP_CALL( propAndSolve(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp, relaxation, pricestore, sepastore,
-            branchcand, cutpool, conflict, eventfilter, eventqueue, focusnode, actdepth, SCIP_PROPTIMING_BEFORELP,
+            branchcand, cutpool, delayedcutpool, conflict, eventfilter, eventqueue, focusnode, actdepth, SCIP_PROPTIMING_BEFORELP,
             propagate, solvelp, solverelax, forcedlpsolve, &nlperrors, &fullpropagation, &propagateagain,
             &initiallpsolved, &solvelpagain, &solverelaxagain, cutoff, unbounded, &lperror, &pricingaborted,
             &forcedenforcement) );
@@ -3395,7 +3444,7 @@ SCIP_RETCODE solveNode(
 
          /* propagate domains after lp solving and resolve relaxation and lp */
          SCIP_CALL( propAndSolve(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp, relaxation, pricestore, sepastore,
-               branchcand, cutpool, conflict, eventfilter, eventqueue, focusnode, actdepth, SCIP_PROPTIMING_AFTERLPLOOP,
+               branchcand, cutpool, delayedcutpool, conflict, eventfilter, eventqueue, focusnode, actdepth, SCIP_PROPTIMING_AFTERLPLOOP,
                propagate, solvelp, solverelax, forcedlpsolve, &nlperrors, &fullpropagation, &propagateagain,
                &initiallpsolved, &solvelpagain, &solverelaxagain, cutoff, unbounded, &lperror, &pricingaborted,
                &forcedenforcement) );
@@ -3845,6 +3894,7 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_CUTPOOL*         cutpool,            /**< global cut pool */
+   SCIP_CUTPOOL*         delayedcutpool,     /**< global delayed cut pool */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -3875,6 +3925,7 @@ SCIP_RETCODE SCIPsolveCIP(
    assert(sepastore != NULL);
    assert(branchcand != NULL);
    assert(cutpool != NULL);
+   assert(delayedcutpool != NULL);
    assert(primal != NULL);
    assert(eventfilter != NULL);
    assert(eventqueue != NULL);
@@ -3982,7 +4033,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
       /* solve focus node */
       SCIP_CALL( solveNode(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp, relaxation, pricestore, sepastore, branchcand,
-            cutpool, conflict, eventfilter, eventqueue, &cutoff, &unbounded, &infeasible, restart, &afternodeheur) );
+            cutpool, delayedcutpool, conflict, eventfilter, eventqueue, &cutoff, &unbounded, &infeasible, restart, &afternodeheur) );
       assert(!cutoff || infeasible);
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
       assert(SCIPtreeGetCurrentNode(tree) == focusnode);

@@ -6,6 +6,9 @@ fixed bugs:
   resulted in changing the row, which is not possible for unmodifiable constraints/locked rows
 - fixed bug in copying nonlinear constraints during presolve (nonlinear part was not copied)
 
+features:
+- added delayed cutpool which only get separated if the sepastore is empty after a separation round
+
 SCIP version 3.0.0
 ==================
 

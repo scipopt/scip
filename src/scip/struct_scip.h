@@ -81,6 +81,7 @@ struct Scip
    SCIP_PRICESTORE*      pricestore;         /**< storage for priced variables */
    SCIP_SEPASTORE*       sepastore;          /**< storage for separated cuts */
    SCIP_CUTPOOL*         cutpool;            /**< global cut pool */
+   SCIP_CUTPOOL*         delayedcutpool;     /**< global delayed cut pool */
 };
 
 #ifdef __cplusplus

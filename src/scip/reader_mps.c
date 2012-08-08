@@ -3957,6 +3957,13 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 	    /* insert variable with variable name into hash map */
 	    assert(!SCIPhashmapExists(varnameHashmap, var));
 	    SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) (size_t) namestr) );
+
+	    /* add the fixed variables to the sparse matrix, needed for columns section */
+	    SCIP_CALL( checkSparseMatrixCapacity(scip, matrix, 1) );
+	    matrix->values[matrix->nentries] = 0.0;
+	    matrix->columns[matrix->nentries] = var;
+	    matrix->rows[matrix->nentries] = "Obj";
+	    matrix->nentries++;
 	 }
       }
    }
