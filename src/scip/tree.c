@@ -4230,20 +4230,23 @@ SCIP_RETCODE SCIPnodeFocus(
    /* if the old focus node is a dead end (has no children), delete it */
    if( oldfocusnode != NULL && SCIPnodeGetType(oldfocusnode) == SCIP_NODETYPE_DEADEND )
    {
-      int oldeffectiverootdepth;
+      int appliedeffectiverootdepth;
 
-      oldeffectiverootdepth = tree->effectiverootdepth;
+      appliedeffectiverootdepth = tree->appliedeffectiverootdepth;
+      assert(appliedeffectiverootdepth <= tree->effectiverootdepth);
+
       SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, stat, eventqueue, tree, lp) );
-      assert(oldeffectiverootdepth <= tree->effectiverootdepth);
       assert(tree->effectiverootdepth < tree->pathlen || *node == NULL || *cutoff);
-      if( tree->effectiverootdepth > oldeffectiverootdepth && *node != NULL && !(*cutoff) )
+
+      if( tree->effectiverootdepth > appliedeffectiverootdepth && *node != NULL && !(*cutoff) )
       {
          int d;
 
          /* promote the constraint set and bound changes up to the new effective root to be global changes */
          SCIPdebugMessage("effective root is now at depth %d: applying constraint set and bound changes to global problem\n",
             tree->effectiverootdepth);
-         for( d = oldeffectiverootdepth+1; d <= tree->effectiverootdepth; ++d )
+
+         for( d = appliedeffectiverootdepth + 1; d <= tree->effectiverootdepth; ++d )
          {
             SCIP_Bool nodecutoff;
 
@@ -4258,6 +4261,8 @@ SCIP_RETCODE SCIPnodeFocus(
                *cutoff = TRUE;
             }
          }
+
+         tree->appliedeffectiverootdepth = tree->effectiverootdepth;
       }
    }
    assert(*cutoff || SCIPtreeIsPathComplete(tree));
@@ -4311,6 +4316,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->pathlen = 0;
    (*tree)->pathsize = 0;
    (*tree)->effectiverootdepth = 0;
+   (*tree)->appliedeffectiverootdepth = 0;
    (*tree)->correctlpdepth = -1;
    (*tree)->cutoffdepth = INT_MAX;
    (*tree)->repropdepth = INT_MAX;
@@ -4408,6 +4414,7 @@ SCIP_RETCODE SCIPtreeClear(
    tree->nsiblings = 0;
    tree->pathlen = 0;
    tree->effectiverootdepth = 0;
+   tree->appliedeffectiverootdepth = 0;
    tree->correctlpdepth = -1;
    tree->cutoffdepth = INT_MAX;
    tree->repropdepth = INT_MAX;
