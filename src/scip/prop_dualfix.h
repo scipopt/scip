@@ -13,20 +13,20 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_dualfix.h
- * @ingroup PRESOLVERS
+/**@file   prop_dualfix.h
+ * @ingroup PROPAGATORS
  * @brief  fixing roundable variables to best bound
  * @author Tobias Achterberg
  *
- * This presolver fixes variables, that have no restrictions in direction of their objective coefficient, to the best
+ * This propagator fixes variables, that have no restrictions in direction of their objective coefficient, to the best
  * possible value. If the objective coefficient of a variable is \f$0\f$ and it may be rounded both up and down, then
  * this variable will be fixed to the closest feasible value to \f$0\f$.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PRESOL_DUALFIX_H__
-#define __SCIP_PRESOL_DUALFIX_H__
+#ifndef __SCIP_PROP_DUALFIX_H__
+#define __SCIP_PROP_DUALFIX_H__
 
 
 #include "scip/scip.h"
@@ -35,9 +35,9 @@
 extern "C" {
 #endif
 
-/** creates the dual fixing presolver and includes it in SCIP */
+/** creates the dual fixing propagator and includes it in SCIP */
 EXTERN
-SCIP_RETCODE SCIPincludePresolDualfix(
+SCIP_RETCODE SCIPincludePropDualfix(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
