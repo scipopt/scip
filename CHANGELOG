@@ -5,6 +5,7 @@ fixed bugs:
 - fixed bug when adding linear constraints with non active variables in solving process, during propagation this
   resulted in changing the row, which is not possible for unmodifiable constraints/locked rows
 - fixed bug in copying nonlinear constraints during presolve (nonlinear part was not copied)
+- fixed issue with deleting varbound constraints in case the bound change was not applied
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round

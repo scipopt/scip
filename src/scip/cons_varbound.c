@@ -1344,6 +1344,7 @@ SCIP_RETCODE propagateCons(
          SCIPvarGetName(consdata->var), SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var),
          SCIPvarGetName(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+
       if( ndelconss != NULL )
          (*ndelconss)++;
    }
@@ -2022,14 +2023,20 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             ++(*ndelconss);
 
-            /* update upper bound if possible */
-            SCIP_CALL( SCIPtightenVarUb(scip, consdata0->var, rhs, FALSE, &infeasible, &tightened) );
+            /* update upper bound if possible
+             *
+             * @note we need to force the bound change since we are deleting the constraint afterwards
+             */
+            SCIP_CALL( SCIPtightenVarUb(scip, consdata0->var, rhs, TRUE, &infeasible, &tightened) );
             assert(!infeasible);
             if( tightened )
                ++(*nchgbds);
 
-            /* update lower bound if possible */
-            SCIP_CALL( SCIPtightenVarLb(scip, consdata0->var, lhs, FALSE, &infeasible, &tightened) );
+            /* update lower bound if possible
+             *
+             * @note we need to force the bound change since we are deleting the constraint afterwards
+             */
+            SCIP_CALL( SCIPtightenVarLb(scip, consdata0->var, lhs, TRUE, &infeasible, &tightened) );
             assert(!infeasible);
             if( tightened )
                ++(*nchgbds);
