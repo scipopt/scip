@@ -3364,6 +3364,7 @@ void SCIPrealstackFree(
    )
 {
    assert(realstack != NULL);
+   assert(realstack->vals != NULL);
 
    BMSfreeMemoryArray(&(*realstack)->vals);
    BMSfreeMemory(realstack);
@@ -3379,17 +3380,18 @@ void SCIPrealstackClear(
    realstack->top = -1;
 }
 
-/** return wheter the stack is empty */
+/** returns whether the stack is empty */
 SCIP_Bool SCIPrealstackIsEmpty(
    SCIP_REALSTACK*       realstack           /**< stack of reals */
    )
 {
    assert(realstack != NULL);
+   assert(realstack->top >= -1);
 
    return (realstack->top == -1);
 }
 
-/** push a real element to the top of the stack */
+/** pushes a real element to the top of the stack */
 SCIP_RETCODE SCIPrealstackPush(
    SCIP_REALSTACK*       realstack,          /**< stack of reals */
    SCIP_Real             elem                /**< element to be pushed */
@@ -3399,6 +3401,8 @@ SCIP_RETCODE SCIPrealstackPush(
    assert(realstack->vals != NULL);
 
    realstack->top++;
+   assert(realstack->top >= 0);
+
    /* resize stack if full */
    if( realstack->top == realstack->size )
    {
@@ -3412,7 +3416,7 @@ SCIP_RETCODE SCIPrealstackPush(
    return SCIP_OKAY;
 }
 
-/** pop an element from the stack of reals */
+/** pops an element from the stack of reals */
 SCIP_RETCODE SCIPrealstackPop(
    SCIP_REALSTACK*       realstack,          /**< stack of reals */
    SCIP_Real*            elem                /**< pointer to store the popped element */
@@ -3424,7 +3428,8 @@ SCIP_RETCODE SCIPrealstackPop(
 
    /* cannot pop from an empty stack */
    if( realstack->top == -1 )
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
+   assert(realstack->top >= 0);
 
    *elem = realstack->vals[realstack->top];
    realstack->top--;

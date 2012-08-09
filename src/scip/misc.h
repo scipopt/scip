@@ -345,22 +345,26 @@ void SCIPrealstackFree(
    );
 
 /** clears the stack, but doesn't free the data elements themselves */
+extern
 void SCIPrealstackClear(
    SCIP_REALSTACK*       realstack           /**< stack of reals */
    );
 
-/** return wheter the stack is empty */
+/** returns whether the stack is empty */
+extern
 SCIP_Bool SCIPrealstackIsEmpty(
    SCIP_REALSTACK*       realstack           /**< stack of reals */
    );
 
-/** push a real element to the top of the stack */
+/** pushes a real element to the top of the stack */
+extern
 SCIP_RETCODE SCIPrealstackPush(
    SCIP_REALSTACK*       realstack,          /**< stack of reals */
    SCIP_Real             elem                /**< element to be pushed */
    );
 
-/** pop an element from the stack of reals */
+/** pops an element from the stack of reals */
+extern
 SCIP_RETCODE SCIPrealstackPop(
    SCIP_REALSTACK*       realstack,          /**< stack of reals */
    SCIP_Real*            elem                /**< pointer to store the popped element */
