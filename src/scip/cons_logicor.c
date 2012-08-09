@@ -750,7 +750,7 @@ SCIP_RETCODE applyFixings(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->vars != NULL);
+   assert(consdata->nvars == 0 || consdata->vars != NULL);
 
    *redundant = FALSE;
    v = 0;
