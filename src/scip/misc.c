@@ -3314,7 +3314,123 @@ int SCIPptrarrayGetMaxIdx(
    return ptrarray->maxusedidx;
 }
 
+/*
+ * Dynamic stacks
+ */
 
+static
+SCIP_RETCODE realstackResize(
+   SCIP_REALSTACK*       realstack,          /**< pointer to a stack of reals */
+   int                   minsize             /**< minimal number of storable elements */
+   )
+{
+   assert(realstack != NULL);
+   assert(minsize > 0);
+
+   if( minsize <= realstack->size )
+      return SCIP_OKAY;
+
+   realstack->size = MAX(minsize, (int)(realstack->size * realstack->growfact));
+   SCIP_ALLOC( BMSreallocMemoryArray(&realstack->vals, realstack->size) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a dynamic stack of real values */
+SCIP_RETCODE SCIPrealstackCreate(
+   SCIP_REALSTACK**      realstack,          /**< pointer to store the real array */
+   int                   initsize,           /**< initial size of the stack */
+   SCIP_Real             growfact            /**< growing factor */
+   )
+{
+   assert(realstack != NULL);
+
+   initsize = MAX(1, initsize);
+   growfact = MAX(1.0, growfact);
+
+   SCIP_ALLOC( BMSallocMemory(realstack) );
+   (*realstack)->vals = NULL;
+   (*realstack)->size = 0;
+   (*realstack)->top = -1;
+   (*realstack)->growfact = growfact;
+   SCIP_CALL( realstackResize(*realstack, initsize) );
+
+   return SCIP_OKAY;
+}
+
+/** frees a dynamic stack of real values */
+void SCIPrealstackFree(
+   SCIP_REALSTACK**      realstack           /**< pointer to the stack of reals */
+   )
+{
+   assert(realstack != NULL);
+
+   BMSfreeMemoryArray(&(*realstack)->vals);
+   BMSfreeMemory(realstack);
+}
+
+/** clears the stack, but doesn't free the data elements themselves */
+void SCIPrealstackClear(
+   SCIP_REALSTACK*       realstack           /**< stack of reals */
+   )
+{
+   assert(realstack != NULL);
+
+   realstack->top = -1;
+}
+
+/** return wheter the stack is empty */
+SCIP_Bool SCIPrealstackIsEmpty(
+   SCIP_REALSTACK*       realstack           /**< stack of reals */
+   )
+{
+   assert(realstack != NULL);
+
+   return (realstack->top == -1);
+}
+
+/** push a real element to the top of the stack */
+SCIP_RETCODE SCIPrealstackPush(
+   SCIP_REALSTACK*       realstack,          /**< stack of reals */
+   SCIP_Real             elem                /**< element to be pushed */
+   )
+{
+   assert(realstack != NULL);
+   assert(realstack->vals != NULL);
+
+   realstack->top++;
+   /* resize stack if full */
+   if( realstack->top == realstack->size )
+   {
+      SCIP_CALL( realstackResize(realstack, realstack->size + 1) );
+   }
+   assert(realstack->top < realstack->size);
+
+   /* insert element */
+   realstack->vals[realstack->top] = elem;
+
+   return SCIP_OKAY;
+}
+
+/** pop an element from the stack of reals */
+SCIP_RETCODE SCIPrealstackPop(
+   SCIP_REALSTACK*       realstack,          /**< stack of reals */
+   SCIP_Real*            elem                /**< pointer to store the popped element */
+   )
+{
+   assert(realstack != NULL);
+   assert(realstack->vals != NULL);
+   assert(elem != NULL);
+
+   /* cannot pop from an empty stack */
+   if( realstack->top == -1 )
+      return SCIP_ERROR;
+
+   *elem = realstack->vals[realstack->top];
+   realstack->top--;
+
+   return SCIP_OKAY;
+}
 
 
 /*
