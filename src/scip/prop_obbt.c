@@ -19,7 +19,6 @@
  * @author  Stefan Weltge
  */
 
-/**@todo if bound tightenings of other propagators are the reason for lpsolstat != SCIP_LPSOLSTAT_OPTIMAL, resolve LP */
 /**@todo only run more than once in root node if primal bound improved or many cuts were added to the LP */
 /**@todo filter bounds of a variable already if SCIPisLbBetter()/SCIPisUbBetter() would return FALSE */
 /**@todo improve warmstarting of LP solving */
@@ -58,11 +57,9 @@
                                                     *   'f'arthest bound) */
 #define DEFAULT_ITLIMITFACTOR             5.0      /**< multiple of root node LP iterations used as total LP iteration
                                                     *   limit for obbt (<= 0: no limit ) */
-#define DEFAULT_ITLIMITRESOLVE             50      /**< iteration limit used for (re-)solving the root LP */
+#define DEFAULT_ITLIMITRESOLVE             20      /**< iteration limit used for (re-)solving the root LP */
 #define DEFAULT_MAXLOOKAHEAD                3      /**< maximal number of bounds evaluated without success per group
                                                     *   (-1: no limit) */
-#define DEFAULT_NEED_SOLVED_LP          FALSE      /**< apply obbt only if the root LP is solved to optimality? */
-
 #define OBBT_SCOREBASE                      5      /**< base that is used to calculate a bounds score value */
 
 #define GENVBOUND_PROP_NAME             "genvbounds"
@@ -1128,9 +1125,8 @@ SCIP_RETCODE applyObbt(
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
 
-   /* force root LP to be solved if requested */
-   if( SCIPgetDepth(scip) == 0 && !propdata->needsolvedlp && ( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL &&
-         SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_UNBOUNDEDRAY ) )
+   /* try to (re-)solve root LP with a few iterations in order to filter bounds with its solution */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
    {
       SCIP_Bool error;
       SCIP_Bool optimal;
@@ -1138,61 +1134,47 @@ SCIP_RETCODE applyObbt(
       error = FALSE;
       optimal = FALSE;
 
-      SCIPdebugMessage("force to solve root lp\n");
+      SCIPdebugMessage("try to (re-)solve root lp...\n");
       SCIP_CALL( solveLP(scip, propdata->itlimitresolve, &error, &optimal) );
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("lp iterations used for (forced) solving root lp: %lld\n", SCIPgetNLPIterations(scip) -
+      SCIPdebugMessage("... %lld iterations used for (re-)solving root lp\n", SCIPgetNLPIterations(scip) -
          nolditerations);
-#endif
-#ifdef SCIP_STATISTIC
-      SCIPstatisticMessage("lp iterations used for (forced) solving root lp: %lld\n", SCIPgetNLPIterations(scip) -
-      nolditerations);
 #endif
 
       /* update number of old LP iterations */
       nolditerations = SCIPgetNLPIterations(scip);
    }
 
-   /* make sure the LP is solved now */
-   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+   /* filter variables via inspecting present LP solution */
+   SCIP_CALL( filterExistingLP(scip, propdata, &nfiltered) );
+   SCIPdebugMessage("filtered %d bounds via inspecting present LP solution\n", nfiltered);
+   SCIPstatisticMessage("filtered bounds with root lp solution: %d\n", nfiltered);
+
+   /* add objective cutoff */
+   SCIP_CALL( addObjCutoff(scip, propdata) );
+
+   /* apply filtering */
+   if( propdata->applyfilterrounds )
    {
-      /* filter variables via inspecting present LP solution */
-      SCIP_CALL( filterExistingLP(scip, propdata, &nfiltered) );
-      SCIPdebugMessage("filtered %d bounds via inspecting present LP solution\n", nfiltered);
-      SCIPstatisticMessage("filtered bounds with root lp solution: %d\n", nfiltered);
-
-      /* add objective cutoff */
-      SCIP_CALL( addObjCutoff(scip, propdata) );
-
-      /* apply filtering */
-      if( propdata->applyfilterrounds )
+      SCIP_CALL( filterBounds(scip, propdata, itlimit) );
+      /* update iteration limit */
+      if( itlimit > 0 )
       {
-         SCIP_CALL( filterBounds(scip, propdata, itlimit) );
-         /* update iteration limit */
-         if( itlimit > 0 )
-         {
-            itlimit = itlimit - ( SCIPgetNLPIterations(scip) - nolditerations );
-            itlimit = MAX(itlimit, 0);
-         }
+         itlimit = itlimit - ( SCIPgetNLPIterations(scip) - nolditerations );
+         itlimit = MAX(itlimit, 0);
       }
-#ifdef SCIP_STATISTIC
-      else
-      {
-         SCIPstatisticMessage("filter rounds are disabled\n");
-      }
-#endif
-
-      /**@todo maybe endDive, startDive, addObjCutoff to restore old LP basis information here */
-
-      /* try to find new bounds and store them in the bound data structure */
-      SCIP_CALL( findNewBounds(scip, propdata, itlimit) );
    }
-#ifdef SCIP_DEBUG
+#ifdef SCIP_STATISTIC
    else
    {
-      SCIPdebugMessage("could not solve root LP, exiting obbt\n");
+      SCIPstatisticMessage("filter rounds are disabled\n");
    }
 #endif
+
+   /**@todo maybe endDive, startDive, addObjCutoff to restore old LP basis information here */
+
+   /* try to find new bounds and store them in the bound data structure */
+   SCIP_CALL( findNewBounds(scip, propdata, itlimit) );
 
    /* end diving */
    SCIP_CALL( SCIPendDive(scip) );
@@ -1596,18 +1578,6 @@ SCIP_DECL_PROPEXEC(propExecObbt)
 
    SCIPdebugMessage("applying obbt for problem <%s> at depth %d\n", SCIPgetProbName(scip), SCIPgetDepth(scip));
 
-   /* without an optimal LP solution we may not want to run; this may be because propagators with higher priority have
-    * already found reductions or numerical troubles occured during LP solving; if we're in root node and
-    * propdata->needsolvedlp is FALSE, then we try to resolve the LP in applyObbt
-    */
-   if( ( SCIPgetDepth(scip) > 0 || propdata->needsolvedlp ) && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL &&
-      SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
-   {
-      SCIPdebugMessage("aborting since no optimal LP solution is at hand\n");
-      SCIPstatisticMessage("no optimal lp solution at hand\n");
-      return SCIP_OKAY;
-   }
-
    /* apply obbt */
    SCIP_CALL( applyObbt(scip, propdata, propdata->itlimitfactor > 0.0 ?
       (SCIP_Longint) (propdata->itlimitfactor * SCIPgetNRootLPIterations(scip)) : -1, result) );
@@ -1721,10 +1691,6 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/applyfilterrounds",
          "try to filter bounds in so-called filter rounds by solving auxiliary LPs?",
          &propdata->applyfilterrounds, TRUE, DEFAULT_APPLY_FILTERROUNDS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/needsolvedlp",
-         "apply obbt only if the root LP is solved to optimality?",
-         &propdata->needsolvedlp, TRUE, DEFAULT_NEED_SOLVED_LP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/minfilter",
          "minimal number of filtered bounds to apply another filter round",
