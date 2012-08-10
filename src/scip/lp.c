@@ -334,7 +334,9 @@ static
 SCIP_RETCODE lpStoreSolVals(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_STAT*            stat,               /**< problem statistics */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    SCIP_LPSOLVALS* storedsolvals;
@@ -342,6 +344,8 @@ SCIP_RETCODE lpStoreSolVals(
    assert(lp != NULL);
    assert(stat != NULL);
    assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(eventqueue != NULL);
 
    /* allocate memory for storage */
    if( lp->storedsolvals == NULL )
@@ -357,6 +361,13 @@ SCIP_RETCODE lpStoreSolVals(
    storedsolvals->dualfeasible = lp->dualfeasible;
    storedsolvals->solisbasic = lp->solisbasic;
    storedsolvals->lpissolved = lp->solved;
+   storedsolvals->lpisflushed = lp->flushed;
+
+   /* flush LP before starting diving */
+   if( !lp->flushed )
+   {
+      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+   }
 
    return SCIP_OKAY;
 }
@@ -16058,14 +16069,14 @@ SCIP_RETCODE SCIPlpStartDive(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    int c;
    int r;
 
    assert(lp != NULL);
-   assert(lp->flushed || !lp->solved);
    assert(!lp->diving);
    assert(!lp->probing);
    assert(lp->divelpistate == NULL);
@@ -16093,7 +16104,7 @@ SCIP_RETCODE SCIPlpStartDive(
    SCIP_CALL( SCIPlpiGetState(lp->lpi, blkmem, &lp->divelpistate) );
 
    /* save current LP values dependent on the solution */
-   SCIP_CALL( lpStoreSolVals(lp, stat, blkmem) );
+   SCIP_CALL( lpStoreSolVals(lp, stat, blkmem, set, eventqueue) );
    assert(lp->storedsolvals != NULL);
    if( !set->lp_resolverestore && lp->solved
       && (lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
@@ -16189,8 +16200,9 @@ SCIP_RETCODE SCIPlpEndDive(
 
    /* resolve LP to reset solution */
    assert(lp->storedsolvals != NULL);
-   if( lp->storedsolvals->lpissolved
-      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
+   if( lp->storedsolvals->lpissolved &&
+      (set->lp_resolverestore || !lp->storedsolvals->lpisflushed ||
+         (lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL && lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY) ) )
    {
       SCIP_Bool lperror;
 
@@ -16225,10 +16237,10 @@ SCIP_RETCODE SCIPlpEndDive(
           */
          SCIP_CALL( updateLazyBounds(lp, set) );
          assert(lp->diving == lp->divinglazyapplied);
-
-         /* flush changes to the LP solver */
-         SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
       }
+
+      /* flush changes to the LP solver */
+      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
 
       /* increment lp counter to ensure that we do not use solution values from the last solved diving lp */
       stat->lpcount++;

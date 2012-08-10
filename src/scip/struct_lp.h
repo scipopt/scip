@@ -111,6 +111,7 @@ struct SCIP_LpSolVals
    SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             lpissolved;         /**< is current LP solved? */
+   SCIP_Bool             lpisflushed;        /**< is current LP flushed? */
 };
 
 /** LP column;

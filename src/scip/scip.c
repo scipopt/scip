@@ -25979,7 +25979,7 @@ SCIP_RETCODE SCIPstartDive(
    }
    assert(SCIPtreeHasCurrentNodeLP(scip->tree));
 
-   SCIP_CALL( SCIPlpStartDive(scip->lp, scip->mem->probmem, scip->set, scip->stat) );
+   SCIP_CALL( SCIPlpStartDive(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue) );
 
    return SCIP_OKAY;
 }

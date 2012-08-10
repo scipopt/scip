@@ -16,6 +16,7 @@ fixed bugs:
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
+- flush LP when starting diving mode; if solved before, simply resolve the LP when ending diving
 
 SCIP version 3.0.0
 ==================
