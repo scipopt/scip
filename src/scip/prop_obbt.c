@@ -50,7 +50,7 @@
 #define DEFAULT_CREATE_GENVBOUNDS        TRUE      /**< should obbt try to provide genvbounds if possible? */
 #define DEFAULT_FILTERING_NORM           TRUE      /**< should coefficients in filtering be normalized w.r.t. the
                                                     *   domains sizes? */
-#define DEFAULT_APPLY_FILTERROUNDS       TRUE      /**< try to filter bounds in so-called filter rounds by solving
+#define DEFAULT_APPLY_FILTERROUNDS      FALSE      /**< try to filter bounds in so-called filter rounds by solving
                                                     *   auxiliary LPs? */
 #define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
                                                     *   round */
