@@ -41,38 +41,38 @@ extern "C" {
  */
 
 /** gets name of event handler */
-extern
+EXTERN
 const char* SCIPeventhdlrGetName(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
 /** gets user data of event handler */
-extern
+EXTERN
 SCIP_EVENTHDLRDATA* SCIPeventhdlrGetData(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
 /** sets user data of event handler; user has to free old data in advance! */
-extern
+EXTERN
 void SCIPeventhdlrSetData(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< new event handler user data */
    );
 
 /** is event handler initialized? */
-extern
+EXTERN
 SCIP_Bool SCIPeventhdlrIsInitialized(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
 /** gets time in seconds used in this event handler for setting up for next stages */
-extern
+EXTERN
 SCIP_Real SCIPeventhdlrGetSetupTime(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
 /** gets time in seconds used in this event handler */
-extern
+EXTERN
 SCIP_Real SCIPeventhdlrGetTime(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
@@ -83,116 +83,116 @@ SCIP_Real SCIPeventhdlrGetTime(
  */
 
 /** gets type of event */
-extern
+EXTERN
 SCIP_EVENTTYPE SCIPeventGetType(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets variable for a variable event (var added, var deleted, var fixed, 
  *  objective value or domain change, domain hole added or removed) */
-extern
+EXTERN
 SCIP_VAR* SCIPeventGetVar(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets old objective value for an objective value change event */
-extern
+EXTERN
 SCIP_Real SCIPeventGetOldobj(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets new objective value for an objective value change event */
-extern
+EXTERN
 SCIP_Real SCIPeventGetNewobj(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets old bound for a bound change event */
-extern
+EXTERN
 SCIP_Real SCIPeventGetOldbound(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets new bound for a bound change event */
-extern
+EXTERN
 SCIP_Real SCIPeventGetNewbound(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets node for a node or LP event */
-extern
+EXTERN
 SCIP_NODE* SCIPeventGetNode(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets solution for a primal solution event */
-extern
+EXTERN
 SCIP_SOL* SCIPeventGetSol(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets the left bound of open interval in the hole */
-extern
+EXTERN
 SCIP_Real SCIPeventGetHoleLeft(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets the right bound of open interval in the hole */
-extern
+EXTERN
 SCIP_Real SCIPeventGetHoleRight(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets row for a row event */
-extern
+EXTERN
 SCIP_ROW* SCIPeventGetRow(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets column for a row change coefficient event */
-extern
+EXTERN
 SCIP_COL* SCIPeventGetRowCol(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets old coefficient value for a row change coefficient event */
-extern
+EXTERN
 SCIP_Real SCIPeventGetRowOldCoefVal(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets new coefficient value for a row change coefficient event */
-extern
+EXTERN
 SCIP_Real SCIPeventGetRowNewCoefVal(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets old constant value for a row change constant event */
-extern
+EXTERN
 SCIP_Real SCIPeventGetRowOldConstVal(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets new constant value for a row change constant event */
-extern
+EXTERN
 SCIP_Real SCIPeventGetRowNewConstVal(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets side for a row change side event */
-extern
+EXTERN
 SCIP_SIDETYPE SCIPeventGetRowSide(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets old side value for a row change side event */
-extern
+EXTERN
 SCIP_Real SCIPeventGetRowOldSideVal(
    SCIP_EVENT*           event               /**< event */
    );
 
 /** gets new side value for a row change side event */
-extern
+EXTERN
 SCIP_Real SCIPeventGetRowNewSideVal(
    SCIP_EVENT*           event               /**< event */
    );

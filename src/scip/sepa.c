@@ -45,6 +45,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPsepaComp)
    return ((SCIP_SEPA*)elem2)->priority - ((SCIP_SEPA*)elem1)->priority;
 }
 
+/** comparison method for sorting separators w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPsepaCompName)
+{
+   return strcmp(SCIPsepaGetName((SCIP_SEPA*)elem1), SCIPsepaGetName((SCIP_SEPA*)elem2));
+}
+
 /** method to call, when the priority of a separator was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdSepaPriority)
@@ -135,6 +141,7 @@ SCIP_RETCODE SCIPsepaCreate(
    (*sepa)->ncalls = 0;
    (*sepa)->ncutoffs = 0;
    (*sepa)->ncutsfound = 0;
+   (*sepa)->ncutsapplied = 0;
    (*sepa)->nconssfound = 0;
    (*sepa)->ndomredsfound = 0;
    (*sepa)->ncallsatnode = 0;
@@ -219,6 +226,7 @@ SCIP_RETCODE SCIPsepaInit(
       sepa->ncalls = 0;
       sepa->ncutoffs = 0;
       sepa->ncutsfound = 0;
+      sepa->ncutsapplied = 0;
       sepa->nconssfound = 0;
       sepa->ndomredsfound = 0;
       sepa->ncallsatnode = 0;
@@ -553,6 +561,74 @@ void SCIPsepaSetData(
    sepa->sepadata = sepadata;
 }
 
+/* new callback/method setter methods */
+
+/** sets copy method of separator */
+void SCIPsepaSetCopy(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPACOPY    ((*sepacopy))       /**< copy method of separator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->sepacopy = sepacopy;
+}
+
+/** sets destructor method of separator */
+void SCIPsepaSetFree(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAFREE    ((*sepafree))       /**< destructor of separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->sepafree = sepafree;
+}
+
+/** sets initialization method of separator */
+void SCIPsepaSetInit(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINIT    ((*sepainit))       /**< initialize separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->sepainit = sepainit;
+}
+
+/** sets deinitialization method of separator */
+void SCIPsepaSetExit(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXIT    ((*sepaexit))       /**< deinitialize separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->sepaexit = sepaexit;
+}
+
+/** sets solving process initialization method of separator */
+void SCIPsepaSetInitsol(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINITSOL ((*sepainitsol))    /**< solving process initialization method of separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->sepainitsol = sepainitsol;
+}
+
+/** sets solving process deinitialization method of separator */
+void SCIPsepaSetExitsol(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXITSOL ((*sepaexitsol))    /**< solving process deinitialization method of separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->sepaexitsol = sepaexitsol;
+}
+
 /** gets name of separator */
 const char* SCIPsepaGetName(
    SCIP_SEPA*            sepa                /**< separator */
@@ -628,7 +704,7 @@ SCIP_Real SCIPsepaGetMaxbounddist(
    return sepa->maxbounddist;
 }
 
-/**< does the separator use a secondary SCIP instance? */
+/** does the separator use a secondary SCIP instance? */
 SCIP_Bool SCIPsepaUsesSubscip(
    SCIP_SEPA*            sepa                /**< separator */
    )
@@ -696,6 +772,26 @@ SCIP_Longint SCIPsepaGetNCutsFound(
    assert(sepa != NULL);
 
    return sepa->ncutsfound;
+}
+
+/** gets the total number of cutting planes applied to lp */
+SCIP_Longint SCIPsepaGetNCutsApplied(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->ncutsapplied;
+}
+
+/** increase count of applied cuts */
+void SCIPsepaIncNAppliedCuts(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert( sepa != NULL );
+
+   ++sepa->ncutsapplied;
 }
 
 /** gets the number of cutting planes found by this separator at the current node */

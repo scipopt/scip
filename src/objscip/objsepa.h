@@ -105,78 +105,56 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
-   /** destructor of cut separator to free user data (called when SCIP is exiting) */
-   virtual SCIP_RETCODE scip_free(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_SEPA*         sepa                /**< the cut separator itself */
-      )
+   /** destructor of cut separator to free user data (called when SCIP is exiting) 
+    *
+    *  @see SCIP_DECL_SEPAFREE(x) in @ref type_sepa.h
+    */
+   virtual SCIP_DECL_SEPAFREE(scip_free)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
-   /** initialization method of cut separator (called after problem was transformed) */
-   virtual SCIP_RETCODE scip_init(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_SEPA*         sepa                /**< the cut separator itself */
-      )
+   /** initialization method of cut separator (called after problem was transformed) 
+    *
+    *  @see SCIP_DECL_SEPAINIT(x) in @ref type_sepa.h
+    */
+   virtual SCIP_DECL_SEPAINIT(scip_init)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
-   /** deinitialization method of cut separator (called before transformed problem is freed) */
-   virtual SCIP_RETCODE scip_exit(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_SEPA*         sepa                /**< the cut separator itself */
-      )
+   /** deinitialization method of cut separator (called before transformed problem is freed)
+    *
+    *  @see SCIP_DECL_SEPAEXIT(x) in @ref type_sepa.h
+    */
+   virtual SCIP_DECL_SEPAEXIT(scip_exit)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
    /** solving process initialization method of separator (called when branch and bound process is about to begin)
     *
-    *  This method is called when the presolving was finished and the branch and bound process is about to begin.
-    *  The separator may use this call to initialize its branch and bound specific data.
+    *  @see SCIP_DECL_SEPAINITSOL(x) in @ref type_sepa.h
     */
-   virtual SCIP_RETCODE scip_initsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_SEPA*         sepa                /**< the cut separator itself */
-      )
+   virtual SCIP_DECL_SEPAINITSOL(scip_initsol)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
    /** solving process deinitialization method of separator (called before branch and bound process data is freed)
     *
-    *  This method is called before the branch and bound process is freed.
-    *  The separator should use this call to clean up its branch and bound data.
+    *  @see SCIP_DECL_SEPAEXITSOL(x) in @ref type_sepa.h
     */
-   virtual SCIP_RETCODE scip_exitsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_SEPA*         sepa                /**< the cut separator itself */
-      )
+   virtual SCIP_DECL_SEPAEXITSOL(scip_exitsol)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
    /** LP solution separation method of separator
     *
-    *  Searches for cutting planes that separate the current LP solution. The method is called in the LP solving loop,
-    *  which means that a valid LP solution exists.
-    *
-    *  possible return values for *result:
-    *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
-    *  - SCIP_SEPARATED  : a cutting plane was generated
-    *  - SCIP_REDUCEDDOM : no cutting plane was generated, but a variable's domain was reduced
-    *  - SCIP_CONSADDED  : no cutting plane or domain reduction, but an additional constraint was generated
-    *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
-    *  - SCIP_DIDNOTRUN  : the separator was skipped
-    *  - SCIP_DELAYED    : the separator was skipped, but should be called again
+    *  @see SCIP_DECL_SEPAEXECLP(x) in @ref type_sepa.h
     */
-   virtual SCIP_RETCODE scip_execlp(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_SEPA*         sepa,               /**< the cut separator itself */
-      SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
-      )
+   virtual SCIP_DECL_SEPAEXECLP(scip_execlp)
    {  /*lint --e{715}*/
       assert(result != NULL);
       *result = SCIP_DIDNOTRUN;
@@ -185,24 +163,9 @@ public:
    
    /** arbitrary primal solution separation method of separator
     *
-    *  Searches for cutting planes that separate the given primal solution. The method is called outside the LP solution
-    *  loop (e.g., by a relaxator or a primal heuristic), which means that there is no valid LP solution.
-    *
-    *  possible return values for *result:
-    *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
-    *  - SCIP_SEPARATED  : a cutting plane was generated
-    *  - SCIP_REDUCEDDOM : no cutting plane was generated, but a variable's domain was reduced
-    *  - SCIP_CONSADDED  : no cutting plane or domain reduction, but an additional constraint was generated
-    *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
-    *  - SCIP_DIDNOTRUN  : the separator was skipped
-    *  - SCIP_DELAYED    : the separator was skipped, but should be called again
+    *  @see SCIP_DECL_SEPAEXECSOL(x) in @ref type_sepa.h
     */
-   virtual SCIP_RETCODE scip_execsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_SEPA*         sepa,               /**< the cut separator itself */
-      SCIP_SOL*          sol,                /**< primal solution that should be separated */
-      SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
-      )
+   virtual SCIP_DECL_SEPAEXECSOL(scip_execsol)
    {  /*lint --e{715}*/
       assert(result != NULL);
       *result = SCIP_DIDNOTRUN;

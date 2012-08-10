@@ -42,7 +42,7 @@ extern "C" {
 #endif
 
 /** creates the handler for logic or constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrLogicor(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -51,7 +51,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPcreateConsLogicor(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -83,8 +83,25 @@ SCIP_RETCODE SCIPcreateConsLogicor(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures a logicor constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsLogicor(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsLogicor() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsBasicLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars                /**< array with variables of constraint entries */
+   );
+
 /** adds coefficient in logic or constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddCoefLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< logicor constraint */
@@ -92,28 +109,28 @@ SCIP_RETCODE SCIPaddCoefLogicor(
    );
 
 /** gets number of variables in logic or constraint */
-extern
+EXTERN
 int SCIPgetNVarsLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in logic or constraint */
-extern
+EXTERN
 SCIP_VAR** SCIPgetVarsLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual solution of the logic or constraint in the current LP */
-extern
+EXTERN
 SCIP_Real SCIPgetDualsolLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual Farkas value of the logic or constraint in the current infeasible LP */
-extern
+EXTERN
 SCIP_Real SCIPgetDualfarkasLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -122,7 +139,7 @@ SCIP_Real SCIPgetDualfarkasLogicor(
 /** returns the linear relaxation of the given logic or constraint; may return NULL if no LP row was yet created;
  *  the user must not modify the row!
  */
-extern
+EXTERN
 SCIP_ROW* SCIPgetRowLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

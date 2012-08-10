@@ -1,0 +1,42 @@
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*                                                                           *
+*                  This file is part of the program and library             *
+*         SCIP --- Solving Constraint Integer Programs                      *
+*                                                                           *
+*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+*                            fuer Informationstechnik Berlin                *
+*                                                                           *
+*  SCIP is distributed under the terms of the ZIB Academic License.         *
+*                                                                           *
+*  You should have received a copy of the ZIB Academic License              *
+*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+*                                                                           *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+This is a beta-version of an AMPL interface for SCIP
+
+Currently not supported, but planned for future versions:
+ - setting user parameters in SCIP from AMPL (AMPL solver options)
+
+Please let us know (e-mail to scip@zib.de mailing list), if you are missing any of these or any other features.
+Please let us know if you find any bugs, unexpected behavior, or compatibility problems (report via http://scip.zib.de/bugs.shtml)
+
+To use SCIP from AMPL, you have to do the following:
+ - execute the ./get.ASL script to download the AMPL solver library sources;
+   the script downloads the compressed tarball from the netlib server and expands it in a directory solvers 
+ - build the AMPL solver library,
+   on Linux, this may be possible by doing "cd solvers; make -f makefile.u",
+   on MinGW with MS or Intel compiler, this may be possible by doing "cd solvers; cp details.c0 details.c; nmake -f makefile.vc"
+ - build SCIP (see ../../INSTALL)
+ - build the SCIP-AMPL binary with the same OPT/LPS/ZIMPL/IPOPT/... flags as the SCIP binary in this directory, e.g.,
+   make LPS=spx ZIMPL=false IPOPT=true  (ignore the compiler warnings...)
+   If that does not work out of the box, it may be required to adapt the "ASL library" section in Makefile! 
+ - the latter should creates a link ./bin/scipampl that points to a binary that expects an AMPL .nl file as command line argument and,
+   if given, attempts to read this instance into SCIP and tries to solve it 
+ - call make test (with the same flags for OPT/LPS/ZIMPL/IPOPT/... as before) to check if the binary is working
+
+To get help on command line parameters, call the scipampl binary without arguments.
+
+WARNINGS: The executable has only been tested on the command line when running with a .nl file, not within AMPL.
+          We have tested only "simple" .nl files, fancy stuff like defined variables may not work.
+

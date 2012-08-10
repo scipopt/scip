@@ -228,7 +228,7 @@ SCIP_RETCODE SCIPincludeObjEventhdlr(
    /* include event handler */
    SCIP_CALL( SCIPincludeEventhdlr(scip, objeventhdlr->scip_name_, objeventhdlr->scip_desc_,
          eventhdlrCopyObj,
-         eventhdlrFreeObj, eventhdlrInitObj, eventhdlrExitObj, 
+         eventhdlrFreeObj, eventhdlrInitObj, eventhdlrExitObj,
          eventhdlrInitsolObj, eventhdlrExitsolObj, eventhdlrDeleteObj, eventhdlrExecObj,
          eventhdlrdata) ); /*lint !e429*/
 

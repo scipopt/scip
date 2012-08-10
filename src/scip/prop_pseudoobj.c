@@ -118,6 +118,7 @@ struct SCIP_PropData
    SCIP_Bool             catchvaradded;      /**< do we catch the variable added event? */
    SCIP_Bool             propuseimplics;     /**< use implications to strengthen the propagation of binary variable (increasing the objective change)? */
    SCIP_Bool             respropuseimplics;  /**< use implications to strengthen the resolve propagation of binary variable (increasing the objective change)? */
+   SCIP_Bool             initialized;        /**< is propagator data structure initialized */
 };
 
 /*
@@ -315,12 +316,17 @@ SCIP_DECL_HASHKEYVAL(cliqueGetHashkeyVal)
  * methods for SCIP_OBJIMPLICS data structure
  */
 
-/** creates an objective implication data structure */
+/** creates an objective implication data structure, fixes (globally) variables which are implied by lower and upper
+ *  bound fixing, and clears the collected arrays for lower and upper bound
+ */
 static
 SCIP_RETCODE objimplicsCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_OBJIMPLICS**     objimplics,         /**< pointer to objective implication data structure */
    SCIP_VAR**            objvars,            /**< objective contributor variables, or NULL */
+   SCIP_HASHMAP*         binobjvarmap,       /**< hash map mapping binary variables with none-zero objective to position in collected variables arrays, or NULL */
+   SCIP_Bool*            collectedlbvars,    /**< temporary buffer to mark collected variables for lower bound fixing, or NULL */
+   SCIP_Bool*            collectedubvars,    /**< temporary buffer to mark collected variables for upper bound fixing, or NULL */
    SCIP_Real             maxlbobjchg,        /**< maximum objective contributor if variables id fixed to zero */
    SCIP_Real             maxubobjchg,        /**< maximum objective contributor if variables id fixed to one */
    int                   nlbimpls,           /**< number of variables contributing to to lower bound fix */
@@ -341,29 +347,107 @@ SCIP_RETCODE objimplicsCreate(
       assert(nlbimpls == 0);
       assert(nubimpls == 0);
       (*objimplics)->objvars = NULL;
+      (*objimplics)->maxobjchg = 0.0;
+      (*objimplics)->nlbimpls = 0;
+      (*objimplics)->nubimpls = 0;
+      (*objimplics)->size = 0;
    }
    else
    {
+      SCIP_VAR* var;
+      int nvars;
+      int pos;
       int v;
 
       assert(objvars != NULL);
+      assert(binobjvarmap != NULL);
+      assert(collectedlbvars != NULL);
+      assert(collectedubvars != NULL);
 
-      /* copy the binary objective implication variables */
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*objimplics)->objvars, objvars, nlbimpls + nubimpls) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*objimplics)->objvars, nlbimpls + nubimpls) );
+      (*objimplics)->size = nlbimpls + nubimpls;
+
+      nvars = 0;
+
+      for( v = 0; v < nlbimpls; ++v )
+      {
+         var = objvars[v];
+         assert(var != NULL);
+         assert(!SCIPisZero(scip, SCIPvarGetObj(var)));
+
+         assert(SCIPhashmapExists(binobjvarmap, var));
+         pos = (int)(size_t)SCIPhashmapGetImage(binobjvarmap, (void*)var);
+         assert(pos > 0);
+         assert(collectedlbvars[pos]);
+
+         if( collectedubvars[pos] )
+         {
+            SCIP_Bool infeasible;
+            SCIP_Bool tightened;
+
+            if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
+            {
+               SCIPdebugMessage("fix variables <%s> to 1.0 due to implications\n", SCIPvarGetName(var));
+
+               SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, 1.0, FALSE, &infeasible, &tightened) );
+               maxlbobjchg -= SCIPvarGetObj(var);
+            }
+            else
+            {
+               SCIPdebugMessage("fix variables <%s> to 0.0 due to implications\n", SCIPvarGetName(var));
+
+               SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, 0.0, FALSE, &infeasible, &tightened) );
+               maxlbobjchg += SCIPvarGetObj(var);
+            }
+            assert(!infeasible);
+            assert(tightened);
+         }
+         else
+         {
+            (*objimplics)->objvars[nvars] = var;
+            nvars++;
+         }
+         collectedlbvars[pos] = FALSE;
+      }
+      (*objimplics)->nlbimpls = nvars;
+
+      for( v = 0; v < nubimpls; ++v )
+      {
+         var = objvars[nlbimpls + v];
+         assert(var != NULL);
+         assert(!SCIPisZero(scip, SCIPvarGetObj(var)));
+
+         assert(SCIPhashmapExists(binobjvarmap, var));
+         pos = (int)(size_t)SCIPhashmapGetImage(binobjvarmap, (void*)var);
+         assert(pos > 0);
+         assert(collectedubvars[pos]);
+
+         if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5 )
+         {
+            if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
+               maxubobjchg -= SCIPvarGetObj(var);
+            else
+               maxubobjchg += SCIPvarGetObj(var);
+         }
+         else
+         {
+            (*objimplics)->objvars[nvars] = var;
+            nvars++;
+         }
+         collectedubvars[pos] = FALSE;
+      }
+      (*objimplics)->nubimpls = nvars - (*objimplics)->nlbimpls;
 
       /* capture the variables */
-      for( v = 0; v < nlbimpls + nubimpls; ++v )
+      for( v = 0; v < nvars; ++v )
       {
-         assert(SCIPvarIsBinary(objvars[v]));
-         assert(!SCIPisZero(scip, SCIPvarGetObj(objvars[v])));
-         SCIP_CALL( SCIPcaptureVar(scip, objvars[v]) );
+         assert(SCIPvarIsBinary((*objimplics)->objvars[v]));
+         assert(!SCIPisZero(scip, SCIPvarGetObj((*objimplics)->objvars[v])));
+         SCIP_CALL( SCIPcaptureVar(scip, (*objimplics)->objvars[v]) );
       }
    }
 
    (*objimplics)->maxobjchg = MAX(maxlbobjchg, maxubobjchg);
-   (*objimplics)->nlbimpls = nlbimpls;
-   (*objimplics)->nubimpls = nubimpls;
-   (*objimplics)->size = nlbimpls + nubimpls;
 
    return SCIP_OKAY;
 }
@@ -599,6 +683,7 @@ void propdataReset(
    propdata->firstnonfixed = 0;
    propdata->nnewvars = 0;
    propdata->catchvaradded = FALSE;
+   propdata->initialized = FALSE;
 }
 
 /** free propagator data */
@@ -609,6 +694,9 @@ SCIP_RETCODE propdataExit(
    )
 {
    int v;
+
+   if( !propdata->initialized )
+      return SCIP_OKAY;
 
    if( propdata->addedvars != NULL )
       SCIPhashtableFree(&propdata->addedvars);
@@ -658,9 +746,7 @@ static
 SCIP_Real collectMinactImplicVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to computes the objective contribution */
-   int*                  binobjidxs,         /**< sorted array which contains all variable problem indices of variable
-					      *   which have a non-zero objective coefficient
-					      */
+   SCIP_HASHMAP*         binobjvarmap,       /**< hash map mapping binary variables with none-zero objective to position in collected variables arrays */
    SCIP_Bool*            collectedvars,      /**< temporary buffer to mark collected variables */
    int                   nbinobjvars,        /**< number of binary variables with non-zero objective coefficient */
    SCIP_VAR**            contributors,       /**< array to store the contributors */
@@ -669,13 +755,10 @@ SCIP_Real collectMinactImplicVar(
 {
    SCIP_Real objval;
    int pos;
-#ifndef NDEBUG
-   SCIP_Bool found;
-#endif
 
    assert(scip != NULL);
    assert(var != NULL);
-   assert(binobjidxs != NULL);
+   assert(binobjvarmap != NULL);
    assert(collectedvars != NULL);
    assert(contributors != NULL);
    assert(ncontributors != NULL);
@@ -690,12 +773,9 @@ SCIP_Real collectMinactImplicVar(
    if( SCIPisZero(scip, objval) )
       return 0.0;
 
-#ifndef NDEBUG
-   found = SCIPsortedvecFindInt(binobjidxs, SCIPvarGetProbindex(var), nbinobjvars, &pos);
-   assert(found);
-#else
-   (void) SCIPsortedvecFindInt(binobjidxs, SCIPvarGetProbindex(var), nbinobjvars, &pos);
-#endif
+   assert(SCIPhashmapExists(binobjvarmap, var));
+   pos = (int)(size_t)SCIPhashmapGetImage(binobjvarmap, var);
+   assert(pos > 0);
 
    /* check if the variables was already collected through other cliques */
    if( collectedvars[pos] )
@@ -733,7 +813,7 @@ SCIP_RETCODE collectMinactImplicVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to computes the objective contribution */
    SCIP_BOUNDTYPE        bound,              /**< bound to check for */
-   int*                  binobjidxs,         /**< sorted array which contains all variable problem indices of variable which have a non-zero objective coefficient */
+   SCIP_HASHMAP*         binobjvarmap,       /**< hash map mapping binary variables with none-zero objective to position in collected variables arrays */
    SCIP_Bool*            collectedvars,      /**< temporary buffer to mark collected variables */
    int                   nbinobjvars,        /**< number of binary variables with non-zero objective coefficient */
    SCIP_VAR**            contributors,       /**< array to store the contributors */
@@ -816,7 +896,7 @@ SCIP_RETCODE collectMinactImplicVars(
          else if( values[v] == (SCIP_Bool)SCIPvarGetBestBoundType(implvar) )
          {
             useless = FALSE;
-            (*objchg) += collectMinactImplicVar(scip, implvar, binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors);
+            (*objchg) += collectMinactImplicVar(scip, implvar, binobjvarmap, collectedvars, nbinobjvars, contributors, ncontributors);
          }
       }
 
@@ -840,7 +920,7 @@ SCIP_RETCODE collectMinactImplicVars(
 
       if( boundtypes[v] == SCIPvarGetBestBoundType(vars[v]) )
       {
-         (*objchg) += collectMinactImplicVar(scip, vars[v], binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors);
+         (*objchg) += collectMinactImplicVar(scip, vars[v], binobjvarmap, collectedvars, nbinobjvars, contributors, ncontributors);
       }
    }
 
@@ -954,7 +1034,7 @@ SCIP_RETCODE collectMinactObjchg(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to computes the objective contribution */
    SCIP_BOUNDTYPE        bound,              /**< bound to check for */
-   int*                  binobjidxs,         /**< sorted array which contains all variable problem indices of variable which have a non-zero objective coefficient */
+   SCIP_HASHMAP*         binobjvarmap,       /**< hash map mapping binary variables with none-zero objective to position in collected variables arrays */
    SCIP_Bool*            collectedvars,      /**< temporary buffer to mark collected variables */
    int                   nbinobjvars,        /**< number of binary variables with non-zero objective coefficient */
    SCIP_VAR**            contributors,       /**< array to store the contriboters */
@@ -973,7 +1053,7 @@ SCIP_RETCODE collectMinactObjchg(
    (*ncontributors) = 0;
 
    /* add the objective contribution from the implication variable */
-   SCIP_CALL( collectMinactImplicVars(scip, var, bound, binobjidxs, collectedvars, nbinobjvars, contributors, uselesscliques, ncontributors, objchg) );
+   SCIP_CALL( collectMinactImplicVars(scip, var, bound, binobjvarmap, collectedvars, nbinobjvars, contributors, uselesscliques, ncontributors, objchg) );
 
    return SCIP_OKAY;
 }
@@ -1088,6 +1168,31 @@ SCIP_Real getMaxactObjchg(
    return objchg;
 }
 
+/** reset variables array which marks variables which are collected */
+static
+void resetContributors(
+   SCIP_HASHMAP*         binobjvarmap,       /**< hash map mapping binary variables with none-zero objective to position in collected variables arrays */
+   SCIP_Bool*            collectedvars,      /**< temporary buffer to mark collected variables which should be reset */
+   SCIP_VAR**            contributors,       /**< temporary buffer to use for collecting contributors */
+   int                   ncontributors       /**< number of contributors */
+   )
+{
+   SCIP_VAR* var;
+   int pos;
+   int c;
+
+   for( c = 0; c < ncontributors; ++c )
+   {
+      var = contributors[c];
+      assert(var != NULL);
+
+      assert(SCIPhashmapExists(binobjvarmap, var));
+      pos = (int)(size_t)SCIPhashmapGetImage(binobjvarmap, var);
+      assert(pos > 0);
+      collectedvars[pos] = FALSE;
+   }
+}
+
 /** check if the given variable should be collected for the minimum activity propagation */
 static
 SCIP_RETCODE collectMinactVar(
@@ -1095,8 +1200,9 @@ SCIP_RETCODE collectMinactVar(
    SCIP_VAR*             var,                /**< variable to check */
    SCIP_OBJIMPLICS**     objimplics,         /**< pointer to store the objective implication data structure w.r.t. minimum activity */
    SCIP_Bool             useimplics,         /**< should implications be used */
-   int*                  binobjidxs,         /**< sorted array which contains all variable problem indices of variable which have a non-zero objective coefficient */
-   SCIP_Bool*            collectedvars,      /**< temporary buffer to mark collected variables */
+   SCIP_HASHMAP*         binobjvarmap,       /**< hash map mapping binary variables with none-zero objective to position in collected variables arrays */
+   SCIP_Bool*            collectedlbvars,    /**< temporary buffer to mark collected variables for lower bound fixing */
+   SCIP_Bool*            collectedubvars,    /**< temporary buffer to mark collected variables for upper bound fixing */
    int                   nbinobjvars,        /**< number of binary variables with non-zero objective coefficient */
    SCIP_VAR**            contributors,       /**< temporary buffer to use for collecting contributors */
    SCIP_HASHTABLE*       uselesscliques,     /**< hash table to store useless cliques, or NULL */
@@ -1132,66 +1238,65 @@ SCIP_RETCODE collectMinactVar(
    {
       int nlbcontributors;
       int nubcontributors;
-      int pos;
-      int c;
 
       assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
       assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
 
       /* get contribution of variable by fixing it to its lower bound w.r.t. minimum activity of the objective function */
-      SCIP_CALL( collectMinactObjchg(scip, var, SCIP_BOUNDTYPE_LOWER, binobjidxs, collectedvars, nbinobjvars,
+      SCIP_CALL( collectMinactObjchg(scip, var, SCIP_BOUNDTYPE_LOWER, binobjvarmap, collectedlbvars, nbinobjvars,
             contributors, uselesscliques, &nlbcontributors, &lbobjchg) );
       assert(!SCIPisNegative(scip, lbobjchg));
 
       SCIPdebugMessage("variable <%s> fixed to bound=%d implies %d(%d)\n", SCIPvarGetName(var),
          SCIP_BOUNDTYPE_LOWER, SCIPvarGetNBinImpls(var, (SCIP_Bool)SCIP_BOUNDTYPE_LOWER), nlbcontributors);
 
-      /* reset variables array which marks variables which are collected */
-      for( c = 0; c < nlbcontributors; ++c )
-      {
-         assert(SCIPsortedvecFindInt(binobjidxs, SCIPvarGetProbindex(contributors[c]), nbinobjvars, &pos));
-         (void) SCIPsortedvecFindInt(binobjidxs, SCIPvarGetProbindex(contributors[c]), nbinobjvars, &pos);
-         collectedvars[pos] = FALSE;
-      }
-
       /* ignore implications if the variable has a zero objective coefficient and implications only one variable, since
        * this covered by that implied variable
        */
       if( !(*collect) && nlbcontributors == 1 )
       {
+         /* reset lower bound contributors */
+         resetContributors(binobjvarmap, collectedlbvars, contributors, nlbcontributors);
+
          assert(SCIPisZero(scip, objval));
          nlbcontributors = 0;
       }
 
       /* get contribution of variable by fixing it to its upper bound w.r.t. minimum activity of the objective function */
-      SCIP_CALL( collectMinactObjchg(scip, var, SCIP_BOUNDTYPE_UPPER, binobjidxs, collectedvars, nbinobjvars,
+      SCIP_CALL( collectMinactObjchg(scip, var, SCIP_BOUNDTYPE_UPPER, binobjvarmap, collectedubvars, nbinobjvars,
             &contributors[nlbcontributors], uselesscliques, &nubcontributors, &ubobjchg) );
       assert(!SCIPisNegative(scip, ubobjchg));
 
       SCIPdebugMessage("variable <%s> fixed to bound=%d implies %d(%d)\n", SCIPvarGetName(var),
          SCIP_BOUNDTYPE_UPPER, SCIPvarGetNBinImpls(var, (SCIP_Bool)SCIP_BOUNDTYPE_UPPER), nubcontributors);
 
-      /* reset variables array which marks variables which are collected */
-      for( c = 0; c < nubcontributors; ++c )
-      {
-         assert(SCIPsortedvecFindInt(binobjidxs, SCIPvarGetProbindex(contributors[nlbcontributors + c]), nbinobjvars, &pos));
-         (void) SCIPsortedvecFindInt(binobjidxs, SCIPvarGetProbindex(contributors[nlbcontributors + c]), nbinobjvars, &pos);
-         collectedvars[pos] = FALSE;
-      }
-
       /* ignore implications if the variable has a zero objective coefficient and implications only one variable, since
        * this covered by that implied variable
        */
       if( !(*collect) && nubcontributors == 1 )
       {
+         /* reset upper bound contributors */
+         resetContributors(binobjvarmap, collectedubvars, &contributors[nlbcontributors], nubcontributors);
+
          assert(SCIPisZero(scip, objval));
          nubcontributors = 0;
       }
 
       if( (*collect) || nlbcontributors > 1 || nubcontributors > 1 )
       {
-         SCIP_CALL( objimplicsCreate(scip, objimplics, contributors, lbobjchg, ubobjchg, nlbcontributors, nubcontributors) );
+         /* creates an objective implication data structure, fixes (globally) variables which are implied by lower and upper
+          * bound fixing, and clears the collected arrays for lower and upper bound
+          */
+         SCIP_CALL( objimplicsCreate(scip, objimplics, contributors, binobjvarmap, collectedlbvars, collectedubvars, lbobjchg, ubobjchg, nlbcontributors, nubcontributors) );
          (*collect) = TRUE;
+      }
+      else
+      {
+         /* reset lower bound contributors */
+         resetContributors(binobjvarmap, collectedlbvars, contributors, nlbcontributors);
+
+         /* reset upper bound contributors */
+         resetContributors(binobjvarmap, collectedubvars, &contributors[nlbcontributors], nubcontributors);
       }
    }
    else if( (*collect) )
@@ -1202,7 +1307,8 @@ SCIP_RETCODE collectMinactVar(
       assert(!SCIPisNegative(scip, lbobjchg));
       assert(!SCIPisNegative(scip, ubobjchg));
 
-      SCIP_CALL( objimplicsCreate(scip, objimplics, NULL, lbobjchg, ubobjchg, 0, 0) );
+      /* creates an "empty" objective implication data structure */
+      SCIP_CALL( objimplicsCreate(scip, objimplics, NULL, NULL, NULL, NULL, lbobjchg, ubobjchg, 0, 0) );
    }
 
    return SCIP_OKAY;
@@ -1246,8 +1352,7 @@ SCIP_RETCODE propdataInit(
 {
    SCIP_VAR** vars;
    SCIP_VAR* var;
-   int* binobjvars;
-   int sizebinobjvars;
+   SCIP_HASHMAP* binobjvarmap;
    int nvars;
    int nbinvars;
    int nintvars;
@@ -1270,9 +1375,8 @@ SCIP_RETCODE propdataInit(
    nbinvars = 0;
    nobjvars = 0;
    nbinobjvars = 0;
-   sizebinobjvars = 100;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &binobjvars, sizebinobjvars) );
+   SCIP_CALL( SCIPhashmapCreate(&binobjvarmap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNObjVars(scip) * 5)) );
 
    /* count and collect variable problem indices of variables with non-zero objective coefficient */
    for( v = 0; v < nvars; ++v )
@@ -1286,13 +1390,7 @@ SCIP_RETCODE propdataInit(
 
          if( SCIPvarIsBinary(var) )
          {
-            if( nbinobjvars == sizebinobjvars )
-            {
-               sizebinobjvars = SCIPcalcMemGrowSize(scip, nbinobjvars + 1);
-               SCIP_CALL( SCIPreallocBufferArray(scip, &binobjvars, sizebinobjvars) );
-            }
-
-            binobjvars[nbinobjvars] = SCIPvarGetProbindex(var);
+            SCIP_CALL( SCIPhashmapInsert(binobjvarmap, (void*)var, (void*)(size_t)(nbinobjvars + 1)) );
             nbinobjvars++;
          }
       }
@@ -1312,7 +1410,8 @@ SCIP_RETCODE propdataInit(
       SCIP_OBJIMPLICS* objimplics;
       SCIP_HASHTABLE* uselesscliques;
       SCIP_VAR** contributors;
-      SCIP_Bool* collectedvars;
+      SCIP_Bool* collectedlbvars;
+      SCIP_Bool* collectedubvars;
       SCIP_Bool collect;
       SCIP_Bool useimplics;
       SCIP_Real objval;
@@ -1336,8 +1435,10 @@ SCIP_RETCODE propdataInit(
 
          /* create temporary buffer */
          SCIP_CALL( SCIPallocBufferArray(scip, &contributors, nbinobjvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &collectedvars, nbinobjvars) );
-         BMSclearMemoryArray(collectedvars, nbinobjvars);
+         SCIP_CALL( SCIPallocBufferArray(scip, &collectedlbvars, nbinobjvars+1) );
+         BMSclearMemoryArray(collectedlbvars, nbinobjvars+1);
+         SCIP_CALL( SCIPallocBufferArray(scip, &collectedubvars, nbinobjvars+1) );
+         BMSclearMemoryArray(collectedubvars, nbinobjvars+1);
 
          ncliques = SCIPgetNCliques(scip);
 
@@ -1352,7 +1453,8 @@ SCIP_RETCODE propdataInit(
       else
       {
          contributors = NULL;
-         collectedvars = NULL;
+         collectedlbvars = NULL;
+         collectedubvars = NULL;
          uselesscliques = NULL;
       }
 
@@ -1379,7 +1481,8 @@ SCIP_RETCODE propdataInit(
             }
 
             /* check if the variable should be collected for the minimum activity propagation */
-            SCIP_CALL( collectMinactVar(scip, var, &objimplics, useimplics, binobjvars, collectedvars, nbinobjvars, contributors, uselesscliques, &collect) );
+            SCIP_CALL( collectMinactVar(scip, var, &objimplics, useimplics, binobjvarmap, collectedlbvars, collectedubvars,
+                  nbinobjvars, contributors, uselesscliques, &collect) );
 
             if( collect )
             {
@@ -1452,7 +1555,8 @@ SCIP_RETCODE propdataInit(
          if( uselesscliques != NULL )
             SCIPhashtableFree(&uselesscliques);
 
-         SCIPfreeBufferArray(scip, &collectedvars);
+         SCIPfreeBufferArray(scip, &collectedubvars);
+         SCIPfreeBufferArray(scip, &collectedlbvars);
          SCIPfreeBufferArray(scip, &contributors);
       }
 
@@ -1508,7 +1612,7 @@ SCIP_RETCODE propdataInit(
       }
    }
 
-   SCIPfreeBufferArray(scip, &binobjvars);
+   SCIPhashmapFree(&binobjvarmap);
 
    propdata->nminactvars = nminactvars;
    propdata->nmaxactvars = nmaxactvars;
@@ -1520,12 +1624,13 @@ SCIP_RETCODE propdataInit(
    propdata->maxactfirstnonfixed = 0;
    propdata->firstnonfixed = 0;
    propdata->nnewvars = 0;
+   propdata->initialized = TRUE;
 
    /* due to scaling after presolving we need to update the global pseudoactivity and the cutoffbound */
    propdata->glbpropagated = FALSE;
    propdata->glbpseudoobjval = SCIPgetGlobalPseudoObjval(scip);
    propdata->cutoffbound = SCIPgetCutoffbound(scip);
-   assert(SCIPisFeasEQ(scip, propdata->glbpseudoobjval, SCIPgetPseudoObjval(scip)));
+   assert(SCIPgetDepth(scip) > 0 || SCIPisFeasEQ(scip, propdata->glbpseudoobjval, SCIPgetPseudoObjval(scip)));
 
    /* create hash table which is used for resolving bound changes */
    if( nminactvars > 0 )
@@ -2857,6 +2962,8 @@ SCIP_RETCODE propagateLowerboundVar(
    objval = SCIPvarGetObj(var);
    assert(!SCIPisZero(scip, objval));
 
+   (*tightened) = FALSE;
+
    /* get residual pseudo objective activity, that is the pseudo objective activity without the given variable */
    residual = getMaxObjPseudoactivityResidual(scip, propdata, var);
 
@@ -2866,13 +2973,37 @@ SCIP_RETCODE propagateLowerboundVar(
    /* compute potential mew bound */
    newbd = (lowerbound - residual) / objval;
 
+   /**@note In case the variable is integral we force the update of the new bound */
+
    if( objval > 0.0 )
    {
-      SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newbd, FALSE, infeasible, tightened) );
+      SCIP_Real lb;
+
+      lb = SCIPvarGetLbGlobal(var);
+
+      if( !SCIPvarIsIntegral(var) )
+      {
+         SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newbd, FALSE, infeasible, tightened) );
+      }
+      else if( SCIPisFeasGT(scip, newbd, lb) )
+      {
+         SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newbd, TRUE, infeasible, tightened) );
+      }
    }
    else
    {
-      SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newbd, FALSE, infeasible, tightened) );
+      SCIP_Real ub;
+
+      ub = SCIPvarGetUbGlobal(var);
+
+      if( !SCIPvarIsIntegral(var) )
+      {
+         SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newbd, FALSE, infeasible, tightened) );
+      }
+      else if( SCIPisFeasLT(scip, newbd, ub) )
+      {
+         SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newbd, TRUE, infeasible, tightened) );
+      }
    }
 
    return SCIP_OKAY;
@@ -2953,6 +3084,7 @@ SCIP_RETCODE propagateLowerbound(
          {
             var = maxactvars[v];
             assert(var != NULL);
+            assert(SCIPvarIsBinary(var));
 
             /* check if the variables is already globally fixed; if so continue with the next potential candidate */
             if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5)
@@ -2996,6 +3128,7 @@ SCIP_RETCODE propagateLowerbound(
          {
             var =  maxactvars[v];
             assert(var != NULL);
+            assert(SCIPvarIsBinary(var));
 
             /* check if the variables is already globally fixed; if so continue with the potential candidate */
             if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5)
@@ -3020,6 +3153,7 @@ SCIP_RETCODE propagateLowerbound(
          {
             var = maxactvars[v];
             assert(var != NULL);
+            assert(SCIPvarIsBinary(var));
 
             /* check if the variables is already globally fixed; if so continue with the next potential candidate */
             if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5)
@@ -3069,7 +3203,6 @@ SCIP_RETCODE propagateLowerbound(
 }
 
 
-
 /*
  * Callback methods of propagator
  */
@@ -3103,22 +3236,6 @@ SCIP_DECL_PROPFREE(propFreePseudoobj)
 }
 
 
-/** initialization method of propagator (called after problem was transformed) */
-#define propInitPseudoobj NULL
-
-
-/** deinitialization method of propagator (called before transformed problem is freed) */
-#define propExitPseudoobj NULL
-
-
-/** presolving initialization method of propagator (called when presolving is about to begin) */
-#define propInitprePseudoobj NULL
-
-
-/** presolving deinitialization method of propagator (called after presolving has been finished) */
-#define propExitprePseudoobj NULL
-
-
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_PROPINITSOL(propInitsolPseudoobj)
@@ -3131,9 +3248,6 @@ SCIP_DECL_PROPINITSOL(propInitsolPseudoobj)
    /* do nothing if active pricer are present and force flag is not TRUE */
    if( !propdata->force && SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
-
-   /* initialize the propagator data structure */
-   SCIP_CALL( propdataInit(scip, propdata) );
 
    /* if active pricer are present we want to catch the variable added event */
    if( SCIPgetNActivePricers(scip) > 0 )
@@ -3149,7 +3263,7 @@ SCIP_DECL_PROPINITSOL(propInitsolPseudoobj)
 /** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
 static
 SCIP_DECL_PROPEXITSOL(propExitsolPseudoobj)
-{
+{  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
 
    propdata = SCIPpropGetData(prop);
@@ -3260,12 +3374,15 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
 
    (*result) = SCIP_DIDNOTRUN;
 
+   if( SCIPinProbing(scip) )
+      return SCIP_OKAY;
+
    /* do nothing if active pricer are present and force flag is not TRUE */
    if( !propdata->force && SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
    /* check if enough new variable are added (due to column generatition to reinitialized the propgator data) */
-   if( propdata->nnewvars > propdata->maxnewvars )
+   if( !propdata->initialized || propdata->nnewvars > propdata->maxnewvars )
    {
       /* free current propdata data */
       SCIP_CALL( propdataExit(scip, propdata) );
@@ -3367,8 +3484,6 @@ SCIP_DECL_EVENTEXEC(eventExecPseudoobj)
 }
 
 
-
-
 /*
  * propagator specific interface methods
  */
@@ -3379,10 +3494,8 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_PROP* prop;
 
-   /* include event handler for gloabl bound change events and variable added event (in case of pricing) */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecPseudoobj, NULL) );
 
    /* create pseudoobj propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
@@ -3390,8 +3503,11 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    /* reset propagator data structure */
    propdataReset(scip, propdata);
 
-   /* get event handler for bound change events */
-   propdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   propdata->eventhdlr = NULL;
+   /* include event handler for gloabl bound change events and variable added event (in case of pricing) */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &propdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecPseudoobj, NULL) );
+
    if( propdata->eventhdlr == NULL )
    {
       SCIPerrorMessage("event handler for pseudo objective propagator not found\n");
@@ -3399,10 +3515,18 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    }
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
-         propCopyPseudoobj, propFreePseudoobj, propInitPseudoobj, propExitPseudoobj, propInitprePseudoobj, propExitprePseudoobj,
-         propInitsolPseudoobj, propExitsolPseudoobj, propPresolPseudoobj, propExecPseudoobj, propRespropPseudoobj,
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
+         propExecPseudoobj,
          propdata) );
+   assert(prop != NULL);
+
+   /* set optional callbacks via setter functions */
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyPseudoobj) );
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreePseudoobj) );
+   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolPseudoobj) );
+   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolPseudoobj) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolPseudoobj, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
+   SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropPseudoobj) );
 
    /* add pseudoobj propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

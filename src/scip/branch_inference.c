@@ -41,7 +41,6 @@
 #define DEFAULT_USEWEIGHTEDSUM     TRUE /**< should a weighted sum of inference, conflict and cutoff weights be used? */
 
 
-
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -55,10 +54,12 @@ struct SCIP_BranchruleData
 /** evaluate the given candidate with the given score against the currently best know candidate */
 static
 void evaluateCand(
-   SCIP_VAR*            cand,                /**< candidate to be checked */
-   SCIP_Real            score,               /**< score of the candidate */
-   SCIP_VAR**           bestcand,            /**< pointer to the currently best candidate */
-   SCIP_Real*           bestscore            /**< pointer to the score of the currently best candidate */
+   SCIP_VAR*             cand,               /**< candidate to be checked */
+   SCIP_Real             score,              /**< score of the candidate */
+   SCIP_Real             val,                /**< solution value of the candidate */
+   SCIP_VAR**            bestcand,           /**< pointer to the currently best candidate */
+   SCIP_Real*            bestscore,          /**< pointer to the score of the currently best candidate */
+   SCIP_Real*            bestval             /**< pointer to the solution value of the currently best candidate */
    )
 {
 
@@ -68,6 +69,7 @@ void evaluateCand(
       /* the score of the candidate is better than the currently best know candidate */
       (*bestscore) = score;
       (*bestcand) = cand;
+      (*bestval) = val;
    }
    else if( (*bestscore) == score ) /*lint !e777*/
    {
@@ -95,6 +97,7 @@ void evaluateCand(
       if( bestobj < candobj || (bestobj == candobj && SCIPvarGetIndex(*bestcand) < SCIPvarGetIndex(cand)) ) /*lint !e777*/
       {
          (*bestcand) = cand;
+         (*bestval) = val;
       }
    }
 }
@@ -104,6 +107,7 @@ static
 SCIP_RETCODE performBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            cands,              /**< candidate array */
+   SCIP_Real *           candsols,           /**< array of candidate solution values, or NULL */
    int                   ncands,             /**< number of candidates */
    SCIP_Real             conflictweight,     /**< weight in score calculations for conflict score */
    SCIP_Real             inferenceweight,    /**< weight in score calculations for inference score */
@@ -112,69 +116,110 @@ SCIP_RETCODE performBranching(
    )
 {
    SCIP_VAR* bestcand;
-   SCIP_VAR* cand;
+   SCIP_Real bestval;
    SCIP_Real bestscore;
-   SCIP_Real score;
-   int c;
 
    assert(ncands > 0);
 
    /* check if the weighted sum between the average inferences and conflict score should be used */
    if( useweightedsum )
    {
+      int c;
+
       bestcand = cands[0];
+      assert(bestcand != NULL);
+
+      if( candsols != NULL )
+         bestval = candsols[0];
+      else
+         bestval = SCIP_INVALID;
+
       bestscore = conflictweight * SCIPgetVarConflictScore(scip, cands[0])
          + inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, cands[0], cutoffweight);
 
       for( c = 1; c < ncands; ++c )
       {
+         SCIP_VAR* cand;
+         SCIP_Real val;
+         SCIP_Real score;
+
          cand = cands[c];
          assert(cand != NULL);
+
+         if( candsols != NULL )
+            val = candsols[c];
+         else
+            val = SCIP_INVALID;
 
          /* compute weighted score for the candidate */
          score = conflictweight * SCIPgetVarConflictScore(scip, cand)
             + inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, cand, cutoffweight);
 
          SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
-            SCIPgetVarSol(scip, cand), score);
+            val == SCIP_INVALID ? SCIPgetVarSol(scip, cand) : val, score); /*lint !e777*/
 
          /* evaluate the candidate against the currently best candidate */
-         evaluateCand(cand, score, &bestcand, &bestscore);
+         evaluateCand(cand, score, val, &bestcand, &bestscore, &bestval);
       }
    }
    else
    {
+      int c;
+
       bestcand = cands[0];
+      assert(bestcand != NULL);
+
+      if( candsols != NULL )
+         bestval = candsols[0];
+      else
+         bestval = SCIP_INVALID;
+
       bestscore = SCIPgetVarAvgInferenceScore(scip, cands[0]);
 
       /* search for variable with best score w.r.t. average inferences per branching */
       for( c = 1; c < ncands; ++c )
       {
+         SCIP_VAR* cand;
+         SCIP_Real val;
+         SCIP_Real score;
+
          cand = cands[c];
          assert(cand != NULL);
+
+         if( candsols != NULL )
+            val = candsols[c];
+         else
+            val = SCIP_INVALID;
 
          score = SCIPgetVarAvgInferenceScore(scip, cand);
 
          SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
-            SCIPgetVarSol(scip, cand), score);
+            val == SCIP_INVALID ? SCIPgetVarSol(scip, cand) : val, score); /*lint !e777*/
 
          /* evaluate the candidate against the currently best candidate */
-         evaluateCand(cand, score, &bestcand, &bestscore);
+         evaluateCand(cand, score, val, &bestcand, &bestscore, &bestval);
       }
    }
 
    assert(bestcand != NULL);
 
    SCIPdebugMessage(" -> %d candidates, selected variable <%s> (prio=%d, solval=%.12f, score=%g)\n",
-      ncands, SCIPvarGetName(bestcand), SCIPvarGetBranchPriority(bestcand), SCIPgetVarSol(scip, bestcand), bestscore);
+      ncands, SCIPvarGetName(bestcand), SCIPvarGetBranchPriority(bestcand),
+      bestval == SCIP_INVALID ? SCIPgetVarSol(scip, bestcand) : bestval, bestscore); /*lint !e777*/
 
    /* perform the branching */
-   SCIP_CALL( SCIPbranchVar(scip, bestcand, NULL, NULL, NULL) );
+   if( candsols != NULL )
+   {
+      assert(bestval != SCIP_INVALID); /*lint !e777*/
+      SCIP_CALL( SCIPbranchVarVal(scip, bestcand, bestval, NULL, NULL, NULL) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPbranchVar(scip, bestcand, NULL, NULL, NULL) );
+   }
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*
@@ -210,22 +255,6 @@ SCIP_DECL_BRANCHFREE(branchFreeInference)
 }
 
 
-/** initialization method of branching rule (called after problem was transformed) */
-#define branchInitInference NULL
-
-
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitInference NULL
-
-
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolInference NULL
-
-
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolInference NULL
-
-
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
@@ -252,7 +281,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
    }
 
    /* perform the branching */
-   SCIP_CALL( performBranching(scip, cands, ncands, branchruledata->conflictweight, 
+   SCIP_CALL( performBranching(scip, cands, NULL, ncands, branchruledata->conflictweight,
          branchruledata->inferenceweight, branchruledata->cutoffweight, branchruledata->useweightedsum) );
 
    *result = SCIP_BRANCHED;
@@ -261,9 +290,33 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
 }
 
 
-/** branching execution method for relaxation solutions */
-#define branchExecextInference NULL
+/** branching execution method for not completely fixed pseudo solutions */
+static
+SCIP_DECL_BRANCHEXECEXT(branchExecextInference)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_VAR** cands;
+   SCIP_Real* candsols;
+   int ncands;
 
+   SCIPdebugMessage("Execps method of inference branching\n");
+
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   /* get branching candidates */
+   SCIP_CALL( SCIPgetExternBranchCands(scip, &cands, &candsols, NULL, &ncands, NULL, NULL, NULL, NULL) );
+   assert(ncands > 0);
+
+   /* perform the branching */
+   SCIP_CALL( performBranching(scip, cands, candsols, ncands, branchruledata->conflictweight,
+         branchruledata->inferenceweight, branchruledata->cutoffweight, branchruledata->useweightedsum) );
+
+   *result = SCIP_BRANCHED;
+
+   return SCIP_OKAY;
+}
 
 /** branching execution method for not completely fixed pseudo solutions */
 static
@@ -283,15 +336,13 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsInference)
    SCIP_CALL( SCIPgetPseudoBranchCands(scip, &cands, NULL, &ncands) );
 
    /* perform the branching */
-   SCIP_CALL( performBranching(scip, cands, ncands, branchruledata->conflictweight, 
+   SCIP_CALL( performBranching(scip, cands, NULL, ncands, branchruledata->conflictweight,
          branchruledata->inferenceweight, branchruledata->cutoffweight, branchruledata->useweightedsum) );
 
    *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*
@@ -304,17 +355,23 @@ SCIP_RETCODE SCIPincludeBranchruleInference(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
 
    /* create inference branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
 
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
-         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchCopyInference,
-         branchFreeInference, branchInitInference, branchExitInference, branchInitsolInference, branchExitsolInference, 
-         branchExeclpInference, branchExecextInference, branchExecpsInference,
-         branchruledata) );
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+
+   assert(branchrule != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions*/
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyInference) );
+   SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeInference) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpInference) );
+   SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextInference) );
+   SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsInference) );
 
    /* inference branching rule parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

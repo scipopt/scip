@@ -38,7 +38,7 @@ extern "C" {
 #endif
 
 /** creates the inttobinary presolver and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePresolInttobinary(
    SCIP*                 scip                /**< SCIP data structure */
    );

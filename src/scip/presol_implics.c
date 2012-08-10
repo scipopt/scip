@@ -33,8 +33,6 @@
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 
 
-
-
 /*
  * Callback methods of presolver
  */
@@ -52,26 +50,6 @@ SCIP_DECL_PRESOLCOPY(presolCopyImplics)
  
    return SCIP_OKAY;
 }
-
-
-/** destructor of presolver to free user data (called when SCIP is exiting) */
-#define presolFreeImplics NULL
-
-
-/** initialization method of presolver (called after problem was transformed) */
-#define presolInitImplics NULL
-
-
-/** deinitialization method of presolver (called before transformed problem is freed) */
-#define presolExitImplics NULL
-
-
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-#define presolInitpreImplics NULL
-
-
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-#define presolExitpreImplics NULL
 
 
 /** execution method of presolver */
@@ -363,9 +341,6 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
 }
 
 
-
-
-
 /*
  * presolver specific interface methods
  */
@@ -376,16 +351,19 @@ SCIP_RETCODE SCIPincludePresolImplics(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presolptr;
 
    /* create implics presolver data */
    presoldata = NULL;
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolCopyImplics,
-         presolFreeImplics, presolInitImplics, presolExitImplics, 
-         presolInitpreImplics, presolExitpreImplics, presolExecImplics,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolExecImplics,
          presoldata) );
+
+   assert(presolptr != NULL);
+
+   SCIP_CALL( SCIPsetPresolCopy(scip, presolptr, presolCopyImplics) );
 
    return SCIP_OKAY;
 }

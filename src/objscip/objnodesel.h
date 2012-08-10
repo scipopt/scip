@@ -88,95 +88,68 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
-   /** destructor of node selector to free user data (called when SCIP is exiting) */
-   virtual SCIP_RETCODE scip_free(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_NODESEL*      nodesel             /**< the node selector itself */
-      )
+   /** destructor of node selector to free user data (called when SCIP is exiting)
+    *
+    *  @see SCIP_DECL_NODESELFREE(x) in @ref type_nodesel.h
+    */
+   virtual SCIP_DECL_NODESELFREE(scip_free)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
-   /** initialization method of node selector (called after problem was transformed) */
-   virtual SCIP_RETCODE scip_init(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_NODESEL*      nodesel             /**< the node selector itself */
-      )
+
+   /** initialization method of node selector (called after problem was transformed)
+    *
+    *  @see SCIP_DECL_NODESELINIT(x) in @ref type_nodesel.h
+    */
+   virtual SCIP_DECL_NODESELINIT(scip_init)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
-   /** deinitialization method of node selector (called before transformed problem is freed) */
-   virtual SCIP_RETCODE scip_exit(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_NODESEL*      nodesel             /**< the node selector itself */
-      )
+
+   /** deinitialization method of node selector (called before transformed problem is freed)
+    *
+    *  @see SCIP_DECL_NODESELEXIT(x) in @ref type_nodesel.h
+    */
+   virtual SCIP_DECL_NODESELEXIT(scip_exit)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** solving process initialization method of node selector (called when branch and bound process is about to begin)
     *
-    *  This method is called when the presolving was finished and the branch and bound process is about to begin.
-    *  The node selector may use this call to initialize its branch and bound specific data.
-    *
+    *  @see SCIP_DECL_NODESELINITSOL(x) in @ref type_nodesel.h
     */
-   virtual SCIP_RETCODE scip_initsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_NODESEL*      nodesel             /**< the node selector itself */
-      )
+   virtual SCIP_DECL_NODESELINITSOL(scip_initsol)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** solving process deinitialization method of node selector (called before branch and bound process data is freed)
     *
-    *  This method is called before the branch and bound process is freed.
-    *  The node selector should use this call to clean up its branch and bound data.
+    *  @see SCIP_DECL_NODESELEXITSOL(x) in @ref type_nodesel.h
     */
-   virtual SCIP_RETCODE scip_exitsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_NODESEL*      nodesel             /**< the node selector itself */
-      )
+   virtual SCIP_DECL_NODESELEXITSOL(scip_exitsol)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** node selection method of node selector
     *
-    *  This method is called to select the next leaf of the branch and bound tree to be processed.
-    *
-    *  possible return values for *selnode:
-    *  - NULL    : problem is solved, because tree is empty
-    *  - non-NULL: node to be solved next
+    *  @see SCIP_DECL_NODESELSELECT(x) in @ref type_nodesel.h
     */
-   virtual SCIP_RETCODE scip_select(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_NODESEL*      nodesel,            /**< the node selector itself */
-      SCIP_NODE**        selnode             /**< pointer to store the selected node */
-      ) = 0;
-   
+   virtual SCIP_DECL_NODESELSELECT(scip_select) = 0;
+
    /** node comparison method of node selector
     *
-    *  This method is called to compare two nodes regarding their order in the node priority queue.
-    *
-    *  possible return values:
-    *  - value < 0: node1 comes before (is better than) node2
-    *  - value = 0: both nodes are equally good
-    *  - value > 0: node2 comes after (is worse than) node2
+    *  @see SCIP_DECL_NODESELCOMP(x) in @ref type_nodesel.h
     */
-   virtual int scip_comp(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_NODESEL*      nodesel,            /**< the node selector itself */
-      SCIP_NODE*         node1,              /**< first node to compare */
-      SCIP_NODE*         node2               /**< second node to compare */
-      ) = 0;
+   virtual SCIP_DECL_NODESELCOMP(scip_comp) = 0;
 };
 
 } /* namespace scip */
 
 
-   
+
 /** creates the node selector for the given node selector object and includes it in SCIP
  *
  *  The method should be called in one of the following ways:

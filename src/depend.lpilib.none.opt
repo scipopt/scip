@@ -7,4 +7,4 @@ $(LIBOBJDIR)/blockmemshell/memory.o: src/blockmemshell/memory.c src/scip/def.h \
 $(LIBOBJDIR)/scip/message.o: src/scip/message.c src/scip/type_message.h \
  src/scip/struct_message.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/pub_misc.h src/blockmemshell/memory.h \
- src/scip/type_misc.h
+ src/scip/type_misc.h src/scip/type_var.h src/scip/struct_misc.h

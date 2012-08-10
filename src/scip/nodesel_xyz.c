@@ -31,8 +31,6 @@
 #define NODESEL_MEMSAVEPRIORITY 0
 
 
-
-
 /*
  * Data structures
  */
@@ -45,15 +43,11 @@ struct SCIP_NodeselData
 };
 
 
-
-
 /*
  * Local methods
  */
 
 /* put your local methods here, and declare them static */
-
-
 
 
 /*
@@ -172,8 +166,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompXyz)
 }
 
 
-
-
 /*
  * node selector specific interface methods
  */
@@ -184,17 +176,39 @@ SCIP_RETCODE SCIPincludeNodeselXyz(
    )
 {
    SCIP_NODESELDATA* nodeseldata;
+   SCIP_NODESEL* nodesel;
 
    /* create xyz node selector data */
    nodeseldata = NULL;
    /* TODO: (optional) create node selector specific data here */
 
+   nodesel = NULL;
+
    /* include node selector */
+#if 0
+   /* use SCIPincludeNodesel() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
+    * new callbacks are added in future SCIP versions
+    */
    SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-         nodeselCopyXyz,
-         nodeselFreeXyz, nodeselInitXyz, nodeselExitXyz, 
-         nodeselInitsolXyz, nodeselExitsolXyz, nodeselSelectXyz, nodeselCompXyz,
+         nodeselCopyXyz, nodeselFreeXyz, nodeselInitXyz, nodeselExitXyz, nodeselInitsolXyz, nodeselExitsolXyz, nodeselSelectXyz, nodeselCompXyz,
          nodeseldata) );
+#else
+   /* use SCIPincludeNodeselBasic() plus setter functions if you want to set callbacks one-by-one and your code should
+    * compile independent of new callbacks being added in future SCIP versions
+    */
+   SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+          nodeselSelectXyz, nodeselCompXyz, nodeseldata) );
+
+   assert(nodesel != NULL);
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyXyz) );
+   SCIP_CALL( SCIPsetNodeselFree(scip, nodesel, nodeselFreeXyz) );
+   SCIP_CALL( SCIPsetNodeselInit(scip, nodesel, nodeselInitXyz) );
+   SCIP_CALL( SCIPsetNodeselExit(scip, nodesel, nodeselExitXyz) );
+   SCIP_CALL( SCIPsetNodeselInitsol(scip, nodesel, nodeselInitsolXyz) );
+   SCIP_CALL( SCIPsetNodeselExitsol(scip, nodesel, nodeselExitsolXyz) );
+#endif
 
    /* add xyz node selector parameters */
    /* TODO: (optional) add node selector specific parameters with SCIPaddTypeParam() here */

@@ -32,8 +32,6 @@
 #define NODESEL_MEMSAVEPRIORITY       0
 
 
-
-
 /*
  * Default parameter settings
  */
@@ -42,7 +40,6 @@
 #define MAXPLUNGEDEPTH               -1 /**< maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting) */
 #define MAXPLUNGEQUOT              0.25 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                               *   where plunging is performed */
-
 
 
 /** node selector data for best first search node selection */
@@ -55,7 +52,6 @@ struct SCIP_NodeselData
    int                   maxplungedepth;     /**< maximal plunging depth, before new best node is forced to be selected
                                               *   (-1 for dynamic setting) */
 };
-
 
 
 /*
@@ -94,21 +90,6 @@ SCIP_DECL_NODESELFREE(nodeselFreeBfs)
 
    return SCIP_OKAY;
 }
-
-/** initialization method of node selector (called after problem was transformed) */
-#define nodeselInitBfs NULL
-
-
-/** deinitialization method of node selector (called before transformed problem is freed) */
-#define nodeselExitBfs NULL
-
-
-/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
-#define nodeselInitsolBfs NULL
-
-
-/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
-#define nodeselExitsolBfs NULL
 
 
 /** node selection method of node selector */
@@ -305,9 +286,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
 }
 
 
-
-
-
 /*
  * bfs specific interface methods
  */
@@ -318,16 +296,19 @@ SCIP_RETCODE SCIPincludeNodeselBfs(
    )
 {
    SCIP_NODESELDATA* nodeseldata;
+   SCIP_NODESEL* nodesel;
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
    SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
 
    /* include node selector */
-   SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-         nodeselCopyBfs,
-         nodeselFreeBfs, nodeselInitBfs, nodeselExitBfs, 
-         nodeselInitsolBfs, nodeselExitsolBfs, nodeselSelectBfs, nodeselCompBfs,
-         nodeseldata) );
+   SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+          nodeselSelectBfs, nodeselCompBfs, nodeseldata) );
+
+   assert(nodesel != NULL);
+
+   SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyBfs) );
+   SCIP_CALL( SCIPsetNodeselFree(scip, nodesel, nodeselFreeBfs) );
 
    /* add node selector parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

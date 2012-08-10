@@ -1,0 +1,70 @@
+Notes for SCIP Release 3.0
+
+
+Features
+========
+
+- new presolvers convertinttobin, components, domcol, gateextraction
+
+- new primal heuristics nlpdiving and zeroobj
+
+- new constraint handler superindicator for indicators on arbitrary constraints
+
+- new shell command "change minuc" to minimize the number of unsatisfied constraints
+
+- new propagators obbt and genvbounds for MINLP
+
+- new reader for OSiL files
+
+- extended vbounds propagator to cliques and implications
+
+- GUB cover cuts
+
+- better handling of memory limits, in particular for large problems
+
+- parameters can now be fixed
+
+- new statistics and new statistic output messages
+
+- full version of cumulative constraint handler
+
+
+Interfaces
+==========
+
+- new AMPL interface
+
+- beta version of a functional MATLAB interface
+
+- introduced basic inclusion and creation methods to simplify usage of the SCIP library
+
+
+Performance Improvements and Bug Fixes
+======================================
+
+- improved scaling of linear constraints
+
+- reworked probing algorithm
+
+- improved reading time
+
+- better handling of numerical tolerances for LP solver
+
+- several performance improvements for Pseudo-Boolean optimization
+
+- many bug fixes
+
+
+Additional Notes
+================
+
+- first release of GCG, a generic branch-cut-and-price solver built on top of SCIP
+
+- first release of UG, a framework for solving mixed integer programs, mixed integer
+  nonlinear programs, and constraint integer programs in parallel
+
+- new examples for scheduling and usage of the callable library with nonlinear problems
+
+- new SCIP T-shirts
+
+- renamed ZIB Optimization Suite to SCIP Optimization Suite

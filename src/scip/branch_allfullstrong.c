@@ -16,6 +16,22 @@
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
  * @author Tobias Achterberg
+ *
+ * The all variables full strong branching rule applies strong branching to every non-fixed variable
+ * at the current node of the branch-and-bound search. The rule selects the candidate
+ * which will cause the highest gain of the dual bound in the created sub-tree among all branching variables.
+ *
+ * For calculating the gain, a look-ahead is performed by solving the child node LPs which will result
+ * from branching on a variable.
+ *
+ * For a more mathematical description and a comparison between the strong branching rule and other branching rules
+ * in SCIP, we refer to
+ *
+ * @par
+ * Tobias Achterberg@n
+ * Constraint Integer Programming@n
+ * PhD Thesis, Technische Universität Berlin, 2007@n
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -38,7 +54,6 @@ struct SCIP_BranchruleData
 {
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
 };
-
 
 
 /** performs the all fullstrong branching */
@@ -361,8 +376,6 @@ SCIP_RETCODE branch(
 }
 
 
-
-
 /*
  * Callback methods
  */
@@ -410,18 +423,6 @@ SCIP_DECL_BRANCHINIT(branchInitAllfullstrong)
 }
 
 
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitAllfullstrong NULL
-
-
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolAllfullstrong NULL
-
-
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolAllfullstrong NULL
-
-
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
@@ -436,10 +437,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
 
    return SCIP_OKAY;
 }
-
-
-/** branching execution method for relaxation solutions */
-#define branchExecextAllfullstrong NULL
 
 
 /** branching execution method for not completely fixed pseudo solutions */
@@ -461,8 +458,6 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsAllfullstrong)
 }
 
 
-
-
 /*
  * branching specific interface methods
  */
@@ -473,19 +468,24 @@ SCIP_RETCODE SCIPincludeBranchruleAllfullstrong(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
 
    /* create allfullstrong branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
 
    /* include allfullstrong branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
-         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchCopyAllfullstrong,
-         branchFreeAllfullstrong, branchInitAllfullstrong, branchExitAllfullstrong, 
-         branchInitsolAllfullstrong, branchExitsolAllfullstrong, 
-         branchExeclpAllfullstrong,  branchExecextAllfullstrong, branchExecpsAllfullstrong,
-         branchruledata) );
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+
+   assert(branchrule != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions*/
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyAllfullstrong) );
+   SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeAllfullstrong) );
+   SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitAllfullstrong) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpAllfullstrong) );
+   SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsAllfullstrong) );
 
    return SCIP_OKAY;
 }

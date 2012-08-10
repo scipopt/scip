@@ -229,7 +229,7 @@ SCIP_RETCODE SCIPincludeObjPricer(
    SCIP_CALL( SCIPincludePricer(scip, objpricer->scip_name_, objpricer->scip_desc_, objpricer->scip_priority_,
          objpricer->scip_delay_,
          pricerCopyObj,
-         pricerFreeObj, pricerInitObj, pricerExitObj, 
+         pricerFreeObj, pricerInitObj, pricerExitObj,
          pricerInitsolObj, pricerExitsolObj, pricerRedcostObj, pricerFarkasObj,
          pricerdata) ); /*lint !e429*/
 

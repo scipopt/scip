@@ -33,8 +33,6 @@
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 
 
-
-
 /*
  * Callback methods of presolver
  */
@@ -52,26 +50,6 @@ SCIP_DECL_PRESOLCOPY(presolCopyInttobinary)
  
    return SCIP_OKAY;
 }
-
-
-/** destructor of presolver to free user data (called when SCIP is exiting) */
-#define presolFreeInttobinary NULL
-
-
-/** initialization method of presolver (called after problem was transformed) */
-#define presolInitInttobinary NULL
-
-
-/** deinitialization method of presolver (called before transformed problem is freed) */
-#define presolExitInttobinary NULL
-
-
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-#define presolInitpreInttobinary NULL
-
-
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-#define presolExitpreInttobinary NULL
 
 
 /** presolving execution method */
@@ -168,9 +146,6 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
 }
 
 
-
-
-
 /*
  * presolver specific interface methods
  */
@@ -181,16 +156,19 @@ SCIP_RETCODE SCIPincludePresolInttobinary(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presolptr;
 
    /* create inttobinary presolver data */
    presoldata = NULL;
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolCopyInttobinary,
-         presolFreeInttobinary, presolInitInttobinary, presolExitInttobinary, 
-         presolInitpreInttobinary, presolExitpreInttobinary, presolExecInttobinary,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolExecInttobinary,
          presoldata) );
+
+   assert(presolptr != NULL);
+
+   SCIP_CALL( SCIPsetPresolCopy(scip, presolptr, presolCopyInttobinary) );
 
    return SCIP_OKAY;
 }

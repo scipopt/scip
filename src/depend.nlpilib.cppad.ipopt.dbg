@@ -1,114 +1,111 @@
-$(LIBOBJDIR)/nlpi/nlpi.o: src/nlpi/nlpi.c src/nlpi/nlpi.h src/nlpi/type_nlpi.h \
- src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
- src/scip/type_message.h src/scip/struct_message.h src/scip/pub_message.h \
- src/blockmemshell/memory.h src/nlpi/type_expr.h src/scip/type_misc.h \
- src/nlpi/struct_nlpi.h
-$(LIBOBJDIR)/nlpi/nlpioracle.o: src/nlpi/nlpioracle.c src/nlpi/nlpioracle.h \
- src/nlpi/type_nlpi.h src/scip/def.h src/scip/type_retcode.h \
- src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
- src/scip/pub_message.h src/blockmemshell/memory.h src/nlpi/type_expr.h \
- src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
- src/scip/intervalarith.h src/nlpi/exprinterpret.h src/scip/pub_misc.h \
- src/scip/type_misc.h
+$(LIBOBJDIR)/nlpi/nlpi.o: src/nlpi/nlpi.c src/scip/pub_message.h src/scip/def.h \
+ src/scip/type_retcode.h src/scip/type_message.h src/nlpi/nlpi.h \
+ src/nlpi/type_nlpi.h src/blockmemshell/memory.h src/nlpi/type_expr.h \
+ src/scip/type_misc.h src/nlpi/struct_nlpi.h
+$(LIBOBJDIR)/nlpi/nlpioracle.o: src/nlpi/nlpioracle.c src/scip/pub_message.h src/scip/def.h \
+ src/scip/type_retcode.h src/scip/type_message.h src/scip/pub_misc.h \
+ src/blockmemshell/memory.h src/scip/type_misc.h src/scip/type_var.h \
+ src/nlpi/nlpioracle.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/exprinterpret.h
 $(LIBOBJDIR)/nlpi/expr.o: src/nlpi/expr.c src/nlpi/pub_expr.h src/scip/def.h \
- src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
- src/scip/struct_message.h src/scip/pub_message.h \
- src/blockmemshell/memory.h src/nlpi/type_expr.h \
- src/nlpi/type_exprinterpret.h src/scip/intervalarith.h \
- src/nlpi/struct_expr.h src/scip/type_misc.h src/nlpi/exprinterpret.h \
- src/scip/pub_misc.h
+ src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
+ src/scip/intervalarith.h src/blockmemshell/memory.h src/nlpi/type_expr.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/type_misc.h src/nlpi/exprinterpret.h src/scip/pub_misc.h \
+ src/scip/type_var.h
 $(LIBOBJDIR)/nlpi/intervalarith.o: src/nlpi/intervalarith.cpp src/scip/def.h \
- src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
- src/scip/struct_message.h src/scip/pub_message.h \
+ src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/nlpi/intervalarith.h src/scip/intervalarith.h
 $(LIBOBJDIR)/nlpi/exprinterpret_cppad.o: src/nlpi/exprinterpret_cppad.cpp src/scip/def.h \
- src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
- src/scip/struct_message.h src/scip/pub_message.h \
- src/blockmemshell/memory.h src/nlpi/pub_expr.h src/nlpi/type_expr.h \
- src/nlpi/type_exprinterpret.h src/scip/intervalarith.h \
- src/nlpi/exprinterpret.h src/nlpi/intervalarith.h  \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-    \
-   \
-   \
-    \
-    \
-   \
-    \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-    \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-   \
-  
+ src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
+ src/blockmemshell/memory.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_expr.h src/nlpi/type_exprinterpret.h \
+ src/nlpi/exprinterpret.h src/nlpi/intervalarith.h src/cppad/cppad.hpp \
+ src/cppad/base_require.hpp src/cppad/error_handler.hpp \
+ src/cppad/configure.hpp src/cppad/local/cppad_assert.hpp \
+ src/cppad/local/define.hpp src/cppad/local/base_cond_exp.hpp \
+ src/cppad/local/base_std_math.hpp src/cppad/local/epsilon.hpp \
+ src/cppad/local/base_float.hpp src/cppad/local/base_double.hpp \
+ src/cppad/local/base_complex.hpp src/cppad/thread_alloc.hpp \
+ src/cppad/check_numeric_type.hpp src/cppad/check_simple_vector.hpp \
+ src/cppad/lu_solve.hpp src/cppad/lu_factor.hpp src/cppad/lu_invert.hpp \
+ src/cppad/memory_leak.hpp src/cppad/omp_alloc.hpp \
+ src/cppad/track_new_del.hpp src/cppad/near_equal.hpp \
+ src/cppad/ode_err_control.hpp src/cppad/nan.hpp src/cppad/ode_gear.hpp \
+ src/cppad/vector.hpp src/cppad/ode_gear_control.hpp src/cppad/poly.hpp \
+ src/cppad/pow_int.hpp src/cppad/romberg_mul.hpp \
+ src/cppad/romberg_one.hpp src/cppad/rosen_34.hpp src/cppad/runge_45.hpp \
+ src/cppad/speed_test.hpp src/cppad/elapsed_seconds.hpp \
+ src/cppad/time_test.hpp src/cppad/local/test_vector.hpp \
+ src/cppad/local/declare_ad.hpp src/cppad/local/ad.hpp \
+ src/cppad/local/ordered.hpp src/cppad/local/identical.hpp \
+ src/cppad/local/op_code.hpp src/cppad/local/recorder.hpp \
+ src/cppad/local/hash_code.hpp src/cppad/local/pod_vector.hpp \
+ src/cppad/local/player.hpp src/cppad/local/ad_tape.hpp \
+ src/cppad/local/tape_link.hpp src/cppad/local/user_ad.hpp \
+ src/cppad/local/default.hpp src/cppad/local/ad_copy.hpp \
+ src/cppad/local/convert.hpp src/cppad/local/value.hpp \
+ src/cppad/local/integer.hpp src/cppad/local/output.hpp \
+ src/cppad/local/print_for.hpp src/cppad/local/var2par.hpp \
+ src/cppad/local/vec_ad.hpp src/cppad/local/ad_valued.hpp \
+ src/cppad/local/arithmetic.hpp src/cppad/local/unary_plus.hpp \
+ src/cppad/local/unary_minus.hpp src/cppad/local/ad_binary.hpp \
+ src/cppad/local/add.hpp src/cppad/local/sub.hpp src/cppad/local/mul.hpp \
+ src/cppad/local/div.hpp src/cppad/local/compute_assign.hpp \
+ src/cppad/local/add_eq.hpp src/cppad/local/sub_eq.hpp \
+ src/cppad/local/mul_eq.hpp src/cppad/local/div_eq.hpp \
+ src/cppad/local/std_math_ad.hpp src/cppad/local/cond_exp.hpp \
+ src/cppad/local/math_other.hpp src/cppad/local/abs.hpp \
+ src/cppad/local/sign.hpp src/cppad/local/atan2.hpp \
+ src/cppad/local/erf.hpp src/cppad/local/pow.hpp \
+ src/cppad/local/discrete.hpp src/cppad/local/user_atomic.hpp \
+ src/cppad/local/bool_valued.hpp src/cppad/local/compare.hpp \
+ src/cppad/local/near_equal_ext.hpp src/cppad/local/bool_fun.hpp \
+ src/cppad/local/par_var.hpp src/cppad/local/equal_op_seq.hpp \
+ src/cppad/local/op.hpp src/cppad/local/sparse_pack.hpp \
+ src/cppad/local/sparse_set.hpp src/cppad/local/abs_op.hpp \
+ src/cppad/local/add_op.hpp src/cppad/local/acos_op.hpp \
+ src/cppad/local/asin_op.hpp src/cppad/local/atan_op.hpp \
+ src/cppad/local/comp_op.hpp src/cppad/local/cond_op.hpp \
+ src/cppad/local/cos_op.hpp src/cppad/local/cosh_op.hpp \
+ src/cppad/local/csum_op.hpp src/cppad/local/discrete_op.hpp \
+ src/cppad/local/div_op.hpp src/cppad/local/exp_op.hpp \
+ src/cppad/local/load_op.hpp src/cppad/local/log_op.hpp \
+ src/cppad/local/mul_op.hpp src/cppad/local/parameter_op.hpp \
+ src/cppad/local/pow_op.hpp src/cppad/local/print_op.hpp \
+ src/cppad/local/sign_op.hpp src/cppad/local/sin_op.hpp \
+ src/cppad/local/sinh_op.hpp src/cppad/local/sqrt_op.hpp \
+ src/cppad/local/sub_op.hpp src/cppad/local/sparse_binary_op.hpp \
+ src/cppad/local/sparse_unary_op.hpp src/cppad/local/store_op.hpp \
+ src/cppad/local/tan_op.hpp src/cppad/local/tanh_op.hpp \
+ src/cppad/local/ad_fun.hpp src/cppad/local/forward0sweep.hpp \
+ src/cppad/local/forward_sweep.hpp src/cppad/local/reverse_sweep.hpp \
+ src/cppad/local/for_jac_sweep.hpp src/cppad/local/rev_jac_sweep.hpp \
+ src/cppad/local/rev_hes_sweep.hpp src/cppad/local/parallel_ad.hpp \
+ src/cppad/local/std_set.hpp src/cppad/local/independent.hpp \
+ src/cppad/local/dependent.hpp src/cppad/local/fun_construct.hpp \
+ src/cppad/local/abort_recording.hpp src/cppad/local/fun_eval.hpp \
+ src/cppad/local/forward.hpp src/cppad/local/cap_taylor.hpp \
+ src/cppad/local/reverse.hpp src/cppad/local/sparse.hpp \
+ src/cppad/local/for_sparse_jac.hpp src/cppad/local/rev_sparse_jac.hpp \
+ src/cppad/local/rev_sparse_hes.hpp src/cppad/local/drivers.hpp \
+ src/cppad/local/jacobian.hpp src/cppad/local/for_one.hpp \
+ src/cppad/local/rev_one.hpp src/cppad/local/hessian.hpp \
+ src/cppad/local/for_two.hpp src/cppad/local/rev_two.hpp \
+ src/cppad/local/sparse_jacobian.hpp src/cppad/local/sparse_hessian.hpp \
+ src/cppad/local/fun_check.hpp src/cppad/local/omp_max_thread.hpp \
+ src/cppad/local/optimize.hpp src/cppad/local/lu_ratio.hpp \
+ src/cppad/local/bender_quad.hpp src/cppad/local/opt_val_hes.hpp \
+ src/cppad/local/undef.hpp
 $(LIBOBJDIR)/nlpi/nlpi_ipopt.o: src/nlpi/nlpi_ipopt.cpp src/nlpi/nlpi_ipopt.h \
  src/nlpi/type_nlpi.h src/scip/def.h src/scip/type_retcode.h \
- src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
- src/scip/pub_message.h src/blockmemshell/memory.h src/nlpi/type_expr.h \
- src/nlpi/nlpi.h src/scip/type_misc.h src/nlpi/nlpioracle.h \
- src/nlpi/exprinterpret.h src/nlpi/type_exprinterpret.h \
- src/scip/intervalarith.h src/scip/interrupt.h src/scip/type_interrupt.h \
- src/scip/pub_misc.h \
+ src/scip/pub_message.h src/scip/type_message.h \
+ src/blockmemshell/memory.h src/nlpi/type_expr.h src/nlpi/nlpi.h \
+ src/scip/type_misc.h src/nlpi/nlpioracle.h src/nlpi/exprinterpret.h \
+ src/nlpi/type_exprinterpret.h src/scip/intervalarith.h \
+ src/scip/interrupt.h src/scip/type_interrupt.h src/scip/pub_misc.h \
+ src/scip/type_var.h \
   \
   \
   \

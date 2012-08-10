@@ -67,19 +67,20 @@
 /* default values for parameters */
 #define SCIP_DEFAULT_SEPARELINT              TRUE /**< generate close cuts w.r.t. relative interior point (best solution otherwise)? */
 #define SCIP_DEFAULT_SEPACOMBVALUE           0.30 /**< convex combination value for close cuts */
-#define SCIP_DEFAULT_SEPAROOTONLY            TRUE /**< generate close cuts in the root only? */
 #define SCIP_DEFAULT_SEPATHRESHOLD             50 /**< threshold on number of generated cuts below which the ordinary separation is started */
 #define SCIP_DEFAULT_INCLOBJCUTOFF          FALSE /**< include the objective cutoff when computing the relative interior? */
 #define SCIP_DEFAULT_RECOMPUTERELINT        FALSE /**< recompute relative interior in each separation call? */
 #define SCIP_DEFAULT_RELINTNORMTYPE           'o' /**< type of norm to use when computing relative interior */
 #define SCIP_DEFAULT_MAXUNSUCCESSFUL            0 /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
+#define SCIP_DEFAULT_MAXLPITERFACTOR          2.0 /**< factor for maximal LP iterations in relative interior computation compared to node LP iterations */
+
+#define SCIP_MIN_LPITERS                      100 /**< minimum number of allowed LP iterations in relative interior computation*/
 
 
 /** separator data */
 struct SCIP_SepaData
 {
    SCIP_Bool             separelint;         /**< generate close cuts w.r.t. relative interior point (best solution otherwise)? */
-   SCIP_Bool             separootonly;       /**< generate close cuts in the root only? */
    SCIP_Real             sepacombvalue;      /**< convex combination value for close cuts */
    int                   sepathreshold;      /**< threshold on number of generated cuts below which the ordinary separation is started */
    SCIP_Bool             inclobjcutoff;      /**< include the objective cutoff when computing the relative interior? */
@@ -88,10 +89,9 @@ struct SCIP_SepaData
    int                   maxunsuccessful;    /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
    SCIP_SOL*             sepasol;            /**< solution that can be used for generating close cuts */
    SCIP_Longint          discardnode;        /**< number of node for which separation is discarded */
+   SCIP_Real             maxlpiterfactor;    /**< factor for maximal LP iterations in relative interior computation compared to node LP iterations */
    int                   nunsuccessful;      /**< number of consecutive unsuccessful calls */
 };
-
-
 
 
 /** generate point for close cut separation
@@ -148,8 +148,6 @@ SCIP_RETCODE generateCloseCutPoint(
 }
 
 
-
-
 /*
  * Callback methods of separator
  */
@@ -189,14 +187,6 @@ SCIP_DECL_SEPAFREE(sepaFreeClosecuts)
    return SCIP_OKAY;
 }
 
-/** initialization method of separator (called after problem was transformed) */
-#define sepaInitClosecuts NULL
-
-/** deinitialization method of separator (called before transformed problem is freed) */
-#define sepaExitClosecuts NULL
-
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolClosecuts NULL
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
 static
@@ -225,6 +215,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
    SCIP_Longint currentnodenumber;
+   SCIP_SOL* point = NULL;
    SCIP_Bool isroot;
 
    assert( sepa != NULL );
@@ -244,105 +235,120 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
    if ( sepadata->discardnode == currentnodenumber )
       return SCIP_OKAY;
 
-   isroot = FALSE;
-   if (SCIPgetNNodes(scip) == 0)
-      isroot = TRUE;
+   if ( SCIPisStopped(scip) )
+      return SCIP_OKAY;
 
-   /* only separate close cuts in the root if required */
-   if ( sepadata->separootonly || isroot )
+   SCIPdebugMessage("Separation method of closecuts separator.\n");
+   *result = SCIP_DIDNOTFIND;
+
+   /* check whether we have to compute a relative interior point */
+   if ( sepadata->separelint )
    {
-      SCIP_SOL* point = NULL;
+      SCIP_Longint nlpiters;
+      SCIP_Real timelimit;
+      int iterlimit;
 
-      SCIPdebugMessage("Separation method of closecuts separator.\n");
-      *result = SCIP_DIDNOTFIND;
+      /* prepare time limit */
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+      if ( ! SCIPisInfinity(scip, timelimit) )
+         timelimit -= SCIPgetSolvingTime(scip);
+      /* exit if no time left */
+      if ( timelimit <= 0.0 )
+         return SCIP_OKAY;
 
-      /* check whether we have to compute a relative interior point */
-      if ( sepadata->separelint )
-      {
-         /* check if previous relative interior point should be forgotten,
-          * otherwise it is computed only once and the same point is used for all nodes */
-         if ( sepadata->recomputerelint && sepadata->sepasol != NULL )
-         {
-            SCIP_CALL( SCIPfreeSol(scip, &sepadata->sepasol) );
-         }
-         if ( sepadata->sepasol == NULL )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Computing relative interior point (norm type: %c) ...\n", sepadata->relintnormtype);
-            assert(sepadata->relintnormtype == 'o' || sepadata->relintnormtype == 's');
-            SCIP_CALL( SCIPcomputeLPRelIntPoint(scip, TRUE, sepadata->inclobjcutoff, sepadata->relintnormtype, &sepadata->sepasol) );
-         }
-      }
+      /* determine iteration limit */
+      if ( sepadata->maxlpiterfactor < 0.0 || SCIPisInfinity(scip, sepadata->maxlpiterfactor) )
+         iterlimit = INT_MAX;
       else
       {
-         /* get best solution (NULL if not present) */
-         sepadata->sepasol = SCIPgetBestSol(scip);
+         nlpiters = SCIPgetNNodeLPIterations(scip);
+         iterlimit = (int)(sepadata->maxlpiterfactor * nlpiters);
+         iterlimit = MAX(iterlimit, SCIP_MIN_LPITERS);
+         if ( iterlimit <= 0 )
+            return SCIP_OKAY;
       }
 
-      /* separate close cuts */
-      if ( sepadata->sepasol != NULL )
+      /* check if previous relative interior point should be forgotten,
+       * otherwise it is computed only once and the same point is used for all nodes */
+      if ( sepadata->recomputerelint && sepadata->sepasol != NULL )
       {
-         SCIPdebugMessage("Generating close cuts ... (combination value: %f)\n", sepadata->sepacombvalue);
+         SCIP_CALL( SCIPfreeSol(scip, &sepadata->sepasol) );
+      }
+      if ( sepadata->sepasol == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Computing relative interior point (norm type: %c, time limit: %g, iter limit: %d) ...\n",
+            sepadata->relintnormtype, timelimit, iterlimit);
+         assert(sepadata->relintnormtype == 'o' || sepadata->relintnormtype == 's');
+         SCIP_CALL( SCIPcomputeLPRelIntPoint(scip, TRUE, sepadata->inclobjcutoff, sepadata->relintnormtype, timelimit, iterlimit, &sepadata->sepasol) );
+      }
+   }
+   else
+   {
+      /* get best solution (NULL if not present) */
+      sepadata->sepasol = SCIPgetBestSol(scip);
+   }
 
-         /* generate point to be separated */
-         SCIP_CALL( generateCloseCutPoint(scip, sepadata, &point) );
+   /* separate close cuts */
+   if ( sepadata->sepasol != NULL )
+   {
+      SCIPdebugMessage("Generating close cuts ... (combination value: %f)\n", sepadata->sepacombvalue);
 
-         /* apply a separation round to generated point */
-         if ( point != NULL )
+      /* generate point to be separated */
+      SCIP_CALL( generateCloseCutPoint(scip, sepadata, &point) );
+
+      /* apply a separation round to generated point */
+      if ( point != NULL )
+      {
+         int noldcuts;
+         SCIP_Bool delayed;
+         SCIP_Bool cutoff;
+
+         noldcuts = SCIPgetNCuts(scip);
+         isroot = (SCIP_Bool) (SCIPgetNNodes(scip) == 0);
+
+         SCIP_CALL( SCIPseparateSol(scip, point, isroot, FALSE, &delayed, &cutoff) );
+
+         SCIP_CALL( SCIPfreeSol(scip, &point) );
+         assert( point == NULL );
+
+         /* the cuts might not violated by the current LP if the computed point is strange */
+         SCIP_CALL( SCIPremoveInefficaciousCuts(scip) );
+
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
          {
-            int noldcuts;
-            SCIP_Bool delayed;
-            SCIP_Bool cutoff;
-
-            noldcuts = SCIPgetNCuts(scip);
-
-            SCIP_CALL( SCIPseparateSol(scip, point, isroot, FALSE, &delayed, &cutoff) );
-
-            SCIP_CALL( SCIPfreeSol(scip, &point) );
-            assert( point == NULL );
-
-            /* the cuts can be not violated by the current LP if the computed point is strange */
-            SCIP_CALL( SCIPremoveInefficaciousCuts(scip) );
-
-            if ( cutoff )
-               *result = SCIP_CUTOFF;
+            if ( SCIPgetNCuts(scip) - noldcuts > sepadata->sepathreshold )
+            {
+               sepadata->nunsuccessful = 0;
+               *result = SCIP_NEWROUND;
+            }
             else
             {
-               if ( SCIPgetNCuts(scip) - noldcuts > sepadata->sepathreshold )
+               if ( SCIPgetNCuts(scip) > noldcuts )
                {
                   sepadata->nunsuccessful = 0;
-                  *result = SCIP_NEWROUND;
+                  *result = SCIP_SEPARATED;
                }
                else
-               {
-                  if ( SCIPgetNCuts(scip) > noldcuts )
-                  {
-                     sepadata->nunsuccessful = 0;
-                     *result = SCIP_SEPARATED;
-                  }
-                  else
-                     ++sepadata->nunsuccessful;
-               }
+                  ++sepadata->nunsuccessful;
             }
+         }
 
-            SCIPdebugMessage("Separated close cuts: %d (enoughcuts: %d, unsuccessful: %d).\n", SCIPgetNCuts(scip) - noldcuts,
-               SCIPgetNCuts(scip) - noldcuts > sepadata->sepathreshold, sepadata->nunsuccessful);
+         SCIPdebugMessage("Separated close cuts: %d (enoughcuts: %d, unsuccessful: %d).\n", SCIPgetNCuts(scip) - noldcuts,
+            SCIPgetNCuts(scip) - noldcuts > sepadata->sepathreshold, sepadata->nunsuccessful);
 
-            if ( sepadata->maxunsuccessful >= 0 && sepadata->nunsuccessful > sepadata->maxunsuccessful )
-            {
-               SCIPdebugMessage("Turn off close cut separation, because of %d unsuccessful calls.\n", sepadata->nunsuccessful);
-               sepadata->discardnode = currentnodenumber;
-            }
+         if ( sepadata->maxunsuccessful >= 0 && sepadata->nunsuccessful > sepadata->maxunsuccessful )
+         {
+            SCIPdebugMessage("Turn off close cut separation, because of %d unsuccessful calls.\n", sepadata->nunsuccessful);
+            sepadata->discardnode = currentnodenumber;
+            sepadata->nunsuccessful = 0;
          }
       }
    }
 
    return SCIP_OKAY;
 }
-
-/** arbitrary primal solution separation method of separator */
-#define sepaExecsolClosecuts NULL
-
-
 
 
 /*
@@ -355,6 +361,7 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create closecuts separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
@@ -363,10 +370,17 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
    sepadata->nunsuccessful = 0;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyClosecuts, sepaFreeClosecuts, sepaInitClosecuts, sepaExitClosecuts,
-         sepaInitsolClosecuts, sepaExitsolClosecuts, sepaExeclpClosecuts, sepaExecsolClosecuts,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaExeclpClosecuts, NULL,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyClosecuts) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeClosecuts) );
+   SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolClosecuts) );
 
    /* add closecuts separator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -379,11 +393,6 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
          "convex combination value for close cuts",
          &sepadata->sepacombvalue, TRUE, SCIP_DEFAULT_SEPACOMBVALUE, 0.0, 1.0,
          NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/closecuts/separootonly",
-         "generate close cuts in the root only?",
-         &sepadata->separootonly, TRUE, SCIP_DEFAULT_SEPAROOTONLY, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/closecuts/closethres",
@@ -409,6 +418,54 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
          "separating/closecuts/maxunsuccessful",
          "turn off separation in current node after unsuccessful calls (-1 never turn off)",
          &sepadata->maxunsuccessful, TRUE, SCIP_DEFAULT_MAXUNSUCCESSFUL, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/closecuts/maxlpiterfactor",
+         "factor for maximal LP iterations in relative interior computation compared to node LP iterations (negative for no limit)",
+         &sepadata->maxlpiterfactor, TRUE, SCIP_DEFAULT_MAXLPITERFACTOR, -1.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** sets point to be used as base point for computing the point to be separated
+ *
+ *  The point is only stored if separation of relative interior points is used. The solution is copied.
+ */
+SCIP_RETCODE SCIPsetBasePointClosecuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< base point solution */
+   )
+{
+   SCIP_SEPA* sepa;
+   SCIP_SEPADATA* sepadata;
+
+   assert( scip != NULL );
+
+   /* find separator */
+   sepa = SCIPfindSepa(scip, SEPA_NAME);
+   if ( sepa == NULL )
+   {
+      SCIPerrorMessage("Could not find separator <%s>.\n", SEPA_NAME);
+      return SCIP_PLUGINNOTFOUND;
+   }
+   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
+
+   /* get sepadata */
+   sepadata = SCIPsepaGetData(sepa);
+   assert( sepadata != NULL );
+
+   /* store point if we have to separate relative interior points */
+   if ( sepadata->separelint )
+   {
+      /* possibly free solution */
+      if ( sepadata->sepasol != NULL )
+      {
+         SCIP_CALL( SCIPfreeSol(scip, &sepadata->sepasol) );
+      }
+
+      /* copy and store solution */
+      SCIP_CALL( SCIPcreateSolCopy(scip, &sepadata->sepasol, sol) );
+   }
 
    return SCIP_OKAY;
 }

@@ -57,13 +57,13 @@ typedef enum SCIP_LinearConsType SCIP_LINEARCONSTYPE;
 
 
 /** creates the handler for pseudoboolean constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates and captures a pseudoboolean constraint, with given linear and and-constraints */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -112,7 +112,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -148,7 +148,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -157,11 +157,41 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures a pseudoboolean constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ *
+ *  @see SCIPcreateConsPseudoboolean() for the default constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR**            linvars,            /**< variables of the linear part, or NULL */
+   int                   nlinvars,           /**< number of variables of the linear part */
+   SCIP_Real*            linvals,            /**< coefficients of linear part, or NULL */
+   SCIP_VAR***           terms,              /**< nonlinear terms of variables, or NULL */
+   int                   nterms,             /**< number of terms of variables of nonlinear term */
+   int*                  ntermvars,          /**< number of variables in nonlinear terms, or NULL */
+   SCIP_Real*            termvals,           /**< coefficients of nonlinear parts, or NULL */
+   SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
+   SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
+   SCIP_Bool             issoftcons,         /**< is this a soft constraint */
+   SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
+                                              *   if this variable is not NULL this constraint (without this integer
+                                              *   variable) describes the objective function */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   );
+
 /** @Note: you can only add a coefficient if the special type of linear constraint won't changed */
 /** @todo: if adding a coefficient would change the type of the special linear constraint, we need to erase it and
  *         create a new linear constraint */
 /** adds linear term pseudo boolean constraint (if it is not zero) */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddCoefPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< pseudoboolean constraint */
@@ -173,7 +203,7 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
 /** @todo: if adding a coefficient would change the type of the special linear constraint, we need to erase it and
  *         create a new linear constraint */
 /** adds nonlinear term to pseudo boolean constraint (if it is not zero) */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddTermPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< pseudoboolean constraint */
@@ -183,35 +213,35 @@ SCIP_RETCODE SCIPaddTermPseudoboolean(
    );
 
 /** gets indicator variable of pseudoboolean constraint, or NULL if there is no */
-extern
+EXTERN
 SCIP_VAR* SCIPgetIndVarPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons                /**< pseudoboolean constraint */
    );
 
 /** gets linear constraint of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_CONS* SCIPgetLinearConsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons                /**< pseudoboolean constraint */
    );
 
 /** gets type of linear constraint of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_LINEARCONSTYPE SCIPgetLinearConsTypePseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons                /**< pseudoboolean constraint */
    );
 
 /** gets number of linear variables without artificial terms variables of pseudoboolean constraint */
-extern
+EXTERN
 int SCIPgetNLinVarsWithoutAndPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons                /**< pseudoboolean constraint */
    );
 
 /** gets linear constraint of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPgetLinDatasWithoutAndPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< pseudoboolean constraint */
@@ -222,7 +252,7 @@ SCIP_RETCODE SCIPgetLinDatasWithoutAndPseudoboolean(
    );
 
 /** gets and-constraints of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPgetAndDatasPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< pseudoboolean constraint */
@@ -233,7 +263,7 @@ SCIP_RETCODE SCIPgetAndDatasPseudoboolean(
    );
 
 /** gets number of and constraints of pseudoboolean constraint */
-extern
+EXTERN
 int SCIPgetNAndsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons                /**< pseudoboolean constraint */
@@ -243,7 +273,7 @@ int SCIPgetNAndsPseudoboolean(
 /** @todo: if changing the left hand side would change the type of the special linear constraint, we need to erase it
  *         and create a new linear constraint */
 /** changes left hand side of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPchgLhsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< pseudoboolean constraint */
@@ -254,7 +284,7 @@ SCIP_RETCODE SCIPchgLhsPseudoboolean(
 /** @todo: if changing the right hand side would change the type of the special linear constraint, we need to erase it
  *         and create a new linear constraint */
 /** changes right hand side of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPchgRhsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< pseudoboolean constraint */
@@ -262,14 +292,14 @@ SCIP_RETCODE SCIPchgRhsPseudoboolean(
    );
 
 /** get left hand side of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetLhsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons                /**< pseudoboolean constraint */
    );
 
 /** get right hand side of pseudoboolean constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetRhsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons                /**< pseudoboolean constraint */

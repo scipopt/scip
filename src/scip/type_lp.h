@@ -57,6 +57,15 @@ enum SCIP_SideType
 };
 typedef enum SCIP_SideType SCIP_SIDETYPE;
 
+/** type of origin of row */
+enum SCIP_RowOriginType
+{
+   SCIP_ROWORIGINTYPE_UNSPEC = 0,       /**< unspecified origin of row */
+   SCIP_ROWORIGINTYPE_CONS   = 1,       /**< row created by constraint handler */
+   SCIP_ROWORIGINTYPE_SEPA   = 2        /**< row created by separator */
+};
+typedef enum SCIP_RowOriginType SCIP_ROWORIGINTYPE;
+
 /** type of LP algorithm */
 enum SCIP_LPAlgo
 {

@@ -31,6 +31,9 @@
 #include <string.h>
 #include <ctype.h>
 
+#ifdef ALLDIFFERENT
+#include "scip/cons_alldifferent.h"
+#endif
 #include "scip/cons_and.h"
 #include "scip/cons_cumulative.h"
 #include "scip/cons_knapsack.h"
@@ -1172,7 +1175,7 @@ SCIP_RETCODE createQuadraticCons(
    SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2,
          quadcoefs, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -1197,7 +1200,7 @@ SCIP_RETCODE createLinearCons(
    SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nvars, vars, vals, lhs, rhs,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -1499,7 +1502,7 @@ void parseRange(
       syntaxError(scip, fzninput, "expected lower bound value");
 
    /* check if we have a float notation or an integer notation which defines the type of the variable */
-   if( fzninput->hasdot )
+   if( fzninput->hasdot || !SCIPisIntegral(scip, *lb) )
       *type = FZN_FLOAT;
    else
       *type = FZN_INT;
@@ -2979,7 +2982,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
             goto TERMINATE;
          }
 
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIPdebugPrintCons(scip, cons, NULL);
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -3060,7 +3063,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       }
 
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebugPrintCons(scip, cons, NULL);
       *created = TRUE;
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -3267,7 +3270,7 @@ CREATE_CONSTRAINT(createAlldifferentOpCons)
    SCIP_CALL( SCIPcreateConsAlldifferent(scip, &cons, fname, nvars, vars,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    /* add and release the constraint to the problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -3375,7 +3378,7 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
    SCIP_CALL( SCIPcreateConsCumulative(scip, &cons, fname, nvars, vars, durations, demands, capacity,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    /* add and release the constraint to the problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -3564,7 +3567,7 @@ SCIP_RETCODE parseSolveItem(
       {
          assert(equalTokens(scip, fzninput->token, "maximize"));
          fzninput->objsense = SCIP_OBJSENSE_MAXIMIZE;
-         SCIPdebugMessage("detected a maximization problem");
+         SCIPdebugMessage("detected a maximization problem\n");
       }
 
       /* parse objective coefficients */
@@ -4428,7 +4431,7 @@ SCIP_RETCODE writeFzn(
          weights = SCIPgetWeightsKnapsack(scip, cons);
          SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
          for( v = 0; v < nconsvars; ++v )
-            consvals[v] = weights[v];
+            consvals[v] = (SCIP_Real)weights[v];
 
          SCIP_CALL( printLinearCons(scip, &fznoutput, consvars, consvals, nconsvars, -SCIPinfinity(scip),
                (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed, FALSE) );
@@ -4892,14 +4895,19 @@ SCIP_RETCODE SCIPincludeReaderFzn(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
    /* create fzn reader data */
    SCIP_CALL( readerdataCreate(scip, &readerdata) );
 
-   /* include fzn reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyFzn, readerFreeFzn, readerReadFzn, readerWriteFzn,
-         readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyFzn) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeFzn) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadFzn) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteFzn) );
 
    return SCIP_OKAY;
 }
@@ -4952,7 +4960,7 @@ SCIP_RETCODE SCIPprintSolReaderFzn(
 
          printValue(scip, file, solvalue, type);
 
-         SCIPinfoMessage(scip, file, "\n");
+         SCIPinfoMessage(scip, file, ";\n");
       }
       else
       {

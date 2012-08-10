@@ -32,8 +32,6 @@
 #define NODESEL_MEMSAVEPRIORITY     100
 
 
-
-
 /*
  * Default parameter settings
  */
@@ -59,7 +57,6 @@ struct SCIP_NodeselData
                                               *   (0: never) */
    int                   breadthfirstdepth;  /**< depth until breadth-fisrt search is applied */
 };
-
 
 
 /*
@@ -98,21 +95,6 @@ SCIP_DECL_NODESELFREE(nodeselFreeEstimate)
 
    return SCIP_OKAY;
 }
-
-/** initialization method of node selector (called after problem was transformed) */
-#define nodeselInitEstimate NULL
-
-
-/** deinitialization method of node selector (called before transformed problem is freed) */
-#define nodeselExitEstimate NULL
-
-
-/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
-#define nodeselInitsolEstimate NULL
-
-
-/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
-#define nodeselExitsolEstimate NULL
 
 
 /** node selection method of node selector */
@@ -338,9 +320,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompEstimate)
 }
 
 
-
-
-
 /*
  * estimate specific interface methods
  */
@@ -351,16 +330,19 @@ SCIP_RETCODE SCIPincludeNodeselEstimate(
    )
 {
    SCIP_NODESELDATA* nodeseldata;
+   SCIP_NODESEL* nodesel;
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
    SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
 
    /* include node selector */
-   SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-         nodeselCopyEstimate,
-         nodeselFreeEstimate, nodeselInitEstimate, nodeselExitEstimate, 
-         nodeselInitsolEstimate, nodeselExitsolEstimate, nodeselSelectEstimate, nodeselCompEstimate,
-         nodeseldata) );
+   SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+          nodeselSelectEstimate, nodeselCompEstimate, nodeseldata) );
+
+   assert(nodesel != NULL);
+
+   SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyEstimate) );
+   SCIP_CALL( SCIPsetNodeselFree(scip, nodesel, nodeselFreeEstimate) );
 
    /* add node selector parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

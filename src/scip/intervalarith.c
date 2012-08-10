@@ -53,7 +53,7 @@ SCIP_Bool SCIPintervalHasRoundingControl(
 
 /** sets rounding mode of floating point operations */
 void SCIPintervalSetRoundingMode(
-   SCIP_ROUNDMODE   roundmode           /**< rounding mode to activate */
+   SCIP_ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
 {
    if( fesetround(roundmode) != 0 )
@@ -99,7 +99,7 @@ SCIP_Bool SCIPintervalHasRoundingControl(
 
 /** sets rounding mode of floating point operations */
 void SCIPintervalSetRoundingMode(
-   SCIP_ROUNDMODE   roundmode           /**< rounding mode to activate */
+   SCIP_ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
 {
    if( write_rnd(roundmode) != 0 )
@@ -145,7 +145,7 @@ SCIP_Bool SCIPintervalHasRoundingControl(
 
 /** sets rounding mode of floating point operations */
 void SCIPintervalSetRoundingMode(
-   SCIP_ROUNDMODE   roundmode           /**< rounding mode to activate */
+   SCIP_ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
 {
    if( (_controlfp(roundmode, _MCW_RC) & _MCW_RC) != roundmode )
@@ -185,7 +185,7 @@ SCIP_Bool SCIPintervalHasRoundingControl(
 
 /** sets rounding mode of floating point operations */
 void SCIPintervalSetRoundingMode(
-   SCIP_ROUNDMODE   roundmode           /**< rounding mode to activate */
+   SCIP_ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
 {  /*lint --e{715}*/
    SCIPerrorMessage("setting rounding mode not available - interval arithmetic is invalid!\n");
@@ -1627,7 +1627,8 @@ SCIP_Real SCIPintervalPowerScalarIntegerInf(
          else
             n >>= 1;
          z = z * z;
-      } while( TRUE );  /*lint !e506 */
+      }
+      while( TRUE );  /*lint !e506 */
 
       SCIPintervalSetRoundingMode(roundmode);
    }
@@ -1700,7 +1701,8 @@ SCIP_Real SCIPintervalPowerScalarIntegerSup(
          else
             n >>= 1;
          z = z * z;
-      } while( TRUE );  /*lint !e506 */
+      }
+      while( TRUE );  /*lint !e506 */
 
       SCIPintervalSetRoundingMode(roundmode);
    }
@@ -1787,7 +1789,8 @@ void SCIPintervalPowerScalarInteger(
             n >>= 1;
          z_inf = negate(negate(z_inf) * z_inf);
          z_sup = z_sup * z_sup;
-      } while( TRUE );  /*lint !e506 */
+      }
+      while( TRUE );  /*lint !e506 */
 
       SCIPintervalSetRoundingMode(roundmode);
 
@@ -2808,7 +2811,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
       SCIP_INTERVAL res2;
       SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(infinity, &res2, sqrcoeff.sup, lincoeff.sup, rhs.inf);
       SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%.20f, %.20f]\n", sqrcoeff.sup, lincoeff.sup, rhs.inf, res2.inf, res2.sup);
-      SCIPdebugMessage("intersect [%.20f, %.20f] and [%.20f, %.20f]", resultant->inf, resultant->sup, res2.inf, res2.sup);
+      SCIPdebugMessage("intersection of [%.20f, %.20f] and [%.20f, %.20f]", resultant->inf, resultant->sup, res2.inf, res2.sup);
       /* intersect both results */
       SCIPintervalIntersect(resultant, *resultant, res2);
       SCIPdebugPrintf(" gives [%.20f, %.20f]\n", resultant->inf, resultant->sup);

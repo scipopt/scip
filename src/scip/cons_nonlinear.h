@@ -32,6 +32,12 @@
  *
  * Branching is performed for variables in nonconvex terms, if the relaxation solution cannot be separated.
  *
+ * This header offers the upgrade functionality to upgrade a general nonlinear constraint into a more specific constraint
+ * via SCIP_DECL_NONLINCONSUPGD().
+ *
+ * Furthermore, the definition of callbacks used to reformulate an expression graph is offered by
+ * SCIP_DECL_EXPRGRAPHNODEREFORM().
+ *
  * Further, the function representation is stored in an expression graph, which allows to propagate variable domains
  * and constraint sides and offers a simple convexity check.
  * During presolve, the expression graph is reformulated, whereby new variables and constraints are created
@@ -105,20 +111,20 @@ extern "C" {
       int* naddcons, SCIP_EXPRGRAPHNODE** reformnode)
 
 /** creates the handler for nonlinear constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** includes a nonlinear constraint upgrade method into the nonlinear constraint handler */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
-   SCIP*                   scip,               /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_NONLINCONSUPGD((*nonlinconsupgd)),/**< method to call for upgrading nonlinear constraint, or NULL */
    SCIP_DECL_EXPRGRAPHNODEREFORM((*nodereform)),/**< method to call for reformulating expression graph node, or NULL */
-   int                     priority,           /**< priority of upgrading method */
-   SCIP_Bool               active,             /**< should the upgrading method by active by default? */
-   const char*             conshdlrname        /**< name of the constraint handler */
+   int                   priority,           /**< priority of upgrading method */
+   SCIP_Bool             active,             /**< should the upgrading method by active by default? */
+   const char*           conshdlrname        /**< name of the constraint handler */
    );
 
 /** creates and captures a nonlinear constraint
@@ -126,7 +132,7 @@ SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -165,13 +171,38 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
    );
 
 /** creates and captures a nonlinear constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsNonlinear(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  this variant takes expression trees as input
+ *
+ *  @see SCIPcreateConsNonlinear() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsBasicNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear variables in the constraint */
+   SCIP_VAR**            linvars,            /**< array with linear variables of constraint entries */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of constraint linear entries */
+   int                   nexprtrees,         /**< number of expression trees for nonlinear part of constraint */
+   SCIP_EXPRTREE**       exprtrees,          /**< expression trees for nonlinear part of constraint */
+   SCIP_Real*            nonlincoefs,        /**< coefficients for expression trees for nonlinear part, or NULL if all 1.0 */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   );
+
+/** creates and captures a nonlinear constraint
  * this variant takes a node of the expression graph as input and can only be used during presolving
  * it is assumed that the nonlinear constraint will be added to the transformed problem short after creation
  * the given exprgraphnode is captured in this method
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsNonlinear2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -198,7 +229,7 @@ SCIP_RETCODE SCIPcreateConsNonlinear2(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -207,8 +238,33 @@ SCIP_RETCODE SCIPcreateConsNonlinear2(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures a nonlinear constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsNonlinear2(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  this variant takes a node of the expression graph as input and can only be used during presolving
+ *  it is assumed that the nonlinear constraint will be added to the transformed problem short after creation
+ *  the given exprgraphnode is captured in this method
+ *
+ *  @see SCIPcreateConsNonlinear2() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsBasicNonlinear2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear variables in the constraint */
+   SCIP_VAR**            linvars,            /**< array with linear variables of constraint entries */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of constraint linear entries */
+   SCIP_EXPRGRAPHNODE*   exprgraphnode,      /**< expression graph node associated to nonlinear expression */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   );
+
 /** adds a linear variable with coefficient to a nonlinear constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddLinearVarNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -219,7 +275,7 @@ SCIP_RETCODE SCIPaddLinearVarNonlinear(
 /** sets the expression trees in a nonlinear constraint
  * constraint must not be active yet
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPsetExprtreesNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -228,8 +284,20 @@ SCIP_RETCODE SCIPsetExprtreesNonlinear(
    SCIP_Real*            coefs               /**< coefficients of expression trees, or NULL if all 1.0 */
    );
 
+/** adds expression trees to a nonlinear constraint
+ * constraint must not be active yet
+ */
+EXTERN
+SCIP_RETCODE SCIPaddExprtreesNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   int                   nexprtrees,         /**< number of expression trees */
+   SCIP_EXPRTREE**       exprtrees,          /**< new expression trees, or NULL if nexprtrees is 0 */
+   SCIP_Real*            coefs               /**< coefficients of expression trees, or NULL if all 1.0 */
+   );
+
 /** gets the nonlinear constraint as a nonlinear row representation */
-extern
+EXTERN
 SCIP_RETCODE SCIPgetNlRowNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -237,77 +305,81 @@ SCIP_RETCODE SCIPgetNlRowNonlinear(
    );
 
 /** gets the number of variables in the linear term of a nonlinear constraint */
-extern
+EXTERN
 int SCIPgetNLinearVarsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the variables in the linear part of a nonlinear constraint */
-extern
+EXTERN
 SCIP_VAR** SCIPgetLinearVarsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the coefficients in the linear part of a nonlinear constraint */
-extern
+EXTERN
 SCIP_Real* SCIPgetLinearCoefsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the number of expression trees of a nonlinear constraint */
-extern
+EXTERN
 int SCIPgetNExprtreesNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the expression trees of a nonlinear constraint */
-extern
+EXTERN
 SCIP_EXPRTREE** SCIPgetExprtreesNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the coefficients of the expression trees of a nonlinear constraint */
-extern
+EXTERN
 SCIP_Real* SCIPgetExprtreeCoefsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the expression graph node of a nonlinear constraint */
-extern
+EXTERN
 SCIP_EXPRGRAPHNODE* SCIPgetExprgraphNodeNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the left hand side of a nonlinear constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetLhsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the right hand side of a nonlinear constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetRhsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** check the function of a nonlinear constraint for convexity/concavity, if not done yet */
-extern
+EXTERN
 SCIP_RETCODE SCIPcheckCurvatureNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** gets the curvature of the nonlinear function of a nonlinear constraint */
-extern
+/** gets the curvature of the nonlinear function of a nonlinear constraint
+ *
+ * The curvature is computed by summing up the curvature for each nonlinear summand.
+ * To get the curvature for single summands, use SCIPgetExprtreeCurvaturesNonlinear().
+ */
+EXTERN
 SCIP_RETCODE SCIPgetCurvatureNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -315,8 +387,17 @@ SCIP_RETCODE SCIPgetCurvatureNonlinear(
    SCIP_EXPRCURV*        curvature           /**< buffer to store curvature of constraint */
    );
 
+/** gets the curvature of the expression trees (multiplied by their coefficient) of a nonlinear constraint */
+EXTERN
+SCIP_RETCODE SCIPgetExprtreeCurvaturesNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             checkcurv,          /**< whether to check constraint curvature, if not checked before */
+   SCIP_EXPRCURV**       curvatures          /**< buffer to store curvatures of exprtrees */
+   );
+
 /** computes the violation of a nonlinear constraint by a solution */
-extern
+EXTERN
 SCIP_RETCODE SCIPgetViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -325,7 +406,7 @@ SCIP_RETCODE SCIPgetViolationNonlinear(
    );
 
 /** gets expression graph of nonlinear constraint handler */
-extern
+EXTERN
 SCIP_EXPRGRAPH* SCIPgetExprgraphNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */

@@ -117,6 +117,7 @@ struct SCIP_Conshdlr
    SCIP_Longint          nrespropcalls;      /**< number of times, the resolve propagation was called */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
    SCIP_Longint          ncutsfound;         /**< number of cuts found by this constraint handler */
+   SCIP_Longint          ncutsapplied;       /**< number of cuts found by this constraint handler applied to lp */
    SCIP_Longint          nconssfound;        /**< number of additional constraints added by this constraint handler */
    SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
    SCIP_Longint          nchildren;          /**< number of children the constraint handler created during branching */
@@ -125,6 +126,8 @@ struct SCIP_Conshdlr
    SCIP_Longint          lastenfopsdomchgcount;/**< last bound change number, where the pseudo enforcement was called */
    SCIP_Longint          lastenfolpnode;     /**< last node at which the LP enforcement was called */
    SCIP_Longint          lastenfopsnode;     /**< last node at which the pseudo enforcement was called */
+   SCIP_RESULT           lastenfolpresult;   /**< result of last LP enforcement call */
+   SCIP_RESULT           lastenfopsresult;   /**< result of last pseudo enforcement call */
    SCIP_Real             ageresetavg;        /**< exp. decaying weighted average of constraint ages at moment of age reset */
    char*                 name;               /**< name of constraint handler */
    char*                 desc;               /**< description of constraint handler */
@@ -232,6 +235,7 @@ struct SCIP_Conshdlr
    int                   nupgdconss;         /**< total number of upgraded constraints by this presolver */
    int                   nchgcoefs;          /**< total number of changed coefficients by this presolver */
    int                   nchgsides;          /**< total number of changed left or right hand sides by this presolver */
+   int                   npresolcalls;       /**< number of times the constraint handler was called in presolving and tried to find reductions */
    int                   delayupdatecount;   /**< must the updates of the constraint arrays be delayed until processUpdates()? */
    SCIP_Bool             delaysepa;          /**< should separation method be delayed, if other separators found cuts? */
    SCIP_Bool             delayprop;          /**< should propagation method be delayed, if other propagators found reductions? */

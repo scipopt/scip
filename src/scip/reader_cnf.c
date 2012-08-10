@@ -41,7 +41,6 @@
 #define MAXLINELEN       65536
 
 
-
 /*
  * cnf reader internal methods
  */
@@ -144,6 +143,7 @@ SCIP_RETCODE readCnf(
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
    SCIP_Bool dynamicrows;
+   SCIP_Bool useobj;
    int linecount;
    int clauselen;
    int clausenum;
@@ -194,6 +194,7 @@ SCIP_RETCODE readCnf(
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamicconss", &dynamicconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamiccols", &dynamiccols) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/useobj", &useobj) );
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
@@ -331,10 +332,13 @@ SCIP_RETCODE readCnf(
  TERMINATE:
    /* change objective values and release variables */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
-   for( v = 0; v < nvars; ++v )
+   if( useobj )
    {
-      SCIP_CALL( SCIPchgVarObj(scip, vars[v], (SCIP_Real)varsign[v]) );
-      SCIP_CALL( SCIPreleaseVar(scip, &vars[v]) );
+      for( v = 0; v < nvars; ++v )
+      {
+         SCIP_CALL( SCIPchgVarObj(scip, vars[v], (SCIP_Real)varsign[v]) );
+         SCIP_CALL( SCIPreleaseVar(scip, &vars[v]) );
+      }
    }
 
    /* free temporary memory */
@@ -344,7 +348,6 @@ SCIP_RETCODE readCnf(
 
    return retcode;
 }
-
 
 
 /*
@@ -364,10 +367,6 @@ SCIP_DECL_READERCOPY(readerCopyCnf)
  
    return SCIP_OKAY;
 }
-
-
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeCnf NULL
 
 
 /** problem reading method of reader */
@@ -406,10 +405,6 @@ SCIP_DECL_READERREAD(readerReadCnf)
 }
 
 
-/** problem writing method of reader */
-#define readerWriteCnf NULL
-
-
 /*
  * cnf file reader specific interface methods
  */
@@ -420,15 +415,17 @@ SCIP_RETCODE SCIPincludeReaderCnf(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create cnf reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include cnf reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyCnf,
-         readerFreeCnf, readerReadCnf, readerWriteCnf, 
-         readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCnf) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCnf) );
 
    /* add cnf reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -439,6 +436,9 @@ SCIP_RETCODE SCIPincludeReaderCnf(
          NULL, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/cnfreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
+         NULL, FALSE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/cnfreader/useobj", "should an artificial objective, depending on the number of clauses a variable appears in, be used?",
          NULL, FALSE, FALSE, NULL, NULL) );
    
    return SCIP_OKAY;

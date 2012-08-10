@@ -51,10 +51,10 @@ public:
 
    /** name of the dialog */
    char* scip_name_;
-   
+
    /** description of the dialog */
    char* scip_desc_;
-   
+
    /** default for whether the dialog is a menu */
    const SCIP_Bool scip_issubmenu_;
 
@@ -84,27 +84,20 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
-   /** destructor of dialog to free user data (called when SCIP is exiting) */
-   virtual SCIP_RETCODE scip_free(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_DIALOG*       dialog              /**< the dialog itself */
-      )
+   /** destructor of dialog to free user data (called when SCIP is exiting)
+    *
+    *  @see SCIP_DECL_DIALOGFREE(x) in @ref type_dialog.h
+    */
+   virtual SCIP_DECL_DIALOGFREE(scip_free)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
-   
+
    /** description output method of dialog
     *
-    *  This method should output (usually a single line of) information describing the meaning of the dialog.  The
-    *  method is called, when the help menu of the parent's dialog is displayed.  
-    *  If no description output method is given/implemented, the description string of the dialog is displayed instead
-    *  (see below).
+    *  @see SCIP_DECL_DIALOGDESC(x) in @ref type_dialog.h
     */
-   virtual SCIP_RETCODE scip_desc(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_DIALOG*       dialog              /**< the dialog itself */
-      )
+   virtual SCIP_DECL_DIALOGDESC(scip_desc)
    {  /*lint --e{715}*/
       SCIPdialogMessage(scip, 0, "%s", scip_desc_);
       return SCIP_OKAY;
@@ -112,28 +105,15 @@ public:
 
    /** execution method of dialog
     *
-    *  This method is invoked, if the user selected the dialog's command name in the parent's dialog menu.
-    *
-    *  input:
-    *  - scip            : SCIP main data structure
-    *  - dialoghdlr      : dialog handler to call for user interaction
-    *  - dialog          : the dialog itself
-    *
-    *  output:
-    *  - *nextdialog     : next dialog to process (or NULL to quit dialog processing)
+    *  @see SCIP_DECL_DIALOGEXEC(x) in @ref type_dialog.h
     */
-   virtual SCIP_RETCODE scip_exec(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_DIALOGHDLR*   dialoghdlr,         /**< the dialog handler containing the dialog */
-      SCIP_DIALOG*       dialog,             /**< the dialog itself */
-      SCIP_DIALOG**      nextdialog          /**< pointer to store next dialog to process (or NULL to quit processing) */
-      ) = 0;
+   virtual SCIP_DECL_DIALOGEXEC(scip_exec) = 0;
 };
 
 } /* namespace scip */
 
 
-   
+
 /** creates the dialog for the given dialog object and includes it in SCIP
  *
  *  The method should be called in one of the following ways:

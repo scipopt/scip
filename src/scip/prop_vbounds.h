@@ -33,41 +33,23 @@ extern "C" {
 #endif
 
 /** creates the vbounds propagator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePropVbounds(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** create a topological sorted variable array of the given variables and stores if (needed) the involved variables into
- *  the corresponding variable array and hash map
- *
- * @note: for all arrays and the hash map (if needed) you need to allocate enough memory before calling this method 
- */
-extern
-SCIP_RETCODE SCIPcreateTopoSortedVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< variable which we want sort */
-   int                   nvars,              /**< number of variables */
-   SCIP_HASHMAP*         varHashmap,         /**< mapping a variable to its position in the (used) variable array, or NULL */    
-   SCIP_VAR**            usedvars,           /**< array of variables which are involved in the propagation, or NULL */
-   int*                  nusedvars,          /**< number of variables which are involved in the propagation, or NULL */
-   SCIP_VAR**            topovars,           /**< array where the topological sorted variables are stored */
-   int*                  ntopovars,          /**< pointer to store the number of topological sorted variables */
-   SCIP_Bool             lowerbound          /**< topological sorted with respect to the variable lower bounds, otherwise variable upper bound */
-   );
-
 /** returns TRUE if the propagator has the status that all variable lower and upper bounds are propagated */
-extern
+EXTERN
 SCIP_Bool SCIPisPropagatedVbounds(
-   SCIP*                 scip                 /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** performs propagation of variables lower and upper bounds */
-extern
+EXTERN
 SCIP_RETCODE SCIPexecPropVbounds(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_Bool             force,               /**< should domain changes be forced */
-   SCIP_RESULT*          result               /**< pointer to store result */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             force,              /**< should domain changes for continuous variables be forced */
+   SCIP_RESULT*          result              /**< pointer to store result */
    );
 
 #ifdef __cplusplus

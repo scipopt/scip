@@ -32,8 +32,6 @@
 #define NODESEL_MEMSAVEPRIORITY      50
 
 
-
-
 /*
  * Default parameter settings
  */
@@ -63,8 +61,6 @@ struct SCIP_NodeselData
 };
 
 
-
-
 /*
  * Local methods
  */
@@ -78,8 +74,6 @@ SCIP_Real getNodeselScore(
 {
    return (1.0-estimweight) * SCIPnodeGetLowerbound(node) + estimweight * SCIPnodeGetEstimate(node);
 }
-
-
 
 
 /*
@@ -118,21 +112,6 @@ SCIP_DECL_NODESELFREE(nodeselFreeHybridestim)
 
    return SCIP_OKAY;
 }
-
-/** initialization method of node selector (called after problem was transformed) */
-#define nodeselInitHybridestim NULL
-
-
-/** deinitialization method of node selector (called before transformed problem is freed) */
-#define nodeselExitHybridestim NULL
-
-
-/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
-#define nodeselInitsolHybridestim NULL
-
-
-/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
-#define nodeselExitsolHybridestim NULL
 
 
 /** node selection method of node selector */
@@ -326,9 +305,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompHybridestim)
 }
 
 
-
-
-
 /*
  * hybridestim specific interface methods
  */
@@ -339,16 +315,19 @@ SCIP_RETCODE SCIPincludeNodeselHybridestim(
    )
 {
    SCIP_NODESELDATA* nodeseldata;
+   SCIP_NODESEL* nodesel;
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
    SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
 
    /* include node selector */
-   SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-         nodeselCopyHybridestim,
-         nodeselFreeHybridestim, nodeselInitHybridestim, nodeselExitHybridestim, 
-         nodeselInitsolHybridestim, nodeselExitsolHybridestim, nodeselSelectHybridestim, nodeselCompHybridestim,
-         nodeseldata) );
+   SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+          nodeselSelectHybridestim, nodeselCompHybridestim, nodeseldata) );
+
+   assert(nodesel != NULL);
+
+   SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyHybridestim) );
+   SCIP_CALL( SCIPsetNodeselFree(scip, nodesel, nodeselFreeHybridestim) );
 
    /* add node selector parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

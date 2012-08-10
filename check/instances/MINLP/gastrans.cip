@@ -1,0 +1,297 @@
+STATISTICS
+  Problem name     : gastrans.osil
+  Variables        : 86 (12 binary, 0 integer, 0 implicit integer, 74 continuous)
+  Constraints      : 144 initial, 144 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <t_b46>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_b47>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_b48>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_b49>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_b60>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_b51>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_b52>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_b61>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_b59>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_b58>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_b56>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_b57>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [continuous] <prodt_b58*nlreform12>: obj=0, global bounds=[0,62.7275690097259], local bounds=[0,62.7275690097259]
+  [continuous] <prodt_b59*nlreform13>: obj=0, global bounds=[0,1126.19491387423], local bounds=[0,1126.19491387423]
+  [continuous] <prodt_b60*nlreform14>: obj=0, global bounds=[0,492.374899701052], local bounds=[0,492.374899701052]
+  [continuous] <e40_linpart>: obj=0, global bounds=[-5.42012337121913,-4.583880994718], local bounds=[-5.42012337121913,-4.583880994718]
+  [continuous] <t_x18>: obj=-1.68, global bounds=[-20.3162212551873,23.389522295445], local bounds=[-20.3162212551873,23.389522295445]
+  [continuous] <t_x21>: obj=0, global bounds=[2.141,2.3281158418814], local bounds=[2.141,2.3281158418814]
+  [continuous] <t_x71>: obj=0, global bounds=[-37.1322212551873,-15.616], local bounds=[-37.1322212551873,-15.616]
+  [continuous] <t_x101>: obj=0, global bounds=[3473.67597806014,3969], local bounds=[3473.67597806014,3969]
+  [continuous] <e38_linpart>: obj=0, global bounds=[-2817.24471256835,-504.631295954072], local bounds=[-2817.24471256835,-504.631295954072]
+  [continuous] <t_x97>: obj=0, global bounds=[2669.52083313877,4242.12062238384], local bounds=[2669.52083313877,4242.12062238384]
+  [continuous] <t_x95>: obj=0, global bounds=[1772.70088242421,4382.44], local bounds=[1772.70088242421,4382.44]
+  [continuous] <t_x98>: obj=0, global bounds=[2157.18542873361,3794.31653273141], local bounds=[2157.18542873361,3794.31653273141]
+  [continuous] <t_x94>: obj=0, global bounds=[900,5929], local bounds=[900,5929]
+  [continuous] <t_x93>: obj=0, global bounds=[2809.84021075493,5929], local bounds=[2809.84021075493,5929]
+  [continuous] <t_x92>: obj=0, global bounds=[2809.84021075493,5929], local bounds=[2809.84021075493,5929]
+  [continuous] <t_x91>: obj=0, global bounds=[2500,4072.59978924507], local bounds=[2500,4072.59978924507]
+  [continuous] <t_x90>: obj=0, global bounds=[2499.99999999986,4382.44], local bounds=[2499.99999999986,4382.44]
+  [continuous] <t_x89>: obj=0, global bounds=[758.546448392818,1253.87047033268], local bounds=[758.546448392818,1253.87047033268]
+  [continuous] <t_x88>: obj=0, global bounds=[900,5929.00000002012], local bounds=[900,5929.00000002012]
+  [continuous] <t_x87>: obj=0, global bounds=[2672.10033371654,4382.44], local bounds=[2672.10033371654,4382.44]
+  [continuous] <t_x106>: obj=0, global bounds=[2809.84021075493,5929], local bounds=[2809.84021075493,5929]
+  [continuous] <t_x16>: obj=0, global bounds=[-19.3962212551873,35.0255368852107], local bounds=[-19.3962212551873,35.0255368852107]
+  [continuous] <t_x105>: obj=0, global bounds=[2809.84021075493,5929], local bounds=[2809.84021075493,5929]
+  [continuous] <t_x104>: obj=0, global bounds=[1717.81885008416,3354.94995408196], local bounds=[1717.81885008416,3354.94995408196]
+  [continuous] <t_x96>: obj=0, global bounds=[899.999999979876,5929], local bounds=[899.999999979876,5929]
+  [continuous] <t_x103>: obj=0, global bounds=[1611.52840853944,3248.65951253724], local bounds=[1611.52840853944,3248.65951253724]
+  [continuous] <t_x17>: obj=0, global bounds=[-21.5162212551873,22.189522295445], local bounds=[-21.5162212551873,22.189522295445]
+  [continuous] <t_x79>: obj=0, global bounds=[-2.1061158418814,-1.919], local bounds=[-2.1061158418814,-1.919]
+  [continuous] <t_x19>: obj=1.68, global bounds=[22.464,54.6261066273212], local bounds=[22.464,54.6261066273212]
+  [continuous] <t_x100>: obj=0, global bounds=[2809.84021075493,4382.44], local bounds=[2809.84021075493,4382.44]
+  [continuous] <t_x76>: obj=2.28, global bounds=[0,4.8], local bounds=[0,4.8]
+  [continuous] <e42_linpart>: obj=0, global bounds=[-4.43572394463602,-3.682560995162], local bounds=[-4.43572394463602,-3.682560995162]
+  [continuous] <e39_linpart>: obj=0, global bounds=[-1378.80185541945,-243.859455967768], local bounds=[-1378.80185541945,-243.859455967768]
+  [continuous] <t_x1>: obj=0, global bounds=[-167.462311548504,172.111994689754], local bounds=[-167.462311548504,172.111994689754]
+  [continuous] <t_x2>: obj=0, global bounds=[-163.241994689754,179.056311548504], local bounds=[-163.241994689754,179.056311548504]
+  [continuous] <t_x3>: obj=2.28, global bounds=[-136.732404813609,146.82496578727], local bounds=[-136.732404813609,146.82496578727]
+  [continuous] <t_x4>: obj=2.28, global bounds=[-138.41696578727,146.82496578727], local bounds=[-138.41696578727,146.82496578727]
+  [continuous] <t_x5>: obj=0, global bounds=[4.49000000000002,65.6841226444122], local bounds=[4.49000000000002,65.6841226444122]
+  [continuous] <t_x99>: obj=0, global bounds=[625,1120.32402193986], local bounds=[625,1120.32402193986]
+  [continuous] <t_x7>: obj=0, global bounds=[-28.4681669051455,0.765999999999995], local bounds=[-28.4681669051455,0.765999999999995]
+  [continuous] <t_x8>: obj=0, global bounds=[-33.6311079403749,-4.49000000000001], local bounds=[-33.6311079403749,-4.49000000000001]
+  [continuous] <t_x9>: obj=-1.68, global bounds=[0,45.1612269655326], local bounds=[0,45.1612269655326]
+  [continuous] <t_x10>: obj=1.68, global bounds=[6.19255478760981,22.012], local bounds=[6.19255478760981,22.012]
+  [continuous] <t_x11>: obj=1.68, global bounds=[0,14.1514452123902], local bounds=[0,14.1514452123902]
+  [continuous] <t_x12>: obj=0, global bounds=[0,43.2391678186367], local bounds=[0,43.2391678186367]
+  [continuous] <t_x13>: obj=0, global bounds=[-7.07572260624648,8.79144003142533], local bounds=[-7.07572260624648,8.79144003142533]
+  [continuous] <t_x14>: obj=0, global bounds=[-26.3150367821851,44.3636643012813], local bounds=[-26.3150367821851,44.3636643012813]
+  [continuous] <t_x15>: obj=0, global bounds=[-5.80219934424117,8.29216422469579], local bounds=[-5.80219934424117,8.29216422469579]
+  [continuous] <e45_linpart>: obj=0, global bounds=[4.583880994718,5.42012337121913], local bounds=[4.583880994718,5.42012337121913]
+  [continuous] <e29_linpart>: obj=0, global bounds=[20.1600999900201,1131.05142129515], local bounds=[20.1600999900201,1131.05142129515]
+  [continuous] <nlreform0>: obj=0, global bounds=[0,29622.5387160848], local bounds=[0,29622.5387160848]
+  [continuous] <nlreform1>: obj=0, global bounds=[0,30052.3942472616], local bounds=[0,30052.3942472616]
+  [continuous] <nlreform2>: obj=0, global bounds=[0,20126.6605522717], local bounds=[0,20126.6605522717]
+  [continuous] <nlreform3>: obj=0, global bounds=[0,20126.6605522717], local bounds=[0,20126.6605522717]
+  [continuous] <prodt_b57*nlreform11>: obj=0, global bounds=[0,1968.13471023778], local bounds=[0,1968.13471023778]
+  [continuous] <nlreform5>: obj=0, global bounds=[-1.000000001e-09,23.0400000106], local bounds=[-1.000000001e-09,23.0400000106]
+  [continuous] <nlreform6>: obj=0, global bounds=[0,742.207201816062], local bounds=[0,742.207201816062]
+  [continuous] <nlreform7>: obj=0, global bounds=[0,559.664387699722], local bounds=[0,559.664387699722]
+  [continuous] <prodt_b56*nlreform10>: obj=0, global bounds=[0,73.3493497623186], local bounds=[0,73.3493497623186]
+  [continuous] <prodt_b55*nlreform9>: obj=0, global bounds=[0,1869.62563364922], local bounds=[0,1869.62563364922]
+  [continuous] <nlreform10>: obj=0, global bounds=[0,73.3493497623186], local bounds=[0,73.3493497623186]
+  [continuous] <nlreform11>: obj=0, global bounds=[0,1968.13471023778], local bounds=[0,1968.13471023778]
+  [continuous] <nlreform12>: obj=0, global bounds=[0,62.7275690097259], local bounds=[0,62.7275690097259]
+  [continuous] <nlreform13>: obj=0, global bounds=[0,1126.19491387423], local bounds=[0,1126.19491387423]
+  [continuous] <nlreform14>: obj=0, global bounds=[0,492.374899701052], local bounds=[0,492.374899701052]
+  [continuous] <prodt_b46*nlreform0>: obj=0, global bounds=[0,29622.5387160848], local bounds=[0,29622.5387160848]
+  [continuous] <prodt_b47*nlreform1>: obj=0, global bounds=[0,30052.3942472616], local bounds=[0,30052.3942472616]
+  [continuous] <prodt_b48*nlreform2>: obj=0, global bounds=[0,20126.6605522717], local bounds=[0,20126.6605522717]
+  [continuous] <prodt_b49*nlreform3>: obj=0, global bounds=[0,20126.6605522717], local bounds=[0,20126.6605522717]
+  [continuous] <prodt_b50*nlreform4>: obj=0, global bounds=[20.1600999990005,4314.40396756418], local bounds=[20.1600999990005,4314.40396756418]
+  [continuous] <prodt_b51*nlreform5>: obj=0, global bounds=[-1.000000001e-09,23.0400000106], local bounds=[-1.000000001e-09,23.0400000106]
+  [continuous] <prodt_b52*nlreform6>: obj=0, global bounds=[0,0.586756001000026], local bounds=[0,0.586756001000026]
+  [continuous] <prodt_b61*nlreform7>: obj=0, global bounds=[0,547.06975321012], local bounds=[0,547.06975321012]
+  [continuous] <prodt_b54*nlreform8>: obj=0, global bounds=[0,2039.53642103035], local bounds=[0,2039.53642103035]
+FIXED
+  [continuous] <t_x86>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [continuous] <t_x84>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [continuous] <t_x83>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [continuous] <t_x81>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [continuous] <t_x70>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [continuous] <t_x102>: obj=0, global bounds=[2500,2500], local bounds=[2500,2500], fixed:2500
+  [continuous] <t_x20>: obj=0, global bounds=[15.616,37.1322212551873], local bounds=[15.616,37.1322212551873], aggregated: -1<t_x71>
+  [continuous] <t_x6>: obj=0, global bounds=[0,4.8], local bounds=[0,4.8], aggregated: +1<t_x76>
+  [continuous] <t_x24>: obj=0, global bounds=[1.919,2.1061158418814], local bounds=[1.919,2.1061158418814], aggregated: -1<t_x79>
+  [continuous] <t_x22>: obj=0, global bounds=[2.141,2.3281158418814], local bounds=[2.141,2.3281158418814], aggregated: +1<t_x23>
+  [continuous] <t_x82>: obj=0, global bounds=[20.344,22.012], local bounds=[20.344,22.012], aggregated: +1<t_x10> +1<t_x11>
+  [continuous] <t_x23>: obj=0, global bounds=[2.141,2.3281158418814], local bounds=[2.141,2.3281158418814], aggregated: +1<t_x21>
+  [continuous] <t_x25>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b46>
+  [continuous] <t_x26>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b47>
+  [continuous] <t_x27>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b48>
+  [continuous] <t_x28>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b49>
+  [continuous] <t_x29>: obj=0, global bounds=[1,1], local bounds=[1,1], aggregated: -1 +2<t_b50>
+  [continuous] <t_x30>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b51>
+  [continuous] <t_x31>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b52>
+  [continuous] <t_x32>: obj=0, global bounds=[-1,-1], local bounds=[-1,-1], aggregated: -1 +2<t_b53>
+  [continuous] <t_x33>: obj=0, global bounds=[1,1], local bounds=[1,1], aggregated: -1 +2<t_b54>
+  [continuous] <t_x34>: obj=0, global bounds=[1,1], local bounds=[1,1], aggregated: -1 +2<t_b55>
+  [continuous] <t_x35>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b56>
+  [continuous] <t_x36>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b57>
+  [continuous] <t_x37>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b58>
+  [continuous] <t_x38>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b59>
+  [continuous] <t_x39>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b60>
+  [continuous] <t_x40>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b61>
+  [continuous] <t_x41>: obj=0, global bounds=[1,1], local bounds=[1,1], aggregated: -1 +2<t_b62>
+  [continuous] <t_x42>: obj=0, global bounds=[1,1], local bounds=[1,1], aggregated: -1 +2<t_b63>
+  [continuous] <t_x43>: obj=0, global bounds=[1,1], local bounds=[1,1], aggregated: -1 +2<t_b64>
+  [continuous] <t_x44>: obj=0, global bounds=[1,1], local bounds=[1,1], aggregated: -1 +2<t_b65>
+  [continuous] <t_x45>: obj=0, global bounds=[1,1], local bounds=[1,1], aggregated: -1 +2<t_b66>
+  [binary] <t_b62>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_b63>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_b66>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [continuous] <t_x67>: obj=0, global bounds=[0,1.2], local bounds=[0,1.2], aggregated: -1<t_x17> +1<t_x18>
+  [continuous] <t_x68>: obj=0, global bounds=[-33.2681669051455,-4.034], local bounds=[-33.2681669051455,-4.034], aggregated: +1<t_x7> -1<t_x76>
+  [continuous] <t_x69>: obj=0, global bounds=[-0.66958207745253,-0.222], local bounds=[-0.66958207745253,-0.222], aggregated: -1<t_x21> -1<t_x79>
+  [continuous] <t_x72>: obj=0, global bounds=[-434.456344421495,-3.918], local bounds=[-434.456344421495,-3.918], aggregated: -1<t_x3> -1<t_x4> +1<t_x5>
+  [continuous] <t_x73>: obj=0, global bounds=[0,8.4], local bounds=[0,8.4], aggregated: -1<t_x1> -1<t_x2> +1<t_x3> +1<t_x4>
+  [continuous] <t_x74>: obj=0, global bounds=[-35.9367558553061,-5.256], local bounds=[-35.9367558553061,-5.256], aggregated: -1<t_x7> +1<t_x8>
+  [continuous] <t_x75>: obj=0, global bounds=[-143.83024307551,-6.385], local bounds=[-143.83024307551,-6.385], aggregated: -1<t_x12> -1<t_x13> +1<t_x14> +1<t_x15>
+  [binary] <t_b65>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [continuous] <t_x77>: obj=0, global bounds=[-109.925194051115,-6.848], local bounds=[-109.925194051115,-6.848], aggregated: -1<t_x19> -1<t_x71>
+  [continuous] <t_x78>: obj=0, global bounds=[-124.028427241822,-2.12], local bounds=[-124.028427241822,-2.12], aggregated: -1<t_x16> +1<t_x17>
+  [binary] <t_b64>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [continuous] <t_x80>: obj=0, global bounds=[0,0.96], local bounds=[0,0.96], aggregated: -1<t_x9> -1<t_x18> +1<t_x19>
+  [continuous] <t_x85>: obj=0, global bounds=[8.87,11.594], local bounds=[8.87,11.594], aggregated: +1<t_x1> +1<t_x2>
+  [binary] <t_b53>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [continuous] <e41_linpart>: obj=0, global bounds=[-5.42012337121913,-4.583880994718], local bounds=[-5.42012337121913,-4.583880994718], aggregated: +1<e40_linpart>
+  [binary] <t_b50>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_b54>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_b55>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [continuous] <nlreform4>: obj=0, global bounds=[20.1600999990002,4314.40396756418], local bounds=[20.1600999990002,4314.40396756418], aggregated: +1<prodt_b50*nlreform4>
+  [continuous] <nlreform8>: obj=0, global bounds=[0,2039.53642103035], local bounds=[0,2039.53642103035], aggregated: +1<prodt_b54*nlreform8>
+  [continuous] <nlreform9>: obj=0, global bounds=[0,1869.62563364922], local bounds=[0,1869.62563364922], aggregated: +1<prodt_b55*nlreform9>
+CONSTRAINTS
+  [varbound] <e121>: <t_x15>[C] -8.6078966125965<t_b58>[B] >= -8.6078966125965;
+  [varbound] <e123>: <t_x17>[C] -44.3859637554959<t_b60>[B] >= -44.3859637554959;
+  [varbound] <e142>: <t_x15>[C] -9.65635470639685<t_b58>[B] <= 0;
+  [varbound] <e144>: <t_x17>[C] -59.1378302162646<t_b60>[B] <= 0;
+  [varbound] <linreformt_b60_2>: <prodt_b60*nlreform14>[C] -2683.12592505378<t_b60>[B] <= 0;
+  [varbound] <linreformt_b49_2>: <prodt_b49*nlreform3>[C] -34251.8093333477<t_b49>[B] <= 0;
+  [varbound] <e145>: <t_x18>[C] -60.3378302162646<t_b61>[B] <= 0;
+  [varbound] <e120>: <t_x14>[C] -49.7813184618928<t_b57>[B] >= -49.7813184618928;
+  [varbound] <linreformt_b56_2>: <prodt_b56*nlreform10>[C] -104.588168944064<t_b56>[B] <= 0;
+  [varbound] <e119>: <t_x13>[C] -10.7961327691767<t_b56>[B] >= -10.7961327691767;
+  [varbound] <linreformt_b58_2>: <prodt_b58*nlreform12>[C] -93.2451862167527<t_b58>[B] <= 0;
+  [varbound] <linreformt_b57_2>: <prodt_b57*nlreform11>[C] -3458.19216095853<t_b57>[B] <= 0;
+  [varbound] <e111>: <t_x3>[C] -195.858591670881<t_b48>[B] >= -195.858591670881;
+  [varbound] <e132>: <t_x3>[C] -173.61748395652<t_b48>[B] <= 0;
+  [varbound] <e124>: <t_x18>[C] -43.1859637554959<t_b61>[B] >= -43.1859637554959;
+  [varbound] <linreformt_b61_2>: <prodt_b61*nlreform7>[C] -3640.65375520777<t_b61>[B] <= 0;
+  [varbound] <e130>: -230.881425454383 <= <t_x1>[C] -230.881425454383<t_b46>[B] <= -0;
+  [varbound] <e140>: <t_x13>[C] -9.62392098452798<t_b56>[B] <= 0;
+  [varbound] <e112>: <t_x4>[C] -195.858591670881<t_b49>[B] >= -195.858591670881;
+  [varbound] <linreformt_b48_2>: <prodt_b48*nlreform2>[C] -34251.8093333477<t_b48>[B] <= 0;
+  [varbound] <e141>: <t_x14>[C] -58.8063955786914<t_b57>[B] <= 0;
+  [varbound] <linreformt_b46_2>: <prodt_b46*nlreform0>[C] -53306.2326198488<t_b46>[B] <= 0;
+  [varbound] <e131>: -230.881425454383 <= <t_x2>[C] -230.881425454383<t_b47>[B] <= -0;
+  [varbound] <linreformt_b47_2>: <prodt_b47*nlreform1>[C] -53306.2326198488<t_b47>[B] <= 0;
+  [varbound] <e143>: <t_x16>[C] -61.2578302162646<t_b59>[B] <= 0;
+  [varbound] <linreformt_b59_2>: <prodt_b59*nlreform13>[C] -3312.62084478142<t_b59>[B] <= 0;
+  [varbound] <e122>: <t_x16>[C] -42.2659637554959<t_b59>[B] >= -42.2659637554959;
+  [varbound] <e133>: <t_x4>[C] -173.61748395652<t_b49>[B] <= 0;
+  [varbound] <e135>: <t_x76>[C] -4.8<t_b51>[B] <= -0;
+  [varbound] <linreformt_b51_2>: <prodt_b51*nlreform5>[C] -23.0400000106<t_b51>[B] <= 0;
+  [varbound] <e136>: <t_x7>[C] -0.766<t_b52>[B] <= -0;
+  [varbound] <linreformt_b52_2>: <prodt_b52*nlreform6>[C] -810.436526940222<t_b52>[B] <= 0;
+  [varbound] <e115>: <t_x7>[C] -28.4681669051455<t_b52>[B] >= -28.4681669051455;
+  [linear] <e2>: 0 <=  -<t_x17>[C] +<t_x18>[C] <= 1.2;
+  [linear] <e103>:  -1572.59978924507<t_b61>[B] +<t_x87>[C] -<t_x100>[C] <= 0;
+  [linear] <e4>: <t_x21>[C] +<t_x79>[C] >= 0.222;
+  [linear] <e5>:  -<t_x10>[C] -<t_x11>[C] +<t_x12>[C] +<t_x13>[C] == 0;
+  [linear] <e41_linpart>:  -0.0016882734118691<t_x89>[C] +0.0016882734118691<t_x101>[C] +<e40_linpart>[C] == -0;
+  [linear] <e7>: <t_x3>[C] +<t_x4>[C] -<t_x5>[C] >= 3.918;
+  [linear] <e8>: 0 <=  -<t_x1>[C] -<t_x2>[C] +<t_x3>[C] +<t_x4>[C] <= 8.4;
+  [linear] <e9>: <t_x7>[C] -<t_x8>[C] >= 5.256;
+  [linear] <e10>: <t_x12>[C] +<t_x13>[C] -<t_x14>[C] -<t_x15>[C] >= 6.385;
+  [linear] <e42_linpart>:  +0.0275751323938619<t_x89>[C] -0.0275751323938619<t_x99>[C] +<e42_linpart>[C] == -0;
+  [linear] <e12>: <t_x19>[C] +<t_x71>[C] >= 6.848;
+  [linear] <e13>: <t_x16>[C] -<t_x17>[C] >= 2.12;
+  [linear] <e39_linpart>:  -1.43852204742378<t_x91>[C] +1.43852204742378<t_x97>[C] +<e39_linpart>[C] == -0;
+  [linear] <e15>: 0 <=  -<t_x9>[C] -<t_x18>[C] +<t_x19>[C] <= 0.96;
+  [linear] <linreformt_b60_4>:  +492.374899701051<t_b60>[B] +<nlreform14>[C] -<prodt_b60*nlreform14>[C] <= 492.374899701051;
+  [linear] <e17>: 20.344 <= <t_x10>[C] +<t_x11>[C] <= 22.012;
+  [linear] <e93>:  -5029<t_b51>[B] -<t_x88>[C] +<t_x96>[C] <= 0;
+  [linear] <e19>:  -<t_x14>[C] -<t_x15>[C] +<t_x16>[C] +<t_x21>[C] == 0;
+  [linear] <e20>: 8.87 <= <t_x1>[C] +<t_x2>[C] <= 11.594;
+  [linear] <e21>: <t_x5>[C] +<t_x8>[C] -<t_x9>[C] == -0;
+  [linear] <e83>: <t_x97>[C] -<t_x100>[C] <= 0;
+  [linear] <e84>: <t_x91>[C] -<t_x97>[C] <= 0;
+  [linear] <e34>:  -0.021277002358447<t_x95>[C] +0.021277002358447<t_x104>[C] -<nlreform12>[C] +2<prodt_b58*nlreform12>[C] == 0;
+  [linear] <e98>:  -2609.73911757579<t_b56>[B] +<t_x90>[C] -<t_x95>[C] <= 0;
+  [linear] <linreformt_b58_3>:  -<nlreform12>[C] +<prodt_b58*nlreform12>[C] <= -0;
+  [linear] <linreformt_b57_4>:  +1968.13471023778<t_b57>[B] +<nlreform11>[C] -<prodt_b57*nlreform11>[C] <= 1968.13471023778;
+  [linear] <e33>:  -1.43852204742378<t_x95>[C] +1.43852204742378<t_x104>[C] -<nlreform11>[C] +2<prodt_b57*nlreform11>[C] == 0;
+  [linear] <e75>: <t_x100>[C] -<t_x106>[C] <= 0;
+  [linear] <e38_linpart>:  -3.59630511855946<t_x97>[C] +3.59630511855946<t_x100>[C] +<e38_linpart>[C] == -0;
+  [linear] <linreformt_b48_4>:  +20126.6605522717<t_b48>[B] +<nlreform2>[C] -<prodt_b48*nlreform2>[C] <= 20126.6605522717;
+  [linear] <e100>:  -2664.62114991584<t_b58>[B] +<t_x95>[C] -<t_x104>[C] <= 0;
+  [linear] <e95>: <t_x94>[C] -<t_x106>[C] <= 0;
+  [linear] <e85>: <t_x103>[C] -<t_x104>[C] <= 0;
+  [linear] <linreformt_b47_3>:  -<nlreform1>[C] +<prodt_b47*nlreform1>[C] <= -0;
+  [linear] <e91>: 0 <=  +3119.15978924507<t_b49>[B] +<t_x92>[C] -<t_x93>[C] <= 3119.15978924507;
+  [linear] <linreformt_b57_3>:  -<nlreform11>[C] +<prodt_b57*nlreform11>[C] <= -0;
+  [linear] <linreformt_b47_4>:  +30052.3942472616<t_b47>[B] +<nlreform1>[C] -<prodt_b47*nlreform1>[C] <= 30052.3942472616;
+  [linear] <e45_linpart>:  -0.00636349209089121<t_x101>[C] +0.00636349209089121<t_x103>[C] +<e45_linpart>[C] <= -0;
+  [linear] <e29_linpart>:  +0.224905830442463<t_x94>[C] -0.224905830442463<t_x106>[C] +<e29_linpart>[C] == -0;
+  [linear] <e87>:  -<t_x89>[C] +<t_x99>[C] <= 0;
+  [linear] <e45>:  -<e45_linpart>[C] -<e40_linpart>[C] <= -0;
+  [linear] <e67>: -0 <=  +3119.15978924507<t_b46>[B] +<t_x93>[C] -<t_x105>[C] <= 3119.15978924507;
+  [linear] <e68>: -0 <=  +3119.15978924507<t_b47>[B] +<t_x93>[C] -<t_x105>[C] <= 3119.15978924507;
+  [linear] <linreformt_b49_4>:  +20126.6605522717<t_b49>[B] +<nlreform3>[C] -<prodt_b49*nlreform3>[C] <= 20126.6605522717;
+  [linear] <e90>: 0 <=  +3119.15978924507<t_b48>[B] +<t_x92>[C] -<t_x93>[C] <= 3119.15978924507;
+  [linear] <e71>:  -<t_x92>[C] +<t_x106>[C] <= 0;
+  [linear] <e77>:  +1882.44000000014<t_b56>[B] -<t_x90>[C] +<t_x95>[C] <= 1882.44000000014;
+  [linear] <e73>: -0 <=  +5029.00000002012<t_b52>[B] -<t_x88>[C] +<t_x94>[C] <= 5029.00000002012;
+  [linear] <e40_linpart>:  -0.0509935163731392<t_x103>[C] +0.0509935163731392<t_x104>[C] +<e40_linpart>[C] == -0;
+  [linear] <e35>:  +0.856263123466538<t_x98>[C] -0.856263123466538<t_x104>[C] -<nlreform13>[C] +2<prodt_b59*nlreform13>[C] == 0;
+  [linear] <e76>:  -<t_x90>[C] +<t_x95>[C] <= 0;
+  [linear] <linreformt_b46_3>:  -<nlreform0>[C] +<prodt_b46*nlreform0>[C] <= -0;
+  [linear] <linreformt_b46_4>:  +29622.5387160848<t_b46>[B] +<nlreform0>[C] -<prodt_b46*nlreform0>[C] <= 29622.5387160848;
+  [linear] <e101>:  -1197.76452534836<t_b59>[B] -<t_x98>[C] +<t_x104>[C] <= 0;
+  [linear] <e31>:  -1.79815255927973<t_x90>[C] +1.79815255927973<t_x95>[C] +<prodt_b55*nlreform9>[C] == 0;
+  [linear] <e36>:  +0.899076279639865<t_x87>[C] -0.899076279639865<t_x98>[C] -<nlreform14>[C] +2<prodt_b60*nlreform14>[C] == 0;
+  [linear] <e78>:  +1582.24907165775<t_b57>[B] -<t_x95>[C] +<t_x104>[C] <= 1582.24907165775;
+  [linear] <e22>:  +8.99076279639865<t_x93>[C] -8.99076279639865<t_x105>[C] -<nlreform0>[C] +2<prodt_b46*nlreform0>[C] == 0;
+  [linear] <e99>:  -2664.62114991584<t_b57>[B] +<t_x95>[C] -<t_x104>[C] <= 0;
+  [linear] <linreformt_b48_3>:  -<nlreform2>[C] +<prodt_b48*nlreform2>[C] <= -0;
+  [linear] <e23>:  +8.99076279639865<t_x93>[C] -8.99076279639865<t_x105>[C] -<nlreform1>[C] +2<prodt_b47*nlreform1>[C] == 0;
+  [linear] <e80>:  +2076.49768264725<t_b59>[B] +<t_x98>[C] -<t_x104>[C] <= 2076.49768264725;
+  [linear] <e102>:  -1122.21619901486<t_b60>[B] -<t_x87>[C] +<t_x98>[C] <= 0;
+  [linear] <e24>:  +5.99384186426577<t_x92>[C] -5.99384186426577<t_x93>[C] -<nlreform2>[C] +2<prodt_b48*nlreform2>[C] == 0;
+  [linear] <linreformt_b56_4>:  +73.3493497623187<t_b56>[B] +<nlreform10>[C] -<prodt_b56*nlreform10>[C] <= 73.3493497623187;
+  [linear] <e82>:  +1710.33966628346<t_b61>[B] -<t_x87>[C] +<t_x100>[C] <= 1710.33966628346;
+  [linear] <e25>:  +5.99384186426577<t_x92>[C] -5.99384186426577<t_x93>[C] -<nlreform3>[C] +2<prodt_b49*nlreform3>[C] == 0;
+  [linear] <e32>:  -0.0265962529480588<t_x90>[C] +0.0265962529480588<t_x95>[C] -<nlreform10>[C] +2<prodt_b56*nlreform10>[C] == 0;
+  [linear] <linreformt_b58_4>:  +62.7275690097258<t_b58>[B] +<nlreform12>[C] -<prodt_b58*nlreform12>[C] <= 62.7275690097258;
+  [linear] <e26>:  -1.38319427636902<t_x92>[C] +1.38319427636902<t_x106>[C] +<prodt_b50*nlreform4>[C] == 0;
+  [linear] <linreformt_b49_3>:  -<nlreform3>[C] +<prodt_b49*nlreform3>[C] <= -0;
+  [linear] <linreformt_b51_4>: <nlreform5>[C] -<prodt_b51*nlreform5>[C] <= 0;
+  [linear] <e27>:  +0.0993769948466698<t_x88>[C] -0.0993769948466698<t_x96>[C] -<nlreform5>[C] +2<prodt_b51*nlreform5>[C] == 0;
+  [linear] <e30>:  +0.653873657919902<t_x100>[C] -0.653873657919902<t_x106>[C] +<prodt_b54*nlreform8>[C] == 0;
+  [linear] <linreformt_b60_3>:  -<nlreform14>[C] +<prodt_b60*nlreform14>[C] <= -0;
+  [linear] <e28>:  -0.147352095807131<t_x88>[C] +0.147352095807131<t_x94>[C] -<nlreform6>[C] +2<prodt_b52*nlreform6>[C] == 0;
+  [linear] <linreformt_b59_4>:  +1126.19491387423<t_b59>[B] +<nlreform13>[C] -<prodt_b59*nlreform13>[C] <= 1126.19491387423;
+  [linear] <linreformt_b56_3>:  -<nlreform10>[C] +<prodt_b56*nlreform10>[C] <= -0;
+  [linear] <e37>:  -7.19261023711892<t_x87>[C] +7.19261023711892<t_x100>[C] -<nlreform7>[C] +2<prodt_b61*nlreform7>[C] == 0;
+  [linear] <e79>:  +1582.24907165775<t_b58>[B] -<t_x95>[C] +<t_x104>[C] <= 1582.24907165775;
+  [linear] <linreformt_b61_3>:  -<nlreform7>[C] +<prodt_b61*nlreform7>[C] <= -0;
+  [linear] <linreformt_b61_4>:  +559.664387699722<t_b61>[B] +<nlreform7>[C] -<prodt_b61*nlreform7>[C] <= 559.664387699722;
+  [linear] <linreformt_b59_3>:  -<nlreform13>[C] +<prodt_b59*nlreform13>[C] <= -0;
+  [linear] <e81>:  +2225.2545712664<t_b60>[B] +<t_x87>[C] -<t_x98>[C] <= 2225.2545712664;
+  [linear] <linreformt_b51_3>:  +1.000000001e-09<t_b51>[B] -<nlreform5>[C] +<prodt_b51*nlreform5>[C] <= 1.000000001e-09;
+  [linear] <e72>:  +5029.00000004025<t_b51>[B] +<t_x88>[C] -<t_x96>[C] <= 5029.00000004025;
+  [linear] <linreformt_b52_4>:  +742.207201816061<t_b52>[B] +<nlreform6>[C] -<prodt_b52*nlreform6>[C] <= 742.207201816061;
+  [linear] <linreformt_b52_3>:  -<nlreform6>[C] +<prodt_b52*nlreform6>[C] <= -0;
+  [linear] <e3>:  -<t_x7>[C] +<t_x76>[C] >= 4.034;
+  [abspower] <e38>: signpower(<t_x19>[C] +0, 2) +1<e38_linpart>[C] == 0;
+  [abspower] <e39>: signpower(<t_x71>[C] +0, 2) -1<e39_linpart>[C] == -0;
+  [abspower] <e42>: signpower(<t_x79>[C] +0, 2) -1<e42_linpart>[C] == -0;
+  [abspower] <e43>: signpower(<t_x10>[C] -0, 2) -7.19261023711892<t_x90>[C] <= -17981.5255927973;
+  [abspower] <e44>: signpower(<t_x11>[C] -0, 2) -0.106385011792235<t_x90>[C] <= -265.962529480587;
+  [abspower] <e40>: signpower(<t_x21>[C] +0, 2) +1<e40_linpart>[C] == 0;
+  [abspower] <e29>: signpower(<t_x8>[C] -0, 2) +1<e29_linpart>[C] == 0;
+  [abspower] <nlreform4>: signpower(<t_x5>[C] +0, 2) -1<prodt_b50*nlreform4>[C] == 0;
+  [abspower] <nlreform9>: signpower(<t_x12>[C] +0, 2) -1<prodt_b55*nlreform9>[C] == 0;
+  [abspower] <nlreform8>: signpower(<t_x9>[C] +0, 2) -1<prodt_b54*nlreform8>[C] == 0;
+  [abspower] <nlreform5>: signpower(<t_x76>[C] +0, 2) -1<nlreform5>[C] == 0;
+  [quadratic] <nlreform14>:  -<nlreform14>[C] +<t_x17>[C]^2 == 0;
+  [quadratic] <nlreform13>:  -<nlreform13>[C] +<t_x16>[C]^2 == 0;
+  [quadratic] <nlreform12>:  -<nlreform12>[C] +<t_x15>[C]^2 == 0;
+  [quadratic] <nlreform11>:  -<nlreform11>[C] +<t_x14>[C]^2 == 0;
+  [quadratic] <nlreform10>:  -<nlreform10>[C] +<t_x13>[C]^2 == 0;
+  [quadratic] <nlreform0>:  -<nlreform0>[C] +<t_x1>[C]^2 == 0;
+  [quadratic] <nlreform1>:  -<nlreform1>[C] +<t_x2>[C]^2 == 0;
+  [quadratic] <nlreform7>:  -<nlreform7>[C] +<t_x18>[C]^2 == 0;
+  [quadratic] <nlreform6>:  -<nlreform6>[C] +<t_x7>[C]^2 == 0;
+  [quadratic] <nlreform2>:  -<nlreform2>[C] +<t_x3>[C]^2 == 0;
+  [quadratic] <nlreform3>:  -<nlreform3>[C] +<t_x4>[C]^2 == 0;
+END

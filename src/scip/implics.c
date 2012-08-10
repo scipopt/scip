@@ -22,7 +22,6 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include "string.h"
 
 #include "scip/def.h"
 #include "scip/set.h"
@@ -426,7 +425,18 @@ void checkImplics(
       assert(nimpls == 0 || types != NULL);
       assert(nimpls == 0 || bounds != NULL);
 
-      for( i = 0; i < nbinimpls; ++i )
+      if( nbinimpls > 0 )
+      {
+         /* in case of implication we cannot use SCIPvarIsBinary() to check for binaries since the implication are
+          * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
+          * SCIP_VARTYPE_BINARY) and second all others;
+          */
+         assert(SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY);
+         assert((types[0] == SCIP_BOUNDTYPE_LOWER) == (bounds[0] > 0.5));
+         assert(SCIPsetIsFeasZero(set, bounds[0]) || SCIPsetIsFeasEQ(set, bounds[0], 1.0));
+      }
+
+      for( i = 1; i < nbinimpls; ++i )
       {
          int cmp;
 
@@ -436,10 +446,7 @@ void checkImplics(
           */
          assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY);
          assert((types[i] == SCIP_BOUNDTYPE_LOWER) == (bounds[i] > 0.5));
-         assert(SCIPsetIsFeasEQ(set, bounds[i], 0.0) || SCIPsetIsFeasEQ(set, bounds[i], 1.0));
-
-         if( i == 0 )
-            continue;
+         assert(SCIPsetIsFeasZero(set, bounds[i]) || SCIPsetIsFeasEQ(set, bounds[i], 1.0));
 
          cmp = compVars(vars[i-1], vars[i]);
          assert(cmp <= 0);
@@ -450,7 +457,7 @@ void checkImplics(
       for( i = nbinimpls; i < nimpls; ++i )
       {
          int cmp;
-         
+
          /* in case of implication we cannot use SCIPvarIsBinary() to check for binaries since the implication are
           * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
           * SCIP_VARTYPE_BINARY) and second all others;
@@ -724,6 +731,7 @@ SCIP_RETCODE SCIPimplicsAdd(
    SCIP_VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    SCIP_BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    SCIP_Real             implbound,          /**< bound b    in implication y <= b or y >= b */
+   SCIP_Bool             isshortcut,         /**< is the implication a shortcut, i.e., added as part of the transitive closure of another implication? */
    SCIP_Bool*            conflict,           /**< pointer to store whether implication causes a conflict for variable x */
    SCIP_Bool*            added               /**< pointer to store whether the implication was added */
    )
@@ -834,7 +842,7 @@ SCIP_RETCODE SCIPimplicsAdd(
          (*implics)->vars[varfixing][posadd] = implvar;
          (*implics)->types[varfixing][posadd] = impltype;
          (*implics)->bounds[varfixing][posadd] = implbound;
-         (*implics)->ids[varfixing][posadd] = stat->nimplications;
+         (*implics)->ids[varfixing][posadd] = (isshortcut ? -stat->nimplications : stat->nimplications);
          if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
             (*implics)->nbinimpls[varfixing]++;
          (*implics)->nimpls[varfixing]++;
@@ -907,7 +915,7 @@ SCIP_RETCODE SCIPimplicsAdd(
          (*implics)->vars[varfixing][posadd] = implvar;
          (*implics)->types[varfixing][posadd] = impltype;
          (*implics)->bounds[varfixing][posadd] = implbound;
-         (*implics)->ids[varfixing][posadd] = stat->nimplications;
+         (*implics)->ids[varfixing][posadd] = (isshortcut ? -stat->nimplications : stat->nimplications);
          if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
             (*implics)->nbinimpls[varfixing]++;
          (*implics)->nimpls[varfixing]++;
@@ -1188,7 +1196,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
    SCIP_Bool*            oppositeentry       /**< pointer to store whether the variable with opposite value is in the clique */
    )
 {
-   int varidx;
+   int pos;
    int i;
 
    assert(clique != NULL);
@@ -1205,30 +1213,108 @@ SCIP_RETCODE SCIPcliqueAddVar(
    /* allocate memory */
    SCIP_CALL( cliqueEnsureSize(clique, blkmem, set, clique->nvars+1) );
 
-   /* store variable in clique, sorted by index and values */
-   varidx = SCIPvarGetIndex(var);
-   assert(varidx >= 0);
-   for( i = clique->nvars; i > 0 && SCIPvarGetIndex(clique->vars[i-1]) > varidx; --i )
-   {
-      clique->vars[i] = clique->vars[i-1];
-      clique->values[i] = clique->values[i-1];
-   }
-   clique->vars[i] = var;
-   for( ; i > 0 && clique->vars[i-1] == var && clique->values[i-1] > value; --i )
-   {
-      clique->values[i] = clique->values[i-1];
-      *oppositeentry = TRUE;
-   }
-   clique->values[i] = value;
-   clique->nvars++;
-   clique->eventsissued = FALSE;
+   /* search for insertion position by binary variable, note that first the entries are order after variable index and
+    * second after the bool value of the corresponding variable
+    */
+   (void) SCIPsortedvecFindPtr((void**) clique->vars, SCIPvarComp, var, clique->nvars, &pos);
 
-   /* check whether the variable is contained twice in the clique */
-   for( i--; i >= 0 && clique->vars[i] == var; --i )
+   assert(pos >= 0 && pos <= clique->nvars);
+   /* remember insertion position for later, pos might change */
+   i = pos;
+
+   if( pos < clique->nvars )
    {
-      *doubleentry = *doubleentry || (clique->values[i] == value);
-      *oppositeentry = *oppositeentry || (clique->values[i] != value);
+      const int amount = clique->nvars - pos;
+
+      /* moving elements to correct position */
+      BMSmoveMemoryArray(&(clique->vars[pos+1]), &(clique->vars[pos]), amount); /*lint !e866*/
+      BMSmoveMemoryArray(&(clique->values[pos+1]), &(clique->values[pos]), amount); /*lint !e866*/
+      clique->nvars++;
+
+      /* insertion for a variable with cliquevalue FALSE */
+      if( !value )
+      {
+	 /* find last entry with the same variable and value behind the insertion position */
+	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] == value; ++pos ); /*lint !e722*/
+
+	 /* check if the same variable with other value also exists */
+	 if( pos < clique->nvars - 1 && clique->vars[pos + 1] == var )
+	 {
+	    assert(clique->values[pos + 1] != value);
+	    *oppositeentry = TRUE;
+	 }
+
+	 /* check if we found the same variable with the same value more than once */
+	 if( pos != i )
+	    *doubleentry = TRUE;
+	 else
+	 {
+	    /* find last entry with the same variable and different value before the insertion position */
+	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] != value; --pos ); /*lint !e722*/
+
+	    /* check if we found the same variable with the same value more than once */
+	    if( pos > 0 && clique->vars[pos - 1] == var )
+	    {
+	       assert(clique->values[pos - 1] == value);
+
+	       *doubleentry = TRUE;
+	    }
+	    /* if we found the same variable with different value, we need to order them correctly */
+	    if( pos != i )
+	    {
+	       assert(clique->vars[pos] == var);
+	       assert(clique->values[pos] != value);
+
+	       clique->values[pos] = value;
+	       value = !value;
+	    }
+	 }
+      }
+      /* insertion for a variable with cliquevalue TRUE */
+      else
+      {
+	 /* find last entry with the same variable and different value behind the insertion position */
+	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] != value; ++pos ); /*lint !e722*/
+
+	 /* check if the same variable with other value also exists */
+	 if( pos < clique->nvars - 1 && clique->vars[pos + 1] == var )
+	 {
+	    assert(clique->values[pos + 1] == value);
+	    *doubleentry = TRUE;
+	 }
+
+	 /* check if we found the same variable with different value */
+	 if( pos != i )
+	 {
+	    *oppositeentry = TRUE;
+
+	    /* if we found the same variable with different value, we need to order them correctly */
+	    assert(clique->vars[pos] == var);
+	    assert(clique->values[pos] != value);
+
+	    clique->values[pos] = value;
+	    value = !value;
+	 }
+	 else
+	 {
+	    /* find last entry with the same variable and value before the insertion position */
+	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] == value; --pos ); /*lint !e722*/
+
+	    if( pos != i )
+	       *doubleentry = TRUE;
+
+	    /* check if we found the same variable with different value up front */
+	    if( pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] != value )
+	       *oppositeentry = TRUE;
+	 }
+      }
    }
+   else
+      clique->nvars++;
+
+   clique->vars[i] = var;
+   clique->values[i] = value;
+   clique->eventsissued = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1511,36 +1597,36 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
          cliques2 = tmpc;
          ncliques2 = tmpi;
       }
-    
+
       /* check whether both clique lists have a same clique */
       while( TRUE )  /*lint !e716*/
       {
-         cliqueid = SCIPcliqueGetId(cliques2[i2]);
+	 cliqueid = SCIPcliqueGetId(cliques2[i2]);
 
-         /* if last item in clique1 has a smaller index than the actual clique in clique2, than cause of increasing order
-          * there will be no same item and we can stop */
-         if( SCIPcliqueGetId(cliques1[ncliques1 - 1]) < cliqueid )
-            break;
+	 /* if last item in clique1 has a smaller index than the actual clique in clique2, than cause of increasing order
+	  * there will be no same item and we can stop */
+	 if( SCIPcliqueGetId(cliques1[ncliques1 - 1]) < cliqueid )
+	    break;
 
-         while( SCIPcliqueGetId(cliques1[i1]) < cliqueid )
-         {
-            ++i1;
-            assert(i1 < ncliques1);
-         }
-         cliqueid = SCIPcliqueGetId(cliques1[i1]);
+	 while( SCIPcliqueGetId(cliques1[i1]) < cliqueid )
+	 {
+	    ++i1;
+	    assert(i1 < ncliques1);
+	 }
+	 cliqueid = SCIPcliqueGetId(cliques1[i1]);
 
-         /* if last item in clique2 has a smaller index than the actual clique in clique1, than cause of increasing order
-          * there will be no same item and we can stop */
-         if( SCIPcliqueGetId(cliques2[ncliques2 - 1]) < cliqueid )
-            break;
+	 /* if last item in clique2 has a smaller index than the actual clique in clique1, than cause of increasing order
+	  * there will be no same item and we can stop */
+	 if( SCIPcliqueGetId(cliques2[ncliques2 - 1]) < cliqueid )
+	    break;
 
-         while( SCIPcliqueGetId(cliques2[i2]) < cliqueid )
-         {
-            ++i2;
-            assert(i2 < ncliques2);
-         }
-         if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
-            return TRUE;
+	 while( SCIPcliqueGetId(cliques2[i2]) < cliqueid )
+	 {
+	    ++i2;
+	    assert(i2 < ncliques2);
+	 }
+	 if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
+	    return TRUE;
       }
    }
    return FALSE;
@@ -1587,8 +1673,8 @@ void SCIPcliquelistRemoveFromCliques(
             /* remove the entry from the clique */
             if( clique->nvars - pos - 1 > 0 )
             {
-               memmove(&clique->vars[pos], &clique->vars[pos+1], sizeof(clique->vars[0]) * (clique->nvars - pos - 1));
-               memmove(&clique->values[pos], &clique->values[pos+1], sizeof(clique->values[0]) * (clique->nvars - pos - 1));
+               BMSmoveMemoryArray(&(clique->vars[pos]), &(clique->vars[pos+1]), clique->nvars - pos - 1); /*lint !e866*/
+               BMSmoveMemoryArray(&(clique->values[pos]), &(clique->values[pos+1]), clique->nvars - pos - 1); /*lint !e866*/
             }
             clique->nvars--;
 
@@ -2003,7 +2089,10 @@ SCIP_Real* SCIPimplicsGetBounds(
    return implics != NULL ? implics->bounds[varfixing] : NULL;
 }
 
-/** gets array with unique implication identifiers for a given binary variable fixing */
+/** Gets array with unique implication identifiers for a given binary variable fixing.
+ *  If an implication is a shortcut, i.e., it was added as part of the transitive closure of another implication,
+ *  its id is negative, otherwise it is nonnegative.
+ */
 int* SCIPimplicsGetIds(
    SCIP_IMPLICS*         implics,            /**< implication data */
    SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */

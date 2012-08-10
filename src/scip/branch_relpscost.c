@@ -67,7 +67,6 @@ struct SCIP_BranchruleData
 };
 
 
-
 /*
  * local methods
  */
@@ -798,22 +797,6 @@ SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
 }
 
 
-/** initialization method of branching rule (called after problem was transformed) */
-#define branchInitRelpscost NULL
-
-
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitRelpscost NULL
-
-
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolRelpscost NULL
-
-
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolRelpscost NULL
-
-
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
@@ -841,16 +824,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 }
 
 
-/** branching execution method for relaxation solutions */
-#define branchExecextRelpscost NULL
-
-
-/** branching execution method for not completely fixed pseudo solutions */
-#define branchExecpsRelpscost NULL
-
-
-
-
 /*
  * branching specific interface methods
  */
@@ -861,17 +834,21 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
 
    /* create relpscost branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
    
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
-         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchCopyRelpscost,
-         branchFreeRelpscost, branchInitRelpscost, branchExitRelpscost, branchInitsolRelpscost, branchExitsolRelpscost, 
-         branchExeclpRelpscost, branchExecextRelpscost, branchExecpsRelpscost,
-         branchruledata) );
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+
+   assert(branchrule != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions*/
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyRelpscost) );
+   SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeRelpscost) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpRelpscost) );
 
    /* relpscost branching rule parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

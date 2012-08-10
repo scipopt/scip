@@ -71,41 +71,35 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
 
 /** presolving initialization method of presolver (called when presolving is about to begin)
  *
+ *  This method is called when the presolving process is about to begin, even if presolving is turned off.
+ *  The presolver may use this call to initialize its data structures.
+ *
+ *  Necessary modifications that have to be performed even if presolving is turned off should be done here or in the
+ *  presolving deinitialization call (SCIP_DECL_PRESOLSEXITPRE()).
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - presol          : the presolver itself
- *  - isunbounded     : was the problem already declared to be unbounded
- *  - isinfeasible    : was the problem already declared to be infeasible
- *
- *  output:
- *  - result          : pointer to store the result of the presolving call
- *
- *  possible return values for *result:
- *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
- *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility or unboundedness could be found
  */
-#define SCIP_DECL_PRESOLINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, SCIP_Bool isunbounded, \
-      SCIP_Bool isinfeasible, SCIP_RESULT* result)
+#define SCIP_DECL_PRESOLINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol)
 
 /** presolving deinitialization method of presolver (called after presolving has been finished)
  *
+ *  This method is called after the presolving has been finished, even if presolving is turned off.
+ *  The presolver may use this call e.g. to clean up or modify its data structures.
+ *
+ *  Necessary modifications that have to be performed even if presolving is turned off should be done here or in the
+ *  presolving initialization call (SCIP_DECL_PRESOLINITPRE()).
+ *
+ *  Besides necessary modifications and clean up, no time consuming operations should be performed, especially if the
+ *  problem has already been solved.  Use the method SCIPgetStatus(), which in this case returns SCIP_STATUS_OPTIMAL,
+ *  SCIP_STATUS_INFEASIBLE, SCIP_STATUS_UNBOUNDED, or SCIP_STATUS_INFORUNBD.
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - presol          : the presolver itself
- *  - isunbounded     : was the problem already declared to be unbounded
- *  - isinfeasible    : was the problem already declared to be infeasible
- *
- *  output:
- *  - result          : pointer to store the result of the presolving call
- *
- *  possible return values for *result:
- *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
- *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility or unboundedness could be found
  */
-#define SCIP_DECL_PRESOLEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, SCIP_Bool isunbounded, \
-      SCIP_Bool isinfeasible, SCIP_RESULT* result)
+#define SCIP_DECL_PRESOLEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol)
 
 /** execution method of presolver
  *

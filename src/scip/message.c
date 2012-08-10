@@ -36,6 +36,12 @@
 #define va_copy(dest, src) do { BMScopyMemory(&dest, &src); } while( 0 )
 #endif
 
+/* do defines for windows directly her to make the lpi more independent*/
+#if defined(_WIN32) || defined(_WIN64)
+#define snprintf _snprintf
+#define vsnprintf _vsnprintf
+#endif
+
 /** stores the given message in the buffer and returns the part of the buffer and message that should be printed now */
 static
 SCIP_Bool bufferMessage(
@@ -455,7 +461,7 @@ SCIP_RETCODE SCIPmessagehdlrCreate(
 
 /** captures message handler */
 void SCIPmessagehdlrCapture(
-   SCIP_MESSAGEHDLR*    messagehdlr          /**< message handler, or NULL */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler, or NULL */
    )
 {
    if( messagehdlr != NULL )

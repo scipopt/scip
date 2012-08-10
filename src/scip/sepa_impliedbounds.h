@@ -33,7 +33,7 @@ extern "C" {
 #endif
 
 /** creates the impliedbounds separator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeSepaImpliedbounds(
    SCIP*                 scip                /**< SCIP data structure */
    );

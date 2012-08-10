@@ -211,9 +211,9 @@ SCIP_RETCODE SCIPincludeObjHeur(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, objheur->scip_name_, objheur->scip_desc_, objheur->scip_dispchar_,
          objheur->scip_priority_, objheur->scip_freq_, objheur->scip_freqofs_, objheur->scip_maxdepth_,
-         objheur->scip_timingmask_, objheur->scip_usessubscip_, 
+         objheur->scip_timingmask_, objheur->scip_usessubscip_,
          heurCopyObj,
-         heurFreeObj, heurInitObj, heurExitObj, 
+         heurFreeObj, heurInitObj, heurExitObj,
          heurInitsolObj, heurExitsolObj, heurExecObj,
          heurdata) ); /*lint !e429*/
 

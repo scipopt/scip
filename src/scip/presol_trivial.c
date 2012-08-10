@@ -37,7 +37,6 @@
 #endif
 
 
-
 /*
  * Callback methods of presolver
  */
@@ -55,26 +54,6 @@ SCIP_DECL_PRESOLCOPY(presolCopyTrivial)
  
    return SCIP_OKAY;
 }
-
-
-/** destructor of presolver to free user data (called when SCIP is exiting) */
-#define presolFreeTrivial NULL
-
-
-/** initialization method of presolver (called after problem was transformed) */
-#define presolInitTrivial NULL
-
-
-/** deinitialization method of presolver (called before transformed problem is freed) */
-#define presolExitTrivial NULL
-
-
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-#define presolInitpreTrivial NULL
-
-
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-#define presolExitpreTrivial NULL
 
 
 /** presolving execution method */
@@ -179,7 +158,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
             SCIP_Real fixval;
 
 #ifdef FIXSIMPLEVALUE
-            fixval = SCIPselectSimpleValue(lb - SCIPepsilon(scip), ub + SCIPepsilon(scip), MAXDNOM);
+            fixval = SCIPselectSimpleValue(lb - 0.9 * SCIPepsilon(scip), ub + 0.9 * SCIPepsilon(scip), MAXDNOM);
 #else
             fixval = (lb + ub)/2;
 #endif
@@ -202,9 +181,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
 }
 
 
-
-
-
 /*
  * presolver specific interface methods
  */
@@ -215,16 +191,19 @@ SCIP_RETCODE SCIPincludePresolTrivial(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presolptr;
 
    /* create trivial presolver data */
    presoldata = NULL;
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolCopyTrivial,
-         presolFreeTrivial, presolInitTrivial, presolExitTrivial, 
-         presolInitpreTrivial, presolExitpreTrivial, presolExecTrivial,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolExecTrivial,
          presoldata) );
+
+   assert(presolptr != NULL);
+
+   SCIP_CALL( SCIPsetPresolCopy(scip, presolptr, presolCopyTrivial) );
 
    return SCIP_OKAY;
 }

@@ -147,6 +147,13 @@ SCIP_RETCODE SCIPparamsetAddString(
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
+/** returns whether an existing parameter is fixed */
+extern
+SCIP_Bool SCIPparamsetIsFixed(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name                /**< name of the parameter */
+   );
+
 /** gets the value of an existing SCIP_Bool parameter */
 extern
 SCIP_RETCODE SCIPparamsetGetBool(
@@ -195,6 +202,13 @@ SCIP_RETCODE SCIPparamsetGetString(
    char**                value               /**< pointer to store the parameter */
    );
 
+/** changes the fixing status of an existing parameter */
+SCIP_RETCODE SCIPparamsetFix(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             fixed               /**< new fixing status of the parameter */
+   );
+
 /** changes the value of an existing parameter */
 extern
 SCIP_RETCODE SCIPparamsetSet(
@@ -215,6 +229,14 @@ SCIP_RETCODE SCIPparamsetSetBool(
    SCIP_Bool             value               /**< new value of the parameter */
    );
 
+/** changes the default value of an existing SCIP_Bool parameter */
+extern
+SCIP_RETCODE SCIPparamsetSetDefaultBool(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             defaultvalue        /**< new default value of the parameter */
+   );
+
 /** changes the value of an existing int parameter */
 extern
 SCIP_RETCODE SCIPparamsetSetInt(
@@ -223,6 +245,14 @@ SCIP_RETCODE SCIPparamsetSetInt(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    int                   value               /**< new value of the parameter */
+   );
+
+/** changes the default value of an existing int parameter */
+extern
+SCIP_RETCODE SCIPparamsetSetDefaultInt(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   int                   defaultvalue        /**< new default value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Longint parameter */
@@ -452,6 +482,19 @@ SCIP_RETCODE SCIPparamSetString(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           value,              /**< new value of the parameter */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets default value of SCIP_Bool parameter */
+extern
+void SCIPparamSetDefaultBool(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Bool             defaultvalue        /**< new default value */
+   );
+
+/** sets default value of int parameter */
+void SCIPparamSetDefaultInt(
+   SCIP_PARAM*           param,              /**< parameter */
+   int                   defaultvalue        /**< new default value */
    );
 
 /** sets the parameter to its default setting */

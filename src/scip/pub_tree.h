@@ -42,65 +42,73 @@ extern "C" {
  */
 
 /** node comparator for best lower bound */
-extern
+EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPnodeCompLowerbound);
 
 /** returns the set of variable branchings that were performed in the parent node to create this node */
-extern
+EXTERN
 void SCIPnodeGetParentBranchings(
-   SCIP_NODE*            node,                /**< node data */
-   SCIP_VAR**            branchvars,          /**< array of variables on which the branching has been performed in the parent node */
-   SCIP_Real*            branchbounds,        /**< array of bounds which the branching in the parent node set */
-   SCIP_BOUNDTYPE*       boundtypes,          /**< array of boundtypes which the branching in the parent node set */
-   int*                  nbranchvars,         /**< number of variables on which branching has been performed in the parent node 
-                                               *   if this is larger than the array size, arrays should be reallocated and method should be called again */
-   int                   branchvarssize       /**< available slots in arrays */
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_VAR**            branchvars,         /**< array of variables on which the branching has been performed in the parent node */
+   SCIP_Real*            branchbounds,       /**< array of bounds which the branching in the parent node set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branching in the parent node set */
+   int*                  nbranchvars,        /**< number of variables on which branching has been performed in the parent node
+                                              *   if this is larger than the array size, arrays should be reallocated and method should be called again */
+   int                   branchvarssize      /**< available slots in arrays */
    );
 
 /** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node */
-extern
+EXTERN
 void SCIPnodeGetAncestorBranchings(
-   SCIP_NODE*            node,                /**< node data */
-   SCIP_VAR**            branchvars,          /**< array of variables on which the branchings has been performed in all ancestors */
-   SCIP_Real*            branchbounds,        /**< array of bounds which the branchings in all ancestors set */
-   SCIP_BOUNDTYPE*       boundtypes,          /**< array of boundtypes which the branchings in all ancestors set */
-   int*                  nbranchvars,         /**< number of variables on which branchings have been performed in all ancestors 
-                                               *   if this is larger than the array size, arrays should be reallocated and method should be called again */
-   int                   branchvarssize       /**< available slots in arrays */
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
+   SCIP_Real*            branchbounds,       /**< array of bounds which the branchings in all ancestors set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branchings in all ancestors set */
+   int*                  nbranchvars,        /**< number of variables on which branchings have been performed in all ancestors
+                                              *   if this is larger than the array size, arrays should be reallocated and method should be called again */
+   int                   branchvarssize      /**< available slots in arrays */
    );
 
-/**  returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node 
- *  sorted by the nodes, starting from the current node going up to the root */
-extern
+/** outputs the path into given file stream in GML format */
+EXTERN
+SCIP_RETCODE SCIPnodePrintAncestorBranchings(
+   SCIP_NODE*            node,               /**< node data */
+   FILE*                 file                /**< file to output the path */
+   );
+
+/** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node
+ *  sorted by the nodes, starting from the current node going up to the root
+ */
+EXTERN
 void SCIPnodeGetAncestorBranchingPath(
-   SCIP_NODE*            node,                /**< node data */
-   SCIP_VAR**            branchvars,          /**< array of variables on which the branchings has been performed in all ancestors */
-   SCIP_Real*            branchbounds,        /**< array of bounds which the branchings in all ancestors set */
-   SCIP_BOUNDTYPE*       boundtypes,          /**< array of boundtypes which the branchings in all ancestors set */
-   int*                  nbranchvars,         /**< number of variables on which branchings have been performed in all ancestors 
-                                               *   if this is larger than the array size, arrays should be reallocated and method should be called again */
-   int                   branchvarssize,      /**< available slots in arrays */   
-   int*                  nodeswitches,        /**< marks, where in the arrays the branching decisions of the next node on the path start 
-                                               * branchings performed at the parent of node always start at position 0. For single variable branching,
-                                               * nodeswitches[i] = i holds
-                                               */
-   int*                  nnodes,              /**< number of nodes in the nodeswitch array */
-   int                   nodeswitchsize       /**< available slots in node switch array */   
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
+   SCIP_Real*            branchbounds,       /**< array of bounds which the branchings in all ancestors set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branchings in all ancestors set */
+   int*                  nbranchvars,        /**< number of variables on which branchings have been performed in all ancestors
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   branchvarssize,     /**< available slots in arrays */
+   int*                  nodeswitches,       /**< marks, where in the arrays the branching decisions of the next node on the path
+                                              *   start; branchings performed at the parent of node always start at position 0.
+                                              *   For single variable branching, nodeswitches[i] = i holds */
+   int*                  nnodes,             /**< number of nodes in the nodeswitch array */
+   int                   nodeswitchsize      /**< available slots in node switch array */
    );
 
 
 /** checks for two nodes whether they share the same root path, i.e., whether one is an ancestor of the other */
-extern
+EXTERN
 SCIP_Bool SCIPnodesSharePath(
-   SCIP_NODE*            node1,                /**< node data */
-   SCIP_NODE*            node2                 /**< node data */
+   SCIP_NODE*            node1,              /**< node data */
+   SCIP_NODE*            node2               /**< node data */
    );
 
 /** finds the common ancestor node of two given nodes */
-extern
+EXTERN
 SCIP_NODE* SCIPnodesGetCommonAncestor(
-   SCIP_NODE*            node1,                /**< node data */
-   SCIP_NODE*            node2                 /**< node data */
+   SCIP_NODE*            node1,              /**< node data */
+   SCIP_NODE*            node2               /**< node data */
    );
 
 
@@ -111,31 +119,31 @@ SCIP_NODE* SCIPnodesGetCommonAncestor(
  */
 
 /** gets the type of the node */
-extern
+EXTERN
 SCIP_NODETYPE SCIPnodeGetType(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets successively assigned number of the node */
-extern
+EXTERN
 SCIP_Longint SCIPnodeGetNumber(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets the depth of the node */
-extern
+EXTERN
 int SCIPnodeGetDepth(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets the lower bound of the node */
-extern
+EXTERN
 SCIP_Real SCIPnodeGetLowerbound(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets the estimated value of the best feasible solution in subtree of the node */
-extern
+EXTERN
 SCIP_Real SCIPnodeGetEstimate(
    SCIP_NODE*            node                /**< node */
    );
@@ -143,25 +151,25 @@ SCIP_Real SCIPnodeGetEstimate(
 /** gets the domain change information of the node, i.e., the information about the differences in the
  *  variables domains to the parent node
  */
-extern
+EXTERN
 SCIP_DOMCHG* SCIPnodeGetDomchg(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets the parent node of a node in the branch-and-bound tree, if any */
-extern
+EXTERN
 SCIP_NODE* SCIPnodeGetParent(
    SCIP_NODE*            node                /**< node */
    );
 
 /** returns whether node is in the path to the current node */
-extern
+EXTERN
 SCIP_Bool SCIPnodeIsActive(
    SCIP_NODE*            node                /**< node */
    );
 
 /** returns whether the node is marked to be propagated again */
-extern
+EXTERN
 SCIP_Bool SCIPnodeIsPropagatedAgain(
    SCIP_NODE*            node                /**< node data */
    );

@@ -84,29 +84,20 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_extension_);
    }
 
-   /** destructor of file reader to free user data (called when SCIP is exiting) */
-   virtual SCIP_RETCODE scip_free(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_READER*       reader              /**< the file reader itself */
-      )
+   /** destructor of file reader to free user data (called when SCIP is exiting)
+    *
+    *  @see SCIP_DECL_READERFREE(x) in @ref type_reader.h
+    */
+   virtual SCIP_DECL_READERFREE(scip_free)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
    /** problem reading method of reader
     *
-    *  possible return values for *result:
-    *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
-    *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
-    *
-    *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERR or SCIP_NOFILE.
+    *  @see SCIP_DECL_READERREAD(x) in @ref type_reader.h
     */
-   virtual SCIP_RETCODE scip_read(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_READER*       reader,             /**< the file reader itself */
-      const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
-      SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
-      )
+   virtual SCIP_DECL_READERREAD(scip_read)
    {  /*lint --e{715}*/
 
       /* set result pointer to indicate that the reading was not performed */
@@ -120,42 +111,9 @@ public:
     *  SCIP already set all variable and constraint names to generic names; therefore, this
     *  method should always use SCIPvarGetName() and SCIPconsGetName(); 
     *
-    *  possible return values for *result:
-    *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
-    *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
-    *
-    *  If the reader detected an error in the writing to the file stream, it should return
-    *  with RETCODE SCIP_WRITEERROR.
+    *  @see SCIP_DECL_READERWRITE(x) in @ref type_reader.h
     */
-   virtual SCIP_RETCODE scip_write(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_READER*       reader,             /**< the file reader itself */
-      FILE*              file,               /**< output file, or NULL if standard output should be used */
-      const char*        name,               /**< problem name */
-      SCIP_PROBDATA*     probdata,           /**< user problem data set by the reader */
-      SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-
-      SCIP_OBJSENSE      objsense,           /**< objective sense */
-      SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-                                              *   extobj = objsense * objscale * (intobj + objoffset) */
-      SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
-      SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, 
-                                              *   continuous */
-      int                nvars,              /**< number of mutable variables in the problem */
-      int                nbinvars,           /**< number of binary variables */
-      int                nintvars,           /**< number of general integer variables */
-      int                nimplvars,          /**< number of implicit integer variables */
-      int                ncontvars,          /**< number of continuous variables */
-      SCIP_VAR**         fixedvars,          /**< array with fixed and aggregated variables */
-      int                nfixedvars,         /**< number of fixed and aggregated variables in the problem */
-      int                startnvars,         /**< number of variables existing when problem solving started */
-      SCIP_CONS**        conss,              /**< array with constraints of the problem */
-      int                nconss,             /**< number of constraints in the problem */
-      int                maxnconss,          /**< maximum number of constraints existing at the same time */
-      int                startnconss,        /**< number of constraints existing when problem solving started */
-      SCIP_Bool          genericnames,       /**< using generic variable and constraint names? */
-      SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
-      )
+   virtual SCIP_DECL_READERWRITE(scip_write)
    {  /*lint --e{715}*/
 
       /* set result pointer to indicate that the writing was not performed */

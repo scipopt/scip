@@ -46,7 +46,6 @@ enum CipSection
 typedef enum CipSection CIPSECTION;          /**< Section of the in CIP files */
 
 
-
 /*
  * Data structures
  */
@@ -66,7 +65,6 @@ struct CipInput
 typedef struct CipInput CIPINPUT;            /**< CIP reading data */
 
 
-
 /*
  * Local methods for reading/parsing
  */
@@ -83,19 +81,20 @@ SCIP_RETCODE getInputString(
 
    assert(cipinput != NULL);
 
-   /* clear the line */
-   BMSclearMemoryArray(cipinput->strbuf, cipinput->len);
-   
    /* read next line */
    cipinput->endfile = (SCIPfgets(cipinput->strbuf, cipinput->len, cipinput->file) == NULL);
-   
+
    if( cipinput->endfile )
+   {
+      /* clear the line for safety reason */
+      BMSclearMemoryArray(cipinput->strbuf, cipinput->len);
       return SCIP_OKAY;
+   }
 
    cipinput->linenumber++;
    endline = strchr(cipinput->strbuf, '\n');
 
-   endcharacter = strchr(cipinput->strbuf, ';'); 
+   endcharacter = strchr(cipinput->strbuf, ';');
    while( endline == NULL || (endcharacter == NULL && cipinput->section == CIP_CONSTRAINTS && strncmp(cipinput->strbuf, "END", 3) != 0 ) )
    {
       int pos;
@@ -105,8 +104,8 @@ SCIP_RETCODE getInputString(
          pos = cipinput->len - 1;
       else
          pos = endline - cipinput->strbuf;
- 
-      /* don't erase the '\n' from all buffers for constraints */ 
+
+      /* don't erase the '\n' from all buffers for constraints */
       if( endline != NULL && cipinput->section == CIP_CONSTRAINTS )
          pos++;
 
@@ -116,21 +115,25 @@ SCIP_RETCODE getInputString(
          cipinput->len = SCIPcalcMemGrowSize(scip, pos + cipinput->readingsize);
          SCIP_CALL( SCIPreallocBufferArray(scip, &(cipinput->strbuf), cipinput->len) );
       }
-      
+
       /* read next line */
       cipinput->endfile = (SCIPfgets(&(cipinput->strbuf[pos]), cipinput->len - pos, cipinput->file) == NULL);
 
       if( cipinput->endfile )
+      {
+	 /* clear the line for safety reason */
+	 BMSclearMemoryArray(cipinput->strbuf, cipinput->len);
          return SCIP_OKAY;
+      }
 
       cipinput->linenumber++;
       endline = strrchr(cipinput->strbuf, '\n');
-      endcharacter = strchr(cipinput->strbuf, ';'); 
+      endcharacter = strchr(cipinput->strbuf, ';');
    }
    assert(endline != NULL);
 
    /*SCIPdebugMessage("read line: %s\n", cipinput->strbuf);*/
-   
+
    if( cipinput->section == CIP_CONSTRAINTS && endcharacter != NULL && endline - endcharacter != 1 )
    {
       SCIPerrorMessage("Constraint line has to end with ';\\n'.\n");
@@ -139,7 +142,7 @@ SCIP_RETCODE getInputString(
    }
 
    *endline = '\0';
-   
+
    return SCIP_OKAY;
 }
 
@@ -168,9 +171,7 @@ SCIP_RETCODE getStatistic(
    )
 {
    char* buf;
-   char* name;
-   char* s;
-   
+
    buf = cipinput->strbuf;
 
    if( strncmp(buf, "OBJECTIVE", 9) == 0 )
@@ -180,26 +181,34 @@ SCIP_RETCODE getStatistic(
    }
 
    SCIPdebugMessage("parse statistic\n");
-   
+
    if( strncmp(buf, "  Problem name", 14) == 0 )
    {
-      if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
+      char* name;
+      char* s;
+
+      name = strchr(buf, ':');
+
+      if( name == NULL )
       {
          SCIPwarningMessage(scip, "did not find problem name\n");
          return SCIP_OKAY;  /* no error, might work with empty problem name */
       }
-      
+
+      /* skip ':' */
+      ++name;
+
       /* remove tabs new line form string */
       if( NULL != (s = strpbrk(name, "#\r\n")) )
          *s = '\0';
-      
+
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
          name++;
-         
+
       /* set problem name */
       SCIP_CALL( SCIPsetProbName(scip, name) );
-         
+
       SCIPdebugMessage("problem name <%s>\n", name);
    }
 
@@ -231,70 +240,85 @@ SCIP_RETCODE getObjective(
       cipinput->section = CIP_CONSTRAINTS;
    else if( strncmp(buf, "END", 3) == 0 )
       cipinput->section = CIP_END;
-   
+
    if( cipinput->section != CIP_OBJECTIVE )
       return SCIP_OKAY;
 
    SCIPdebugMessage("parse objective information\n");
-   
+
    if( strncmp(buf, "  Sense", 7) == 0 )
    {
       SCIP_OBJSENSE objsense;
-      
-      if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
+
+      name = strchr(buf, ':');
+
+      if( name == NULL )
       {
          SCIPwarningMessage(scip, "did not find objective sense\n");
          return SCIP_OKAY; /* no error - might work with default */
       }
-      
+
+      /* skip ':' */
+      ++name;
+
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
          name++;
-      
+
       if( strncmp(name, "minimize", 3) == 0 )
          objsense = SCIP_OBJSENSE_MINIMIZE;
       else if( strncmp(name, "maximize", 3) == 0 )
          objsense = SCIP_OBJSENSE_MAXIMIZE;
       else
       {
-         SCIPwarningMessage(scip, "unknown objective sense\n");
+         SCIPwarningMessage(scip, "unknown objective sense, %s\n", name);
          return SCIP_OKAY; /* no error - might work with default */
       }
 
       /* set problem name */
       SCIP_CALL( SCIPsetObjsense(scip, objsense) );
-      SCIPdebugMessage("objective sense <%s>\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");         
+      SCIPdebugMessage("objective sense <%s>\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
    }
    else if( strncmp(buf, "  Offset", 7) == 0 )
    {
       char* endptr;
 
-      if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
+      name = strchr(buf, ':');
+
+      if( name == NULL )
       {
          SCIPwarningMessage(scip, "did not find offset\n");
          return SCIP_OKAY;
       }
 
+      /* skip ':' */
+      ++name;
+
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
          name++;
-         
+
       *objoffset += strtod(name, &endptr);
    }
    else if( strncmp(buf, "  Scale", 7) == 0 )
    {
       char* endptr;
 
-      if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
+      name = strchr(buf, ':');
+
+      if( name == NULL )
       {
          SCIPwarningMessage(scip, "did not find scale\n");
          return SCIP_OKAY;
       }
 
+      /* skip ':' */
+      ++name;
+
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
          name++;
-         
+
       *objscale *= strtod(name, &endptr);
    }
 
@@ -386,7 +410,7 @@ SCIP_RETCODE getConstraints(
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             dynamic,            /**< Is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -394,7 +418,9 @@ SCIP_RETCODE getConstraints(
 {
    SCIP_CONS* cons;
    char* buf;
-   
+   char* copybuf;
+   int len;
+
    SCIP_Bool separate;
    SCIP_Bool enforce;
    SCIP_Bool check;
@@ -411,30 +437,45 @@ SCIP_RETCODE getConstraints(
       cipinput->section = CIP_END;
       return SCIP_OKAY;
    }
-   
+
    SCIPdebugMessage("parse constraints in line %d\n", cipinput->linenumber);
-   
+
    separate = TRUE;
    enforce = TRUE;
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
    modifiable = FALSE;
-   
+
+   /* get length of line and check for correct ending of constraint line */
+   len = (int)strlen(buf);
+   if( len < 1 || buf[len - 1] != ';' )
+   {
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* copy buffer for working purpose */
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &copybuf, buf, len) );
+   copybuf[len - 1] = '\0';
+
    /* parse the constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, cipinput->strbuf,
+   SCIP_CALL( SCIPparseCons(scip, &cons, copybuf,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE, &success) );
-   
+
+   /* free temporary buffer */
+   SCIPfreeMemoryArray(scip, &copybuf);
+
    if( !success )
    {
       cipinput->haserror = TRUE;
       return SCIP_OKAY;
    }
-   
+
    SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebugPrintCons(scip, cons, NULL);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -455,10 +496,6 @@ SCIP_DECL_READERCOPY(readerCopyCip)
  
    return SCIP_OKAY;
 }
-
-
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeCip NULL
 
 
 /** problem reading method of reader */
@@ -585,7 +622,7 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    SCIPinfoMessage(scip, file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
    SCIPinfoMessage(scip, file, "  Constraints      : %d initial, %d maximal\n", startnconss, maxnconss);
-   
+
    SCIPinfoMessage(scip, file, "OBJECTIVE\n");
    SCIPinfoMessage(scip, file, "  Sense            : %s\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
    if( !SCIPisZero(scip, objoffset) )
@@ -614,16 +651,17 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    if( nconss > 0 )
    {
       SCIPinfoMessage(scip, file, "CONSTRAINTS\n");
-      
+
       for( i = 0; i < nconss; ++i )
       {
          /* in case the transformed is written only constraint are posted which are enabled in the current node */
          assert(!transformed || SCIPconsIsEnabled(conss[i]));
-         
+
          SCIP_CALL( SCIPprintCons(scip, conss[i], file) );
+         SCIPinfoMessage(scip, file, ";\n");
       }
    }
-   
+
    *result = SCIP_SUCCESS;
 
    SCIPinfoMessage(scip, file, "END\n");
@@ -641,13 +679,18 @@ SCIP_RETCODE SCIPincludeReaderCip(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create cip reader data */
+   /* create reader data */
    readerdata = NULL;
-   
-   /* include cip reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyCip, readerFreeCip, readerReadCip, readerWriteCip, readerdata) );
+
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCip) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCip) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteCip) );
 
    /* add cip reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

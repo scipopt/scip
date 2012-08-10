@@ -187,7 +187,6 @@ struct SCIP_SepaData
 };
 
 
-
 /*
  * debugging methods
  */
@@ -879,6 +878,7 @@ SCIP_RETCODE liftOddCycleCut(
 static
 SCIP_RETCODE generateOddCycleCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< given primal solution */
    SCIP_VAR**            vars,               /**< problem variables */
    unsigned int          nbinvars,           /**< number of binary problem variables */
@@ -961,7 +961,7 @@ SCIP_RETCODE generateOddCycleCut(
 
    /* create cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "oddcycle_%d", sepadata->ncuts);
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), (ncyclevars-1)/2.0, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), (ncyclevars-1)/2.0, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
    negatedcount = 0;
 
@@ -1030,6 +1030,9 @@ SCIP_RETCODE generateOddCycleCut(
    /* modify right hand side corresponding to number of added negated variables */
    SCIP_CALL( SCIPchgRowRhs(scip, cut, SCIProwGetRhs(cut)-negatedcount) );
    SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
+   /* set cut rank: for oddcycle cuts we always set to 1 */
+   SCIProwChgRank(cut, 1);
 
    /* not every odd cycle has to be violated due to incompleteness of the implication graph */
    if( SCIPisCutEfficacious(scip, sol, cut) )
@@ -1265,7 +1268,11 @@ SCIP_RETCODE checkArraySizesHeur(
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
 
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
@@ -1291,8 +1298,12 @@ SCIP_RETCODE checkArraySizesHeur(
    /* if memorylimit is exceeded free all data and exit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( memorylimit <= 0.0 )
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       *success = FALSE;
       SCIPdebugMessage("...memory limit exceeded\n");
@@ -2463,6 +2474,7 @@ SCIP_RETCODE createNextLevel(
 static
 SCIP_RETCODE separateHeur(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data structure */
    SCIP_SOL*             sol,                /**< given primal solution */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
@@ -2847,7 +2859,7 @@ SCIP_RETCODE separateHeur(
                   unsigned int oldncuts = sepadata->ncuts;
 
                   sepadata->levelgraph = &graph;
-                  SCIP_CALL( generateOddCycleCut(scip, sol, vars, nbinvars, graph.targetAdj[j], pred, ncyclevars,
+                  SCIP_CALL( generateOddCycleCut(scip, sepa, sol, vars, nbinvars, graph.targetAdj[j], pred, ncyclevars,
                         incut, vals, sepadata, result) );
 #ifndef NDEBUG
                   sepadata->levelgraph = NULL;
@@ -2959,7 +2971,11 @@ SCIP_RETCODE checkArraySizesGLS(
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
 
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
@@ -2979,9 +2995,13 @@ SCIP_RETCODE checkArraySizesGLS(
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
 
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
 
-   if( memorylimit <= 0.0 )
+
+   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       SCIPdebugMessage("...memory limit exceeded - freeing all arrays\n");
       *success = FALSE;
@@ -3302,6 +3322,7 @@ SCIP_RETCODE addGLSCliques(
 static
 SCIP_RETCODE separateGLS(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data structure */
    SCIP_SOL*             sol,                /**< given primal solution */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
@@ -3749,7 +3770,7 @@ SCIP_RETCODE separateGLS(
       {
          /* generate cut */
          sepadata->dijkstragraph = &graph;
-         SCIP_CALL( generateOddCycleCut(scip, sol, vars, nbinvars, startnode, pred2, ncyclevars, incut, vals, sepadata, result) );
+         SCIP_CALL( generateOddCycleCut(scip, sepa, sol, vars, nbinvars, startnode, pred2, ncyclevars, incut, vals, sepadata, result) );
 #ifndef NDEBUG
          sepadata->dijkstragraph = NULL;
 #endif
@@ -3852,10 +3873,6 @@ SCIP_DECL_SEPAINIT(sepaInitOddcycle)
 }
 
 
-/** deinitialization method of separator (called before transformed problem is freed) */
-#define sepaExitOddcycle NULL
-
-
 /** solving process initialization method of separator (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_SEPAINITSOL(sepaInitsolOddcycle)
@@ -3872,10 +3889,6 @@ SCIP_DECL_SEPAINITSOL(sepaInitsolOddcycle)
 
    return SCIP_OKAY;
 }
-
-
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolOddcycle NULL
 
 
 /** LP solution separation method of separator */
@@ -3950,12 +3963,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
    if( sepadata->usegls )
    {
       SCIPdebugMessage("using GLS method for finding odd cycles\n");
-      SCIP_CALL( separateGLS(scip, sepadata, NULL, result) );
+      SCIP_CALL( separateGLS(scip, sepa, sepadata, NULL, result) );
    }
    else
    {
       SCIPdebugMessage("using level graph heuristic for finding odd cycles\n");
-      SCIP_CALL( separateHeur(scip, sepadata, NULL, result) );
+      SCIP_CALL( separateHeur(scip, sepa, sepadata, NULL, result) );
    }
 
    if( sepadata->ncuts - sepadata->oldncuts > 0 )
@@ -3974,9 +3987,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
    return SCIP_OKAY;
 }
 
-/** arbitrary primal solution separation method of separator */
-#define sepaExecsolOddcycle NULL
-
 
 /*
  * separator specific interface methods
@@ -3988,6 +3998,7 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create oddcycle separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
@@ -3995,10 +4006,18 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    sepadata->lastnode = -1;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyOddcycle, sepaFreeOddcycle, sepaInitOddcycle, sepaExitOddcycle, sepaInitsolOddcycle,
-         sepaExitsolOddcycle, sepaExeclpOddcycle, sepaExecsolOddcycle, sepadata) );
+         sepaExeclpOddcycle, NULL,
+         sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyOddcycle) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeOddcycle) );
+   SCIP_CALL( SCIPsetSepaInit(scip, sepa, sepaInitOddcycle) );
+   SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolOddcycle) );
 
    /* add oddcycle separator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/usegls",

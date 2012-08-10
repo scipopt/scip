@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /** creates the handler for SOS1 constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -50,7 +50,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -80,8 +80,29 @@ SCIP_RETCODE SCIPcreateConsSOS1(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures an SOS1 constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ *
+ *  @see SCIPcreateConsSOS1() for the default constraint flag configuration
+ *
+ *  @warning Do NOT set the constraint to be modifiable manually, because this might lead
+ *  to wrong results as the variable array will not be resorted
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsBasicSOS1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            weights             /**< weights determining the variable order, or NULL if natural order should be used */
+   );
+
 /** adds variable to SOS1 constraint, the position is determined by the given weight */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddVarSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -90,7 +111,7 @@ SCIP_RETCODE SCIPaddVarSOS1(
    );
 
 /** appends variable to SOS1 constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPappendVarSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -98,7 +119,7 @@ SCIP_RETCODE SCIPappendVarSOS1(
    );
 
 /** gets number of variables in SOS1 constraint */
-extern
+EXTERN
 int SCIPgetNVarsSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */

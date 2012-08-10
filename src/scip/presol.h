@@ -90,20 +90,14 @@ SCIP_RETCODE SCIPpresolExit(
 extern
 SCIP_RETCODE SCIPpresolInitpre(
    SCIP_PRESOL*          presol,             /**< presolver */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs presolver that the presolving process is finished */
 extern
 SCIP_RETCODE SCIPpresolExitpre(
    SCIP_PRESOL*          presol,             /**< presolver */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** executes presolver */
@@ -133,6 +127,49 @@ void SCIPpresolSetPriority(
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   priority            /**< new priority of the presolver */
    );
+
+/** sets copy method of presolver */
+extern
+void SCIPpresolSetCopy(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLCOPY ((*presolcopy))     /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of presolver */
+extern
+void SCIPpresolSetFree(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLFREE ((*presolfree))     /**< destructor of presolver */
+   );
+
+/** sets initialization method of presolver */
+extern
+void SCIPpresolSetInit(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLINIT ((*presolinit))     /**< initialize presolver */
+   );
+
+/** sets deinitialization method of presolver */
+extern
+void SCIPpresolSetExit(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXIT ((*presolexit))     /**< deinitialize presolver */
+   );
+
+/** sets solving process initialization method of presolver */
+extern
+void SCIPpresolSetInitpre(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLINITPRE ((*presolinitpre))/**< solving process initialization method of presolver */
+   );
+
+/** sets solving process deinitialization method of presolver */
+extern
+void SCIPpresolSetExitpre(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXITPRE ((*presolexitpre))/**< solving process deinitialization method of presolver */
+   );
+
 
 #ifdef __cplusplus
 }

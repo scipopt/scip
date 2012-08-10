@@ -32,14 +32,14 @@ do
     # dependencies of nlpi libraries
     for EXPRINT in ${EXPRINTS[@]}
     do
-        if test "$EXPRINT" == "none" -o -e lib/$EXPRINT -o -e lib/$EXPRINT"inc"
+        if test "$EXPRINT" == "none" -o "$EXPRINT" == "cppad" -o -e lib/$EXPRINT -o -e lib/$EXPRINT"inc"
         then
             make OPT=$OPT LPS=none EXPRINT=$EXPRINT IPOPT=false nlpidepend
 
-            if [ -e lib/ipopt.*.opt ]
+            if ls lib/ipopt.*.opt > /dev/null 2>&1;
             then
                 make OPT=$OPT LPS=none EXPRINT=$EXPRINT IPOPT=true IPOPTOPT=opt nlpidepend
-            elif [ -e lib/ipopt.*.dbg ]
+            elif ls lib/ipopt.*.dbg > /dev/null 2>&1;
             then
                 make OPT=$OPT LPS=none EXPRINT=$EXPRINT IPOPT=true IPOPTOPT=dbg nlpidepend
             fi

@@ -37,7 +37,7 @@
  *    - For the @p length variant, Clp computes the number of elements from this length variant and
  *      there exists no matrix implementation that uses the length information, i.e., it is recomputed
  *      again.
- *    .
+ *
  *    Concluding: the implementation of Clp/CoinPackeMatrix could be improved. The functions
  *    affected by this are SCIPlpiLoadColLP(), SCIPlpiAddCols(), SCIPlpiAddRows()
  *
@@ -66,8 +66,9 @@
 #define CLP_VERSION VERSION
 #endif
 
-#include <iostream>
 #include <cassert>
+#include <cstdlib>
+#include <iostream>
 #include <vector>
 #include <string>
 
@@ -75,11 +76,10 @@
 #include "scip/bitencode.h"
 #include "scip/pub_message.h"
 
-
-/* in C++ we have to use "0" instead of "(void*)0" */
-#undef NULL
-#define NULL 0
-
+/* do defines for windows directly her to make the lpi more independent*/
+#if defined(_WIN32) || defined(_WIN64)
+#define snprintf _snprintf
+#endif
 
 /* for debugging: alternatingly write files "debug_[p|d]_[0|1].mps" after each run - use with care! */
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
@@ -389,6 +389,9 @@ void setFastmipClpParameters(
 #else
    lpi->clp->setSpecialOptions(32|64|128|512|1024|4096|32768);
 #endif
+
+   // 8192 bit - don't even think of using primal if user asks for dual (and vv)
+   lpi->clp->setMoreSpecialOptions(8192 | lpi->clp->moreSpecialOptions());
 
    // let memory grow only (do not shrink) - [needs specialOptions & 65536 != 0]
    // does not seem to work
@@ -1448,7 +1451,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    )
 {
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 
@@ -1464,7 +1467,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    )
 {
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 
@@ -1481,6 +1484,26 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
 
    /* unstable situations cannot be ignored */
    *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+
+/** gets the objective sense of the LP */
+SCIP_RETCODE SCIPlpiGetObjsen(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
+   )
+{
+   assert( lpi != NULL );
+   assert( lpi->clp != NULL );
+   assert( objsen != NULL );
+
+   // Clp direction of optimization (1 - minimize, -1 - maximize, 0 - ignore)
+   if ( lpi->clp->getObjSense() < 0 )
+      *objsen = SCIP_OBJSEN_MAXIMIZE;
+   else
+      *objsen = SCIP_OBJSEN_MINIMIZE;
 
    return SCIP_OKAY;
 }
@@ -1610,10 +1633,10 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SCIPdebugMessage("calling Clp primal(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
-
    assert(lpi != 0);
    assert(lpi->clp != 0);
+
+   SCIPdebugMessage("calling Clp primal(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
 
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
    char filename[255];
@@ -1683,10 +1706,10 @@ SCIP_RETCODE SCIPlpiSolveDual(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SCIPdebugMessage("calling Clp dual(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
-
    assert(lpi != 0);
    assert(lpi->clp != 0);
+
+   SCIPdebugMessage("calling Clp dual(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
 
 #ifdef LPI_CLP_DEBUG_WRITE_FILES
    char filename[255];
@@ -1759,10 +1782,10 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_Bool             crossover            /**< perform crossover */
    )
 {
-   SCIPdebugMessage("calling Clp barrier(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
-
    assert(lpi != 0);
    assert(lpi->clp != 0);
+
+   SCIPdebugMessage("calling Clp barrier(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
 
    invalidateSolution(lpi);
 
@@ -2362,7 +2385,7 @@ SCIP_Bool SCIPlpiIsPrimalInfeasible(
     * detects an objective limit exceedence. The primal simplex has no such detection (will never
     * stop with objective limit exceedence). Hence we are infeasible only if status == 1 and we have
     * not stopped due to the objective limit. */
-   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 );
+   return ( lpi->clp->status() == 1 && (lpi->clp->secondaryStatus() == 0 || lpi->clp->secondaryStatus() == 6) );
 }
 
 
@@ -2741,8 +2764,10 @@ SCIP_RETCODE SCIPlpiGetIterations(
 }
 
 /** gets information about the quality of an LP solution
- * Such information is usually only available, if also a (maybe not optimal) solution is available.
- * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+ *
+ *  Such information is usually only available, if also a (maybe not optimal) solution is available.
+ *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ */
 extern
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2815,6 +2840,7 @@ SCIP_RETCODE SCIPlpiGetBase(
 	 default:
             SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
 	 }
       }
    }
@@ -2846,7 +2872,9 @@ SCIP_RETCODE SCIPlpiGetBase(
 	    else
 	       cstat[j] = SCIP_BASESTAT_UPPER;
 	    break;
-	 default: SCIPerrorMessage("invalid basis status\n");  SCIPABORT();
+	 default: SCIPerrorMessage("invalid basis status\n");
+            SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
 	 }
       }
    }
@@ -2908,6 +2936,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -2945,6 +2974,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -3183,9 +3213,22 @@ SCIP_RETCODE SCIPlpiSetState(
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
 
-   /* extend the basis to the current LP */
+   /* extend the basis to the current LP beyond the previously existing columns */
    for( i = lpistate->ncols; i < lpncols; ++i )
-      lpi->cstat[i] = SCIP_BASESTAT_LOWER; /**@todo this has to be corrected for lb = -infinity */
+   {
+      SCIP_Real bnd = (lpi->clp->getColLower())[i];
+      if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+      {
+         /* if lower bound is +/- infinity -> try upper bound */
+         bnd = (lpi->clp->getColUpper())[i];
+         if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+            lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /* variable is free */
+         else
+            lpi->cstat[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+      }
+      else
+         lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+   }
    for( i = lpistate->nrows; i < lpnrows; ++i )
       lpi->rstat[i] = SCIP_BASESTAT_BASIC;
 
@@ -3380,7 +3423,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       case SCIP_PRICING_DEVEX:
          primalmode = 2; dualmode = 3; break;
       default:
-         SCIPerrorMessage("unkown pricing parameter %d!\n", ival); SCIPABORT();
+         SCIPerrorMessage("unkown pricing parameter %d!\n", ival);
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
       ClpPrimalColumnSteepest primalpivot(primalmode);
       lpi->clp->setPrimalColumnPivotAlgorithm(primalpivot);
@@ -3398,7 +3443,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
       break;
    case SCIP_LPPAR_PRICING:
+      /* should not happen - see above */
       SCIPABORT();
+      return SCIP_LPERROR; /*lint !e527*/
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
       /** Amount of print out:

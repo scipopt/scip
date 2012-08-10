@@ -39,16 +39,12 @@
 #define MAXDIVEDEPTH          100
 
 
-
-
 /*
  * Default parameter settings
  */
 
 #define DEFAULT_PROPROUNDS           0  /**< maximal number of propagation rounds in probing subproblems */
 #define DEFAULT_MINFIXINGS         100  /**< minimal number of fixings to apply before dive may be aborted */
-
-
 
 
 /*
@@ -63,8 +59,6 @@ struct SCIP_HeurData
 };
 
 
-
-
 /*
  * Local methods
  */
@@ -74,7 +68,8 @@ static
 SCIP_RETCODE fixVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            pseudocands,        /**< array of unfixed variables */
-   int                   npseudocands        /**< number of unfixed variables */
+   int                   npseudocands,       /**< number of unfixed variables */
+   SCIP_Real             large               /**< large value to be used instead of infinity */
    )
 {
    SCIP_VAR* var;
@@ -112,6 +107,33 @@ SCIP_RETCODE fixVariable(
    /* fix variable to its current pseudo solution value */
    var = pseudocands[bestcand];
    solval = SCIPgetVarSol(scip, var);
+
+   /* adapt solution value if it is infinite */
+   if( SCIPisInfinity(scip, solval) )
+   {
+      SCIP_Real lb;
+      assert(SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
+      lb = SCIPvarGetLbLocal(var);
+
+      /* adapt fixing value by changing it to a large value */
+      if( SCIPisInfinity(scip, -lb) )
+         solval = SCIPceil(scip, large);
+      else if( !SCIPisInfinity(scip, SCIPceil(scip, lb+large)) )
+         solval = SCIPceil(scip, lb+large);
+   }
+   else if( SCIPisInfinity(scip, -solval) )
+   {
+      SCIP_Real ub;
+      assert(SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
+      ub = SCIPvarGetUbLocal(var);
+
+      /* adapt fixing value by changing it to a large negative value */
+      if( SCIPisInfinity(scip, ub) )
+         solval = SCIPfloor(scip, -large);
+      else if( !SCIPisInfinity(scip, -SCIPfloor(scip, ub-large)) )
+         solval = SCIPfloor(scip, ub-large);
+   }
+
    assert(SCIPisFeasIntegral(scip, solval)); /* in probing, we always have the pseudo solution */
    SCIPdebugMessage(" -> fixed variable <%s>[%g,%g] = %g (%d candidates left)\n",
       SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), solval, npseudocands - 1);
@@ -119,8 +141,6 @@ SCIP_RETCODE fixVariable(
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*
@@ -157,22 +177,6 @@ SCIP_DECL_HEURFREE(heurFreeFixandinfer) /*lint --e{715}*/
 }
 
 
-/** initialization method of primal heuristic (called after problem was transformed) */
-#define heurInitFixandinfer NULL
-
-
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#define heurExitFixandinfer NULL
-
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolFixandinfer NULL
-
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolFixandinfer NULL
-
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecFixandinfer)
@@ -183,6 +187,7 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
    int startncands;
    int divedepth;
    SCIP_Bool cutoff;
+   SCIP_Real large;
 
    *result = SCIP_DIDNOTRUN;
 
@@ -212,6 +217,12 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
    cutoff = FALSE;
    divedepth = 0;
    startncands = ncands;
+
+   /* determine large value to set variables to */
+   large = SCIPinfinity(scip);
+   if( !SCIPisInfinity(scip, 0.1 / SCIPfeastol(scip)) )
+      large = 0.1 / SCIPfeastol(scip);
+
    while( !cutoff && ncands > 0
       && (divedepth < heurdata->minfixings || (startncands - ncands) * 2 * MAXDIVEDEPTH >= startncands * divedepth)
       && !SCIPisStopped(scip) )
@@ -222,7 +233,7 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
       SCIP_CALL( SCIPnewProbingNode(scip) );
 
       /* fix next variable */
-      SCIP_CALL( fixVariable(scip, cands, ncands) );
+      SCIP_CALL( fixVariable(scip, cands, ncands, large) );
 
       /* propagate the fixing */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->proprounds, &cutoff, NULL) );
@@ -270,9 +281,6 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
 }
 
 
-
-
-
 /*
  * primal heuristic specific interface methods
  */
@@ -283,17 +291,21 @@ SCIP_RETCODE SCIPincludeHeurFixandinfer(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create fixandinfer primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+    /* create Fixandinfer primal heuristic data */
+    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
-   /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyFixandinfer,
-         heurFreeFixandinfer, heurInitFixandinfer, heurExitFixandinfer,
-         heurInitsolFixandinfer, heurExitsolFixandinfer, heurExecFixandinfer,
-         heurdata) );
+    /* include primal heuristic */
+    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecFixandinfer, heurdata) );
+
+    assert(heur != NULL);
+
+    /* set non-NULL pointers to callback methods */
+    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyFixandinfer) );
+    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeFixandinfer) );
 
    /* fixandinfer heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

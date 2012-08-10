@@ -22,8 +22,8 @@
  * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
  *
  * This file can only be compiled if Ipopt is available.
- * Otherwise, to resolve public functions, use nlpi_ipopt.c, which also can be compiled by a C compiler.
- * The latter is the reason why it has been moved into a separate file.
+ * Otherwise, to resolve public functions, use nlpi_ipopt_dummy.c.
+ * Since the dummy code is C instead of C++, it has been moved into a separate file.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,6 +37,7 @@
 #include "scip/pub_misc.h"
 
 #include <new>      /* for std::bad_alloc */
+#include <sstream>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
@@ -72,14 +73,56 @@ using namespace Ipopt;
 #define DEFAULT_MAXITER    3000              /**< default iteration limit for Ipopt */
 
 #define MAXPERTURB         0.01              /**< maximal perturbation of bounds in starting point heuristic */
+#define FEASTOLFACTOR      0.05              /**< factor for user-given feasibility tolerance to get feasibility tolerance that is actually passed to Ipopt */
+
+/* Convergence check (see ScipNLP::intermediate_callback)
+ *
+ * If the fastfail option is enabled, then we stop Ipopt if the reduction in
+ * primal infeasibility is not sufficient for a consecutive number of iterations.
+ * With the parameters as given below, we require Ipopt to
+ * - not increase the primal infeasibility after 5 iterations
+ * - reduce the primal infeasibility by at least 50% within 10 iterations
+ * - reduce the primal infeasibility by at least 90% within 30 iterations
+ * The targets are updated once they are reached and the limit on allowed iterations to reach the new target is reset.
+ *
+ * In certain situations, it is allowed to exceed an iteration limit:
+ * - If we are in the first 10 (convcheck_startiter) iterations.
+ * - If we are within 10 (convcheck_startiter) iterations after the restoration phase ended.
+ *   The reason for this is that during feasibility restoration phase Ipopt aims completely on
+ *   reducing constraint violation, completely forgetting the objective function.
+ *   When returning from feasibility restoration and considering the original objective again,
+ *   it is unlikely that Ipopt will continue to decrease primal infeasibility, since it may now target on
+ *   more on optimality again. Thus, we do not check convergence for a number of iterations.
+ * - If the target on dual infeasibility reduction has been achieved, we are below twice the iteration limit, and
+ *   we are not in restoration mode.
+ *   The reason for this is that if Ipopt makes good progress towards optimality,
+ *   we want to allow some more iterations where primal infeasibility is not reduced.
+ *   However, in restoration mode, dual infeasibility does not correspond to the original problem and
+ *   the complete aim is to restore primal infeasibility.
+ */
+static const int convcheck_nchecks                         = 3;                 /**< number of convergence checks */
+static const int convcheck_startiter                       = 10;                /**< iteration where to start convergence checking */
+static const int convcheck_maxiter[convcheck_nchecks]      = { 5,   15,  30 };  /**< maximal number of iterations to achieve each convergence check */
+static const SCIP_Real convcheck_minred[convcheck_nchecks] = { 1.0, 0.5, 0.1 }; /**< minimal required infeasibility reduction in each convergence check */
 
 class ScipNLP;
 
 struct SCIP_NlpiData
 {
+public:
    BMS_BLKMEM*                 blkmem;       /**< block memory */
    SCIP_MESSAGEHDLR*           messagehdlr;  /**< message handler */
    SCIP_Real                   infinity;     /**< initial value for infinity */
+   std::string                 defoptions;   /**< modified default options for Ipopt */
+
+   /** constructor */
+   SCIP_NlpiData(
+      BMS_BLKMEM* blkmem_                    /**< block memory */
+      )
+     : blkmem(blkmem_),
+       messagehdlr(NULL),
+       infinity(SCIP_DEFAULT_INFINITY)
+   { }
 };
 
 struct SCIP_NlpiProblem
@@ -91,6 +134,7 @@ public:
    SmartPtr<ScipNLP>           nlp;          /**< NLP in Ipopt form */
    std::string                 optfile;      /**< name of options file */
    bool                        storeintermediate;/**< whether to store intermediate solutions */
+   bool                        fastfail;     /**< whether to stop Ipopt if convergence seems slow */
 
    SCIP_Bool                   firstrun;     /**< whether the next NLP solve will be the first one (with the current problem structure) */
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
@@ -105,9 +149,10 @@ public:
    int                         lastniter;    /**< number of iterations in last run */
    SCIP_Real                   lasttime;     /**< time spend in last run */
 
+   /** constructor */
    SCIP_NlpiProblem()
       : oracle(NULL),
-        storeintermediate(false),
+        storeintermediate(false), fastfail(false),
         firstrun(TRUE), initguess(NULL),
         lastsolstat(SCIP_NLPSOLSTAT_UNKNOWN), lasttermstat(SCIP_NLPTERMSTAT_OTHER),
         lastsolprimals(NULL), lastsoldualcons(NULL), lastsoldualvarlb(NULL), lastsoldualvarub(NULL),
@@ -120,6 +165,11 @@ class ScipNLP : public TNLP
 {
 private:
    SCIP_NLPIPROBLEM*     nlpiproblem;        /**< NLPI problem data */
+
+   SCIP_Real             conv_prtarget[convcheck_nchecks]; /**< target primal infeasibility for each convergence check */
+   SCIP_Real             conv_dutarget[convcheck_nchecks]; /**< target dual infeasibility for each convergence check */
+   int                   conv_iterlim[convcheck_nchecks];  /**< iteration number where target primal infeasibility should to be achieved */
+   int                   conv_lastrestoiter;               /**< last iteration number in restoration mode, or -1 if none */
 
 public:
    bool                  approxhessian;      /**< do we tell Ipopt to approximate the hessian? (may also be false if user set to approx. hessian via option file) */
@@ -364,6 +414,34 @@ void invalidateSolution(
    problem->lastsolinfeas = SCIP_INVALID;
 }
 
+/** sets feasibility tolerance parameters in Ipopt
+ *
+ * Sets tol and constr_viol_tol to FEASTOLFACTOR*feastol and acceptable_tol and acceptable_viol_tol to feastol.
+ * Since the users and Ipopts conception of feasibility may differ, we let Ipopt try to compute solutions
+ * that are more accurate (w.r.t. constraint violation) than requested by the user.
+ * Only if Ipopt has problems to achieve this accuracy, we also accept solutions that are accurate w.r.t. feastol only.
+ * The additional effort for computing a more accurate solution should be small if one can assume fast convergence when close to a local minimizer.
+ */
+static
+void setFeastol(
+   SCIP_NLPIPROBLEM* nlpiproblem,
+   SCIP_Real         feastol
+   )
+{
+   nlpiproblem->ipopt->Options()->SetNumericValue("tol", FEASTOLFACTOR * feastol);
+   nlpiproblem->ipopt->Options()->SetNumericValue("constr_viol_tol", FEASTOLFACTOR * feastol);
+
+   nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_tol", feastol);
+   nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_constr_viol_tol", feastol);
+
+   /* It seem to be better to let Ipopt relax bounds a bit to ensure that a relative interior exists.
+    * However, if we relax the bounds too much, then the solutions tend to be slightly infeasible.
+    * If the user wants to set a tight feasibility tolerance, then (s)he has probably difficulties to compute accurate enough solutions.
+    * Thus, we turn off the bound_relax_factor completely if it would be below its default value of 1e-8.
+    */
+   nlpiproblem->ipopt->Options()->SetNumericValue("bound_relax_factor", feastol < 1e-8/FEASTOLFACTOR ? 0.0 : FEASTOLFACTOR * feastol);
+}
+
 /** copy method of NLP interface (called when SCIP copies plugins)
  *
  * input:
@@ -375,6 +453,7 @@ static
 SCIP_DECL_NLPICOPY(nlpiCopyIpopt)
 {
    SCIP_NLPIDATA* sourcedata;
+   SCIP_NLPIDATA* targetdata;
 
    assert(sourcenlpi != NULL);
    assert(targetnlpi != NULL);
@@ -385,7 +464,13 @@ SCIP_DECL_NLPICOPY(nlpiCopyIpopt)
    SCIP_CALL( SCIPcreateNlpSolverIpopt(blkmem, targetnlpi) );
    assert(*targetnlpi != NULL);
 
-   SCIP_CALL( SCIPnlpiSetRealPar((*targetnlpi), NULL, SCIP_NLPPAR_INFINITY, sourcedata->infinity) );
+   SCIP_CALL( SCIPnlpiSetRealPar(*targetnlpi, NULL, SCIP_NLPPAR_INFINITY, sourcedata->infinity) );
+   SCIP_CALL( SCIPnlpiSetMessageHdlr(*targetnlpi, sourcedata->messagehdlr) );
+
+   targetdata = SCIPnlpiGetData(*targetnlpi);
+   assert(targetdata != NULL);
+
+   targetdata->defoptions = sourcedata->defoptions;
 
    return SCIP_OKAY;
 }
@@ -405,9 +490,7 @@ SCIP_DECL_NLPIFREE(nlpiFreeIpopt)
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
 
-   BMSfreeMemory(&data);
-
-   assert(data == NULL);
+   delete data;
 
    return SCIP_OKAY;
 }
@@ -483,16 +566,12 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       return SCIP_NOMEMORY;
    }
 
+   /* modify Ipopt's default settings to what we believe is appropriate */
    (*problem)->ipopt->RegOptions()->AddStringOption2("store_intermediate", "whether to store the most feasible intermediate solutions", "no", "yes", "", "no", "", "useful when Ipopt looses a once found feasible solution and then terminates with an infeasible point");
    (*problem)->ipopt->Options()->SetIntegerValue("print_level", DEFAULT_PRINTLEVEL);
    /* (*problem)->ipopt->Options()->SetStringValue("print_timing_statistics", "yes"); */
    (*problem)->ipopt->Options()->SetStringValue("mu_strategy", "adaptive");
    (*problem)->ipopt->Options()->SetStringValue("expect_infeasible_problem", "yes");
-   /* it seem to be better to let Ipopt relax bounds a bit to ensure that a relative interior exists;
-    * however, if we relax the bounds too much, then the solutions tend to be slightly infeasible */
-   (*problem)->ipopt->Options()->SetNumericValue("tol", SCIP_DEFAULT_FEASTOL/2);
-   (*problem)->ipopt->Options()->SetNumericValue("bound_relax_factor", SCIP_DEFAULT_FEASTOL/2);
-   (*problem)->ipopt->Options()->SetNumericValue("constr_viol_tol", 0.75*SCIP_DEFAULT_FEASTOL);
    (*problem)->ipopt->Options()->SetIntegerValue("max_iter", DEFAULT_MAXITER);
    (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -data->infinity, false);
    (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  data->infinity, false);
@@ -502,12 +581,27 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
 #ifdef SCIP_DEBUG
    (*problem)->ipopt->Options()->SetStringValue("derivative_test", "second-order");
 #endif
+   setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
 
+   /* apply user's given modifications to Ipopt's default settings */
+   if( data->defoptions.length() > 0 )
+   {
+      std::istringstream is(data->defoptions);
+
+      if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is) )
+      {
+         SCIPerrorMessage("Error when modifiying Ipopt options using options string\n%s\n", data->defoptions.c_str());
+         return SCIP_ERROR;
+      }
+   }
+
+   /* apply user's given options file (this one is NLPI problem specific) */
    if( (*problem)->ipopt->Initialize((*problem)->optfile) != Solve_Succeeded )
    {
       SCIPerrorMessage("Error during initialization of Ipopt using optionfile \"%s\"\n", (*problem)->optfile.c_str());
       return SCIP_ERROR;
    }
+
 
    return SCIP_OKAY;
 }
@@ -1242,6 +1336,18 @@ SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParIpopt)
       return SCIP_PARAMETERWRONGTYPE;
    }
 
+   case SCIP_NLPPAR_OPTFILE:
+   {
+      SCIPerrorMessage("optfile parameter is of type string.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      *ival = problem->fastfail ? 1 : 0;
+      break;
+   }
+
    default:
    {
       SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
@@ -1360,6 +1466,27 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
       return SCIP_PARAMETERWRONGTYPE;
    }
 
+   case SCIP_NLPPAR_OPTFILE:
+   {
+      SCIPerrorMessage("optfile parameter is of type string.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      if( ival == 0 || ival == 1 )
+      {
+         problem->fastfail = (bool)ival;
+         problem->storeintermediate = (bool)ival;
+      }
+      else
+      {
+         SCIPerrorMessage("Value %d for parameter fastfail out of range {0, 1}\n", ival);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+      break;
+   }
+
    default:
    {
       SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
@@ -1405,7 +1532,7 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
 
    case SCIP_NLPPAR_FEASTOL:
    {
-      problem->ipopt->Options()->GetNumericValue("constr_viol_tol", *dval, "");
+      problem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", *dval, "");
       break;
    }
 
@@ -1454,6 +1581,12 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
       return SCIP_PARAMETERWRONGTYPE;
    }
 
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      SCIPerrorMessage("fastfail parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
    default:
    {
       SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
@@ -1497,12 +1630,7 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
    {
       if( dval >= 0 )
       {
-         problem->ipopt->Options()->SetNumericValue("constr_viol_tol", dval);
-         /* Let's think that when the user wants to set the feas. tolerance below the ipopt default of the bound_relax_factor,
-          * then (s)he has problem to have SCIP accept a solution found by Ipopt.
-          * Thus, we turn off the bound_relax_factor completely.
-          */
-         problem->ipopt->Options()->SetNumericValue("bound_relax_factor", dval < 1e-8 ? 0. : dval/2.);
+         setFeastol(problem, dval);
       }
       else
       {
@@ -1580,6 +1708,12 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
    case SCIP_NLPPAR_OPTFILE:
    {
       SCIPerrorMessage("option file parameter is of type string.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      SCIPerrorMessage("fastfail parameter is of type int.\n");
       return SCIP_PARAMETERWRONGTYPE;
    }
 
@@ -1667,6 +1801,12 @@ SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParIpopt )
       else
          *sval = NULL;
       return SCIP_OKAY;
+   }
+
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      SCIPerrorMessage("fastfail parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
    }
 
    default:
@@ -1761,6 +1901,12 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParIpopt )
       return SCIP_OKAY;
    }
 
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      SCIPerrorMessage("fastfail parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
    default:
    {
       SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
@@ -1803,12 +1949,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    assert(blkmem != NULL);
    assert(nlpi   != NULL);
 
-   nlpidata = NULL;
-   if( BMSallocMemory(&nlpidata) == NULL )
-      return SCIP_NOMEMORY;
-   nlpidata->blkmem = blkmem;
-   nlpidata->messagehdlr = NULL;
-   nlpidata->infinity = SCIP_DEFAULT_INFINITY;
+   SCIP_ALLOC( nlpidata = new SCIP_NLPIDATA(blkmem) );
 
    SCIP_CALL( SCIPnlpiCreate(nlpi,
          NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
@@ -1867,6 +2008,25 @@ void* SCIPgetNlpiOracleIpopt(
    assert(nlpiproblem != NULL);
 
    return nlpiproblem->oracle;
+}
+
+/** sets modified default settings that are used when setting up an Ipopt problem
+ *
+ * Do not forget to add a newline after the last option in optionsstring.
+ */
+void SCIPsetModifiedDefaultSettingsIpopt(
+   SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
+   const char*           optionsstring       /**< string with options as in Ipopt options file */
+   )
+{
+   SCIP_NLPIDATA* data;
+
+   assert(nlpi != NULL);
+
+   data = SCIPnlpiGetData(nlpi);
+   assert(data != NULL);
+
+   data->defoptions = optionsstring;
 }
 
 /** Method to return some info about the nlp */
@@ -2371,6 +2531,77 @@ bool ScipNLP::intermediate_callback(
 #endif
 #endif
 
+   /* do convergence test if fastfail is enabled */
+   if( nlpiproblem->fastfail )
+   {
+      int i;
+
+      if( iter == 0 )
+      {
+         conv_lastrestoiter = -1;
+      }
+      else if( mode == RestorationPhaseMode )
+      {
+         conv_lastrestoiter = iter;
+      }
+      else if( conv_lastrestoiter == iter-1 )
+      {
+         /* just switched back from restoration mode, reset dual reduction targets */
+         for( i = 0; i < convcheck_nchecks; ++i )
+            conv_dutarget[i] = convcheck_minred[i] * inf_du;
+      }
+
+      if( iter == convcheck_startiter )
+      {
+         /* define initial targets and iteration limits */
+         for( i = 0; i < convcheck_nchecks; ++i )
+         {
+            conv_prtarget[i] = convcheck_minred[i] * inf_pr;
+            conv_dutarget[i] = convcheck_minred[i] * inf_du;
+            conv_iterlim[i] = iter + convcheck_maxiter[i];
+         }
+      }
+      else if( iter > convcheck_startiter )
+      {
+         /* check if we should stop */
+         for( i = 0; i < convcheck_nchecks; ++i )
+         {
+            if( inf_pr <= conv_prtarget[i] )
+            {
+               /* sufficient reduction w.r.t. primal infeasibility target
+                * reset target w.r.t. current infeasibilities
+                */
+               conv_prtarget[i] = convcheck_minred[i] * inf_pr;
+               conv_dutarget[i] = convcheck_minred[i] * inf_du;
+               conv_iterlim[i] = iter + convcheck_maxiter[i];
+            }
+            else if( iter >= conv_iterlim[i] )
+            {
+               /* we hit a limit, should we really stop? */
+               SCIPdebugMessage("convcheck %d: inf_pr = %e > target %e; inf_du = %e target %e: ",
+                  i, inf_pr, conv_prtarget[i], inf_du, conv_dutarget[i]);
+               if( mode == RegularMode && iter <= conv_lastrestoiter + convcheck_startiter )
+               {
+                  /* if we returned from feasibility restoration recently, we allow some more iterations,
+                   * because Ipopt may go for optimality for some iterations, at the costs of infeasibility
+                   */
+                  SCIPdebugPrintf("continue, because restoration phase only %d iters ago\n", iter - conv_lastrestoiter);
+               }
+               else if( mode == RegularMode && inf_du <= conv_dutarget[i] && iter < conv_iterlim[i] + convcheck_maxiter[i] )
+               {
+                  /* if dual reduction is sufficient, we allow for twice the number of iterations to reach primal infeas reduction */
+                  SCIPdebugPrintf("continue, because dual infeas. red. sufficient and only %d iters above limit\n", iter - conv_iterlim[i]);
+               }
+               else
+               {
+                  SCIPdebugPrintf("abort\n");
+                  return false;
+               }
+            }
+         }
+      }
+   }
+
    return (SCIPinterrupted() == FALSE);
 }
 
@@ -2400,12 +2631,13 @@ void ScipNLP::finalize_solution(
    switch( status )
    {
    case SUCCESS:
-   case STOP_AT_ACCEPTABLE_POINT:
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCOPT;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       assert(x != NULL);
       break;
 
+   case STOP_AT_ACCEPTABLE_POINT:
+      /* if stop at acceptable point, then dual infeasibility can be arbitrary large, so claim only feasibility */
    case FEASIBLE_POINT_FOUND:
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
@@ -2433,6 +2665,8 @@ void ScipNLP::finalize_solution(
       break;
 
    case LOCAL_INFEASIBILITY:
+      /* still check feasibility, since we let Ipopt solve with higher tolerance than actually required */
+      check_feasibility = true;
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -2448,8 +2682,9 @@ void ScipNLP::finalize_solution(
       break;
 
    case USER_REQUESTED_STOP:
+      check_feasibility = true;
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
 
    case TOO_FEW_DEGREES_OF_FREEDOM:
@@ -2465,8 +2700,8 @@ void ScipNLP::finalize_solution(
       break;
    }
 
-   /* if Ipopt reports its solution as locally infeasible, then report the intermediate point with lowest constraint violation, if available */
-   if( (x == NULL || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE) && nlpiproblem->lastsolinfeas != SCIP_INVALID )
+   /* if Ipopt reports its solution as locally infeasible or we don't know feasibility, then report the intermediate point with lowest constraint violation, if available */
+   if( (x == NULL || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_UNKNOWN) && nlpiproblem->lastsolinfeas != SCIP_INVALID )
    {
       /* if infeasibility of lastsol is not invalid, then lastsol values should exist */
       assert(nlpiproblem->lastsolprimals != NULL);
@@ -2476,22 +2711,14 @@ void ScipNLP::finalize_solution(
 
       /* check if lastsol is feasible */
       Number constrvioltol;
-      nlpiproblem->ipopt->Options()->GetNumericValue("constr_viol_tol", constrvioltol, "");
+      nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
       if( nlpiproblem->lastsolinfeas <= constrvioltol )
-      {
          nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-      }
       else
-      {
-         nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
-         if( nlpiproblem->lastsolinfeas <= constrvioltol )
-            nlpiproblem->lastsolstat = SCIP_NLPSOLSTAT_FEASIBLE;
-         else
-            nlpiproblem->lastsolstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
-      }
+         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
 
-      SCIPdebugMessage("drop Ipopt's final point and report intermediate locally %sfeasible solution with infeas %g instead\n",
-         nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE ? "in" : "", nlpiproblem->lastsolinfeas);
+      SCIPdebugMessage("drop Ipopt's final point and report intermediate locally %sfeasible solution with infeas %g instead (acceptable: %g)\n",
+         nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE ? "in" : "", nlpiproblem->lastsolinfeas, constrvioltol);
    }
    else
    {
@@ -2531,17 +2758,11 @@ void ScipNLP::finalize_solution(
 
          constrviol = cq->curr_constraint_violation();
 
-         nlpiproblem->ipopt->Options()->GetNumericValue("constr_viol_tol", constrvioltol, "");
+         nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
          if( constrviol <= constrvioltol )
-         {
             nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-         }
          else
-         {
-            nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
-            if( constrviol <= constrvioltol )
-               nlpiproblem->lastsolstat = SCIP_NLPSOLSTAT_FEASIBLE;
-         }
+            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
       }
    }
 }

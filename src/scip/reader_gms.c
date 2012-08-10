@@ -169,7 +169,7 @@ void appendLine(
 
    (*linecnt) += (int) strlen(extension);
 
-   SCIPdebugMessage("linebuffer <%s>, length = %zu\n", linebuffer, len);
+   SCIPdebugMessage("linebuffer <%s>, length = %lu\n", linebuffer, (unsigned long)len);
 
    if( (*linecnt) > GMS_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
@@ -241,7 +241,6 @@ SCIP_RETCODE printConformName(
 
    return SCIP_OKAY;
 }
-
 
 
 /* retransform to active variables and print in GAMS format to file stream with surrounding bracket, pre- and suffix */
@@ -399,7 +398,6 @@ SCIP_RETCODE printActiveVariables(
 }
 
 
-
 /* print linear row in GAMS format to file stream (without retransformation to active variables) */
 static
 SCIP_RETCODE printLinearRow(
@@ -482,7 +480,6 @@ SCIP_RETCODE printLinearRow(
 
    return SCIP_OKAY;
 }
-
 
 
 /** prints given linear constraint information in GAMS format to file stream */
@@ -571,7 +568,6 @@ SCIP_RETCODE printLinearCons(
    
    return SCIP_OKAY;
 }
-
 
 
 /* print quadratic row in GAMS format to file stream (performing retransformation to active variables) */
@@ -691,7 +687,6 @@ SCIP_RETCODE printQuadraticRow(
 
    return SCIP_OKAY;
 }
-
 
 
 /** prints given quadratic constraint information in GAMS format to file stream */
@@ -1831,7 +1826,6 @@ SCIP_RETCODE checkConsnames(
 }
 
 
-
 /*
  * Callback methods of reader
  */
@@ -1851,12 +1845,6 @@ SCIP_DECL_READERCOPY(readerCopyGms)
 }
 
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeGms NULL
-
-/** problem reading method of reader */
-#define readerReadGms NULL
-
 /** problem writing method of reader */
 static
 SCIP_DECL_READERWRITE(readerWriteGms)
@@ -1866,7 +1854,6 @@ SCIP_DECL_READERWRITE(readerWriteGms)
 
    return SCIP_OKAY;
 }
-
 
 
 /*
@@ -1879,15 +1866,17 @@ SCIP_RETCODE SCIPincludeReaderGms(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create gms reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include gms reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyGms,
-         readerFreeGms, readerReadGms, readerWriteGms, 
-         readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyGms) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteGms) );
 
    /* add gms reader parameters for writing routines*/
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -1912,7 +1901,6 @@ SCIP_RETCODE SCIPincludeReaderGms(
 
    return SCIP_OKAY;
 }
-
 
 
 /* writes problem to gms file */
@@ -2300,7 +2288,7 @@ SCIP_RETCODE SCIPwriteGms(
          weights = SCIPgetWeightsKnapsack(scip, cons);
          SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
          for( v = 0; v < nconsvars; ++v )
-            consvals[v] = weights[v];
+            consvals[v] = (SCIP_Real)weights[v];
 
          SCIP_CALL( printLinearCons(scip, file, consname, nconsvars, consvars, consvals,
                -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
@@ -2433,7 +2421,7 @@ SCIP_RETCODE SCIPwriteGms(
          SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "* ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
-         SCIPinfoMessage(scip, file, "\n");
+         SCIPinfoMessage(scip, file, ";\n");
       }
 
       SCIPinfoMessage(scip, file, "\n");

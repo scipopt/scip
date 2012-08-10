@@ -37,7 +37,6 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
-
 /*
  * Default parameter settings
  */
@@ -52,7 +51,6 @@
 #define DEFAULT_DEPTHFACNOSOL       2.0 /**< maximal diving depth factor if no feasible solution was found yet */
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
-
 
 
 /* locally defined heuristic data */
@@ -70,8 +68,6 @@ struct SCIP_HeurData
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 };
-
-
 
 
 /*
@@ -132,8 +128,6 @@ void calcPscostQuot(
    if( SCIPvarIsBinary(var) )
       (*pscostquot) *= 1000.0;
 }
-
-
 
 
 /*
@@ -216,14 +210,6 @@ SCIP_DECL_HEUREXIT(heurExitObjpscostdiving) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
-
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolObjpscostdiving NULL
-
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolObjpscostdiving NULL
 
 
 /** execution method of primal heuristic */
@@ -598,8 +584,6 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
 }
 
 
-
-
 /*
  * heuristic specific interface methods
  */
@@ -610,17 +594,23 @@ SCIP_RETCODE SCIPincludeHeurObjpscostdiving(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create heuristic data */
+   /* create Objpscostdiving primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
-   /* include heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyObjpscostdiving,
-         heurFreeObjpscostdiving, heurInitObjpscostdiving, heurExitObjpscostdiving,
-         heurInitsolObjpscostdiving, heurExitsolObjpscostdiving, heurExecObjpscostdiving,
-         heurdata) );
+   /* include primal heuristic */
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecObjpscostdiving, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyObjpscostdiving) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeObjpscostdiving) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitObjpscostdiving) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitObjpscostdiving) );
 
    /* objpscostdiving heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

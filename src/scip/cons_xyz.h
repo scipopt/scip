@@ -67,13 +67,30 @@ SCIP_RETCODE SCIPcreateConsXyz(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   );
+
+/** creates and captures a xyz constraint with all its constraint flags set to their
+ *  default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+extern
+SCIP_RETCODE SCIPcreateConsBasicXyz(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
    );
 
 #ifdef __cplusplus

@@ -243,7 +243,7 @@ SCIP_RETCODE SCIPincludeObjBranchrule(
    branchruledata->deleteobject = deleteobject;
 
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, objbranchrule->scip_name_, objbranchrule->scip_desc_, 
+   SCIP_CALL( SCIPincludeBranchrule(scip, objbranchrule->scip_name_, objbranchrule->scip_desc_,
          objbranchrule->scip_priority_, objbranchrule->scip_maxdepth_, objbranchrule->scip_maxbounddist_,
          branchCopyObj,
          branchFreeObj, branchInitObj, branchExitObj, branchInitsolObj, branchExitsolObj,

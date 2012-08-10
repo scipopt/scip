@@ -37,7 +37,6 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
-
 /*
  * Default parameter settings
  */
@@ -53,7 +52,6 @@
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
-
 
 
 /* locally defined heuristic data */
@@ -74,14 +72,9 @@ struct SCIP_HeurData
 };
 
 
-
-
 /*
  * local methods
  */
-
-
-
 
 
 /*
@@ -164,14 +157,6 @@ SCIP_DECL_HEUREXIT(heurExitGuideddiving) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
-
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolGuideddiving NULL
-
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolGuideddiving NULL
 
 
 /** execution method of primal heuristic */
@@ -300,7 +285,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    /* get best solution that should guide the search; if this solution lives in the original variable space,
     * we cannot use it since it might violate the global bounds of the current problem
     */
-   if( SCIPsolGetOrigin(SCIPgetBestSol(scip)) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
       return SCIP_OKAY;
 
    /* store a copy of the best solution */
@@ -465,14 +450,21 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
       backtracked = FALSE;
       do
       {
-         /* if the variable is already fixed, numerical troubles may have occured or
-          * variable was fixed by propagation while backtracking => Abort diving!
+         /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
+          * occured or variable was fixed by propagation while backtracking => Abort diving!
           */
          if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
          {
             SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), lpcandssol[bestcand]);
             cutoff = TRUE;
+            break;
+         }
+         if( SCIPisFeasLT(scip, lpcandssol[bestcand], SCIPvarGetLbLocal(var)) || SCIPisFeasGT(scip, lpcandssol[bestcand], SCIPvarGetUbLocal(var)) )
+         {
+            SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
+               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), lpcandssol[bestcand]);
+            assert(backtracked);
             break;
          }
 
@@ -607,8 +599,6 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
 }
 
 
-
-
 /*
  * heuristic specific interface methods
  */
@@ -619,17 +609,23 @@ SCIP_RETCODE SCIPincludeHeurGuideddiving(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create heuristic data */
+   /* create Guideddiving primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
-   /* include heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyGuideddiving,
-         heurFreeGuideddiving, heurInitGuideddiving, heurExitGuideddiving,
-         heurInitsolGuideddiving, heurExitsolGuideddiving, heurExecGuideddiving,
-         heurdata) );
+   /* include primal heuristic */
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecGuideddiving, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyGuideddiving) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeGuideddiving) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitGuideddiving) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitGuideddiving) );
 
    /* guideddiving heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

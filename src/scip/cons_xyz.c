@@ -25,32 +25,37 @@
 #include "scip/cons_xyz.h"
 
 
-/* constraint handler properties */
+/* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "xyz"
 #define CONSHDLR_DESC          "constraint handler template"
-#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
-#define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                               *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
-#define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+/* optional constraint handler properties */
+/* TODO: remove properties which are never used because the corresponding routines are not supported */
+#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
+#define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
+
+#define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
+#define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP/**< propagation timing mask of the constraint handler*/
 
-/* TODO: (optional) enable linear constraint upgrading */
+#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
+
+
+
+/* TODO: (optional) enable linear or nonlinear constraint upgrading */
 #if 0
 #include "scip/cons_linear.h"
-
+#include "scip/cons_nonlinear.h"
 #define LINCONSUPGD_PRIORITY          0 /**< priority of the constraint handler for upgrading of linear constraints */
+#define NONLINCONSUPGD_PRIORITY       0 /**< priority of the constraint handler for upgrading of nonlinear constraints */
 #endif
-
-
 
 
 /*
@@ -68,8 +73,6 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
 };
-
-
 
 
 /*
@@ -112,8 +115,6 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXyz)
    return SCIP_OKAY;
 }
 #endif
-
-
 
 
 /*
@@ -563,12 +564,19 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create xyz constraint handler data */
    conshdlrdata = NULL;
    /* TODO: (optional) create constraint handler specific data here */
 
+   conshdlr = NULL;
+
    /* include constraint handler */
+#if 0
+   /* use SCIPincludeConshdlr() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
+    * new callbacks are added in future SCIP versions
+    */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
@@ -584,6 +592,43 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
          consEnableXyz, consDisableXyz, consDelvarsXyz,
          consPrintXyz, consCopyXyz, consParseXyz,
          consGetVarsXyz, consGetNVarsXyz, conshdlrdata) );
+#else
+   /* use SCIPincludeConshdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
+    * compile independent of new callbacks being added in future SCIP versions
+    */
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpXyz, consEnfopsXyz, consCheckXyz, consLockXyz,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveXyz) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyXyz, consCopyXyz) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveXyz) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteXyz) );
+   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsXyz) );
+   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableXyz) );
+   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableXyz) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitXyz) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreXyz) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolXyz) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeXyz) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsXyz) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsXyz) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitXyz) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreXyz) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolXyz) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpXyz) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseXyz) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolXyz, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintXyz) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropXyz, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropXyz) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpXyz, consSepasolXyz, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransXyz) );
+#endif
 
 #ifdef LINCONSUPGD_PRIORITY
    if( SCIPfindConshdlr(scip,"linear") != NULL )
@@ -664,3 +709,24 @@ SCIP_RETCODE SCIPcreateConsXyz(
    return SCIP_OKAY;
 }
 
+/** creates and captures a xyz constraint with all its constraint flags set to their
+ *  default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicXyz(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   )
+{
+   SCIP_CALL( SCIPcreateConsXyz(scip, cons, name, nvars, vars, coefs, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}

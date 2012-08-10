@@ -33,15 +33,12 @@
 #define NODESEL_MEMSAVEPRIORITY   50000
 
 
-
-
 /*
  * Default parameter settings
  */
 
 #define SELECTBESTFREQ              100 /**< frequency for selecting the best node instead of the deepest one */
 #define COUNTONLYLEAVES            TRUE /**< only count leaf nodes or all nodes */
-
 
 
 /** node selector data for best first search node selection */
@@ -52,8 +49,6 @@ struct SCIP_NodeselData
    int                   selectbestfreq;     /**< frequency for selecting the best node instead of the deepest one */
    SCIP_Bool             countonlyleaves;    /**< only count leaf nodes or all nodes */
 };
-
-
 
 
 /*
@@ -91,13 +86,6 @@ SCIP_DECL_NODESELFREE(nodeselFreeRestartdfs)
    return SCIP_OKAY;
 }
 
-/** initialization method of node selector (called after problem was transformed) */
-#define nodeselInitRestartdfs NULL
-
-
-/** deinitialization method of node selector (called before transformed problem is freed) */
-#define nodeselExitRestartdfs NULL
-
 
 /** solving process initialization method of node selector (called when branch and bound process is about to begin) */
 static
@@ -116,10 +104,6 @@ SCIP_DECL_NODESELINITSOL(nodeselInitsolRestartdfs)
 
    return SCIP_OKAY;
 }
-
-
-/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
-#define nodeselExitsolRestartdfs NULL
 
 
 /** node selection method of node selector */
@@ -185,6 +169,7 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
    )
 {
    SCIP_NODESELDATA* nodeseldata;
+   SCIP_NODESEL* nodesel;
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
    SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
@@ -194,11 +179,14 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
    nodeseldata->countonlyleaves = COUNTONLYLEAVES;
 
    /* include node selector */
-   SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-         nodeselCopyRestartdfs,
-         nodeselFreeRestartdfs, nodeselInitRestartdfs, nodeselExitRestartdfs, 
-         nodeselInitsolRestartdfs, nodeselExitsolRestartdfs, nodeselSelectRestartdfs, nodeselCompRestartdfs,
-         nodeseldata) );
+   SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+          nodeselSelectRestartdfs, nodeselCompRestartdfs, nodeseldata) );
+
+   assert(nodesel != NULL);
+
+   SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyRestartdfs) );
+   SCIP_CALL( SCIPsetNodeselFree(scip, nodesel, nodeselFreeRestartdfs) );
+   SCIP_CALL( SCIPsetNodeselInitsol(scip, nodesel, nodeselInitsolRestartdfs) );
 
    /* add node selector parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

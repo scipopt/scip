@@ -210,6 +210,13 @@ SCIP_RETCODE SCIPsetAddStringParam(
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
+/** gets the fixing status value of an existing parameter */
+extern
+SCIP_Bool SCIPsetIsParamFixed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of the parameter */
+   );
+
 /** gets the value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPsetGetBoolParam(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -257,6 +264,14 @@ SCIP_RETCODE SCIPsetGetStringParam(
    char**                value               /**< pointer to store the parameter */
    );
 
+/** changes the fixing status of an existing parameter */
+extern
+SCIP_RETCODE SCIPsetChgParamFixed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             fixed               /**< new fixing status of the parameter */
+   );
+
 /** changes the value of an existing parameter */
 extern
 SCIP_RETCODE SCIPsetSetParam(
@@ -284,6 +299,14 @@ SCIP_RETCODE SCIPsetSetBoolParam(
    SCIP_Bool             value               /**< new value of the parameter */
    );
 
+/** changes the default value of an existing SCIP_Bool parameter */
+extern
+SCIP_RETCODE SCIPsetSetDefaultBoolParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             defaultvalue        /**< new default value of the parameter */
+   );
+
 /** changes the value of an existing Int parameter */
 extern
 SCIP_RETCODE SCIPsetChgIntParam(
@@ -300,6 +323,14 @@ SCIP_RETCODE SCIPsetSetIntParam(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    int                   value               /**< new value of the parameter */
+   );
+
+/** changes the default value of an existing Int parameter */
+extern
+SCIP_RETCODE SCIPsetSetDefaultIntParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   int                   defaultvalue        /**< new default value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Longint parameter */
@@ -326,7 +357,7 @@ SCIP_RETCODE SCIPsetChgRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_Real             value                /**< new value of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Real parameter */
@@ -335,7 +366,7 @@ SCIP_RETCODE SCIPsetSetRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real             value                /**< new value of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing Char parameter */
@@ -522,11 +553,25 @@ void SCIPsetSortPricers(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts pricers by name */
+extern
+void SCIPsetSortPricersName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts constraint handler in constraint handler list */
 extern
 SCIP_RETCODE SCIPsetIncludeConshdlr(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** reinserts a constraint handler with modified sepa priority into the sepa priority sorted array */
+extern
+void SCIPsetReinsertConshdlrSepaPrio(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler to be reinserted */
+   int                   oldpriority         /**< the old separation priority of constraint handler */
    );
 
 /** returns the constraint handler of the given name, or NULL if not existing */
@@ -556,6 +601,12 @@ void SCIPsetSortConflicthdlrs(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts conflict handlers by name */
+extern
+void SCIPsetSortConflicthdlrsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts presolver in presolver list */
 extern
 SCIP_RETCODE SCIPsetIncludePresol(
@@ -573,6 +624,12 @@ SCIP_PRESOL* SCIPsetFindPresol(
 /** sorts presolvers by priorities */
 extern
 void SCIPsetSortPresols(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts presolvers by name */
+extern
+void SCIPsetSortPresolsName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -596,6 +653,12 @@ void SCIPsetSortRelaxs(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts relaxators by name */
+extern
+void SCIPsetSortRelaxsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts separator in separator list */
 extern
 SCIP_RETCODE SCIPsetIncludeSepa(
@@ -613,6 +676,12 @@ SCIP_SEPA* SCIPsetFindSepa(
 /** sorts separators by priorities */
 extern
 void SCIPsetSortSepas(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts separators by name */
+extern
+void SCIPsetSortSepasName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -642,6 +711,12 @@ void SCIPsetSortPropsPresol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts propagators w.r.t. names */
+extern
+void SCIPsetSortPropsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts primal heuristic in primal heuristic list */
 extern
 SCIP_RETCODE SCIPsetIncludeHeur(
@@ -659,6 +734,12 @@ SCIP_HEUR* SCIPsetFindHeur(
 /** sorts heuristics by priorities */
 extern
 void SCIPsetSortHeurs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts heuristics by name */
+extern
+void SCIPsetSortHeursName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -714,6 +795,12 @@ SCIP_BRANCHRULE* SCIPsetFindBranchrule(
 /** sorts branching rules by priorities */
 extern
 void SCIPsetSortBranchrules(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts branching rules by name */
+extern
+void SCIPsetSortBranchrulesName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -801,24 +888,16 @@ SCIP_RETCODE SCIPsetExitPlugins(
 extern
 SCIP_RETCODE SCIPsetInitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
-   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** calls exitpre methods of all plugins */
 extern
 SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness, if
-					      *   problem was already declared unbounded, it is already stored */
-   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility, if
-					      *   problem was already declared infeasible, it is already stored */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** calls initsol methods of all plugins */
@@ -836,6 +915,12 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
+   );
+
+/** returns the estimated number of bytes used by external software, e.g., the LP solver */
+extern
+SCIP_Longint SCIPsetGetMemExternEstim(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calculate memory size for dynamically allocated arrays */
@@ -871,6 +956,14 @@ extern
 SCIP_RETCODE SCIPsetSetFeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             feastol             /**< new feasibility tolerance */
+   );
+
+/** sets primal feasibility tolerance of LP solver */
+extern
+SCIP_RETCODE SCIPsetSetLpfeastol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             lpfeastol,          /**< new primal feasibility tolerance of LP solver */
+   SCIP_Bool             printnewvalue       /**< should "numerics/lpfeastol = ..." be printed? */
    );
 
 /** sets feasibility tolerance for reduced costs in LP solution */
@@ -952,6 +1045,12 @@ SCIP_Real SCIPsetSumepsilon(
 /** returns feasibility tolerance for constraints */
 extern
 SCIP_Real SCIPsetFeastol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns primal feasibility tolerance of LP solver */
+extern
+SCIP_Real SCIPsetLpfeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -1432,6 +1531,7 @@ SCIP_Real SCIPsetGetHugeValue(
 #define SCIPsetEpsilon(set)                ( (set)->num_epsilon )
 #define SCIPsetSumepsilon(set)             ( (set)->num_sumepsilon )
 #define SCIPsetFeastol(set)                ( (set)->num_feastol )
+#define SCIPsetLpfeastol(set)              ( (set)->num_lpfeastol )
 #define SCIPsetDualfeastol(set)            ( (set)->num_dualfeastol )
 #define SCIPsetBarrierconvtol(set)         ( (set)->num_barrierconvtol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )

@@ -18,14 +18,15 @@ $(LIBOBJDIR)/objscip/objbranchrule.o: src/objscip/objbranchrule.cpp \
  src/scip/pub_implics.h src/scip/type_implics.h src/scip/struct_implics.h \
  src/scip/pub_lp.h src/scip/type_set.h src/scip/type_stat.h \
  src/scip/type_lpi.h src/scip/struct_lp.h src/scip/pub_nlp.h \
- src/scip/pub_misc.h src/scip/pub_nodesel.h src/scip/pub_paramset.h \
- src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
- src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
- src/scip/pub_sol.h src/scip/struct_sol.h src/scip/pub_tree.h \
- src/scip/struct_tree.h src/scip/pub_var.h src/scip/type_history.h \
- src/scip/struct_var.h src/scip/implics.h src/scip/history.h \
- src/scip/struct_history.h src/scip/lpi.h src/nlpi/pub_expr.h \
- src/scip/intervalarith.h src/nlpi/type_exprinterpret.h \
+ src/scip/pub_misc.h src/scip/struct_misc.h src/scip/pub_nodesel.h \
+ src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
+ src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
+ src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
+ src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
+ src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
+ src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
  src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
  src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
@@ -52,20 +53,21 @@ $(LIBOBJDIR)/objscip/objconshdlr.o: src/objscip/objconshdlr.cpp src/objscip/objc
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objprobcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objprobcloneable.h \
  src/objscip/type_objprobcloneable.h
 $(LIBOBJDIR)/objscip/objdialog.o: src/objscip/objdialog.cpp src/objscip/objdialog.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
@@ -86,20 +88,21 @@ $(LIBOBJDIR)/objscip/objdialog.o: src/objscip/objdialog.cpp src/objscip/objdialo
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objdisp.o: src/objscip/objdisp.cpp src/objscip/objdisp.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
@@ -120,20 +123,21 @@ $(LIBOBJDIR)/objscip/objdisp.o: src/objscip/objdisp.cpp src/objscip/objdisp.h sr
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objeventhdlr.o: src/objscip/objeventhdlr.cpp src/objscip/objeventhdlr.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
@@ -154,20 +158,21 @@ $(LIBOBJDIR)/objscip/objeventhdlr.o: src/objscip/objeventhdlr.cpp src/objscip/ob
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objheur.o: src/objscip/objheur.cpp src/objscip/objheur.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
@@ -188,20 +193,21 @@ $(LIBOBJDIR)/objscip/objheur.o: src/objscip/objheur.cpp src/objscip/objheur.h sr
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objmessagehdlr.o: src/objscip/objmessagehdlr.cpp \
  src/objscip/objmessagehdlr.h src/scip/scip.h src/scip/def.h \
@@ -223,14 +229,15 @@ $(LIBOBJDIR)/objscip/objmessagehdlr.o: src/objscip/objmessagehdlr.cpp \
  src/scip/pub_implics.h src/scip/type_implics.h src/scip/struct_implics.h \
  src/scip/pub_lp.h src/scip/type_set.h src/scip/type_stat.h \
  src/scip/type_lpi.h src/scip/struct_lp.h src/scip/pub_nlp.h \
- src/scip/pub_misc.h src/scip/pub_nodesel.h src/scip/pub_paramset.h \
- src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
- src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
- src/scip/pub_sol.h src/scip/struct_sol.h src/scip/pub_tree.h \
- src/scip/struct_tree.h src/scip/pub_var.h src/scip/type_history.h \
- src/scip/struct_var.h src/scip/implics.h src/scip/history.h \
- src/scip/struct_history.h src/scip/lpi.h src/nlpi/pub_expr.h \
- src/scip/intervalarith.h src/nlpi/type_exprinterpret.h \
+ src/scip/pub_misc.h src/scip/struct_misc.h src/scip/pub_nodesel.h \
+ src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
+ src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
+ src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
+ src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
+ src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
+ src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
  src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
  src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
@@ -257,20 +264,21 @@ $(LIBOBJDIR)/objscip/objnodesel.o: src/objscip/objnodesel.cpp src/objscip/objnod
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objpresol.o: src/objscip/objpresol.cpp src/objscip/objpresol.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
@@ -291,20 +299,21 @@ $(LIBOBJDIR)/objscip/objpresol.o: src/objscip/objpresol.cpp src/objscip/objpreso
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objpricer.o: src/objscip/objpricer.cpp src/objscip/objpricer.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
@@ -325,20 +334,21 @@ $(LIBOBJDIR)/objscip/objpricer.o: src/objscip/objpricer.cpp src/objscip/objprice
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objprobcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objprobcloneable.h \
  src/objscip/type_objprobcloneable.h
 $(LIBOBJDIR)/objscip/objprobdata.o: src/objscip/objprobdata.cpp src/objscip/objprobdata.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
@@ -359,20 +369,21 @@ $(LIBOBJDIR)/objscip/objprobdata.o: src/objscip/objprobdata.cpp src/objscip/objp
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objprop.o: src/objscip/objprop.cpp src/objscip/objprop.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
@@ -393,20 +404,21 @@ $(LIBOBJDIR)/objscip/objprop.o: src/objscip/objprop.cpp src/objscip/objprop.h sr
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objreader.o: src/objscip/objreader.cpp src/objscip/objreader.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
@@ -427,20 +439,21 @@ $(LIBOBJDIR)/objscip/objreader.o: src/objscip/objreader.cpp src/objscip/objreade
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objrelax.o: src/objscip/objrelax.cpp src/objscip/objrelax.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
@@ -461,20 +474,21 @@ $(LIBOBJDIR)/objscip/objrelax.o: src/objscip/objrelax.cpp src/objscip/objrelax.h
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objsepa.o: src/objscip/objsepa.cpp src/objscip/objsepa.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
@@ -495,20 +509,21 @@ $(LIBOBJDIR)/objscip/objsepa.o: src/objscip/objsepa.cpp src/objscip/objsepa.h sr
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h
 $(LIBOBJDIR)/objscip/objvardata.o: src/objscip/objvardata.cpp src/objscip/objvardata.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
@@ -529,18 +544,19 @@ $(LIBOBJDIR)/objscip/objvardata.o: src/objscip/objvardata.cpp src/objscip/objvar
  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/struct_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/struct_lp.h \
- src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
- src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/struct_var.h src/scip/implics.h \
- src/scip/history.h src/scip/struct_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/struct_scip.h \
- src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
- src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
- src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/objscip/objcloneable.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/struct_misc.h \
+ src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+ src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+ src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+ src/scip/struct_sol.h src/scip/pub_tree.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/struct_var.h \
+ src/scip/implics.h src/scip/history.h src/scip/struct_history.h \
+ src/scip/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+ src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
+ src/scip/type_buffer.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/objscip/objcloneable.h \
  src/objscip/type_objcloneable.h

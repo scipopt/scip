@@ -50,8 +50,6 @@ struct SCIP_HeurData
 };
 
 
-
-
 /*
  * local methods
  */
@@ -459,7 +457,6 @@ void addFracCounter(
 }
 
 
-
 /*
  * Callback methods
  */
@@ -478,8 +475,6 @@ SCIP_DECL_HEURCOPY(heurCopyIntshifting)
    return SCIP_OKAY;
 }
 
-/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-#define heurFreeIntshifting NULL
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
@@ -532,10 +527,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolIntshifting)
 
    return SCIP_OKAY;
 }
-
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolIntshifting NULL
 
 
 /** execution method of primal heuristic */
@@ -999,8 +990,6 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
 }
 
 
-
-
 /*
  * heuristic specific interface methods
  */
@@ -1010,13 +999,21 @@ SCIP_RETCODE SCIPincludeHeurIntshifting(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   /* include heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyIntshifting,
-         heurFreeIntshifting, heurInitIntshifting, heurExitIntshifting,
-         heurInitsolIntshifting, heurExitsolIntshifting, heurExecIntshifting,
-         NULL) );
+   SCIP_HEUR* heur;
+
+   /* include primal heuristic */
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecIntshifting, NULL) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIntshifting) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitIntshifting) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitIntshifting) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolIntshifting) );
+
 
    return SCIP_OKAY;
 }

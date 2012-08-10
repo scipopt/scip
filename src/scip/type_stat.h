@@ -34,8 +34,8 @@ enum SCIP_Status
    SCIP_STATUS_USERINTERRUPT  =  1,     /**< the user interrupted the solving process (by pressing CTRL-C) */
    SCIP_STATUS_NODELIMIT      =  2,     /**< the solving process was interrupted because the node limit was reached */
    SCIP_STATUS_TOTALNODELIMIT =  3,     /**< the solving process was interrupted because the total node limit was
-					 *   reached (incl. restarts)
-					 */
+                                         *   reached (incl. restarts)
+                                         */
    SCIP_STATUS_STALLNODELIMIT =  4,     /**< the solving process was interrupted because the node limit was reached */
    SCIP_STATUS_TIMELIMIT      =  5,     /**< the solving process was interrupted because the time limit was reached */
    SCIP_STATUS_MEMLIMIT       =  6,     /**< the solving process was interrupted because the memory limit was reached */

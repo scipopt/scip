@@ -87,6 +87,48 @@ SCIP_RETCODE SCIPprobCreate(
    SCIP_Bool             transformed         /**< is this the transformed problem? */
    );
 
+/** sets callback to free user data of original problem */
+extern
+void SCIPprobSetDelorig(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
+   );
+
+/** sets callback to create user data of transformed problem by transforming original user data */
+extern
+void SCIPprobSetTrans(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBTRANS   ((*probtrans))      /**< creates user data of transformed problem by transforming original user data */
+   );
+
+/** sets callback to free user data of transformed problem */
+extern
+void SCIPprobSetDeltrans(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBDELTRANS((*probdeltrans))   /**< frees user data of transformed problem */
+   );
+
+/** sets solving process initialization callback of transformed data */
+extern
+void SCIPprobSetInitsol(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBINITSOL ((*probinitsol))    /**< solving process initialization callback of transformed data */
+   );
+
+/** sets solving process deinitialization callback of transformed data */
+extern
+void SCIPprobSetExitsol(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBEXITSOL ((*probexitsol))    /**< solving process deinitialization callback of transformed data */
+   );
+
+/** sets callback to copy user data to copy it to a subscip, or NULL */
+extern
+void SCIPprobSetCopy(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBCOPY    ((*probcopy))       /**< copies user data if you want to copy it to a subscip, or NULL */
+   );
+
 /** frees problem data structure */
 extern
 SCIP_RETCODE SCIPprobFree(
@@ -146,6 +188,20 @@ void SCIPprobSetData(
    SCIP_PROBDATA*        probdata            /**< user problem data to use */
    );
 
+/** adds variable's name to the namespace */
+extern
+SCIP_RETCODE SCIPprobAddVarName(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_VAR*             var                 /**< variable */
+   );
+
+/** removes variable's name from the namespace */
+extern
+SCIP_RETCODE SCIPprobRemoveVarName(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_VAR*             var                 /**< variable */
+   );
+
 /** adds variable to the problem and captures it */
 extern
 SCIP_RETCODE SCIPprobAddVar(
@@ -201,6 +257,20 @@ SCIP_RETCODE SCIPprobVarChangedStatus(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** adds constraint's name to the namespace */
+extern
+SCIP_RETCODE SCIPprobAddConsName(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** remove constraint's name from the namespace */
+extern
+SCIP_RETCODE SCIPprobRemoveConsName(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** adds constraint to the problem and captures it;
@@ -304,9 +374,17 @@ extern
 void SCIPprobStoreRootSol(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
+   );
+
+/** remembers the best solution w.r.t. root reduced cost propagation as root solution in the problem variables */
+extern
+void SCIPprobUpdateBestRootSol(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** informs problem, that the presolving process was finished, and updates all internal data structures */

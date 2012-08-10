@@ -48,11 +48,7 @@ SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
    assert(heur2 != NULL);
 
    if( heur1->delaypos == heur2->delaypos )
-   {
-      assert(heur1 == heur2 || heur1->delaypos == -1);
-      assert(heur1 == heur2 || heur2->delaypos == -1);
       return heur2->priority - heur1->priority; /* prefer higher priorities */
-   }
    else if( heur1->delaypos == -1 )
       return +1;                                /* prefer delayed heuristics */
    else if( heur2->delaypos == -1 )
@@ -63,6 +59,13 @@ SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
       return -1;
    else
       return heur1->delaypos - heur2->delaypos; /* prefer lower delay positions */
+}
+
+
+/** comparison method for sorting heuristics w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPheurCompName)
+{
+   return strcmp(SCIPheurGetName((SCIP_HEUR*)elem1), SCIPheurGetName((SCIP_HEUR*)elem2));
 }
 
 /** method to call, when the priority of a heuristic was changed */
@@ -455,8 +458,8 @@ SCIP_RETCODE SCIPheurExec(
    /* check if the heuristic was (still) delayed */
    if( *result == SCIP_DELAYED || heur->delaypos >= 0 )
    {
-      SCIPdebugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d), heur was %s delayed before, had delaypos %d\n", 
-         heur->name, depth, *ndelayedheurs, *result == SCIP_DELAYED ? "" : "not", heur->delaypos);
+      SCIPdebugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d), heur was%s delayed before, had delaypos %d\n",
+         heur->name, depth, *ndelayedheurs, heur->delaypos >= 0 ? "" : " not", heur->delaypos);
 
       /* mark the heuristic delayed */
       if( heur->delaypos != *ndelayedheurs )
@@ -489,6 +492,74 @@ void SCIPheurSetData(
    assert(heur != NULL);
 
    heur->heurdata = heurdata;
+}
+
+/* new callback setter methods */
+
+/** sets copy callback of primal heuristic */
+void SCIPheurSetCopy(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURCOPY    ((*heurcopy))       /**< copy callback of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   assert(heur != NULL);
+
+   heur->heurcopy = heurcopy;
+}
+
+/** sets destructor callback of primal heuristic */
+void SCIPheurSetFree(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURFREE    ((*heurfree))       /**< destructor of primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->heurfree = heurfree;
+}
+
+/** sets initialization callback of primal heuristic */
+void SCIPheurSetInit(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINIT    ((*heurinit))       /**< initialize primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->heurinit = heurinit;
+}
+
+/** sets deinitialization callback of primal heuristic */
+void SCIPheurSetExit(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXIT    ((*heurexit))       /**< deinitialize primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->heurexit = heurexit;
+}
+
+/** sets solving process initialization callback of primal heuristic */
+void SCIPheurSetInitsol(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINITSOL ((*heurinitsol))    /**< solving process initialization callback of primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->heurinitsol = heurinitsol;
+}
+
+/** sets solving process deinitialization callback of primal heuristic */
+void SCIPheurSetExitsol(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXITSOL ((*heurexitsol))    /**< solving process deinitialization callback of primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->heurexitsol = heurexitsol;
 }
 
 /** gets name of primal heuristic */

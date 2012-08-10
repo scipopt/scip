@@ -37,7 +37,6 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
-
 /*
  * Default parameter settings
  */
@@ -153,14 +152,6 @@ SCIP_DECL_HEUREXIT(heurExitRootsoldiving) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
-
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolRootsoldiving NULL
-
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolRootsoldiving NULL
 
 
 /** execution method of primal heuristic */
@@ -575,17 +566,23 @@ SCIP_RETCODE SCIPincludeHeurRootsoldiving(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create heuristic data */
+   /* create Rootsoldiving primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
-   /* include heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyRootsoldiving,
-         heurFreeRootsoldiving, heurInitRootsoldiving, heurExitRootsoldiving,
-         heurInitsolRootsoldiving, heurExitsolRootsoldiving, heurExecRootsoldiving,
-         heurdata) );
+   /* include primal heuristic */
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecRootsoldiving, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyRootsoldiving) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeRootsoldiving) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitRootsoldiving) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitRootsoldiving) );
 
    /* rootsoldiving heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

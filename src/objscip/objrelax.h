@@ -87,84 +87,56 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
-   /** destructor of relaxator to free user data (called when SCIP is exiting) */
-   virtual SCIP_RETCODE scip_free(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_RELAX*        relax               /**< the relaxator itself */
-      )
+   /** destructor of relaxator to free user data (called when SCIP is exiting)
+    *
+    *  @see SCIP_DECL_RELAXFREE(x) in @ref type_relax.h
+    */
+   virtual SCIP_DECL_RELAXFREE(scip_free)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
-   /** initialization method of relaxator (called after problem was transformed) */
-   virtual SCIP_RETCODE scip_init(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_RELAX*        relax               /**< the relaxator itself */
-      )
+   /** initialization method of relaxator (called after problem was transformed)
+    *
+    *  @see SCIP_DECL_RELAXINIT(x) in @ref type_relax.h
+    */
+   virtual SCIP_DECL_RELAXINIT(scip_init)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
-   /** deinitialization method of relaxator (called before transformed problem is freed) */
-   virtual SCIP_RETCODE scip_exit(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_RELAX*        relax               /**< the relaxator itself */
-      )
+   /** deinitialization method of relaxator (called before transformed problem is freed)
+    *
+    *  @see SCIP_DECL_RELAXEXIT(x) in @ref type_relax.h
+    */
+   virtual SCIP_DECL_RELAXEXIT(scip_exit)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
    /** solving process initialization method of relaxator (called when branch and bound process is about to begin)
     *
-    *  This method is called when the presolving was finished and the branch and bound process is about to begin.
-    *  The relaxator may use this call to initialize its branch and bound specific data.
-    *
+    *  @see SCIP_DECL_RELAXINITSOL(x) in @ref type_relax.h
     */
-   virtual SCIP_RETCODE scip_initsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_RELAX*        relax               /**< the relaxator itself */
-      )
+   virtual SCIP_DECL_RELAXINITSOL(scip_initsol)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
    /** solving process deinitialization method of relaxator (called before branch and bound process data is freed)
     *
-    *  This method is called before the branch and bound process is freed.
-    *  The relaxator should use this call to clean up its branch and bound data.
+    *  @see SCIP_DECL_RELAXEXITSOL(x) in @ref type_relax.h
     */
-   virtual SCIP_RETCODE scip_exitsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_RELAX*        relax               /**< the relaxator itself */
-      )
+   virtual SCIP_DECL_RELAXEXITSOL(scip_exitsol)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
    /** execution method of relaxator
     *
-    *  The method is called in the node processing loop. It solves the current subproblem's relaxation.
-    *  Like the LP relaxation, the relaxator should only operate on COLUMN variables.
-    *
-    *  possible return values for *result (if more than one applies, the first in the list should be used):
-    *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
-    *  - SCIP_CONSADDED  : an additional constraint was generated, and the relaxator should not be called again on the
-    *                      same relaxation
-    *  - SCIP_REDUCEDDOM : a variable's domain was reduced, and the relaxator should not be called again on the same
-    *                      relaxation
-    *  - SCIP_SEPARATED  : a cutting plane was generated, and the relaxator should not be called again on the same
-    *                      relaxation
-    *  - SCIP_SUCCESS    : the relaxator solved the relaxation and should not be called again on the same relaxation
-    *  - SCIP_SUSPENDED  : the relaxator interrupted its solving process to wait for additional input (e.g. cutting
-    *                      planes); however, it is able to continue the solving in order to improve the dual bound
-    *  - SCIP_DIDNOTRUN  : the relaxator was skipped
+    *  @see SCIP_DECL_RELAXEXEC(x) in @ref type_relax.h
     */
-   virtual SCIP_RETCODE scip_exec(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_RELAX*        relax,              /**< the relaxator itself */
-      SCIP_Real*         lowerbound,         /**< pointer to store a lowerbound for the current node */
-      SCIP_RESULT*       result              /**< pointer to store the result of the relaxation call */
-      ) = 0;
+   virtual SCIP_DECL_RELAXEXEC(scip_exec) = 0;
 };
 
 } /* namespace scip */

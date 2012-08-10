@@ -196,6 +196,11 @@ SCIP_RETCODE readCol(
          }
          if ( !duplicateedge )
          {
+            if( i >= nedges )
+            {
+               SCIPerrorMessage("more edges than expected: expected %d many, but got already %d'th (non-duplicate) edge", nedges, i+1);
+               return SCIP_READERROR;
+            }
             edges[i][0] = begin;
             edges[i][1] = end;
             assert((edges[i][0] > 0) && (edges[i][0] <= nnodes));
@@ -203,6 +208,11 @@ SCIP_RETCODE readCol(
             i++;
          }
       }
+   }
+   if( i + nduplicateedges != nedges )
+   {
+      SCIPerrorMessage("incorrect number of edges: expected %d many, but got %d many\n", nedges, i + nduplicateedges);
+      return SCIP_ERROR;
    }
 
    printf("Read graph: %d nodes, %d edges (%d duplicates)\n", nnodes, nedges, nduplicateedges);
@@ -247,8 +257,6 @@ SCIP_DECL_READERCOPY(readerCopyCol)
    return SCIP_OKAY;
 }
 
-#define readerFreeCol NULL
-
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadCol)
@@ -278,14 +286,17 @@ SCIP_RETCODE SCIPincludeReaderCol(
    )
 {
   SCIP_READERDATA* readerdata;
+  SCIP_READER* reader;
 
   /* create col reader data */
   readerdata = NULL;
 
   /* include col reader */
-  SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-        readerCopyCol,
-        readerFreeCol, readerReadCol, NULL, readerdata) );
+  SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION,
+        readerdata) );
+
+  SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCol) );
+  SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCol) );
 
 
   return SCIP_OKAY;

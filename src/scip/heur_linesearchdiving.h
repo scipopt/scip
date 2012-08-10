@@ -38,7 +38,7 @@ extern "C" {
 #endif
 
 /** creates the linesearchdiving primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurLinesearchdiving(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -33,24 +33,24 @@ extern "C" {
 #endif
 
 /** includes the ppm file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderPpm(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /* writes problem to file */
-extern
+EXTERN
 SCIP_RETCODE SCIPwritePpm(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**< output file, or NULL if standard output should be used */
-   const char*        name,               /**< problem name */
-   SCIP_READERDATA*   readerdata,         /**< information for reader */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                nvars,              /**< number of mutable variables in the problem */
-   SCIP_CONS**        conss,              /**< array with constraints of the problem */
-   int                nconss,             /**< number of constraints in the problem */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
+   const char*           name,               /**< problem name */
+   SCIP_READERDATA*      readerdata,         /**< information for reader */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   SCIP_CONS**           conss,              /**< array with constraints of the problem */
+   int                   nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
 
 #ifdef __cplusplus

@@ -92,6 +92,25 @@ struct SCIP_HeurData
  * Local methods
  */
 
+/** indicates whether the heuristic should be running, i.e., whether we expect something nonlinear after fixing all discrete variables */
+static
+SCIP_Bool runHeuristic(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   /* do not run heuristic if no NLP solver is available */
+   if( SCIPgetNNlpis(scip) <= 0 )
+      return FALSE;
+
+   /* do not run heuristic if no continuous nonlinear variables are present */
+   if( !SCIPisNLPConstructed(scip) || !SCIPhasNLPContinuousNonlinearity(scip) )
+      return FALSE;
+
+   return TRUE;
+}
+
 /** creates copy of CIP from problem in SCIP */
 static
 SCIP_RETCODE createSubSCIP(
@@ -274,9 +293,18 @@ SCIP_RETCODE createSubSCIP(
     * set nodelimit to 0
     * heuristics and separators were not copied into subscip, so should not need to switch off
     */
-   SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
-   SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "propagating/probing/maxprerounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrestarts", 0) );
+   if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrounds") )
+   {
+      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
+   }
+   if( !SCIPisParamFixed(heurdata->subscip, "propagating/probing/maxprerounds") )
+   {
+      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "propagating/probing/maxprerounds", 0) );
+   }
+   if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrestarts") )
+   {
+      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrestarts", 0) );
+   }
 
 #ifdef SCIP_DEBUG
    /* for debugging, enable SCIP output */
@@ -906,6 +934,7 @@ SCIP_RETCODE solveSubNLP(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_RETCODE   retcode;
    SCIP_Real*     startpoint;
    SCIP_VAR*      var;
    SCIP_VAR*      subvar;
@@ -924,7 +953,11 @@ SCIP_RETCODE solveSubNLP(
       SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", heurdata->resolvetolfactor*SCIPfeastol(scip)) );
       SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/epsilon", heurdata->resolvetolfactor*SCIPepsilon(scip)) );
       SCIP_CALL( SCIPsetPresolving(heurdata->subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-      SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "constraints/linear/aggregatevariables", FALSE) );
+
+      if( !SCIPisParamFixed(heurdata->subscip, "constraints/linear/aggregatevariables") )
+      {
+         SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "constraints/linear/aggregatevariables", FALSE) );
+      }
    }
 
    /* transform sub-SCIP */
@@ -935,7 +968,10 @@ SCIP_RETCODE solveSubNLP(
     *  reset maxpresolverounds, in case user changed
     */
    SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
-   SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
+   if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrounds") )
+   {
+      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
+   }
    SCIP_CALL( SCIPpresolve(heurdata->subscip) );
    if( SCIPpressedCtrlC(heurdata->subscip) )
    {
@@ -953,19 +989,20 @@ SCIP_RETCODE solveSubNLP(
    }
    assert(SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVED);
 
+   retcode = SCIP_OKAY;
    if( SCIPgetNVars(heurdata->subscip) > 0 )
    {
       /* do initial solve, i.e., "solve" root node with node limit 0 (should do scip.c::initSolve and then stop immediately in solve.c::SCIPsolveCIP) */
       SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 0LL) );
-      SCIP_CALL( SCIPsolve(heurdata->subscip) );
+      retcode = SCIPsolve(heurdata->subscip);
 
       /* If no NLP was constructed, then there were no nonlinearities after presolve.
        * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem.
        */
-      if( !SCIPisNLPConstructed(heurdata->subscip) )
+      if( !SCIPisNLPConstructed(heurdata->subscip) && retcode == SCIP_OKAY )
       {
          SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
-         SCIP_CALL( SCIPsolve(heurdata->subscip) );
+         retcode = SCIPsolve(heurdata->subscip);
       }
    }
    else
@@ -973,7 +1010,18 @@ SCIP_RETCODE solveSubNLP(
       /* If all variables were removed by presolve, but presolve did not end with status SOLVED,
        * then we run solve, still with nodelimit=1, and hope to find some (maybe trivial) solution.
        */
-      SCIP_CALL( SCIPsolve(heurdata->subscip) );
+      retcode = SCIPsolve(heurdata->subscip);
+   }
+
+   /* errors in solving the subproblem should not kill the overall solving process;
+    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
+   if ( retcode != SCIP_OKAY )
+   {
+#ifndef NDEBUG
+      SCIP_CALL( retcode );
+#endif
+      SCIPwarningMessage(scip, "Error while solving subproblem in subnlp heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+      goto CLEANUP;
    }
 
    /* if sub-SCIP found solutions already, then pass them to main scip */
@@ -1266,6 +1314,9 @@ SCIP_RETCODE solveSubNLP(
       }
    }
 
+   if( iterused != NULL && *iterused == 0 )
+      *iterused = 1;
+
    return SCIP_OKAY;
 }
 
@@ -1426,7 +1477,7 @@ SCIP_RETCODE forbidFixation(
    if( cons != NULL )
    {
       SCIPdebugMessage("adding constraint to forbid fixation in main problem\n");
-      /* SCIPdebug( SCIPprintCons(scip, cons, NULL) ); */
+      /* SCIPdebugPrintCons(scip, cons, NULL); */
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
@@ -1829,45 +1880,6 @@ SCIP_DECL_HEURFREE(heurFreeSubNlp)
    return SCIP_OKAY;
 }
 
-
-/** initialization method of primal heuristic (called after problem was transformed) */
-#if 0
-static
-SCIP_DECL_HEURINIT(heurInitSubNlp)
-{
-   SCIP_HEURDATA* heurdata;
-
-   assert(scip != NULL);
-   assert(heur != NULL);
-
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   return SCIP_OKAY;
-}
-#else
-#define heurInitSubNlp NULL
-#endif
-
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_HEUREXIT(heurExitSubNlp)
-{
-   SCIP_HEURDATA* heurdata;
-
-   assert(scip != NULL);
-   assert(heur != NULL);
-
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   return SCIP_OKAY;
-}
-#else
-#define heurExitSubNlp NULL
-#endif
-
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
@@ -1877,16 +1889,8 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
    assert(scip != NULL);
    assert(heur != NULL);
 
-   /* do not setup sub-SCIP if heuristic is never called by SCIP */
-   if( SCIPheurGetFreq(heur) < 0 )
-      return SCIP_OKAY;
-
-   /* do not setup sub-SCIP if no NLP solver is available */
-   if( SCIPgetNNlpis(scip) <= 0 )
-      return SCIP_OKAY;
-
-   /* do not setup sub-SCIP if no continuous nonlinear variables are present */
-   if( !SCIPhasContinuousNonlinearitiesPresent(scip) )
+   /* skip setting up sub-SCIP if heuristic is disabled or we do not want to run the heuristic */
+   if( SCIPheurGetFreq(heur) < 0 || !runHeuristic(scip) )
       return SCIP_OKAY;
 
    heurdata = SCIPheurGetData(heur);
@@ -1973,6 +1977,10 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
     * otherwise, we continue and let SCIPapplyHeurSubNlp try to create subscip
     */
    if( heurdata->subscip == NULL && (heurdata->keepcopy || heurdata->triedsetupsubscip) )
+      return SCIP_OKAY;
+
+   /* if we recreate the subSCIP in every run, then also check whether we want to run the heuristic at all */
+   if( !heurdata->keepcopy && !runHeuristic(scip) )
       return SCIP_OKAY;
 
    if( heurdata->startcand == NULL )
@@ -2097,23 +2105,30 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create Nlp primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    BMSclearMemory(heurdata);
 
    /* include variable event handler */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, HEUR_NAME, "propagates a global bound change to the sub-SCIP",
-         NULL,
-         NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
-   heurdata->eventhdlr = SCIPfindEventhdlr(scip, HEUR_NAME);
+   heurdata->eventhdlr = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &heurdata->eventhdlr, HEUR_NAME, "propagates a global bound change to the sub-SCIP",
+         processVarEvent, NULL) );
+   assert(heurdata->eventhdlr != NULL);
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopySubNlp,
-         heurFreeSubNlp, heurInitSubNlp, heurExitSubNlp, heurInitsolSubNlp, heurExitsolSubNlp, heurExecSubNlp,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecSubNlp, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopySubNlp) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSubNlp) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolSubNlp) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolSubNlp) );
 
    /* add Nlp primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpverblevel",

@@ -417,7 +417,7 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
 
    }
 
-   // add all n node degree constraints
+   /* add all n node degree constraints */
    if( nnodes >= 2 )
    {
       for( i = 0, node = &(graph->nodes[0]); i < nnodes; i++, node++ )
@@ -444,10 +444,10 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
       }
    }
 
-   // last, we need a constraint forbidding subtours
+   /* last, we need a constraint forbidding subtours */
    SCIP_CONS* cons;
    SCIP_CALL( SCIPcreateConsSubtour(scip, &cons, "subtour", graph, 
-         FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE ) ); /* aus cons_subtour.h; eigener Constraint Handler */
+         FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE ) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
  

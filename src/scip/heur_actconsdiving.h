@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /** creates the actconsdiving heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurActconsdiving(
    SCIP*                 scip                /**< SCIP data structure */
    );

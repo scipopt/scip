@@ -144,6 +144,7 @@ BEGIN {
    pb = +infty;
    firstpb = +infty;
    db = -infty;
+   dbset = 0;
    rootdb = -infty;
    simpiters = 0;
    bbnodes = 0;
@@ -190,23 +191,24 @@ BEGIN {
       lpsname = "spx";
    else if( $13 == "CPLEX" )
       lpsname = "cpx";
-   else if( $13 == "NONE" )
+   else if( $13 == "NONE]" )
+   {
       lpsname = "none";
+      lpsversion = "";
+   }
    else if( $13 == "Clp" )
       lpsname = "clp";
    else if( $13 == "MOSEK" )
       lpsname = "msk";
    else if( $13 == "Gurobi" )
       lpsname = "grb";
-   else if( $13 == "NONE" )
-      lpsname = "none";
    else if( $13 == "QSopt" )
       lpsname = "qso";
 #   else if( $13 == "???" )
 #      lpsname = "xprs";
 
     # get LP solver version 
-   if( NF >= 14 ) {
+   if( NF >= 16 ) {
       split($14, v, "]");
       lpsversion = v[1];
    }
@@ -223,6 +225,12 @@ BEGIN {
 /^reading user parameter file/ { settings = $5; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
 /^parameter <limits\/time> set to/ { timelimit = $5; }
 /^limits\/time =/ { timelimit = $3; }
+
+# check for primalbound before statitic printing
+/^Primal Bound       :/{
+   pb = $4
+}
+
 #
 # get objective sense
 #
@@ -231,6 +239,7 @@ BEGIN {
       objsense = 1;
    if ( $4 == "maximize" )
       objsense = -1;
+
    # objsense is 0 otherwise
 }
 #
@@ -385,9 +394,10 @@ BEGIN {
    firstpb = $4;
 }
 /^  Primal Bound     :/ {
-   if( $4 == "infeasible" ) {
+   if( $4 == "infeasible" || $4 == "infeasible\r" ) {
       pb = +infty;
       db = +infty;
+      dbset = 1;
       feasible = 0;
    }
    else if( $4 == "-" ) {
@@ -401,8 +411,10 @@ BEGIN {
    }
 }
 /^Dual Bound         :/ { 
-   if( $4 != "-" ) 
+   if( $4 != "-" ) {
       db = $4;
+      dbset = 1;
+   }
 }
 /^  Root Dual Bound  :/ {
    if( $5 != "-" )
@@ -544,13 +556,13 @@ BEGIN {
 	 else
 	    objsense = -1;  # maximize
       }
-      
+
       # modify primal bound for maximization problems without primal solution
-      if ( objsense == -1 && pb >= +infty )
+      if ( (objsense == -1 && pb >= +infty) )
 	 pb = -1.0 * pb;
 
       # modify dual bound for infeasible maximization problems
-      if ( objsense == -1 && db >= +infty )
+      if ( objsense == -1 && (db >= +infty || dbset == 0) )
 	 db = -1.0 * db;
 
       nprobs++;
@@ -583,12 +595,22 @@ BEGIN {
          probtype = "   --";
       else if( lincons < cons )
       {
-	 if( cons == lincons+quadcons )  
-	    probtype = "MIQCP";
-	 else if( cons == lincons+quadcons+nonlincons )  
-	    probtype = "MINLP";
-	 else
-	    probtype = "  CIP";
+         if( cons == lincons+quadcons )
+         {
+            if( binvars == 0 && intvars == 0 )
+               probtype = "  QCP";
+            else
+               probtype = "MIQCP";
+         }
+         else if( cons == lincons+quadcons+nonlincons )
+         {
+            if( binvars == 0 && intvars == 0 )
+               probtype = "  NLP";
+            else
+               probtype = "MINLP";
+         }
+         else
+            probtype = "  CIP";
       }
       else if( binvars == 0 && intvars == 0 )
          probtype = "   LP";

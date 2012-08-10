@@ -43,16 +43,16 @@ extern "C" {
 #endif
 
 /** creates the handler for or constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrOr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates nd captures a or constraint
+/** creates and captures an or constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -76,7 +76,7 @@ SCIP_RETCODE SCIPcreateConsOr(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -85,22 +85,40 @@ SCIP_RETCODE SCIPcreateConsOr(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures an or constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsNonlinear(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsOr() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsBasicOr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             resvar,             /**< resultant variable of the operation */
+   int                   nvars,              /**< number of operator variables in the constraint */
+   SCIP_VAR**            vars                /**< array with operator variables of constraint */
+   );
+
 /** gets number of variables in or constraint */
-extern
+EXTERN
 int SCIPgetNVarsOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in or constraint */
-extern
+EXTERN
 SCIP_VAR** SCIPgetVarsOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the resultant variable in or constraint */
-extern
+EXTERN
 SCIP_VAR* SCIPgetResultantOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

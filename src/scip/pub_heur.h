@@ -34,122 +34,126 @@ extern "C" {
 #endif
 
 /** compares two heuristics w. r. to their priority */
-extern
+EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp);
 
+/** comparison method for sorting heuristics w.r.t. to their name */
+EXTERN
+SCIP_DECL_SORTPTRCOMP(SCIPheurCompName);
+
 /** gets user data of primal heuristic */
-extern
+EXTERN
 SCIP_HEURDATA* SCIPheurGetData(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** sets user data of primal heuristic; user has to free old data in advance! */
-extern
+EXTERN
 void SCIPheurSetData(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_HEURDATA*        heurdata            /**< new primal heuristic user data */
    );
 
 /** gets name of primal heuristic */
-extern
+EXTERN
 const char* SCIPheurGetName(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets description of primal heuristic */
-extern
+EXTERN
 const char* SCIPheurGetDesc(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets display character of primal heuristic */
-extern
+EXTERN
 char SCIPheurGetDispchar(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** returns the timing mask of the heuristic */
-extern
+EXTERN
 SCIP_HEURTIMING SCIPheurGetTimingmask(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** sets new timing mask for heuristic */
-extern
+EXTERN
 void SCIPheurSetTimingmask(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_HEURTIMING       timingmask          /**< new timing mask of heuristic */
    );
 
 /** does the heuristic use a secondary SCIP instance? */
-extern
+EXTERN
 SCIP_Bool SCIPheurUsesSubscip(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets priority of primal heuristic */
-extern
+EXTERN
 int SCIPheurGetPriority(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets frequency of primal heuristic */
-extern
+EXTERN
 int SCIPheurGetFreq(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** sets frequency of primal heuristic */
-extern
+EXTERN
 void SCIPheurSetFreq(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    int                   freq                /**< new frequency of heuristic */
    );
 
 /** gets frequency offset of primal heuristic */
-extern
+EXTERN
 int SCIPheurGetFreqofs(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets maximal depth level for calling primal heuristic (returns -1, if no depth limit exists) */
-extern
+EXTERN
 int SCIPheurGetMaxdepth(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets the number of times, the heuristic was called and tried to find a solution */
-extern
+EXTERN
 SCIP_Longint SCIPheurGetNCalls(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets the number of primal feasible solutions found by this heuristic */
-extern
+EXTERN
 SCIP_Longint SCIPheurGetNSolsFound(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets the number of new best primal feasible solutions found by this heuristic */
-extern
+EXTERN
 SCIP_Longint SCIPheurGetNBestSolsFound(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** is primal heuristic initialized? */
-extern
+EXTERN
 SCIP_Bool SCIPheurIsInitialized(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets time in seconds used in this heuristic for setting up for next stages */
-extern
+EXTERN
 SCIP_Real SCIPheurGetSetupTime(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets time in seconds used in this heuristic */
-extern
+EXTERN
 SCIP_Real SCIPheurGetTime(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );

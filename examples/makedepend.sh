@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# 
-# This scripts generates the dependences for SCIP 
+#
+# This scripts generates the dependences for SCIP
 #
 
-EXAMPLES=(Coloring Binpacking Eventhdlr LOP MIPSolver Queens SamplePricer SamplePricer_C TSP VRP)
+EXAMPLES=(Coloring Binpacking Eventhdlr LOP MIPSolver Queens Scheduler Testslack TSP VRP CallableLibrary)
 OPTS=(opt dbg opt-gccold)
 
 for EXAMPLE in ${EXAMPLES[@]}

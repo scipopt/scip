@@ -16,6 +16,17 @@
 /**@file   reader_fix.c
  * @brief  file reader for variable fixings
  * @author Tobias Achterberg
+ *
+ * This reader allows to read a file containing fixation values for variables of the current problem. Each line of the
+ * file should have format
+ *
+ *    \<variable name\> \<value to fix\>
+ *
+ * Note that only a subset of the variables may need to appear in the file. Lines with unknown variable names are
+ * ignored. The writing functionality is currently not supported.
+ *
+ * @note The format is equal to the (not xml) solution format of SCIP.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -33,7 +44,6 @@
 #define READER_NAME             "fixreader"
 #define READER_DESC             "file reader for variable fixings"
 #define READER_EXTENSION        "fix"
-
 
 
 /*
@@ -157,9 +167,6 @@ SCIP_RETCODE readSol(
       return SCIP_OKAY;
 }
 
-
-
-
 /*
  * Callback methods of reader
  */
@@ -177,11 +184,6 @@ SCIP_DECL_READERCOPY(readerCopyFix)
  
    return SCIP_OKAY;
 }
-
-
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeFix NULL
-
 
 /** problem reading method of reader */
 static
@@ -210,12 +212,6 @@ SCIP_DECL_READERREAD(readerReadFix)
    return SCIP_OKAY;
 }
 
-
-/** problem writing method of reader */
-#define readerWriteFix NULL
-
-
-
 /*
  * fix file reader specific interface methods
  */
@@ -226,13 +222,17 @@ SCIP_RETCODE SCIPincludeReaderFix(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create fix reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include fix reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyFix, readerFreeFix, readerReadFix, readerWriteFix, readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyFix) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadFix) );
 
    return SCIP_OKAY;
 }

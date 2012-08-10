@@ -30,20 +30,68 @@
 extern "C" {
 #endif
 
-typedef struct SCIP_PQueue SCIP_PQUEUE;           /**< priority queue */
-typedef struct SCIP_HashTable SCIP_HASHTABLE;     /**< hash table */
-typedef struct SCIP_HashTableList SCIP_HASHTABLELIST; /**< element list to store single elements of a hash table */
-typedef struct SCIP_HashMap SCIP_HASHMAP;         /**< hash map to map pointers to pointers */
-typedef struct SCIP_HashMapList SCIP_HASHMAPLIST; /**< element list to store single mappings of a hash map */
-typedef struct SCIP_RealArray SCIP_REALARRAY;     /**< dynamic array for storing SCIP_Real values */
-typedef struct SCIP_IntArray SCIP_INTARRAY;       /**< dynamic array for storing int values */
-typedef struct SCIP_BoolArray SCIP_BOOLARRAY;     /**< dynamic array for storing SCIP_Bool values */
-typedef struct SCIP_PtrArray SCIP_PTRARRAY;       /**< dynamic array for storing pointers */
-typedef struct SCIP_Stairmap SCIP_STAIRMAP;       /**< stair map */
-typedef struct SCIP_Digraph SCIP_DIGRAPH;         /**< adjacency list to store and handle graphs */
-typedef struct SCIP_BstNode SCIP_BSTNODE;         /**< search node of binary search tree */
-typedef struct SCIP_Bst SCIP_BST;                 /**< binary search tree */
+/** Sparse solution data structure
+ *
+ *  - \ref SparseSol "List of all available methods"
+ */
+typedef struct SCIP_SparseSol SCIP_SPARSESOL;
 
+/** Priority queue data structure
+ *
+ *  - \ref PriorityQueue "List of all available methods"
+ */
+typedef struct SCIP_PQueue SCIP_PQUEUE;
+
+/** Hash table data structure
+ *
+ *  - \ref HashTable "List of all available methods"
+ */
+typedef struct SCIP_HashTable SCIP_HASHTABLE;
+
+/** Hash table element list to store single elements of a hash table */
+typedef struct SCIP_HashTableList SCIP_HASHTABLELIST;
+
+/** Hash map data structure
+ *
+ *  - \ref HashMap "List of all available methods"
+ */
+typedef struct SCIP_HashMap SCIP_HASHMAP;
+
+/** Hash map  element list to store single mappings of a hash map */
+typedef struct SCIP_HashMapList SCIP_HASHMAPLIST;
+
+/** dynamic array for storing SCIP_Real values */
+typedef struct SCIP_RealArray SCIP_REALARRAY;
+
+/** dynamic array for storing int values */
+typedef struct SCIP_IntArray SCIP_INTARRAY;
+
+/** dynamic array for storing SCIP_Bool values */
+typedef struct SCIP_BoolArray SCIP_BOOLARRAY;
+
+/** dynamic array for storing pointers */
+typedef struct SCIP_PtrArray SCIP_PTRARRAY;
+
+/** Resource profile data structure
+ *
+ *  - \ref ResourceProfile "List of all available methods"
+ */
+typedef struct SCIP_Profile SCIP_PROFILE;
+
+/** Directed graph data structure (stored as adjacency list)
+ *
+ *  - \ref DirectedGraph "List of all available methods"
+ */
+typedef struct SCIP_Digraph SCIP_DIGRAPH;
+
+/** Binary tree data structure
+ *
+ *  - \ref BinaryTree "List of all available methods"
+ */
+typedef struct SCIP_Bt SCIP_BT;
+
+/** search node of \ref SCIP_BT "binary tree" */
+typedef struct SCIP_BtNode SCIP_BTNODE;
 
 /** compares two element indices
  *  result:
@@ -69,28 +117,6 @@ typedef struct SCIP_Bst SCIP_BST;                 /**< binary search tree */
 
 /** returns the hash value of the key */
 #define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* userptr, void* key)
-
-/** method used to insert a search into a binary search tree
- *
- *  input:
- *  - tree            : binary search tree
- *  - node            : search node to be inserted
- *
- *  output:
- *  - inserted        : pointer to store whether the node was inserted
- */
-#define SCIP_DECL_BSTINSERT(x) SCIP_RETCODE x (SCIP_BST* tree, SCIP_BSTNODE* node, SCIP_Bool* inserted)
-
-/** method used to delete from a binarysearch tree
- *
- *  input:
- *  - tree            : binary search tree
- *  - node            : pointer to the search node to be deleted
- *
- *  output:
- *  - inserted        : pointer to store whether the node was deleted
- */
-#define SCIP_DECL_BSTDELETE(x) SCIP_RETCODE x (SCIP_BST* tree, SCIP_BSTNODE* node, SCIP_Bool* deleted)
 
 #ifdef __cplusplus
 }

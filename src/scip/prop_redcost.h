@@ -15,8 +15,14 @@
 
 /**@file   prop_redcost.h
  * @ingroup PROPAGATORS
- * @brief  redcost propagator
+ * @brief  propagator using the LP reduced cost and the cutoff bound
  * @author Tobias Achterberg
+ * @author Stefan Heinz
+ * @author Matthias Miltenberger
+ * @author Michael Winkler
+ *
+ * This propagator uses the reduced cost of an optimal solved LP relaxation to propagate the variables against the
+ * cutoff bound.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -32,7 +38,7 @@ extern "C" {
 #endif
 
 /** creates the redcost propagator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePropRedcost(
    SCIP*                 scip                /**< SCIP data structure */
    );

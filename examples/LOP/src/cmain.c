@@ -45,6 +45,7 @@ SCIP_Bool readArguments(
 {
    int i;
    char usage[256];
+#ifndef NDEBUG
    int status;
 
    assert( argc > 0 );
@@ -59,6 +60,9 @@ SCIP_Bool readArguments(
    /* init usage text */
    status = snprintf(usage, 255, "usage: %s <LOP file> [-s <setting file>] [-t <time limit>] [-m <mem limit>] [-n <node limit>] [-d <display frequency>]", argv[0]);
    assert( 0 <= status && status < 256 );
+#else
+   (void) snprintf(usage, 255, "usage: %s <LOP file> [-s <setting file>] [-t <time limit>] [-m <mem limit>] [-n <node limit>] [-d <display frequency>]", argv[0]);
+#endif
 
    /* init arguments */
    *timelimit = 1e20;

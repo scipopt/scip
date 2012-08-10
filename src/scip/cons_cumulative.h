@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_cumulative.h
- * @ingroup CONSHDLRS
  * @brief  constraint handler for cumulative constraints
  * @author Timo Berthold
  * @author Stefan Heinz
@@ -27,13 +26,15 @@
  *
  * The cumulative constraint ensures that for each point in time \f$t\f$ \f$\sum_{j: S_j \leq t < S_j + p_j} d_j \leq C\f$ holds.
  *
+ * @par
  * Separation:
  * - can be done using binary start time model, see Pritskers, Watters and Wolfe
  * - or by just separating relatively weak cuts on the start time variables
  *
+ * @par
  * Propagation:
  * - time tabling, Klein & Scholl (1999)
- * - Edge-finding from Petr Vilim, adjusted and simplified for dynamic propagation
+ * - Edge-finding from Petr Vilim, adjusted and simplified for dynamic repropagation
  *   (2009)
  * - energetic reasoning, see Baptiste, Le Pape, Nuijten (2001)
  */
@@ -50,27 +51,14 @@
 extern "C" {
 #endif
 
-/* cumulative profile */
-struct CumulativeProfile
-{
-   int*                  timepoints;         /**< time point array */
-   int*                  freecapacities;     /**< array holding corresponding available capacity */
-   int                   ntimepoints;        /**< current number of entries */
-   int                   arraysize;          /**< current array size */
-};
-typedef struct CumulativeProfile CUMULATIVEPROFILE;
-
-/** creates the handler for cumulative constraints and includes it in SCIP */
-extern
+/** creates the constraint handler for cumulative constraints and includes it in SCIP */
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a cumulative constraint
- *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
- */
-extern
+/** creates and captures a cumulative constraint */
+EXTERN
 SCIP_RETCODE SCIPcreateConsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -97,7 +85,7 @@ SCIP_RETCODE SCIPcreateConsCumulative(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which
-                                              *   are separated as constraints. */
+                                              *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -105,36 +93,87 @@ SCIP_RETCODE SCIPcreateConsCumulative(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** returns the activities of the cumulative constraint */
-extern
+/** creates and captures an absolute power constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsCumulative(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsCumulative() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsBasicCumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity            /**< available cumulative capacity */
+   );
+
+/** set the left bound of effective horizon */
+EXTERN
+SCIP_RETCODE SCIPsetHminCumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   int                   hmin                /**< left bound of time axis to be considered */
+   );
+
+/** returns the left bound of the effective horizon */
+EXTERN
+int SCIPgetHminCumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+
+/** set the right bound of the effective horizon */
+EXTERN
+SCIP_RETCODE SCIPsetHmaxCumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   int                   hmax                /**< right bound of time axis to be considered */
+   );
+
+/** returns the right bound of effective horizon */
+EXTERN
+int SCIPgetHmaxCumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** returns the start time variables of the cumulative constraint */
+EXTERN
 SCIP_VAR** SCIPgetVarsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** returns the number of activities of the cumulative constraint */
-extern
+/** returns the number of start time variables of the cumulative constraint */
+EXTERN
 int SCIPgetNVarsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns the capacity of the cumulative constraint */
-extern
+EXTERN
 int SCIPgetCapacityCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns the durations of the cumulative constraint */
-extern
+EXTERN
 int* SCIPgetDurationsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns the demands of the cumulative constraint */
-extern
+EXTERN
 int* SCIPgetDemandsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -143,7 +182,7 @@ int* SCIPgetDemandsCumulative(
 /** check for the given starting time variables with their demands and durations if the cumulative conditions for the
  *  given solution is satisfied
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcheckCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -152,59 +191,15 @@ SCIP_RETCODE SCIPcheckCumulativeCondition(
    int*                  durations,          /**< array containing corresponding durations */
    int*                  demands,            /**< array containing corresponding demands */
    int                   capacity,           /**< available cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered */
+   int                   hmax,               /**< right bound of time axis to be considered */
    SCIP_Bool*            violated,           /**< pointer to store if the cumulative condition is violated */
    SCIP_CONS*            cons,               /**< constraint which is checked */
    SCIP_Bool             printreason         /**< should the reason for the violation be printed? */
    );
 
-/** presolve the given cumulative condition */
-extern
-SCIP_RETCODE SCIPpresolveCumulativeCondition(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of variables (jobs) */
-   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
-   int*                  durations,          /**< array containing corresponding durations */
-   int*                  demands,            /**< array containing corresponding demands */
-   int*                  capacity,           /**< pointer to available cumulative capacity which might change */
-   SCIP_CONS*            cons,               /**< constraint which gets presolved */
-   SCIP_Bool*            delvars,            /**< array storing which jobs can be deleted since they are irrelevant */
-   int*                  nfixedvars,         /**< pointer to store the number of fixed variable */
-   int*                  nchgbds,            /**< pointer to store the number of variable bound changes */
-   int*                  nchgcoefs,          /**< pointer to store the number of coefficient changes */
-   int*                  nchgsides,          /**< pointer to store the number of changes constraint sides */
-   SCIP_Bool*            redundant,          /**< pointer to store if the constraint is redundant */
-   SCIP_Bool*            cutoff              /**< pointer to store if the cumulative condition is violated */
-   );
-
-/** presolve the given cumulative condition */
-extern
-SCIP_RETCODE SCIPdetectIrrelevantJobsCumulativeCondition(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of variables (jobs) */
-   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
-   int*                  durations,          /**< array containing corresponding durations */
-   int*                  demands,            /**< array containing corresponding demands */
-   int                   capacity,           /**< available cumulative capacity */
-   SCIP_CONS*            cons,               /**< constraint which gets presolved */
-   SCIP_Bool*            delvars,            /**< array storing which jobs can be deleted since they are irrelevant */
-   int*                  nfixedvars          /**< pointer to store the number of fixed variable */
-   );
-
-/** normalizes the cumulative condition */
-extern
-SCIP_RETCODE SCIPnormalizeCumulativeCondition(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of variables (jobs) */
-   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
-   int*                  durations,          /**< array containing corresponding durations */
-   int*                  demands,            /**< array containing corresponding demands */
-   int*                  capacity,           /**< pointer to available cumulative capacity which might change */
-   int*                  nchgcoefs,          /**< pointer to store the number of coefficient changes */
-   int*                  nchgsides           /**< pointer to store the number of changes constraint sides */
-   );
-
 /** propagate the given cumulative condition */
-extern
+EXTERN
 SCIP_RETCODE SCIPpropCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables (jobs) */
@@ -212,13 +207,17 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
    int*                  durations,          /**< array containing corresponding durations */
    int*                  demands,            /**< array containing corresponding demands */
    int                   capacity,           /**< available cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered */
+   int                   hmax,               /**< right bound of time axis to be considered */
    SCIP_CONS*            cons,               /**< constraint which gets propagated */
    int*                  nchgbds,            /**< pointer to store the number of variable bound changes */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the cumulative condition is violated */
    );
 
 /** resolve propagation w.r.t. the cumulative condition */
+EXTERN
 SCIP_RETCODE SCIPrespropCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of start time variables (activities) */
@@ -226,130 +225,21 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
    int                   inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    );
 
-/** create a new cumulative profile for the given capacity */
-extern
-SCIP_RETCODE SCIPprofileCreate(
+/** this method visualizes the cumulative structure in GML format */
+EXTERN
+SCIP_RETCODE SCIPconsdataVisualize(
    SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE**   profile,            /**< pointer to store the create profile */
-   int                   capacity,           /**< Capacity for this profile */
-   int                   maxtimepoints       /**< maximum number of time points */
-   );
-
-/** frees given profile */
-extern
-void SCIPprofileFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE**   profile             /**< pointer to the profile */
-   );
-
-/** resizes the cumulative profile array */
-extern
-SCIP_RETCODE SCIPprofileResize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE*    profile,            /**< cumulative profile to resize */
-   int                   newminsize          /**< minimum size to ensure */
-   );
-
-/** from the given job, the core time is computed. If core is non-empty the cumulative profile will be updated otherwise
- *  nothing happens
- */
-extern
-void SCIPprofileInsertCore(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE*    profile,            /**< profile to use */
-   SCIP_VAR*             var,                /**< integer variable which corresponds to the starting point of the job */
-   int                   duration,           /**< duration of the job */
-   int                   demand,             /**< demand of the job */
-   SCIP_Bool*            core,               /**< pointer to store if the corresponds job has a core */  
-   SCIP_Bool*            fixed,              /**< pointer to store if the job is fixed due to its bounds */
-   SCIP_Bool*            infeasible          /**< pointer to store if the job does not fit due to capacity */
-   );
-
-/** subtracts the demand from the profile during core time of the job */
-extern
-void SCIPprofileDeleteCore(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE*    profile,            /**< profile to use */
-   SCIP_VAR*             var,                /**< integer variable which corresponds to the starting point of the job */
-   int                   duration,           /**< duration of the job */
-   int                   demand,             /**< demand of the job */
-   SCIP_Bool*            core                /**< pointer to store if the corresponds job has a core, or NULL */  
-   );
-
-/** print profile to the given file stream (for debugging) */
-extern
-void SCIPprofilePrint(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE*    profile,            /**< profile to output */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   );
-
-/** return if the given time point exists in the profile and stores the position of the given time point if it exists;
- *  otherwise the position of the next smaller existing time point */
-extern
-SCIP_Bool SCIPprofileFindLowerBound(
-   CUMULATIVEPROFILE*    profile,              /**< profile to search in */
-   int                   timepoint,            /**< time point to search for */
-   int*                  pos                   /**< pointer to store the position */
-   );
-
-/** inserts the given time point into the profile if it this time point does not exists yet; returns its position in the
- *  time point array */
-extern
-int SCIPprofileInsertTimepoint(
-   CUMULATIVEPROFILE*    profile,            /**< profile to insert the time point */
-   int                   timepoint           /**< time point to insert */
-   );
-
-/** updates the profile due to inserting and removing a new job */
-extern
-void SCIPprofileUpdate(
-   CUMULATIVEPROFILE*    profile,            /**< profile to update */
-   int                   starttime,          /**< time point to start */
-   int                   endtime,            /**< time point to end */
-   int                   demand,             /**< demand of the job */
-   SCIP_Bool*            infeasible          /**< pointer to store if the update is infeasible */
-   );
-
-/** returns TRUE if the job (given by its  demand and duration) can be inserted at the given time point; otherwise FALSE */
-extern
-SCIP_Bool SCIPprofileIsFeasibleStart(
-   CUMULATIVEPROFILE*    profile,            /**< Cumulative profile to use */
-   int                   timepoint,          /**< time point to start */
-   int                   duration,           /**< duration of the job */
-   int                   demand,             /**< the demand of the job */
-   int*                  pos                 /**< pointer to store the earliest position where the job does not fit */
-   );
-
-/** return the earliest possible starting point within the time interval [lb,ub] for a given job (given by its duration
- *  and demand) */
-extern
-int SCIPprofileGetEarliestFeasibleStart(
-   CUMULATIVEPROFILE*    profile,            /**< profile to use */
-   int                   lb,                 /**< earliest possible start point */
-   int                   ub,                 /**< latest possible start point */
-   int                   duration,           /**< duration of the job */
-   int                   demand,             /**< demand of the job */
-   SCIP_Bool*            infeasible          /**< pointer store if the job cannot be scheduled */
-   );
-
-/** return the latest possible starting point within the time interval [lb,ub] for a given job (given by its duration
- *  and demand) */
-extern
-int SCIPprofileGetLatestFeasibleStart(
-   CUMULATIVEPROFILE*    profile,            /**< profile to use */
-   int                   lb,                 /**< earliest possible start point */
-   int                   ub,                 /**< latest possible start point */
-   int                   duration,           /**< duration of the job */
-   int                   demand,             /**< demand of the job */
-   SCIP_Bool*            infeasible          /**< pointer store if the job cannot be scheduled */
+   SCIP_CONS*            cons                /**< cumulative constraint */
    );
 
 #ifdef __cplusplus

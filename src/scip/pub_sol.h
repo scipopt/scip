@@ -45,56 +45,62 @@ extern "C" {
  */
 
 /** gets origin of solution */
-extern
+EXTERN
 SCIP_SOLORIGIN SCIPsolGetOrigin(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** returns whether the given solution is defined on original variables */
+EXTERN
+SCIP_Bool SCIPsolIsOriginal(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
 /** gets objective value of primal CIP solution which lives in the original problem space */
-extern
+EXTERN
 SCIP_Real SCIPsolGetOrigObj(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets clock time, when this solution was found */
-extern
+EXTERN
 SCIP_Real SCIPsolGetTime(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets branch and bound run number, where this solution was found */
-extern
+EXTERN
 int SCIPsolGetRunnum(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets node number of the specific branch and bound run, where this solution was found */
-extern
+EXTERN
 SCIP_Longint SCIPsolGetNodenum(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets node's depth, where this solution was found */
-extern
+EXTERN
 int SCIPsolGetDepth(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets heuristic, that found this solution (or NULL if it's from the tree) */
-extern
+EXTERN
 SCIP_HEUR* SCIPsolGetHeur(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** informs the solution that it now belongs to the given primal heuristic */
-extern
+EXTERN
 void SCIPsolSetHeur(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
 /** returns unique index of given solution */
-extern
+EXTERN
 int SCIPsolGetIndex(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
@@ -107,6 +113,7 @@ int SCIPsolGetIndex(
  */
 
 #define SCIPsolGetOrigin(sol)           ((sol)->solorigin)
+#define SCIPsolIsOriginal(sol)          ((sol)->solorigin == SCIP_SOLORIGIN_ORIGINAL)
 #define SCIPsolGetOrigObj(sol)          (sol)->obj
 #define SCIPsolGetTime(sol)             (sol)->time
 #define SCIPsolGetNodenum(sol)          (sol)->nodenum
@@ -114,7 +121,7 @@ int SCIPsolGetIndex(
 #define SCIPsolGetDepth(sol)            (sol)->depth
 #define SCIPsolGetHeur(sol)             (sol)->heur
 #define SCIPsolGetIndex(sol)            (sol)->index
-#define SCIPsolSetHeur(sol,heur)        { (sol)->heur = heur; }
+#define SCIPsolSetHeur(sol,newheur)     ((sol)->heur = (newheur))
 #endif
 
 #ifdef __cplusplus

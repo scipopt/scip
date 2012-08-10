@@ -29,22 +29,11 @@
 
 #define CONSHDLR_NAME          "integral"
 #define CONSHDLR_DESC          "integrality constraint"
-#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
-#define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
                                               *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
-#define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
-
-#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
-
-
 
 /*
  * Callback methods
@@ -66,54 +55,9 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyIntegral)
    return SCIP_OKAY;
 }
 
+#define consCopyIntegral NULL
 
-/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#define consFreeIntegral NULL
-
-
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitIntegral NULL
-
-
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitIntegral NULL
-
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreIntegral NULL
-
-
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreIntegral NULL
-
-
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolIntegral NULL
-
-
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#define consExitsolIntegral NULL
-
-
-/** frees specific constraint data */
-#define consDeleteIntegral NULL
-
-
-/** transforms constraint data into data belonging to the transformed problem */ 
-#define consTransIntegral NULL
-
-
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#define consInitlpIntegral NULL
-
-
-/** separation method of constraint handler for LP solutions */
-#define consSepalpIntegral NULL
-
-
-/** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolIntegral NULL
-
+#define consEnfopsIntegral NULL
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -149,10 +93,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 
    return SCIP_OKAY;
 }
-
-
-/** constraint enforcing method of constraint handler for pseudo solutions */
-#define consEnfopsIntegral NULL
 
 
 /** feasibility check method of constraint handler for integral solutions */
@@ -211,62 +151,12 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    return SCIP_OKAY;
 }
 
-
-/** domain propagation method of constraint handler */
-#define consPropIntegral NULL
-
-
-/** presolving method of constraint handler */
-#define consPresolIntegral NULL
-
-
-/** propagation conflict resolving method of constraint handler */
-#define consRespropIntegral NULL
-
-
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockIntegral)
 {  /*lint --e{715}*/
    return SCIP_OKAY;
 }
-
-
-/** constraint activation notification method of constraint handler */
-#define consActiveIntegral NULL
-
-
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveIntegral NULL
-
-
-/** constraint enabling notification method of constraint handler */
-#define consEnableIntegral NULL
-
-
-/** constraint disabling notification method of constraint handler */
-#define consDisableIntegral NULL
-
-
-/** variable deletion method of constraint handler */
-#define consDelvarsIntegral NULL
-
-
-/** constraint display method of constraint handler */
-#define consPrintIntegral NULL
-
-/** constraint copying method of constraint handler */
-#define consCopyIntegral NULL
-
-/** constraint parsing method of constraint handler */
-#define consParseIntegral NULL
-
-/** constraint method of constraint handler which returns the variables (if possible) */
-#define consGetVarsIntegral NULL
-
-/** constraint method of constraint handler which returns the number of variables (if possible) */
-#define consGetNVarsIntegral NULL
-
 
 /*
  * constraint specific interface methods
@@ -278,26 +168,21 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create integral constraint handler data */
    conshdlrdata = NULL;
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
-         conshdlrCopyIntegral,
-         consFreeIntegral, consInitIntegral, consExitIntegral,
-         consInitpreIntegral, consExitpreIntegral, consInitsolIntegral, consExitsolIntegral,
-         consDeleteIntegral, consTransIntegral, consInitlpIntegral,
-         consSepalpIntegral, consSepasolIntegral, consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral,
-         consPropIntegral, consPresolIntegral, consRespropIntegral, consLockIntegral,
-         consActiveIntegral, consDeactiveIntegral,
-         consEnableIntegral, consDisableIntegral, consDelvarsIntegral,
-         consPrintIntegral, consCopyIntegral, consParseIntegral,
-         consGetVarsIntegral, consGetNVarsIntegral, conshdlrdata) );
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, consLockIntegral,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIntegral, consCopyIntegral) );
 
    return SCIP_OKAY;
 }

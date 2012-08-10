@@ -18,6 +18,18 @@
  * @brief  constraint handler for linking binary variables to an integer variable
  * @author Stefan Heinz
  * @author Jens Schulz
+ *
+ * The constraints handler stores linking constraints between an integer variable and an array of binary variables. Such
+ * a linking constraint has the form:
+ * \f[
+ * y = \sum_{i=1}^n {(b+i) * x_i}
+ *\f]
+ * with integer variable \f$ y \f$, binary variables \f$ x_1, \dots, x_n \f$ and offset \f$b \in Q\f$, and
+ * with the additional side condition that exactly one binary variable has to be one (set partitioning condition).
+ *
+ * This constraint can be created only with the integer variable. In this case the binary variables are only created on
+ * demand. That is, whenever someone asks for the binary variables. Therefore, such constraints can be used to get a
+ * "binary representation" of the domain of the integer variable which will be dynamically created.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -33,7 +45,7 @@ extern "C" {
 #endif
 
 /** creates the handler for linking constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrLinking(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -42,7 +54,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -67,7 +79,7 @@ SCIP_RETCODE SCIPcreateConsLinking(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -76,30 +88,49 @@ SCIP_RETCODE SCIPcreateConsLinking(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures a linking constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsLinking(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsLinking() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsBasicLinking(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             intvar,             /**< integer variable which should be linked */
+   SCIP_VAR**            binvars,            /**< binary variables, or NULL */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   offset              /**< offset of the binary variable representation */
+   );
+
 
 /** checks if for the given integer variable a linking constraint exists */
-extern
+EXTERN
 SCIP_Bool SCIPexistsConsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             intvar              /**< integer variable which should be linked */
    );
 
 /** returns the linking constraint belonging the given integer variable or NULL if it does not exist yet */
-extern
+EXTERN
 SCIP_CONS* SCIPgetConsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             intvar              /**< integer variable which should be linked */
    );
 
 /** returns the integer variable of the linking constraint */
-extern
+EXTERN
 SCIP_VAR* SCIPgetIntvarLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linking constraint */
    );
 
 /** returns the binary variables of the linking constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPgetBinvarsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linking constraint */
@@ -108,14 +139,14 @@ SCIP_RETCODE SCIPgetBinvarsLinking(
    );
 
 /** returns the number of binary variables of the linking constraint */
-extern
+EXTERN
 int SCIPgetNBinvarsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linking constraint */
    );
 
 /** returns the offset of the linking constraint */
-extern
+EXTERN
 int SCIPgetOffsetLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linking constraint */

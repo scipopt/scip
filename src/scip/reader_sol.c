@@ -35,7 +35,6 @@
 #define READER_EXTENSION        "sol"
 
 
-
 /*
  * Local methods of reader
  */
@@ -43,8 +42,8 @@
 /** reads a given SCIP solution file, problem has to be transformed in advance */
 static
 SCIP_RETCODE readSol(
-   SCIP*                 scip,              /**< SCIP data structure */
-   const char*           fname              /**< name of the input file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           fname               /**< name of the input file */
    )
 {
    SCIP_SOL* sol;
@@ -153,7 +152,26 @@ SCIP_RETCODE readSol(
       }
       else
       {
-         SCIP_CALL( SCIPsetSolVal(scip, sol, var, value) );
+         SCIP_RETCODE retcode;
+         retcode =  SCIPsetSolVal(scip, sol, var, value);
+
+         if( retcode == SCIP_INVALIDDATA )
+         {
+            if( SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_FIXED )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored conflicting solution value for fixed variable <%s>\n",
+                  SCIPvarGetName(var));
+            }
+            else
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n",
+                  SCIPvarGetName(var));
+            }
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
       }
    }
 
@@ -195,8 +213,8 @@ SCIP_RETCODE readSol(
 /** reads a given xml solution file */
 static
 SCIP_RETCODE readXMLSol(
-   SCIP*                 scip,              /**< SCIP data structure */
-   const char*           filename           /**< name of the input file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< name of the input file */
    )
 {
    SCIP_Bool unknownvariablemessage;
@@ -340,7 +358,6 @@ SCIP_RETCODE readXMLSol(
 }
 
 
-
 /*
  * Callback methods of reader
  */
@@ -358,10 +375,6 @@ SCIP_DECL_READERCOPY(readerCopySol)
  
    return SCIP_OKAY;
 }
-
-
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeSol NULL
 
 
 /** problem reading method of reader 
@@ -438,10 +451,6 @@ SCIP_DECL_READERREAD(readerReadSol)
 }
 
 
-/** problem writing method of reader */
-#define readerWriteSol NULL
-
-
 /*
  * sol file reader specific interface methods
  */
@@ -452,14 +461,19 @@ SCIP_RETCODE SCIPincludeReaderSol(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create sol reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include sol reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopySol, readerFreeSol, readerReadSol, readerWriteSol, 
-         readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   assert(reader != NULL);
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopySol) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadSol) );
 
    return SCIP_OKAY;
 }

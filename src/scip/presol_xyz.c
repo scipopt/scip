@@ -32,8 +32,6 @@
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 
 
-
-
 /*
  * Data structures
  */
@@ -46,15 +44,11 @@ struct SCIP_PresolData
 };
 
 
-
-
 /*
  * Local methods
  */
 
 /* put your local methods here, and declare them static */
-
-
 
 
 /*
@@ -165,9 +159,6 @@ SCIP_DECL_PRESOLEXEC(presolExecXyz)
 }
 
 
-
-
-
 /*
  * presolver specific interface methods
  */
@@ -178,17 +169,40 @@ SCIP_RETCODE SCIPincludePresolXyz(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presol;
 
    /* create xyz presolver data */
    presoldata = NULL;
    /* TODO: (optional) create presolver specific data here */
 
+   presol = NULL;
+
    /* include presolver */
+#if 0
+   /* use SCIPincludePresol() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
+    * new callbacks are added in future SCIP versions
+    */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolCopyXyz,
-         presolFreeXyz, presolInitXyz, presolExitXyz, 
-         presolInitpreXyz, presolExitpreXyz, presolExecXyz,
+         presolCopyXyz, presolFreeXyz, presolInitXyz, presolExitXyz, presolInitpreXyz, presolExitpreXyz, presolExecXyz,
          presoldata) );
+#else
+   /* use SCIPincludePresolBasic() plus setter functions if you want to set callbacks one-by-one and your code should
+    * compile independent of new callbacks being added in future SCIP versions
+    */
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolExecXyz,
+         presoldata) );
+
+   assert(presol != NULL);
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyXyz) );
+   SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeXyz) );
+   SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitXyz) );
+   SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitXyz) );
+   SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreXyz) );
+   SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreXyz) );
+#endif
 
    /* add xyz presolver parameters */
    /* TODO: (optional) add presolver specific parameters with SCIPaddTypeParam() here */

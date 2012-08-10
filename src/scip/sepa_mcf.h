@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the mcf separator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeSepaMcf(
    SCIP*                 scip                /**< SCIP data structure */
    );

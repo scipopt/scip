@@ -43,6 +43,7 @@
 
 #define CHECK_SPXSOLVE                  true /**< shall the SoPlex results in spxSolve() be double checked using CPLEX? */
 #define CHECK_SPXSTRONGBRANCH           true /**< shall the SoPlex results in SCIPlpStrongbranch() be double checked using CPLEX? */
+#define CHECK_START                     0    /**< skip first CHECK_START number of checks */
 #define EXIT_AT_WRONG_RESULT            false/**< shall program be exited if CPLEX returns different result than SoPlex? */
 #define EXIT_AT_CPXERROR                false/**< shall program be exited if CPLEX returns an error? */
 
@@ -71,9 +72,30 @@
 #undef SCIP_DEBUG
 #endif
 
+/* include SoPlex solver */
 #include "spxsolver.h"
+
+/* define subversion for versions <= 1.5.0.1 */
+#ifndef SOPLEX_SUBVERSION
+#define SOPLEX_SUBVERSION 0
+#endif
+
+/* check version */
+#if (SOPLEX_VERSION < 133)
+#error "This interface is not compatible with SoPlex versions prior to 1.4"
+#endif
+
+/* get githash of SoPlex */
+#if (SOPLEX_VERSION >= 160)
+#include "spxgithash.h"
+#endif
+
+/* include SoPlex components */
 #include "slufactor.h"
 #include "spxsteeppr.h"
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 6) || SOPLEX_VERSION > 160)
+#include "spxsteepexpr.h"
+#endif
 #include "spxparmultpr.h"
 #include "spxdevexpr.h"
 #include "spxfastrt.h"
@@ -82,21 +104,6 @@
 
 #ifdef WITH_BOUNDFLIPPING
 #include "spxboundflippingrt.h"
-#endif
-
-/* check version */
-#if (SOPLEX_VERSION < 133)
-#error "This interface is not compatible with SoPlex versions prior to 1.4"
-#endif
-
-/* define subversion for versions <= 1.5.0.1 */
-#ifndef SOPLEX_SUBVERSION
-#define SOPLEX_SUBVERSION 0
-#endif
-
-/* get githash of SoPlex */
-#if (SOPLEX_VERSION > 150)
-#include "spxgithash.h"
 #endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
@@ -124,6 +131,7 @@ using namespace soplex;
  *  make no distinction between different exception types, e.g., between memory allocation and other
  *  exceptions.
  */
+#ifndef NDEBUG
 #define SOPLEX_TRY(messagehdlr, x)  do                                  \
    {                                                                    \
       try                                                               \
@@ -138,6 +146,21 @@ using namespace soplex;
       }                                                                 \
    }                                                                    \
    while( FALSE )
+
+#else
+#define SOPLEX_TRY(messagehdlr, x)  do                                  \
+   {                                                                    \
+      try                                                               \
+      {                                                                 \
+         (x);                                                           \
+      }                                                                 \
+      catch(SPxException E)                                             \
+      {                                                                 \
+         return SCIP_LPERROR;                                           \
+      }                                                                 \
+   }                                                                    \
+   while( FALSE )
+#endif
 
 #define SOPLEX_TRYLPI(x) SOPLEX_TRY(lpi->messagehdlr, x)
 #define SOPLEX_TRYLPIPTR(x) SOPLEX_TRY((*lpi)->messagehdlr, x)
@@ -168,6 +191,11 @@ class SPxSCIP : public SPxSolver
    SPxLP::SPxSense       m_sense;            /**< optimization sense */
    SLUFactor             m_slu;              /**< sparse LU factorization */
    SPxSteepPR            m_price_steep;      /**< steepest edge pricer */
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 6) || SOPLEX_VERSION > 160)
+   SPxSteepExPR          m_price_steep_ex;   /**< steepest edge with exact weight initialization */
+#else
+   SPxSteepPR            m_price_steep_ex;   /**< fallback to quick start pricer */
+#endif
    SPxParMultPR          m_price_parmult;    /**< partial multiple pricer */
    SPxDevexPR            m_price_devex;      /**< devex pricer */
 #ifdef WITH_BOUNDFLIPPING
@@ -179,7 +207,8 @@ class SPxSCIP : public SPxSolver
    bool                  m_fromscratch;      /**< use old basis indicator */
    bool                  m_scaling;          /**< use lp scaling */
    bool                  m_presolving;       /**< use lp presolving */
-   Real                  m_feastol;          /**< feasibility tolerance of SCIP */
+   Real                  m_lpifeastol;       /**< feastol set by SCIPlpiSetRealpar() */
+   Real                  m_lpiopttol;        /**< opttol set by SCIPlpiSetRealpar() */
    Real                  m_objLoLimit;       /**< lower objective limit */
    Real                  m_objUpLimit;       /**< upper objective limit */
    Status                m_stat;             /**< solving status */
@@ -193,6 +222,7 @@ class SPxSCIP : public SPxSolver
    NameSet*              m_colnames;         /**< column names */
 
 #ifdef WITH_LPSCHECK
+   int                   m_checknum;
    bool                  m_doublecheck;
    CPXENVptr             m_cpxenv;           /**< CPLEX memory environment */
    CPXLPptr              m_cpxlp;            /**< CPLEX lp structure */
@@ -207,9 +237,8 @@ public:
       : SPxSolver(LEAVE, COLUMN),
         m_probname(0),
         m_fromscratch(false),
-        m_scaling(false),
-        m_presolving(false),
-        m_feastol(1e-06),
+        m_scaling(true),
+        m_presolving(true),
         m_objLoLimit(-soplex::infinity),
         m_objUpLimit(soplex::infinity),
         m_stat(NO_PROBLEM),
@@ -233,12 +262,21 @@ public:
       if ( probname != NULL )
          SOPLEX_TRY_ABORT( setProbname(probname) );
 
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
+      m_lpifeastol = SPxSolver::feastol();
+      m_lpiopttol = SPxSolver::opttol();
+#else
+      m_lpifeastol = SPxSolver::delta();
+      m_lpiopttol = SPxSolver::delta();
+#endif
+
 #ifdef WITH_LPSCHECK
       int cpxstat;
       m_cpxenv = CPXopenCPLEX(&cpxstat);
       assert(m_cpxenv != NULL);
       m_cpxlp = CPXcreateprob(m_cpxenv, &cpxstat, probname != NULL ? probname : "spxcheck");
       (void) CPXsetintparam(m_cpxenv, CPX_PARAM_SCRIND, 0);
+      m_checknum = 0;
 #endif
    }
 
@@ -252,6 +290,46 @@ public:
 #ifdef WITH_LPSCHECK
       (void) CPXfreeprob(m_cpxenv, &m_cpxlp);
       (void) CPXcloseCPLEX(&m_cpxenv);
+#endif
+   }
+
+   /**< return feastol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
+   Real feastol()
+   {
+      return m_lpifeastol;
+   }
+
+   /**< set feastol and store value in case SoPlex only accepts a larger tolerance */
+   void setFeastol(
+      const Real d
+      )
+   {
+      m_lpifeastol = d;
+
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
+      SPxSolver::setFeastol(d);
+#else
+      SPxSolver::setDelta(d);
+#endif
+   }
+
+   /**< return opttol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
+   Real opttol()
+   {
+      return m_lpiopttol;
+   }
+
+   /**< set opttol and store value in case SoPlex only accepts a larger tolerance */
+   void setOpttol(
+      const Real d
+      )
+   {
+      m_lpiopttol = d;
+
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
+      SPxSolver::setOpttol(d);
+#else
+      SPxSolver::setDelta(d);
 #endif
    }
 
@@ -277,7 +355,7 @@ public:
 
    void setSteepPricer()
    {
-      setPricer(&m_price_steep);
+      setPricer(&m_price_steep_ex);
       m_autopricing = false;
    }
 
@@ -333,16 +411,6 @@ public:
    void setPresolving(bool p)
    {
       m_presolving = p;
-   }
-
-   Real getFeastol() const
-   {
-      return m_feastol;
-   }
-
-   void setFeastol(Real f)
-   {
-      m_feastol = f;
    }
 
    bool getLpInfo() const
@@ -438,9 +506,10 @@ public:
    }
 
 #ifdef WITH_LPSCHECK
-   bool getDoubleCheck() const
+   bool getDoubleCheck()
    {
-      return m_doublecheck;
+      m_checknum++;
+      return m_doublecheck && m_checknum + 1 >= CHECK_START;
    }
 
    void setDoubleCheck(bool dc)
@@ -507,6 +576,38 @@ public:
    }
 #endif
 
+#ifndef NDEBUG
+   bool checkConsistentBounds()
+   {
+      for( int i = 0; i < nCols(); ++i )
+      {
+         if( lower(i) > upper(i) )
+         {
+            SCIPerrorMessage("inconsistent bounds on column %d: lower=%.17g, upper=%.17g\n",
+               i, lower(i), upper(i));
+            return false;
+         }
+      }
+
+      return true;
+   }
+
+   bool checkConsistentSides()
+   {
+      for( int i = 0; i < nRows(); ++i )
+      {
+         if( lhs(i) > rhs(i) )
+         {
+            SCIPerrorMessage("inconsistent sides on row %d: lhs=%.17g, rhs=%.17g\n",
+               i, lhs(i), rhs(i));
+            return false;
+         }
+      }
+
+      return true;
+   }
+#endif
+
    void trySolve(bool printwarning = true)
    {
       Real timespent;
@@ -559,6 +660,9 @@ public:
       verbosity = Param::verbose();
       Param::setVerbose(getLpInfo() ? 5 : 0);
 
+      assert(checkConsistentBounds());
+      assert(checkConsistentSides());
+
 #ifdef WITH_LPSCHECK
       /* dump LP with current basis and settings saved in SoPlex */
       if( getDoubleCheck() )
@@ -573,7 +677,7 @@ public:
       if( m_autopricing && m_stat == SPxSolver::ABORT_ITER && (m_itlim < 0 || m_itlim - m_itused > 0) )
       {
          setTerminationIter(m_itlim - m_itused);
-         setPricer(&m_price_steep);
+         setPricer(&m_price_steep_ex);
 
          trySolve(printwarning);
 
@@ -603,8 +707,8 @@ public:
          CPX_CALL( CPXreadcopybase(m_cpxenv, m_cpxlp, "spxcheck.bas") );
 
          /* set tolerances */
-         CPX_CALL( CPXsetdblparam(m_cpxenv, CPX_PARAM_EPOPT, delta()) );
-         CPX_CALL( CPXsetdblparam(m_cpxenv, CPX_PARAM_EPRHS, delta()) );
+         CPX_CALL( CPXsetdblparam(m_cpxenv, CPX_PARAM_EPOPT, MAX(opttol(), 1e-9)) );
+         CPX_CALL( CPXsetdblparam(m_cpxenv, CPX_PARAM_EPRHS, MAX(feastol(), 1e-9)) );
 
          /* solve LP */
          CPX_CALL( CPXlpopt(m_cpxenv, m_cpxlp) );
@@ -615,12 +719,19 @@ public:
             cpxobj *= -1.0;
 
          /* check for inconsistent statuses */
-         if( (m_stat == SPxSolver::OPTIMAL && cpxstat != CPX_STAT_OPTIMAL)
+         if( cpxstat == CPX_STAT_OPTIMAL_INFEAS )
+         {
+            SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
+               m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
+            if( EXIT_AT_CPXERROR )
+               exit(1);
+         }
+         else if( (m_stat == SPxSolver::OPTIMAL && cpxstat != CPX_STAT_OPTIMAL)
             || (m_stat == SPxSolver::UNBOUNDED && cpxstat != CPX_STAT_UNBOUNDED)
             || (m_stat == SPxSolver::INFEASIBLE && cpxstat != CPX_STAT_INFEASIBLE) )
          {
-            SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
-               m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
+            SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s) (checknum=%d)\n",
+               m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat), m_checknum);
             if( EXIT_AT_WRONG_RESULT )
                exit(1);
          }
@@ -629,21 +740,21 @@ public:
             switch( cpxstat )
             {
             case CPX_STAT_OPTIMAL:
-               if( (getSense() == SPxSolver::MINIMIZE && LTrel(cpxobj, getObjUpLimit(), 2*delta()))
-                  || (getSense() == SPxSolver::MAXIMIZE && GTrel(cpxobj, getObjLoLimit(), 2*delta())) )
+               if( (getSense() == SPxSolver::MINIMIZE && LTrel(cpxobj, getObjUpLimit(), 2*opttol()))
+                  || (getSense() == SPxSolver::MAXIMIZE && GTrel(cpxobj, getObjLoLimit(), 2*opttol())) )
                {
-                  SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
+                  SCIPerrorMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s) (checknum=%d)\n",
                      m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
-                     getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat));
+                     getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat), m_checknum);
                   if( EXIT_AT_WRONG_RESULT )
                      exit(1);
                }
                else if( (getSense() == SPxSolver::MINIMIZE && cpxobj < getObjUpLimit())
                   || (getSense() == SPxSolver::MAXIMIZE && cpxobj > getObjLoLimit()) )
                {
-                  SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
+                  SCIPerrorMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s) (checknum=%d)\n",
                      m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
-                     getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat));
+                     getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat), m_checknum);
                }
                break;
             case CPX_STAT_OPTIMAL_INFEAS:
@@ -651,42 +762,40 @@ public:
                if( (getSense() == SPxSolver::MINIMIZE && cpxobj < getObjUpLimit())
                   || (getSense() == SPxSolver::MAXIMIZE && cpxobj > getObjLoLimit()) )
                {
-                  SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
+                  SCIPerrorMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s) (checknum=%d)\n",
                      m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
-                     getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat));
+                     getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat), m_checknum);
                }
                break;
             case CPX_STAT_INFEASIBLE:
                break;
             case CPX_STAT_UNBOUNDED:
-               SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
-                  m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
+               SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s) (checknum=%d)\n",
+                  m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat), m_checknum);
                if( EXIT_AT_WRONG_RESULT )
                   exit(1);
                break;
             case CPX_STAT_INForUNBD:
             default:
-               SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
-                  m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
+               SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s) (checknum=%d)\n",
+                  m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat), m_checknum);
                break;
             }  /*lint !e788*/
          }
          /* check for same objective values */
          else if( m_stat == SPxSolver::OPTIMAL )
          {
-            if( (getSense() == SPxSolver::MINIMIZE && LTrel(value(), cpxobj, 2*delta()))
-               || (getSense() == SPxSolver::MAXIMIZE && GTrel(value(), cpxobj, 2*delta())) )
+            if( (getSense() == SPxSolver::MINIMIZE && LTrel(value(), cpxobj, 2*opttol()))
+               || (getSense() == SPxSolver::MAXIMIZE && GTrel(value(), cpxobj, 2*opttol())) )
             {
-               SCIPmessagePrintWarning(m_messagehdlr, "In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f too good\n", value(),
-                  m_probname, getSense() == SPxSolver::MINIMIZE ? "<" : ">", cpxobj);
-               if( EXIT_AT_WRONG_RESULT )
-                  exit(1);
+               /* SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f too good (checknum=%d)\n", value(),
+                  m_probname, getSense() == SPxSolver::MINIMIZE ? "<" : ">", cpxobj, m_checknum); */
             }
-            else if( (getSense() == SPxSolver::MINIMIZE && GTrel(value(), cpxobj, 2*delta()))
-               || (getSense() == SPxSolver::MAXIMIZE && LTrel(value(), cpxobj, 2*delta())) )
+            else if( (getSense() == SPxSolver::MINIMIZE && GTrel(value(), cpxobj, 2*opttol()))
+               || (getSense() == SPxSolver::MAXIMIZE && LTrel(value(), cpxobj, 2*opttol())) )
             {
-               SCIPmessagePrintWarning(m_messagehdlr, "In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal\n", value(),
-                  m_probname, getSense() == SPxSolver::MINIMIZE ? ">" : "<", cpxobj);
+               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal (checknum=%d)\n", value(),
+                  m_probname, getSense() == SPxSolver::MINIMIZE ? ">" : "<", cpxobj, m_checknum);
                if( EXIT_AT_WRONG_RESULT )
                   exit(1);
             }
@@ -707,7 +816,7 @@ public:
       assert(m_sense == sense());
 
       SPxEquiliSC* scaler = NULL;
-      SPxMainSM* simplifier = NULL;
+      SPxSimplifier* simplifier = NULL;
       SPxLP origlp;
       SPxSimplifier::Result result = SPxSimplifier::OKAY;
 
@@ -760,9 +869,13 @@ public:
 
          /* store and set verbosity */
          verbosity = Param::verbose();
-         Param::setVerbose(getLpInfo() ? 3 : 0);
+         Param::setVerbose(getLpInfo() ? 5 : 0);
          SCIPdebugMessage("simplifying LP\n");
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
+         result = simplifier->simplify(*this, epsilon(), feastol(), opttol());
+#else
          result = simplifier->simplify(*this, epsilon(), delta());
+#endif
          SCIPdebugMessage("simplifier ended with status %u (0: OKAY, 1: INFEASIBLE, 2: DUAL_INFEASIBLE, 3: UNBOUNDED, 4: VANISHED)\n", result);
 
          /* unsimplification is not designed for these cases, thus reload original/scaled lp */
@@ -796,7 +909,11 @@ public:
             setObjUpLimit(soplex::infinity);
          }
 
+#ifndef NDEBUG
          doSolve();
+#else
+         doSolve(false);
+#endif
 
          if( simplifier != NULL || scaler != NULL )
          {
@@ -805,10 +922,10 @@ public:
          }
       }
 
-      /* unsimplification not designed for infeasible basis */
-      if( (SPxSolver::getBasisStatus() == SPxBasis::INFEASIBLE || m_stat == SPxSolver::INFEASIBLE) && simplifier != NULL )
+      /* unsimplification only stable for optimal basis */
+      if( m_stat != SPxSolver::OPTIMAL && simplifier != NULL )
       {
-         SCIPdebugMessage("presolved LP infeasible - reloading and solving original LP\n");
+         SCIPdebugMessage("presolved LP not optimal - reloading and solving original LP\n");
 
          delete simplifier;
          simplifier = NULL;
@@ -903,7 +1020,11 @@ public:
          }
 
          SCIPdebugMessage("solve original LP\n");
+#ifndef NDEBUG
          doSolve();
+#else
+         doSolve(false);
+#endif
 
          /* free allocated memory */
          if( cstat != NULL )
@@ -942,6 +1063,7 @@ public:
       }
       catch(SPxException x)
       {
+#ifndef NDEBUG
          std::string s = x.what();
          SCIPmessagePrintWarning(m_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 
@@ -950,6 +1072,7 @@ public:
           * not OPTIMAL anymore.
           */
          assert(m_stat != SPxSolver::OPTIMAL);
+#endif
       }
    }
 
@@ -965,8 +1088,10 @@ public:
       }
       catch(SPxException x)
       {
+#ifndef NDEBUG
          std::string s = x.what();
          SCIPmessagePrintWarning(m_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
          m_stat = SPxSolver::status();
 
          /* since it is not clear if the status in SoPlex are set correctly
@@ -1003,6 +1128,12 @@ public:
       return m_stat;
    }
 
+   Status updateStatus()
+   {
+      m_stat = SPxSolver::status();
+      return m_stat;
+   }
+
    bool isInitialized() const
    {
       return SPxSolver::isInitialized();
@@ -1023,23 +1154,33 @@ public:
 
    bool readLP(const char* fname)
    {
+      clear();
+
       if ( m_rownames != 0 )
-	 delete m_rownames;
+         delete m_rownames;
       if ( m_colnames != 0 )
-	 delete m_colnames;
+         delete m_colnames;
       m_rownames = new NameSet;
       m_colnames = new NameSet;
-      return SPxSolver::readFile(fname, m_rownames, m_colnames);
+
+      if( SPxSolver::readFile(fname, m_rownames, m_colnames) )
+      {
+         m_stat = NO_PROBLEM;
+         m_sense = sense();
+         return true;
+      }
+
+      return false;
    }
 
    /** copy column names into namestorage with access via colnames */
    void getColNames(
-      int                   firstcol,           /**< first column to get name from LP */
-      int                   lastcol,            /**< last column to get name from LP */
-      char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
-      char*                 namestorage,        /**< storage for col names */
-      int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
-      int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+      int                firstcol,           /**< first column to get name from LP */
+      int                lastcol,            /**< last column to get name from LP */
+      char**             colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
+      char*              namestorage,        /**< storage for col names */
+      int                namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
+      int*               storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
       )
    {
       assert( m_colnames != NULL );
@@ -1079,12 +1220,12 @@ public:
 
    /** copy row names into namestorage with access via row */
    void getRowNames(
-      int                   firstrow,           /**< first row to get name from LP */
-      int                   lastrow,            /**< last row to get name from LP */
-      char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
-      char*                 namestorage,        /**< storage for row names */
-      int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
-      int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+      int                firstrow,           /**< first row to get name from LP */
+      int                lastrow,            /**< last row to get name from LP */
+      char**             rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
+      char*              namestorage,        /**< storage for row names */
+      int                namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+      int*               storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
       )
    {
       assert( m_rownames != NULL );
@@ -1143,16 +1284,16 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 /** LP interface */
 struct SCIP_LPi
 {
-   SPxSCIP*                 spx;                /**< our SPxSolver implementation */
-   int*                     cstat;              /**< array for storing column basis status */
-   int*                     rstat;              /**< array for storing row basis status */
-   int                      cstatsize;          /**< size of cstat array */
-   int                      rstatsize;          /**< size of rstat array */
-   SCIP_PRICING             pricing;            /**< current pricing strategy */
-   SCIP_Bool                solved;             /**< was the current LP solved? */
-   SLUFactor*               factorization;      /**< factorization possibly needed for basis inverse */
-   SCIP_Real                rowrepswitch;       /**< use row representation if number of rows divided by number of columns exceeds this value */
-   SCIP_MESSAGEHDLR*        messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
+   SPxSCIP*              spx;                /**< our SPxSolver implementation */
+   int*                  cstat;              /**< array for storing column basis status */
+   int*                  rstat;              /**< array for storing row basis status */
+   int                   cstatsize;          /**< size of cstat array */
+   int                   rstatsize;          /**< size of rstat array */
+   SCIP_PRICING          pricing;            /**< current pricing strategy */
+   SCIP_Bool             solved;             /**< was the current LP solved? */
+   SLUFactor*            factorization;      /**< factorization possibly needed for basis inverse */
+   SCIP_Real             rowrepswitch;       /**< use row representation if number of rows divided by number of columns exceeds this value */
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
 /** LPi state stores basis information */
@@ -1386,7 +1527,7 @@ const char* SCIPlpiGetSolverDesc(
    )
 {
    sprintf(spxdesc, "%s", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
-#if (SOPLEX_VERSION > 150)
+#if (SOPLEX_VERSION >= 160)
    sprintf(spxdesc, "%s [GitHash: %s]", spxdesc, getGitHash());
 #endif
 #ifdef WITH_LPSCHECK
@@ -1530,8 +1671,10 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -1596,8 +1739,10 @@ SCIP_RETCODE SCIPlpiAddCols(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
  
@@ -1709,8 +1854,10 @@ SCIP_RETCODE SCIPlpiAddRows(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -1817,12 +1964,15 @@ SCIP_RETCODE SCIPlpiChgBounds(
       {
 	 assert(0 <= ind[i] && ind[i] < lpi->spx->nCols());
 	 lpi->spx->changeBounds(ind[i], lb[i], ub[i]);
+         assert(lpi->spx->lower(ind[i]) <= lpi->spx->upper(ind[i]));
       }
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -1858,12 +2008,15 @@ SCIP_RETCODE SCIPlpiChgSides(
       {
 	 assert(0 <= ind[i] && ind[i] < lpi->spx->nRows());
 	 lpi->spx->changeRange(ind[i], lhs[i], rhs[i]);
+         assert(lpi->spx->lhs(ind[i]) <= lpi->spx->rhs(ind[i]));
       }
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -1945,8 +2098,10 @@ SCIP_RETCODE SCIPlpiChgObj(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -2001,14 +2156,17 @@ SCIP_RETCODE SCIPlpiScaleRow(
 
       /* create the new row */
       LPRow lprow(lhs, rowvec, rhs);
-   
+
       /* change the row in the LP */
       lpi->spx->changeRow(row, lprow);
+      assert(lpi->spx->lhs(row) <= lpi->spx->rhs(row));
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -2070,14 +2228,17 @@ SCIP_RETCODE SCIPlpiScaleCol(
 
       /* create the new col (in LPCol's constructor, the upper bound is given first!) */
       LPCol lpcol(obj, colvec, ub, lb);
-   
+
       /* change the col in the LP */
       lpi->spx->changeCol(col, lpcol);
+      assert(lpi->spx->lower(col) <= lpi->spx->upper(col));
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -2339,6 +2500,23 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    SCIPdebugMessage("getting row names %d to %d\n", firstrow, lastrow);
 
    lpi->spx->getRowNames(firstrow, lastrow, rownames, namestorage, namestoragesize, storageleft);
+
+   return SCIP_OKAY;
+}
+
+/** gets objective sense of the LP */
+SCIP_RETCODE SCIPlpiGetObjsen(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetObjsen()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(objsen != NULL);
+
+   *objsen = (lpi->spx->getSense() == SPxLP::MINIMIZE) ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE;
 
    return SCIP_OKAY;
 }
@@ -2681,12 +2859,13 @@ SCIP_RETCODE lpiStrongbranch(
    lpi->spx->setType( lpi->spx->rep() == SPxSolver::ROW ? SPxSolver::ENTER : SPxSolver::LEAVE);
 
    /* down branch */
-   newub = EPSCEIL(psol-1.0, lpi->spx->getFeastol());
+   newub = EPSCEIL(psol-1.0, lpi->spx->feastol());
    if( newub >= oldlb - 0.5 )
    {
       SCIPdebugMessage("strong branching down on x%d (%g) with %d iterations\n", col, psol, itlim);
 
       spx->changeUpper(col, newub);
+      assert(spx->lower(col) <= spx->upper(col));
 
       spx->setIterationLimit(itlim);
       do
@@ -2745,6 +2924,7 @@ SCIP_RETCODE lpiStrongbranch(
       while( fromparentbasis );
 
       spx->changeUpper(col, oldub);
+      assert(spx->lower(col) <= spx->upper(col));
    }
    else
    {
@@ -2755,12 +2935,13 @@ SCIP_RETCODE lpiStrongbranch(
    /* up branch */
    if( !error )
    {
-      newlb = EPSFLOOR(psol+1.0, lpi->spx->getFeastol());
+      newlb = EPSFLOOR(psol+1.0, lpi->spx->feastol());
       if( newlb <= oldub + 0.5 )
       {
          SCIPdebugMessage("strong branching  up  on x%d (%g) with %d iterations\n", col, psol, itlim);
-      
+
          spx->changeLower(col, newlb);
+         assert(spx->lower(col) <= spx->upper(col));
 
          spx->setIterationLimit(itlim);
          do
@@ -2819,6 +3000,7 @@ SCIP_RETCODE lpiStrongbranch(
          while( fromparentbasis );
 
          spx->changeLower(col, oldlb);
+         assert(spx->lower(col) <= spx->upper(col));
       }
       else
       {
@@ -2832,7 +3014,7 @@ SCIP_RETCODE lpiStrongbranch(
 
    if( error )
    {
-      SCIPerrorMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));
+      SCIPdebugMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));
       return SCIP_LPERROR;
    }
 
@@ -2854,8 +3036,17 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
+   SCIP_RETCODE retcode;
+
    /* pass call on to lpiStrongbranch() */
-   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+   retcode = lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter);
+
+   /* pass SCIP_LPERROR to SCIP without a back trace */
+   if( retcode == SCIP_LPERROR )
+      return SCIP_LPERROR;
+
+   /* evaluate retcode */
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -2876,6 +3067,8 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
+   SCIP_RETCODE retcode;
+
    assert( iter != NULL );
    assert( cols != NULL );
    assert( psols != NULL );
@@ -2891,7 +3084,14 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    for (int j = 0; j < ncols; ++j)
    {
       /* pass call on to lpiStrongbranch() */
-      SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
+      retcode = lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter);
+
+      /* pass SCIP_LPERROR to SCIP without a back trace */
+      if( retcode == SCIP_LPERROR )
+         return SCIP_LPERROR;
+
+      /* evaluate retcode */
+      SCIP_CALL( retcode );
    }
    return SCIP_OKAY;
 }
@@ -2911,9 +3111,18 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
+   SCIP_RETCODE retcode;
+
    /* pass call on to lpiStrongbranch() */
-   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
-   
+   retcode = lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter);
+
+   /* pass SCIP_LPERROR to SCIP without a back trace */
+   if( retcode == SCIP_LPERROR )
+      return SCIP_LPERROR;
+
+   /* evaluate retcode */
+   SCIP_CALL( retcode );
+
    return SCIP_OKAY;
 }
 
@@ -2933,6 +3142,8 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
+   SCIP_RETCODE retcode;
+
    assert( iter != NULL );
    assert( cols != NULL );
    assert( psols != NULL );
@@ -2948,8 +3159,16 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    for (int j = 0; j < ncols; ++j)
    {
       /* pass call on to lpiStrongbranch() */
-      SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
+      retcode = lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter);
+
+      /* pass SCIP_LPERROR to SCIP without a back trace */
+      if( retcode == SCIP_LPERROR )
+         return SCIP_LPERROR;
+
+      /* evaluate retcode */
+      SCIP_CALL( retcode );
    }
+
    return SCIP_OKAY;
 }
 /**@} */
@@ -3024,7 +3243,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2))
+#if ((SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 150)
    return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED);
 #else
    return FALSE;
@@ -3303,8 +3522,10 @@ SCIP_RETCODE SCIPlpiGetSol(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -3322,7 +3543,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2))
+#if ((SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 150)
    try
    {
       Vector tmp(lpi->spx->nCols(), ray);
@@ -3330,8 +3551,10 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -3360,8 +3583,10 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -3385,8 +3610,10 @@ SCIP_RETCODE SCIPlpiGetIterations(
 }
 
 /** gets information about the quality of an LP solution
- * Such information is usually only available, if also a (maybe not optimal) solution is available.
- * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+ *
+ *  Such information is usually only available, if also a (maybe not optimal) solution is available.
+ *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ */
 extern
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3496,7 +3723,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          {
          case SPxSolver::BASIC:
             rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
-            break;	  
+            break;
          case SPxSolver::FIXED:
          case SPxSolver::ON_LOWER:
             rstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
@@ -3510,6 +3737,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          default:
             SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -3523,7 +3751,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          {
          case SPxSolver::BASIC:
             cstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
-            break;	  
+            break;
          case SPxSolver::FIXED:
 	    /* Get reduced cost estimation. If the estimation is not correct this should not hurt:
 	     * If the basis is loaded into SoPlex again, the status is converted to FIXED again; in
@@ -3548,6 +3776,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          default:
             SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -3598,6 +3827,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -3620,9 +3850,12 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
+
    SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );
+   lpi->spx->updateStatus();
 
    delete[] spxcstat;
    delete[] spxrstat;
@@ -3736,8 +3969,10 @@ SCIP_RETCODE prepareFactorization(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
    return SCIP_OKAY;
@@ -3791,8 +4026,10 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -3851,8 +4088,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -3957,8 +4196,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_LPERROR;
    }
 
@@ -4052,9 +4293,22 @@ SCIP_RETCODE SCIPlpiSetState(
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
 
-   /* extend the basis to the current LP */
+   /* extend the basis to the current LP beyond the previously existing columns */
    for( i = lpistate->ncols; i < lpncols; ++i )
-      lpi->cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/ /**@todo this has to be corrected for lb = -infinity */
+   {
+      SCIP_Real bnd = lpi->spx->lower(i);
+      if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+      {
+         /* if lower bound is +/- infinity -> try upper bound */
+         bnd = lpi->spx->lower(i);
+         if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+            lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /* variable is free */
+         else
+            lpi->cstat[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+      }
+      else
+         lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+   }
    for( i = lpistate->nrows; i < lpnrows; ++i )
       lpi->rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
 
@@ -4080,10 +4334,12 @@ SCIP_RETCODE SCIPlpiClearState(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       assert( lpi->spx->getStatus() != SPxSolver::OPTIMAL );
-      return SCIP_ERROR;
+      return SCIP_LPERROR;
    }
 
    return SCIP_OKAY;
@@ -4129,7 +4385,7 @@ SCIP_RETCODE SCIPlpiReadState(
    bool success;
    SOPLEX_TRY( lpi->messagehdlr, success = lpi->spx->readBasisFile(fname, 0, 0) );
 
-   return success ? SCIP_OKAY : SCIP_ERROR;
+   return success ? SCIP_OKAY : SCIP_LPERROR;
 }
 
 /** writes LP state (like basis information) to a file */
@@ -4146,7 +4402,8 @@ SCIP_RETCODE SCIPlpiWriteState(
    SOPLEX_TRY( lpi->messagehdlr, res = lpi->spx->writeBasisFile(fname, 0, 0) );
 
    if ( ! res )
-      return SCIP_ERROR;
+      return SCIP_LPERROR;
+
    return SCIP_OKAY;
 }
 
@@ -4286,8 +4543,13 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      *dval = lpi->spx->delta();
+      *dval = lpi->spx->feastol();
       break;
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
+   case SCIP_LPPAR_DUALFEASTOL:
+      *dval = lpi->spx->opttol();
+      break;
+#endif
    case SCIP_LPPAR_LOBJLIM:
       *dval = lpi->spx->getObjLoLimit();
       break;
@@ -4303,7 +4565,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
-   
+
    return SCIP_OKAY;
 }
 
@@ -4322,9 +4584,13 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      lpi->spx->setDelta(dval);
       lpi->spx->setFeastol(dval);
       break;
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
+   case SCIP_LPPAR_DUALFEASTOL:
+      lpi->spx->setOpttol(dval);
+      break;
+#endif
    case SCIP_LPPAR_LOBJLIM:
       lpi->spx->setObjLoLimit(dval);
       break;
@@ -4430,8 +4696,10 @@ SCIP_RETCODE SCIPlpiReadLP(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();      
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_READERROR;
    }
    
@@ -4455,8 +4723,10 @@ SCIP_RETCODE SCIPlpiWriteLP(
    }
    catch(SPxException x)
    {
+#ifndef NDEBUG
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
       return SCIP_WRITEERROR;
    }
 

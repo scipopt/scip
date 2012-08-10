@@ -41,7 +41,7 @@
 /** converts CPU clock ticks into seconds */
 static
 SCIP_Real cputime2sec(
-   clock_t          cputime             /**< clock ticks for CPU time */
+   clock_t               cputime             /**< clock ticks for CPU time */
    )
 {
    clock_t clocks_per_second;
@@ -83,7 +83,7 @@ void sec2cputime(
 
    assert(cputime != NULL);
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
    clocks_per_second = 100;
 #else
 #ifndef CLK_TCK

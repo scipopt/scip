@@ -18,6 +18,12 @@
  * @brief  constraint handler for disjunction constraints
  * @author Stefan Heinz
  * @author Michael Winkler
+ *
+ * A disjunction constraint \f$ C \f$ is a constraint of the form
+ * \f[
+ *   C = C_1 \vee \dots \vee C_n
+ * \f]
+ *  where all the \f$ C_i \f$ are individual constraints themselves.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -33,7 +39,7 @@ extern "C" {
 #endif
 
 /** creates the handler for disjunction constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -42,13 +48,14 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsDisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int                   nconss,             /**< number of initial constraints in disjunction */
    SCIP_CONS**           conss,              /**< initial constraint in disjunction */
+   SCIP_CONS*            relaxcons,          /**< a conjunction constraint containing the linear relaxation of the disjunction constraint, or NULL */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
@@ -61,12 +68,29 @@ SCIP_RETCODE SCIPcreateConsDisjunction(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic             /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    );
 
+/** creates and captures a cumulative constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsDisjunction(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsDisjunction() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicDisjunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nconss,             /**< number of initial constraints in disjunction */
+   SCIP_CONS**           conss,              /**< initial constraint in disjunction */
+   SCIP_CONS*            relaxcons           /**< a conjunction constraint containing the linear relaxation of the disjunction constraint, or NULL */
+   );
+
 /** adds constraint to the disjunction of constraints */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddConsElemDisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< disjunction constraint */

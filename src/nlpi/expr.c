@@ -174,6 +174,8 @@ const char* curvnames[4] =
       "linear"
    };
 
+#undef SCIPexprcurvAdd
+
 /* gives curvature for a sum of two functions with given curvature */
 SCIP_EXPRCURV SCIPexprcurvAdd(
    SCIP_EXPRCURV         curv1,              /**< curvature of first summand */
@@ -4763,6 +4765,284 @@ SCIP_RETCODE exprsimplifyUnconvertPolynomials(
 /**@name Expression methods */
 /**@{ */
 
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPexprGetOperator
+#undef SCIPexprGetNChildren
+#undef SCIPexprGetChildren
+#undef SCIPexprGetOpIndex
+#undef SCIPexprGetOpReal
+#undef SCIPexprGetOpData
+#undef SCIPexprGetRealPowerExponent
+#undef SCIPexprGetIntPowerExponent
+#undef SCIPexprGetSignPowerExponent
+#undef SCIPexprGetLinearCoefs
+#undef SCIPexprGetLinearConstant
+#undef SCIPexprGetQuadElements
+#undef SCIPexprGetQuadConstant
+#undef SCIPexprGetQuadLinearCoefs
+#undef SCIPexprGetNQuadElements
+#undef SCIPexprGetMonomials
+#undef SCIPexprGetNMonomials
+#undef SCIPexprGetPolynomialConstant
+#undef SCIPexprGetMonomialCoef
+#undef SCIPexprGetMonomialNFactors
+#undef SCIPexprGetMonomialChildIndices
+#undef SCIPexprGetMonomialExponents
+
+/** gives operator of expression */
+SCIP_EXPROP SCIPexprGetOperator(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->op;
+}
+
+/** gives number of children of an expression */
+int SCIPexprGetNChildren(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->nchildren;
+}
+
+/** gives pointer to array with children of an expression */
+SCIP_EXPR** SCIPexprGetChildren(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->children;
+}
+
+/** gives index belonging to a SCIP_EXPR_VARIDX or SCIP_EXPR_PARAM operand */
+int SCIPexprGetOpIndex(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_VARIDX || expr->op == SCIP_EXPR_PARAM);
+
+   return expr->data.intval;
+}
+
+/** gives real belonging to a SCIP_EXPR_CONST operand */
+SCIP_Real SCIPexprGetOpReal(
+   SCIP_EXPR* expr                           /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_CONST);
+
+   return expr->data.dbl;
+}
+
+/** gives void* belonging to a complex operand */
+void* SCIPexprGetOpData(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op >= SCIP_EXPR_SUM); /* only complex operands store their data as void* */
+
+   return expr->data.data;
+}
+
+/** gives exponent belonging to a SCIP_EXPR_REALPOWER expression */
+SCIP_Real SCIPexprGetRealPowerExponent(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_REALPOWER);
+
+   return expr->data.dbl;
+}
+
+/** gives exponent belonging to a SCIP_EXPR_INTPOWER expression */
+int SCIPexprGetIntPowerExponent(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_INTPOWER);
+
+   return expr->data.intval;
+}
+
+/** gives exponent belonging to a SCIP_EXPR_SIGNPOWER expression */
+SCIP_Real SCIPexprGetSignPowerExponent(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_SIGNPOWER);
+
+   return expr->data.dbl;
+}
+
+/** gives linear coefficients belonging to a SCIP_EXPR_LINEAR expression */
+SCIP_Real* SCIPexprGetLinearCoefs(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_LINEAR);
+   assert(expr->data.data != NULL);
+
+   /* the coefficients are stored in the first nchildren elements of the array stored as expression data */
+   return (SCIP_Real*)expr->data.data;
+}
+
+/** gives constant belonging to a SCIP_EXPR_LINEAR expression */
+SCIP_Real SCIPexprGetLinearConstant(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_LINEAR);
+   assert(expr->data.data != NULL);
+
+   /* the constant is stored in the nchildren's element of the array stored as expression data */
+   return ((SCIP_Real*)expr->data.data)[expr->nchildren];
+}
+
+/** gives quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
+SCIP_QUADELEM* SCIPexprGetQuadElements(
+   SCIP_EXPR*            expr                /**< quadratic expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_QUADRATIC);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->quadelems;
+}
+
+/** gives constant belonging to a SCIP_EXPR_QUADRATIC expression */
+SCIP_Real SCIPexprGetQuadConstant(
+   SCIP_EXPR*            expr                /**< quadratic expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_QUADRATIC);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->constant;
+}
+
+/** gives linear coefficients belonging to a SCIP_EXPR_QUADRATIC expression
+ * can be NULL if all coefficients are 0.0 */
+SCIP_Real* SCIPexprGetQuadLinearCoefs(
+   SCIP_EXPR*            expr                /**< quadratic expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_QUADRATIC);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->lincoefs;
+}
+
+/** gives number of quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
+int SCIPexprGetNQuadElements(
+   SCIP_EXPR*            expr                /**< quadratic expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_QUADRATIC);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->nquadelems;
+}
+
+/** gives the monomials belonging to a SCIP_EXPR_POLYNOMIAL expression */
+SCIP_EXPRDATA_MONOMIAL** SCIPexprGetMonomials(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_POLYNOMIAL);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data)->monomials;
+}
+
+/** gives the number of monomials belonging to a SCIP_EXPR_POLYNOMIAL expression */
+int SCIPexprGetNMonomials(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_POLYNOMIAL);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data)->nmonomials;
+}
+
+/** gives the constant belonging to a SCIP_EXPR_POLYNOMIAL expression */
+SCIP_Real SCIPexprGetPolynomialConstant(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_POLYNOMIAL);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data)->constant;
+}
+
+/** gets coefficient of a monomial */
+SCIP_Real SCIPexprGetMonomialCoef(
+   SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
+   )
+{
+   assert(monomial != NULL);
+
+   return monomial->coef;
+}
+
+/** gets number of factors of a monomial */
+int SCIPexprGetMonomialNFactors(
+   SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
+   )
+{
+   assert(monomial != NULL);
+
+   return monomial->nfactors;
+}
+
+/** gets indices of children corresponding to factors of a monomial */
+int* SCIPexprGetMonomialChildIndices(
+   SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
+   )
+{
+   assert(monomial != NULL);
+
+   return monomial->childidxs;
+}
+
+/** gets exponents in factors of a monomial */
+SCIP_Real* SCIPexprGetMonomialExponents(
+   SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
+   )
+{
+   assert(monomial != NULL);
+
+   return monomial->exponents;
+}
+
+
+
 /** creates a simple expression */
 SCIP_RETCODE SCIPexprCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
@@ -5009,100 +5289,25 @@ void SCIPexprFreeDeep(
    BMSfreeBlockMemory(blkmem, expr);
 }
 
-/** gives operator of expression */
-SCIP_EXPROP SCIPexprGetOperator(
-   SCIP_EXPR*            expr                /**< expression */
+/** frees an expression but not its children */
+void SCIPexprFreeShallow(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr                /**< pointer to expression to free */
    )
 {
-   assert(expr != NULL);
+   assert(blkmem != NULL);
+   assert(expr   != NULL);
+   assert(*expr  != NULL);
 
-   return expr->op;
-}
+   /* call operands data free callback, if given */
+   if( exprOpTable[(*expr)->op].freedata != NULL )
+   {
+      exprOpTable[(*expr)->op].freedata(blkmem, (*expr)->nchildren, (*expr)->data);
+   }
 
-/** gives number of children of an expression */
-int SCIPexprGetNChildren(
-   SCIP_EXPR*            expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*expr)->children, (*expr)->nchildren);
 
-   return expr->nchildren;
-}
-
-/** gives pointer to array with children of an expression */
-SCIP_EXPR** SCIPexprGetChildren(
-   SCIP_EXPR*            expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-
-   return expr->children;
-}
-
-/** gives index belonging to a SCIP_EXPR_VARIDX or SCIP_EXPR_PARAM operand */
-int SCIPexprGetOpIndex(
-   SCIP_EXPR*            expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op == SCIP_EXPR_VARIDX || expr->op == SCIP_EXPR_PARAM);
-
-   return expr->data.intval;
-}
-
-/** gives real belonging to a SCIP_EXPR_CONST operand */ 
-SCIP_Real SCIPexprGetOpReal(
-   SCIP_EXPR* expr                           /**< expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op == SCIP_EXPR_CONST);
-
-   return expr->data.dbl;
-}
-
-/** gives void* belonging to a complex operand */
-void* SCIPexprGetOpData(
-   SCIP_EXPR*            expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op >= SCIP_EXPR_SUM); /* only complex operands store their data as void* */
-
-   return expr->data.data;
-}
-
-/** gives exponent belonging to a SCIP_EXPR_REALPOWER expression */
-SCIP_Real SCIPexprGetRealPowerExponent(
-   SCIP_EXPR*            expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op == SCIP_EXPR_REALPOWER);
-
-   return expr->data.dbl;
-}
-
-/** gives exponent belonging to a SCIP_EXPR_INTPOWER expression */
-int SCIPexprGetIntPowerExponent(
-   SCIP_EXPR*            expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op == SCIP_EXPR_INTPOWER);
-
-   return expr->data.intval;
-}
-
-/** gives exponent belonging to a SCIP_EXPR_SIGNPOWER expression */
-SCIP_Real SCIPexprGetSignPowerExponent(
-   SCIP_EXPR*            expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op == SCIP_EXPR_SIGNPOWER);
-
-   return expr->data.dbl;
+   BMSfreeBlockMemory(blkmem, expr);
 }
 
 /** creates a SCIP_EXPR_LINEAR expression that is (affine) linear in its children: constant + sum_i coef_i child_i */
@@ -5142,30 +5347,49 @@ SCIP_RETCODE SCIPexprCreateLinear(
    return SCIP_OKAY;
 }
 
-/** gives linear coefficients belonging to a SCIP_EXPR_LINEAR expression */
-SCIP_Real* SCIPexprGetLinearCoefs(
-   SCIP_EXPR*            expr                /**< expression */
+/** adds new terms to a linear expression */
+SCIP_RETCODE SCIPexprAddToLinear(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< linear expression */
+   int                   nchildren,          /**< number of children to add */
+   SCIP_Real*            coefs,              /**< coefficients of additional children */
+   SCIP_EXPR**           children,           /**< additional children expressions */
+   SCIP_Real             constant            /**< constant to add */
    )
 {
+   SCIP_Real* data;
+
+   assert(blkmem != NULL);
    assert(expr != NULL);
    assert(expr->op == SCIP_EXPR_LINEAR);
-   assert(expr->data.data != NULL);
+   assert(nchildren >= 0);
+   assert(coefs != NULL || nchildren == 0);
+   assert(children != NULL || nchildren == 0);
 
-   /* the coefficients are stored in the first nchildren elements of the array stored as expression data */
-   return (SCIP_Real*)expr->data.data;
-}
+   data = (SCIP_Real*)expr->data.data;
+   assert(data != NULL);
 
-/** gives constant belonging to a SCIP_EXPR_LINEAR expression */
-SCIP_Real SCIPexprGetLinearConstant(
-   SCIP_EXPR*            expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op == SCIP_EXPR_LINEAR);
-   assert(expr->data.data != NULL);
+   /* handle simple case of adding a constant */
+   if( nchildren == 0 )
+   {
+      data[expr->nchildren] += constant;
 
-   /* the constant is stored in the nchildren's element of the array stored as expression data */
-   return ((SCIP_Real*)expr->data.data)[expr->nchildren];
+      return SCIP_OKAY;
+   }
+
+   /* add new children to expr's children array */
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &expr->children, expr->nchildren, expr->nchildren + nchildren) );
+   BMScopyMemoryArray(&expr->children[expr->nchildren], children, nchildren);  /*lint !e866*/
+
+   /* add constant and new coefs to expr's data array */
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &data, expr->nchildren + 1, expr->nchildren + nchildren + 1) );
+   data[expr->nchildren + nchildren] = data[expr->nchildren] + constant;
+   BMScopyMemoryArray(&data[expr->nchildren], coefs, nchildren);  /*lint !e866*/
+   expr->data.data = (void*)data;
+
+   expr->nchildren += nchildren;
+
+   return SCIP_OKAY;
 }
 
 /** creates a SCIP_EXPR_QUADRATIC expression: constant + sum_i coef_i child_i + sum_i coef_i child1_i child2_i */
@@ -5202,55 +5426,6 @@ SCIP_RETCODE SCIPexprCreateQuadratic(
    SCIP_CALL( exprCreate( blkmem, expr, SCIP_EXPR_QUADRATIC, nchildren, childrencopy, opdata) );
 
    return SCIP_OKAY;
-}
-
-/** gives quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
-SCIP_QUADELEM* SCIPexprGetQuadElements(
-   SCIP_EXPR*            expr                /**< quadratic expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op == SCIP_EXPR_QUADRATIC);
-   assert(expr->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->quadelems;
-}
-
-/** gives constant belonging to a SCIP_EXPR_QUADRATIC expression */
-SCIP_Real SCIPexprGetQuadConstant(
-   SCIP_EXPR*            expr                /**< quadratic expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op == SCIP_EXPR_QUADRATIC);
-   assert(expr->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->constant;
-}
-
-/** gives linear coefficients belonging to a SCIP_EXPR_QUADRATIC expression
- * can be NULL if all coefficients are 0.0 */
-SCIP_Real* SCIPexprGetQuadLinearCoefs(
-   SCIP_EXPR*            expr                /**< quadratic expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op == SCIP_EXPR_QUADRATIC);
-   assert(expr->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->lincoefs;
-}
-
-/** gives number of quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
-int SCIPexprGetNQuadElements(
-   SCIP_EXPR*            expr                /**< quadratic expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op == SCIP_EXPR_QUADRATIC);
-   assert(expr->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->nquadelems;
 }
 
 /** ensures that quadratic elements of a quadratic expression are sorted */
@@ -5298,42 +5473,6 @@ SCIP_RETCODE SCIPexprCreatePolynomial(
    SCIP_CALL( exprCreate( blkmem, expr, SCIP_EXPR_POLYNOMIAL, nchildren, childrencopy, opdata) );
 
    return SCIP_OKAY;
-}
-
-/** gives the monomials belonging to a SCIP_EXPR_POLYNOMIAL expression */
-SCIP_EXPRDATA_MONOMIAL** SCIPexprGetMonomials(
-   SCIP_EXPR*            expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op == SCIP_EXPR_POLYNOMIAL);
-   assert(expr->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data)->monomials;
-}
-
-/** gives the number of monomials belonging to a SCIP_EXPR_POLYNOMIAL expression */
-int SCIPexprGetNMonomials(
-   SCIP_EXPR*            expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op == SCIP_EXPR_POLYNOMIAL);
-   assert(expr->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data)->nmonomials;
-}
-
-/** gives the constant belonging to a SCIP_EXPR_POLYNOMIAL expression */
-SCIP_Real SCIPexprGetPolynomialConstant(
-   SCIP_EXPR*            expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->op == SCIP_EXPR_POLYNOMIAL);
-   assert(expr->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data)->constant;
 }
 
 /** adds an array of monomials to a SCIP_EXPR_POLYNOMIAL expression */
@@ -5777,46 +5916,6 @@ void SCIPexprFreeMonomial(
    assert((*monomial)->exponents == NULL);
 
    BMSfreeBlockMemory(blkmem, monomial);
-}
-
-/** gets coefficient of a monomial */
-SCIP_Real SCIPexprGetMonomialCoef(
-   SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
-   )
-{
-   assert(monomial != NULL);
-
-   return monomial->coef;
-}
-
-/** gets number of factors of a monomial */
-int SCIPexprGetMonomialNFactors(
-   SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
-   )
-{
-   assert(monomial != NULL);
-
-   return monomial->nfactors;
-}
-
-/** gets indices of children corresponding to factors of a monomial */
-int* SCIPexprGetMonomialChildIndices(
-   SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
-   )
-{
-   assert(monomial != NULL);
-
-   return monomial->childidxs;
-}
-
-/** gets exponents in factors of a monomial */
-SCIP_Real* SCIPexprGetMonomialExponents(
-   SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
-   )
-{
-   assert(monomial != NULL);
-
-   return monomial->exponents;
 }
 
 /** ensures that factors in a monomial are sorted */
@@ -6987,6 +7086,194 @@ void SCIPexprPrint(
 /**@name Expression tree methods */
 /**@{ */
 
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPexprtreeGetRoot
+#undef SCIPexprtreeGetNVars
+#undef SCIPexprtreeGetNParams
+#undef SCIPexprtreeGetParamVals
+#undef SCIPexprtreeSetParamVal
+#undef SCIPexprtreeGetInterpreterData
+#undef SCIPexprtreeSetInterpreterData
+#undef SCIPexprtreeFreeInterpreterData
+#undef SCIPexprtreeHasParam
+#undef SCIPexprtreeGetMaxDegree
+#undef SCIPexprtreeEval
+#undef SCIPexprtreeEvalInt
+#undef SCIPexprtreePrint
+
+/** returns root expression of an expression tree */
+SCIP_EXPR* SCIPexprtreeGetRoot(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->root;
+}
+
+/** returns number of variables in expression tree */
+int SCIPexprtreeGetNVars(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->nvars;
+}
+
+/** returns number of parameters in expression tree */
+int SCIPexprtreeGetNParams(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->nparams;
+}
+
+/** returns values of parameters or NULL if none */
+SCIP_Real* SCIPexprtreeGetParamVals(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->params;
+}
+
+/** sets value of a single parameter in expression tree */
+void SCIPexprtreeSetParamVal(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   int                   paramidx,           /**< index of parameter */
+   SCIP_Real             paramval            /**< new value of parameter */
+   )
+{
+   assert(tree != NULL);
+   assert(paramidx >= 0);
+   assert(paramidx < tree->nparams);
+   assert(tree->params != NULL);
+
+   tree->params[paramidx] = paramval;
+}
+
+/** gets data of expression tree interpreter, or NULL if not set */
+SCIP_EXPRINTDATA* SCIPexprtreeGetInterpreterData(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->interpreterdata;
+}
+
+/** sets data of expression tree interpreter */
+void SCIPexprtreeSetInterpreterData(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPRINTDATA*     interpreterdata     /**< expression interpreter data */
+   )
+{
+   assert(tree != NULL);
+   assert(interpreterdata != NULL);
+   assert(tree->interpreterdata == NULL);
+
+   tree->interpreterdata = interpreterdata;
+}
+
+/** frees data of expression tree interpreter, if any */
+SCIP_RETCODE SCIPexprtreeFreeInterpreterData(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   if( tree->interpreterdata != NULL )
+   {
+      SCIP_CALL( SCIPexprintFreeData(&tree->interpreterdata) );
+      assert(tree->interpreterdata == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** indicates whether there are parameterized constants (SCIP_EXPR_PARAM) in expression tree */
+SCIP_Bool SCIPexprtreeHasParam(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   assert(tree != NULL);
+
+   return SCIPexprHasParam(tree->root);
+}
+
+/** Gives maximal degree of expression in expression tree.
+ * If constant expression, gives 0,
+ * if linear expression, gives 1,
+ * if polynomial expression, gives its maximal degree,
+ * otherwise (nonpolynomial nonconstant expressions) gives at least SCIP_EXPR_DEGREEINFINITY.
+ */
+SCIP_RETCODE SCIPexprtreeGetMaxDegree(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   int*                  maxdegree           /**< buffer to store maximal degree */
+   )
+{
+   assert(tree != NULL);
+
+   SCIP_CALL( SCIPexprGetMaxDegree(tree->root, maxdegree) );
+
+   return SCIP_OKAY;
+}
+
+/** evaluates an expression tree w.r.t. a point */
+SCIP_RETCODE SCIPexprtreeEval(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real*            varvals,            /**< values for variables */
+   SCIP_Real*            val                 /**< buffer to store expression tree value */
+   )
+{
+   assert(tree    != NULL);
+   assert(varvals != NULL || tree->nvars == 0);
+   assert(val     != NULL);
+
+   SCIP_CALL( SCIPexprEval(tree->root, varvals, tree->params, val) );
+
+   return SCIP_OKAY;
+}
+
+/** evaluates an expression tree w.r.t. an interval */
+SCIP_RETCODE SCIPexprtreeEvalInt(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        varvals,            /**< intervals for variables */
+   SCIP_INTERVAL*        val                 /**< buffer to store expression tree value */
+   )
+{
+   assert(tree    != NULL);
+   assert(varvals != NULL || tree->nvars == 0);
+   assert(val     != NULL);
+
+   SCIP_CALL( SCIPexprEvalInt(tree->root, infinity, varvals, tree->params, val) );
+
+   return SCIP_OKAY;
+}
+
+/** prints an expression tree */
+void SCIPexprtreePrint(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file,               /**< file for printing, or NULL for stdout */
+   const char**          varnames,           /**< names of variables, or NULL for default names */
+   const char**          paramnames          /**< names of parameters, or NULL for default names */
+   )
+{
+   assert(tree != NULL);
+
+   SCIPexprPrint(tree->root, messagehdlr, file, varnames, paramnames, tree->params);
+}
+
+
 /** creates an expression tree */
 SCIP_RETCODE SCIPexprtreeCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
@@ -7092,61 +7379,6 @@ SCIP_RETCODE SCIPexprtreeFree(
    return SCIP_OKAY;
 }
 
-/** returns root expression of an expression tree */
-SCIP_EXPR* SCIPexprtreeGetRoot(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   )
-{
-   assert(tree != NULL);
-
-   return tree->root;
-}
-
-/** returns number of variables in expression tree */
-int SCIPexprtreeGetNVars(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   )
-{
-   assert(tree != NULL);
-
-   return tree->nvars;
-}
-
-/** returns number of parameters in expression tree */
-int SCIPexprtreeGetNParams(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   )
-{
-   assert(tree != NULL);
-
-   return tree->nparams;
-}
-
-/** returns values of parameters or NULL if none */
-SCIP_Real* SCIPexprtreeGetParamVals(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   )
-{
-   assert(tree != NULL);
-
-   return tree->params;
-}
-
-/** sets value of a single parameter in expression tree */
-void SCIPexprtreeSetParamVal(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   int                   paramidx,           /**< index of parameter */
-   SCIP_Real             paramval            /**< new value of parameter */
-   )
-{
-   assert(tree != NULL);
-   assert(paramidx >= 0);
-   assert(paramidx < tree->nparams);
-   assert(tree->params != NULL);
-
-   tree->params[paramidx] = paramval;
-}
-
 /** sets number and values of all parameters in expression tree */
 SCIP_RETCODE SCIPexprtreeSetParams(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -7177,70 +7409,6 @@ SCIP_RETCODE SCIPexprtreeSetParams(
    return SCIP_OKAY;
 }
 
-/** gets data of expression tree interpreter, or NULL if not set */
-SCIP_EXPRINTDATA* SCIPexprtreeGetInterpreterData(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   )
-{
-   assert(tree != NULL);
-
-   return tree->interpreterdata;
-}
-
-/** sets data of expression tree interpreter */
-void SCIPexprtreeSetInterpreterData(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_EXPRINTDATA*     interpreterdata     /**< expression interpreter data */
-   )
-{
-   assert(tree != NULL);
-   assert(interpreterdata != NULL);
-   assert(tree->interpreterdata == NULL);
-
-   tree->interpreterdata = interpreterdata;
-}
-
-/** frees data of expression tree interpreter, if any */
-SCIP_RETCODE SCIPexprtreeFreeInterpreterData(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   )
-{
-   if( tree->interpreterdata != NULL )
-   {
-      SCIP_CALL( SCIPexprintFreeData(&tree->interpreterdata) );
-      assert(tree->interpreterdata == NULL);
-   }
-
-   return SCIP_OKAY;
-}
-
-/** indicates whether there are parameterized constants (SCIP_EXPR_PARAM) in expression tree */
-SCIP_Bool SCIPexprtreeHasParam(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   )
-{
-   assert(tree != NULL);
-
-   return SCIPexprHasParam(tree->root);
-}
-
-/** Gives maximal degree of expression in expression tree.
- * If constant expression, gives 0,
- * if linear expression, gives 1,
- * if polynomial expression, gives its maximal degree,
- * otherwise (nonpolynomial nonconstant expressions) gives at least SCIP_EXPR_DEGREEINFINITY.
- */
-SCIP_RETCODE SCIPexprtreeGetMaxDegree(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   int*                  maxdegree           /**< buffer to store maximal degree */
-   )
-{
-   assert(tree != NULL);
-
-   SCIP_CALL( SCIPexprGetMaxDegree(tree->root, maxdegree) );
-
-   return SCIP_OKAY;
-}
 
 /** gives the number of usages for each variable in the expression tree */
 void SCIPexprtreeGetVarsUsage(
@@ -7333,39 +7501,6 @@ SCIP_RETCODE SCIPexprtreeAddExpr(
    return SCIP_OKAY;
 }
 
-/** evaluates an expression tree w.r.t. a point */
-SCIP_RETCODE SCIPexprtreeEval(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_Real*            varvals,            /**< values for variables */
-   SCIP_Real*            val                 /**< buffer to store expression tree value */
-   )
-{
-   assert(tree    != NULL);
-   assert(varvals != NULL || tree->nvars == 0);
-   assert(val     != NULL);
-
-   SCIP_CALL( SCIPexprEval(tree->root, varvals, tree->params, val) );
-
-   return SCIP_OKAY;
-}
-
-/** evaluates an expression tree w.r.t. an interval */
-SCIP_RETCODE SCIPexprtreeEvalInt(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_Real             infinity,           /**< value for infinity */
-   SCIP_INTERVAL*        varvals,            /**< intervals for variables */
-   SCIP_INTERVAL*        val                 /**< buffer to store expression tree value */
-   )
-{
-   assert(tree    != NULL);
-   assert(varvals != NULL || tree->nvars == 0);
-   assert(val     != NULL);
-
-   SCIP_CALL( SCIPexprEvalInt(tree->root, infinity, varvals, tree->params, val) );
-
-   return SCIP_OKAY;
-}
-
 /** tries to determine the curvature type of an expression tree w.r.t. given variable domains */
 SCIP_RETCODE SCIPexprtreeCheckCurvature(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -7423,20 +7558,6 @@ SCIP_RETCODE SCIPexprtreeSubstituteVars(
    SCIP_CALL( SCIPexprtreeFreeInterpreterData(tree) );
 
    return SCIP_OKAY;
-}
-
-/** prints an expression tree */
-void SCIPexprtreePrint(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   FILE*                 file,               /**< file for printing, or NULL for stdout */
-   const char**          varnames,           /**< names of variables, or NULL for default names */
-   const char**          paramnames          /**< names of parameters, or NULL for default names */
-   )
-{
-   assert(tree != NULL);
-
-   SCIPexprPrint(tree->root, messagehdlr, file, varnames, paramnames, tree->params);
 }
 
 /**@} */
@@ -8597,6 +8718,10 @@ void exprgraphNodePropagateBounds(
    /* if node is not enabled, then do nothing */
    if( !node->enabled )
       return;
+
+   /* tell children that they should propagate their bounds even if not tightened */
+   if( (node->boundstatus & SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTFORCE) == SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTFORCE )
+      minstrength = -1.0;
 
    /* we will do something, so reset boundstatus to "tightened-by-parent, but not recently" */
    node->boundstatus = SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENT;
@@ -11091,6 +11216,339 @@ void exprgraphUpdateVarNodeBounds(
 /**@name Expression graph node methods */
 /**@{ */
 
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPexprgraphCaptureNode
+#undef SCIPexprgraphIsNodeEnabled
+#undef SCIPexprgraphGetNodeNChildren
+#undef SCIPexprgraphGetNodeChildren
+#undef SCIPexprgraphGetNodeNParents
+#undef SCIPexprgraphGetNodeParents
+#undef SCIPexprgraphGetNodeDepth
+#undef SCIPexprgraphGetNodePosition
+#undef SCIPexprgraphGetNodeOperator
+#undef SCIPexprgraphGetNodeOperatorIndex
+#undef SCIPexprgraphGetNodeOperatorReal
+#undef SCIPexprgraphGetNodeVar
+#undef SCIPexprgraphGetNodeRealPowerExponent
+#undef SCIPexprgraphGetNodeIntPowerExponent
+#undef SCIPexprgraphGetNodeSignPowerExponent
+#undef SCIPexprgraphGetNodeLinearCoefs
+#undef SCIPexprgraphGetNodeLinearConstant
+#undef SCIPexprgraphGetNodeQuadraticConstant
+#undef SCIPexprgraphGetNodeQuadraticLinearCoefs
+#undef SCIPexprgraphGetNodeQuadraticQuadElements
+#undef SCIPexprgraphGetNodeQuadraticNQuadElements
+#undef SCIPexprgraphGetNodePolynomialMonomials
+#undef SCIPexprgraphGetNodePolynomialNMonomials
+#undef SCIPexprgraphGetNodePolynomialConstant
+#undef SCIPexprgraphGetNodeBounds
+#undef SCIPexprgraphGetNodeVal
+#undef SCIPexprgraphGetNodeCurvature
+
+/** captures node, i.e., increases number of uses */
+void SCIPexprgraphCaptureNode(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node to capture */
+   )
+{
+   assert(node->nuses >= 0);
+
+   SCIPdebugMessage("capture node %p\n", (void*)node);
+
+   ++node->nuses;
+}
+
+/** returns whether a node is currently enabled */
+SCIP_Bool SCIPexprgraphIsNodeEnabled(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node to enable */
+   )
+{
+   assert(node != NULL);
+
+   return node->enabled;
+}
+
+/** gets number of children of a node in an expression graph */
+int SCIPexprgraphGetNodeNChildren(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+
+   return node->nchildren;
+}
+
+/** gets children of a node in an expression graph */
+SCIP_EXPRGRAPHNODE** SCIPexprgraphGetNodeChildren(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+
+   return node->children;
+}
+
+/** gets number of parents of a node in an expression graph */
+int SCIPexprgraphGetNodeNParents(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+
+   return node->nparents;
+}
+
+/** gets parents of a node in an expression graph */
+SCIP_EXPRGRAPHNODE** SCIPexprgraphGetNodeParents(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+
+   return node->parents;
+}
+
+/** gets depth of node in expression graph */
+int SCIPexprgraphGetNodeDepth(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+
+   return node->depth;
+}
+
+/** gets position of node in expression graph at its depth level */
+int SCIPexprgraphGetNodePosition(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+
+   return node->pos;
+}
+
+/** gets operator of a node in an expression graph */
+SCIP_EXPROP SCIPexprgraphGetNodeOperator(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+
+   return node->op;
+}
+
+/** gives index belonging to a SCIP_EXPR_VARIDX or SCIP_EXPR_PARAM operand */
+int SCIPexprgraphGetNodeOperatorIndex(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_VARIDX || node->op == SCIP_EXPR_PARAM);
+
+   return node->data.intval;
+}
+
+/** gives real belonging to a SCIP_EXPR_CONST operand */
+SCIP_Real SCIPexprgraphGetNodeOperatorReal(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_CONST);
+
+   return node->data.dbl;
+}
+
+/** gives variable belonging to a SCIP_EXPR_VARIDX expression */
+void* SCIPexprgraphGetNodeVar(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(exprgraph != NULL);
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_VARIDX);
+   assert(node->data.intval >= 0);
+   assert(node->data.intval < exprgraph->nvars);
+
+   return exprgraph->vars[node->data.intval];
+}
+
+/** gives exponent belonging to a SCIP_EXPR_REALPOWER expression */
+SCIP_Real SCIPexprgraphGetNodeRealPowerExponent(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_REALPOWER);
+
+   return node->data.dbl;
+}
+
+/** gives exponent belonging to a SCIP_EXPR_INTPOWER expression */
+int SCIPexprgraphGetNodeIntPowerExponent(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_INTPOWER);
+
+   return node->data.intval;
+}
+
+/** gives exponent belonging to a SCIP_EXPR_SIGNPOWER expression */
+SCIP_Real SCIPexprgraphGetNodeSignPowerExponent(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_SIGNPOWER);
+
+   return node->data.dbl;
+}
+
+/** gives linear coefficients belonging to a SCIP_EXPR_LINEAR expression */
+SCIP_Real* SCIPexprgraphGetNodeLinearCoefs(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_LINEAR);
+
+   return (SCIP_Real*)node->data.data;
+}
+
+/** gives constant belonging to a SCIP_EXPR_LINEAR expression  */
+SCIP_Real SCIPexprgraphGetNodeLinearConstant(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_LINEAR);
+   assert(node->data.data != NULL);
+
+   return ((SCIP_Real*)node->data.data)[node->nchildren];
+}
+
+/** gives constant belonging to a SCIP_EXPR_QUADRATIC expression */
+SCIP_Real SCIPexprgraphGetNodeQuadraticConstant(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_QUADRATIC);
+   assert(node->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_QUADRATIC*)node->data.data)->constant;
+}
+
+/** gives linear coefficients belonging to a SCIP_EXPR_QUADRATIC expression, or NULL if all coefficients are 0.0 */
+SCIP_Real* SCIPexprgraphGetNodeQuadraticLinearCoefs(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_QUADRATIC);
+   assert(node->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_QUADRATIC*)node->data.data)->lincoefs;
+}
+
+/** gives quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
+SCIP_QUADELEM* SCIPexprgraphGetNodeQuadraticQuadElements(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_QUADRATIC);
+   assert(node->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_QUADRATIC*)node->data.data)->quadelems;
+}
+
+/** gives number of quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
+int SCIPexprgraphGetNodeQuadraticNQuadElements(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_QUADRATIC);
+   assert(node->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_QUADRATIC*)node->data.data)->nquadelems;
+}
+
+/** gives the monomials belonging to a SCIP_EXPR_POLYNOMIAL expression */
+SCIP_EXPRDATA_MONOMIAL** SCIPexprgraphGetNodePolynomialMonomials(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_POLYNOMIAL);
+   assert(node->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_POLYNOMIAL*)node->data.data)->monomials;
+}
+
+/** gives the number of monomials belonging to a SCIP_EXPR_POLYNOMIAL expression */
+int SCIPexprgraphGetNodePolynomialNMonomials(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_POLYNOMIAL);
+   assert(node->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_POLYNOMIAL*)node->data.data)->nmonomials;
+}
+
+/** gives the constant belonging to a SCIP_EXPR_POLYNOMIAL expression */
+SCIP_Real SCIPexprgraphGetNodePolynomialConstant(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+   assert(node->op == SCIP_EXPR_POLYNOMIAL);
+   assert(node->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_POLYNOMIAL*)node->data.data)->constant;
+}
+
+/** gets bounds of a node in an expression graph */
+SCIP_INTERVAL SCIPexprgraphGetNodeBounds(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+
+   return node->bounds;
+}
+
+/** gets value of expression associated to node from last evaluation call */
+SCIP_Real SCIPexprgraphGetNodeVal(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+
+   return node->value;
+}
+
+/** gets curvature of expression associated to node from last curvature check call */
+SCIP_EXPRCURV SCIPexprgraphGetNodeCurvature(
+   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
+   )
+{
+   assert(node != NULL);
+
+   return node->curv;
+}
+
 /** creates an expression graph node */
 SCIP_RETCODE SCIPexprgraphCreateNode(
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -12111,18 +12569,6 @@ SCIP_RETCODE SCIPexprgraphMoveNodeParents(
    return SCIP_OKAY;
 }
 
-/** captures node, i.e., increases number of uses */
-void SCIPexprgraphCaptureNode(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node to capture */
-   )
-{
-   assert(node->nuses >= 0);
-
-   SCIPdebugMessage("capture node %p\n", (void*)node);
-
-   ++node->nuses;
-}
-
 /** releases node, i.e., decreases number of uses
  * node is freed if no parents and no other uses
  * children are recursively released if they have no other parents
@@ -12302,56 +12748,6 @@ void SCIPexprgraphDisableNode(
       SCIPexprgraphDisableNode(exprgraph, node->children[i]);
 }
 
-/** returns whether a node is currently enabled */
-SCIP_Bool SCIPexprgraphIsNodeEnabled(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node to enable */
-   )
-{
-   assert(node != NULL);
-
-   return node->enabled;
-}
-
-/** gets number of children of a node in an expression graph */
-int SCIPexprgraphGetNodeNChildren(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-
-   return node->nchildren;
-}
-
-/** gets children of a node in an expression graph */
-SCIP_EXPRGRAPHNODE** SCIPexprgraphGetNodeChildren(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-
-   return node->children;
-}
-
-/** gets number of parents of a node in an expression graph */
-int SCIPexprgraphGetNodeNParents(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-
-   return node->nparents;
-}
-
-/** gets parents of a node in an expression graph */
-SCIP_EXPRGRAPHNODE** SCIPexprgraphGetNodeParents(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-
-   return node->parents;
-}
-
 /** returns whether the node has siblings in the expression graph */
 SCIP_Bool SCIPexprgraphHasNodeSibling(
    SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
@@ -12366,243 +12762,6 @@ SCIP_Bool SCIPexprgraphHasNodeSibling(
          return TRUE;
 
    return FALSE;
-}
-
-/** gets depth of node in expression graph */
-int SCIPexprgraphGetNodeDepth(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-
-   return node->depth;
-}
-
-/** gets position of node in expression graph at its depth level */
-int SCIPexprgraphGetNodePosition(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-
-   return node->pos;
-}
-
-/** gets operator of a node in an expression graph */
-SCIP_EXPROP SCIPexprgraphGetNodeOperator(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-
-   return node->op;
-}
-
-/** gives index belonging to a SCIP_EXPR_VARIDX or SCIP_EXPR_PARAM operand */
-int SCIPexprgraphGetNodeOperatorIndex(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_VARIDX || node->op == SCIP_EXPR_PARAM);
-
-   return node->data.intval;
-}
-
-/** gives real belonging to a SCIP_EXPR_CONST operand */
-SCIP_Real SCIPexprgraphGetNodeOperatorReal(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_CONST);
-
-   return node->data.dbl;
-}
-
-/** gives variable belonging to a SCIP_EXPR_VARIDX expression */
-void* SCIPexprgraphGetNodeVar(
-   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(exprgraph != NULL);
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_VARIDX);
-   assert(node->data.intval >= 0);
-   assert(node->data.intval < exprgraph->nvars);
-
-   return exprgraph->vars[node->data.intval];
-}
-
-/** gives exponent belonging to a SCIP_EXPR_REALPOWER expression */
-SCIP_Real SCIPexprgraphGetNodeRealPowerExponent(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_REALPOWER);
-
-   return node->data.dbl;
-}
-
-/** gives exponent belonging to a SCIP_EXPR_INTPOWER expression */
-int SCIPexprgraphGetNodeIntPowerExponent(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_INTPOWER);
-
-   return node->data.intval;
-}
-
-/** gives exponent belonging to a SCIP_EXPR_SIGNPOWER expression */
-SCIP_Real SCIPexprgraphGetNodeSignPowerExponent(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_SIGNPOWER);
-
-   return node->data.dbl;
-}
-
-/** gives linear coefficients belonging to a SCIP_EXPR_LINEAR expression */
-SCIP_Real* SCIPexprgraphGetNodeLinearCoefs(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_LINEAR);
-
-   return (SCIP_Real*)node->data.data;
-}
-
-/** gives constant belonging to a SCIP_EXPR_LINEAR expression  */
-SCIP_Real SCIPexprgraphGetNodeLinearConstant(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_LINEAR);
-   assert(node->data.data != NULL);
-
-   return ((SCIP_Real*)node->data.data)[node->nchildren];
-}
-
-/** gives constant belonging to a SCIP_EXPR_QUADRATIC expression */
-SCIP_Real SCIPexprgraphGetNodeQuadraticConstant(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_QUADRATIC);
-   assert(node->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_QUADRATIC*)node->data.data)->constant;
-}
-
-/** gives linear coefficients belonging to a SCIP_EXPR_QUADRATIC expression, or NULL if all coefficients are 0.0 */
-SCIP_Real* SCIPexprgraphGetNodeQuadraticLinearCoefs(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_QUADRATIC);
-   assert(node->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_QUADRATIC*)node->data.data)->lincoefs;
-}
-
-/** gives quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
-SCIP_QUADELEM* SCIPexprgraphGetNodeQuadraticQuadElements(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_QUADRATIC);
-   assert(node->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_QUADRATIC*)node->data.data)->quadelems;
-}
-
-/** gives number of quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
-int SCIPexprgraphGetNodeQuadraticNQuadElements(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_QUADRATIC);
-   assert(node->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_QUADRATIC*)node->data.data)->nquadelems;
-}
-
-/** gives the monomials belonging to a SCIP_EXPR_POLYNOMIAL expression */
-SCIP_EXPRDATA_MONOMIAL** SCIPexprgraphGetNodePolynomialMonomials(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_POLYNOMIAL);
-   assert(node->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_POLYNOMIAL*)node->data.data)->monomials;
-}
-
-/** gives the number of monomials belonging to a SCIP_EXPR_POLYNOMIAL expression */
-int SCIPexprgraphGetNodePolynomialNMonomials(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_POLYNOMIAL);
-   assert(node->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_POLYNOMIAL*)node->data.data)->nmonomials;
-}
-
-/** gives the constant belonging to a SCIP_EXPR_POLYNOMIAL expression */
-SCIP_Real SCIPexprgraphGetNodePolynomialConstant(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-   assert(node->op == SCIP_EXPR_POLYNOMIAL);
-   assert(node->data.data != NULL);
-
-   return ((SCIP_EXPRDATA_POLYNOMIAL*)node->data.data)->constant;
-}
-
-/** gets bounds of a node in an expression graph */
-SCIP_INTERVAL SCIPexprgraphGetNodeBounds(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-
-   return node->bounds;
-}
-
-/** gets value of expression associated to node from last evaluation call */
-SCIP_Real SCIPexprgraphGetNodeVal(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-
-   return node->value;
-}
-
-/** gets curvature of expression associated to node from last curvature check call */
-SCIP_EXPRCURV SCIPexprgraphGetNodeCurvature(
-   SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
-   )
-{
-   assert(node != NULL);
-
-   return node->curv;
 }
 
 /** returns whether all children of an expression graph node are variable nodes
@@ -12680,7 +12839,7 @@ void SCIPexprgraphTightenNodeBounds(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
    SCIP_EXPRGRAPHNODE*   node,               /**< node in expression graph with no parents */
    SCIP_INTERVAL         nodebounds,         /**< new bounds for node */
-   SCIP_Real             minstrength,        /**< minimal required relative bound strengthening in a node to trigger a propagation into children nodes */
+   SCIP_Real             minstrength,        /**< minimal required relative bound strengthening in a node to trigger a propagation into children nodes (set to negative value if propagation should always be triggered) */
    SCIP_Bool*            cutoff              /**< buffer to store whether a node's bounds were propagated to an empty interval */
    )
 {
@@ -12714,12 +12873,17 @@ void SCIPexprgraphTightenNodeBounds(
       return;
    }
 
-   /* if bounds are considerably improved or tightening leads to an empty interval,
-    * mark that node have recently tightened bounds
+   /* if minstrength is negative, always mark that node has recently tightened bounds,
+    * if bounds are considerably improved or tightening leads to an empty interval,
+    * mark that node has recently tightened bounds
     * if bounds are only slightly improved, set the status to tightened by parent,
-    * so next propagateVarBound round will reset the bounds */
-   if( isLbBetter(minstrength, nodebounds.inf, node->bounds.inf, node->bounds.sup) ||
-      (isUbBetter(minstrength, nodebounds.sup, node->bounds.inf, node->bounds.sup)) )
+    * so next propagateVarBound round will reset the bounds
+    */
+   if( minstrength < 0.0 )
+      node->boundstatus |= SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTFORCE;
+   else if(
+      isLbBetter(minstrength, nodebounds.inf, node->bounds.inf, node->bounds.sup) ||
+      isUbBetter(minstrength, nodebounds.sup, node->bounds.inf, node->bounds.sup) )
       node->boundstatus |= SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTRECENT;
    else if( nodebounds.inf > node->bounds.inf || nodebounds.sup < node->bounds.sup )
       node->boundstatus |= SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENT;
@@ -12859,6 +13023,198 @@ SCIP_RETCODE SCIPexprgraphUpdateNodeBoundsCurvature(
 
 /**@name Expression graph methods */
 /**@{ */
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPexprgraphGetDepth
+#undef SCIPexprgraphGetNNodes
+#undef SCIPexprgraphGetNodes
+#undef SCIPexprgraphGetNVars
+#undef SCIPexprgraphGetVars
+#undef SCIPexprgraphGetVarNodes
+#undef SCIPexprgraphSetVarNodeValue
+#undef SCIPexprgraphSetVarsBounds
+#undef SCIPexprgraphSetVarBounds
+#undef SCIPexprgraphSetVarNodeBounds
+#undef SCIPexprgraphSetVarNodeLb
+#undef SCIPexprgraphSetVarNodeUb
+#undef SCIPexprgraphGetVarsBounds
+
+/** get current maximal depth of expression graph */
+int SCIPexprgraphGetDepth(
+   SCIP_EXPRGRAPH*       exprgraph           /**< expression graph */
+   )
+{
+   assert(exprgraph != NULL);
+
+   return exprgraph->depth;
+}
+
+/** gets array with number of nodes at each depth of expression graph */
+int* SCIPexprgraphGetNNodes(
+   SCIP_EXPRGRAPH*       exprgraph           /**< expression graph */
+   )
+{
+   assert(exprgraph != NULL);
+
+   return exprgraph->nnodes;
+}
+
+/** gets nodes of expression graph, one array per depth */
+SCIP_EXPRGRAPHNODE*** SCIPexprgraphGetNodes(
+   SCIP_EXPRGRAPH*       exprgraph           /**< expression graph */
+   )
+{
+   assert(exprgraph != NULL);
+
+   return exprgraph->nodes;
+}
+
+/** gets number of variables in expression graph */
+int SCIPexprgraphGetNVars(
+   SCIP_EXPRGRAPH*       exprgraph           /**< pointer to expression graph that should be freed */
+   )
+{
+   assert(exprgraph != NULL);
+
+   return exprgraph->nvars;
+}
+
+/** gets array of variables in expression graph */
+void** SCIPexprgraphGetVars(
+   SCIP_EXPRGRAPH*       exprgraph           /**< pointer to expression graph that should be freed */
+   )
+{
+   assert(exprgraph != NULL);
+
+   return exprgraph->vars;
+}
+
+/** gets array of expression graph nodes corresponding to variables */
+SCIP_EXPRGRAPHNODE** SCIPexprgraphGetVarNodes(
+   SCIP_EXPRGRAPH*       exprgraph           /**< pointer to expression graph that should be freed */
+   )
+{
+   assert(exprgraph != NULL);
+
+   return exprgraph->varnodes;
+}
+
+/** sets value for a single variable given as expression graph node */
+void SCIPexprgraphSetVarNodeValue(
+   SCIP_EXPRGRAPHNODE*   varnode,            /**< expression graph node corresponding to variable */
+   SCIP_Real             value               /**< new value for variable */
+   )
+{
+   assert(varnode != NULL);
+   assert(varnode->op == SCIP_EXPR_VARIDX);
+
+   varnode->value = value;
+}
+
+/** sets bounds for variables */
+void SCIPexprgraphSetVarsBounds(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_INTERVAL*        varbounds           /**< new bounds for variables */
+   )
+{
+   assert(exprgraph != NULL);
+   assert(varbounds != NULL || exprgraph->nvars == 0);
+
+   BMScopyMemoryArray(exprgraph->varbounds, varbounds, exprgraph->nvars);
+}
+
+/** sets bounds for a single variable */
+void SCIPexprgraphSetVarBounds(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   void*                 var,                /**< variable */
+   SCIP_INTERVAL         varbounds           /**< new bounds of variable */
+   )
+{
+   int pos;
+
+   assert(exprgraph != NULL);
+   assert(var != NULL);
+   assert(SCIPhashmapExists(exprgraph->varidxs, var));
+
+   pos = (int)(size_t)SCIPhashmapGetImage(exprgraph->varidxs, var);
+   assert(pos < exprgraph->nvars);
+   assert(exprgraph->vars[pos] == var);
+
+   exprgraph->varbounds[pos] = varbounds;
+}
+
+/** sets bounds for a single variable given as expression graph node */
+void SCIPexprgraphSetVarNodeBounds(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   varnode,            /**< expression graph node corresponding to variable */
+   SCIP_INTERVAL         varbounds           /**< new bounds of variable */
+   )
+{
+   int pos;
+
+   assert(exprgraph != NULL);
+   assert(varnode != NULL);
+
+   pos = varnode->data.intval;
+   assert(pos >= 0);
+   assert(pos < exprgraph->nvars);
+   assert(exprgraph->varnodes[pos] == varnode);
+
+   exprgraph->varbounds[pos] = varbounds;
+}
+
+/** sets lower bound for a single variable given as expression graph node */
+void SCIPexprgraphSetVarNodeLb(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   varnode,            /**< expression graph node corresponding to variable */
+   SCIP_Real             lb                  /**< new lower bound for variable */
+   )
+{
+   int pos;
+
+   assert(exprgraph != NULL);
+   assert(varnode != NULL);
+
+   pos = varnode->data.intval;
+   assert(pos >= 0);
+   assert(pos < exprgraph->nvars);
+   assert(exprgraph->varnodes[pos] == varnode);
+
+   exprgraph->varbounds[pos].inf = lb;
+}
+
+/** sets upper bound for a single variable given as expression graph node */
+void SCIPexprgraphSetVarNodeUb(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   varnode,            /**< expression graph node corresponding to variable */
+   SCIP_Real             ub                  /**< new upper bound for variable */
+   )
+{
+   int pos;
+
+   assert(exprgraph != NULL);
+   assert(varnode != NULL);
+
+   pos = varnode->data.intval;
+   assert(pos >= 0);
+   assert(pos < exprgraph->nvars);
+   assert(exprgraph->varnodes[pos] == varnode);
+
+   exprgraph->varbounds[pos].sup = ub;
+}
+
+/** gets bounds that are stored for all variables */
+SCIP_INTERVAL* SCIPexprgraphGetVarsBounds(
+   SCIP_EXPRGRAPH*       exprgraph           /**< expression graph */
+   )
+{
+   return exprgraph->varbounds;
+}
 
 /** creates an empty expression graph */
 SCIP_RETCODE SCIPexprgraphCreate(
@@ -13534,66 +13890,6 @@ SCIP_Bool SCIPexprgraphFindConstNode(
    return TRUE;
 }
 
-/** get current maximal depth of expression graph */
-int SCIPexprgraphGetDepth(
-   SCIP_EXPRGRAPH*       exprgraph           /**< expression graph */
-   )
-{
-   assert(exprgraph != NULL);
-
-   return exprgraph->depth;
-}
-
-/** gets array with number of nodes at each depth of expression graph */
-int* SCIPexprgraphGetNNodes(
-   SCIP_EXPRGRAPH*       exprgraph           /**< expression graph */
-   )
-{
-   assert(exprgraph != NULL);
-
-   return exprgraph->nnodes;
-}
-
-/** gets nodes of expression graph, one array per depth */
-SCIP_EXPRGRAPHNODE*** SCIPexprgraphGetNodes(
-   SCIP_EXPRGRAPH*       exprgraph           /**< expression graph */
-   )
-{
-   assert(exprgraph != NULL);
-
-   return exprgraph->nodes;
-}
-
-/** gets number of variables in expression graph */
-int SCIPexprgraphGetNVars(
-   SCIP_EXPRGRAPH*       exprgraph           /**< pointer to expression graph that should be freed */
-   )
-{
-   assert(exprgraph != NULL);
-
-   return exprgraph->nvars;
-}
-
-/** gets array of variables in expression graph */
-void** SCIPexprgraphGetVars(
-   SCIP_EXPRGRAPH*       exprgraph           /**< pointer to expression graph that should be freed */
-   )
-{
-   assert(exprgraph != NULL);
-
-   return exprgraph->vars;
-}
-
-/** gets array of expression graph nodes corresponding to variables */
-SCIP_EXPRGRAPHNODE** SCIPexprgraphGetVarNodes(
-   SCIP_EXPRGRAPH*       exprgraph           /**< pointer to expression graph that should be freed */
-   )
-{
-   assert(exprgraph != NULL);
-
-   return exprgraph->varnodes;
-}
-
 /** prints an expression graph in dot format */
 SCIP_RETCODE SCIPexprgraphPrintDot(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
@@ -13662,118 +13958,6 @@ SCIP_RETCODE SCIPexprgraphEval(
       }
 
    return SCIP_OKAY;
-}
-
-/** sets value for a single variable given as expression graph node */
-void SCIPexprgraphSetVarNodeValue(
-   SCIP_EXPRGRAPHNODE*   varnode,            /**< expression graph node corresponding to variable */
-   SCIP_Real             value               /**< new value for variable */
-   )
-{
-   assert(varnode != NULL);
-   assert(varnode->op == SCIP_EXPR_VARIDX);
-
-   varnode->value = value;
-}
-
-/** sets bounds for variables */
-void SCIPexprgraphSetVarsBounds(
-   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
-   SCIP_INTERVAL*        varbounds           /**< new bounds for variables */
-   )
-{
-   assert(exprgraph != NULL);
-   assert(varbounds != NULL || exprgraph->nvars == 0);
-
-   BMScopyMemoryArray(exprgraph->varbounds, varbounds, exprgraph->nvars);
-}
-
-/** sets bounds for a single variable */
-void SCIPexprgraphSetVarBounds(
-   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
-   void*                 var,                /**< variable */
-   SCIP_INTERVAL         varbounds           /**< new bounds of variable */
-   )
-{
-   int pos;
-
-   assert(exprgraph != NULL);
-   assert(var != NULL);
-   assert(SCIPhashmapExists(exprgraph->varidxs, var));
-
-   pos = (int)(size_t)SCIPhashmapGetImage(exprgraph->varidxs, var);
-   assert(pos < exprgraph->nvars);
-   assert(exprgraph->vars[pos] == var);
-
-   exprgraph->varbounds[pos] = varbounds;
-}
-
-/** sets bounds for a single variable given as expression graph node */
-void SCIPexprgraphSetVarNodeBounds(
-   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
-   SCIP_EXPRGRAPHNODE*   varnode,            /**< expression graph node corresponding to variable */
-   SCIP_INTERVAL         varbounds           /**< new bounds of variable */
-   )
-{
-   int pos;
-
-   assert(exprgraph != NULL);
-   assert(varnode != NULL);
-
-   pos = varnode->data.intval;
-   assert(pos >= 0);
-   assert(pos < exprgraph->nvars);
-   assert(exprgraph->varnodes[pos] == varnode);
-
-   exprgraph->varbounds[pos] = varbounds;
-}
-
-/** sets lower bound for a single variable given as expression graph node */
-void SCIPexprgraphSetVarNodeLb(
-   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
-   SCIP_EXPRGRAPHNODE*   varnode,            /**< expression graph node corresponding to variable */
-   SCIP_Real             lb                  /**< new lower bound for variable */
-   )
-{
-   int pos;
-
-   assert(exprgraph != NULL);
-   assert(varnode != NULL);
-
-   pos = varnode->data.intval;
-   assert(pos >= 0);
-   assert(pos < exprgraph->nvars);
-   assert(exprgraph->varnodes[pos] == varnode);
-
-   exprgraph->varbounds[pos].inf = lb;
-}
-
-/** sets upper bound for a single variable given as expression graph node */
-void SCIPexprgraphSetVarNodeUb(
-   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
-   SCIP_EXPRGRAPHNODE*   varnode,            /**< expression graph node corresponding to variable */
-   SCIP_Real             ub                  /**< new upper bound for variable */
-   )
-{
-   int pos;
-
-   assert(exprgraph != NULL);
-   assert(varnode != NULL);
-
-   pos = varnode->data.intval;
-   assert(pos >= 0);
-   assert(pos < exprgraph->nvars);
-   assert(exprgraph->varnodes[pos] == varnode);
-
-   exprgraph->varbounds[pos].sup = ub;
-}
-
-/** gets bounds that are stored for all variables */
-SCIP_INTERVAL* SCIPexprgraphGetVarsBounds(
-   SCIP_EXPRGRAPH*       exprgraph           /**< expression graph */
-   )
-{
-   return exprgraph->varbounds;
 }
 
 /** propagates bound changes in variables forward through the expression graph */
@@ -13965,7 +14149,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    {
       FILE* file;
       file = fopen("exprgraph_beforesimplify.dot", "w");
-      SCIP_CALL( SCIPexprgraphPrintDot(exprgraph, file, NULL) );
+      SCIP_CALL( SCIPexprgraphPrintDot(exprgraph, messagehdlr, file, NULL) );
       fclose(file);
    }
 #endif
@@ -14111,7 +14295,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    {
       FILE* file;
       file = fopen("exprgraph_aftersimplify.dot", "w");
-      SCIP_CALL( SCIPexprgraphPrintDot(exprgraph, file, NULL) );
+      SCIP_CALL( SCIPexprgraphPrintDot(exprgraph, messagehdlr, file, NULL) );
       fclose(file);
    }
 #endif

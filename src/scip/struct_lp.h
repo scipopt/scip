@@ -180,9 +180,9 @@ struct SCIP_Col
 
 /** LP row
  *  The column vector of the LP row is partitioned into two parts: The first row->nlpcols columns in the cols array
- *  are the ones that belong to the current LP (row->cols[j]->lppos >= 0) and that are linked to the row   
+ *  are the ones that belong to the current LP (row->cols[j]->lppos >= 0) and that are linked to the row
  *  (row->linkpos[j] >= 0). The remaining row->len - row->nlpcols columns in the cols array are the ones that
- *  don't belong to the current LP (row->cols[j]->lppos == -1) or that are not linked to the row   
+ *  don't belong to the current LP (row->cols[j]->lppos == -1) or that are not linked to the row
  *  (row->linkpos[j] == -1).
  */
 struct SCIP_Row
@@ -207,6 +207,7 @@ struct SCIP_Row
    SCIP_Longint          validactivitybdsdomchg;/**< domain change number for which activity bound values are valid */
    SCIP_Longint          obsoletenode;       /**< last node where this row was removed due to aging */
    SCIP_ROWSOLVALS*      storedsolvals;      /**< values stored before entering diving or probing mode */
+   void*                 origin;             /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
    char*                 name;               /**< name of the row */
    SCIP_COL**            cols;               /**< columns of row entries, that may have a nonzero primal solution value */
    int*                  cols_index;         /**< copy of cols[i]->index for avoiding expensive dereferencing */
@@ -228,6 +229,7 @@ struct SCIP_Row
    int                   nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int                   numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
    int                   age;                /**< number of successive times this row was in LP and was not sharp in solution */
+   int                   rank;               /**< rank of the row (upper bound, to be precise) */
    unsigned int          basisstatus:2;      /**< basis status of row in last LP solution, invalid for non-LP rows */
    unsigned int          lpcolssorted:1;     /**< are the linked LP columns in the cols array sorted by non-decreasing index? */
    unsigned int          nonlpcolssorted:1;  /**< are the non-LP/not linked columns sorted by non-decreasing index? */
@@ -241,7 +243,8 @@ struct SCIP_Row
    unsigned int          modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
    unsigned int          removable:1;        /**< is row removable from the LP (due to aging or cleanup)? */
    unsigned int          inglobalcutpool:1;  /**< is row contained in the global cut pool? */
-   unsigned int          nlocks:18;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int          nlocks:16;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int          origintype:2;       /**< origin of row (0: unkown, 1: constraint handler, 2: separator) */
 };
 
 /** current LP data */
@@ -303,6 +306,8 @@ struct SCIP_Lp
    int                   nloosevars;         /**< number of loose variables in LP */
    int                   glbpseudoobjvalinf; /**< number of variables with infinite best bound in global pseudo solution */
    int                   pseudoobjvalinf;    /**< number of variables with infinite best bound in current pseudo solution */
+   int                   ndivingrows;        /**< number of rows when entering diving mode */
+   int                   divinglpiitlim;     /**< LPI iteration limit when entering diving mode */
    int                   lpiitlim;           /**< current iteration limit setting in LPI */
    int                   lpifastmip;         /**< current FASTMIP setting in LPI */
    int                   lpithreads;         /**< current THREADS setting in LPI */
@@ -320,8 +325,8 @@ struct SCIP_Lp
    SCIP_Bool             flushaddedrows;     /**< have LPI-rows been added in the last lpFlush() call? */
    SCIP_Bool             flushed;            /**< are all cached changes applied to the LP solver? */
    SCIP_Bool             solved;             /**< is current LP solved? */
-   SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
-   SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
+   SCIP_Bool             primalfeasible;     /**< is current LP solution (rather LPI state) primal feasible? */
+   SCIP_Bool             dualfeasible;       /**< is current LP solution (rather LPI state) dual feasible? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             rootlpisrelax;      /**< is root LP a relaxation of the problem and its solution value a valid global lower bound? */
    SCIP_Bool             isrelax;            /**< is the current LP a relaxation of the problem for which it has been solved and its 

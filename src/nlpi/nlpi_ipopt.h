@@ -63,6 +63,16 @@ void* SCIPgetNlpiOracleIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
    );
 
+/** sets modified default settings that are used when setting up an Ipopt problem
+ *
+ * Do not forget to add a newline after the last option in optionsstring.
+ */
+extern
+void SCIPsetModifiedDefaultSettingsIpopt(
+   SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
+   const char*           optionsstring       /**< string with options as in Ipopt options file */
+   );
+
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
  * It's here, because Ipopt is linked against Lapack.
  */

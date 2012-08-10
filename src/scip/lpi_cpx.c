@@ -45,16 +45,22 @@
       }                                                                 \
    }
 
+/* this macro is only called in functions returning SCIP_Bool; thus, we return FALSE if there is an error in optimized mode */
 #define ABORT_ZERO(x) { int _restat_;                                   \
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
          SCIPerrorMessage("LP Error: CPLEX returned %d\n", _restat_);   \
          SCIPABORT();                                                   \
+         return FALSE;                                                  \
       }                                                                 \
    }
 
-#define CPX_INT_MAX 2100000000 /* CPLEX doesn't accept larger values in integer parameters */
+#define CPX_INT_MAX      2100000000          /* CPLEX doesn't accept larger values in integer parameters */
 
+/* At several places we need to guarantee to have a factorization of an optimal basis and call the simplex to produce
+ * it. In a numerical perfect world, this should need no iterations. However, due to numerical inaccuracies after
+ * refactorization, it might be necessary to do a few extra pivot steps, in particular if FASTMIP is used. */
+#define CPX_REFACTORMAXITERS     50          /* maximal number of iterations allowed for producing a refactorization of the basis */
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
 #define COLS_PER_PACKET SCIP_DUALPACKETSIZE
@@ -63,7 +69,8 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 
 /* CPLEX parameter lists which can be changed */
 #define NUMINTPARAM  10
-static const int intparam[NUMINTPARAM] = {
+static const int intparam[NUMINTPARAM] =
+{
    CPX_PARAM_ADVIND,
    CPX_PARAM_ITLIM,
    CPX_PARAM_FASTMIP,
@@ -75,8 +82,10 @@ static const int intparam[NUMINTPARAM] = {
    CPX_PARAM_SCRIND,
    CPX_PARAM_THREADS
 };
+
 #define NUMDBLPARAM  7
-static const int dblparam[NUMDBLPARAM] = {
+static const int dblparam[NUMDBLPARAM] =
+{
    CPX_PARAM_EPRHS,
    CPX_PARAM_EPOPT,
    CPX_PARAM_BAREPCOMP,
@@ -85,7 +94,9 @@ static const int dblparam[NUMDBLPARAM] = {
    CPX_PARAM_TILIM,
    CPX_PARAM_EPMRK
 };
-static const double dblparammin[NUMDBLPARAM] = {
+
+static const double dblparammin[NUMDBLPARAM] =
+{
    +1e-09, /*CPX_PARAM_EPRHS*/
    +1e-09, /*CPX_PARAM_EPOPT*/
    +1e-12, /*CPX_PARAM_BAREPCOMP*/
@@ -143,7 +154,7 @@ struct SCIP_LPi
                                               *   we set the thread count to 1. In order to fulfill assert in lp.c,
                                               *   we have to return the value set by SCIP and not the real thread count */
 #endif
-   SCIP_MESSAGEHDLR*        messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
 /** LPi state stores basis information */
@@ -322,6 +333,12 @@ SCIP_RETCODE setBase(
    /* load basis information into CPLEX */
    CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
 
+   /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
+   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
+   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC);
+   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
+   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
+
    return SCIP_OKAY;
 }
 
@@ -353,9 +370,9 @@ int rowpacketNum(
 /** store row and column basis status in a packed LPi state object */
 static
 void lpistatePack(
-   SCIP_LPISTATE*       lpistate,            /**< pointer to LPi state data */
-   const int*           cstat,               /**< basis status of columns in unpacked format */
-   const int*           rstat                /**< basis status of rows in unpacked format */
+   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const int*            cstat,              /**< basis status of columns in unpacked format */
+   const int*            rstat               /**< basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -369,9 +386,9 @@ void lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   const SCIP_LPISTATE* lpistate,            /**< pointer to LPi state data */
-   int*                 cstat,               /**< buffer for storing basis status of columns in unpacked format */
-   int*                 rstat                /**< buffer for storing basis status of rows in unpacked format */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
+   int*                  cstat,              /**< buffer for storing basis status of columns in unpacked format */
+   int*                  rstat               /**< buffer for storing basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -466,7 +483,8 @@ SCIP_RETCODE checkParameterValues(
 
    SCIP_CALL( getParameterValues(lpi, &par) );
    for( i = 0; i < NUMINTPARAM; ++i )
-      assert(lpi->curparam.intparval[i] == par.intparval[i]);
+      assert(lpi->curparam.intparval[i] == par.intparval[i]
+         || (lpi->curparam.intparval[i] == CPX_INT_MAX && par.intparval[i] >= CPX_INT_MAX));
    for( i = 0; i < NUMDBLPARAM; ++i )
       assert(MAX(lpi->curparam.dblparval[i], dblparammin[i]) == par.dblparval[i]); /*lint !e777*/
 #endif
@@ -542,8 +560,10 @@ int getIntParam(
    assert(lpi != NULL);
 
    for( i = 0; i < NUMINTPARAM; ++i )
+   {
       if( intparam[i] == param )
          return lpi->cpxparam.intparval[i];
+   }
 
    SCIPerrorMessage("unknown CPLEX integer parameter\n");
    SCIPABORT();
@@ -594,11 +614,13 @@ void setIntParam(
    assert(lpi != NULL);
 
    for( i = 0; i < NUMINTPARAM; ++i )
+   {
       if( intparam[i] == param )
       {
          lpi->cpxparam.intparval[i] = parval;
          return;
       }
+   }
 
    SCIPerrorMessage("unknown CPLEX integer parameter\n");
    SCIPABORT();
@@ -622,11 +644,13 @@ void setDblParam(
       parval = -1e+75;
 
    for( i = 0; i < NUMDBLPARAM; ++i )
+   {
       if( dblparam[i] == param )
       {
          lpi->cpxparam.dblparval[i] = parval;
          return;
       }
+   }
 
    SCIPerrorMessage("unknown CPLEX double parameter\n");
    SCIPABORT();
@@ -635,7 +659,7 @@ void setDblParam(
 /** marks the current LP to be unsolved */
 static
 void invalidateSolution(
-   SCIP_LPI*const        lpi                 /**< LP interface structure */
+   SCIP_LPI* const       lpi                 /**< LP interface structure */
    )
 {
    assert(lpi != NULL);
@@ -776,7 +800,7 @@ void reconvertBothSides(
             rhs[i] = lpi->rhsarray[i];
          }
          break;
-         
+
       default:
          SCIPerrorMessage("invalid row sense\n");
          SCIPABORT();
@@ -825,7 +849,7 @@ void reconvertLhs(
          else
             lhs[i] = lpi->rhsarray[i] + lpi->rngarray[i];
          break;
-         
+
       default:
          SCIPerrorMessage("invalid row sense\n");
          SCIPABORT();
@@ -873,7 +897,7 @@ void reconvertRhs(
          else
             rhs[i] = lpi->rhsarray[i];
          break;
-         
+
       default:
          SCIPerrorMessage("invalid row sense\n");
          SCIPABORT();
@@ -899,6 +923,30 @@ void reconvertSides(
 }
 
 
+/** after restoring the old lp data in CPLEX we need to resolve the lp to be able to retrieve correct information */
+static
+SCIP_RETCODE restoreLPData(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to return the
+    * basis -> we have to resolve the LP;
+    *
+    * this may happen after manual strong branching on an integral variable, or after conflict analysis on a strong
+    * branching conflict created a constraint that is not able to modify the LP but trigger the additional call of the
+    * separators, in particular, the Gomory separator
+    *
+    * In a numerical perfect world, CPX_REFACTORMAXITERS below should be zero. However, due to numerical inaccuracies
+    * after refactorization, it might be necessary to do a few extra pivot steps.
+    */
+   CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
+   assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) <= CPX_REFACTORMAXITERS);
+   assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= CPX_REFACTORMAXITERS);
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -966,7 +1014,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
-   int          restat;
+   int restat;
 
    assert(sizeof(SCIP_Real) == sizeof(double)); /* CPLEX only works with doubles as floating points */
    assert(sizeof(SCIP_Bool) == sizeof(int));    /* CPLEX only works with ints as bools */
@@ -1012,7 +1060,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->rstatsize = 0;
    (*lpi)->iterations = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
-   (*lpi)->solisbasic = TRUE;
+   (*lpi)->solisbasic = FALSE;
    (*lpi)->cpxlp = CPXcreateprob((*lpi)->cpxenv, &restat, name);
    (*lpi)->instabilityignored = FALSE;
    (*lpi)->fromscratch = FALSE;
@@ -1865,6 +1913,23 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    return SCIP_OKAY;
 }
 
+/** gets objective sense of the LP */
+SCIP_RETCODE SCIPlpiGetObjsen(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
+   )
+{
+   assert(lpi != NULL);
+   assert(objsen != NULL);
+   assert(CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN || CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MAX);
+
+   SCIPdebugMessage("getting objective sense\n");
+
+   *objsen = (CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN) ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE;
+
+   return SCIP_OKAY;
+}
+
 /** gets objective coefficients from LP problem object */
 SCIP_RETCODE SCIPlpiGetObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -1990,6 +2055,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    int retval;
    int primalfeasible;
    int dualfeasible;
+   int solntype;
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -2018,7 +2084,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       return SCIP_LPERROR;
    }
 
-   lpi->solisbasic = TRUE;
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
@@ -2065,6 +2130,25 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       }
    }
 
+   /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
+    * also for some pathological cases of infeasibility, e.g., contradictory bounds 
+    */
+   if( lpi->solstat == CPX_STAT_OPTIMAL )
+   {
+#ifdef NDEBUG
+      lpi->solisbasic = TRUE;
+#else
+      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
+      assert(lpi->solisbasic);
+#endif
+   }
+   else
+   {
+      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2076,6 +2160,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    int retval;
    int primalfeasible;
    int dualfeasible;
+   int solntype;
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -2104,7 +2189,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
       return SCIP_LPERROR;
    }
 
-   lpi->solisbasic = TRUE;
+   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
@@ -2150,6 +2236,25 @@ SCIP_RETCODE SCIPlpiSolveDual(
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          SCIPerrorMessage("CPLEX dual simplex returned CPX_STAT_INForUNBD after presolving was turned off\n");
       }
+   }
+
+   /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
+    * also for some pathological cases of infeasibility, e.g., contradictory bounds 
+    */
+   if( lpi->solstat == CPX_STAT_OPTIMAL )
+   {
+#ifdef NDEBUG
+      lpi->solisbasic = TRUE;
+#else
+      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
+      assert(lpi->solisbasic);
+#endif
+   }
+   else
+   {
+      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    }
 
 #if 0
@@ -2235,7 +2340,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
 SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool             crossover            /**< perform crossover */
+   SCIP_Bool             crossover           /**< perform crossover */
    )
 {
    int solntype;
@@ -3073,9 +3178,10 @@ SCIP_RETCODE SCIPlpiGetIterations(
 }
 
 /** gets information about the quality of an LP solution
- * Such information is usually only available, if also a (maybe not optimal) solution is available.
- * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
-extern
+ *
+ *  Such information is usually only available, if also a (maybe not optimal) solution is available.
+ *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ */
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
@@ -3202,18 +3308,9 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXgetbhead(lpi->cpxenv, lpi->cpxlp, bind, NULL);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
-      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
-       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
-       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
-       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
-       * call of the separators, in particular, the Gomory separator
-       */
-      CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
-      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) == 0);
-      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) == 0);
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
       retval = CPXgetbhead(lpi->cpxenv, lpi->cpxlp, bind, NULL);
    }
    CHECK_ZERO( lpi->messagehdlr, retval );
@@ -3241,18 +3338,9 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvrow(lpi->cpxenv, lpi->cpxlp, r, coef);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
-      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
-       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
-       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
-       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
-       * call of the separators, in particular, the Gomory separator
-       */
-      CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
-      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) == 0);
-      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) == 0);
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
       retval = CPXbinvrow(lpi->cpxenv, lpi->cpxlp, r, coef);
    }
    CHECK_ZERO( lpi->messagehdlr, retval );
@@ -3284,18 +3372,9 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvcol(lpi->cpxenv, lpi->cpxlp, c, coef);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
-      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
-       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
-       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
-       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
-       * call of the separators, in particular, the Gomory separator
-       */
-      CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
-      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) == 0);
-      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) == 0);
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
       retval = CPXbinvcol(lpi->cpxenv, lpi->cpxlp, c, coef);
    }
    CHECK_ZERO( lpi->messagehdlr, retval );
@@ -3324,21 +3403,9 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvarow(lpi->cpxenv, lpi->cpxlp, r, coef);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
-      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
-       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
-       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
-       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
-       * call of the separators, in particular, the Gomory separator
-       */
-      CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
-
-      /* In a numerical perfect world, the 10 below should be zero. However, due to numerical inaccuracies after refactorization, 
-       * it might be necessary to do one (or even a few) extra pivot steps, in particular if FASTMIP is used. */ 
-      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) <= 10);
-      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= 10);
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
       retval = CPXbinvarow(lpi->cpxenv, lpi->cpxlp, r, coef);
    }
    CHECK_ZERO( lpi->messagehdlr, retval );
@@ -3366,21 +3433,9 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvacol(lpi->cpxenv, lpi->cpxlp, c, coef);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
-      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
-       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
-       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
-       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
-       * call of the separators, in particular, the Gomory separator
-       */
-      CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
-
-      /* In a numerical perfect world, the 10 below should be zero. However, due to numerical inaccuracies after refactorization, 
-       * it might be necessary to do one (or even a few) extra pivot steps, in particular if FASTMIP is used. */ 
-      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) <= 10);
-      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= 10);
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
       retval = CPXbinvacol(lpi->cpxenv, lpi->cpxlp, c, coef);
    }
    CHECK_ZERO( lpi->messagehdlr, retval );
@@ -3486,11 +3541,25 @@ SCIP_RETCODE SCIPlpiSetState(
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
 
-   /* extend the basis to the current LP */
+   /* extend the basis to the current LP beyond the previously existing columns */
    for( i = lpistate->ncols; i < lpncols; ++i )
-      lpi->cstat[i] = CPX_AT_LOWER; /**@todo this has to be corrected for lb = -infinity */
+   {
+      SCIP_Real bnd;
+      CHECK_ZERO( lpi->messagehdlr, CPXgetlb(lpi->cpxenv, lpi->cpxlp, &bnd, i, i) );
+      if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+      {
+         /* if lower bound is +/- infinity -> try upper bound */
+         CHECK_ZERO( lpi->messagehdlr, CPXgetub(lpi->cpxenv, lpi->cpxlp, &bnd, i, i) );
+         if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+            lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /* variable is free -> super basic */
+         else
+            lpi->cstat[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+      }
+      else
+         lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+   }
    for( i = lpistate->nrows; i < lpnrows; ++i )
-      lpi->rstat[i] = CPX_BASIC;
+      lpi->rstat[i] = SCIP_BASESTAT_BASIC;
 
    /* load basis information into CPLEX */
    SCIP_CALL( setBase(lpi) );
@@ -3657,8 +3726,8 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_THREADS:
 #if (CPX_VERSION == 1100 || (CPX_VERSION == 1220 && (CPX_SUBVERSION == 0 || CPX_SUBVERSION == 2)))
-      /**< Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
-       *   return the value set by SCIP and not the real thread count */
+      /** Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
+       *  return the value set by SCIP and not the real thread count */
       *ival = lpi->pseudonthreads;
       assert(getIntParam(lpi, CPX_PARAM_THREADS) == 1);
 #else
@@ -3756,8 +3825,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_THREADS:
 #if (CPX_VERSION == 1100 || (CPX_VERSION == 1220 && (CPX_SUBVERSION == 0 || CPX_SUBVERSION == 2)))
-      /**< Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
-       *   store the value set by SCIP and return it later instead of the real thread count */
+      /** Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
+       *  store the value set by SCIP and return it later instead of the real thread count */
       lpi->pseudonthreads = ival;
       ival = 1;
 #else

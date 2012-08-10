@@ -30,17 +30,11 @@
 #include <vector>
 using std::vector;
 
-/* CppAD is not thread-safe by itself, but uses some static datastructures
- * To run it in a multithreading environment, a special CppAD memory allocator that is aware of the multiple threads has to be used.
- * This allocator requires to know the number of threads and a thread number for each thread.
- * Conveniently, SCIPs message handler has currently still the same issue, so we can use its routines here.
+/* defining NO_CPPAD_USER_ATOMIC disables the use of our own implementation of derivaties of power operators
+ * via CppAD's user-atomic function feature
+ * our customized implementation should give better results (tighter intervals) for the interval data type
  */
-#ifndef NPARASCIP
-#include "scip/message.h"
-
-/** CppAD needs to know a fixed upper bound on the number of threads at compile time. */
-#define CPPAD_MAX_NUM_THREADS 48
-#endif
+/* #define NO_CPPAD_USER_ATOMIC */
 
 /** sign of a value (-1 or +1)
  * 
@@ -56,40 +50,120 @@ using std::vector;
 SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
 using CppAD::SCIPInterval;
 
+/** CppAD needs to know a fixed upper bound on the number of threads at compile time.
+ * It is wise to set it to a power of 2, so that if the tape id overflows, it is likely to start at 0 again, which avoids difficult to debug errors.
+ */
+#ifndef CPPAD_MAX_NUM_THREADS
+#ifndef NPARASCIP
+#define CPPAD_MAX_NUM_THREADS 64
+#else
+#define CPPAD_MAX_NUM_THREADS 1
+#endif
+#endif
+
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
 #endif
 
 #include <cppad/cppad.hpp>
-#ifndef CPPAD_PACKAGE_STRING
-#include <cppad/config.h>
-#define CPPAD_PACKAGE_STRING PACKAGE_STRING
-#endif
 #include <cppad/error_handler.hpp>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
 
+/* CppAD is not thread-safe by itself, but uses some static datastructures
+ * To run it in a multithreading environment, a special CppAD memory allocator that is aware of the multiple threads has to be used.
+ * This allocator requires to know the number of threads and a thread number for each thread.
+ * To implement this, we follow the team_pthread example of CppAD, which uses pthread's thread-specific data management.
+ */
 #ifndef NPARASCIP
+#include <pthread.h>
 
-/** CppAD callback function that indicates whether we are running in parallel mode */
-static bool in_parallel(void)
+/* workaround error message regarding missing implementation of tanh during initialization of static variables (see cppad/local/erf.hpp) */
+namespace CppAD
 {
-   return SCIPmessagehdlrGetNThreads() > 0;
+template <> SCIPInterval erf_template(
+   const SCIPInterval    &x
+)
+{
+   CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
+   return SCIPInterval();
+}
+template <> AD<SCIPInterval> erf_template(
+   const AD<SCIPInterval> &x
+)
+{
+   CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
+   return AD<SCIPInterval>();
+}
 }
 
-/** CppAD callback function that returns the number of the current thread */
+/** mutex for locking in pthread case */
+static pthread_mutex_t cppadmutex = PTHREAD_MUTEX_INITIALIZER;
+
+/** key for accessing thread specific information */
+static pthread_key_t thread_specific_key;
+
+/** currently registered number of threads */
+static size_t ncurthreads = 0;
+
+/** CppAD callback function that indicates whether we are running in parallel mode */
+static
+bool in_parallel(void)
+{
+   return ncurthreads > 1;
+}
+
+/** CppAD callback function that returns the number of the current thread
+ * assigns a new number to the thread if new
+ */
+static
 size_t thread_num(void)
 {
-   return SCIPmessagehdlrGetThreadNum();
+   size_t threadnum;
+   void* specific;
+
+   specific = pthread_getspecific(thread_specific_key);
+
+   /* if no data for this thread yet, then assign a new thread number to the current thread
+    * we store the thread number incremented by one, to distinguish the absence of data (=0) from existing data
+    */
+   if( specific == NULL )
+   {
+      pthread_mutex_lock(&cppadmutex);
+
+      SCIPdebugMessage("Assigning thread number %lu to thread %p.\n", ncurthreads, (void*)pthread_self());
+
+      pthread_setspecific(thread_specific_key, (void*)(ncurthreads + 1));
+
+      threadnum = ncurthreads;
+
+      ++ncurthreads;
+
+      pthread_mutex_unlock(&cppadmutex);
+
+      assert(pthread_getspecific(thread_specific_key) != NULL);
+      assert((size_t)pthread_getspecific(thread_specific_key) == threadnum + 1);
+   }
+   else
+   {
+      threadnum = (size_t)(specific) - 1;
+   }
+
+   assert(threadnum < ncurthreads);
+
+   return threadnum;
 }
 
 /** sets up CppAD's datastructures for running in multithreading mode
  * it must be called once before multithreading is started
  */
-static char init_parallel(void)
+static
+char init_parallel(void)
 {
+   pthread_key_create(&thread_specific_key, NULL);
+
    CppAD::thread_alloc::parallel_setup(CPPAD_MAX_NUM_THREADS, in_parallel, thread_num);
    CppAD::parallel_ad<double>();
    CppAD::parallel_ad<SCIPInterval>();
@@ -103,34 +177,6 @@ static char init_parallel(void)
 static char init_parallel_return = init_parallel();
 
 #endif // NPARASCIP
-
-/* CppAD 20120101 brings its own implementation of a sign operator, so don't implement again */
-#ifndef CPPAD_SIGN_OP_INCLUDED
-/* Brad recomends using the discrete function feature of CppAD for sign, since it avoids the need for retaping
- * It can be used since it's derivative is almost everywhere 0.0 */
-
-/* sign as function for double */
-double sign(const double &x)
-{
-   return SIGN(x);
-}
-/* discrete CppAD function sign(double) for use in eval */
-CPPAD_DISCRETE_FUNCTION(double, sign)
-
-/* sign as function for SCIPInterval
- * this time outside of the CppAD namespace
- */
-SCIPInterval sign(const SCIPInterval& x)
-{
-   SCIPInterval resultant;
-
-   SCIPintervalSign(&resultant, x);
-
-   return resultant;
-}
-/* discrete CppAD function sign(SCIPInterval) for use in eval */
-CPPAD_DISCRETE_FUNCTION(SCIPInterval, sign)
-#endif
 
 /** defintion of CondExpOp for SCIPInterval (required by CppAD) */
 inline
@@ -283,7 +329,7 @@ struct SCIP_ExprInt
 };
 
 /** expression specific interpreter data */
-class SCIP_ExprIntData
+struct SCIP_ExprIntData
 {
 public:
    /* constructor */
@@ -317,7 +363,9 @@ public:
    SCIP_EXPR*            root;               /**< copy of expression tree; @todo we should not need to make a copy */
 };
 
-#ifdef CPPAD_USER_ATOMIC
+
+#ifndef NO_CPPAD_USER_ATOMIC
+
 /** forward sweep of positive integer power
  * Given the taylor coefficients for x, we have to compute the taylor coefficients for f(x),
  * that is, given tx = (x, x', x'', ...), we compute the coefficients ty = (y, y', y'', ...)
@@ -359,11 +407,11 @@ bool forward_posintpower(
    switch( k )
    {
    case 0:
-      ty[0] = pow(tx[0], id);
+      ty[0] = pow(tx[0], (int)id);
       break;
 
    case 1:
-      ty[1] = pow(tx[0], id-1) * tx[1];
+      ty[1] = pow(tx[0], (int)id-1) * tx[1];
       ty[1] *= double(id);
       break;
 
@@ -371,9 +419,9 @@ bool forward_posintpower(
       if( id > 2 )
       {
          // ty[2] = id * (id-1) * pow(tx[0], id-2) * tx[1] * tx[1] + id * pow(tx[0], id-1) * tx[2];
-         ty[2]  = pow(tx[0], id-2) * tx[1] * tx[1];
+         ty[2]  = pow(tx[0], (int)id-2) * tx[1] * tx[1];
          ty[2] *= id-1;
-         ty[2] += pow(tx[0], id-1) * tx[2];
+         ty[2] += pow(tx[0], (int)id-1) * tx[2];
          ty[2] *= id;
       }
       else
@@ -395,25 +443,31 @@ bool forward_posintpower(
 /** reverse sweep of positive integer power
  * Assume y(x) is a function of the taylor coefficients of f(x) = x^p for x, i.e.,
  *   y(x) = [ x^p, p * x^(p-1) * x', p * (p-1) * x^(p-2) * x'^2 + p * x^(p-1) * x'', ... ].
- * Then in the reverse sweep we have to compute the elements of \partial h / \partial x^[l], l = 0, ..., k,
+ * Then in the reverse sweep we have to compute the elements of \f$\partial h / \partial x^[l], l = 0, ..., k,\f$
  * where x^[l] is the l'th taylor coefficient (x, x', x'', ...) and h(x) = g(y(x)) for some function g:R^k -> R.
  * That is, we have to compute
+ *\f$
  * px[l] = \partial h / \partial x^[l] = (\partial g / \partial y) * (\partial y / \partial x^[l])
  *       = \sum_{i=0}^k (\partial g / \partial y_i) * (\partial y_i / \partial x^[l])
  *       = \sum_{i=0}^k py[i] * (\partial y_i / \partial x^[l])
+ * \f$
  *
  * For k = 0, this means
+ *\f$
  * px[0] = py[0] * (\partial y_0 / \partial x^[0])
  *       = py[0] * (\partial x^p / \partial x)
  *       = py[0] * p * tx[0]^(p-1)
+ *\f$
  *
  * For k = 1, this means
- * px[0] = py[0] * (\partial y_0 / \partial x^[0]) + py[1] * (\partial y_1 / \partial x^[0])
+ * \f$
+ px[0] = py[0] * (\partial y_0 / \partial x^[0]) + py[1] * (\partial y_1 / \partial x^[0])
  *       = py[0] * (\partial x^p / \partial x)     + py[1] * (\partial (p * x^(p-1) * x') / \partial x)
  *       = py[0] * p * tx[0]^(p-1)                 + py[1] * p * (p-1) * tx[0]^(p-2) * tx[1]
  * px[1] = py[0] * (\partial y_0 / \partial x^[1]) + py[1] * (\partial y_1 / \partial x^[1])
  *       = py[0] * (\partial x^p / \partial x')    + py[1] * (\partial (p * x^(p-1) x') / \partial x')
  *       = py[0] * 0                               + py[1] * p * tx[0]^(p-1)
+ * \f$
  */
 template<class Type>
 bool reverse_posintpower(
@@ -438,18 +492,18 @@ bool reverse_posintpower(
    {
    case 0:
       // px[0] = py[0] * id * pow(tx[0], id-1);
-      px[0]  = py[0] * pow(tx[0], id-1);
+      px[0]  = py[0] * pow(tx[0], (int)id-1);
       px[0] *= id;
       break;
 
    case 1:
       // px[0] = py[0] * id * pow(tx[0], id-1) + py[1] * id * (id-1) * pow(tx[0], id-2) * tx[1];
-      px[0]  = py[1] * tx[1] * pow(tx[0], id-2);
+      px[0]  = py[1] * tx[1] * pow(tx[0], (int)id-2);
       px[0] *= id-1;
-      px[0] += py[0] * pow(tx[0], id-1);
+      px[0] += py[0] * pow(tx[0], (int)id-1);
       px[0] *= id;
       // px[1] = py[1] * id * pow(tx[0], id-1);
-      px[1]  = py[1] * pow(tx[0], id-1);
+      px[1]  = py[1] * pow(tx[0], (int)id-1);
       px[1] *= id;
       break;
 
@@ -571,15 +625,25 @@ CPPAD_USER_ATOMIC(
    rev_jac_sparse_posintpower,
    rev_hes_sparse_posintpower
    )
+
 #else
+
+/** power function with natural exponents */
 template<class Type>
-void posintpower(size_t exp, vector<Type>& in, vector<Type>& out)
+void posintpower(
+   size_t                exp,                /**< exponent */
+   vector<Type>&         in,                 /**< vector which first argument is base */
+   vector<Type>&         out                 /**< vecter where to store result in first argument */
+)
 {
    out[0] = pow(in[0], (int)exp);
 }
+
 #endif
 
-#ifdef CPPAD_USER_ATOMIC
+
+#ifndef NO_CPPAD_USER_ATOMIC
+
 /** forward sweep of signpower
  * Given the taylor coefficients for x, we have to compute the taylor coefficients for f(x),
  * that is, given tx = (x, x', x'', ...), we compute the coefficients ty = (y, y', y'', ...)
@@ -731,25 +795,31 @@ bool forward_signpower(
 /** reverse sweep of signpower
  * Assume y(x) is a function of the taylor coefficients of f(x) = sign(x)|x|^p for x, i.e.,
  *   y(x) = [ f(x), f'(x), f''(x), ... ].
- * Then in the reverse sweep we have to compute the elements of \partial h / \partial x^[l], l = 0, ..., k,
+ * Then in the reverse sweep we have to compute the elements of \f$\partial h / \partial x^[l], l = 0, ..., k,\f$
  * where x^[l] is the l'th taylor coefficient (x, x', x'', ...) and h(x) = g(y(x)) for some function g:R^k -> R.
  * That is, we have to compute
+ *\f$
  * px[l] = \partial h / \partial x^[l] = (\partial g / \partial y) * (\partial y / \partial x^[l])
  *       = \sum_{i=0}^k (\partial g / \partial y_i) * (\partial y_i / \partial x^[l])
  *       = \sum_{i=0}^k py[i] * (\partial y_i / \partial x^[l])
+ *\f$
  *
  * For k = 0, this means
+ *\f$
  * px[0] = py[0] * (\partial y_0 / \partial x^[0])
  *       = py[0] * (\partial f(x) / \partial x)
  *       = py[0] * p * abs(tx[0])^(p-1)
+ * \f$
  *
  * For k = 1, this means
+ *\f$
  * px[0] = py[0] * (\partial y_0  / \partial x^[0]) + py[1] * (\partial y_1   / \partial x^[0])
  *       = py[0] * (\partial f(x) / \partial x)     + py[1] * (\partial f'(x) / \partial x)
  *       = py[0] * p * abs(tx[0])^(p-1)             + py[1] * p * (p-1) * abs(tx[0])^(p-2) * sign(tx[0]) * tx[1]
  * px[1] = py[0] * (\partial y_0  / \partial x^[1]) + py[1] * (\partial y_1 / \partial x^[1])
  *       = py[0] * (\partial f(x) / \partial x')    + py[1] * (\partial f'(x) / \partial x')
  *       = py[0] * 0                                + py[1] * p * abs(tx[0])^(p-1)
+ * \f$
  */
 template<class Type>
 bool reverse_signpower(
@@ -1009,6 +1079,7 @@ void evalSignPower(
 }
 
 #else
+
 /** template for evaluation for signpower operator
  * only implemented for real numbers, thus gives error by default
  */
@@ -1045,6 +1116,7 @@ void evalSignPower(
    else
       resultant = -pow(-arg, exponent);
 }
+
 #endif
 
 /** template for evaluation for minimum operator
@@ -1501,7 +1573,7 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
    case SCIP_EXPR_MIN:
    case SCIP_EXPR_MAX:
    case SCIP_EXPR_ABS:
-#ifndef CPPAD_USER_ATOMIC
+#ifdef NO_CPPAD_USER_ATOMIC
    case SCIP_EXPR_SIGNPOWER:
 #endif
       return true;
@@ -1827,11 +1899,13 @@ SCIP_RETCODE SCIPexprintGrad(
    for( int i = 0; i < n; ++i )
       gradient[i] = jac[i];
 
+/* disable debug output since we have no message handler here
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("Grad for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
    SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t %g", data->x[i]); printf("\n");
    SCIPdebugMessage("grad ="); for (int i = 0; i < n; ++i) printf("\t %g", gradient[i]); printf("\n");
 #endif
+*/
 
    return SCIP_OKAY;
 }
@@ -1868,11 +1942,13 @@ SCIP_RETCODE SCIPexprintGradInt(
    for (int i = 0; i < n; ++i)
       gradient[i] = jac[i];
 
+/* disable debug output since we have no message handler here
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("GradInt for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
    SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t [%g,%g]", SCIPintervalGetInf(data->int_x[i]), SCIPintervalGetSup(data->int_x[i])); printf("\n");
    SCIPdebugMessage("grad ="); for (int i = 0; i < n; ++i) printf("\t [%g,%g]", SCIPintervalGetInf(gradient[i]), SCIPintervalGetSup(gradient[i])); printf("\n");
 #endif
+*/
 
    return SCIP_OKAY;
 }
@@ -1906,10 +1982,12 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
       for( int i = 0; i < nn; ++i )
          sparsity[i] = TRUE;
 
+/* disable debug output since we have no message handler here
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("HessianSparsityDense for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
       SCIPdebugMessage("sparsity = all elements, due to discontinuouities\n");
 #endif
+*/
 
       return SCIP_OKAY;
    }
@@ -1935,10 +2013,12 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    for( int i = 0; i < nn; ++i )
       sparsity[i] = sparsehes[i];
 
+/* disable debug output since we have no message handler here
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("HessianSparsityDense for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
    SCIPdebugMessage("sparsity ="); for (int i = 0; i < n; ++i) for (int j = 0; j < n; ++j) if (sparsity[i*n+j]) printf(" (%d,%d)", i, j); printf("\n");
 #endif
+*/
 
    return SCIP_OKAY;
 }
@@ -1979,11 +2059,12 @@ SCIP_RETCODE SCIPexprintHessianDense(
    for (int i = 0; i < nn; ++i)
       hessian[i] = hess[i];
 
+/* disable debug output since we have no message handler here
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("HessianDense for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
    SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t %g", data->x[i]); printf("\n");
    SCIPdebugMessage("hess ="); for (int i = 0; i < n*n; ++i) printf("\t %g", hessian[i]); printf("\n");
 #endif
-
+*/
    return SCIP_OKAY;
 }

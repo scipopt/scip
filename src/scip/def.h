@@ -42,6 +42,23 @@
 #endif
 #endif
 
+/*
+ * Define the marco EXTERN and some functions depending if the OS is Windows or not
+ */
+#if defined(_WIN32) || defined(_WIN64)
+
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#define getcwd _getcwd
+
+#define EXTERN __declspec(dllexport)
+
+#else
+#define EXTERN extern
+#endif
+
+
+
 #include "scip/type_retcode.h"
 #include "scip/pub_message.h"
 
@@ -49,8 +66,8 @@
 extern "C" {
 #endif
 
-#define SCIP_VERSION                211 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               5 /**< SCIP sub version number */
+#define SCIP_VERSION                300 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               1 /**< SCIP sub version number */
 #define SCIP_COPYRIGHT   "Copyright (c) 2002-2012 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
@@ -97,7 +114,8 @@ extern "C" {
 #define SCIP_DEFAULT_EPSILON          1e-09  /**< default upper bound for floating points to be considered zero */
 #define SCIP_DEFAULT_SUMEPSILON       1e-06  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL          1e-06  /**< default feasibility tolerance for constraints */
-#define SCIP_DEFAULT_DUALFEASTOL      1e-09  /**< default feasibility tolerance for reduced costs */
+#define SCIP_DEFAULT_LPFEASTOL        1e-06  /**< default primal feasibility tolerance of LP solver */
+#define SCIP_DEFAULT_DUALFEASTOL      1e-06  /**< default feasibility tolerance for reduced costs */
 #define SCIP_DEFAULT_BARRIERCONVTOL   1e-10  /**< default convergence tolerance used in barrier algorithm */
 #define SCIP_DEFAULT_BOUNDSTREPS       0.05  /**< default minimal relative improve for strengthening bounds */
 #define SCIP_DEFAULT_PSEUDOCOSTEPS    1e-01  /**< default minimal variable distance value to use for pseudo cost updates */
@@ -161,13 +179,6 @@ extern "C" {
  */
 
 #define SCIP_MAXSTRLEN             1024 /**< maximum string length in SCIP */
-#if defined(_WIN32) || defined(_WIN64)
-#define snprintf _snprintf
-#define vsnprintf _vsnprintf
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
-#endif
-
 
 /*
  * Memory settings
@@ -185,7 +196,6 @@ extern "C" {
 /*#define BMS_NOBLOCKMEM*/
 
 
-
 /*
  * Global debugging settings
  */
@@ -197,6 +207,11 @@ extern "C" {
  * Defines for handling SCIP return codes
  */
 
+/** this macro is used to stop SCIP in debug mode such that errors can be debugged;
+ *
+ *  @note In optimized mode this macro has no effect. That means, in case of an error it has to be ensured that code
+ *        terminates with an error code or continues safely.
+ */
 #define SCIPABORT() assert(FALSE)
 
 #define SCIP_CALL_ABORT_QUIET(x)  do { if( (x) != SCIP_OKAY ) SCIPABORT(); } while( FALSE )
@@ -245,6 +260,18 @@ extern "C" {
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
+
+/*
+ * Define to mark deprecated API functions
+ */
+
+#if defined(_WIN32) || defined(_WIN64)
+#  define SCIP_DEPRECATED __declspec(deprecated)
+#elif defined(__GNUC__) && defined(__linux__)
+#  define SCIP_DEPRECATED __attribute__ ((deprecated))
+#else
+#  define SCIP_DEPRECATED
+#endif
 
 #ifdef __cplusplus
 }

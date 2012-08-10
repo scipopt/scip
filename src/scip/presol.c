@@ -47,6 +47,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPpresolComp)
    return ((SCIP_PRESOL*)elem2)->priority - ((SCIP_PRESOL*)elem1)->priority;
 }
 
+/** comparison method for sorting presolvers w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPpresolCompName)
+{
+   return strcmp(SCIPpresolGetName((SCIP_PRESOL*)elem1), SCIPpresolGetName((SCIP_PRESOL*)elem2));
+}
+
 /** method to call, when the priority of a presolver was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdPresolPriority)
@@ -210,6 +216,7 @@ SCIP_RETCODE SCIPpresolInit(
       presol->nupgdconss = 0;
       presol->nchgcoefs = 0;
       presol->nchgsides = 0;
+      presol->ncalls = 0;
       presol->wasdelayed = FALSE;
    }
    
@@ -263,17 +270,11 @@ SCIP_RETCODE SCIPpresolExit(
 /** informs presolver that the presolving process is being started */
 SCIP_RETCODE SCIPpresolInitpre(
    SCIP_PRESOL*          presol,             /**< presolver */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(presol != NULL);
    assert(set != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    presol->lastnfixedvars = 0;
    presol->lastnaggrvars = 0;
@@ -293,20 +294,10 @@ SCIP_RETCODE SCIPpresolInitpre(
       /* start timing */
       SCIPclockStart(presol->setuptime, set);
 
-      SCIP_CALL( presol->presolinitpre(set->scip, presol, isunbounded, isinfeasible, result) );
+      SCIP_CALL( presol->presolinitpre(set->scip, presol) );
 
       /* stop timing */
       SCIPclockStop(presol->setuptime, set);
-
-      /* evaluate result */
-      if( *result != SCIP_CUTOFF
-         && *result != SCIP_UNBOUNDED
-         && *result != SCIP_FEASIBLE )
-      {
-         SCIPerrorMessage("presolving initialization method of presolver <%s> returned invalid result <%d>\n", 
-            presol->name, *result);
-         return SCIP_INVALIDRESULT;
-      }
    }
 
    return SCIP_OKAY;
@@ -315,17 +306,11 @@ SCIP_RETCODE SCIPpresolInitpre(
 /** informs presolver that the presolving process is finished */
 SCIP_RETCODE SCIPpresolExitpre(
    SCIP_PRESOL*          presol,             /**< presolver */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(presol != NULL);
    assert(set != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    /* call presolving deinitialization method of presolver */
    if( presol->presolexitpre != NULL )
@@ -333,18 +318,10 @@ SCIP_RETCODE SCIPpresolExitpre(
       /* start timing */
       SCIPclockStart(presol->setuptime, set);
 
-      SCIP_CALL( presol->presolexitpre(set->scip, presol, isunbounded, isinfeasible, result) );
+      SCIP_CALL( presol->presolexitpre(set->scip, presol) );
 
       /* stop timing */
       SCIPclockStop(presol->setuptime, set);
-
-      /* evaluate result */
-      if( *result != SCIP_CUTOFF && *result != SCIP_UNBOUNDED && *result != SCIP_FEASIBLE )
-      {
-         SCIPerrorMessage("presolving deinitialization method of presolver <%s> returned invalid result <%d>\n", 
-            presol->name, *result);
-         return SCIP_INVALIDRESULT;
-      }
    }
 
    return SCIP_OKAY;
@@ -466,6 +443,10 @@ SCIP_RETCODE SCIPpresolExec(
          SCIPerrorMessage("presolver <%s> returned invalid result <%d>\n", presol->name, *result);
          return SCIP_INVALIDRESULT;
       }
+
+      /* increase the number of calls, if the presolver tried to find reductions */
+      if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+         ++(presol->ncalls);
    }
    else
    {
@@ -498,6 +479,72 @@ void SCIPpresolSetData(
    assert(presol != NULL);
 
    presol->presoldata = presoldata;
+}
+
+/** sets copy method of presolver */
+void SCIPpresolSetCopy(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLCOPY  ((*presolcopy))     /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presolcopy = presolcopy;
+}
+
+/** sets destructor method of presolver */
+void SCIPpresolSetFree(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLFREE  ((*presolfree))     /**< destructor of presolver */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presolfree = presolfree;
+}
+
+/** sets initialization method of presolver */
+void SCIPpresolSetInit(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLINIT  ((*presolinit))     /**< initialize presolver */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presolinit = presolinit;
+}
+
+/** sets deinitialization method of presolver */
+void SCIPpresolSetExit(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXIT  ((*presolexit))     /**< deinitialize presolver */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presolexit = presolexit;
+}
+
+/** sets solving process initialization method of presolver */
+void SCIPpresolSetInitpre(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLINITPRE ((*presolinitpre))/**< solving process initialization method of presolver */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presolinitpre = presolinitpre;
+}
+
+/** sets solving process deinitialization method of presolver */
+void SCIPpresolSetExitpre(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXITPRE ((*presolexitpre))/**< solving process deinitialization method of presolver */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presolexitpre = presolexitpre;
 }
 
 /** gets name of presolver */
@@ -694,3 +741,12 @@ int SCIPpresolGetNChgSides(
    return presol->nchgsides;
 }
 
+/** gets number of times the presolver was called and tried to find reductions */
+int SCIPpresolGetNCalls(
+   SCIP_PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->ncalls;
+}

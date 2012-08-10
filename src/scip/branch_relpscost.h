@@ -17,6 +17,24 @@
  * @ingroup BRANCHINGRULES
  * @brief  reliable pseudo costs branching rule
  * @author Tobias Achterberg
+ *
+ * The reliable pseudo costs branching rule uses the notion of pseudo costs to measure the expected
+ * gain in the dual bound when branching on a particular variable.
+ * The pseudo cost information is collected during the branch-and-bound search in the same manner as for
+ * the pseudo costs branching rule.
+ *
+ * The reliable pseudo costs branching rule, however, uses a limited number of look-ahead LP-iterations
+ * at the beginning of the search in order to obtain better pseudo cost estimates and make branching decisions in a
+ * sense more "reliable" at an early stage of the search,
+ * at the price of a higher computational cost at the beginning of the search.
+ *
+ * For a more mathematical description and a comparison between the reliable pseudo costs rule and other branching rules
+ * in SCIP, we refer to
+ *
+ * @par
+ * Tobias Achterberg@n
+ * Constraint Integer Programming@n
+ * PhD Thesis, Technische Universität Berlin, 2007@n
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -32,13 +50,13 @@ extern "C" {
 #endif
 
 /** creates the reliable pseudo cost branching rule and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** execution reliability pseudo cost branching with the given branching candidates */
-extern
+EXTERN
 SCIP_RETCODE SCIPexecRelpscostBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints to the current node

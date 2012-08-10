@@ -51,12 +51,6 @@
                                          *   constraints of the subscip
                                          */
 
-/* enable statistic output by defining macro STATISTIC_INFORMATION */
-#ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                x
-#else
-#define STATISTIC(x)             /**/
-#endif
 
 /*
  * Data structures
@@ -139,6 +133,235 @@ void heurdataReset(
    heurdata->applicable = FALSE;
 }
 
+/** gets the requested variables bounds */
+static
+void getVariableBounds(
+   SCIP_VAR*             var,                /**< variable to get the variable bounds from */
+   SCIP_VAR***           vbvars,             /**< pointer to store the variable bound array */
+   int*                  nvbvars,            /**< pointer to store the number of variable bounds */
+   SCIP_Bool             lowerbound          /**< variable lower bounds? (otherwise variable upper bound) */
+   )
+{
+   if( lowerbound )
+   {
+      /* get variable lower bounds */
+      (*vbvars) = SCIPvarGetVlbVars(var);
+      (*nvbvars) = SCIPvarGetNVlbs(var);
+   }
+   else
+   {
+      /* get variable upper bounds */
+      (*vbvars) = SCIPvarGetVubVars(var);
+      (*nvbvars) = SCIPvarGetNVubs(var);
+   }
+}
+
+/** perform depth-first-search from the given variable using the variable lower or upper bounds of the variable */
+static
+SCIP_RETCODE depthFirstSearch(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to start the depth-first-search  */
+   SCIP_HASHMAP*         varPosMap,          /**< mapping a variable to its position in the (used) variable array, or NULL */
+   SCIP_VAR**            usedvars,           /**< array of variables which are involved in the propagation, or NULL */
+   int*                  nusedvars,          /**< number of variables which are involved in the propagation, or NULL */
+   SCIP_HASHTABLE*       connected,          /**< hash table storing if a node was already visited */
+   SCIP_VAR**            sortedvars,         /**< array that will contain the topological sorted variables */
+   int*                  nsortedvars,        /**< pointer to store the number of already collects variables in the sorted variables array */
+   SCIP_Bool             lowerbound          /**< depth-first-search with respect to the variable lower bounds, otherwise variable upper bound */
+   )
+{
+   SCIP_VAR** vbvars;
+   SCIP_VAR* vbvar;
+   SCIP_Real scalar;
+   SCIP_Real constant;
+   int nvbvars;
+   int v;
+
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(varPosMap == NULL || (varPosMap != NULL && usedvars != NULL && nusedvars != NULL));
+   assert(sortedvars != NULL);
+   assert(nsortedvars != NULL);
+   assert(*nsortedvars >= 0);
+   assert(SCIPvarGetProbindex(var) > -1);
+   assert(SCIPhashtableExists(connected, var));
+
+   /* mark variable as visited, remove variable from hash table */
+   SCIP_CALL( SCIPhashtableRemove(connected, var) );
+
+   /* get variable bounds */
+   getVariableBounds(var, &vbvars, &nvbvars, lowerbound);
+
+   SCIPdebugMessage("variable <%s> has %d variable %s bounds\n", SCIPvarGetName(var), nvbvars,
+      lowerbound ? "lower" : "upper");
+
+   for( v = 0; v < nvbvars; ++v )
+   {
+      vbvar = vbvars[v];
+      assert(vbvar != NULL);
+
+      scalar = 1.0;
+      constant = 0.0;
+
+      /* transform variable bound variable to an active variable if possible */
+      SCIP_CALL( SCIPgetProbvarSum(scip, &vbvar, &scalar, &constant) );
+
+      /* we could not resolve the variable bound variable to one active variable, therefore, ignore this variable bound */
+      if( !SCIPvarIsActive(vbvar) )
+         continue;
+
+      /* insert variable bound variable into the hash table since they are involved in later propagation */
+      if( varPosMap != NULL && !SCIPhashmapExists(varPosMap, vbvar) )
+      {
+         SCIPdebugMessage("insert variable <%s> with position %d into the hash map\n", SCIPvarGetName(vbvar), *nusedvars);
+         SCIP_CALL( SCIPhashmapInsert(varPosMap, vbvar, (void*)(size_t)(*nusedvars)) );
+         usedvars[*nusedvars] = vbvar;
+         (*nusedvars)++;
+      }
+
+      /* check if the variable bound variable was already visited */
+      if( SCIPhashtableExists(connected, vbvar) )
+      {
+         /* recursively call depth-first-search */
+         SCIP_CALL( depthFirstSearch(scip, vbvar, varPosMap, usedvars, nusedvars, connected, sortedvars, nsortedvars, lowerbound) );
+      }
+   }
+
+   /* store variable in the sorted variable array */
+   sortedvars[(*nsortedvars)] = var;
+   (*nsortedvars)++;
+
+   /* insert variable bound variable into the hash table since they are involve in the later propagation */
+   if( varPosMap != NULL && !SCIPhashmapExists(varPosMap, var) )
+   {
+      SCIPdebugMessage("insert variable <%s> with position %d into the hash map\n", SCIPvarGetName(var), *nusedvars);
+      SCIP_CALL( SCIPhashmapInsert(varPosMap, var, (void*) (size_t)(*nusedvars)) );
+      usedvars[*nusedvars] = var;
+      (*nusedvars)++;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** create a topological sorted variable array of the given variables and stores if (needed) the involved variables into
+ *  the corresponding variable array and hash map
+ *
+ * @note: for all arrays and the hash map (if requested) you need to allocate enough memory before calling this method
+ */
+static
+SCIP_RETCODE createTopoSortedVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variable which we want sort */
+   int                   nvars,              /**< number of variables */
+   SCIP_HASHMAP*         varPosMap,          /**< mapping a variable to its position in the (used) variable array, or NULL */
+   SCIP_VAR**            usedvars,           /**< array of variables which are involved in the propagation, or NULL */
+   int*                  nusedvars,          /**< number of variables which are involved in the propagation, or NULL */
+   SCIP_VAR**            topovars,           /**< array where the topological sorted variables are stored */
+   int*                  ntopovars,          /**< pointer to store the number of topological sorted variables */
+   SCIP_Bool             lowerbound          /**< topological sorted with respect to the variable lower bounds, otherwise variable upper bound */
+   )
+{
+   SCIP_VAR** sortedvars;
+   SCIP_VAR** vbvars;
+   SCIP_VAR* var;
+   SCIP_HASHTABLE* connected;
+   int nvbvars;
+   int hashsize;
+   int i;
+   int v;
+
+   assert(scip != NULL);
+   assert(vars != NULL || nvars == 0);
+   assert(varPosMap == NULL || (varPosMap != NULL && usedvars != NULL && nusedvars != NULL));
+   assert(topovars != NULL);
+   assert(ntopovars != NULL);
+
+   SCIPdebugMessage("create topological sorted variable array with respect to variables %s bounds\n",
+      lowerbound ? "lower" : "upper");
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   assert(vars != NULL);
+
+   /* allocate buffer array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortedvars, nvars) );
+
+   hashsize = SCIPcalcHashtableSize(5 * nvars);
+
+   /* create hash table for variables which are (still) connected */
+   SCIP_CALL( SCIPhashtableCreate(&connected, SCIPblkmem(scip), hashsize, SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
+
+   /* detect isolated variables; mark all variables which have at least one entering or leaving arc as connected */
+   for( v = 0; v < nvars; ++v )
+   {
+      var = vars[v];
+      assert(var != NULL);
+
+      if( !SCIPvarIsActive(var) )
+         continue;
+
+      /* get variable bounds */
+      getVariableBounds(var, &vbvars, &nvbvars, lowerbound);
+
+      if( nvbvars > 0 && !SCIPhashtableExists(connected, var) )
+      {
+         SCIP_CALL( SCIPhashtableInsert(connected, var) );
+      }
+
+      for( i = 0; i < nvbvars; ++i )
+      {
+         if( !SCIPvarIsActive(vbvars[i]) )
+            continue;
+
+         /* there is a leaving arc, hence, the variable/node is connected */
+         assert(vbvars[i] != NULL);
+         if( !SCIPhashtableExists(connected, vbvars[i]) )
+         {
+            SCIP_CALL( SCIPhashtableInsert(connected, vbvars[i]) );
+         }
+      }
+   }
+
+   /* loop over all "connected" variable and find for each connected component a "almost" topological sorted version */
+   for( v = 0; v < nvars; ++v )
+   {
+      if( SCIPhashtableExists(connected, vars[v]) )
+      {
+         int nsortedvars;
+
+         SCIPdebugMessage("start depth-first-search with variable <%s>\n", SCIPvarGetName(vars[v]));
+
+         /* use depth first search to get a "almost" topological sorted variables for the connected component which
+          * includes vars[v]
+          */
+         nsortedvars = 0;
+         SCIP_CALL( depthFirstSearch(scip, vars[v], varPosMap, usedvars, nusedvars, connected, sortedvars, &nsortedvars, lowerbound) );
+
+         SCIPdebugMessage("detected connected component of size <%d>\n", nsortedvars);
+
+         /* copy variables */
+         for( i = 0; i < nsortedvars; ++i )
+         {
+            topovars[(*ntopovars)] = sortedvars[i];
+            (*ntopovars)++;
+         }
+      }
+   }
+
+   assert(*ntopovars <= nvars);
+   SCIPdebugMessage("topological sorted array contains %d of %d variables (variable %s bound)\n",
+      *ntopovars, nvars, lowerbound ? "lower" : "upper");
+
+   /* free hash table */
+   SCIPhashtableFree(&connected);
+
+   /* free buffer memory */
+   SCIPfreeBufferArray(scip, &sortedvars);
+
+   return SCIP_OKAY;
+}
+
 /** initialize candidate lists */
 static
 SCIP_RETCODE initializeCandsLists(
@@ -177,10 +400,10 @@ SCIP_RETCODE initializeCandsLists(
    SCIP_CALL( SCIPallocBufferArray(scip, &impvars, nallvars) );
 
    /* create the topological sorted variable array with respect to the variable lower bounds */
-   SCIP_CALL( SCIPcreateTopoSortedVars(scip, allvars, nallvars, NULL, vars, &nvars, lbvars, &nlbvars, TRUE) );
+   SCIP_CALL( createTopoSortedVars(scip, allvars, nallvars, NULL, vars, &nvars, lbvars, &nlbvars, TRUE) );
 
    /* create the topological sorted variable array with respect to the variable upper bounds */
-   SCIP_CALL( SCIPcreateTopoSortedVars(scip, allvars, nallvars, NULL, vars, &nvars, ubvars, &nubvars, FALSE) );
+   SCIP_CALL( createTopoSortedVars(scip, allvars, nallvars, NULL, vars, &nvars, ubvars, &nubvars, FALSE) );
 
    /* create hash table for variables which are already collected */
    SCIP_CALL( SCIPhashtableCreate(&collectedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(nallvars), hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
@@ -260,12 +483,9 @@ SCIP_RETCODE initializeCandsLists(
    heurdata->usednodes = 0;
    heurdata->initialized = TRUE;
 
-   STATISTIC(
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-         "lbvars %.3g\%, ubvars %.3g\%, impvars %.3g\% (%s)\n",
-         (nlbvars * 100.0) / nallvars, (nubvars * 100.0) / nallvars,
-         ((nlbimpvars + nubimpvars) * 100.0) / nallvars, SCIPgetProbName(scip));
-      )
+   SCIPstatisticMessage("lbvars %.3g, ubvars %.3g, impvars %.3g (%s)\n",
+      (nlbvars * 100.0) / nallvars, (nubvars * 100.0) / nallvars,
+      ((nlbimpvars + nubimpvars) * 100.0) / nallvars, SCIPgetProbName(scip));
 
    return SCIP_OKAY;
 }
@@ -474,12 +694,12 @@ SCIP_RETCODE applyVbounds(
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_vbounds", FALSE, FALSE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_vbounds", FALSE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {
          /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, FALSE) );
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, FALSE, NULL) );
       }
 
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
@@ -501,9 +721,16 @@ SCIP_RETCODE applyVbounds(
       if( !SCIPisInfinity(scip, timelimit) )
          timelimit -= SCIPgetSolvingTime(scip);
       SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+      /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
       if( !SCIPisInfinity(scip, memorylimit) )
+      {
          memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      if( timelimit <= 0.0 || memorylimit <= 0.0 )
+         memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+      }
+
+      /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+      if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       {
          /* free subproblem */
          SCIPfreeBufferArray(scip, &subvars);
@@ -639,7 +866,6 @@ SCIP_RETCODE applyVbounds(
 }
 
 
-
 /*
  * Callback methods of primal heuristic
  */
@@ -673,14 +899,6 @@ SCIP_DECL_HEURFREE(heurFreeVbounds)
    return SCIP_OKAY;
 }
 
-/** initialization method of primal heuristic (called after problem was transformed) */
-#define heurInitVbounds NULL
-
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#define heurExitVbounds NULL
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolVbounds NULL
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 static
@@ -769,22 +987,27 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create vbounds primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    heurdataReset(heurdata);
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyVbounds,
-         heurFreeVbounds, heurInitVbounds, heurExitVbounds,
-         heurInitsolVbounds, heurExitsolVbounds, heurExecVbounds,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecVbounds, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyVbounds) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeVbounds) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolVbounds) );
 
    /* add variable bounds primal heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minfixingrate",
-         "minimum percentage of integer variables that have to be fixable ",
+         "minimum percentage of integer variables that have to be fixable",
          &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/maxnodes",
@@ -804,7 +1027,7 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
-         "factor by which "HEUR_NAME" heuristic should at least improve the incumbent  ",
+         "factor by which "HEUR_NAME" heuristic should at least improve the incumbent",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxproprounds",

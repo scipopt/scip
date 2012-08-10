@@ -216,25 +216,6 @@ SCIP_DECL_BRANCHCOPY(branchCopyMostinf)
    return SCIP_OKAY;
 }
 
-/** destructor of branching rule to free user data (called when SCIP is exiting) */
-#define branchFreeMostinf NULL
-
-
-/** initialization method of branching rule (called after problem was transformed) */
-#define branchInitMostinf NULL
-
-
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitMostinf NULL
-
-
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolMostinf NULL
-
-
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolMostinf NULL
-
 
 /** branching execution method for fractional LP solutions */
 static
@@ -367,12 +348,6 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextMostinf)
 }
 
 
-/** branching execution method for not completely fixed pseudo solutions */
-#define branchExecpsMostinf NULL
-
-
-
-
 /*
  * branching specific interface methods
  */
@@ -382,13 +357,18 @@ SCIP_RETCODE SCIPincludeBranchruleMostinf(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_BRANCHRULE* branchrule;
+
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
-         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchCopyMostinf,
-         branchFreeMostinf, branchInitMostinf, branchExitMostinf, branchInitsolMostinf, branchExitsolMostinf, 
-         branchExeclpMostinf, branchExecextMostinf, branchExecpsMostinf,
-         NULL) );
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, NULL) );
+
+   assert(branchrule != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions*/
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyMostinf) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpMostinf) );
+   SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextMostinf) );
 
    return SCIP_OKAY;
 }

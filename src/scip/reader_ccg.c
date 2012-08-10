@@ -64,7 +64,6 @@ struct sparseGraph
 typedef struct sparseGraph SparseGraph;
 
 
-
 /*
  * Local methods (for writing)
  */
@@ -144,10 +143,6 @@ SCIP_RETCODE ensureEdgeCapacity(
 
    return SCIP_OKAY;
 }
-
-
-
-
 
 
 /** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
@@ -281,7 +276,6 @@ SCIP_RETCODE createEdgesFromRow(
 }
 
 
-
 /** handle given linear constraint information */
 static
 SCIP_RETCODE handleLinearCons(
@@ -347,11 +341,6 @@ SCIP_DECL_READERCOPY(readerCopyCcg)
    return SCIP_OKAY;
 }
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeCcg NULL
-
-/** problem reading method of reader */
-#define readerReadCcg NULL
 
 /** problem writing method of reader */
 static
@@ -372,17 +361,19 @@ SCIP_RETCODE SCIPincludeReaderCcg(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   /* include ccg reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyCcg, readerFreeCcg, readerReadCcg, readerWriteCcg, NULL) );
+   SCIP_READER* reader;
+
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
+
+   assert(reader != NULL);
+
+   /* set non-fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCcg) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteCcg) );
 
    return SCIP_OKAY;
 }
-
-
-
-
-
 
 
 /* writes problem to file */
@@ -479,7 +470,7 @@ SCIP_RETCODE SCIPwriteCcg(
          w = SCIPgetWeightsKnapsack(scip, cons);
          SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
          for( v = 0; v < nconsvars; ++v )
-            consvals[v] = w[v];
+            consvals[v] = (SCIP_Real)w[v];
 
          if( nconsvars > 0 ) 
          { 
@@ -508,6 +499,7 @@ SCIP_RETCODE SCIPwriteCcg(
          SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "\\ ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
+         SCIPinfoMessage(scip, file, ";\n");
       }
    }
 

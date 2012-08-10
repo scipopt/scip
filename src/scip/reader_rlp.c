@@ -49,10 +49,6 @@ SCIP_DECL_READERCOPY(readerCopyRlp)
 }
 
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeRlp NULL
-
-
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadRlp)
@@ -103,13 +99,20 @@ SCIP_RETCODE SCIPincludeReaderRlp(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create lp reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include lp reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyRlp, readerFreeRlp, readerReadRlp, readerWriteRlp, readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   assert(reader != NULL);
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyRlp) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadRlp) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteRlp) );
 
    return SCIP_OKAY;
 }

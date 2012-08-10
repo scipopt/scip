@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   ConshdlrSubtour.cpp
- * @brief  C++ file reader for TSP data files
+ * @brief  Subtour elimination constraint handler for TSP problems, written in C++
  * @author Timo Berthold
  */
 
@@ -169,7 +169,7 @@ SCIP_RETCODE sepaSubtour(
          while( i < ncuts )
          {
             SCIP_ROW* row; 
-            SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "sepa_con", 2.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) ); 
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "sepa_con", 2.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) ); 
 
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 

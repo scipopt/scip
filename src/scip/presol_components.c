@@ -14,11 +14,21 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_components.c
+ * @ingroup PRESOLVERS
  * @brief  solve independent components in advance
  * @author Dieter Weninger
  * @author Gerald Gamrath
  *
- * TODO: simulation of presolving without solve
+ * This presolver looks for independent components at the end of the presolving.
+ * If independent components are found in which a maximum number of discrete variables
+ * is not exceeded, the presolver tries to solve them in advance as subproblems.
+ * Afterwards, if a subproblem was solved to optimality, the corresponding
+ * variables/constraints can be fixed/deleted in the main problem.
+ *
+ * @todo simulation of presolving without solve
+ * @todo solve all components with less than given size, count number of components with nodelimit reached;
+ *       if all components could be solved within nodelimit (or all but x), continue solving components in
+ *       increasing order until one hit the node limit
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -27,7 +37,6 @@
 
 #include "scip/presol_components.h"
 
-
 #define PRESOL_NAME            "components"
 #define PRESOL_DESC            "components presolver"
 #define PRESOL_PRIORITY        -9200000      /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
@@ -35,13 +44,13 @@
 #define PRESOL_DELAY               TRUE      /**< should presolver be delayed, if other presolvers found reductions? */
 
 #define DEFAULT_WRITEPROBLEMS     FALSE      /**< should the single components be written as an .lp-file? */
-#define DEFAULT_MAXINTVARS           20      /**< maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
+#define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
 #define DEFAULT_NODELIMIT       10000LL      /**< maximum number of nodes to be solved in subproblems */
 #define DEFAULT_INTFACTOR           1.0      /**< the weight of an integer variable compared to binary variables */
 #define DEFAULT_RELDECREASE         0.2      /**< percentage by which the number of variables has to be decreased after the last component solving
                                               *   to allow running again (1.0: do not run again) */
 
-#ifdef WITH_STATISTICS
+#ifdef SCIP_STATISTIC
 static int NCATEGORIES = 6;
 static int CATLIMITS[] = {0,20,50,100,500};
 #endif
@@ -54,6 +63,7 @@ static int CATLIMITS[] = {0,20,50,100,500};
 struct SCIP_PresolData
 {
    SCIP_Bool             didsearch;          /** did the presolver already search for components? */
+   SCIP_Bool             pluginscopied;      /** was the copying of the plugins successful? */
    SCIP_Bool             writeproblems;      /** should the single components be written as an .lp-file? */
    int                   maxintvars;         /** maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
    SCIP_Longint          nodelimit;          /** maximum number of nodes to be solved in subproblems */
@@ -62,7 +72,7 @@ struct SCIP_PresolData
                                               *  to allow running again (1.0: do not run again) */
    int                   lastnvars;          /** number of variables after last run of the presolver */
    SCIP*                 subscip;            /** sub-SCIP used to solve single components */
-#ifdef WITH_STATISTICS
+#ifdef SCIP_STATISTIC
    int*                  compspercat;        /** number of components of the different categories */
    int                   nsinglevars;        /** number of components with a single variable without constraint */
    SCIP_Real             subsolvetime;       /** total solving time of the subproblems */
@@ -73,7 +83,7 @@ struct SCIP_PresolData
  * Statistic methods
  */
 
-#ifdef WITH_STATISTICS
+#ifdef SCIP_STATISTIC
 /** initialize data for statistics */
 static
 SCIP_RETCODE initStatistics(
@@ -199,14 +209,6 @@ void printStatistics(
    printf("# Total subproblem solving time: %.2f\n", presoldata->subsolvetime);
    printf("############\n");
 }
-
-#else
-#define initStatistics(scip, presoldata) SCIP_OKAY
-#define resetStatistics(scip, presoldata) /**/
-#define updateStatisticsComp(presoldata, nbinvars, nintvars) /**/
-#define updateStatisticsSingleVar(presoldata) /**/
-#define updateStatisticsSubsolvetime(presoldata, subsolvetime) /**/
-#define printStatistics(presoldata) /**/
 #endif
 
 
@@ -226,6 +228,7 @@ SCIP_RETCODE copyAndSolveComponent(
    SCIP_CONS**           conss,              /**< constraints contained in this component */
    int                   nconss,             /**< number of constraints contained in this component */
    SCIP_VAR**            vars,               /**< variables contained in this component */
+   SCIP_Real*            fixvals,            /**< array to store the values to fix the variables to */
    int                   nvars,              /**< number of variables contained in this component */
    int                   nbinvars,           /**< number of binary variables contained in this component */
    int                   nintvars,           /**< number of integer variables contained in this component */
@@ -254,11 +257,23 @@ SCIP_RETCODE copyAndSolveComponent(
 
    *result = SCIP_DIDNOTRUN;
 
+#ifndef SCIP_DEBUG
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
+      compnr, nvars, nbinvars, nintvars, nvars - nintvars - nbinvars, nconss);
+#else
+   SCIPdebugMessage("build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
+      compnr, nvars, nbinvars, nintvars, nvars - nintvars - nbinvars, nconss);
+#endif
+
    /* stop if the problem has too many integer variables; only if the problems should be written we have to build it anyway */
-   if( (nbinvars + presoldata->intfactor * nintvars > presoldata->maxintvars) && !presoldata->writeproblems )
+   if( presoldata->maxintvars != -1 && (nbinvars + presoldata->intfactor * nintvars > presoldata->maxintvars)
+      && !presoldata->writeproblems )
    {
-      SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not created: %d vars (%d bin, %d int, %d cont), %d conss\n",
-         compnr, nvars, nbinvars, nintvars, nvars - nintvars - nbinvars, nconss);
+#ifndef SCIP_DEBUG
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "--> not created (too many integer variables)\n");
+#else
+      SCIPdebugMessage("--> not created (too many integer variables)\n");
+#endif
 
       return SCIP_OKAY;
    }
@@ -268,10 +283,21 @@ SCIP_RETCODE copyAndSolveComponent(
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit <= 0.0 || memorylimit <= 0.0 )
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+   if( timelimit <= 0.0 || memorylimit <= (1.0 * nvars / SCIPgetNVars(scip)) / (1.0 * nconss / SCIPgetNConss(scip)) *
+      ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) )
+   {
+      SCIPdebugMessage("--> not created (not enough memory or time left)\n");
       return SCIP_OKAY;
+   }
 
    /* create sub-SCIP */
    if( presoldata->subscip == NULL )
@@ -286,8 +312,13 @@ SCIP_RETCODE copyAndSolveComponent(
 
       /* abort if the plugins were not successfully copied */
       if( !success )
-         return SCIP_OKAY;
+      {
+         SCIP_CALL( SCIPfree(&presoldata->subscip) );
+         presoldata->subscip = NULL;
+         presoldata->pluginscopied = FALSE;
 
+         return SCIP_OKAY;
+      }
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
 
@@ -295,15 +326,26 @@ SCIP_RETCODE copyAndSolveComponent(
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", 0.0) );
 
       /* reduce the effort spent for hash tables */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usevartable", FALSE) );
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/useconstable", FALSE) );
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usesmalltables", TRUE) );
+      if( !SCIPisParamFixed(subscip, "misc/usevartable") )
+      {
+         SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usevartable", FALSE) );
+      }
+      if( !SCIPisParamFixed(subscip, "misc/useconstable") )
+      {
+         SCIP_CALL( SCIPsetBoolParam(subscip, "misc/useconstable", FALSE) );
+      }
+      if( !SCIPisParamFixed(subscip, "misc/usesmalltables") )
+      {
+         SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usesmalltables", TRUE) );
+      }
 
       /* do not catch control-C */
       SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
+#ifndef SCIP_MORE_DEBUG
       /* disable output */
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+#endif
    }
    else
    {
@@ -322,9 +364,8 @@ SCIP_RETCODE copyAndSolveComponent(
    else
    {
       /* if we have only continuous variables, solving the root should be enough;
-       * this avoids to spend much time in a nonlinear subscip with only continuous variables
-       */
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", presoldata->nodelimit) );
+       * this avoids to spend much time in a nonlinear subscip with only continuous variables */
+      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
    }
 
    /* create problem in sub-SCIP */
@@ -358,7 +399,7 @@ SCIP_RETCODE copyAndSolveComponent(
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, NULL, FALSE) );
    }
 
-   /* the following asserts are not true, because some aggregations in the original scip instance could not get sesolved
+   /* the following asserts are not true, because some aggregations in the original scip instance could not get resolved
     * inside some constraints, so the copy (subscip) will have also some inactive variables which were copied
     */
 #if 0
@@ -369,31 +410,35 @@ SCIP_RETCODE copyAndSolveComponent(
    assert(nintvars >= SCIPgetNIntVars(subscip));
 #endif
 
-   /* In debug mode, we want to be informed if the number of variables was reduced during copying.
+   /* In extended debug mode, we want to be informed if the number of variables was reduced during copying.
     * This might happen, since the components presolver uses SCIPgetConsVars() and then SCIPgetActiveVars() to get the
     * active representation, while SCIPgetConsCopy() might use SCIPgetProbvarLinearSum() and this might cancel out some
     * of the active variables and cannot be avoided. However, we want to notice it and check whether the constraint
     * handler could do something more clever.
     */
-#ifndef NDEBUG
+#ifdef SCIP_MORE_DEBUG
    if( nvars > SCIPgetNVars(subscip) )
    {
-      SCIPwarningMessage(scip, "copying component %d reduced number of variables: %d -> %d\n", compnr, nvars, SCIPgetNVars(subscip));
+      SCIPinfoMessage(scip, NULL, "copying component %d reduced number of variables: %d -> %d\n", compnr, nvars, SCIPgetNVars(subscip));
    }
 #endif
 
-   if( SCIPgetNBinVars(subscip) + presoldata->intfactor * SCIPgetNIntVars(subscip) <= presoldata->maxintvars )
+   if( presoldata->maxintvars == -1 || (SCIPgetNBinVars(subscip) + presoldata->intfactor * SCIPgetNIntVars(subscip) <= presoldata->maxintvars) )
    {
       /* solve the subproblem */
       SCIP_CALL( SCIPsolve(subscip) );
 
-      updateStatisticsSubsolvetime(presoldata, SCIPgetSolvingTime(subscip));
+#ifdef SCIP_MORE_DEBUG
+      SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+#endif
+
+      SCIPstatistic( updateStatisticsSubsolvetime(presoldata, SCIPgetSolvingTime(subscip)) );
 
       if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
       {
          SCIP_SOL* sol;
          SCIP_VAR* subvar;
-         SCIP_Real fixval;
+         SCIP_Bool feasible;
          SCIP_Bool infeasible;
          SCIP_Bool fixed;
 
@@ -401,89 +446,185 @@ SCIP_RETCODE copyAndSolveComponent(
 
          sol = SCIPgetBestSol(subscip);
 
-         /* fix variables */
-         for( i = 0; i < nvars; ++i )
+#ifdef SCIP_DEBUG
+         SCIP_CALL( SCIPcheckSolOrig(subscip, sol, &feasible, TRUE, TRUE) );
+#else
+         SCIP_CALL( SCIPcheckSolOrig(subscip, sol, &feasible, FALSE, FALSE) );
+#endif
+
+         SCIPdebugMessage("--> solved to optimality: time=%.2f, solution is%s feasible\n", SCIPgetSolvingTime(subscip), feasible ? "" : " not");
+
+         if( feasible )
          {
-            subvar = (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i]);
+            SCIP_Real glb;
+            SCIP_Real gub;
 
-            if( subvar != NULL )
+            /* get values of variables in the optimal solution */
+            for( i = 0; i < nvars; ++i )
             {
-               /* get solution value from optimal solution of the component */
-               fixval = SCIPgetSolVal(subscip, sol, subvar);
+               subvar = (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i]);
+
+               /* get global bounds */
+               glb = SCIPvarGetLbGlobal(vars[i]);
+               gub = SCIPvarGetUbGlobal(vars[i]);
+
+               if( subvar != NULL )
+               {
+                  /* get solution value from optimal solution of the component */
+                  fixvals[i] = SCIPgetSolVal(subscip, sol, subvar);
+
+                  assert(SCIPisFeasLE(scip, fixvals[i], SCIPvarGetUbLocal(vars[i])));
+                  assert(SCIPisFeasGE(scip, fixvals[i], SCIPvarGetLbLocal(vars[i])));
+
+                  /* checking a solution is done with a relative tolerance of feasibility epsilon, if we really want to
+                   * change the bounds of the variables by fixing them, the old bounds must not be violated by more than
+                   * the absolute epsilon; therefore, we change the fixing values, if needed, and mark that the solution
+                   * has to be checked again
+                   */
+                  if( SCIPisGT(scip, fixvals[i], gub) )
+                  {
+                     fixvals[i] = gub;
+                     feasible = FALSE;
+                  }
+                  else if( SCIPisLT(scip, fixvals[i], glb) )
+                  {
+                     fixvals[i] = glb;
+                     feasible = FALSE;
+                  }
+                  assert(SCIPisLE(scip, fixvals[i], SCIPvarGetUbLocal(vars[i])));
+                  assert(SCIPisGE(scip, fixvals[i], SCIPvarGetLbLocal(vars[i])));
+               }
+               else
+               {
+                  /* the variable was not copied, so it was cancelled out of constraints during copying;
+                   * thus, the variable is not constrained and we fix it to its best bound
+                   */
+                  if( SCIPisPositive(scip, SCIPvarGetObj(vars[i])) )
+                     fixvals[i] = glb;
+                  else if( SCIPisNegative(scip, SCIPvarGetObj(vars[i])) )
+                     fixvals[i] = gub;
+                  else
+                  {
+                     fixvals[i] = 0.0;
+                     fixvals[i] = MIN(fixvals[i], gub);
+                     fixvals[i] = MAX(fixvals[i], glb);
+                  }
+               }
             }
-            else
+
+            /* the solution value of at least one variable is feasible with a relative tolerance of feasibility epsilon,
+             * but infeasible with an absolute tolerance of epsilon; try to set the variables to the bounds and check
+             * solution again (changing the values might now introduce infeasibilities of constraints)
+             */
+            if( !feasible )
             {
-               /* the variable was not copied, so it was cancelled out of constraints during copying;
-                * thus, the variable is not constrained and we fix it to its best bound
-                */
-               fixval = 0.0;
+               SCIPdebugMessage("solution violated bounds by more than epsilon, check the corrected solution...\n");
 
-               if( SCIPisPositive(scip, SCIPvarGetObj(vars[i])) )
-                  fixval = SCIPvarGetLbGlobal(vars[i]);
-               else if( SCIPisNegative(scip, SCIPvarGetObj(vars[i])) )
-                  fixval = SCIPvarGetUbGlobal(vars[i]);
+               SCIP_CALL( SCIPfreeTransform(subscip) );
+
+               SCIP_CALL( SCIPcreateOrigSol(subscip, &sol, NULL) );
+
+               /* get values of variables in the optimal solution */
+               for( i = 0; i < nvars; ++i )
+               {
+                  subvar = (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i]);
+
+                  SCIP_CALL( SCIPsetSolVal(subscip, sol, subvar, fixvals[i]) );
+               }
+
+               /* check the solution; integrality and bounds should be fulfilled and do not have to be checked */
+               SCIP_CALL( SCIPcheckSol(subscip, sol, FALSE, FALSE, FALSE, TRUE, &feasible) );
+
+#ifndef NDEBUG
+               /* in debug mode, we additionally check integrality and bounds */
+               if( feasible )
+               {
+                  SCIP_CALL( SCIPcheckSol(subscip, sol, FALSE, TRUE, TRUE, FALSE, &feasible) );
+                  assert(feasible);
+               }
+#endif
+
+               SCIPdebugMessage("--> corrected solution is%s feasible\n", feasible ? "" : " not");
+
+               SCIP_CALL( SCIPfreeSol(subscip, &sol) );
             }
 
-            SCIP_CALL( SCIPfixVar(scip, vars[i], fixval, &infeasible, &fixed) );
-            assert(!infeasible);
-            assert(fixed);
-            (*ndeletedvars)++;
-         }
+            /* if the solution is feasible, fix variables and delete constraints of the component */
+            if( feasible )
+            {
+               /* fix variables */
+               for( i = 0; i < nvars; ++i )
+               {
+                  assert(SCIPisLE(scip, fixvals[i], SCIPvarGetUbLocal(vars[i])));
+                  assert(SCIPisGE(scip, fixvals[i], SCIPvarGetLbLocal(vars[i])));
+                  assert(SCIPisLE(scip, fixvals[i], SCIPvarGetUbGlobal(vars[i])));
+                  assert(SCIPisGE(scip, fixvals[i], SCIPvarGetLbGlobal(vars[i])));
 
-         /* delete constraints */
-         for( i = 0; i < nconss; ++i )
-         {
-            SCIP_CALL( SCIPdelCons(scip, conss[i]) );
-            (*ndeletedconss)++;
+                  SCIP_CALL( SCIPfixVar(scip, vars[i], fixvals[i], &infeasible, &fixed) );
+                  assert(!infeasible);
+                  assert(fixed);
+                  (*ndeletedvars)++;
+               }
+
+               /* delete constraints */
+               for( i = 0; i < nconss; ++i )
+               {
+                  SCIP_CALL( SCIPdelCons(scip, conss[i]) );
+                  (*ndeletedconss)++;
+               }
+            }
          }
       }
       else if( SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE )
       {
          *result = SCIP_CUTOFF;
       }
-      else if( SCIPgetStatus(subscip) == SCIP_STATUS_UNBOUNDED )
+      else if( SCIPgetStatus(subscip) == SCIP_STATUS_UNBOUNDED || SCIPgetStatus(subscip) == SCIP_STATUS_INFORUNBD )
       {
          /* TODO: store unbounded ray in original SCIP data structure */
          *result = SCIP_UNBOUNDED;
       }
       else
       {
-         SCIP_Bool infeasible;
-         SCIP_Bool tightened;
-         int ntightened;
+         SCIPdebugMessage("--> solving interrupted (status=%d, time=%.2f)\n",
+            SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip));
 
-         SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not solved (status=%d, time=%.2f): %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
-            compnr, SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip), nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip),
-            SCIPgetNContVars(subscip), nconss);
-
-         ntightened = 0;
-
-         /* transfer global fixings to the original problem */
-         for( i = 0; i < nvars; ++i )
+         /* transfer global fixings to the original problem; we can only do this, if we did not find a solution in the
+          * subproblem, because otherwise, the primal bound might lead to dual reductions that cannot be transferred to
+          * the original problem without also transferring the possibly suboptimal solution (which is currently not
+          * possible)
+          */
+         if( SCIPgetNSols(subscip) == 0 )
          {
-            assert( SCIPhashmapExists(varmap, vars[i]) );
+            SCIP_Bool infeasible;
+            SCIP_Bool tightened;
+            int ntightened;
 
-            SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal((SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i])), FALSE,
-                  &infeasible, &tightened) );
-            assert(!infeasible);
-            if( tightened )
-               ntightened++;
+            ntightened = 0;
 
-            SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal((SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i])), FALSE,
-                  &infeasible, &tightened) );
-            assert(!infeasible);
-            if( tightened )
-               ntightened++;
+            for( i = 0; i < nvars; ++i )
+            {
+               assert( SCIPhashmapExists(varmap, vars[i]) );
+
+               SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal((SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i])), FALSE,
+                     &infeasible, &tightened) );
+               assert(!infeasible);
+               if( tightened )
+                  ntightened++;
+
+               SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal((SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i])), FALSE,
+                     &infeasible, &tightened) );
+               assert(!infeasible);
+               if( tightened )
+                  ntightened++;
+            }
+            SCIPdebugMessage("--> tightened %d bounds of variables due to global bounds in the sub-SCIP\n", ntightened);
          }
-
-         SCIPdebugMessage("-> tightened %d bounds of variables due to global bounds in the sub-SCIP for component %d\n", ntightened, compnr);
       }
    }
    else
    {
-      SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not solved: %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
-         compnr, nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip),
-         SCIPgetNContVars(subscip), nconss);
+      SCIPdebugMessage("--> not solved (too many integer variables)\n");
    }
 
  TERMINATE:
@@ -530,6 +671,13 @@ SCIP_RETCODE fillDigraph(
 
    for( c = 0; c < nconss; ++c )
    {
+      /* check for reached timelimit */
+      if( (c % 1000 == 0) && SCIPisStopped(scip) )
+      {
+         *success = FALSE;
+         break;
+      }
+
       /* get number of variables for this constraint */
       SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, success) );
 
@@ -572,35 +720,38 @@ SCIP_RETCODE fillDigraph(
       for( v = nconsvars - 1; v >= 0; --v )
 	 assert(consvars[v] != NULL);
       if( nconsvars < nvars )
-      {
 	 assert(consvars[nconsvars] == NULL);
-      }
 #endif
 
       /* transform given variables to active variables */
       SCIP_CALL( SCIPgetActiveVars(scip, consvars, &nconsvars, nvars, &requiredsize) );
       assert(requiredsize <= nvars);
 
-      idx1 = SCIPvarGetProbindex(consvars[0]);
-      assert(idx1 >= 0);
-
-      /* save index of the first variable for later component assignment */
-      firstvaridxpercons[c] = idx1;
-
-      if( nconsvars > 1 )
+      if( nconsvars > 0 )
       {
-         /* create sparse directed graph
-          * sparse means, to add only those edges necessary for component calculation
-          */
-         for( v = 1; v < nconsvars; ++v )
-         {
-            idx2 = SCIPvarGetProbindex(consvars[v]);
-            assert(idx2 >= 0);
+         idx1 = SCIPvarGetProbindex(consvars[0]);
+         assert(idx1 >= 0);
 
-            /* we add only one directed edge, because the other direction is automatically added for component computation */
-            SCIP_CALL( SCIPdigraphAddEdge(digraph, idx1, idx2) );
+         /* save index of the first variable for later component assignment */
+         firstvaridxpercons[c] = idx1;
+
+         if( nconsvars > 1 )
+         {
+            /* create sparse directed graph
+             * sparse means, to add only those edges necessary for component calculation
+             */
+            for( v = 1; v < nconsvars; ++v )
+            {
+               idx2 = SCIPvarGetProbindex(consvars[v]);
+               assert(idx2 >= 0);
+
+               /* we add only one directed edge, because the other direction is automatically added for component computation */
+               SCIP_CALL( SCIPdigraphAddArc(digraph, idx1, idx2, NULL) );
+            }
          }
       }
+      else
+         firstvaridxpercons[c] = -1;
    }
 
    SCIPfreeBufferArray(scip, &consvars);
@@ -617,12 +768,13 @@ SCIP_RETCODE splitProblem(
    SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
    SCIP_CONS**           conss,              /**< constraints */
    SCIP_VAR**            vars,               /**< variables */
+   SCIP_Real*            fixvals,            /**< array to store the fixing values */
    int                   nconss,             /**< number of constraints */
    int                   nvars,              /**< number of variables */
    int*                  components,         /**< array with component number for every variable */
    int                   ncomponents,        /**< number of components */
    int*                  firstvaridxpercons, /**< array with index of first variable in vars array for each constraint */
-   int*                  nsolvedprobs,       /**< number of solved subproblems */
+   int*                  nsolvedprobs,       /**< pointer to store the number of solved subproblems */
    int*                  ndeletedvars,       /**< pointer to store the number of deleted variables */
    int*                  ndeletedconss,      /**< pointer to store the number of deleted constraints */
    SCIP_RESULT*          result              /**< pointer to store the result of the presolving call */
@@ -631,6 +783,7 @@ SCIP_RETCODE splitProblem(
    SCIP_HASHMAP* consmap;
    SCIP_CONS** compconss;
    SCIP_VAR** compvars;
+   SCIP_Real* compfixvals;
    int* conscomponent;
    int ncompconss;
    int ncompvars;
@@ -662,13 +815,16 @@ SCIP_RETCODE splitProblem(
     * actual variables and constraints belonging to one component
     */
    for( c = 0; c < nconss; c++ )
-      conscomponent[c] = components[firstvaridxpercons[c]];
+      conscomponent[c] = (firstvaridxpercons[c] == -1 ? -1 : components[firstvaridxpercons[c]]);
 
    SCIPsortIntPtr(components, (void**)vars, nvars);
    SCIPsortIntPtr(conscomponent, (void**)conss, nconss);
 
    compvarsstart = 0;
    compconssstart = 0;
+
+   while( compconssstart < nconss && conscomponent[compconssstart] == -1 )
+      ++compconssstart;
 
    /* loop over all components */
    for( comp = 0; comp < ncomponents && !SCIPisStopped(scip); comp++ )
@@ -692,9 +848,10 @@ SCIP_RETCODE splitProblem(
          ++c;
 
       /* collect some statistical information */
-      updateStatisticsComp(presoldata, nbinvars, nintvars);
+      SCIPstatistic( updateStatisticsComp(presoldata, nbinvars, nintvars) );
 
       compvars = &(vars[compvarsstart]);
+      compfixvals = &(fixvals[compvarsstart]);
       compconss = &(conss[compconssstart]);
       ncompvars = v - compvarsstart;
       ncompconss = c - compconssstart;
@@ -704,60 +861,75 @@ SCIP_RETCODE splitProblem(
       /* single variable without constraint */
       if( ncompconss == 0 )
       {
-         SCIP_Real fixval;
          SCIP_Bool infeasible;
          SCIP_Bool fixed;
 
          /* there is no constraint to connect variables, so there should be only one variable in the component */
          assert(ncompvars == 1);
 
-         fixval = 0.0;
-
          /* fix variable to its best bound (or 0.0, if objective is 0) */
          if( SCIPisPositive(scip, SCIPvarGetObj(compvars[0])) )
-            fixval = SCIPvarGetLbGlobal(compvars[0]);
+            compfixvals[0] = SCIPvarGetLbGlobal(compvars[0]);
          else if( SCIPisNegative(scip, SCIPvarGetObj(compvars[0])) )
-            fixval = SCIPvarGetUbGlobal(compvars[0]);
+            compfixvals[0] = SCIPvarGetUbGlobal(compvars[0]);
+         else
+         {
+            compfixvals[0] = 0.0;
+            compfixvals[0] = MIN(compfixvals[0], SCIPvarGetUbGlobal(compvars[0])); /*lint !e666*/
+            compfixvals[0] = MAX(compfixvals[0], SCIPvarGetLbGlobal(compvars[0])); /*lint !e666*/
+         }
 
-#ifndef NDEBUG
-	 SCIPwarningMessage(scip, "strange: fixing variables <%s> (locks [%d, %d]) to %g because it occurs in no contraint\n", SCIPvarGetName(compvars[0]), SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), fixval);
+#ifdef SCIP_MORE_DEBUG
+	 SCIPinfoMessage(scip, NULL, "presol components: fix variable <%s>[%g,%g] (locks [%d, %d]) to %g because it occurs in no constraint\n",
+            SCIPvarGetName(compvars[0]), SCIPvarGetLbGlobal(compvars[0]), SCIPvarGetUbGlobal(compvars[0]),
+            SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), compfixvals[0]);
 #else
-	 SCIPdebugMessage("strange: fixing variables <%s> (locks [%d, %d]) to %g because it occurs in no contraint\n", SCIPvarGetName(compvars[0]), SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), fixval);
+	 SCIPdebugMessage("presol components: fix variable <%s>[%g,%g] (locks [%d, %d]) to %g because it occurs in no constraint\n",
+            SCIPvarGetName(compvars[0]), SCIPvarGetLbGlobal(compvars[0]), SCIPvarGetUbGlobal(compvars[0]),
+            SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), compfixvals[0]);
 #endif
 
-         SCIP_CALL( SCIPfixVar(scip, compvars[0], fixval, &infeasible, &fixed) );
+         SCIP_CALL( SCIPfixVar(scip, compvars[0], compfixvals[0], &infeasible, &fixed) );
          assert(!infeasible);
          assert(fixed);
-         (*ndeletedvars)++;
+         ++(*ndeletedvars);
+         ++(*nsolvedprobs);
 
          /* update statistics */
-         updateStatisticsSingleVar(presoldata);
+         SCIPstatistic( updateStatisticsSingleVar(presoldata) );
       }
-      else
+      /* we do not want to solve the component, if it is the last unsolved one */
+      else if( ncompvars < SCIPgetNVars(scip) )
       {
+         SCIP_RESULT subscipresult;
+
          assert(ncompconss > 0);
 
-         /* in debug mode, we want to be informed about components with single constraints;
+         /* in extended debug mode, we want to be informed about components with single constraints;
           * this is only for noticing this case and possibly handling it within the constraint handler
           */
-#ifndef NDEBUG
+#ifdef SCIP_MORE_DEBUG
          if( ncompconss == 1 )
          {
-            SCIPwarningMessage(scip, "presol component detected component with a single constraint:\n");
+            SCIPinfoMessage(scip, NULL, "presol component detected component with a single constraint:\n");
             SCIP_CALL( SCIPprintCons(scip, compconss[0], NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
          }
 #endif
 
-         /* we do not want to solve the component, if it is the last unsolved one */
-         if( ncompvars < SCIPgetNVars(scip) )
-         {
-            /* build subscip for one component and try to solve it */
-            SCIP_CALL( copyAndSolveComponent(scip, presoldata, consmap, comp, compconss, ncompconss, compvars, ncompvars,
-                  nbinvars, nintvars, nsolvedprobs, ndeletedvars, ndeletedconss, result) );
+         /* build subscip for one component and try to solve it */
+         SCIP_CALL( copyAndSolveComponent(scip, presoldata, consmap, comp, compconss, ncompconss, compvars,
+               compfixvals, ncompvars, nbinvars, nintvars, nsolvedprobs, ndeletedvars, ndeletedconss,
+               &subscipresult) );
 
-            if( *result == SCIP_CUTOFF )
-               break;
-         }
+         if( subscipresult == SCIP_CUTOFF || subscipresult == SCIP_UNBOUNDED )
+	 {
+	    *result = subscipresult;
+            break;
+	 }
+
+         if( !presoldata->pluginscopied )
+            break;
       }
    }
 
@@ -784,22 +956,17 @@ SCIP_RETCODE presolComponents(
    )
 {
    SCIP_PRESOLDATA* presoldata;
-   SCIP_DIGRAPH* digraph;
    SCIP_CONS** conss;
    SCIP_CONS** tmpconss;
-   SCIP_VAR** vars;
-   SCIP_VAR** tmpvars;
-   int* firstvaridxpercons;
+   SCIP_Bool success;
    int nconss;
    int ntmpconss;
    int nvars;
-   int* components;
    int ncomponents;
    int ndeletedconss;
    int ndeletedvars;
    int nsolvedprobs;
    int c;
-   SCIP_Bool success;
 
    assert(scip != NULL);
    assert(presol != NULL);
@@ -807,16 +974,11 @@ SCIP_RETCODE presolComponents(
 
    *result = SCIP_DIDNOTRUN;
 
-   /**@todo maybe only not in SCIP_STAGE_PRESOLVING ? */
-   if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE || SCIPinProbing(scip) )
+   if( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING || SCIPinProbing(scip) )
       return SCIP_OKAY;
 
    /* do not run, if not all variables are explicitly known */
    if( SCIPgetNActivePricers(scip) > 0 )
-      return SCIP_OKAY;
-
-   /* only call the component presolver, if presolving would be stopped otherwise */
-   if( !SCIPisPresolveFinished(scip) )
       return SCIP_OKAY;
 
    presoldata = SCIPpresolGetData(presol);
@@ -824,11 +986,29 @@ SCIP_RETCODE presolComponents(
 
    nvars = SCIPgetNVars(scip);
 
-   /* the presolver should be executed only once */
-   if( nvars == 0 || (presoldata->didsearch && nvars > (1 - presoldata->reldecrease) * presoldata->lastnvars) )
+   /* we do not want to run, if there are no variables left */
+   if( nvars == 0 )
       return SCIP_OKAY;
 
-   resetStatistics(scip, presoldata);
+   /* the presolver should be executed only if it didn't run so far or the number of variables was significantly reduced
+    * since tha last run
+    */
+   if( (presoldata->didsearch && nvars > (1 - presoldata->reldecrease) * presoldata->lastnvars) )
+      return SCIP_OKAY;
+
+   /* if we were not able to copy all plugins, we cannot run the components presolver */
+   if( !presoldata->pluginscopied )
+      return SCIP_OKAY;
+
+   /* only call the component presolver, if presolving would be stopped otherwise */
+   if( !SCIPisPresolveFinished(scip) )
+      return SCIP_OKAY;
+
+   /* check for a reached timelimit */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   SCIPstatistic( resetStatistics(scip, presoldata) );
 
    *result = SCIP_DIDNOTFIND;
    presoldata->didsearch = TRUE;
@@ -852,25 +1032,43 @@ SCIP_RETCODE presolComponents(
       }
    }
 
-   /* get number of variables and copy variables into a local array */
-   tmpvars = SCIPgetVars(scip);
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   BMScopyMemoryArray(vars, tmpvars, nvars);
-
    if( nvars > 1 && nconss > 1 )
    {
+      SCIP_DIGRAPH* digraph;
+      SCIP_VAR** vars;
+      SCIP_Real* fixvals;
+      int* firstvaridxpercons;
+      int* varlocks;
+      int v;
+
+      /* copy variables into a local array */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &fixvals, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &firstvaridxpercons, nconss) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varlocks, nvars) );
+      BMScopyMemoryArray(vars, SCIPgetVars(scip), nvars);
+
+      /* count number of varlocks for each variable (up + down locks) and multiply it by 2;
+       * that value is used as an estimate of the number of arcs incident to the variable's node in the digraph
+       */
+      for( v = 0; v < nvars; ++v )
+         varlocks[v] = 4 * (SCIPvarGetNLocksDown(vars[v]) + SCIPvarGetNLocksUp(vars[v]));
 
       /* create and fill directed graph */
       SCIP_CALL( SCIPdigraphCreate(&digraph, nvars) );
+      SCIP_CALL( SCIPdigraphSetSizes(digraph, varlocks) );
       SCIP_CALL( fillDigraph(scip, digraph, conss, nconss, firstvaridxpercons, &success) );
 
       if( success )
       {
+         int* components;
+
          SCIP_CALL( SCIPallocBufferArray(scip, &components, nvars) );
 
          /* compute independent components */
          SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, components, &ncomponents) );
+
+         SCIPdebugMessage("presol components found %d undirected components\n", ncomponents);
 
          /* We want to sort the components in increasing size (number of variables).
           * Therefore, we now get the number of variables for each component, and rename the components
@@ -879,41 +1077,59 @@ SCIP_RETCODE presolComponents(
           */
          if( ncomponents > 0 )
          {
-            int* ncompvars;
+            int* compsize;
             int* permu;
+            int* compvars;
+            int ncompvars;
+            int nbinvars;
+            int nintvars;
+            int ncontvars;
 
-            SCIP_CALL( SCIPallocBufferArray(scip, &ncompvars, ncomponents) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &compsize, ncomponents) );
             SCIP_CALL( SCIPallocBufferArray(scip, &permu, ncomponents) );
 
             /* get number of variables in the components */
             for( c = 0; c < ncomponents; ++c )
             {
-               SCIPdigraphGetComponent(digraph, c, NULL, &ncompvars[c]);
+               SCIPdigraphGetComponent(digraph, c, &compvars, &ncompvars);
                permu[c] = c;
+               nbinvars = 0;
+               nintvars = 0;
+
+               for( v = 0; v < ncompvars; ++v )
+               {
+                  /* check whether variable is of binary or integer type */
+                  if( SCIPvarGetType(vars[compvars[v]]) == SCIP_VARTYPE_BINARY )
+                     nbinvars++;
+                  else if( SCIPvarGetType(vars[compvars[v]]) == SCIP_VARTYPE_INTEGER )
+                     nintvars++;
+               }
+               ncontvars = ncompvars - nintvars - nbinvars;
+               compsize[c] = (int)(1000 * (nbinvars + presoldata->intfactor * nintvars) + MIN(999, ncontvars));
             }
 
             /* get permutation of component numbers such that the size of the components is increasing */
-            SCIPsortIntInt(ncompvars, permu, ncomponents);
+            SCIPsortIntInt(compsize, permu, ncomponents);
 
             /* now, we need the reverse direction, i.e., for each component number, we store its new number
-             * such that the components are sorted; for this, we abuse the ncompvars array
+             * such that the components are sorted; for this, we abuse the compsize array
              */
             for( c = 0; c < ncomponents; ++c )
-               ncompvars[permu[c]] = c;
+               compsize[permu[c]] = c;
 
             /* for each variable, replace the old component number by the new one */
             for( c = 0; c < nvars; ++c )
-               components[c] = ncompvars[components[c]];
+               components[c] = compsize[components[c]];
 
             /* create subproblems from independent components and solve them in dependence of their size */
-            SCIP_CALL( splitProblem(scip, presoldata, conss, vars, nconss, nvars, components, ncomponents, firstvaridxpercons,
+            SCIP_CALL( splitProblem(scip, presoldata, conss, vars, fixvals, nconss, nvars, components, ncomponents, firstvaridxpercons,
                   &nsolvedprobs, &ndeletedvars, &ndeletedconss, result) );
 
             (*nfixedvars) += ndeletedvars;
             (*ndelconss) += ndeletedconss;
 
             SCIPfreeBufferArray(scip, &permu);
-            SCIPfreeBufferArray(scip, &ncompvars);
+            SCIPfreeBufferArray(scip, &compsize);
          }
 
          SCIPfreeBufferArray(scip, &components);
@@ -921,10 +1137,12 @@ SCIP_RETCODE presolComponents(
 
       SCIPdigraphFree(&digraph);
 
+      SCIPfreeBufferArray(scip, &varlocks);
       SCIPfreeBufferArray(scip, &firstvaridxpercons);
+      SCIPfreeBufferArray(scip, &fixvals);
+      SCIPfreeBufferArray(scip, &vars);
    }
 
-   SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &conss);
 
    /* update result to SCIP_SUCCESS, if reductions were found;
@@ -934,10 +1152,14 @@ SCIP_RETCODE presolComponents(
       *result = SCIP_SUCCESS;
 
    /* print statistics */
-   printStatistics(presoldata);
+   SCIPstatistic( printStatistics(presoldata) );
 
-   SCIPdebugMessage("### %d components, %d solved, %d deleted constraints, %d deleted variables\n",
-      ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars);
+   SCIPdebugMessage("%d components, %d solved, %d deleted constraints, %d deleted variables, result = %d\n",
+      ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars, *result);
+#ifdef NDEBUG
+   SCIPstatisticMessage("%d components, %d solved, %d deleted constraints, %d deleted variables, result = %d\n",
+      ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars, *result);
+#endif
 
    presoldata->lastnvars = SCIPgetNVars(scip);
 
@@ -948,21 +1170,6 @@ SCIP_RETCODE presolComponents(
 /*
  * Callback methods of presolver
  */
-
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_PRESOLCOPY(presolCopyComponents)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of components presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define presolCopyComponents NULL
-#endif
-
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
@@ -991,15 +1198,16 @@ SCIP_DECL_PRESOLINIT(presolInitComponents)
    assert(presoldata != NULL);
 
    /* initialize statistics */
-   SCIP_CALL( initStatistics(scip, presoldata) ); /*lint !e506 !e774*/
+   SCIPstatistic( SCIP_CALL( initStatistics(scip, presoldata) ) );
 
    presoldata->subscip = NULL;
    presoldata->didsearch = FALSE;
+   presoldata->pluginscopied = TRUE;
 
    return SCIP_OKAY;
 }
 
-#ifdef WITH_STATISTICS
+#ifdef SCIP_STATISTIC
 /** deinitialization method of presolver (called before transformed problem is freed) */
 static
 SCIP_DECL_PRESOLEXIT(presolExitComponents)
@@ -1010,17 +1218,11 @@ SCIP_DECL_PRESOLEXIT(presolExitComponents)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   freeStatistics(scip, presoldata);
+   SCIPstatistic( freeStatistics(scip, presoldata) );
 
    return SCIP_OKAY;
 }
-#else
-#define presolExitComponents NULL
 #endif
-
-/* define unused callbacks as NULL */
-#define presolInitpreComponents NULL
-#define presolExitpreComponents NULL
 
 
 /** execution method of presolver */
@@ -1044,25 +1246,18 @@ SCIP_RETCODE SCIPincludePresolComponents(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presol;
 
    /* create components presolver data */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip,
-         PRESOL_NAME,
-         PRESOL_DESC,
-         PRESOL_PRIORITY,
-         PRESOL_MAXROUNDS,
-         PRESOL_DELAY,
-         presolCopyComponents,
-         presolFreeComponents,
-         presolInitComponents,
-         presolExitComponents,
-         presolInitpreComponents,
-         presolExitpreComponents,
-         presolExecComponents,
-         presoldata) );
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
+         PRESOL_DELAY, presolExecComponents, presoldata) );
+
+   SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeComponents) );
+   SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitComponents) );
+   SCIPstatistic( SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitComponents) ) );
 
    /* add presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -1071,7 +1266,7 @@ SCIP_RETCODE SCIPincludePresolComponents(
          &presoldata->writeproblems, FALSE, DEFAULT_WRITEPROBLEMS, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/components/maxintvars",
-         "maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving)",
+         "maximum number of integer (or binary) variables to solve a subproblem directly (-1: unlimited)",
          &presoldata->maxintvars, FALSE, DEFAULT_MAXINTVARS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip,
          "presolving/components/nodelimit",

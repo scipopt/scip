@@ -17,28 +17,54 @@
  * @brief  variable upper and lower bound propagator
  * @author Stefan Heinz
  * @author Jens Schulz
+ * @author Gerald Gamrath
  *
- * This propagator uses the variable lower and upper bounds of a variable to reduce variable domains. We (implicitly)
- * create a graph for the variable lower and upper bounds. 
+ * This propagator uses global bound information provided by SCIP to deduce global and local bound changes.
+ * It can take into account
+ * - implications (bound change following from specific value of a binary variable)
+ * - cliques (set of binary variables, each with a corresponding value, of which at most one variable can get the value)
+ * - variable lower/upper bounds (bounds of arbitrary variables that depend linearly on the value of another variable)
  *
- * 1) Graph construction
+ * The propagator does not look at a variable in whole, but at one point in time only handles one specific bound (lower
+ * or upper) of a variable and deduces changes for lower or upper bounds of other variables. The concept is as follows:
  *
- *    For each variable we create a node and for each variable lower (upper) bound we insert an arc (directed) from the
- *    variable which influences the lower (upper) bound of the other variable
+ * 1) Extract variable bound data
  *
- * 2) Create a topological sorted variable array 
+ *    Implications and cliques are stored in a way such that given a variable and its new value, we can access all bound
+ *    changes that can be deduced from setting the variable to that value. However, for variable bounds, this currently
+ *    does not hold, they are only stored in the other direction, i.e. for a bound of a given variable, we have a list
+ *    of all other bounds of variables that directly influence the bound of the given variable and a linear function
+ *    describing how they do this.
+ *    For the propagation, we need the other direction, thus we store it in the propagator data when the branch-and-bound
+ *    solving process is about to begin.
  *
- *    This graph is used to create two (almost) topological sorted variable array. One w.r.t. the variable lower bounds
- *    and the other w.r.t. the variable upper bounds. Topological sorted means, a variable which influences the lower
- *    (upper) bound of another variable y is located before y in the corresponding variable array. Note, that in general
- *    a topological sort is not unique.
+ * 2) Topological sorting of bounds of variable
  *
- * 3) Propagation
- *  
- *    The topological sorted lower and upper bound arrays are used to propagate the variable lower or upper bounds of
- *    the corresponding variables.
+ *    We compute a topological order of the bounds of variables. This is needed to define an order in which we will
+ *    regard bounds of variables in the propagation process in order to avoid unneccessarily regarding the same variable
+ *    bound multiple times because it was changed in the meantime when propagating another bound of a variable.
+ *    Therefore, we implictly regard a directed graph, in which each node corresponds to a bound of a variable and there
+ *    exists a directed edge from one node to another, if the bound corresponding to the former node influences the
+ *    bound corresponding to the latter node. This is done by iteratively running a DFS until all nodes were visited.
+ *    Note that there might be cycles in the graph, which are randomly broken, so the order is only almost topological.
+ *
+ * 3) Collecting bound changes
+ *
+ *    For each bound of a variable, which can trigger bound changes of other variables, the propagator catches all
+ *    events informing about a global change of the bound or a local toghtening of the bound. The event handler
+ *    then adds the bound of the variable to a priority queue, with the key in the priority queue corresponding
+ *    to the position of the bound in the topological sort.
+ *
+ * 4) Propagating Bounds
+ *
+ *    As long as there are bounds contained in the priority queue, the propagator pops one bound from the queue, which
+ *    is the one most at the beginning of the topological sort, so it should not be influenced by propagating other
+ *    bounds currently contained in the queue. Starting at this bound, all implication, clique, and variable bound
+ *    information is used to deduce tigther bounds for other variables and change the bounds, if a tighter one is found.
+ *    These bound changes trigger an event that will lead to adding the corresponding bound to the priority queue,
+ *    if it is not contained, yet. The process is iterated until the priority queue contains no more bounds.
  */
- 
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -46,21 +72,67 @@
 
 #include "scip/prop_vbounds.h"
 
+/**@name Propagator properties
+ *
+ * @{
+ */
+
 #define PROP_NAME              "vbounds"
 #define PROP_DESC              "propagates variable upper and lower bounds"
-#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP
-#define PROP_PRIORITY           2000000 /**< propagator priority */ 
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP
+#define PROP_PRIORITY           3000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define PROP_PRESOL_PRIORITY          0 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
-#define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
-#define PROP_PRESOL_MAXROUNDS         0 /**< maximal number of presolving rounds the presolver participates in (-1: no
-                                         *   limit) */
+
+/**@} */
+
+/**@name Event handler properties
+ *
+ * @{
+ */
 
 #define EVENTHDLR_NAME         "vbounds"
 #define EVENTHDLR_DESC         "bound change event handler for for vbounds propagator"
 
+/**@} */
+
+/**@name Default parameter values
+ *
+ * @{
+ */
+
 #define DEFAULT_USEBDWIDENING      TRUE      /**< should bound widening be used to initialize conflict analysis? */
+#define DEFAULT_USEIMPLICS         FALSE     /**< should implications be propagated? */
+#define DEFAULT_USECLIQUES         FALSE     /**< should cliques be propagated? */
+#define DEFAULT_USEVBOUNDS         TRUE      /**< should variable bounds be propagated? */
+#define DEFAULT_DOTOPOSORT         TRUE      /**< should the bounds be topologically sorted in advance? */
+#define DEFAULT_SORTCLIQUES        FALSE     /**< should cliques be regarded for the topological sort? */
+
+/**@} */
+
+/**@name Propagator defines
+ *
+ * @{
+ *
+ * The propagator works on indices representing a bound of a variable. This index will be called bound index in the
+ * following. For a given active variable with problem index i (note that active variables have problem indices
+ * between 0 and nactivevariable - 1), the bound index of its lower bound is 2*i, the bound index of its upper
+ * bound is 2*i + 1. The other way around, a given bound index i corresponds to the variable with problem index
+ * i/2 (rounded down), and to the lower bound, if i is even, to the upper bound if i is odd.
+ * The following macros can be used to convert bound index into variable problem index and boundtype and vice versa.
+ */
+#define getLbIndex(idx) (2*(idx))
+#define getUbIndex(idx) (2*(idx)+1)
+#define varGetLbIndex(var) (getLbIndex(SCIPvarGetProbindex(var)))
+#define varGetUbIndex(var) (getUbIndex(SCIPvarGetProbindex(var)))
+#define getVarIndex(idx) ((idx)/2)
+#define getBoundtype(idx) (((idx) % 2 == 0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER)
+#define isIndexLowerbound(idx) ((idx) % 2 == 0)
+#define getBoundString(lower) ((lower) ? "lb" : "ub")
+#define getBoundtypeString(type) ((type) == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper")
+#define indexGetBoundString(idx) (getBoundString(isIndexLowerbound(idx)))
+
+/**@} */
 
 /*
  * Data structures
@@ -69,22 +141,35 @@
 /** propagator data */
 struct SCIP_PropData
 {
-   SCIP_VAR**            vars;               /**< array of involved variables */
-   SCIP_HASHMAP*         varHashmap;         /**< mapping a variable to its position in the variable array */    
-   SCIP_VAR**            lbvars;             /**< topological sorted variables with respect to the variable lower bound */
-   SCIP_VAR**            ubvars;             /**< topological sorted variables with respect to the variable upper bound */
-   SCIP_EVENTTYPE*       lbeventtypes;       /**< event types of variables belonging to variable lower bounds */ 
-   SCIP_EVENTTYPE*       ubeventtypes;       /**< event types of variables belonging to variable upper bounds */ 
-   int                   nvars;              /**< number of involved variables */
-   int                   neventvars;         /**< number of variables which are triggered by an event */
-   int                   sizevars;           /**< size of the variable array vars */
-   int                   nlbvars;            /**< number of variables in variable lower bound array */
-   int                   nubvars;            /**< number of variables in variable upper bound array */
-   SCIP_Bool             lbpropagated;       /**< is the lower bound variable array already propagated? */
-   SCIP_Bool             ubpropagated;       /**< is the upper bound variable array already propagated? */
+   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for catching bound changes */
+   int*                  topoorder;          /**< array mapping on the bounds of variables in topological order;
+                                              *   or -1, if the bound that should be at that position has no outgoing
+                                              *   implications, cliques, or vbounds;
+                                              *   i.e., for i < j and topoorder[i] != -1 != topoorder[j], the variable
+                                              *   and boundtype represented by index topoorder[i] are earlier in the
+                                              *   topological order than those represented by index topoorder[j]
+                                              */
+   int**                 vboundboundedidx;   /**< array storing for each bound index the bound indices of all bounds
+                                              *   influenced by this bound through variable bounds */
+   SCIP_Real**           vboundcoefs;        /**< array storing for each bound index the coefficients in the variable
+                                              *   bounds influencing the corresponding bound index stored in
+                                              *   vboundboundedidx */
+   SCIP_Real**           vboundconstants;    /**< array storing for each bound index the constants in the variable
+                                              *   bounds influencing the corresponding bound index stored in
+                                              *   vboundboundedidx */
+   int*                  nvbounds;           /**< array storing for each bound index the number of vbounds stored */
+   int*                  vboundsize;         /**< array with sizes of vbound arrays for the nodes */
+   int                   nbounds;            /**< number of bounds of variables regarded (two times number of active variables) */
+   SCIP_PQUEUE*          propqueue;          /**< priority queue to handle the bounds of variables that were changed and have to be propagated */
+   SCIP_Bool*            inqueue;            /**< boolean array to store whether a bound of a variable is already contained in propqueue */
+   SCIP_Bool             initialized;        /**< was the data for propagation already initialized? */
    SCIP_Bool             usebdwidening;      /**< should bound widening be used to initialize conflict analysis? */
+   SCIP_Bool             useimplics;         /**< should implications be propagated? */
+   SCIP_Bool             usecliques;         /**< should cliques be propagated? */
+   SCIP_Bool             usevbounds;         /**< should variable bounds be propagated? */
+   SCIP_Bool             dotoposort;         /**< should the bounds be topologically sorted in advance? */
+   SCIP_Bool             sortcliques;        /**< should cliques be regarded for the topological sort? */
 };
-
 
 /** inference information */
 struct InferInfo
@@ -129,7 +214,7 @@ SCIP_BOUNDTYPE inferInfoGetBoundtype(
    INFERINFO             inferinfo           /**< inference information to convert */
    )
 {
-   assert((SCIP_BOUNDTYPE)inferinfo.val.asbits.boundtype == SCIP_BOUNDTYPE_LOWER 
+   assert((SCIP_BOUNDTYPE)inferinfo.val.asbits.boundtype == SCIP_BOUNDTYPE_LOWER
       || (SCIP_BOUNDTYPE)inferinfo.val.asbits.boundtype == SCIP_BOUNDTYPE_UPPER);
    return (SCIP_BOUNDTYPE)inferinfo.val.asbits.boundtype;
 }
@@ -143,7 +228,7 @@ int inferInfoGetPos(
    return inferinfo.val.asbits.pos;
 }
 
-/** constructs an inference information out of a propagation rule and a position number */
+/** constructs an inference information out of a position of a variable and a boundtype */
 static
 INFERINFO getInferInfo(
    int                   pos,                /**< position of the variable which forced that propagation */
@@ -154,13 +239,12 @@ INFERINFO getInferInfo(
 
    assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
    assert((int)boundtype >= 0 && (int)boundtype <= 1); /*lint !e685 !e568q*/
-   
+
    inferinfo.val.asbits.pos = pos; /*lint !e732*/
    inferinfo.val.asbits.boundtype = boundtype; /*lint !e641*/
-   
+
    return inferinfo;
 }
-
 
 /*
  * Local methods
@@ -172,128 +256,14 @@ void resetPropdata(
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
-   propdata->vars = NULL;
-   propdata->varHashmap = NULL;
-   propdata->lbvars = NULL;
-   propdata->ubvars = NULL;
-   propdata->lbeventtypes = NULL;
-   propdata->ubeventtypes = NULL;
-   propdata->nvars = 0;
-   propdata->neventvars = 0;
-   propdata->nlbvars = 0;
-   propdata->nubvars = 0;
-   propdata->lbpropagated = TRUE;
-   propdata->ubpropagated = TRUE;
-}
-
-/** gets the requested variables bounds */
-static
-void getVariableBounds(
-   SCIP_VAR*             var,                /**< variable to get the variable bounds from */
-   SCIP_VAR***           vbvars,             /**< pointer to store the variable bound array */
-   int*                  nvbvars,            /**< pointer to store the number of variable bounds */
-   SCIP_Bool             lowerbound          /**< variable lower bounds? (otherwise variable upper bound) */
-   )
-{
-   if( lowerbound )
-   {
-      /* get variable lower bounds */
-      (*vbvars) = SCIPvarGetVlbVars(var);
-      (*nvbvars) = SCIPvarGetNVlbs(var);
-   }
-   else
-   {
-      /* get variable upper bounds */
-      (*vbvars) = SCIPvarGetVubVars(var);
-      (*nvbvars) = SCIPvarGetNVubs(var);
-   }
-}
-
-/** perform depth-first-search from the given variable using the variable lower or upper bounds of the variable */
-static
-SCIP_RETCODE depthFirstSearch(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable to start the depth-first-search  */
-   SCIP_HASHMAP*         varPosMap,          /**< mapping a variable to its position in the (used) variable array, or NULL */    
-   SCIP_VAR**            usedvars,           /**< array of variables which are involved in the propagation, or NULL */
-   int*                  nusedvars,          /**< number of variables which are involved in the propagation, or NULL */
-   SCIP_HASHTABLE*       connected,          /**< hash table storing if a node was already visited */
-   SCIP_VAR**            sortedvars,         /**< array that will contain the topological sorted variables */
-   int*                  nsortedvars,        /**< pointer to store the number of already collects variables in the sorted variables array */
-   SCIP_Bool             lowerbound          /**< depth-first-search with respect to the variable lower bounds, otherwise variable upper bound */
-   )
-{
-   SCIP_VAR** vbvars;
-   SCIP_VAR* vbvar;
-   SCIP_Real scalar;
-   SCIP_Real constant;
-   int nvbvars;
-   int v;
-
-   assert(scip != NULL);
-   assert(var != NULL);
-   assert(varPosMap == NULL || (varPosMap != NULL && usedvars != NULL && nusedvars != NULL));
-   assert(sortedvars != NULL);
-   assert(nsortedvars != NULL);
-   assert(*nsortedvars >= 0);
-   assert(SCIPvarGetProbindex(var) > -1);
-   assert(SCIPhashtableExists(connected, var));
-
-   /* mark variable as visited, remove variable from hash table */
-   SCIP_CALL( SCIPhashtableRemove(connected, var) );
-
-   /* get variable bounds */
-   getVariableBounds(var, &vbvars, &nvbvars, lowerbound);
-   
-   SCIPdebugMessage("variable <%s> has %d variable %s bounds\n", SCIPvarGetName(var), nvbvars, 
-      lowerbound ? "lower" : "upper");
-
-   for( v = 0; v < nvbvars; ++v )
-   {
-      vbvar = vbvars[v];
-      assert(vbvar != NULL);
-      
-      scalar = 1.0;
-      constant = 0.0;
-
-      /* transform variable bound variable to an active variable if possible */
-      SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &scalar, &constant) );
-      
-      /* we could not resolve the variable bound variable to one active variable, therefore, ignore this variable bound */
-      if( !SCIPvarIsActive(vbvar) )
-         continue;
-      
-      /* insert variable bound variable into the hash table since they are involved in later propagation */
-      if( varPosMap != NULL && !SCIPhashmapExists(varPosMap, vbvar) )
-      {
-         SCIPdebugMessage("insert variable <%s> with position %d into the hash map\n", SCIPvarGetName(vbvar), *nusedvars);
-         SCIP_CALL( SCIPhashmapInsert(varPosMap, vbvar, (void*)(size_t)(*nusedvars)) );
-         usedvars[*nusedvars] =  vbvar;
-         (*nusedvars)++;
-      }
-      
-      /* check if the variable bound variable was already visited */
-      if( SCIPhashtableExists(connected, vbvar) )
-      {
-         /* recursively call depth-first-search */
-         SCIP_CALL( depthFirstSearch(scip, vbvar, varPosMap, usedvars, nusedvars, connected, sortedvars, nsortedvars, lowerbound) );
-      }
-   }
-
-   /* store variable in the sorted variable array */
-   sortedvars[(*nsortedvars)] = var;
-   (*nsortedvars)++;
-   
-   /* insert variable bound variable into the hash table since they are involve in the later propagation */ 
-   if( varPosMap != NULL && !SCIPhashmapExists(varPosMap, var) ) 
-   { 
-      SCIPdebugMessage("insert variable <%s> with position %d into the hash map\n", SCIPvarGetName(var), *nusedvars); 
-      SCIP_CALL( SCIPhashmapInsert(varPosMap, var, (void*) (size_t)(*nusedvars)) ); 
-      usedvars[*nusedvars] =  var; 
-      (*nusedvars)++; 
-   } 
-
-   return SCIP_OKAY;
+   propdata->topoorder = NULL;
+   propdata->vboundboundedidx = NULL;
+   propdata->vboundcoefs = NULL;
+   propdata->vboundconstants = NULL;
+   propdata->nvbounds = NULL;
+   propdata->vboundsize = NULL;
+   propdata->nbounds = 0;
+   propdata->initialized = FALSE;
 }
 
 /** catches events for variables */
@@ -304,135 +274,51 @@ SCIP_RETCODE catchEvents(
    )
 {
    SCIP_EVENTHDLR* eventhdlr;
-   SCIP_VAR** vbvars;
-   SCIP_VAR* vbvar;
-   SCIP_Real* coefs;
-   SCIP_Real coef;
-   SCIP_Real constant;
-   int nvbvars;
-   int n;
+   SCIP_EVENTTYPE eventtype;
+   SCIP_VAR** vars;
    SCIP_VAR* var;
-   int idx;
+   SCIP_Bool lower;
+   int nbounds;
    int v;
+   int idx;
 
+   assert(scip != NULL);
    assert(propdata != NULL);
+   assert(propdata->topoorder != NULL);
 
-   propdata->neventvars = propdata->nvars;
-
-   /* setup arrays of event types lbeventtype and ubeventtype */
-   if( propdata->nlbvars > 0 )
-   {
-      /* we watch the LBCHANGED if the variable bound coefficient is positive and 
-       * we watch the UBCHANGED if the variable bound coefficient is negative
-       */
-      
-      assert(propdata->lbeventtypes == NULL);
-      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->lbeventtypes, propdata->neventvars) );
-      BMSclearMemoryArray(propdata->lbeventtypes, propdata->neventvars);
-      
-      for( v = 0; v < propdata->nlbvars; ++v )
-      {
-         var = propdata->lbvars[v];
-
-         vbvars  = SCIPvarGetVlbVars(var);
-         coefs   = SCIPvarGetVlbCoefs(var);
-         nvbvars = SCIPvarGetNVlbs(var);
-
-         /* loop over all variable lower bounds; a variable lower bound has the form: x >= b*y + d*/
-         for( n = 0; n < nvbvars; ++n )
-         {
-            vbvar = vbvars[n];
-            coef = coefs[n];
-            constant = 1.0;
-                        
-            /* transform variable bound variable to an active variable if possible */
-            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
-         
-            if( !SCIPvarIsActive(vbvar) )
-               continue;
-
-            assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
-            idx = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
-            assert(idx < propdata->neventvars);
-            
-            if( coef > 0.0 )
-            {
-               /* change in lower bound of y may lead to a propagation for x */
-               propdata->lbeventtypes[idx] = propdata->lbeventtypes[idx] | SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_VARFIXED;
-            }
-            else
-            {
-               /* change in upper bound of y may lead to a propagation for x */
-               propdata->lbeventtypes[idx] = propdata->lbeventtypes[idx] | SCIP_EVENTTYPE_UBCHANGED | SCIP_EVENTTYPE_VARFIXED;
-            }
-         }
-      }
-   }
-   
-   if( propdata->nubvars > 0 )
-   {
-      /* we watch the UBCHANGED if the variable bound coefficient is positive and
-       * we watch the LBCHANGED if the variable bound coefficient is negative
-       */
-
-      assert(propdata->ubeventtypes == NULL);
-      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->ubeventtypes, propdata->neventvars) );
-      BMSclearMemoryArray(propdata->ubeventtypes, propdata->neventvars);
-
-      for( v = 0; v < propdata->nubvars; ++v )
-      {
-         var = propdata->ubvars[v];
-
-         vbvars  = SCIPvarGetVubVars(var);
-         coefs   = SCIPvarGetVubCoefs(var);
-         nvbvars = SCIPvarGetNVubs(var);
-
-         /* loop over all variable upper bounds; a variable upper bound has the form: x <= b*y + d*/
-         for( n = 0; n < nvbvars; ++n )
-         {
-            vbvar = vbvars[n];
-            coef = coefs[n];
-            constant = 1.0;
-                        
-            /* transform variable bound variable to an active variable if possible */
-            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
-         
-            if( !SCIPvarIsActive(vbvar) )
-               continue;
-
-            assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
-            idx = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
-            assert(idx < propdata->neventvars);
-            
-            if( coef > 0.0 )
-            {
-               /* change in upper bound of y may lead to a propagation for x */
-               propdata->ubeventtypes[idx] = propdata->ubeventtypes[idx] | SCIP_EVENTTYPE_UBCHANGED | SCIP_EVENTTYPE_VARFIXED;
-            }
-            else
-            {
-               /* change in lower bound of y may lead to a propagation for x */
-               propdata->ubeventtypes[idx] = propdata->ubeventtypes[idx] | SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_VARFIXED;
-            }
-         }
-      }
-   }
-   
-   /* catch variable events according to computed event types */
-   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   /* catch variable events according to computed eventtypes */
+   eventhdlr = propdata->eventhdlr;
    assert(eventhdlr != NULL);
 
-   for( v = 0; v < propdata->neventvars; ++v )
+   vars = SCIPgetVars(scip);
+   nbounds = propdata->nbounds;
+
+   /* setup events */
+   for( v = 0; v < nbounds; ++v )
    {
-      if( propdata->lbeventtypes != NULL && propdata->lbeventtypes[v] != SCIP_EVENTTYPE_DISABLED )
+      idx = propdata->topoorder[v];
+      assert(idx >= 0 && idx < nbounds);
+
+      var = vars[getVarIndex(idx)];
+      lower = isIndexLowerbound(idx);
+
+      /* if the bound does not influence another bound by implications, cliques, or vbounds,
+       * we do not create an event and do not catch changes of the bound;
+       * we mark this by setting the value in topoorder to -1
+       */
+      if( propdata->nvbounds[idx] == 0 && SCIPvarGetNImpls(var, lower) == 0 && SCIPvarGetNCliques(var, lower) == 0 )
       {
-         SCIP_CALL( SCIPcatchVarEvent(scip, propdata->vars[v], propdata->lbeventtypes[v], eventhdlr, (SCIP_EVENTDATA*)(&propdata->lbpropagated), NULL) );
+         propdata->topoorder[v] = -1;
+         continue;
       }
 
-      if( propdata->ubeventtypes != NULL && propdata->ubeventtypes[v] != SCIP_EVENTTYPE_DISABLED )
-      {
-         SCIP_CALL( SCIPcatchVarEvent(scip, propdata->vars[v], propdata->ubeventtypes[v], eventhdlr, (SCIP_EVENTDATA*)(&propdata->ubpropagated), NULL) );
-      }
+      /* determine eventtype that we want to catch depending on boundtype of variable */
+      if( lower )
+         eventtype = SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_GLBCHANGED;
+      else
+         eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
+
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, NULL) );
    }
 
    return SCIP_OKAY;
@@ -447,318 +333,631 @@ SCIP_RETCODE dropEvents(
    )
 {
    SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTTYPE eventtype;
+   SCIP_VAR** vars;
+   SCIP_VAR* var;
+   SCIP_Bool lower;
+   int nbounds;
    int v;
-      
-   assert(propdata != NULL);
-   assert((propdata->nlbvars == 0) == (propdata->lbeventtypes == NULL));
-   assert((propdata->nubvars == 0) == (propdata->ubeventtypes == NULL));
+   int idx;
 
-   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   assert(propdata != NULL);
+
+   eventhdlr = propdata->eventhdlr;
    assert(eventhdlr != NULL);
 
-   for( v = 0; v < propdata->neventvars; ++v )
+   vars = SCIPgetVars(scip);
+   nbounds = propdata->nbounds;
+
+   for( v = 0; v < nbounds; ++v )
    {
-      if( propdata->lbeventtypes != NULL && propdata->lbeventtypes[v] != SCIP_EVENTTYPE_DISABLED )
-      {
-         SCIP_CALL( SCIPdropVarEvent(scip, propdata->vars[v], propdata->lbeventtypes[v], eventhdlr, (SCIP_EVENTDATA*)(&propdata->lbpropagated), -1) );
-      }
-      if( propdata->ubeventtypes != NULL && propdata->ubeventtypes[v] != SCIP_EVENTTYPE_DISABLED )
-      {
-         SCIP_CALL( SCIPdropVarEvent(scip, propdata->vars[v], propdata->ubeventtypes[v], eventhdlr, (SCIP_EVENTDATA*)(&propdata->ubpropagated), -1) );
-      }
+      idx = propdata->topoorder[v];
+
+      if( idx == -1 )
+         continue;
+
+      assert(idx >= 0 && idx < nbounds);
+
+      var = vars[getVarIndex(idx)];
+      lower = isIndexLowerbound(idx);
+
+      /* determine eventtype that we catch and now want to drop depending on boundtype of variable */
+      if( lower )
+         eventtype = SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_GLBCHANGED;
+      else
+         eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
+
+      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, -1) );
    }
-  
+
    return SCIP_OKAY;
 }
+
+#define INITMEMSIZE 5
+
+/* adds a vbound to the propagator data to store it internally and allow forward propagation */
+static
+SCIP_RETCODE addVbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata,           /**< propagator data */
+   int                   startidx,           /**< index of bound of variable influencing the other variable */
+   int                   endidx,             /**< index of bound of variable which is influenced */
+   SCIP_Real             coef,               /**< coefficient in the variable bound */
+   SCIP_Real             constant            /**< constant in the variable bound */
+   )
+{
+   int nvbounds;
+
+   assert(scip != NULL);
+   assert(propdata != NULL);
+
+   if( propdata->vboundsize[startidx] == 0 )
+   {
+      /* allocate memory for storing vbounds */
+      propdata->vboundsize[startidx] = INITMEMSIZE;
+
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &propdata->vboundboundedidx[startidx], propdata->vboundsize[startidx]) ); /*lint !e866*/
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &propdata->vboundcoefs[startidx], propdata->vboundsize[startidx]) ); /*lint !e866*/
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &propdata->vboundconstants[startidx], propdata->vboundsize[startidx]) ); /*lint !e866*/
+   }
+   else if( propdata->nvbounds[startidx] >= propdata->vboundsize[startidx] )
+   {
+      /* reallocate memory for storing vbounds */
+      propdata->vboundsize[startidx] = SCIPcalcMemGrowSize(scip, propdata->nvbounds[startidx] + 1);
+      assert(propdata->nvbounds[startidx] < propdata->vboundsize[startidx]);
+
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &propdata->vboundboundedidx[startidx], propdata->vboundsize[startidx]) ); /*lint !e866*/
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &propdata->vboundcoefs[startidx], propdata->vboundsize[startidx]) ); /*lint !e866*/
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &propdata->vboundconstants[startidx], propdata->vboundsize[startidx]) ); /*lint !e866*/
+   }
+
+   nvbounds = propdata->nvbounds[startidx];
+   propdata->vboundboundedidx[startidx][nvbounds] = endidx;
+   propdata->vboundcoefs[startidx][nvbounds] = coef;
+   propdata->vboundconstants[startidx][nvbounds] = constant;
+   (propdata->nvbounds[startidx])++;
+
+   return SCIP_OKAY;
+}
+
+
+/** comparison method for two indices in the topoorder array, preferring higher indices because the order is reverse
+ *  topological
+ */
+static
+SCIP_DECL_SORTPTRCOMP(compVarboundIndices)
+{
+   int idx1 = (int)(size_t)elem1;
+   int idx2 = (int)(size_t)elem2;
+
+   return idx2 - idx1;
+}
+
+/** performs depth-first-search in the implicitly given directed graph from the given start index */
+static
+SCIP_RETCODE dfs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata,           /**< propagator data */
+   int                   startnode,          /**< node to start the depth-first-search */
+   SCIP_Bool*            visited,            /**< array to store for each node, whether it was already visited */
+   int*                  dfsstack,           /**< array of size number of nodes to store the stack;
+                                              *   only needed for performance reasons */
+   int*                  stacknextedge,      /**< array of size number of nodes to store the number of adjacent nodes
+                                              *   already visited for each node on the stack; only needed for
+                                              *   performance reasons */
+   int*                  dfsnodes,           /**< array of nodes that can be reached starting at startnode, in reverse
+                                              *   dfs order */
+   int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at
+                                              *   startnode */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_VAR* startvar;
+   SCIP_Bool lower;
+   int stacksize;
+   int curridx;
+   int nimpls;
+   int idx;
+
+   assert(startnode >= 0);
+   assert(startnode < propdata->nbounds);
+   assert(visited != NULL);
+   assert(visited[startnode] == FALSE);
+   assert(dfsstack != NULL);
+   assert(dfsnodes != NULL);
+   assert(ndfsnodes != NULL);
+
+   vars = SCIPgetVars(scip);
+
+   /* put start node on the stack */
+   dfsstack[0] = startnode;
+   stacknextedge[0] = 0;
+   stacksize = 1;
+   idx = -1;
+
+   /* we run until no more bounds indices are on the stack, i.e. all changed bounds were propagated */
+   while( stacksize > 0 )
+   {
+      /* get next node from stack */
+      curridx = dfsstack[stacksize - 1];
+
+      /* mark current node as visited */
+      assert(visited[curridx] == (stacknextedge[stacksize - 1] != 0));
+      visited[curridx] = TRUE;
+
+      startvar = vars[getVarIndex(curridx)];
+      lower = isIndexLowerbound(curridx);
+
+      nimpls = 0;
+
+      if( propdata->sortcliques && propdata->usecliques && stacknextedge[stacksize - 1] == 0 )
+         stacknextedge[stacksize - 1] = -1;
+
+      /* stacknextedge is negative, if the last visited edge from the current node belongs to a clique;
+       * the index of the clique in the variable's clique list equals abs(stacknextedge) - 1
+       */
+      if( propdata->sortcliques && propdata->usecliques && stacknextedge[stacksize - 1] < 0 )
+      {
+         SCIP_CLIQUE** cliques;
+         int ncliques;
+         int j;
+         int i;
+         SCIP_Bool found;
+
+         ncliques = SCIPvarGetNCliques(startvar, lower);
+         cliques = SCIPvarGetCliques(startvar, lower);
+         found = FALSE;
+
+         assert(stacknextedge[stacksize - 1] == -1 || -stacknextedge[stacksize - 1] - 1 < ncliques);
+
+         /* iterate over all not yet handled cliques and search for an unvisited node */
+         for( j = -stacknextedge[stacksize - 1] - 1; j < ncliques; ++j )
+         {
+            SCIP_VAR** cliquevars;
+            SCIP_Bool* cliquevals;
+            int ncliquevars;
+
+            cliquevars = SCIPcliqueGetVars(cliques[j]);
+            cliquevals = SCIPcliqueGetValues(cliques[j]);
+            ncliquevars = SCIPcliqueGetNVars(cliques[j]);
+
+            for( i = 0; i < ncliquevars; ++i )
+            {
+               if( cliquevars[i] == startvar )
+                  continue;
+
+               if( cliquevals[i] )
+                  idx = varGetUbIndex(cliquevars[i]);
+               else
+                  idx = varGetLbIndex(cliquevars[i]);
+
+               /* break when the first unvisited node is reached */
+               if( !visited[idx] )
+               {
+                  found = TRUE;
+                  break;
+               }
+            }
+            if( found )
+               break;
+         }
+
+         /* we stopped because we found an unhandled node and not because we reached the end of the list */
+         if( found )
+         {
+            assert(idx >= 0);
+            assert(!visited[idx]);
+            assert(j < ncliques);
+
+            SCIPdebugMessage("clique: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
+               indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
+
+            /* put the adjacent node onto the stack */
+            dfsstack[stacksize] = idx;
+            stacknextedge[stacksize] = 0;
+            stacknextedge[stacksize - 1] = -j - 1;
+            stacksize++;
+            assert(stacksize <= propdata->nbounds);
+
+            /* restart while loop, get next index from stack */
+            continue;
+         }
+         else
+         {
+            /* we did not find an edge to an unhandled node given by a clique */
+            stacknextedge[stacksize - 1] = 0;
+         }
+      }
+      assert(stacknextedge[stacksize - 1] >= 0);
+
+      /* go over edges given by implications */
+      if( propdata->useimplics )
+      {
+         nimpls = SCIPvarGetNImpls(startvar, lower);
+
+         if( stacknextedge[stacksize - 1] < nimpls )
+         {
+            SCIP_VAR** implvars;
+            SCIP_BOUNDTYPE* impltypes;
+            int* implids;
+            int i;
+
+            implvars = SCIPvarGetImplVars(startvar, lower);
+            impltypes = SCIPvarGetImplTypes(startvar, lower);
+            implids = SCIPvarGetImplIds(startvar, lower);
+
+            for( i = stacknextedge[stacksize - 1]; i < nimpls; ++i )
+            {
+               /* it might happen that implications point to inactive variables (normally, those are removed when a
+                * variable becomes inactive, but in some cases, it cannot be done), we have to ignore these variables
+                */
+               if( !SCIPvarIsActive(implvars[i]) )
+                  continue;
+
+               /* implication is just a shortcut, so we dont regard it now, because will later go the long way, anyway;
+                * however, if we do regard cliques for the topological order, we use them to get a better order
+                */
+               if( propdata->usecliques && !propdata->sortcliques && implids[i] < 0 )
+                  continue;
+
+               idx = (impltypes[i] == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(implvars[i]) : varGetUbIndex(implvars[i]));
+               assert(idx >= 0);
+
+               /* break when the first unvisited node is reached */
+               if( !visited[idx] )
+                  break;
+            }
+
+            /* we stopped because we found an unhandled node and not because we reached the end of the list */
+            if( i < nimpls )
+            {
+               assert(!visited[idx]);
+
+               SCIPdebugMessage("impl: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
+                  indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
+
+
+               /* put the adjacent node onto the stack */
+               dfsstack[stacksize] = idx;
+               stacknextedge[stacksize] = 0;
+               stacknextedge[stacksize - 1] = i + 1;
+               stacksize++;
+               assert(stacksize <= propdata->nbounds);
+
+               /* restart while loop, get next index from stack */
+               continue;
+            }
+            else
+            {
+               stacknextedge[stacksize - 1] = nimpls;
+            }
+         }
+      }
+      assert(stacknextedge[stacksize - 1] >= nimpls);
+
+      /* go over edges corresponding by varbounds */
+      if( propdata->usevbounds )
+      {
+         int nvbounds;
+         int* vboundidx;
+         int i;
+
+         nvbounds = propdata->nvbounds[curridx];
+         vboundidx = propdata->vboundboundedidx[curridx];
+
+         /* iterate over all vbounds for the given bound */
+         for( i = 0; i < nvbounds; ++i )
+         {
+            idx = vboundidx[i];
+            assert(idx >= 0);
+
+            /* break when the first unvisited node is reached */
+            if( !visited[idx] )
+               break;
+         }
+
+         /* we stopped because we found an unhandled node and not because we reached the end of the list */
+         if( i < nvbounds )
+         {
+            assert(!visited[idx]);
+
+            SCIPdebugMessage("vbound: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
+               indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
+
+            /* put the adjacent node onto the stack */
+            dfsstack[stacksize] = idx;
+            stacknextedge[stacksize] = 0;
+            stacknextedge[stacksize - 1] = nimpls + i + 1;
+            stacksize++;
+            assert(stacksize <= propdata->nbounds);
+
+            /* restart while loop, get next index from stack */
+            continue;
+         }
+
+      }
+
+      /* the current node was completely handled, remove it from stack */
+      stacksize--;
+
+      SCIPdebugMessage("topoorder[%d] = %s(%s)\n", *ndfsnodes, getBoundString(lower), SCIPvarGetName(startvar));
+
+      /* store node in the sorted nodes array */
+      dfsnodes[(*ndfsnodes)] = curridx;
+      (*ndfsnodes)++;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** sort the bounds of variables topologically */
+static
+SCIP_RETCODE topologicalSort(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   int* dfsstack;
+   int* stacknextedge;
+   int nsortednodes;
+   int nbounds;
+   int i;
+
+   assert(scip != NULL);
+   assert(propdata != NULL);
+
+   nbounds = propdata->nbounds;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &dfsstack, nbounds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stacknextedge, nbounds) );
+
+   nsortednodes = 0;
+
+#ifndef NDEBUG
+   for( i = 0; i < nbounds; ++i )
+      assert(!propdata->inqueue[i]);
+#endif
+
+   /* while there are unvisited nodes, run dfs starting from one of these nodes; the dfs orders are stored in the
+    * topoorder array, later dfs calls are just appended after the stacks of previous dfs calls, which gives us a
+    * reverse topological order
+    */
+   for( i = 0; i < nbounds; ++i )
+   {
+      if( !propdata->inqueue[i] )
+      {
+         SCIP_CALL( dfs(scip, propdata, i, propdata->inqueue, dfsstack, stacknextedge, propdata->topoorder, &nsortednodes) );
+      }
+   }
+   assert(nsortednodes == nbounds);
+
+   BMSclearMemoryArray(propdata->inqueue, nbounds);
+
+   SCIPfreeBufferArray(scip, &stacknextedge);
+   SCIPfreeBufferArray(scip, &dfsstack);
+
+   return SCIP_OKAY;
+}
+
+/** initializes the internal data for the variable bounds propagator */
+static
+SCIP_RETCODE initData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop                /**< vbounds propagator */
+   )
+{
+   SCIP_PROPDATA* propdata;
+   SCIP_VAR** vars;
+   int nvars;
+   int nbounds;
+   int startidx;
+   int v;
+   int n;
+
+   assert(scip != NULL);
+   assert(prop != NULL);
+
+   /* get propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+   assert(!propdata->initialized);
+
+   SCIPdebugMessage("initialize vbounds propagator for problem <%s>\n", SCIPgetProbName(scip));
+
+   propdata->initialized = TRUE;
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   nbounds = 2 * nvars;
+
+   /* prepare priority queue structure */
+   SCIP_CALL( SCIPpqueueCreate(&propdata->propqueue, nvars, 2.0, compVarboundIndices) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->inqueue, nbounds) );
+   BMSclearMemoryArray(propdata->inqueue, nbounds);
+
+   if( nbounds == 0 )
+      return SCIP_OKAY;
+
+   /* allocate memory for the arrays of the propdata */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->topoorder, nbounds) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->vboundboundedidx, nbounds) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->vboundcoefs, nbounds) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->vboundconstants, nbounds) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->nvbounds, nbounds) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->vboundsize, nbounds) );
+   BMSclearMemoryArray(propdata->vboundboundedidx, nbounds);
+   BMSclearMemoryArray(propdata->vboundcoefs, nbounds);
+   BMSclearMemoryArray(propdata->vboundconstants, nbounds);
+   BMSclearMemoryArray(propdata->nvbounds, nbounds);
+   BMSclearMemoryArray(propdata->vboundsize, nbounds);
+
+   /* store size of the variable array */
+   propdata->nbounds = nbounds;
+
+   for( v = 0; v < nbounds; ++v )
+   {
+      propdata->topoorder[v] = v;
+      propdata->vboundboundedidx[v] = NULL;
+      propdata->vboundcoefs[v] = NULL;
+      propdata->vboundconstants[v] = NULL;
+      propdata->nvbounds[v] = 0;
+      propdata->vboundsize[v] = 0;
+   }
+
+   /* collect information about varbounds */
+   for( v = 0; v < nbounds; ++v )
+   {
+      SCIP_VAR** vbvars;
+      SCIP_VAR* var;
+      SCIP_Real* coefs;
+      SCIP_Real* constants;
+      SCIP_Bool lower;
+      int nvbvars;
+
+      var = vars[getVarIndex(v)];
+      lower = isIndexLowerbound(v);
+
+      /* get the variable bound informations for the current variable */
+      if( lower )
+      {
+         vbvars = SCIPvarGetVlbVars(var);
+         coefs = SCIPvarGetVlbCoefs(var);
+         constants = SCIPvarGetVlbConstants(var);
+         nvbvars = SCIPvarGetNVlbs(var);
+      }
+      else
+      {
+         vbvars = SCIPvarGetVubVars(var);
+         coefs = SCIPvarGetVubCoefs(var);
+         constants = SCIPvarGetVubConstants(var);
+         nvbvars = SCIPvarGetNVubs(var);
+      }
+
+      /* loop over all variable lower bounds; a variable lower bound has the form: x >= b*y + d,
+       * a variable upper bound the form x <= b*y + d */
+      for( n = 0; n < nvbvars; ++n )
+      {
+         SCIP_VAR* vbvar;
+         SCIP_Real coef;
+         SCIP_Real constant;
+
+         vbvar = vbvars[n];
+         coef = coefs[n];
+         constant = constants[n];
+         assert(vbvar != NULL);
+
+         /* transform variable bound variable to an active variable, if possible */
+         SCIP_CALL( SCIPgetProbvarSum(scip, &vbvar, &coef, &constant) );
+         assert(vbvar != NULL);
+
+         if( !SCIPvarIsActive(vbvar) )
+            continue;
+
+         /* if the coefficient is positive, the type of bound is the same for the bounded and the bounding variable */
+         if( SCIPisPositive(scip, coef) )
+            startidx = (lower ? varGetLbIndex(vbvar) : varGetUbIndex(vbvar));
+         else
+            startidx = (lower ? varGetUbIndex(vbvar) : varGetLbIndex(vbvar));
+
+         /* If the vbvar is binary, the vbound should be stored as an implication already.
+          * However, it might happen that vbvar was integer when the variable bound was added, but was converted
+          * to a binary variable later during presolving when its upper bound was changed to 1. In this case,
+          */
+         if( SCIPvarGetType(vbvar) == SCIP_VARTYPE_BINARY
+            && SCIPvarHasImplic(vbvar, isIndexLowerbound(startidx), var, getBoundtype(v)) )
+         {
+#if 0
+            SCIP_VAR** implvars;
+            SCIP_Real* implbounds;
+            SCIP_BOUNDTYPE* impltypes;
+            int nimplvars;
+            int j;
+            SCIP_Bool startlower;
+
+            startlower = isIndexLowerbound(startidx);
+
+            implvars = SCIPvarGetImplVars(vbvar, startlower);
+            impltypes = SCIPvarGetImplTypes(vbvar, startlower);
+            implbounds = SCIPvarGetImplBounds(vbvar, startlower);
+            nimplvars = SCIPvarGetNImpls(vbvar, startlower);
+
+            for( j = 0; j < nimplvars; ++j )
+            {
+               if( (implvars[j] == var) && (lower == (impltypes[j] == SCIP_BOUNDTYPE_LOWER)) )
+               {
+                  if( lower )
+                     assert(SCIPisGE(scip, implbounds[j], (startlower ? coef : 0.0) + constant));
+                  else
+                     assert(SCIPisLE(scip, implbounds[j], (startlower ? coef : 0.0) + constant));
+                  break;
+               }
+            }
+            assert(j  < nimplvars);
+#endif
+            SCIPdebugMessage("varbound <%s> %s %g * <%s> + %g not added to propagator data due to reverse implication\n",
+               SCIPvarGetName(var), (lower ? ">=" : "<="), coef,
+               SCIPvarGetName(vbvar), constant);
+         }
+         else
+         {
+            SCIP_CALL( addVbound(scip, propdata, startidx, v, coef, constant) );
+
+            SCIPdebugMessage("varbound <%s> %s %g * <%s> + %g added to propagator data\n",
+               SCIPvarGetName(var), (lower ? ">=" : "<="), coef,
+               SCIPvarGetName(vbvar), constant);
+
+         }
+      }
+   }
+
+   /* sort the bounds topologically */
+   if( propdata->dotoposort )
+   {
+      SCIP_CALL( topologicalSort(scip, propdata) );
+   }
+
+   /* catch variable events */
+   SCIP_CALL( catchEvents(scip, propdata) );
+
+   return SCIP_OKAY;
+}
+
 
 /** resolves a propagation by adding the variable which implied that bound change */
 static
 SCIP_RETCODE resolvePropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
-   INFERINFO             inferinfo,          /**< inference information */
-   SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_VAR*             var,                /**< variable to be reported */
+   SCIP_BOUNDTYPE        boundtype,          /**< bound to be reported */
+   SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change, representing the point of time where the change took place, or NULL for the current local bounds */
    )
 {
-   SCIP_VAR* var;
-   SCIP_BOUNDTYPE boundtype;
-   int pos;
-
    assert(propdata != NULL);
-   
-   boundtype = inferInfoGetBoundtype(inferinfo);
    assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
-   
-   pos = inferInfoGetPos(inferinfo);
-   assert(pos >= 0);
-   assert(pos < propdata->nvars);
-   
-   var = propdata->vars[pos];
-   
-   SCIPdebugMessage(" -> add %s bound of variable <%s> as reason\n", 
-      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(var));
-   
+
+   SCIPdebugMessage(" -> add %s bound of variable <%s> as reason\n",
+      getBoundtypeString(boundtype), SCIPvarGetName(var));
+
    switch( boundtype )
    {
    case SCIP_BOUNDTYPE_LOWER:
-   {
-      SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx ) );
+      SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
       break;
-   }
    case SCIP_BOUNDTYPE_UPPER:
-      SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx ) );
+      SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
       break;
    default:
       SCIPerrorMessage("invalid bound type <%d>\n", boundtype);
       SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
    return SCIP_OKAY;
 }
 
-/** relax lower bound of give variable as long as the given inference upper bound leads still to a cutoff and add that
- *  bound change to the conflict set
- */
-static
-SCIP_RETCODE relaxInfervarLowerbound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
-   SCIP_Real             inferub,            /**< upper bound which lead to infeasibility */
-   SCIP_Real*            newlb               /**< pointer to store the reached relaxed lower bound */
-   )
-{
-   SCIP_BDCHGINFO* bdchginfo;
-   SCIP_BDCHGIDX* bdchgidx;
-   int nbdchgs;
-
-   /* get number of bound changes */
-   nbdchgs = SCIPvarGetNBdchgInfosLb(var);
-   bdchgidx = NULL;
-   
-   assert(nbdchgs > 0 || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var)));
-   assert(nbdchgs == 0 || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPbdchginfoGetNewbound(SCIPvarGetBdchgInfoLb(var, nbdchgs-1))));
-
-   SCIPdebugMessage("variable <%s>[%.15g,%.15g]: nbdchgs %d try to relax lower bound to %.15g\n", 
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), nbdchgs, inferub);
-
-   /* try to relax lower bound */
-   while( nbdchgs > 0 )
-   {
-      bdchginfo = SCIPvarGetBdchgInfoLb(var, nbdchgs-1);
-      assert(SCIPisEQ(scip, *newlb, SCIPbdchginfoGetNewbound(bdchginfo)));
-
-      SCIPdebugMessage("lower bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n", 
-         nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo), 
-         SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
-
-      /* check if the old lower bound is sufficient to prove infeasibility; in case the inference upper bound is
-       * greater equal to the next possible relaxed lower bound, then we have to break since in this case the inference
-       * upper bound does not lead to a cutoff anymore
-       */
-      if( SCIPisGE(scip, inferub, SCIPbdchginfoGetOldbound(bdchginfo)) )
-         break;
-      
-      SCIPdebugMessage("***** relaxed lower bound of inference variable <%s> from <%g> to <%g>\n", 
-         SCIPvarGetName(var), SCIPbdchginfoGetNewbound(bdchginfo), SCIPbdchginfoGetOldbound(bdchginfo));
-
-      bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-      *newlb = SCIPbdchginfoGetOldbound(bdchginfo);
-      nbdchgs--;
-   }
-      
-   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL represents
-    * the right time point and SCIP finds out that this bound is redundant since it is global
-    */
-   SCIPdebugMessage("add lower bound of bound change info %d to conflict set\n", nbdchgs);
-   SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
-   
-   SCIPdebugMessage("relaxed lower bound to %.15g\n", *newlb);
-
-   return SCIP_OKAY;
-}
-
-/** relax lower bound of give variable as long as the given inference bound leads still to a cutoff and add that bound
- *  change to the conflict set
- */
-static
-SCIP_RETCODE relaxVbdvarLowerbound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
-   SCIP_Real             coef,               /**< variable bound coefficient */
-   SCIP_Real             constant,           /**< variable bound constant */
-   SCIP_Real             bound,              /**< bound to exceed */
-   SCIP_Real*            inferbound          /**< pointer to store the relaxed inferbound bound */
-   )
-{
-   SCIP_BDCHGINFO* bdchginfo;
-   SCIP_BDCHGIDX* bdchgidx;
-   int nbdchgs;
-
-   /* get number of bound changes */
-   nbdchgs = SCIPvarGetNBdchgInfosLb(var);
-   bdchgidx = NULL;
- 
-   SCIPdebugMessage("variable <%s>[%.15g,%.15g], coef=%.15g, constant=%.15g: nbdchgs %d try to relax lower bound to %.15g\n", 
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), coef, constant, nbdchgs, bound);
- 
-   assert(nbdchgs > 0 || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var)));
-   assert(nbdchgs == 0 || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPbdchginfoGetNewbound(SCIPvarGetBdchgInfoLb(var, nbdchgs-1))));
-
-   /* try to relax lower bound */
-   while( nbdchgs > 0 )
-   {
-      bdchginfo = SCIPvarGetBdchgInfoLb(var, nbdchgs-1);
-
-      SCIPdebugMessage("lower bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n", 
-         nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo), 
-         SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
-      
-      /* check if the old lower bound is sufficient to prove infeasibility; in case the inference bound is greater
-       * equal to the next possible relaxed lower bound, then we have to break since in this case the inference bound
-       * does not lead to a cutoff anymore
-       */
-      if( SCIPisGE(scip, bound, coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant) )
-         break;
-      
-      SCIPdebugMessage("***** relaxed lower bound of vbound variable <%s> from <%g> to <%g>\n", 
-         SCIPvarGetName(var), SCIPbdchginfoGetNewbound(bdchginfo), SCIPbdchginfoGetOldbound(bdchginfo));
-
-      bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-      *inferbound =  coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant;
-      nbdchgs--;
-   }
-      
-   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL represents
-    * the right time point and SCIP finds out that this bound is redundant since it is global
-    */
-   SCIPdebugMessage("add lower bound of bound change info %d to conflict set\n", nbdchgs); 
-   SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
-   
-   return SCIP_OKAY;
-}
-
-/** relax upper bound of give variable as long as the given inference lower bound leads still to a cutoff and add that
- *  bound change to the conflict set
- */
-static
-SCIP_RETCODE relaxInfervarUpperbound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
-   SCIP_Real             inferlb,            /**< lower bound which lead to infeasibility */
-   SCIP_Real*            newub               /**< pointer to store the reached relaxed upper bound */
-   )
-{
-   SCIP_BDCHGINFO* bdchginfo;
-   SCIP_BDCHGIDX* bdchgidx;
-   int nbdchgs;
-
-   /* get number of bound changes */
-   nbdchgs = SCIPvarGetNBdchgInfosUb(var);
-   bdchgidx = NULL;
-      
-   assert(nbdchgs > 0 || SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var)));
-   assert(nbdchgs == 0 || SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPbdchginfoGetNewbound(SCIPvarGetBdchgInfoUb(var, nbdchgs-1))));
-
-   SCIPdebugMessage("variable <%s>[%.15g,%.15g]: nbdchgs %d try to relax upper bound to %.15g\n", 
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), nbdchgs, inferlb);
-   
-   /* try to relax upper bound */
-   while( nbdchgs > 0 )
-   {
-      bdchginfo = SCIPvarGetBdchgInfoUb(var, nbdchgs-1);
-      assert(SCIPisEQ(scip, *newub, SCIPbdchginfoGetNewbound(bdchginfo)));
-
-      SCIPdebugMessage("upper bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n", 
-         nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo), 
-         SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
-   
-      /* check if the old upper bound is sufficient to prove infeasibility; in case the inference lower bound is less
-       * equal to the next possible relaxed upper bound, then we have to break since in this case the inference lower bound
-       * does not lead to a cutoff anymore
-       */
-      if( SCIPisLE(scip, inferlb, SCIPbdchginfoGetOldbound(bdchginfo)) )
-         break;
-         
-      SCIPdebugMessage("***** relaxed upper bound of inference variable <%s> from <%g> to <%g>\n", 
-         SCIPvarGetName(var), SCIPbdchginfoGetNewbound(bdchginfo), SCIPbdchginfoGetOldbound(bdchginfo));
-      
-      bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-      *newub = SCIPbdchginfoGetOldbound(bdchginfo);
-      nbdchgs--;
-   }
-   
-   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL represents
-    * the right time point and SCIP finds out that this bound is redundant since it is global
-    */
-   SCIPdebugMessage("add upper bound of bound change info %d to conflict set\n", nbdchgs);
-   SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
-   
-   SCIPdebugMessage("relaxed upper bound to %.15g\n", *newub);
-
-   return SCIP_OKAY;
-}
-
-/** relax upper bound of give variable as long as the given inference bound leads still to a cutoff and add that bound
- *  change to the conflict set
- */
-static
-SCIP_RETCODE relaxVbdvarUpperbound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
-   SCIP_Real             coef,               /**< variable bound coefficient */
-   SCIP_Real             constant,           /**< variable bound constant */
-   SCIP_Real             bound,              /**< bound to exceed */
-   SCIP_Real*            inferbound          /**< pointer to store the relaxed inferbound bound */
-   )
-{
-   SCIP_BDCHGINFO* bdchginfo;
-   SCIP_BDCHGIDX* bdchgidx;
-   int nbdchgs;
-
-   /* get number of bound changes */
-   nbdchgs = SCIPvarGetNBdchgInfosUb(var);
-   bdchgidx = NULL;
-   
-   SCIPdebugMessage("variable <%s>[%.15g,%.15g], coef=%.15g, constant=%.15g: nbdchgs %d try to relax upper bound to %.15g\n", 
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), coef, constant, nbdchgs, bound);
-   
-   assert(nbdchgs > 0 || SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var)));
-   assert(nbdchgs == 0 || SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPbdchginfoGetNewbound(SCIPvarGetBdchgInfoUb(var, nbdchgs-1))));
-
-   /* try to relax upper bound */
-   while( nbdchgs > 0 )
-   {
-      bdchginfo = SCIPvarGetBdchgInfoUb(var, nbdchgs-1);
-
-      SCIPdebugMessage("upper bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n", 
-         nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo), 
-         SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
-      
-      /* check if the old upper bound is sufficient to prove infeasibility; in case the inference bound is greater
-       * equal to the next possible relaxed upper bound, then we have to break since in this case the inference bound
-       * does not lead to a cutoff anymore
-       */
-      if( SCIPisGE(scip, bound, coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant) )
-         break;
-         
-      SCIPdebugMessage("***** relaxed upper bound of vbound variable <%s> from <%g> to <%g>\n", 
-         SCIPvarGetName(var), SCIPbdchginfoGetNewbound(bdchginfo), SCIPbdchginfoGetOldbound(bdchginfo));
-
-      bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-      *inferbound =  coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant;
-      nbdchgs--;
-   }
-      
-   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL represents
-    * the right time point and SCIP finds out that this bound is redundant since it is global
-    */
-   SCIPdebugMessage("add upper bound of bound change info %d to conflict set\n", nbdchgs);
-   SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
-
-   return SCIP_OKAY;
-}
-
-/** relaxes bound of give variable as long as the given inference bound leads still to a cutoff and add that bound
+/** relaxes bound of give variable as long as the given inference bound still leads to a cutoff and add that bound
  *  change to the conflict set
  */
 static
@@ -766,23 +965,44 @@ SCIP_RETCODE relaxVbdvar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
    SCIP_BOUNDTYPE        boundtype,          /**< boundtype used for the variable bound variable */
-   SCIP_Real             coef,               /**< variable bound coefficient */
-   SCIP_Real             constant,           /**< variable bound constant */
-   SCIP_Real             bound,              /**< bound to exceed */
-   SCIP_Real*            inferbound          /**< pointer to store the relaxed inferbound bound */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place, or NULL for the current local bounds */
+   SCIP_Real             relaxedbd           /**< relaxed bound */
    )
 {
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
-      SCIP_CALL( relaxVbdvarLowerbound(scip, var, coef, constant, bound, inferbound) );
+      SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, relaxedbd) );
    }
    else
    {
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
-      SCIP_CALL( relaxVbdvarUpperbound(scip, var, coef, constant, bound, inferbound) );
+      SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, relaxedbd) );
    }
 
    return SCIP_OKAY;
+}
+
+/** compute the relaxed bound which is sufficient to propagate the inference lower bound of given variable */
+static
+SCIP_Real computeRelaxedLowerbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which was propagated */
+   SCIP_Real             inferlb,            /**< inference lower bound */
+   SCIP_Real             coef,               /**< inference variable bound coefficient used */
+   SCIP_Real             constant            /**< inference variable bound constant used */
+   )
+{
+   SCIP_Real relaxedbd;
+
+   if( SCIPvarIsIntegral(var) )
+      relaxedbd = (inferlb - 1.0 + 2*SCIPfeastol(scip) - constant) / coef;
+   else
+      relaxedbd = (inferlb - constant) / coef;
+
+   /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
+   assert(SCIPisEQ(scip, inferlb, SCIPadjustedVarLb(scip, var, relaxedbd * coef + constant)));
+
+   return relaxedbd;
 }
 
 
@@ -792,12 +1012,14 @@ SCIP_RETCODE relaxVbdvar(
 static
 SCIP_RETCODE analyzeConflictLowerbound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROPDATA*        propdata,           /**< propagator data */   
-   SCIP_VAR*             infervar,           /**< variable which lead to a cutoff */
-   SCIP_Real             inferlb,            /**< lower bound which lead to infeasibility */
-   INFERINFO             inferinfo,          /**< inference information */
+   SCIP_PROPDATA*        propdata,           /**< propagator data */
+   SCIP_VAR*             infervar,           /**< variable which led to a cutoff */
+   SCIP_Real             inferlb,            /**< lower bound which led to infeasibility */
+   SCIP_VAR*             vbdvar,             /**< variable which is the reason for the lower bound change */
+   SCIP_BOUNDTYPE        boundtype,          /**< bound which is the reason for the lower bound change */
    SCIP_Real             coef,               /**< inference variable bound coefficient used */
-   SCIP_Real             constant            /**< inference variable bound constant used */
+   SCIP_Real             constant,           /**< inference variable bound constant used */
+   SCIP_Bool             canwide             /**< can bound widening be used (for vbounds) or not (for inplications or cliques) */
    )
 {
    assert(scip != NULL);
@@ -812,62 +1034,45 @@ SCIP_RETCODE analyzeConflictLowerbound(
    if( !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
-   if( propdata->usebdwidening )
+   if( canwide && propdata->usebdwidening )
    {
-      SCIP_VAR* vbdvar;
-      SCIP_Real newub;
-      SCIP_Real previnferlb;
-      int pos;
-      
-      pos = inferInfoGetPos(inferinfo);
-      assert(pos >= 0);
-      assert(pos < propdata->nvars);
-      
-      vbdvar = propdata->vars[pos];
-      newub = SCIPvarGetUbLocal(infervar); 
-      previnferlb = inferlb;
-      
+      SCIP_Real relaxedbd;
+      SCIP_Real relaxedub;
+
       SCIPdebugMessage("try to create conflict using bound widening order: inference variable, variable bound variable\n");
 
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-      /* try to relax inference variable upper bound bounds */
-      SCIP_CALL( relaxInfervarUpperbound(scip, infervar, inferlb, &newub) );
-      
+      /* adjust lower bound */
+      inferlb = SCIPadjustedVarLb(scip, infervar, inferlb);
+
+      /* compute a relaxed upper bound which would be sufficient to be still infeasible */
+      if( SCIPvarIsIntegral(infervar) )
+         relaxedub = inferlb - 1.0;
+      else
+         relaxedub = inferlb - 2*SCIPfeastol(scip);
+
+      /* try to relax inference variable upper bound such that the infeasibility is still given */
+      SCIP_CALL( SCIPaddConflictRelaxedUb(scip, infervar, NULL, relaxedub) );
+
+      /* collect the upper bound which is reported to the conflict analysis */
+      relaxedub = SCIPgetConflictVarUb(scip, infervar);
+
+      /* adjust inference bound with respect to the upper bound reported to the conflict analysis */
+      if( SCIPvarIsIntegral(infervar) )
+         relaxedub = relaxedub + 1.0;
+      else
+         relaxedub = relaxedub + 2*SCIPfeastol(scip);
+
+      /* compute the relaxed bound which is sufficient to propagate the inference lower bound of given variable */
+      relaxedbd = computeRelaxedLowerbound(scip, infervar, relaxedub, coef, constant);
+
       /* try to relax variable bound variable */
-      SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), coef, constant, newub, &previnferlb) );
+      SCIP_CALL( relaxVbdvar(scip, vbdvar, boundtype, NULL, relaxedbd) );
 
       /* analyze the conflict */
       SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
-
-      /* if the upper bound relaxation was successful we try to create another conflict by relaxing the bound of the
-       * variable bound variable first 
-       */
-      if( SCIPisGT(scip, newub, SCIPvarGetUbLocal(infervar)) ) 
-      {
-         SCIPdebugMessage("try to create conflict using bound widening order: variable bound variable, inference variable\n");
-
-         /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-         newub = SCIPvarGetUbLocal(infervar); 
-         
-         /* try to relax variable bound variable */
-         SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), coef, constant, newub, &inferlb) );
-         
-         /* continue conflict analysis only if we improved the inference lower bound; otherwise we end up with previous
-          * conflict set 
-          */
-         if( SCIPisLT(scip, inferlb, previnferlb ) )
-         {
-            /* try to relax inference variable upper bound bounds */
-            SCIP_CALL( relaxInfervarUpperbound(scip, infervar, inferlb, &newub) );
-         
-            /* analyze the conflict */
-            SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
-         }
-      }
    }
    else
    {
@@ -876,15 +1081,38 @@ SCIP_RETCODE analyzeConflictLowerbound(
 
       /* add upper bound of the variable for which we tried to change the lower bound */
       SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL) );
-      
+
       /* add (correct) bound of the variable which let to the new lower bound */
-      SCIP_CALL( resolvePropagation(scip, propdata, inferinfo, NULL) );
+      SCIP_CALL( resolvePropagation(scip, propdata, vbdvar, boundtype, NULL) );
 
       /* analyze the conflict */
       SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
    }
-   
+
    return SCIP_OKAY;
+}
+
+/** compute the relaxed bound which is sufficient to propagate the inference upper bound of given variable */
+static
+SCIP_Real computeRelaxedUpperbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which was propagated */
+   SCIP_Real             inferub,            /**< inference upper bound */
+   SCIP_Real             coef,               /**< inference variable bound coefficient used */
+   SCIP_Real             constant            /**< inference variable bound constant used */
+   )
+{
+   SCIP_Real relaxedbd;
+
+   if( SCIPvarIsIntegral(var) )
+      relaxedbd = (inferub + 1.0 - 2*SCIPfeastol(scip) - constant) / coef;
+   else
+      relaxedbd = (inferub - constant) / coef;
+
+   /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
+   assert(SCIPisEQ(scip, inferub, SCIPadjustedVarUb(scip, var, relaxedbd * coef + constant)));
+
+   return relaxedbd;
 }
 
 /** analyzes an infeasibility which was reached by updating the upper bound of the inference variable below its lower
@@ -893,12 +1121,14 @@ SCIP_RETCODE analyzeConflictLowerbound(
 static
 SCIP_RETCODE analyzeConflictUpperbound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROPDATA*        propdata,           /**< propagator data */   
-   SCIP_VAR*             infervar,           /**< variable which lead to a cutoff */
-   SCIP_Real             inferub,            /**< upper bound which lead to infeasibility */
-   INFERINFO             inferinfo,          /**< inference information */
+   SCIP_PROPDATA*        propdata,           /**< propagator data */
+   SCIP_VAR*             infervar,           /**< variable which led to a cutoff */
+   SCIP_Real             inferub,            /**< upper bound which led to infeasibility */
+   SCIP_VAR*             vbdvar,             /**< variable which is the reason for the upper bound change */
+   SCIP_BOUNDTYPE        boundtype,          /**< bound which is the reason for the upper bound change */
    SCIP_Real             coef,               /**< inference variable bound coefficient used */
-   SCIP_Real             constant            /**< inference variable bound constant used */
+   SCIP_Real             constant,           /**< inference variable bound constant used */
+   SCIP_Bool             canwide             /**< can bound widening be used (for vbounds) or not (for inplications or cliques) */
    )
 {
    assert(scip != NULL);
@@ -913,482 +1143,501 @@ SCIP_RETCODE analyzeConflictUpperbound(
    if( !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
-   if( propdata->usebdwidening )
+   if( canwide && propdata->usebdwidening )
    {
-      SCIP_VAR* vbdvar;
-      SCIP_Real newlb;
-      SCIP_Real previnferub;
-      int pos;
-      
-      pos = inferInfoGetPos(inferinfo);
-      assert(pos >= 0);
-      assert(pos < propdata->nvars);
-      
-      vbdvar = propdata->vars[pos];
-      newlb = SCIPvarGetLbLocal(infervar); 
-      previnferub = inferub;
+      SCIP_Real relaxedbd;
+      SCIP_Real relaxedlb;
 
       SCIPdebugMessage("try to create conflict using bound widening order: inference variable, variable bound variable\n");
 
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-      
-      /* try to relax inference variable lower bound bounds */
-      SCIP_CALL( relaxInfervarLowerbound(scip, infervar, inferub, &newlb) );
-      
+
+      /* adjust upper bound */
+      inferub = SCIPadjustedVarUb(scip, infervar, inferub);
+
+      /* compute a relaxed lower bound which would be sufficient to be still infeasible */
+      if( SCIPvarIsIntegral(infervar) )
+         relaxedlb = inferub + 1.0;
+      else
+         relaxedlb = inferub + 2*SCIPfeastol(scip);
+
+      /* try to relax inference variable lower bound such that the infeasibility is still given */
+      SCIP_CALL( SCIPaddConflictRelaxedLb(scip, infervar, NULL, relaxedlb) );
+
+      /* collect the lower bound which is reported to the conflict analysis */
+      relaxedlb = SCIPgetConflictVarLb(scip, infervar);
+
+      /* adjust inference bound with respect to the upper bound reported to the conflict analysis */
+      if( SCIPvarIsIntegral(infervar) )
+         relaxedlb = relaxedlb - 1.0;
+      else
+         relaxedlb = relaxedlb - 2*SCIPfeastol(scip);
+
+      /* compute the relaxed bound which is sufficient to propagate the inference upper bound of given variable */
+      relaxedbd = computeRelaxedUpperbound(scip, infervar, relaxedlb, coef, constant);
+
       /* try to relax variable bound variable */
-      SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), -coef, -constant, -newlb, &previnferub) );
+      SCIP_CALL( relaxVbdvar(scip, vbdvar, boundtype, NULL, relaxedbd) );
 
       /* analyze the conflict */
       SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
-
-      /* if the lower bound relaxation was successful we try to create another conflict by relaxing the bound of the
-       * variable bound variable first 
-       */
-      if( SCIPisLT(scip, newlb, SCIPvarGetLbLocal(infervar)) ) 
-      {
-         SCIPdebugMessage("try to create conflict using bound widening order: variable bound variable, inference variable\n");
-
-         /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-         newlb = SCIPvarGetLbLocal(infervar); 
-         
-         /* try to relax variable bound variable */
-         SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), -coef, -constant, -newlb, &inferub) );
-
-         /* continue conflict analysis only if we improved the inference upper bound w.r.t. the previous conflict
-          * analysis run; otherwise we end up with previous conflict set
-          */
-         if( SCIPisGT(scip, inferub, previnferub ) )
-         {
-            /* try to relax inference variable upper bound bounds */
-            SCIP_CALL( relaxInfervarUpperbound(scip, infervar, inferub, &newlb) );
-
-            /* analyze the conflict */
-            SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
-         }
-      }
-
    }
    else
    {
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-      
+
       /* add lower bound of the variable for which we tried to change the upper bound */
       SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL) );
-      
-      /* add (correct) bound of the variable which let to the new upper  bound */
-      SCIP_CALL( resolvePropagation(scip, propdata, inferinfo, NULL) );
+
+      /* add (correct) bound of the variable which let to the new upper bound */
+      SCIP_CALL( resolvePropagation(scip, propdata, vbdvar, boundtype, NULL) );
 
       /* analyze the conflict */
       SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
    }
-   
+
    return SCIP_OKAY;
 }
 
-/** find position of the given variable in the variable array; if it does not exist yet it gets added to the end of the
- *  array 
- */
+
+/* tries to tighten the (global) lower bound of the given variable to the given new bound */
 static
-SCIP_RETCODE getVarPos(
+SCIP_RETCODE tightenVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROPDATA*        propdata,           /**< vbounds propagator data */
-   SCIP_VAR*             var,                /**< variable */
-   int*                  pos                 /**< pointer to store position in array */
+   SCIP_PROP*            prop,               /**< vbounds propagator */
+   SCIP_PROPDATA*        propdata,           /**< propagator data */
+   SCIP_VAR*             var,                /**< variable whose lower bound should be tightened */
+   SCIP_Real             newlb,              /**< new lower bound for the variable */
+   SCIP_Bool             global,             /**< is the bound globally valid? */
+   SCIP_VAR*             vbdvar,             /**< variable which is the reason for the lower bound change */
+   SCIP_BOUNDTYPE        boundtype,          /**< bound which is the reason for the lower bound change */
+   SCIP_Bool             force,              /**< should domain changes for continuous variables be forced */
+   SCIP_Real             coef,               /**< coefficient in vbound constraint causing the propagation;
+                                              *   or 0.0 if propagation is caused by clique or implication */
+   SCIP_Real             constant,           /**< constant in vbound constraint causing the propagation;
+                                              *   or 0.0 if propagation is caused by clique or implication */
+   SCIP_Bool             canwide,            /**< can bound widening be used (for vbounds) or not (for inplications or cliques) */
+   int*                  nchgbds,            /**< pointer to increase, if a bound was changed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the propagation */
    )
 {
+   INFERINFO inferinfo;
+   SCIP_Real lb;
+   SCIP_Bool tightened;
+   SCIP_Bool infeasible;
+
    assert(scip != NULL);
+   assert(prop != NULL);
    assert(propdata != NULL);
    assert(var != NULL);
-   assert(pos != NULL);
+   assert(nchgbds != NULL);
+   assert(result != NULL);
 
-   /* get position of vbvar in variable arrays */
-   if( SCIPhashmapExists(propdata->varHashmap, var) )
-      *pos = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, var);
+   lb = SCIPvarGetLbLocal(var);
+
+   /* check that the new upper bound is better */
+   if( (SCIPvarIsIntegral(var) && newlb - lb > 0.5) || (force && SCIPisGT(scip, newlb, lb)) )
+      force = TRUE;
+   else
+      force = FALSE;
+
+   /* try to tighten the lower bound */
+   if( global )
+   {
+      SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, force, &infeasible, &tightened) );
+   }
    else
    {
-      /* ensure array size */
-      if( propdata->sizevars <= propdata->nvars )
-      {
-         propdata->sizevars = SCIPcalcMemGrowSize(scip, propdata->nvars + 1);
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &(propdata->vars), propdata->sizevars) );
-      }
-      assert(propdata->sizevars > propdata->nvars);
+      inferinfo = getInferInfo(boundtype == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(vbdvar) : varGetUbIndex(vbdvar), boundtype);
 
-      propdata->vars[propdata->nvars] = var;
-      *pos = propdata->nvars;
-      propdata->nvars++;
-
-      /* capture variable to ensure the existence */
-      SCIP_CALL( SCIPcaptureVar(scip, var) );
-      
-      /* insert variable bound variable into the hash table since they are involve in propagation */ 
-      SCIP_CALL( SCIPhashmapInsert(propdata->varHashmap, var, (void*)(size_t)*pos) );
+      SCIP_CALL( SCIPinferVarLbProp(scip, var, newlb, prop, inferInfoToInt(inferinfo), force, &infeasible, &tightened) );
    }
-   
+
+   if( infeasible )
+   {
+      /* the infeasible results comes from the fact that the new lower bound lies above the current upper bound */
+      assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(var)));
+      assert(!global || SCIPisGT(scip, newlb, SCIPvarGetUbGlobal(var)));
+
+      SCIPdebugMessage("tightening%s lower bound of variable <%s> to %g due the %s bound of variable <%s> led to infeasibility\n",
+         (global ? " global" : ""), SCIPvarGetName(var), newlb, getBoundtypeString(boundtype), SCIPvarGetName(vbdvar));
+
+      if( global )
+      {
+         /* cutoff the root node */
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
+      }
+      else
+      {
+         /* analyzes a infeasibility via conflict analysis */
+         SCIP_CALL( analyzeConflictLowerbound(scip, propdata, var, newlb, vbdvar, boundtype, coef, constant, canwide) );
+      }
+      *result = SCIP_CUTOFF;
+   }
+   else if( tightened )
+   {
+      SCIPdebugMessage("tightened%s lower bound of variable <%s> to %g due the %s bound of variable <%s>\n",
+         (global ? " global" : ""), SCIPvarGetName(var), newlb, getBoundtypeString(boundtype), SCIPvarGetName(vbdvar));
+      (*nchgbds)++;
+   }
+
    return SCIP_OKAY;
 }
 
-/** performs propagation of variables lower and upper bounds */
+/* tries to tighten the (global) upper bound of the given variable to the given new bound */
+static
+SCIP_RETCODE tightenVarUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< vbounds propagator */
+   SCIP_PROPDATA*        propdata,           /**< propagator data */
+   SCIP_VAR*             var,                /**< variable whose upper bound should be tightened */
+   SCIP_Real             newub,              /**< new upper bound of the variable */
+   SCIP_Bool             global,             /**< is the bound globally valid? */
+   SCIP_VAR*             vbdvar,             /**< variable which is the reason for the upper bound change */
+   SCIP_BOUNDTYPE        boundtype,          /**< bound which is the reason for the upper bound change */
+   SCIP_Bool             force,              /**< should domain changes for continuous variables be forced */
+   SCIP_Real             coef,               /**< coefficient in vbound constraint causing the propagation;
+                                              *   or 0.0 if propagation is caused by clique or implication */
+   SCIP_Real             constant,           /**< constant in vbound constraint causing the propagation;
+                                              *   or 0.0 if propagation is caused by clique or implication */
+   SCIP_Bool             canwide,            /**< can bound widening be used (for vbounds) or not (for inplications or cliques) */
+   int*                  nchgbds,            /**< pointer to increase, if a bound was changed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the propagation */
+   )
+{
+   INFERINFO inferinfo;
+   SCIP_Real ub;
+   SCIP_Bool tightened;
+   SCIP_Bool infeasible;
+
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(propdata != NULL);
+   assert(var != NULL);
+   assert(nchgbds != NULL);
+   assert(result != NULL);
+
+   ub = SCIPvarGetUbLocal(var);
+
+   /* check that the new upper bound is better */
+   if( (SCIPvarIsIntegral(var) && ub - newub > 0.5) || (force && SCIPisLT(scip, newub, ub)) )
+      force = TRUE;
+   else
+      force = FALSE;
+
+   /* try to tighten the upper bound */
+   if( global )
+   {
+      SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, force, &infeasible, &tightened) );
+   }
+   else
+   {
+      inferinfo = getInferInfo(boundtype == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(vbdvar) : varGetUbIndex(vbdvar), boundtype);
+
+      SCIP_CALL( SCIPinferVarUbProp(scip, var, newub, prop, inferInfoToInt(inferinfo), force, &infeasible, &tightened) );
+   }
+
+   if( infeasible )
+   {
+      /* the infeasible results comes from the fact that the new upper bound lies below the current lower bound */
+      assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(var)));
+      assert(!global || SCIPisLT(scip, newub, SCIPvarGetLbGlobal(var)));
+
+      SCIPdebugMessage("tightening%s upper bound of variable <%s> to %g due the %s bound of variable <%s> led to infeasibility\n",
+         (global ? " global" : ""), SCIPvarGetName(var), newub, getBoundtypeString(boundtype), SCIPvarGetName(vbdvar));
+
+      if( global )
+      {
+         /* cutoff the root node */
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
+      }
+      else
+      {
+         /* analyzes a infeasibility via conflict analysis */
+         SCIP_CALL( analyzeConflictUpperbound(scip, propdata, var, newub, vbdvar, boundtype, coef, constant, canwide) );
+      }
+      *result = SCIP_CUTOFF;
+   }
+   else if( tightened )
+   {
+      SCIPdebugMessage("tightened%s upper bound of variable <%s> to %g due the %s bound of variable <%s>\n",
+         (global ? " global" : ""), SCIPvarGetName(var), newub, getBoundtypeString(boundtype), SCIPvarGetName(vbdvar));
+      (*nchgbds)++;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** performs propagation of variables lower and upper bounds, implications, and cliques */
 static
 SCIP_RETCODE propagateVbounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< vbounds propagator */
-   SCIP_Bool             force,              /**< should domain changes be forced */
+   SCIP_Bool             force,              /**< should domain changes for continuous variables be forced */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation */
    )
 {
    SCIP_PROPDATA* propdata;
    SCIP_VAR** vars;
-   SCIP_VAR** vbvars;
-   SCIP_VAR* var;
-   SCIP_VAR* vbvar;
-   SCIP_Real* coefs;
-   SCIP_Real* constants;
-   SCIP_Real coef;
-   SCIP_Real constant;
-   SCIP_Real bestcoef;
-   SCIP_Real bestconstant;
-   SCIP_Real newbound;
-   INFERINFO inferinfo;
-   int nvars;
-   int nvbvars;
-   int pos;
-   int n;
+   SCIP_VAR* startvar;
+   SCIP_BOUNDTYPE starttype;
+   SCIP_Real startbound;
+   SCIP_Real globalbound;
+   int startpos;
+   int topopos;
    int v;
+   int n;
    int nchgbds;
-   SCIP_Bool infeasible;
-   SCIP_Bool tightened;
-   
+   int nbounds;
+   SCIP_Bool lower;
+   SCIP_Bool global;
+
    assert(scip != NULL);
    assert(prop != NULL);
    assert(result != NULL);
 
+   (*result) = SCIP_DIDNOTRUN;
+
+   /* we do not run the propagator in presolving, because we want to avoid doing the expensive creation of the graph twice */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+      return SCIP_OKAY;
+
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
-   
-   (*result) = SCIP_DIDNOTRUN;
-   
-   if( propdata->lbpropagated && propdata->ubpropagated )
+
+   /* initialize propagator data needed for propagation, if not done yet */
+   if( !propdata->initialized )
+   {
+      SCIP_CALL( initData(scip, prop) );
+   }
+   assert(propdata->propqueue != NULL);
+
+   vars = SCIPgetVars(scip);
+   nbounds = propdata->nbounds;
+
+   /* propagate all variables if we are in repropagation */
+   if( SCIPinRepropagation(scip) )
+   {
+      SCIP_VAR* var;
+      int idx;
+
+      for( v = nbounds - 1; v >= 0; --v )
+      {
+         idx = propdata->topoorder[v];
+         if( idx != -1 && !propdata->inqueue[v] )
+         {
+            var = vars[getVarIndex(idx)];
+            lower = isIndexLowerbound(idx);
+            if( !SCIPvarIsBinary(var) || (lower && SCIPvarGetLbLocal(var) > 0.5)
+                  || (!lower && SCIPvarGetUbLocal(var) < 0.5) )
+            {
+               SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(v + 1)) );
+               propdata->inqueue[v] = TRUE;
+            }
+         }
+      }
+   }
+
+   /* return if no bound changes are in the priority queue (no changed bounds to handle since last propagation) */
+   if( SCIPpqueueNElems(propdata->propqueue) == 0 )
       return SCIP_OKAY;
 
    nchgbds = 0;
-   nvars = propdata->nlbvars;
-   
-   if( nvars > 0 && !propdata->lbpropagated )
+
+   SCIPdebugMessage("varbound propagator: %d elements in the propagation queue\n", SCIPpqueueNElems(propdata->propqueue));
+
+   /* get variable bound of highest priority from priority queue and try to deduce bound changes for other variables;
+    * the priority queue is ordered w.r.t the topological sort of the varbound graph
+    */
+   while( SCIPpqueueNElems(propdata->propqueue) > 0 )
    {
-      vars = propdata->lbvars;
-      assert(vars != NULL);
-    
-      SCIPdebugMessage("run vbounds (lower) propagator over %d variables\n", nvars);
-      
-      /* try tighten lower bounds by traversing topological sorted variables from left to right */
-      for( v = 0; v < nvars; ++v )
+      topopos = ((int)(size_t)SCIPpqueueRemove(propdata->propqueue)) - 1;
+      assert(propdata->inqueue[topopos]);
+      startpos = propdata->topoorder[topopos];
+      assert(startpos >= 0);
+      propdata->inqueue[topopos] = FALSE;
+
+      startvar = vars[getVarIndex(startpos)];
+      starttype = getBoundtype(startpos);
+      lower = (starttype == SCIP_BOUNDTYPE_LOWER);
+      startbound = ( lower ? SCIPvarGetLbLocal(startvar) : SCIPvarGetUbLocal(startvar) );
+      globalbound = ( lower ? SCIPvarGetLbGlobal(startvar) : SCIPvarGetUbGlobal(startvar));
+      global = SCIPisEQ(scip, startbound, globalbound);
+
+      SCIPdebugMessage("propagate new %s bound of %g of variable <%s>:\n",
+         getBoundtypeString(starttype), startbound, SCIPvarGetName(startvar));
+
+      /* there should be neither implications nor cliques for non-binary variables */
+      assert(SCIPvarIsBinary(startvar) || SCIPvarGetNImpls(startvar, lower) == 0);
+      assert(SCIPvarIsBinary(startvar) || SCIPvarGetNCliques(startvar, lower) == 0);
+
+      if( SCIPvarIsBinary(startvar) )
       {
-         assert(vars[v] != NULL);
-         
-         /* get next variable of the topological sorted graph */
-         var = vars[v];
-         assert(var != NULL );
-         
-         /* get current lower bound as initialization of new lower bound */
-         newbound = SCIPvarGetLbLocal(var);
-         bestcoef = 1.0;
-         bestconstant = 0.0;
-         inferinfo = getInferInfo(v, SCIP_BOUNDTYPE_UPPER);
+         /* we only propagate binary variables if the lower bound changed to 1.0 or the upper bound changed to 0.0 */
+         if( lower != (startbound > 0.5) )
+            continue;
 
-         SCIPdebugMessage("try to improve lower bound of variable <%s> (current loc=[%.15g,%.15g])\n",
-            SCIPvarGetName(var), newbound, SCIPvarGetUbLocal(var));
-         
-         /* get the variable lower bound informations for the current variable */
-         vbvars = SCIPvarGetVlbVars(var);
-         coefs = SCIPvarGetVlbCoefs(var);
-         constants = SCIPvarGetVlbConstants(var);
-         nvbvars = SCIPvarGetNVlbs(var);
-
-         /* loop over all variable lower bounds; a variable lower bound has the form: x >= b*y + d*/
-         for( n = 0; n < nvbvars; ++n )
+         /* propagate implications */
+         if( propdata->useimplics )
          {
-            vbvar = vbvars[n];
-            coef = coefs[n];
-            constant = constants[n];
-            
-            /* transform variable bound variable to an active variable if possible */
-            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
-         
-            if( !SCIPvarIsActive(vbvar) )
-               continue;
-         
-            if( SCIPisPositive(scip, coef) )
+            int nimplvars;
+
+            /* if the lower bound of the startvar was changed, it was fixed to 1.0, otherwise it was fixed to 0.0;
+             * get all implications for this varfixing
+             */
+            nimplvars = SCIPvarGetNImpls(startvar, lower);
+
+            /* if there are implications for the varfixing, propagate them */
+            if( nimplvars > 0 )
             {
-               SCIP_Real candbound;
-               SCIP_Real lb;
+               SCIP_VAR** implvars;
+               SCIP_BOUNDTYPE* impltypes;
+               SCIP_Real* implbounds;
+               int* implids;
 
-               lb =  SCIPvarGetLbLocal(vbvar);
+               implvars = SCIPvarGetImplVars(startvar, lower);
+               impltypes = SCIPvarGetImplTypes(startvar, lower);
+               implbounds = SCIPvarGetImplBounds(startvar, lower);
+               implids = SCIPvarGetImplIds(startvar, lower);
 
-               /* ignore variable bound variables with a lower bound of minus infinity */
-               if( SCIPisInfinity(scip, -lb) )
-                  continue;
-
-               /* compute candidate bound; if b > 0 => x >= b*lb(y) + d */ 
-               candbound =  coef * lb + constant;
-
-               /* check if candidate bound is better */
-               if( SCIPisGT(scip, candbound, newbound) )
+               for( n = 0; n < nimplvars; ++n )
                {
-                  assert(SCIPvarGetProbindex(vbvar) > -1);
+                  /* implication is just a shortcut, so we do not propagate it now,
+                   * because we will propagate the longer way, anyway
+                   */
+                  if( implids[n] < 0 )
+                     continue;
 
-                  newbound = candbound;
-                  bestcoef = coef;
-                  bestconstant = constant;
-               
-                  SCIPdebugMessage(" -> new lower bound candidate <%.15g> due to lower bound of variable <%s> (n=%d)\n",
-                     newbound, SCIPvarGetName(vbvar), n);
-                  SCIPdebugMessage("         newlb >= %.15g * [%.15g,%.15g] + %.15g\n", 
-                     coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
+                  /* it might happen that implications point to inactive variables (normally, those are removed when a
+                   * variable becomes inactive, but in some cases, it cannot be done), we have to ignore these variables
+                   */
+                  if( !SCIPvarIsActive(implvars[n]) )
+                     continue;
 
-                  /* get position of vbvar in variable arrays */
-                  SCIP_CALL( getVarPos(scip, propdata, vbvar, &pos) );
+                  if( impltypes[n] == SCIP_BOUNDTYPE_LOWER )
+                  {
+                     SCIP_CALL( tightenVarLb(scip, prop, propdata, implvars[n], implbounds[n], global, startvar,
+                           starttype, force, 0.0, 0.0, FALSE, &nchgbds, result) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( tightenVarUb(scip, prop, propdata, implvars[n], implbounds[n], global, startvar,
+                           starttype, force, 0.0, 0.0, FALSE, &nchgbds, result) );
+                  }
 
-                  /* construct infer info */
-                  inferinfo = getInferInfo(pos, SCIP_BOUNDTYPE_LOWER);
+                  if( *result == SCIP_CUTOFF )
+                     return SCIP_OKAY;
                }
+            }
+         }
+
+         /* propagate cliques */
+         if( propdata->usecliques )
+         {
+            int ncliques;
+
+            /* if the lower bound of the startvar was changed, it was fixed to 1.0, otherwise it was fixed to 0.0;
+             * get all cliques for this varfixing
+             */
+            ncliques = SCIPvarGetNCliques(startvar, lower);
+
+            /* if there are cliques for the varfixing, propagate them */
+            if( ncliques > 0 )
+            {
+               SCIP_CLIQUE** cliques;
+               int j;
+
+               cliques = SCIPvarGetCliques(startvar, lower);
+
+               for( j = 0; j < ncliques; ++j )
+               {
+                  SCIP_VAR** cliquevars;
+                  SCIP_Bool* cliquevals;
+                  int ncliquevars;
+
+                  cliquevars = SCIPcliqueGetVars(cliques[j]);
+                  cliquevals = SCIPcliqueGetValues(cliques[j]);
+                  ncliquevars = SCIPcliqueGetNVars(cliques[j]);
+
+                  /* fix all variables except for the startvar to the value which is not in the clique */
+                  for( n = 0; n < ncliquevars; ++n )
+                  {
+                     if( cliquevars[n] == startvar )
+                        continue;
+
+                     /* try to tighten the bound */
+                     if( cliquevals[n] )
+                     {
+                        /* unnegated variable is in clique, so it has to be fixed to 0.0 */
+                        SCIP_CALL( tightenVarUb(scip, prop, propdata, cliquevars[n], 0.0, global, startvar, starttype,
+                              force, 0.0, 0.0, FALSE, &nchgbds, result) );
+                     }
+                     else
+                     {
+                        /* negated variable is in clique, so it has to be fixed to 1.0 */
+                        SCIP_CALL( tightenVarLb(scip, prop, propdata, cliquevars[n], 1.0, global, startvar, starttype,
+                              force, 0.0, 0.0, FALSE, &nchgbds, result) );
+                     }
+                     if( *result == SCIP_CUTOFF )
+                        return SCIP_OKAY;
+                  }
+               }
+            }
+         }
+      }
+
+      /* propagate vbounds */
+      if( propdata->usevbounds )
+      {
+         SCIP_VAR* boundedvar;
+         SCIP_Real newbound;
+         SCIP_Real coef;
+         SCIP_Real constant;
+
+         /* iterate over all vbounds for the given bound */
+         for( n = 0; n < propdata->nvbounds[startpos]; ++n )
+         {
+            boundedvar = vars[getVarIndex(propdata->vboundboundedidx[startpos][n])];
+            coef = propdata->vboundcoefs[startpos][n];
+            constant = propdata->vboundconstants[startpos][n];
+
+            /* compute new bound */
+            newbound = startbound * coef + constant;
+
+            /* try to tighten the bound */
+            if( isIndexLowerbound(propdata->vboundboundedidx[startpos][n]) )
+            {
+               SCIP_CALL( tightenVarLb(scip, prop, propdata, boundedvar, newbound, global, startvar, starttype, force,
+                     coef, constant, TRUE, &nchgbds, result) );
             }
             else
             {
-               SCIP_Real candbound;
-               SCIP_Real ub;
-
-               ub =  SCIPvarGetUbLocal(vbvar);
-
-               /* ignore variable bound variables with an upper bound of infinity */
-               if( SCIPisInfinity(scip, ub) )
-                  continue;
-
-               /* compute candidate bound; if b < 0 => x >= b*ub(y) + d */ 
-               candbound =  coef * ub + constant;
-
-               /* check if candidate bound is better */
-               if( SCIPisGT(scip, candbound, newbound) )
-               {
-                  assert(SCIPvarGetProbindex(vbvar) > -1);
-
-                  newbound = candbound;
-                  bestcoef = coef;
-                  bestconstant = constant;
-
-                  SCIPdebugMessage(" -> new lower bound candidate <%.15g> due to upper bound of variable <%s> (n=%d)\n",
-                     newbound, SCIPvarGetName(vbvar), n);
-                  SCIPdebugMessage("         newlb >= %.15g * [%.15g,%.15g] + %.15g\n", 
-                     coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
-                  
-                  /* get position of vbvar in variable arrays */
-                  SCIP_CALL( getVarPos(scip, propdata, vbvar, &pos) );
-
-                  /* construct infer info */
-                  inferinfo = getInferInfo(pos, SCIP_BOUNDTYPE_UPPER);
-               }
+               SCIP_CALL( tightenVarUb(scip, prop, propdata, boundedvar, newbound, global, startvar, starttype, force,
+                     coef, constant, TRUE, &nchgbds, result) );
             }
-         }
-         
-         /* try to tighten lower bound */
-         SCIP_CALL( SCIPinferVarLbProp(scip, var, newbound, prop, inferInfoToInt(inferinfo), force, &infeasible, &tightened) );
-         
-         if( infeasible )
-         {
-            /* the infeasible results comes from the fact that the new lower bound lies above the current upper bound */
-            assert(SCIPisGT(scip, newbound, SCIPvarGetUbLocal(var)));
-               
-            SCIPdebugMessage(" -> variable <%s> => variable <%s> lower bound candidate is <%.15g>\n", 
-               SCIPvarGetName(propdata->vars[inferInfoGetPos(inferinfo)]), SCIPvarGetName(var), newbound);
-            
-            SCIPdebugMessage(" -> lower bound tightening lead to infeasibility\n");
-            
-            /* analyzes an infeasibility via conflict analysis */
-            SCIP_CALL( analyzeConflictLowerbound(scip, propdata, var, newbound, inferinfo, bestcoef, bestconstant) );
-            *result = SCIP_CUTOFF;
 
-            return SCIP_OKAY;      
-         } 
-         
-         if( tightened )
-         {
-            SCIPdebugMessage(" -> tightened lower bound to <%g> due the %s bound of variable <%s>\n", 
-               newbound, inferInfoGetBoundtype(inferinfo) == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", 
-               SCIPvarGetName(propdata->vars[inferInfoGetPos(inferinfo)]));
-            nchgbds++;
+            if( *result == SCIP_CUTOFF )
+               return SCIP_OKAY;
          }
       }
-      
-      /* mark lower bound variable array as propagated */
-      propdata->lbpropagated = TRUE;
    }
-   
-   nvars = propdata->nubvars;
-
-   if( nvars > 0 && !propdata->ubpropagated)
-   {
-      vars = propdata->ubvars;
-      assert(vars != NULL);
-
-      SCIPdebugMessage("run vbounds (upper) propagator over %d variables\n", nvars);
-
-      /* try to tighten upper bounds by traversing topological sorted variables from right to left */
-      for( v = 0; v < nvars; ++v )
-      {
-         assert(vars[v] != NULL);
-
-         var = vars[v];
-         assert(var != NULL);
-      
-         /* get current upper bound and initialize new upper bound */
-         newbound = SCIPvarGetUbLocal(var);
-         bestcoef = 1.0;
-         bestconstant = 0.0;
-         inferinfo = getInferInfo(v, SCIP_BOUNDTYPE_UPPER);
-
-         SCIPdebugMessage("try to improve upper bound of variable <%s> (current loc=[%.15g,%.15g])\n",
-            SCIPvarGetName(var), SCIPvarGetLbLocal(var), newbound);
-         
-         /* loop over successor variables to find a better upper bound */
-         vbvars = SCIPvarGetVubVars(var);
-         coefs = SCIPvarGetVubCoefs(var);
-         constants = SCIPvarGetVubConstants(var);
-         nvbvars = SCIPvarGetNVubs(var);
-
-         /* loop of the entering arcs of the current node */
-         for( n = 0; n < nvbvars; ++n )
-         {
-            vbvar = vbvars[n];
-            coef = coefs[n];
-            constant = constants[n];
-
-            /* transform variable bound variable to an active variable if possible */
-            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
-            
-            if( !SCIPvarIsActive(vbvar) )
-               continue;
-
-            if( SCIPisPositive(scip, coef) )
-            {
-               SCIP_Real candbound;
-               SCIP_Real ub;
-
-               ub = SCIPvarGetUbLocal(vbvar);
-
-               /* ignore variable bound variables with an upper bound of infinity */
-               if( SCIPisInfinity(scip, ub) )
-                  continue;
-               
-               /* compute candidate for new bound; if b > 0 => x <= b*ub(y) + d */ 
-               candbound = coef * ub + constant;
-               
-               /* check if the candidate is better */
-               if(  SCIPisLT(scip, candbound, newbound) )
-               {
-                  assert(SCIPvarGetProbindex(vbvar) > -1);
-
-                  newbound = candbound;
-                  bestcoef = coef;
-                  bestconstant = constant;
-
-                  SCIPdebugMessage(" -> new upper bound candidate <%.15g> due to upper bound of variable <%s> (n=%d)\n",
-                     newbound, SCIPvarGetName(vbvar), n);
-                  SCIPdebugMessage("         newub <= %.15g * [%.15g,%.15g] + %.15g\n", 
-                     coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
-                  
-                  /* get position of vbvar in variable arrays */
-                  SCIP_CALL( getVarPos(scip, propdata, vbvar, &pos) );
-
-                  /* construct infer info */
-                  inferinfo = getInferInfo(pos, SCIP_BOUNDTYPE_UPPER);
-               }
-            }
-            else
-            {
-               SCIP_Real candbound;
-               SCIP_Real lb;
-
-               lb = SCIPvarGetLbLocal(vbvar);
-
-               /* ignore variable bound variables with a lower bound of minus infinity */
-               if( SCIPisInfinity(scip, -lb) )
-                  continue;
-               
-               /* compute candidate bound; if b < 0 => x <= b*lb(y) + d */ 
-               candbound = coef * lb + constant;
-
-               /* check if candidate bound is better */
-               if( SCIPisLT(scip, candbound, newbound) )
-               {
-                  assert(SCIPvarGetProbindex(vbvar) > -1);
-
-                  newbound = candbound;
-                  bestcoef = coef;
-                  bestconstant = constant;
-                  
-                  SCIPdebugMessage(" -> new upper bound candidate <%.15g> due to lower bound of variable <%s> (n=%d)\n",
-                     newbound, SCIPvarGetName(vbvar), n);
-                  SCIPdebugMessage("         newub <= %.15g * [%.15g,%.15g] + %.15g\n", 
-                     coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
-                  
-                  /* get position of vbvar in variable arrays */
-                  SCIP_CALL( getVarPos(scip, propdata, vbvar, &pos) );
-
-                  /* construct infer info */
-                  inferinfo = getInferInfo(pos, SCIP_BOUNDTYPE_LOWER);
-               }
-            }
-         }
-      
-         /* try to tighten upper bound */
-         SCIP_CALL( SCIPinferVarUbProp(scip, var, newbound, prop, inferInfoToInt(inferinfo), force, &infeasible, &tightened) );
-      
-         if( infeasible )
-         {
-            /* the infeasible results from the fact that the new upper bound lies below the current lower bound */
-            assert(SCIPisLT(scip, newbound, SCIPvarGetLbLocal(var)));
-
-            SCIPdebugMessage(" -> variable <%s> => variable <%s> upper bound candidate is <%.15g>\n", 
-               SCIPvarGetName(propdata->vars[inferInfoGetPos(inferinfo)]), SCIPvarGetName(var), newbound);
-
-            SCIPdebugMessage(" -> upper bound tightening lead to infeasibility\n");
-            
-            /* analyzes an infeasibility via conflict analysis */
-            SCIP_CALL( analyzeConflictUpperbound(scip, propdata, var, newbound, inferinfo, bestcoef, bestconstant) );
-            *result = SCIP_CUTOFF;
-            
-            return SCIP_OKAY;      
-         } 
-
-         if( tightened )
-         {
-            SCIPdebugMessage(" -> tightened upper bound to <%g> due the %s bound of variable <%s>\n", 
-               newbound, inferInfoGetBoundtype(inferinfo) == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", 
-               SCIPvarGetName(propdata->vars[inferInfoGetPos(inferinfo)]));
-            nchgbds++;
-         }
-      }
-      
-      /* mark upper bound variable array as propagated */
-      propdata->ubpropagated = TRUE;
-   }   
 
    SCIPdebugMessage("tightened %d variable bounds\n", nchgbds);
 
+   /* set the result depending on whether bound changes were found or not */
    if( nchgbds > 0 )
       (*result) = SCIP_REDUCEDDOM;
    else
       (*result) = SCIP_DIDNOTFIND;
-   
+
    return SCIP_OKAY;
 }
 
-/*
- * Callback methods of propagator
+/**@name Callback methods of propagator
+ *
+ * @{
  */
 
 /** copy method for propagator plugins (called when SCIP copies plugins) */
@@ -1401,7 +1650,7 @@ SCIP_DECL_PROPCOPY(propCopyVbounds)
 
    /* call inclusion method of propagator */
    SCIP_CALL( SCIPincludePropVbounds(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -1416,88 +1665,9 @@ SCIP_DECL_PROPFREE(propFreeVbounds)
 
    SCIPfreeMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
-   
-   return SCIP_OKAY;
-}
-
-
-/** initialization method of propagator (called after problem was transformed) */
-#define propInitVbounds NULL
-
-
-/** deinitialization method of propagator (called before transformed problem is freed) */
-#define propExitVbounds NULL
-
-
-/** presolving initialization method of propagator (called when presolving is about to begin) */
-#define propInitpreVbounds NULL
-
-
-/** presolving deinitialization method of propagator (called after presolving has been finished) */
-#define propExitpreVbounds NULL
-
-
-/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
-static
-SCIP_DECL_PROPINITSOL(propInitsolVbounds)
-{  /*lint --e{715}*/
-   SCIP_PROPDATA* propdata;
-   SCIP_VAR** vars;
-   int nvars;
-   int v;
-
-   SCIPdebugMessage("initialize vbounds propagator for problem <%s>\n", SCIPgetProbName(scip));
-
-   /* free propagator data */
-   propdata = SCIPpropGetData(prop);
-   assert(propdata != NULL);
-   
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
-   
-   if( nvars == 0 )
-      return SCIP_OKAY;
-
-   /* allocate memory for the arrays of the propdata */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->vars, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->lbvars, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->ubvars, nvars) );
-
-   /* store size of the variable array */
-   propdata->sizevars = nvars;
-   
-   /* create hash table for storing the involved variables */
-   assert(propdata->nvars == 0);
-   SCIP_CALL( SCIPhashmapCreate(&propdata->varHashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
-   
-   /* create the topological sorted variable array with respect to the variable lower bounds */
-   assert(propdata->nlbvars == 0);
-   SCIP_CALL( SCIPcreateTopoSortedVars(scip, vars, nvars, propdata->varHashmap, propdata->vars, &propdata->nvars, 
-         propdata->lbvars, &propdata->nlbvars, TRUE) );
-
-   /* create the topological sorted variable array with respect to the variable upper bounds */
-   assert(propdata->nubvars == 0);
-   SCIP_CALL( SCIPcreateTopoSortedVars(scip, vars, nvars, propdata->varHashmap, propdata->vars, &propdata->nvars, 
-         propdata->ubvars, &propdata->nubvars, FALSE) );
-
-   /* capture all variables */
-   for( v = 0; v < propdata->nvars; ++v )
-   {
-      SCIP_CALL( SCIPcaptureVar(scip, propdata->vars[v]) );
-   }
-
-   /* catch variable events */
-   SCIP_CALL( catchEvents(scip, propdata) );
-
-   if( propdata->nlbvars > 0 )
-      propdata->lbpropagated = FALSE;
-   
-   if( propdata->nubvars > 0 )
-      propdata->ubpropagated = FALSE;
 
    return SCIP_OKAY;
 }
-
 
 /** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
 static
@@ -1509,25 +1679,36 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   /* drop all variable events */
-   SCIP_CALL( dropEvents(scip, propdata) );
-
-   /* release all variables */
-   for( v = 0; v < propdata->nvars; ++v )
+   /* free data stored for propagation */
+   if( propdata->initialized )
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &propdata->vars[v]) );
-   }
+      /* drop all variable events */
+      SCIP_CALL( dropEvents(scip, propdata) );
 
-   /* free hash map */
-   if( propdata->varHashmap != NULL )
-      SCIPhashmapFree(&propdata->varHashmap);
-   
-   /* free array */
-   SCIPfreeMemoryArrayNull(scip, &propdata->lbeventtypes);
-   SCIPfreeMemoryArrayNull(scip, &propdata->ubeventtypes);
-   SCIPfreeMemoryArrayNull(scip, &propdata->lbvars);
-   SCIPfreeMemoryArrayNull(scip, &propdata->ubvars);
-   SCIPfreeMemoryArrayNull(scip, &propdata->vars);
+      /* release all variables */
+      for( v = 0; v < propdata->nbounds; ++v )
+      {
+         /* free vbound data */
+         if( propdata->vboundsize[v] > 0 )
+         {
+            SCIPfreeMemoryArray(scip, &propdata->vboundboundedidx[v]);
+            SCIPfreeMemoryArray(scip, &propdata->vboundcoefs[v]);
+            SCIPfreeMemoryArray(scip, &propdata->vboundconstants[v]);
+         }
+      }
+
+      /* free priority queue */
+      SCIPpqueueFree(&propdata->propqueue);
+
+      /* free arrays */
+      SCIPfreeBlockMemoryArray(scip, &propdata->vboundsize, propdata->nbounds);
+      SCIPfreeBlockMemoryArray(scip, &propdata->nvbounds, propdata->nbounds);
+      SCIPfreeBlockMemoryArray(scip, &propdata->vboundconstants, propdata->nbounds);
+      SCIPfreeBlockMemoryArray(scip, &propdata->vboundcoefs, propdata->nbounds);
+      SCIPfreeBlockMemoryArray(scip, &propdata->vboundboundedidx, propdata->nbounds);
+      SCIPfreeBlockMemoryArray(scip, &propdata->inqueue, propdata->nbounds);
+      SCIPfreeBlockMemoryArray(scip, &propdata->topoorder, propdata->nbounds);
+   }
 
    /* reset propagation data */
    resetPropdata(propdata);
@@ -1535,19 +1716,17 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
    return SCIP_OKAY;
 }
 
-
-/** presolving method of propagator */
-#define propPresolVbounds NULL
-
-
 /** execution method of propagator */
 static
 SCIP_DECL_PROPEXEC(propExecVbounds)
 {  /*lint --e{715}*/
-   
+
    /* perform variable lower and upper bound propagation */
    SCIP_CALL( propagateVbounds(scip, prop, FALSE, result) );
-   
+
+   assert((*result) == SCIP_CUTOFF || (*result) == SCIP_DIDNOTRUN
+      || (*result) == SCIP_DIDNOTFIND || (*result) == SCIP_REDUCEDDOM);
+
    return SCIP_OKAY;
 }
 
@@ -1557,40 +1736,126 @@ static
 SCIP_DECL_PROPRESPROP(propRespropVbounds)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
+   SCIP_VAR** vars;
+   SCIP_VAR* startvar;
+   SCIP_BOUNDTYPE starttype;
+   int pos;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
-   
-   SCIPdebugMessage("explain %s bound change of variable <%s>\n", 
-      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(infervar));
-   
-   SCIP_CALL( resolvePropagation(scip, propdata, intToInferInfo(inferinfo), bdchgidx) );
+
+   starttype = inferInfoGetBoundtype(intToInferInfo(inferinfo));
+   pos = inferInfoGetPos(intToInferInfo(inferinfo));
+   assert(pos >= 0);
+   assert(pos < propdata->nbounds);
+
+   vars = SCIPgetVars(scip);
+   assert(vars != NULL);
+   startvar = vars[getVarIndex(pos)];
+   assert(startvar != NULL);
+   assert(startvar != infervar);
+
+   SCIPdebugMessage("explain %s bound change of variable <%s>\n",
+      getBoundtypeString(boundtype), SCIPvarGetName(infervar));
+
+   if( !SCIPvarIsBinary(startvar) && propdata->usebdwidening )
+   {
+      int* vboundboundedidx;
+      SCIP_Real constant;
+      SCIP_Real coef;
+      int inferidx;
+      int nvbounds;
+      int b;
+
+      nvbounds = propdata->nvbounds[pos];
+      vboundboundedidx = propdata->vboundboundedidx[pos];
+
+      inferidx = boundtype == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(infervar) : varGetUbIndex(infervar);
+
+      for( b = 0; b < nvbounds; ++b )
+      {
+         if( vboundboundedidx[b] == inferidx )
+            break;
+      }
+      assert(b < nvbounds);
+
+      coef = propdata->vboundcoefs[pos][b];
+      constant = propdata->vboundconstants[pos][b];
+      assert(!SCIPisZero(scip, coef));
+
+      /* compute the relaxed bound which is sufficient to propagate the inference bound of given variable */
+      if( boundtype == SCIP_BOUNDTYPE_LOWER )
+         relaxedbd = computeRelaxedLowerbound(scip, infervar, relaxedbd, coef, constant);
+      else
+         relaxedbd = computeRelaxedUpperbound(scip, infervar, relaxedbd, coef, constant);
+
+      /* try to relax variable bound variable */
+      SCIP_CALL( relaxVbdvar(scip, startvar, starttype, bdchgidx, relaxedbd) );
+   }
+   else
+   {
+      SCIP_CALL( resolvePropagation(scip, propdata, startvar, starttype, bdchgidx) );
+   }
 
    (*result) = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
 
-/*
- * Event Handler
+/**@} */
+
+/**@name Callback methods of event handler
+ *
+ * @{
  */
 
 /** execution method of bound change event handler */
 static
 SCIP_DECL_EVENTEXEC(eventExecVbound)
 {  /*lint --e{715}*/
-   SCIP_Bool* propagated;
+   SCIP_PROPDATA* propdata;
+   int idx;
 
-   propagated = (SCIP_Bool*)eventdata;
-   assert(propagated != NULL);
+   assert(eventhdlr != NULL);
 
-   (*propagated) = FALSE;
+   propdata = (SCIP_PROPDATA*)SCIPeventhdlrGetData(eventhdlr);
+   assert(propdata != NULL);
+
+   idx = (int) (size_t) eventdata;
+   assert(idx >= 0);
+
+   SCIPdebugMessage("eventexec (type=%u): try to add sort index %d: %s(%s) to priority queue\n", SCIPeventGetType(event),
+      idx, indexGetBoundString(propdata->topoorder[idx]),
+      SCIPvarGetName(SCIPgetVars(scip)[getVarIndex(propdata->topoorder[idx])]));
+
+   if( SCIPeventGetType(event) == SCIP_EVENTTYPE_GUBCHANGED && SCIPvarIsBinary(SCIPeventGetVar(event))
+      && SCIPeventGetNewbound(event) > 0.5 )
+      return SCIP_OKAY;
+
+   if( SCIPeventGetType(event) == SCIP_EVENTTYPE_GLBCHANGED && SCIPvarIsBinary(SCIPeventGetVar(event))
+      && SCIPeventGetNewbound(event) < 0.5 )
+      return SCIP_OKAY;
+
+   assert(getVarIndex(propdata->topoorder[idx]) < SCIPgetNVars(scip));
+   assert(SCIPvarGetType(SCIPgetVars(scip)[getVarIndex(propdata->topoorder[idx])]) != SCIP_VARTYPE_BINARY
+      || (isIndexLowerbound(propdata->topoorder[idx]) == (SCIPeventGetNewbound(event) > 0.5)));
+
+   /* add the bound change to the propagation queue, if it is not already contained */
+   if( !propdata->inqueue[idx] )
+   {
+      SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(idx + 1)) );
+      propdata->inqueue[idx] = TRUE;
+   }
+   assert(SCIPpqueueNElems(propdata->propqueue) > 0);
 
    return SCIP_OKAY;
 }
 
-/*
- * propagator specific interface methods
+/**@} */
+
+/**@name Interface methods
+ *
+ * @{
  */
 
 /** creates the vbounds propagator and includes it in SCIP */
@@ -1599,181 +1864,87 @@ SCIP_RETCODE SCIPincludePropVbounds(
    )
 {
    SCIP_PROPDATA* propdata;
-   
+   SCIP_PROP* prop;
+
    /* create pseudoobj propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
-   
+
    /*  reset propagation data */
    resetPropdata(propdata);
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
-         propCopyVbounds,
-         propFreeVbounds, propInitVbounds, propExitVbounds, propInitpreVbounds, propExitpreVbounds, 
-         propInitsolVbounds, propExitsolVbounds, propPresolVbounds, propExecVbounds, propRespropVbounds,
-         propdata) );
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
+         propExecVbounds, propdata) );
+   assert(prop != NULL);
+
+   /* set optional callbacks via setter functions */
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyVbounds) );
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeVbounds) );
+   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolVbounds) );
+   SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropVbounds) );
 
    /* include event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecVbound, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &propdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecVbound, (SCIP_EVENTHDLRDATA*)propdata) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/"PROP_NAME"/usebdwidening", "should bound widening be used to initialize conflict analysis?",
          &propdata->usebdwidening, FALSE, DEFAULT_USEBDWIDENING, NULL, NULL) );
-   
-   
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/"PROP_NAME"/useimplics", "should implications be propagated?",
+         &propdata->useimplics, FALSE, DEFAULT_USEIMPLICS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/"PROP_NAME"/usecliques", "should cliques be propagated?",
+         &propdata->usecliques, FALSE, DEFAULT_USECLIQUES, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/"PROP_NAME"/usevbounds", "should vbounds be propagated?",
+         &propdata->usevbounds, FALSE, DEFAULT_USEVBOUNDS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/"PROP_NAME"/dotoposort", "should the bounds be topologically sorted in advance?",
+         &propdata->dotoposort, FALSE, DEFAULT_DOTOPOSORT, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/"PROP_NAME"/sortcliques", "should cliques be regarded for the topological sort?",
+         &propdata->sortcliques, FALSE, DEFAULT_SORTCLIQUES, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
-/** create a topological sorted variable array of the given variables and stores if (needed) the involved variables into
- *  the corresponding variable array and hash map
- *
- * @note: for all arrays and the hash map (if requested) you need to allocate enough memory before calling this method 
- */
-SCIP_RETCODE SCIPcreateTopoSortedVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< variable which we want sort */
-   int                   nvars,              /**< number of variables */
-   SCIP_HASHMAP*         varPosMap,          /**< mapping a variable to its position in the (used) variable array, or NULL */    
-   SCIP_VAR**            usedvars,           /**< array of variables which are involved in the propagation, or NULL */
-   int*                  nusedvars,          /**< number of variables which are involved in the propagation, or NULL */
-   SCIP_VAR**            topovars,           /**< array where the topological sorted variables are stored */
-   int*                  ntopovars,          /**< pointer to store the number of topological sorted variables */
-   SCIP_Bool             lowerbound          /**< topological sorted with respect to the variable lower bounds, otherwise variable upper bound */
-   )
-{
-   SCIP_VAR** sortedvars;
-   SCIP_VAR** vbvars;
-   SCIP_VAR* var;
-   SCIP_HASHTABLE* connected;
-   int nvbvars;
-   int hashsize;
-   int i;
-   int v;
-   
-   assert(scip != NULL);   
-   assert(vars != NULL || nvars == 0);
-   assert(varPosMap == NULL || (varPosMap != NULL && usedvars != NULL && nusedvars != NULL));
-   assert(topovars != NULL);
-   assert(ntopovars != NULL);
-   
-   SCIPdebugMessage("create topological sorted variable array with respect to variables %s bounds\n", 
-      lowerbound ? "lower" : "upper");
-
-   if( nvars == 0 )
-      return SCIP_OKAY;
-
-   assert(vars != NULL);
-   
-   /* allocate buffer array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &sortedvars, nvars) );
-   
-   hashsize = SCIPcalcHashtableSize(5 * nvars);
-
-   /* create hash table for variables which are (still) connected */
-   SCIP_CALL( SCIPhashtableCreate(&connected, SCIPblkmem(scip), hashsize, SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
-   
-   /* detect isolated variables; mark all variables which have at least one entering or leaving arc as connected */
-   for( v = 0; v < nvars; ++v )
-   {
-      var = vars[v];
-      assert(var != NULL);
-      
-      if( !SCIPvarIsActive(var) )
-         continue;
-
-      /* get variable bounds */
-      getVariableBounds(var, &vbvars, &nvbvars, lowerbound);
-      
-      if( nvbvars > 0 && !SCIPhashtableExists(connected, var) )
-      {
-         SCIP_CALL( SCIPhashtableInsert(connected, var) );
-      }
-
-      for( i = 0; i < nvbvars; ++i )
-      {
-         if( !SCIPvarIsActive(vbvars[i]) )
-            continue;
-
-         /* there is a leaving arc, hence, the variable/node  is connected */  
-         assert(vbvars[i] != NULL);
-         if( !SCIPhashtableExists(connected, vbvars[i]) )
-         {
-            SCIP_CALL( SCIPhashtableInsert(connected, vbvars[i]) );
-         }
-      }
-   }
-
-   /* loop over all "connected" variable and find for each connected component a "almost" topological sorted version */
-   for( v = 0; v < nvars; ++v )
-   {
-      if( SCIPhashtableExists(connected, vars[v]) )
-      {
-         int nsortedvars;
-
-         SCIPdebugMessage("start depth-first-search with variable <%s>\n", SCIPvarGetName(vars[v]));
-         
-         /* use depth first search to get a "almost" topological sorted variables for the connected component which
-          * includes vars[v]
-          */
-         nsortedvars = 0;
-         SCIP_CALL( depthFirstSearch(scip, vars[v], varPosMap, usedvars, nusedvars, connected, sortedvars, &nsortedvars, lowerbound) );
-         
-         SCIPdebugMessage("detected connected component of size <%d>\n", nsortedvars);
-        
-         /* copy variables */
-         for( i = 0; i < nsortedvars; ++i )
-         {
-            topovars[(*ntopovars)] = sortedvars[i];
-            (*ntopovars)++;
-         }
-      }
-   }
-   
-   assert(*ntopovars <= nvars);
-   SCIPdebugMessage("topological sorted array contains %d of %d variables (variable %s bound)\n", 
-      *ntopovars, nvars, lowerbound ? "lower" : "upper");
-   
-   /* free hash table */
-   SCIPhashtableFree(&connected);
-
-   /* free buffer memory */
-   SCIPfreeBufferArray(scip, &sortedvars);
-   
-   return SCIP_OKAY;
-}
-
-/** returns TRUE if the propagator has the status that all variable lower and upper bounds are propagated */
+/** returns TRUE if the propagator has the status that all variable lower and upper bounds are propgated */
 SCIP_Bool SCIPisPropagatedVbounds(
-   SCIP*                 scip                 /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_PROP* prop;
    SCIP_PROPDATA* propdata;
-   
+
    prop = SCIPfindProp(scip, PROP_NAME);
    assert(prop != NULL);
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   return propdata->lbpropagated && propdata->ubpropagated;
+   return (SCIPpqueueNElems(propdata->propqueue) == 0);
 }
 
 /** performs propagation of variables lower and upper bounds */
 SCIP_RETCODE SCIPexecPropVbounds(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_Bool             force,               /**< should domain changes be forced */
-   SCIP_RESULT*          result               /**< pointer to store result */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             force,              /**< should domain changes for continuous variables be forced */
+   SCIP_RESULT*          result              /**< pointer to store result */
    )
 {
    SCIP_PROP* prop;
-   
+
    prop = SCIPfindProp(scip, PROP_NAME);
    assert(prop != NULL);
 
    /* perform variable lower and upper bound propagation */
    SCIP_CALL( propagateVbounds(scip, prop, force, result) );
 
+   assert((*result) == SCIP_CUTOFF || (*result) == SCIP_DIDNOTRUN
+      || (*result) == SCIP_DIDNOTFIND || (*result) == SCIP_REDUCEDDOM);
+
    return SCIP_OKAY;
 }
+
+/**@} */

@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /** creates the twoopt primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurTwoopt(
    SCIP*                 scip                /**< SCIP data structure */
    );

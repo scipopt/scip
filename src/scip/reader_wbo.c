@@ -45,13 +45,9 @@ SCIP_DECL_READERCOPY(readerCopyWbo)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderWbo(scip) );
- 
+
    return SCIP_OKAY;
 }
-
-
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeWbo NULL
 
 
 /** problem reading method of reader */
@@ -70,7 +66,7 @@ static
 SCIP_DECL_READERWRITE(readerWriteWbo)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPwriteOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-         nvars, nbinvars, nintvars, nimplvars, ncontvars, nfixedvars, conss, nconss, genericnames, result) );
+         nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, genericnames, result) );
 
    return SCIP_OKAY;
 }
@@ -86,13 +82,20 @@ SCIP_RETCODE SCIPincludeReaderWbo(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create lp reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include lp reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyWbo, readerFreeWbo, readerReadWbo, readerWriteWbo, readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   assert(reader != NULL);
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyWbo) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadWbo) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteWbo) );
 
    return SCIP_OKAY;
 }

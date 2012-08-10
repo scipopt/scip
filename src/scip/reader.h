@@ -99,6 +99,33 @@ SCIP_RETCODE SCIPreaderResetReadingTime(
    SCIP_READER*          reader              /**< reader */
    );
 
+/** sets copy method of reader */
+extern
+void SCIPreaderSetCopy(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERCOPY  ((*readercopy))     /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor of reader */
+extern
+void SCIPreaderSetFree(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERFREE  ((*readerfree))     /**< destructor of reader */
+   );
+
+/** sets read method of reader */
+extern
+void SCIPreaderSetRead(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERREAD  ((*readerread))     /**< read method */
+   );
+
+/** sets write method of reader */
+extern
+void SCIPreaderSetWrite(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERWRITE ((*readerwrite))    /**< write method */
+   );
 
 #ifdef __cplusplus
 }

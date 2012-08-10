@@ -64,6 +64,9 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxrounds,          /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
@@ -168,6 +171,7 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_CUTPOOL*         cutpool,            /**< global cut pool */
+   SCIP_CUTPOOL*         delayedcutpool,     /**< global delayed cut pool */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */

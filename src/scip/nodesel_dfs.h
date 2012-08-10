@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the node selector for depth first search and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeNodeselDfs(
    SCIP*                 scip                /**< SCIP data structure */
    );

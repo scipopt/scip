@@ -77,7 +77,7 @@ typedef SCIP_Longint         Int;
 #define DISP_SOLS_NAME             "sols"
 #define DISP_SOLS_DESC             "number of detected feasible solutions"
 #define DISP_SOLS_HEADER           " sols "
-#define DISP_SOLS_WIDTH            6
+#define DISP_SOLS_WIDTH            7
 #define DISP_SOLS_PRIORITY         110000
 #define DISP_SOLS_POSITION         100000
 #define DISP_SOLS_STRIPLINE        TRUE
@@ -105,11 +105,11 @@ typedef SCIP_Longint         Int;
 struct SCIP_ConshdlrData
 {
    /* solution data and statistic variables */
-   SPARSESOLUTION**      solutions;          /**< array to store all solutions */
+   SCIP_SPARSESOL**      solutions;          /**< array to store all solutions */
    int                   nsolutions;         /**< number of solution stored */
    int                   ssolutions;         /**< size of the solution array */
    int                   feasST;             /**< number of non trivial feasible subtrees */
-   int                   nDiscardSols ;      /**< number of discard solutions */
+   int                   nDiscardSols;       /**< number of discard solutions */
    int                   nNonSparseSols;     /**< number of non sparse solutions */
    Int                   nsols;              /**< number of solutions */
    CUTOFF_CONSTRAINT((*cutoffSolution));     /**< method for cutting of a solution */
@@ -139,7 +139,7 @@ struct SCIP_ConshdlrData
 /** allocates memory for the value pointer */
 static
 void allocInt(
-   Int*          value                       /**< pointer to the value to allocate memory */
+   Int*                  value               /**< pointer to the value to allocate memory */
    )
 {  /*lint --e{715}*/
 #ifdef WITH_GMP
@@ -151,8 +151,8 @@ void allocInt(
 /** sets the value pointer to the new value */
 static
 void setInt(
-   Int*          value,                       /**< pointer to the value to initialize */
-   SCIP_Longint  newvalue                     /**< new value */
+   Int*                  value,              /**< pointer to the value to initialize */
+   SCIP_Longint          newvalue            /**< new value */
    )
 {
 #ifdef WITH_GMP
@@ -163,10 +163,26 @@ void setInt(
 }
 
 
+/** sets a power of 2 to the given value */
+static
+void setPowerOfTwo(
+   Int*                  value,              /**< pointer to the value to increase */
+   SCIP_Longint          exponent            /**< exponent for the base 2 */
+   )
+{
+#ifdef WITH_GMP
+   mpz_ui_pow_ui(*value, 2, exponent);
+#else
+   assert(exponent < 64);
+   (*value) = 1 << exponent;
+#endif
+}
+
+
 /** free memory */
 static
 void freeInt(
-   Int*          value                      /**< pointer to the value to free */
+   Int*                  value               /**< pointer to the value to free */
    )
 {  /*lint --e{715}*/
 #ifdef WITH_GMP
@@ -178,7 +194,7 @@ void freeInt(
 /** adds one to the given value */
 static
 void addOne(
-   Int*          value                      /**< pointer to the value to increase */
+   Int*                  value               /**< pointer to the value to increase */
    )
 {
 #ifdef WITH_GMP
@@ -192,8 +208,8 @@ void addOne(
 /** adds the summand to the given value */
 static
 void addInt(
-   Int*          value,                     /**< pointer to the value to increase */
-   Int*          summand                    /**< summand to add on */
+   Int*                  value,              /**< pointer to the value to increase */
+   Int*                  summand             /**< summand to add on */
    )
 {
 #ifdef WITH_GMP
@@ -207,24 +223,24 @@ void addInt(
 /** multiplies the factor by the given value */
 static
 void multInt(
-   Int*          value,                     /**< pointer to the value to increase */
-   SCIP_Longint  factor                     /**< factor to multiply with */
+   Int*                  value,              /**< pointer to the value to increase */
+   SCIP_Longint          factor              /**< factor to multiply with */
    )
 {
 #ifdef WITH_GMP
-   mpz_mul_ui (*value, *value, factor);
+   mpz_mul_ui(*value, *value, factor);
 #else
    (*value) *= factor;
 #endif
 }
 
 
-/* method for creating a string out of an Int which is a mpz_t or SCIP_Longint */
+/** method for creating a string out of an Int which is a mpz_t or SCIP_Longint */
 static
 void toString(
-   Int      value,                          /**< number */
-   char**   buffer,                         /**< pointer to buffer for storing the string */
-   int      buffersize                      /**< length of the buffer */
+   Int                   value,              /**< number */
+   char**                buffer,             /**< pointer to buffer for storing the string */
+   int                   buffersize          /**< length of the buffer */
    )
 {
 #ifdef WITH_GMP
@@ -235,11 +251,11 @@ void toString(
 }
 
 
-/* method for creating a SCIP_Longing out of an Int */
+/** method for creating a SCIP_Longing out of an Int */
 static
 SCIP_Longint getNCountedSols(
-   Int                   value,             /**< number to convert */
-   SCIP_Bool*            valid              /**< pointer to store if the return value is valid */
+   Int                   value,              /**< number to convert */
+   SCIP_Bool*            valid               /**< pointer to store if the return value is valid */
    )
 {
 #ifdef WITH_GMP
@@ -277,8 +293,8 @@ SCIP_Bool varIsUnfixedLocal(
 /** creates the constraint handler data */
 static
 SCIP_RETCODE conshdlrdataCreate(
-   SCIP*                      scip,            /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**        conshdlrdata     /**< pointer to store constraint handler data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store constraint handler data */
    )
 {
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
@@ -308,9 +324,9 @@ SCIP_RETCODE conshdlrdataCreate(
 /** check solution in original space */
 static
 void checkSolutionOrig(
-   SCIP*                    scip,            /**< SCIP data structure */
-   SCIP_SOL*                sol,             /**< solution to add */
-   SCIP_CONSHDLRDATA*       conshdlrdata     /**< constraint handler data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to add */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
    SCIP_Bool feasible;
@@ -344,7 +360,7 @@ void checkSolutionOrig(
 /** check if the current parameter setting is correct for a save counting process */
 static
 SCIP_RETCODE checkParameters(
-   SCIP*                      scip             /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_HEUR** heuristics;
@@ -465,7 +481,6 @@ CUTOFF_CONSTRAINT(addIntegerCons)
    int nconsvars;
    SCIP_VAR* var;
    SCIP_Real value;
-   SCIP_Longint lb,ub,valueInt;
 
    SCIP_CONS* cons;
 
@@ -491,7 +506,6 @@ CUTOFF_CONSTRAINT(addIntegerCons)
       var = vars[v];
 
       assert( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS );
-      assert( varIsUnfixedLocal(var) );
 
       if( SCIPvarIsBinary(var) )
       {
@@ -512,32 +526,36 @@ CUTOFF_CONSTRAINT(addIntegerCons)
       }
       else
       {
+         SCIP_Real lb;
+         SCIP_Real ub;
+         SCIP_Real valueInt;
+
          assert( SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)) );
          assert( SCIPisFeasIntegral(scip, SCIPvarGetUbLocal(var)) );
          assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, var)) );
 
-         lb = (SCIP_Longint) SCIPfeasCeil(scip, SCIPvarGetLbLocal(var));
-         ub = (SCIP_Longint) SCIPfeasCeil(scip, SCIPvarGetUbLocal(var));
-         valueInt = (SCIP_Longint) SCIPfeasCeil(scip, SCIPgetSolVal(scip, sol, var));
+         lb = SCIPvarGetLbLocal(var);
+         ub = SCIPvarGetUbLocal(var);
+         valueInt = SCIPgetSolVal(scip, sol, var);
 
-         if( valueInt == lb )
+         if( SCIPisFeasEQ(scip, valueInt, lb) )
          {
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_LOWER;
-            bounds[nconsvars] = lb + 1;
+            bounds[nconsvars] = lb + 1.0;
          }
-         else if( valueInt == ub )
+         else if( SCIPisFeasEQ(scip, valueInt, ub) )
          {
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_UPPER;
-            bounds[nconsvars] = ub - 1;
+            bounds[nconsvars] = ub - 1.0;
          }
          else
          {
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_LOWER;
-            bounds[nconsvars] = valueInt + 1;
+            bounds[nconsvars] = valueInt + 1.0;
             consvars[nconsvars] = var;
             ++nconsvars;
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_UPPER;
-            bounds[nconsvars] = valueInt - 1;
+            bounds[nconsvars] = valueInt - 1.0;
          }
       }
 
@@ -584,12 +602,12 @@ CUTOFF_CONSTRAINT(addIntegerCons)
 /** collect given solution or local domains as sparse solution */
 static
 SCIP_RETCODE collectSolution(
-   SCIP*                      scip,             /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*         conshdlrdata,     /**< constraint handler data */
-   SCIP_SOL*                  sol               /**< solution, or NULL if local domains */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_SOL*             sol                 /**< solution, or NULL if local domains */
    )
 {
-   SPARSESOLUTION* solution;
+   SCIP_SPARSESOL* solution;
    SCIP_Longint* lbvalues;
    SCIP_Longint* ubvalues;
    int nvars;
@@ -615,11 +633,12 @@ SCIP_RETCODE collectSolution(
    /* get number of active variables */
    nvars = conshdlrdata->nvars;
 
-   /* get memory for storing the solution */
-   lbvalues = NULL;
-   ubvalues = NULL;
-   SCIP_CALL( SCIPallocMemoryArray(scip, &lbvalues, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &ubvalues, nvars) );
+   /* create a solution */
+   SCIP_CALL( SCIPsparseSolCreate(&solution, conshdlrdata->vars, nvars, FALSE) );
+   assert(solution != NULL);
+
+   lbvalues = SCIPsparseSolGetLbs(solution);
+   ubvalues = SCIPsparseSolGetUbs(solution);
    assert(ubvalues != NULL);
    assert(lbvalues != NULL);
 
@@ -646,12 +665,6 @@ SCIP_RETCODE collectSolution(
          SCIPvarGetName(var), lbvalues[v], ubvalues[v]);
    }
 
-   SCIP_CALL( SCIPallocMemory(scip, &solution) );
-   assert(solution != NULL);
-
-   solution->lbvalues = lbvalues;
-   solution->ubvalues = ubvalues;
-
    conshdlrdata->solutions[conshdlrdata->nsolutions] = solution;
    conshdlrdata->nsolutions++;
 
@@ -661,12 +674,12 @@ SCIP_RETCODE collectSolution(
 
 /** counts the number of solutions represented by sol */
 static
-SCIP_RETCODE countSparsesol(
-   SCIP*                      scip,             /**< SCIP data structure */
-   SCIP_SOL*                  sol,              /**< solution */
-   SCIP_Bool                  feasible,         /**< is solution feasible? */
-   SCIP_CONSHDLRDATA*         conshdlrdata,     /**< constraint handler data */
-   SCIP_RESULT*               result            /**< pointer to store the result of the checking process */
+SCIP_RETCODE countSparseSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Bool             feasible,           /**< is solution feasible? */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_RESULT*          result              /**< pointer to store the result of the checking process */
    )
 {
    assert( scip != NULL );
@@ -707,19 +720,12 @@ SCIP_RETCODE countSparsesol(
 
       if( SCIPgetNBinVars(scip) == SCIPgetNVars(scip) )
       {
-         SCIP_Longint nsols;
          int npseudocands;
 
-         nsols = 1;
          npseudocands = SCIPgetNPseudoBranchCands(scip);
-         assert(npseudocands < 64);
 
-         /* bit shift the factor by npseudocands; this means factor = 2^npseudocands */
-         nsols <<= npseudocands;
-
-         /* set newsols to the computed number */
-         setInt(&newsols, nsols);
-         SCIPdebugMessage("-> add 2^%d to number of solutions\n", npseudocands);
+         /* sets a power of 2 to the number of solutions */
+         setPowerOfTwo(&newsols, npseudocands);
       }
       else
       {
@@ -777,10 +783,10 @@ SCIP_RETCODE countSparsesol(
 /** checks if the new solution is feasible for the logicor constraints */
 static
 SCIP_RETCODE checkLogicor(
-   SCIP*                      scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,         /**< constraint handler */
-   int                        nconss,           /**< number of enabled constraints */
-   SCIP_Bool*                 satisfied         /**< pointer to store if the logicor constraints a satisfied */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   int                   nconss,             /**< number of enabled constraints */
+   SCIP_Bool*            satisfied           /**< pointer to store if the logicor constraints a satisfied */
    )
 {
    /**@note the logicor constraints are not fully propagated; therefore, we have to check
@@ -833,7 +839,7 @@ SCIP_RETCODE checkLogicor(
       if( !fixedone )
       {
          SCIPdebugMessage("constraint <%s> cannot be disabled\n", SCIPconsGetName(conss[c]));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebugPrintCons(scip, conss[c], NULL);
          (*satisfied) = FALSE;
       }
 
@@ -848,10 +854,10 @@ SCIP_RETCODE checkLogicor(
 /** checks if the new solution is feasible for the knapsack constraints */
 static
 SCIP_RETCODE checkKnapsack(
-   SCIP*                      scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,         /**< constraint handler */
-   int                        nconss,           /**< number of enabled constraints */
-   SCIP_Bool*                 satisfied         /**< pointer to store if the logicor constraints a satisfied */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   int                   nconss,             /**< number of enabled constraints */
+   SCIP_Bool*            satisfied           /**< pointer to store if the logicor constraints a satisfied */
    )
 {
    /**@note the knapsack constraints are not fully propagated; therefore, we have to check
@@ -928,7 +934,7 @@ SCIP_RETCODE checkKnapsack(
       if( SCIPisFeasLT(scip, capa, 0.0) )
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebugPrintCons(scip, conss[c], NULL);
          (*satisfied) = FALSE;
       }
 
@@ -942,10 +948,10 @@ SCIP_RETCODE checkKnapsack(
 /** checks if the new solution is feasible for the bounddisjunction constraints */
 static
 SCIP_RETCODE checkBounddisjunction(
-   SCIP*                      scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,         /**< constraint handler */
-   int                        nconss,           /**< number of enabled constraints */
-   SCIP_Bool*                 satisfied         /**< pointer to store if the logicor constraints a satisfied */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   int                   nconss,             /**< number of enabled constraints */
+   SCIP_Bool*            satisfied           /**< pointer to store if the logicor constraints a satisfied */
    )
 {
    /**@note the bounddisjunction constraints are not fully propagated; therefore, we have to check
@@ -1005,7 +1011,7 @@ SCIP_RETCODE checkBounddisjunction(
       if( !satisfiedbound )
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebugPrintCons(scip, conss[c], NULL);
          (*satisfied) = FALSE;
       }
 
@@ -1019,10 +1025,10 @@ SCIP_RETCODE checkBounddisjunction(
 /** checks if the new solution is feasible for the varbound constraints */
 static
 SCIP_RETCODE checkVarbound(
-   SCIP*                      scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,         /**< constraint handler */
-   int                        nconss,           /**< number of enabled constraints */
-   SCIP_Bool*                 satisfied         /**< pointer to store if the logicor constraints a satisfied */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   int                   nconss,             /**< number of enabled constraints */
+   SCIP_Bool*            satisfied           /**< pointer to store if the logicor constraints a satisfied */
    )
 {
    /**@note the varbound constraints are not fully propagated; therefore, we have to check
@@ -1076,7 +1082,7 @@ SCIP_RETCODE checkVarbound(
          || !SCIPisGE(scip, SCIPvarGetLbLocal(var), lhs - SCIPvarGetLbLocal(vbdvar) * coef ) )
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebugPrintCons(scip, conss[c], NULL);
          SCIPdebugMessage("<%s>  lb: %.15g\t ub: %.15g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          SCIPdebugMessage("<%s>  lb: %.15g\t ub: %.15g\n", SCIPvarGetName(vbdvar), SCIPvarGetLbLocal(vbdvar), SCIPvarGetUbLocal(vbdvar));
          (*satisfied) = FALSE;
@@ -1093,9 +1099,9 @@ SCIP_RETCODE checkVarbound(
 /** check if the current node initializes a non trivial unrestricted subtree */
 static
 SCIP_RETCODE checkFeasSubtree(
-   SCIP* scip,                         /**< SCIP main data structure */
-   SCIP_SOL* sol,                      /**< solution to check */
-   SCIP_Bool* feasible                 /**< pointer to store the result of the check */
+   SCIP*                 scip,               /**< SCIP main data structure */
+   SCIP_SOL*             sol,                /**< solution to check */
+   SCIP_Bool*            feasible            /**< pointer to store the result of the check */
    )
 {
    int h;
@@ -1179,7 +1185,7 @@ SCIP_RETCODE checkFeasSubtree(
          else
          {
             SCIPdebugMessage("sparse solution is infeasible since the following constraint (and maybe more) is(/are) enabled\n");
-            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, SCIPconshdlrGetConss(conshdlr)[0], NULL) ) );
+            SCIPdebugPrintCons(scip, SCIPconshdlrGetConss(conshdlr)[0], NULL);
             return SCIP_OKAY;
          }
       }
@@ -1195,10 +1201,10 @@ SCIP_RETCODE checkFeasSubtree(
 /** check the given solution */
 static
 SCIP_RETCODE checkSolution(
-   SCIP*                    scip,            /**< SCIP data structure */
-   SCIP_SOL*                sol,             /**< solution to add */
-   SCIP_CONSHDLRDATA*       conshdlrdata,    /**< constraint handler data */
-   SCIP_RESULT*             result           /**< pointer to store the result of the checking process */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to add */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_RESULT*          result              /**< pointer to store the result of the checking process */
    )
 {
    SCIP_Longint nsols;
@@ -1216,7 +1222,7 @@ SCIP_RETCODE checkSolution(
     * this solution
     */
 
-   /**@todo it might be not necessary to check this assert since we can check in generale all solutions of feasibility
+   /**@todo it might be not necessary to check this assert since we can check in general all solutions of feasibility
     *       independently of the origin; however, the locally fixed technique does only work if the solution comes from
     *       the branch and bound tree; in case the solution comes from a heuristic we should try to sequentially fix the
     *       variables in the branch and bound tree and check after every fixing if all constraints are disabled; at the
@@ -1279,7 +1285,7 @@ SCIP_RETCODE checkSolution(
    else if( conshdlrdata->sparsetest && !conshdlrdata->continuous )
    {
       SCIP_CALL( checkFeasSubtree(scip, sol, &feasible) ) ;
-      SCIP_CALL( countSparsesol(scip, sol, feasible, conshdlrdata, result) );
+      SCIP_CALL( countSparseSol(scip, sol, feasible, conshdlrdata, result) );
    }
 
    /* transform the current number of solutions into a SCIP_Longint */
@@ -1301,21 +1307,41 @@ SCIP_RETCODE checkSolution(
  * Callback methods of constraint handler
  */
 
+/** creates the handler for countsols constraints and includes it in SCIP */
+static
+SCIP_RETCODE includeConshdlrCountsols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             dialogs             /**< sould count dialogs be added */
+   );
+
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCountsols)
 {  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
-   /* call inclusion method of branchrule */
-   SCIP_CALL( SCIPincludeConshdlrCountsols(scip) );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
-   *valid = TRUE;
+   /* in case the count constraint handler is active we avoid copying to ensure a safe count */
+   if( conshdlrdata->active )
+      *valid = FALSE;
+   else
+   {
+      assert(scip != NULL);
+      assert(conshdlr != NULL);
+      assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+      /* call inclusion method of constraint handler and do not add counting dialogs */
+      SCIP_CALL( includeConshdlrCountsols(scip, FALSE) );
+
+      *valid = TRUE;
+   }
 
    return SCIP_OKAY;
 }
+
+#define consCopyCountsols NULL
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
@@ -1446,9 +1472,7 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
       {
          for( s = conshdlrdata->nsolutions - 1; s >= 0 ; --s )
          {
-            SCIPfreeMemoryArrayNull(scip, &(conshdlrdata->solutions[s]->lbvalues) );
-            SCIPfreeMemoryArrayNull(scip, &(conshdlrdata->solutions[s]->ubvalues) );
-            SCIPfreeMemory(scip, &(conshdlrdata->solutions[s]));
+            SCIPsparseSolFree(&(conshdlrdata->solutions[s]));
          }
 
          SCIPfreeMemoryArrayNull(scip, &conshdlrdata->solutions);
@@ -1468,11 +1492,6 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
    return SCIP_OKAY;
 }
 
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreCountsols NULL
-
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreCountsols NULL
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin)
  *
@@ -1483,8 +1502,6 @@ static
 SCIP_DECL_CONSINITSOL(consInitsolCountsols)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-
-   assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING );
 
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
@@ -1501,9 +1518,6 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
       assert(conshdlrdata->nsolutions == 0);
       assert(conshdlrdata->solutions == NULL);
 
-      /* get number of active integral variables */
-      conshdlrdata->nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
-
       /* copy array containing all variables */
       SCIP_CALL( SCIPallocMemoryArray(scip, &vars, conshdlrdata->nallvars) );
 
@@ -1512,6 +1526,8 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
       /* only consider active variables of original variables which are not continuous */
       for( v = 0; v < conshdlrdata->nallvars; ++v )
       {
+	 assert(SCIPvarGetType(conshdlrdata->allvars[v]) != SCIP_VARTYPE_CONTINUOUS);
+
          if( SCIPvarIsActive(conshdlrdata->allvars[v]) )
          {
             vars[nvars] = conshdlrdata->allvars[v];
@@ -1549,20 +1565,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolCountsols)
 #define consExitsolCountsols NULL
 #endif
 
-/** frees specific constraint data */
-#define consDeleteCountsols NULL
-
-/** transforms constraint data into data belonging to the transformed problem */
-#define consTransCountsols NULL
-
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#define consInitlpCountsols NULL
-
-/** separation method of constraint handler for LP solutions */
-#define consSepalpCountsols NULL
-
-/** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolCountsols NULL
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -1670,15 +1672,6 @@ SCIP_DECL_CONSCHECK(consCheckCountsols)
    return SCIP_OKAY;
 }
 
-/** domain propagation method of constraint handler */
-#define consPropCountsols NULL
-
-/** presolving method of constraint handler */
-#define consPresolCountsols NULL
-
-/** propagation conflict resolving method of constraint handler */
-#define consRespropCountsols NULL
-
 
 /** variable rounding lock method of constraint handler */
 static
@@ -1686,37 +1679,6 @@ SCIP_DECL_CONSLOCK(consLockCountsols)
 {  /*lint --e{715}*/
    return SCIP_OKAY;
 }
-
-/** constraint activation notification method of constraint handler */
-#define consActiveCountsols NULL
-
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveCountsols NULL
-
-/** constraint enabling notification method of constraint handler */
-#define consEnableCountsols NULL
-
-/** constraint disabling notification method of constraint handler */
-#define consDisableCountsols NULL
-
-/** variable deletion method of constraint handler */
-#define consDelvarsCountsols NULL
-
-/** constraint display method of constraint handler */
-#define consPrintCountsols NULL
-
-/** constraint copying method of constraint handler */
-#define consCopyCountsols NULL
-
-/** constraint parsing method of constraint handler */
-#define consParseCountsols NULL
-
-/** constraint method of constraint handler which returns the variables (if possible) */
-#define consGetVarsCountsols NULL
-
-/** constraint method of constraint handler which returns the number of variable (if possible) */
-#define consGetNVarsCountsols NULL
-
 
 
 /*
@@ -1872,7 +1834,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          {
             SCIP_CALL( SCIPreallocBufferArray(scip, &buffer, requiredsize) );
             SCIPgetNCountedSolsstr(scip, &buffer, buffersize, &requiredsize);
-
          }
 
          assert( buffersize >= requiredsize );
@@ -1931,38 +1892,63 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
 /** constructs the first solution of sparse solution (all variables are set to their lower bound value */
 static
 void getFirstSolution(
-   SPARSESOLUTION*       sparsesol,          /**< sparse solutions */
+   SCIP_SPARSESOL*       sparsesol,          /**< sparse solutions */
    SCIP_Longint*         sol,                /**< current solution */
    int                   nvars               /**< number of variables */
    )
 {
-   int v;
+   SCIP_Longint* lbvalues;
 
-   for( v = 0; v < nvars; ++v )
-      sol[v] = sparsesol->lbvalues[v];
+   if( nvars == 0 )
+      return;
+
+   assert(sparsesol != NULL);
+   assert(sol != NULL);
+   assert(nvars == SCIPsparseSolGetNVars(sparsesol));
+
+   lbvalues = SCIPsparseSolGetLbs(sparsesol);
+   assert(lbvalues != NULL);
+
+   BMScopyMemoryArray(sol, lbvalues, nvars);
 }
 
 /** constructs the next solution of the sparse solution and return whether there was one more or not */
 static
 SCIP_Bool getNextSolution(
-   SPARSESOLUTION*       sparsesol,          /**< sparse solutions */
+   SCIP_SPARSESOL*       sparsesol,          /**< sparse solutions */
    SCIP_Longint*         sol,                /**< current solution */
    int                   nvars               /**< number of variables */
    )
 {
+   SCIP_Longint* lbvalues;
+   SCIP_Longint* ubvalues;
    SCIP_Longint lbvalue;
    SCIP_Longint ubvalue;
    SCIP_Bool singular;
    SCIP_Bool carryflag;
    int v;
 
+   assert(sparsesol != NULL);
+   assert(sol != NULL);
+
+   if( nvars == 0 )
+      return FALSE;
+
+   assert(nvars > 0);
+   assert(nvars == SCIPsparseSolGetNVars(sparsesol));
+
+   lbvalues = SCIPsparseSolGetLbs(sparsesol);
+   ubvalues = SCIPsparseSolGetUbs(sparsesol);
+   assert(lbvalues != NULL);
+   assert(ubvalues != NULL);
+
    singular = TRUE;
    carryflag = FALSE;
 
    for( v = 0; v < nvars; ++v )
    {
-      lbvalue = sparsesol->lbvalues[v];
-      ubvalue = sparsesol->ubvalues[v];
+      lbvalue = lbvalues[v];
+      ubvalue = ubvalues[v];
 
       if( lbvalue < ubvalue )
       {
@@ -2003,6 +1989,30 @@ SCIP_Bool getNextSolution(
    return (!carryflag && !singular);
 }
 
+/** comparison method for sorting variables by non-decreasing w.r.t. problem index */
+static
+SCIP_DECL_SORTPTRCOMP(varCompProbindex)
+{
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+
+   var1 = (SCIP_VAR*)elem1;
+   var2 = (SCIP_VAR*)elem2;
+
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+
+   if( SCIPvarGetProbindex(var1) < SCIPvarGetProbindex(var2) )
+      return -1;
+   else if( SCIPvarGetProbindex(var1) > SCIPvarGetProbindex(var2) )
+      return +1;
+   else
+   {
+      assert(var1 == var2 || (SCIPvarGetProbindex(var1) == -1 && SCIPvarGetProbindex(var2) == -1));
+      return 0;
+   }
+}
+
 /** expands the sparse solutions and writes them to the file */
 static
 SCIP_RETCODE writeExpandedSolutions(
@@ -2011,38 +2021,55 @@ SCIP_RETCODE writeExpandedSolutions(
    SCIP_VAR**            allvars,            /**< SCIP variables */
    int                   nactivevars,        /**< number of active variables */
    int                   nallvars,           /**< number of all variables */
-   int*                  perm,               /**< permutation array which defines the output order of variables */
-   SPARSESOLUTION**      sols,               /**< sparse solutions to expands and write */
+   SCIP_SPARSESOL**      sols,               /**< sparse solutions to expands and write */
    int                   nsols               /**< number of sparse solutions */
    )
 {
-   SPARSESOLUTION* sparsesol;
+   SCIP_SPARSESOL* sparsesol;
+   SCIP_VAR** vars;
    SCIP_Longint* sol;
+   int* perm;
    SCIP_Longint solcnt;
    SCIP_Real objcoeff;
    int s;
+   int v;
 
    solcnt = 0;
 
    /* get memory to store active solution */
    SCIP_CALL( SCIPallocBufferArray(scip, &sol, nactivevars) );
+   /* create permutation array for accessing the correct indices later on */
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nactivevars) );
 
    /* loop over all sparse solutions */
    for( s = 0; s < nsols; ++s )
    {
       sparsesol = sols[s];
+      assert(sparsesol != NULL);
+      assert(SCIPsparseSolGetNVars(sparsesol) == nactivevars);
 
       /* get first solution of the sparse solution */
       getFirstSolution(sparsesol, sol, nactivevars);
 
+      /* duplicate variables in sparse solution, only used for sorting */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPsparseSolGetVars(sparsesol), nactivevars) );
+
+      /* create identity permutation */
+      for( v = 0; v < nactivevars; ++v )
+	 perm[v] = v;
+
+      /* create permutation for variables of the sparse solution w.r.t. the problem index */
+      SCIPsortDownPtrInt((void**)vars, perm, varCompProbindex, nactivevars);
+
+      /* free variable array copy (this copy was only used to get the permutation array */
+      SCIPfreeBufferArray(scip, &vars);
+
       do
       {
-         SCIP_VAR** vars;
          SCIP_Real* scalars;
          SCIP_Longint value;
          SCIP_Real objval;
          int idx;
-         int v;
 
          solcnt++;
 
@@ -2115,33 +2142,11 @@ SCIP_RETCODE writeExpandedSolutions(
       while( getNextSolution(sparsesol, sol, nactivevars) );
    }
 
-   /* free buffer array */
+   /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &perm);
    SCIPfreeBufferArray(scip, &sol);
 
    return SCIP_OKAY;
-}
-/** comparison method for sorting variables by non-decreasing w.r.t. problem index */
-static
-SCIP_DECL_SORTPTRCOMP(varCompProbindex)
-{
-   SCIP_VAR* var1;
-   SCIP_VAR* var2;
-
-   var1 = (SCIP_VAR*)elem1;
-   var2 = (SCIP_VAR*)elem2;
-
-   assert(var1 != NULL);
-   assert(var2 != NULL);
-
-   if( SCIPvarGetProbindex(var1) < SCIPvarGetProbindex(var2) )
-      return -1;
-   else if( SCIPvarGetProbindex(var1) > SCIPvarGetProbindex(var2) )
-      return +1;
-   else
-   {
-      assert(var1 == var2 || (SCIPvarGetProbindex(var1) == -1 && SCIPvarGetProbindex(var2) == -1));
-      return 0;
-   }
 }
 
 /** execution method of dialog for writing all solutions */
@@ -2208,6 +2213,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
 
          if( requiredsize > buffersize )
          {
+	    buffersize = requiredsize;
             SCIP_CALL( SCIPreallocBufferArray(scip, &buffer, requiredsize) );
             SCIPgetNCountedSolsstr(scip, &buffer, buffersize, &requiredsize);
          }
@@ -2251,13 +2257,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
             }
             else
             {
-               SPARSESOLUTION** sparsesols;
+               SCIP_SPARSESOL** sparsesols;
                SCIP_VAR** origvars;
                SCIP_VAR** allvars;
-               SCIP_VAR** vars;
                SCIP_VAR* var;
                const char* varname;
-               int* perm;
                int norigvars;
                int nvars;
                int v;
@@ -2298,32 +2302,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                /* sort original variables array and the corresponding transformed variables w.r.t. the problem index */
                SCIPsortDownPtrPtr((void**)allvars, (void**)origvars, varCompProbindex, norigvars);
 
-               /* copy variable array of the sparse solutions */
-               retcode = SCIPallocBufferArray(scip, &perm, nvars);
-               if( retcode != SCIP_OKAY )
-               {
-                  fclose(file);
-                  SCIP_CALL( retcode );
-               }
-               retcode = SCIPduplicateBufferArray(scip, &vars, conshdlrdata->vars, nvars);
-               if( retcode != SCIP_OKAY )
-               {
-                  fclose(file);
-                  SCIP_CALL( retcode );
-               }
-
-               /* create identity permutation */
-               for( v = 0; v < nvars; ++v )
-                  perm[v] = v;
-
-               /* create permutation for variables of the sparse solution w.r.t. the problem index */
-               SCIPsortDownPtrInt((void**)vars, perm, varCompProbindex, nvars);
-
-               /* free variable array copy (this copy was only used to get the permutation array */
-               SCIPfreeBufferArray(scip, &vars);
-
-               vars = conshdlrdata->vars;
-
                SCIPdialogMessage(scip, NULL, "saving %"SCIP_LONGINT_FORMAT" (%d) feasible solutions\n", nsols, nsparsesols);
 
                /* first row: output the names of the variables in the given ordering */
@@ -2349,7 +2327,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                SCIPinfoMessage(scip, file, "objval\n");
 
                /* expand and write solution */
-               retcode = writeExpandedSolutions(scip, file, allvars, nvars, conshdlrdata->nallvars, perm, sparsesols, nsparsesols);
+               retcode = writeExpandedSolutions(scip, file, allvars, nvars, conshdlrdata->nallvars, sparsesols, nsparsesols);
                if( retcode != SCIP_OKAY )
                {
                   fclose(file);
@@ -2357,7 +2335,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                }
                SCIPdialogMessage(scip, NULL, "written solutions information to file <%s>\n", filename);
 
-               SCIPfreeBufferArray(scip, &perm);
                SCIPfreeBufferArray(scip, &allvars);
                SCIPfreeBufferArray(scip, &origvars);
 
@@ -2383,7 +2360,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
 /** create the interactive shell dialogs for the counting process */
 static
 SCIP_RETCODE createCountDialog(
-   SCIP*                    scip             /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_DIALOG* root;
@@ -2427,7 +2404,7 @@ SCIP_RETCODE createCountDialog(
    if( !SCIPdialogHasEntry(submenu, "allsolutions") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecWriteAllsolutions, NULL, NULL,
-            "allsolutions", "writes all counted primal solutions to file", FALSE, NULL) );
+            "allsolutions", "write all counted primal solutions to file", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -2511,12 +2488,15 @@ SCIP_DECL_DISPOUTPUT(dispOutputFeasSubtrees)
  */
 
 /** creates the handler for countsols constraints and includes it in SCIP */
-SCIP_RETCODE SCIPincludeConshdlrCountsols(
-   SCIP*                 scip                /**< SCIP data structure */
+static
+SCIP_RETCODE includeConshdlrCountsols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             dialogs             /**< sould count dialogs be added */
    )
 {
    /* create countsol constraint handler data */
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
 #ifdef WITH_GMP
    char gmpversion[20];
@@ -2526,22 +2506,22 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
-         conshdlrCopyCountsols,
-         consFreeCountsols, consInitCountsols, consExitCountsols,
-         consInitpreCountsols, consExitpreCountsols, consInitsolCountsols, consExitsolCountsols,
-         consDeleteCountsols, consTransCountsols, consInitlpCountsols,
-         consSepalpCountsols, consSepasolCountsols, consEnfolpCountsols, consEnfopsCountsols, consCheckCountsols,
-         consPropCountsols, consPresolCountsols, consRespropCountsols, consLockCountsols,
-         consActiveCountsols, consDeactiveCountsols,
-         consEnableCountsols, consDisableCountsols, consDelvarsCountsols,
-         consPrintCountsols, consCopyCountsols, consParseCountsols,
-         consGetVarsCountsols, consGetNVarsCountsols,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpCountsols, consEnfopsCountsols, consCheckCountsols, consLockCountsols,
          conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyCountsols, consCopyCountsols) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitCountsols) );
+#ifndef NDEBUG
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolCountsols) );
+#endif
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeCountsols) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitCountsols) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolCountsols) );
 
    /* add countsols constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -2566,7 +2546,10 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          &conshdlrdata->sollimit, FALSE, DEFAULT_SOLLIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL));
 
    /* create the interactive shell dialogs for the counting process  */
-   SCIP_CALL( createCountDialog(scip) );
+   if( dialogs )
+   {
+      SCIP_CALL( createCountDialog(scip) );
+   }
 
    /* include display column */
    SCIP_CALL( SCIPincludeDisp(scip, DISP_SOLS_NAME, DISP_SOLS_DESC, DISP_SOLS_HEADER, SCIP_DISPSTATUS_OFF,
@@ -2581,6 +2564,17 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
    (void) SCIPsnprintf(gmpversion, sizeof(gmpversion), "GMP %d.%d.%d", __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR, __GNU_MP_VERSION_PATCHLEVEL);
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, gmpversion, "GNU Multiple Precision Arithmetic Library developed by T. Granlund (gmplib.org)") );
 #endif
+
+   return SCIP_OKAY;
+}
+
+/** creates the handler for countsols constraints and includes it in SCIP */
+SCIP_RETCODE SCIPincludeConshdlrCountsols(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   /* include constraint handler including the count dialog */
+   SCIP_CALL( includeConshdlrCountsols(scip, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -2620,8 +2614,8 @@ SCIP_RETCODE SCIPcount(
  *  a SCIP_Longint the valid flag is set to FALSE
  */
 SCIP_Longint SCIPgetNCountedSols(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_Bool*            valid              /**< pointer to store if the return value is valid */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            valid               /**< pointer to store if the return value is valid */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -2701,11 +2695,11 @@ SCIP_Longint SCIPgetNCountedFeasSubtrees(
  *        during presolving. For none active variables the value has to be computed depending on their aggregation
  *        type. See for more details about that \ref COLLECTALLFEASEBLES.
  */
-void SCIPgetCountedSparseSolutions(
+void SCIPgetCountedSparseSols(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< pointer to active variable array defining to variable order */
    int*                  nvars,              /**< number of active variables */
-   SPARSESOLUTION***     sols,               /**< pointer to the solutions */
+   SCIP_SPARSESOL***     sols,               /**< pointer to the solutions */
    int*                  nsols               /**< pointer to number of solutions */
    )
 {

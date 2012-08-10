@@ -101,20 +101,14 @@ SCIP_RETCODE SCIPpropExit(
 extern
 SCIP_RETCODE SCIPpropInitpre(
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs propagator that the presolving is finished */
 extern
 SCIP_RETCODE SCIPpropExitpre(
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs propagator that the branch and bound process is being started */
@@ -128,7 +122,8 @@ SCIP_RETCODE SCIPpropInitsol(
 extern
 SCIP_RETCODE SCIPpropExitsol(
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    );
 
 /** executes presolving method of propagator */
@@ -195,6 +190,79 @@ void SCIPpropSetPresolPriority(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   presolpriority      /**< new priority of the propagator */
+   );
+
+/** sets copy method of propagator */
+extern
+void SCIPpropSetCopy(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPCOPY    ((*propcopy))       /**< copy method of propagator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of propagator */
+extern
+void SCIPpropSetFree(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPFREE    ((*propfree))       /**< destructor of propagator */
+   );
+
+/** sets initialization method of propagator */
+extern
+void SCIPpropSetInit(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINIT    ((*propinit))       /**< initialize propagator */
+   );
+
+/** sets deinitialization method of propagator */
+extern
+void SCIPpropSetExit(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXIT    ((*propexit))       /**< deinitialize propagator */
+   );
+
+/** sets solving process initialization method of propagator */
+extern
+void SCIPpropSetInitsol(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINITSOL((*propinitsol))     /**< solving process initialization method of propagator */
+   );
+
+/** sets solving process deinitialization method of propagator */
+extern
+void SCIPpropSetExitsol(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXITSOL ((*propexitsol))    /**< solving process deinitialization method of propagator */
+   );
+
+/** sets preprocessing initialization method of propagator */
+extern
+void SCIPpropSetInitpre(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINITPRE((*propinitpre))     /**< preprocessing initialization method of propagator */
+   );
+
+/** sets preprocessing deinitialization method of propagator */
+extern
+void SCIPpropSetExitpre(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXITPRE((*propexitpre))     /**< preprocessing deinitialization method of propagator */
+   );
+
+/** sets presolving method of propagator */
+extern
+void SCIPpropSetPresol(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPPRESOL  ((*proppresol)),    /**< presolving method */
+   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
+   SCIP_Bool             presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
+   );
+
+/** sets propagation conflict resolving callback of propagator */
+extern
+void SCIPpropSetResprop(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPRESPROP ((*propresprop))    /**< propagation conflict resolving callback */
    );
 
 #ifdef __cplusplus

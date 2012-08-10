@@ -46,7 +46,6 @@
 #define DEFAULT_CLIQUEDENSITY      0.05 /**< minimal density of cliques to use a dense clique table */
 
 
-
 /*
  * Data structures
  */
@@ -56,6 +55,7 @@ struct SCIP_SepaData
 {
    TCLIQUE_GRAPH*        tcliquegraph;       /**< tclique graph data structure */
    SCIP*                 scip;               /**< SCIP data structure */
+   SCIP_SEPA*            sepa;               /**< separator */
    SCIP_SOL*             sol;                /**< primal solution that is currently separated */
    SCIP_Real*            varsolvals;         /**< LP solution of binary variables (contained in a 3-clique in implgraph) */
    SCIP_Real             scaleval;           /**< factor for scaling weights */
@@ -86,8 +86,6 @@ struct TCLIQUE_Graph
    int                   nnodes;             /**< number of nodes in graph */
    int                   tablewidth;         /**< number of unsigned ints per row in the table */
 };
-
-
 
 
 /*
@@ -231,7 +229,7 @@ SCIP_RETCODE tcliquegraphAddNode(
       SCIP_CALL( tcliquegraphCreate(scip, tcliquegraph) );
    }
    assert(*tcliquegraph != NULL);
-   assert((*tcliquegraph)->nnodes < 2*SCIPgetNBinVars(scip) - 1);
+   assert((*tcliquegraph)->nnodes < 2*SCIPgetNBinVars(scip));
 
    /* if the value is FALSE, use the negated variable for the node */
    if( !value )
@@ -461,8 +459,8 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
                /* scan the implications of x */
                zindex = SCIPvarGetIndex(yimplvars[yk]);
 
-               for(; xk < xnbinimpls && SCIPvarGetIndex(ximplvars[xk]) < zindex; ++xk ) 
-               {}
+               while ( xk < xnbinimpls && SCIPvarGetIndex(ximplvars[xk]) < zindex )
+                  ++xk;
 
                if( xk >= xnbinimpls )
                   break;
@@ -470,8 +468,8 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
                /* scan the implications of y */
                zindex = SCIPvarGetIndex(ximplvars[xk]);
 
-               for(; yk < ynbinimpls && SCIPvarGetIndex(yimplvars[yk]) < zindex; ++yk )
-               {}
+               while ( yk < ynbinimpls && SCIPvarGetIndex(yimplvars[yk]) < zindex )
+                  ++yk;
 
                if( yk >= ynbinimpls )
                   break;
@@ -913,8 +911,16 @@ SCIP_RETCODE loadTcliquegraph(
    /* add all implications between used variables to the tclique graph */
    SCIP_CALL( tcliquegraphAddImplics(scip, sepadata->tcliquegraph, cliquegraphidx) );
 
-   /* construct the dense clique table */
-   SCIP_CALL( tcliquegraphConstructCliqueTable(scip, sepadata->tcliquegraph, sepadata->cliquetablemem, sepadata->cliquedensity) );
+   /* it occurs that it might be that some cliques were not yet removed from the global clique array, so SCIPgetNClique
+    * can be greater than 0, even if there is no clique with some variables left
+    *
+    * @todo clean up empty cliques
+    */
+   if( sepadata->tcliquegraph != NULL )
+   {
+      /* construct the dense clique table */
+      SCIP_CALL( tcliquegraphConstructCliqueTable(scip, sepadata->tcliquegraph, sepadata->cliquetablemem, sepadata->cliquedensity) );
+   }
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &cliquegraphidx[1]);
@@ -949,8 +955,6 @@ void updateTcliquegraph(
       tcliquegraph->weights[i] = MAX(weight, 0);
    }
 }
-
-
 
 
 /*
@@ -1120,6 +1124,56 @@ TCLIQUE_SELECTADJNODES(tcliqueSelectadjnodesClique)
    return nadjnodes;
 }
 
+/** basic code for new cliques (needed because of error handling) */
+static
+SCIP_RETCODE newsolCliqueAddRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< the cut separator itself */
+   SCIP_SEPADATA*        sepadata,           /**< data of separator */
+   int                   ncliquenodes,       /**< number of nodes in clique */
+   int*                  cliquenodes         /**< nodes in clique */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_ROW* cut;
+   char cutname[SCIP_MAXSTRLEN];
+   int i;
+
+   vars = sepadata->tcliquegraph->vars;
+   assert(sepadata->tcliquegraph->nnodes > 0);
+   assert(vars != NULL);
+
+   /* create the cut (handle retcode since we do not have a backtrace) */
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "clique%"SCIP_LONGINT_FORMAT"_%d", sepadata->ncalls, sepadata->ncuts);
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
+
+   SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+
+   assert(ncliquenodes <= sepadata->tcliquegraph->nnodes);
+   /*SCIPdebugMessage(" -> clique in graph:");*/
+   for( i = 0; i < ncliquenodes; ++i )
+   {
+      assert(cliquenodes[i] < sepadata->tcliquegraph->nnodes);
+      SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cliquenodes[i]], 1.0) );
+      /*SCIPdebugPrintf(" [%d]<%s>", cliquenodes[i], SCIPvarGetName(vars[cliquenodes[i]]));*/
+   }
+   /*SCIPdebugPrintf("\n");*/
+   SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
+   /* set cut rank: for clique cuts we always set to 1 */
+   SCIProwChgRank(cut, 1);
+
+   /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
+
+   SCIP_CALL( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );
+   SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+
+   /* release the row */
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
+   return SCIP_OKAY;
+}
+
 /** generates cuts using a clique found by algorithm for maximum weight clique
  *  and decides whether to stop generating cliques with the algorithm for maximum weight clique
  */
@@ -1135,6 +1189,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
    sepadata = (SCIP_SEPADATA*)tcliquedata;
    assert(sepadata != NULL);
    assert(sepadata->scip != NULL);
+   assert(sepadata->sepa != NULL);
    assert(sepadata->tcliquegraph != NULL);
    assert(sepadata->ncuts >= 0);
 
@@ -1151,11 +1206,13 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
    if( cliqueweight > sepadata->scaleval )
    {
       SCIP* scip;
+      SCIP_SEPA* sepa;
       SCIP_Real* varsolvals;
       SCIP_Real unscaledweight;
       int i;
 
       scip = sepadata->scip;
+      sepa = sepadata->sepa;
       varsolvals = sepadata->varsolvals;
       assert(varsolvals != NULL);
 
@@ -1166,61 +1223,29 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
 
       if( SCIPisEfficacious(scip, unscaledweight - 1.0) )
       {
-         SCIP_VAR** vars;
-#ifndef NDEBUG
-         int nvars;
-#endif
-         SCIP_ROW* cut;
-         char cutname[SCIP_MAXSTRLEN];
+         SCIP_RETCODE retcode;
 
-#ifndef NDEBUG
-         nvars = sepadata->tcliquegraph->nnodes;
-#endif
-         vars = sepadata->tcliquegraph->vars;
-         assert(nvars > 0);
-         assert(vars != NULL);
-
-         /* create the cut */
-         (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "clique%"SCIP_LONGINT_FORMAT"_%d", sepadata->ncalls, sepadata->ncuts);
-         SCIP_CALL_ABORT( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
-
-         SCIP_CALL_ABORT( SCIPcacheRowExtensions(scip, cut) );
-         assert(ncliquenodes <= nvars);
-         /*SCIPdebugMessage(" -> clique in graph:");*/
-         for( i = 0; i < ncliquenodes; ++i )
+         /* explicitly handle return code */
+         retcode = newsolCliqueAddRow(scip, sepa, sepadata, ncliquenodes, cliquenodes);
+         if ( retcode == SCIP_OKAY )
          {
-            assert(cliquenodes[i] < nvars);
-            SCIP_CALL_ABORT( SCIPaddVarToRow(scip, cut, vars[cliquenodes[i]], 1.0) );
-            /*SCIPdebugPrintf(" [%d]<%s>", cliquenodes[i], SCIPvarGetName(vars[cliquenodes[i]]));*/
-         }
-         /*SCIPdebugPrintf("\n");*/
-         SCIP_CALL_ABORT( SCIPflushRowExtensions(scip, cut) );
+            SCIPdebugMessage(" -> found clique cut (act=%g)\n", unscaledweight);
+            sepadata->ncuts++;
 
-         SCIPdebugMessage(" -> found clique cut (act=%g)\n", unscaledweight);
-         /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-
-         SCIP_CALL_ABORT( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );
-         SCIP_CALL_ABORT( SCIPaddPoolCut(scip, cut) );
-         sepadata->ncuts++;
-
-         /* release the row */
-         SCIP_CALL_ABORT( SCIPreleaseRow(scip, &cut) );
-
-         /* if we found more than half the cuts we are allowed to generate, we accept the clique as new incumbent,
-          * such that only more violated cuts are generated afterwards
-          */
-         if( sepadata->maxsepacuts >= 0 )
-         {
-            if( sepadata->ncuts > sepadata->maxsepacuts/2 )
-               *acceptsol = TRUE;
-            if( sepadata->ncuts >= sepadata->maxsepacuts )
-               *stopsolving = TRUE;
+            /* if we found more than half the cuts we are allowed to generate, we accept the clique as new incumbent,
+             * such that only more violated cuts are generated afterwards
+             */
+            if( sepadata->maxsepacuts >= 0 )
+            {
+               if( sepadata->ncuts > sepadata->maxsepacuts/2 )
+                  *acceptsol = TRUE;
+               if( sepadata->ncuts >= sepadata->maxsepacuts )
+                  *stopsolving = TRUE;
+            }
          }
       }
    }
 }
-
-
 
 
 /*
@@ -1279,8 +1304,10 @@ SCIP_RETCODE separateCuts(
           * implication graph or in the clique table -> nothing has to be done
           */
          else
+	 {
             SCIPdebugMessage("no 3-cliques found in implication graph\n");
-         
+         }
+
          return SCIP_OKAY;
       }
    }
@@ -1322,8 +1349,6 @@ SCIP_RETCODE separateCuts(
 }
 
 
-
-
 /*
  * Callback methods of separator
  */
@@ -1358,18 +1383,6 @@ SCIP_DECL_SEPAFREE(sepaFreeClique)
 
    return SCIP_OKAY;
 }
-
-
-/** initialization method of separator (called after problem was transformed) */
-#define sepaInitClique NULL
-
-
-/** deinitialization method of separator (called before transformed problem is freed) */
-#define sepaExitClique NULL
-
-
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolClique NULL
 
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
@@ -1435,8 +1448,6 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolClique)
 }
 
 
-
-
 /*
  * separator specific interface methods
  */
@@ -1447,6 +1458,7 @@ SCIP_RETCODE SCIPincludeSepaClique(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create clique separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
@@ -1459,12 +1471,18 @@ SCIP_RETCODE SCIPincludeSepaClique(
    sepadata->tcliquegraphloaded = FALSE;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, 
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyClique, sepaFreeClique, sepaInitClique, sepaExitClique,
-         sepaInitsolClique, sepaExitsolClique,
          sepaExeclpClique, sepaExecsolClique,
          sepadata) );
+
+   assert(sepa != NULL);
+   sepadata->sepa = sepa;
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyClique) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeClique) );
+   SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolClique) );
 
    /* add clique separator parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

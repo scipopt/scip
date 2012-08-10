@@ -57,7 +57,7 @@ enum SCIP_SetppcType
 typedef enum SCIP_SetppcType SCIP_SETPPCTYPE;
 
 /** creates the handler for set partitioning / packing / covering constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -66,7 +66,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsSetpart(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -89,7 +89,7 @@ SCIP_RETCODE SCIPcreateConsSetpart(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -98,11 +98,28 @@ SCIP_RETCODE SCIPcreateConsSetpart(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures a set partitioning constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ *
+ *  @see SCIPcreateConsSetpart() for the default constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsBasicSetpart(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars                /**< array with variables of constraint entries */
+   );
+
 /** creates and captures a set packing constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsSetpack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -125,7 +142,7 @@ SCIP_RETCODE SCIPcreateConsSetpack(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -134,11 +151,28 @@ SCIP_RETCODE SCIPcreateConsSetpack(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures a set packing constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ *
+ *  @see SCIPcreateConsSetpack() for the default constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsBasicSetpack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars                /**< array with variables of constraint entries */
+   );
+
 /** creates and captures a set covering constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsSetcover(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -161,7 +195,7 @@ SCIP_RETCODE SCIPcreateConsSetcover(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -170,8 +204,25 @@ SCIP_RETCODE SCIPcreateConsSetcover(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures a set packing constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ *
+ *  @see SCIPcreateConsSetpack() for the default constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsBasicSetcover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars                /**< array with variables of constraint entries */
+   );
+
 /** adds coefficient in set partitioning / packing / covering constraint */
-extern
+EXTERN
 SCIP_RETCODE SCIPaddCoefSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -179,35 +230,35 @@ SCIP_RETCODE SCIPaddCoefSetppc(
    );
 
 /** gets number of variables in set partitioning / packing / covering constraint */
-extern
+EXTERN
 int SCIPgetNVarsSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in set partitioning / packing / covering constraint */
-extern
+EXTERN
 SCIP_VAR** SCIPgetVarsSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets type of set partitioning / packing / covering constraint */
-extern
+EXTERN
 SCIP_SETPPCTYPE SCIPgetTypeSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual solution of the set partitioning / packing / covering constraint in the current LP */
-extern
+EXTERN
 SCIP_Real SCIPgetDualsolSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual Farkas value of the set partitioning / packing / covering constraint in the current infeasible LP */
-extern
+EXTERN
 SCIP_Real SCIPgetDualfarkasSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -216,21 +267,21 @@ SCIP_Real SCIPgetDualfarkasSetppc(
 /** returns the linear relaxation of the given set partitioning / packing / covering constraint; may return NULL if no
  *  LP row was yet created; the user must not modify the row!
  */
-extern
+EXTERN
 SCIP_ROW* SCIPgetRowSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns current number of variables fixed to one in the constraint  */
-extern
+EXTERN
 int SCIPgetNFixedonesSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns current number of variables fixed to zero in the constraint  */
-extern
+EXTERN
 int SCIPgetNFixedzerosSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

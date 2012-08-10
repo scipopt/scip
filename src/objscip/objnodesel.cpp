@@ -224,10 +224,10 @@ SCIP_RETCODE SCIPincludeObjNodesel(
    nodeseldata->deleteobject = deleteobject;
 
    /* include node selector */
-   SCIP_CALL( SCIPincludeNodesel(scip, objnodesel->scip_name_, objnodesel->scip_desc_, 
+   SCIP_CALL( SCIPincludeNodesel(scip, objnodesel->scip_name_, objnodesel->scip_desc_,
          objnodesel->scip_stdpriority_, objnodesel->scip_memsavepriority_,
          nodeselCopyObj,
-         nodeselFreeObj, nodeselInitObj, nodeselExitObj, 
+         nodeselFreeObj, nodeselInitObj, nodeselExitObj,
          nodeselInitsolObj, nodeselExitsolObj, nodeselSelectObj, nodeselCompObj,
          nodeseldata) ); /*lint !e429*/
 

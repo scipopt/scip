@@ -49,8 +49,6 @@ struct SCIP_HeurData
 };
 
 
-
-
 /*
  * local methods
  */
@@ -444,7 +442,6 @@ void addFracCounter(
 }
 
 
-
 /*
  * Callback methods
  */
@@ -463,8 +460,6 @@ SCIP_DECL_HEURCOPY(heurCopyShifting)
    return SCIP_OKAY;
 }
 
-/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-#define heurFreeShifting NULL
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
@@ -517,10 +512,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolShifting)
 
    return SCIP_OKAY;
 }
-
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolShifting NULL
 
 
 /** execution method of primal heuristic */
@@ -845,8 +836,6 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
 }
 
 
-
-
 /*
  * heuristic specific interface methods
  */
@@ -856,13 +845,20 @@ SCIP_RETCODE SCIPincludeHeurShifting(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   /* include heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyShifting,
-         heurFreeShifting, heurInitShifting, heurExitShifting, 
-         heurInitsolShifting, heurExitsolShifting, heurExecShifting,
-         NULL) );
+   SCIP_HEUR* heur;
+
+   /* include primal heuristic */
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecShifting, NULL) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyShifting) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitShifting) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitShifting) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolShifting) );
 
    return SCIP_OKAY;
 }

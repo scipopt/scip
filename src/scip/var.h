@@ -324,6 +324,15 @@ SCIP_RETCODE SCIPvarRelease(
    SCIP_LP*              lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    );
 
+/** change variable name */
+extern
+/** change variable name */
+SCIP_RETCODE SCIPvarChgName(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name                /**< name of variable */
+   );
+
 /** initializes variable data structure for solving */
 extern
 void SCIPvarInitSolve(
@@ -415,6 +424,19 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
 
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or
+ *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
+ */
+extern
+SCIP_RETCODE SCIPvarGetProbvarSum(
+   SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
+   SCIP_Real*            constant            /**< pointer to constant c in sum a*x + c */
+   );
+
+
 /** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
 extern
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
@@ -428,11 +450,11 @@ extern
 SCIP_RETCODE SCIPvarsGetActiveVars(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
-					      *   variables, if enough slots exist
-					      */
+                                              *   variables, if enough slots exist
+                                              */
    int*                  nvars,              /**< number of given variables, and as output number of active variables,
-					      *   if enough slots exist
-					      */
+                                              *   if enough slots exist
+                                              */
    int                   varssize,           /**< available slots in vars array */
    int*                  requiredsize        /**< pointer to store the required array size for the active variables */
    );
@@ -1008,7 +1030,7 @@ SCIP_RETCODE SCIPvarDelCliqueFromList(
  *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
 extern
-void SCIPvarChgBranchFactor(
+SCIP_RETCODE SCIPvarChgBranchFactor(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             branchfactor        /**< factor to weigh variable's branching score with */
@@ -1018,7 +1040,7 @@ void SCIPvarChgBranchFactor(
  *  with lower priority in selection of branching variable
  */
 extern
-void SCIPvarChgBranchPriority(
+SCIP_RETCODE SCIPvarChgBranchPriority(
    SCIP_VAR*             var,                /**< problem variable */
    int                   branchpriority      /**< branching priority of the variable */
    );
@@ -1027,7 +1049,7 @@ void SCIPvarChgBranchPriority(
  *  with lower direction in selection of branching variable
  */
 extern
-void SCIPvarChgBranchDirection(
+SCIP_RETCODE SCIPvarChgBranchDirection(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
    );
@@ -1088,9 +1110,17 @@ void SCIPvarGetClosestVub(
 extern
 void SCIPvarStoreRootSol(
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
+   );
+
+/** updates the current solution as best root solution in the problem variables if it is better */
+extern
+void SCIPvarUpdateBestRootSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             rootsol,            /**< root solution value */
+   SCIP_Real             rootredcost,        /**< root reduced cost */
+   SCIP_Real             rootlpobjval        /**< objective value of the root LP */
    );
 
 /** returns the solution value of the problem variables in the relaxation solution */
@@ -1106,6 +1136,28 @@ SCIP_Real SCIPvarGetRelaxSolTransVar(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** returns for given variable the reduced cost */
+extern
+SCIP_Real SCIPvarGetRedcost(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** returns for the given binary variable the reduced cost which are given by the variable itself and its implication if
+ *  the binary variable is fixed to the given value
+ */
+extern
+SCIP_Real SCIPvarGetImplRedcost(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+
 /** stores the solution value as relaxation solution in the problem variable */
 extern
 SCIP_RETCODE SCIPvarSetRelaxSol(
@@ -1118,7 +1170,7 @@ SCIP_RETCODE SCIPvarSetRelaxSol(
 
 /** stores the solution value as NLP solution in the problem variable */
 extern
-void SCIPvarSetNLPSol(
+SCIP_RETCODE SCIPvarSetNLPSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             solval              /**< solution value in the current NLP solution */
@@ -1185,7 +1237,7 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
-/** increases the conflict score of the variable by the given weight */
+/** increases the VSIDS of the variable by the given weight */
 extern
 SCIP_RETCODE SCIPvarIncVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
@@ -1209,17 +1261,17 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_Real             length              /**< length of the conflict */
    );
 
-/**  gets the number of active conflicts containing this variable in given direction */
-SCIP_Real SCIPvarGetNActiveConflicts(
+/** gets the number of active conflicts containing this variable in given direction */
+SCIP_Longint SCIPvarGetNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
-/**  gets the number of active conflicts containing this variable in given direction
+/** gets the number of active conflicts containing this variable in given direction
  *  in the current run
  */
-SCIP_Real SCIPvarGetNActiveConflictsCurrentRun(
+SCIP_Longint SCIPvarGetNActiveConflictsCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1266,7 +1318,7 @@ SCIP_RETCODE SCIPvarIncCutoffSum(
    SCIP_Real             weight              /**< weight of this update in cutoff score */
    );
 
-/** returns the average number of inferences found after branching on the variable in given direction */
+/** returns the variable's VSIDS score */
 extern
 SCIP_Real SCIPvarGetVSIDS_rec(
    SCIP_VAR*             var,                /**< problem variable */
@@ -1274,9 +1326,7 @@ SCIP_Real SCIPvarGetVSIDS_rec(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
-/** returns the average number of inferences found after branching on the variable in given direction
- *  in the current run
- */
+/** returns the variable's VSIDS score only using conflicts of the current run */
 extern
 SCIP_Real SCIPvarGetVSIDSCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
@@ -1320,7 +1370,7 @@ SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
 
 /** outputs variable information into file stream */
 extern
-void SCIPvarPrint(
+SCIP_RETCODE SCIPvarPrint(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -1358,12 +1408,18 @@ SCIP_RETCODE SCIPvarDropEvent(
    int                   filterpos           /**< position of event filter entry returned by SCIPvarCatchEvent(), or -1 */
    );
 
-/** returns the average number of inferences found after branching on the variable in given direction */
+/** returns the variable's VSIDS score */
 extern
 SCIP_Real SCIPvarGetVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns the position of the bound change index */
+extern
+int SCIPbdchgidxGetPos(
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
    );
 
 #else
@@ -1378,6 +1434,7 @@ SCIP_Real SCIPvarGetVSIDS(
    SCIPeventfilterDel(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos)
 #define SCIPvarGetVSIDS(var, stat, dir)    ((var)->varstatus == SCIP_VARSTATUS_LOOSE || (var)->varstatus == SCIP_VARSTATUS_COLUMN ? \
       SCIPhistoryGetVSIDS(var->history, dir)/stat->vsidsweight : SCIPvarGetVSIDS_rec(var, stat, dir))
+#define SCIPbdchgidxGetPos(bdchgidx) ((bdchgidx)->pos)
 
 #endif
 

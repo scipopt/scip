@@ -48,7 +48,7 @@ extern "C" {
 
 
 /** creates the handler for orbitope constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -57,7 +57,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -90,6 +90,26 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   );
+
+/** creates and captures an orbitope constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ *
+ *  @see SCIPcreateConsOrbitope() for the default constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsBasicOrbitope(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
+   SCIP_Bool             ispart,             /**< whether we deal with the partitioning case (packing otherwise) */
+   int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
+   int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
+   SCIP_Bool             resolveprop         /**< should propagation be resolved? */
    );
 
 #ifdef __cplusplus

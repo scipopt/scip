@@ -145,7 +145,7 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreObj)
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   SCIP_CALL( presoldata->objpresol->scip_initpre(scip, presol, isunbounded, isinfeasible, result) );
+   SCIP_CALL( presoldata->objpresol->scip_initpre(scip, presol) );
 
    return SCIP_OKAY;
 }
@@ -162,7 +162,7 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreObj)
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   SCIP_CALL( presoldata->objpresol->scip_exitpre(scip, presol, isunbounded, isinfeasible, result) );
+   SCIP_CALL( presoldata->objpresol->scip_exitpre(scip, presol) );
 
    return SCIP_OKAY;
 }
@@ -213,10 +213,10 @@ SCIP_RETCODE SCIPincludeObjPresol(
    presoldata->deleteobject = deleteobject;
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_, 
+   SCIP_CALL( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_,
          objpresol->scip_priority_, objpresol->scip_maxrounds_, objpresol->scip_delay_,
          presolCopyObj,
-         presolFreeObj, presolInitObj, presolExitObj, 
+         presolFreeObj, presolInitObj, presolExitObj,
          presolInitpreObj, presolExitpreObj, presolExecObj,
          presoldata) ); /*lint !e429*/
 

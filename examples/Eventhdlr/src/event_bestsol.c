@@ -42,15 +42,6 @@ SCIP_DECL_EVENTCOPY(eventCopyBestsol)
    return SCIP_OKAY;
 }
 
-/** destructor of event handler to free user data (called when SCIP is exiting) */
-#define eventFreeBestsol NULL
-
-/** solving process initialization method of event handler (called when branch and bound process is about to begin) */
-#define eventInitsolBestsol NULL
-
-/** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
-#define eventExitsolBestsol NULL
-
 /** initialization method of event handler (called after problem was transformed) */
 static
 SCIP_DECL_EVENTINIT(eventInitBestsol)
@@ -78,9 +69,6 @@ SCIP_DECL_EVENTEXIT(eventExitBestsol)
 
    return SCIP_OKAY;
 }
-
-/** frees specific event data */
-#define eventDeleteBestsol NULL
 
 /** execution method of event handler */
 static
@@ -114,13 +102,17 @@ SCIP_RETCODE SCIPincludeEventHdlrBestsol(
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLR* eventhdlr;
    eventhdlrdata = NULL;
    
+   eventhdlr = NULL;
    /* create event handler for events on watched variables */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         eventCopyBestsol, eventFreeBestsol, eventInitBestsol, eventExitBestsol, 
-         eventInitsolBestsol, eventExitsolBestsol, eventDeleteBestsol, eventExecBestsol,
-         eventhdlrdata) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecBestsol, eventhdlrdata) );
+   assert(eventhdlr != NULL);
+
+   SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopyBestsol) );
+   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitBestsol) );
+   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitBestsol) );
    
    return SCIP_OKAY;
 }

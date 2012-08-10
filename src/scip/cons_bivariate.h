@@ -61,7 +61,7 @@ typedef enum
 } SCIP_BIVAR_CONVEXITY;
 
 /** creates the handler for bivariate constraints and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeConshdlrBivariate(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -70,7 +70,7 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcreateConsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -106,36 +106,57 @@ SCIP_RETCODE SCIPcreateConsBivariate(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures an absolute power constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsBivariate(); all flags can be set via SCIPconsSetFLAGNAME-methods in cons.h
+ *
+ *  @see SCIPcreateConsBivariate() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsBasicBivariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_EXPRTREE*        f,                  /**< expression tree specifying bivariate function f(x,y) */
+   SCIP_BIVAR_CONVEXITY  convextype,         /**< kind of convexity of f(x,y) */
+   SCIP_VAR*             z,                  /**< linear variable in constraint */
+   SCIP_Real             zcoef,              /**< coefficient of linear variable */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   );
+
 /** gets the linear variable of a bivariate constraint, or NULL if no such variable */
-extern
+EXTERN
 SCIP_VAR* SCIPgetLinearVarBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the coefficients of the linear variable of a bivariate constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetLinearCoefBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the expression tree of a bivariate constraint */
-extern
+EXTERN
 SCIP_EXPRTREE* SCIPgetExprtreeBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the left hand side of a bivariate constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetLhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the right hand side of a bivariate constraint */
-extern
+EXTERN
 SCIP_Real SCIPgetRhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */

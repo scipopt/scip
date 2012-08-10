@@ -19,7 +19,7 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  *
- * This file reader parses the \f$opb\f$ format and is also used by the \f$wbo\f$ reader for the \f$wbo\f$ format. For a
+ * This file reader parses the @a opb format and is also used by the @a wbo reader for the @a wbo format. For a
  * detailed description of this format see http://www.cril.univ-artois.fr/PB10/format.pdf .
  */
 
@@ -35,13 +35,13 @@ extern "C" {
 #endif
 
 /** includes the opb file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderOpb(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /* reads problem from file */
-extern
+EXTERN
 SCIP_RETCODE SCIPreadOpb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< the file reader itself */
@@ -50,7 +50,7 @@ SCIP_RETCODE SCIPreadOpb(
    );
 
 /* writes problem to file */
-extern
+EXTERN
 SCIP_RETCODE SCIPwriteOpb(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */
@@ -66,6 +66,7 @@ SCIP_RETCODE SCIPwriteOpb(
    int                   nintvars,           /**< number of general integer variables */
    int                   nimplvars,          /**< number of implicit integer variables */
    int                   ncontvars,          /**< number of continuous variables */
+   SCIP_VAR**            fixedvars,          /**< array with fixed variables */
    int                   nfixedvars,         /**< number of fixed and aggregated variables in the problem */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */

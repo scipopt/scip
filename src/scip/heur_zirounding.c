@@ -41,12 +41,6 @@
 #define DEFAULT_STOPPERCENTAGE     0.02   /**< the tolerance percentage after which zirounding will not be executed anymore */
 #define DEFAULT_MINSTOPNCALLS      1000   /**< number of heuristic calls before deactivation check */
 
-/* enable statistic output by defining macro STATISTIC_INFORMATION */
-#ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                x
-#else
-#define STATISTIC(x)             /**/
-#endif
 
 /*
  * Data structures
@@ -173,14 +167,11 @@ void calculateBounds(
          return;
       }
 
-
       SCIPdebugMessage("colval: %15.8f, downslack: %15.8f, upslack: %5.2f, lb: %5.2f, ub: %5.2f\n", colvals[i], downslacks[rowpos], upslacks[rowpos],
          *lowerbound, *upperbound);
 
       /* if coefficient > 0, rounding up might violate up slack and rounding down might violate down slack
-       * thus search for the minimum so that no constraint is violated;
-       * if coefficient < 0, it is the other way around unless at least one row slack is infinity
-       * which has to be excluded explicitly so as not to corrupt calculations
+       * thus search for the minimum so that no constraint is violated; vice versa for coefficient < 0
        */
       if( colvals[i] > 0 )
       {
@@ -297,8 +288,8 @@ SCIP_RETCODE updateSlacks(
          if( !SCIPisInfinity(scip, -downslacks[rowpos]) )
             downslacks[rowpos] += val;
 
-         assert(!SCIPisNegative(scip, upslacks[rowpos]));
-         assert(!SCIPisNegative(scip, downslacks[rowpos]));
+         assert(!SCIPisFeasNegative(scip, upslacks[rowpos]));
+         assert(!SCIPisFeasNegative(scip, downslacks[rowpos]));
       }
    }
    return SCIP_OKAY;
@@ -445,8 +436,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolZirounding)
    return SCIP_OKAY;
 }
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolZirounding NULL
 
 /** execution method of primal heuristic */
 static
@@ -699,9 +688,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    improvementfound = TRUE;
    *result = SCIP_DIDNOTFIND;
 
-   /* check if fractional rounding candidates are left in each round,
-    * whereas number of rounds is limited by parameter maxroundingloops
-    */
+   /* iterate over variables as long as there are fractional variables left */
    while( currentlpcands > 0 && improvementfound && (heurdata->maxroundingloops == -1 || nroundings < heurdata->maxroundingloops) )
    {  /*lint --e{850}*/
       improvementfound = FALSE;
@@ -783,7 +770,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             SCIP_CALL( updateSlacks(scip, sol, var, shiftval, upslacks,
                   downslacks, activities, slackvars, slackvarcoeffs, nslacks) );
 
-            SCIPdebugMessage("zirounding update step : %d var index, oldsolval=%g, shiftval=%g \n ",
+            SCIPdebugMessage("zirounding update step : %d var index, oldsolval=%g, shiftval=%g\n",
                SCIPvarGetIndex(var), oldsolval, shiftval);
             /* since at least one improvement has been found, heuristic will enter main loop for another time because the improvement
              * might affect many LP rows and their current slacks and thus make further rounding steps possible */
@@ -821,9 +808,8 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          SCIPdebugMessage("found feasible rounded solution:\n");
          SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
-         STATISTIC(
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  ZI Round solution value: %g \n", SCIPgetSolOrigObj(scip, sol));
-            )
+         SCIPstatisticMessage("  ZI Round solution value: %g \n", SCIPgetSolOrigObj(scip, sol));
+
          *result = SCIP_FOUNDSOL;
       }
    }
@@ -852,17 +838,24 @@ SCIP_RETCODE SCIPincludeHeurZirounding(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create zirounding primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyZirounding,
-         heurFreeZirounding, heurInitZirounding, heurExitZirounding,
-         heurInitsolZirounding, heurExitsolZirounding, heurExecZirounding,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecZirounding, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyZirounding) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeZirounding) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitZirounding) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitZirounding) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolZirounding) );
 
    /* add zirounding primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/zirounding/maxroundingloops",
@@ -875,8 +868,8 @@ SCIP_RETCODE SCIPincludeHeurZirounding(
          "if percentage of found solutions falls below this parameter, Zirounding will be deactivated",
          &heurdata->stoppercentage, TRUE, DEFAULT_STOPPERCENTAGE, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/zirounding/minstopncalls",
-         "determines the minimum number of calls before percentage-based deactivation of"
-         " Zirounding is applied", &heurdata->minstopncalls, TRUE, DEFAULT_MINSTOPNCALLS, 1, INT_MAX, NULL, NULL) );
+         "determines the minimum number of calls before percentage-based deactivation of Zirounding is applied",
+         &heurdata->minstopncalls, TRUE, DEFAULT_MINSTOPNCALLS, 1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

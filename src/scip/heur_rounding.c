@@ -49,10 +49,8 @@ struct SCIP_HeurData
    int                   successfactor;      /**< number of calls per found solution that are considered as standard success, 
                                               * a higher factor causes the heuristic to be called more often 
                                               */
-   SCIP_Bool             oncepernode;         /**< should the heuristic only be called once per node? */
+   SCIP_Bool             oncepernode;        /**< should the heuristic only be called once per node? */
 };
-
-
 
 
 /*
@@ -403,8 +401,6 @@ SCIP_RETCODE selectEssentialRounding(
 }
 
 
-
-
 /*
  * Callback methods
  */
@@ -731,8 +727,6 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
 }
 
 
-
-
 /*
  * heuristic specific interface methods
  */
@@ -743,17 +737,25 @@ SCIP_RETCODE SCIPincludeHeurRounding(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create heuristic data */
+   /* create Rounding primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
-   /* include heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyRounding,
-         heurFreeRounding, heurInitRounding, heurExitRounding, 
-         heurInitsolRounding, heurExitsolRounding, heurExecRounding,
-         heurdata) );
+   /* include primal heuristic */
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecRounding, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyRounding) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeRounding) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitRounding) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitRounding) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolRounding) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolRounding) );
 
    /* add rounding primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/successfactor",

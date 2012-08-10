@@ -494,13 +494,6 @@ SCIP_DECL_PROBDELTRANS(probdeltransColoring)
    return SCIP_OKAY;
 }
 
-
-#define probcopyColoring NULL
-#define probinitsolColoring NULL
-#define probexitsolColoring NULL
-#define probcopyColoring NULL
-
-
 static
 SCIP_DECL_PROBDELORIG(probdelorigColoring)
 {
@@ -542,24 +535,6 @@ SCIP_DECL_PROBDELORIG(probdelorigColoring)
 /*
  * Callback methods of event handler
  */
-
-/** destructor of event handler to free user data (called when SCIP is exiting) */
-#define eventFreeProbdatavardeleted NULL
-
-/** initialization method of event handler (called after problem was transformed) */
-#define eventInitProbdatavardeleted NULL
-
-/** deinitialization method of event handler (called before transformed problem is freed) */
-#define eventExitProbdatavardeleted NULL
-
-/** solving process initialization method of event handler (called when branch and bound process is about to begin) */
-#define eventInitsolProbdatavardeleted NULL
-
-/** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
-#define eventExitsolProbdatavardeleted NULL
-
-/** frees specific event data */
-#define eventDeleteProbdatavardeleted NULL
 
 /** execution method of event handler */
 static
@@ -663,14 +638,12 @@ SCIP_RETCODE SCIPcreateProbColoring(
    probdata->nstablesets = 0;
 
    /* include variable deleted event handler into SCIP */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, eventFreeProbdatavardeleted, eventInitProbdatavardeleted, eventExitProbdatavardeleted,
-         eventInitsolProbdatavardeleted, eventExitsolProbdatavardeleted, eventDeleteProbdatavardeleted, eventExecProbdatavardeleted,
-         NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecProbdatavardeleted, NULL) );
 
    /* create problem in SCIP */
    SCIP_CALL( SCIPcreateProb(scip, name, probdelorigColoring, probtransColoring, probdeltransColoring, 
-         probinitsolColoring, probexitsolColoring, probcopyColoring, probdata) );
+         NULL, NULL, NULL, probdata) );
 
    SCIP_CALL( preprocessGraph(scip) );
 

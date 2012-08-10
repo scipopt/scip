@@ -16,6 +16,14 @@
 /**@file   reader_bnd.c
  * @brief  file reader for variable bounds
  * @author Ambros Gleixner
+ *
+ * This reader allows to read a file containing new bounds for variables of the current problem.  Each line of the file
+ * should have format
+ *
+ *    \<variable name\> \<lower bound\> \<upper bound\>
+ *
+ * where infinite bounds can be written as inf, +inf or -inf.  Note that only a subset of the variables may appear in
+ * the file.  Lines with unknown variable names are ignored.  The writing functionality is currently not supported.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -28,7 +36,6 @@
 #define READER_NAME             "bndreader"
 #define READER_DESC             "file reader for variable bounds"
 #define READER_EXTENSION        "bnd"
-
 
 
 /*
@@ -172,7 +179,6 @@ SCIP_RETCODE readBounds(
 }
 
 
-
 /*
  * Callback methods of reader
  */
@@ -190,10 +196,6 @@ SCIP_DECL_READERCOPY(readerCopyBnd)
 
    return SCIP_OKAY;
 }
-
-
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeBnd NULL
 
 
 /** problem reading method of reader
@@ -231,10 +233,6 @@ SCIP_DECL_READERREAD(readerReadBnd)
 }
 
 
-/** problem writing method of reader */
-#define readerWriteBnd NULL
-
-
 /*
  * bnd file reader specific interface methods
  */
@@ -245,14 +243,17 @@ SCIP_RETCODE SCIPincludeReaderBnd(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create bnd reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include bnd reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyBnd, readerFreeBnd, readerReadBnd, readerWriteBnd,
-         readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyBnd) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadBnd) );
 
    return SCIP_OKAY;
 }

@@ -1,0 +1,274 @@
+STATISTICS
+  Problem name     : STEIN27_SUPER
+  Variables        : 146 (146 binary, 0 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 120 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <x0026>: obj=0, original bounds=[0,1]
+  [binary] <x0001>: obj=0, original bounds=[0,1]
+  [binary] <x0002>: obj=0, original bounds=[0,1]
+  [binary] <x0003>: obj=0, original bounds=[0,1]
+  [binary] <x0004>: obj=0, original bounds=[0,1]
+  [binary] <x0005>: obj=0, original bounds=[0,1]
+  [binary] <x0006>: obj=0, original bounds=[0,1]
+  [binary] <x0007>: obj=0, original bounds=[0,1]
+  [binary] <x0008>: obj=0, original bounds=[0,1]
+  [binary] <x0009>: obj=0, original bounds=[0,1]
+  [binary] <x0010>: obj=0, original bounds=[0,1]
+  [binary] <x0011>: obj=0, original bounds=[0,1]
+  [binary] <x0012>: obj=0, original bounds=[0,1]
+  [binary] <x0013>: obj=0, original bounds=[0,1]
+  [binary] <x0014>: obj=0, original bounds=[0,1]
+  [binary] <x0015>: obj=0, original bounds=[0,1]
+  [binary] <x0016>: obj=0, original bounds=[0,1]
+  [binary] <x0017>: obj=0, original bounds=[0,1]
+  [binary] <x0018>: obj=0, original bounds=[0,1]
+  [binary] <x0019>: obj=0, original bounds=[0,1]
+  [binary] <x0020>: obj=0, original bounds=[0,1]
+  [binary] <x0021>: obj=0, original bounds=[0,1]
+  [binary] <x0022>: obj=0, original bounds=[0,1]
+  [binary] <x0023>: obj=0, original bounds=[0,1]
+  [binary] <x0024>: obj=0, original bounds=[0,1]
+  [binary] <x0025>: obj=0, original bounds=[0,1]
+  [binary] <x0027>: obj=0, original bounds=[0,1]
+  [binary] <A1_master>: obj=1, original bounds=[0,1]
+  [binary] <A2_master>: obj=1, original bounds=[0,1]
+  [binary] <A3_master>: obj=1, original bounds=[0,1]
+  [binary] <A4_master>: obj=1, original bounds=[0,1]
+  [binary] <A5_master>: obj=1, original bounds=[0,1]
+  [binary] <A6_master>: obj=1, original bounds=[0,1]
+  [binary] <A7_master>: obj=1, original bounds=[0,1]
+  [binary] <A8_master>: obj=1, original bounds=[0,1]
+  [binary] <A9_master>: obj=1, original bounds=[0,1]
+  [binary] <A10_master>: obj=1, original bounds=[0,1]
+  [binary] <A11_master>: obj=1, original bounds=[0,1]
+  [binary] <A12_master>: obj=1, original bounds=[0,1]
+  [binary] <A13_master>: obj=1, original bounds=[0,1]
+  [binary] <A14_master>: obj=1, original bounds=[0,1]
+  [binary] <A15_master>: obj=1, original bounds=[0,1]
+  [binary] <A16_master>: obj=1, original bounds=[0,1]
+  [binary] <A17_master>: obj=1, original bounds=[0,1]
+  [binary] <A18_master>: obj=1, original bounds=[0,1]
+  [binary] <A19_master>: obj=1, original bounds=[0,1]
+  [binary] <A20_master>: obj=1, original bounds=[0,1]
+  [binary] <A21_master>: obj=1, original bounds=[0,1]
+  [binary] <A22_master>: obj=1, original bounds=[0,1]
+  [binary] <A23_master>: obj=1, original bounds=[0,1]
+  [binary] <A24_master>: obj=1, original bounds=[0,1]
+  [binary] <A25_master>: obj=1, original bounds=[0,1]
+  [binary] <A26_master>: obj=1, original bounds=[0,1]
+  [binary] <A27_master>: obj=1, original bounds=[0,1]
+  [binary] <A28_master>: obj=1, original bounds=[0,1]
+  [binary] <A29_master>: obj=1, original bounds=[0,1]
+  [binary] <A30_master>: obj=1, original bounds=[0,1]
+  [binary] <A31_master>: obj=1, original bounds=[0,1]
+  [binary] <A32_master>: obj=1, original bounds=[0,1]
+  [binary] <A33_master>: obj=1, original bounds=[0,1]
+  [binary] <A34_master>: obj=1, original bounds=[0,1]
+  [binary] <A35_master>: obj=1, original bounds=[0,1]
+  [binary] <A36_master>: obj=1, original bounds=[0,1]
+  [binary] <A37_master>: obj=1, original bounds=[0,1]
+  [binary] <A38_master>: obj=1, original bounds=[0,1]
+  [binary] <A39_master>: obj=1, original bounds=[0,1]
+  [binary] <A40_master>: obj=1, original bounds=[0,1]
+  [binary] <A41_master>: obj=1, original bounds=[0,1]
+  [binary] <A42_master>: obj=1, original bounds=[0,1]
+  [binary] <A43_master>: obj=1, original bounds=[0,1]
+  [binary] <A44_master>: obj=1, original bounds=[0,1]
+  [binary] <A45_master>: obj=1, original bounds=[0,1]
+  [binary] <A46_master>: obj=1, original bounds=[0,1]
+  [binary] <A47_master>: obj=1, original bounds=[0,1]
+  [binary] <A48_master>: obj=1, original bounds=[0,1]
+  [binary] <A49_master>: obj=1, original bounds=[0,1]
+  [binary] <A50_master>: obj=1, original bounds=[0,1]
+  [binary] <A51_master>: obj=1, original bounds=[0,1]
+  [binary] <A52_master>: obj=1, original bounds=[0,1]
+  [binary] <A53_master>: obj=1, original bounds=[0,1]
+  [binary] <A54_master>: obj=1, original bounds=[0,1]
+  [binary] <A55_master>: obj=1, original bounds=[0,1]
+  [binary] <A56_master>: obj=1, original bounds=[0,1]
+  [binary] <A57_master>: obj=1, original bounds=[0,1]
+  [binary] <A58_master>: obj=1, original bounds=[0,1]
+  [binary] <A59_master>: obj=1, original bounds=[0,1]
+  [binary] <A60_master>: obj=1, original bounds=[0,1]
+  [binary] <A61_master>: obj=1, original bounds=[0,1]
+  [binary] <A62_master>: obj=1, original bounds=[0,1]
+  [binary] <A63_master>: obj=1, original bounds=[0,1]
+  [binary] <A64_master>: obj=1, original bounds=[0,1]
+  [binary] <A65_master>: obj=1, original bounds=[0,1]
+  [binary] <A66_master>: obj=1, original bounds=[0,1]
+  [binary] <A67_master>: obj=1, original bounds=[0,1]
+  [binary] <A68_master>: obj=1, original bounds=[0,1]
+  [binary] <A69_master>: obj=1, original bounds=[0,1]
+  [binary] <A70_master>: obj=1, original bounds=[0,1]
+  [binary] <A71_master>: obj=1, original bounds=[0,1]
+  [binary] <A72_master>: obj=1, original bounds=[0,1]
+  [binary] <A73_master>: obj=1, original bounds=[0,1]
+  [binary] <A74_master>: obj=1, original bounds=[0,1]
+  [binary] <A75_master>: obj=1, original bounds=[0,1]
+  [binary] <A76_master>: obj=1, original bounds=[0,1]
+  [binary] <A77_master>: obj=1, original bounds=[0,1]
+  [binary] <A78_master>: obj=1, original bounds=[0,1]
+  [binary] <A79_master>: obj=1, original bounds=[0,1]
+  [binary] <A80_master>: obj=1, original bounds=[0,1]
+  [binary] <A81_master>: obj=1, original bounds=[0,1]
+  [binary] <A82_master>: obj=1, original bounds=[0,1]
+  [binary] <A83_master>: obj=1, original bounds=[0,1]
+  [binary] <A84_master>: obj=1, original bounds=[0,1]
+  [binary] <A85_master>: obj=1, original bounds=[0,1]
+  [binary] <A86_master>: obj=1, original bounds=[0,1]
+  [binary] <A87_master>: obj=1, original bounds=[0,1]
+  [binary] <A88_master>: obj=1, original bounds=[0,1]
+  [binary] <A89_master>: obj=1, original bounds=[0,1]
+  [binary] <A90_master>: obj=1, original bounds=[0,1]
+  [binary] <A91_master>: obj=1, original bounds=[0,1]
+  [binary] <A92_master>: obj=1, original bounds=[0,1]
+  [binary] <A93_master>: obj=1, original bounds=[0,1]
+  [binary] <A94_master>: obj=1, original bounds=[0,1]
+  [binary] <A95_master>: obj=1, original bounds=[0,1]
+  [binary] <A96_master>: obj=1, original bounds=[0,1]
+  [binary] <A97_master>: obj=1, original bounds=[0,1]
+  [binary] <A98_master>: obj=1, original bounds=[0,1]
+  [binary] <A99_master>: obj=1, original bounds=[0,1]
+  [binary] <A100_master>: obj=1, original bounds=[0,1]
+  [binary] <A101_master>: obj=1, original bounds=[0,1]
+  [binary] <A102_master>: obj=1, original bounds=[0,1]
+  [binary] <A103_master>: obj=1, original bounds=[0,1]
+  [binary] <A104_master>: obj=1, original bounds=[0,1]
+  [binary] <A105_master>: obj=1, original bounds=[0,1]
+  [binary] <A106_master>: obj=1, original bounds=[0,1]
+  [binary] <A107_master>: obj=1, original bounds=[0,1]
+  [binary] <A108_master>: obj=1, original bounds=[0,1]
+  [binary] <A109_master>: obj=1, original bounds=[0,1]
+  [binary] <A110_master>: obj=1, original bounds=[0,1]
+  [binary] <A111_master>: obj=1, original bounds=[0,1]
+  [binary] <A112_master>: obj=1, original bounds=[0,1]
+  [binary] <A113_master>: obj=1, original bounds=[0,1]
+  [binary] <A114_master>: obj=1, original bounds=[0,1]
+  [binary] <A115_master>: obj=1, original bounds=[0,1]
+  [binary] <A116_master>: obj=1, original bounds=[0,1]
+  [binary] <A117_master>: obj=1, original bounds=[0,1]
+  [binary] <OB2_master>: obj=1, original bounds=[0,1]
+  [binary] <objcut_master>: obj=1, original bounds=[0,1]
+CONSTRAINTS
+  [superindicator] <A1_super>: <A1_master>[B] = 0 ->  [linear] <A1>: <x0002>[B] +<x0003>[B] +<x0004>[B] >= 1;
+  [superindicator] <A2_super>: <A2_master>[B] = 0 ->  [linear] <A2>: <x0001>[B] +<x0003>[B] +<x0005>[B] >= 1;
+  [superindicator] <A3_super>: <A3_master>[B] = 0 ->  [linear] <A3>: <x0001>[B] +<x0002>[B] +<x0006>[B] >= 1;
+  [superindicator] <A4_super>: <A4_master>[B] = 0 ->  [linear] <A4>: <x0005>[B] +<x0006>[B] +<x0007>[B] >= 1;
+  [superindicator] <A5_super>: <A5_master>[B] = 0 ->  [linear] <A5>: <x0004>[B] +<x0006>[B] +<x0008>[B] >= 1;
+  [superindicator] <A6_super>: <A6_master>[B] = 0 ->  [linear] <A6>: <x0004>[B] +<x0005>[B] +<x0009>[B] >= 1;
+  [superindicator] <A7_super>: <A7_master>[B] = 0 ->  [linear] <A7>: <x0001>[B] +<x0008>[B] +<x0009>[B] >= 1;
+  [superindicator] <A8_super>: <A8_master>[B] = 0 ->  [linear] <A8>: <x0002>[B] +<x0007>[B] +<x0009>[B] >= 1;
+  [superindicator] <A9_super>: <A9_master>[B] = 0 ->  [linear] <A9>: <x0003>[B] +<x0007>[B] +<x0008>[B] >= 1;
+  [superindicator] <A10_super>: <A10_master>[B] = 0 ->  [linear] <A10>: <x0001>[B] +<x0004>[B] +<x0007>[B] >= 1;
+  [superindicator] <A11_super>: <A11_master>[B] = 0 ->  [linear] <A11>: <x0002>[B] +<x0005>[B] +<x0008>[B] >= 1;
+  [superindicator] <A12_super>: <A12_master>[B] = 0 ->  [linear] <A12>: <x0003>[B] +<x0006>[B] +<x0009>[B] >= 1;
+  [superindicator] <A13_super>: <A13_master>[B] = 0 ->  [linear] <A13>: <x0011>[B] +<x0012>[B] +<x0013>[B] >= 1;
+  [superindicator] <A14_super>: <A14_master>[B] = 0 ->  [linear] <A14>: <x0010>[B] +<x0012>[B] +<x0014>[B] >= 1;
+  [superindicator] <A15_super>: <A15_master>[B] = 0 ->  [linear] <A15>: <x0010>[B] +<x0011>[B] +<x0015>[B] >= 1;
+  [superindicator] <A16_super>: <A16_master>[B] = 0 ->  [linear] <A16>: <x0014>[B] +<x0015>[B] +<x0016>[B] >= 1;
+  [superindicator] <A17_super>: <A17_master>[B] = 0 ->  [linear] <A17>: <x0013>[B] +<x0015>[B] +<x0017>[B] >= 1;
+  [superindicator] <A18_super>: <A18_master>[B] = 0 ->  [linear] <A18>: <x0013>[B] +<x0014>[B] +<x0018>[B] >= 1;
+  [superindicator] <A19_super>: <A19_master>[B] = 0 ->  [linear] <A19>: <x0010>[B] +<x0017>[B] +<x0018>[B] >= 1;
+  [superindicator] <A20_super>: <A20_master>[B] = 0 ->  [linear] <A20>: <x0011>[B] +<x0016>[B] +<x0018>[B] >= 1;
+  [superindicator] <A21_super>: <A21_master>[B] = 0 ->  [linear] <A21>: <x0012>[B] +<x0016>[B] +<x0017>[B] >= 1;
+  [superindicator] <A22_super>: <A22_master>[B] = 0 ->  [linear] <A22>: <x0010>[B] +<x0013>[B] +<x0016>[B] >= 1;
+  [superindicator] <A23_super>: <A23_master>[B] = 0 ->  [linear] <A23>: <x0011>[B] +<x0014>[B] +<x0017>[B] >= 1;
+  [superindicator] <A24_super>: <A24_master>[B] = 0 ->  [linear] <A24>: <x0012>[B] +<x0015>[B] +<x0018>[B] >= 1;
+  [superindicator] <A25_super>: <A25_master>[B] = 0 ->  [linear] <A25>: <x0020>[B] +<x0021>[B] +<x0022>[B] >= 1;
+  [superindicator] <A26_super>: <A26_master>[B] = 0 ->  [linear] <A26>: <x0019>[B] +<x0021>[B] +<x0023>[B] >= 1;
+  [superindicator] <A27_super>: <A27_master>[B] = 0 ->  [linear] <A27>: <x0019>[B] +<x0020>[B] +<x0024>[B] >= 1;
+  [superindicator] <A28_super>: <A28_master>[B] = 0 ->  [linear] <A28>: <x0023>[B] +<x0024>[B] +<x0025>[B] >= 1;
+  [superindicator] <A29_super>: <A29_master>[B] = 0 ->  [linear] <A29>: <x0022>[B] +<x0024>[B] +<x0026>[B] >= 1;
+  [superindicator] <A30_super>: <A30_master>[B] = 0 ->  [linear] <A30>: <x0022>[B] +<x0023>[B] +<x0027>[B] >= 1;
+  [superindicator] <A31_super>: <A31_master>[B] = 0 ->  [linear] <A31>: <x0019>[B] +<x0026>[B] +<x0027>[B] >= 1;
+  [superindicator] <A32_super>: <A32_master>[B] = 0 ->  [linear] <A32>: <x0020>[B] +<x0025>[B] +<x0027>[B] >= 1;
+  [superindicator] <A33_super>: <A33_master>[B] = 0 ->  [linear] <A33>: <x0021>[B] +<x0025>[B] +<x0026>[B] >= 1;
+  [superindicator] <A34_super>: <A34_master>[B] = 0 ->  [linear] <A34>: <x0019>[B] +<x0022>[B] +<x0025>[B] >= 1;
+  [superindicator] <A35_super>: <A35_master>[B] = 0 ->  [linear] <A35>: <x0020>[B] +<x0023>[B] +<x0026>[B] >= 1;
+  [superindicator] <A36_super>: <A36_master>[B] = 0 ->  [linear] <A36>: <x0021>[B] +<x0024>[B] +<x0027>[B] >= 1;
+  [superindicator] <A37_super>: <A37_master>[B] = 0 ->  [linear] <A37>: <x0001>[B] +<x0010>[B] +<x0019>[B] >= 1;
+  [superindicator] <A38_super>: <A38_master>[B] = 0 ->  [linear] <A38>: <x0001>[B] +<x0011>[B] +<x0024>[B] >= 1;
+  [superindicator] <A39_super>: <A39_master>[B] = 0 ->  [linear] <A39>: <x0001>[B] +<x0012>[B] +<x0023>[B] >= 1;
+  [superindicator] <A40_super>: <A40_master>[B] = 0 ->  [linear] <A40>: <x0001>[B] +<x0013>[B] +<x0025>[B] >= 1;
+  [superindicator] <A41_super>: <A41_master>[B] = 0 ->  [linear] <A41>: <x0001>[B] +<x0014>[B] +<x0021>[B] >= 1;
+  [superindicator] <A42_super>: <A42_master>[B] = 0 ->  [linear] <A42>: <x0001>[B] +<x0015>[B] +<x0020>[B] >= 1;
+  [superindicator] <A43_super>: <A43_master>[B] = 0 ->  [linear] <A43>: <x0001>[B] +<x0016>[B] +<x0022>[B] >= 1;
+  [superindicator] <A44_super>: <A44_master>[B] = 0 ->  [linear] <A44>: <x0001>[B] +<x0017>[B] +<x0027>[B] >= 1;
+  [superindicator] <A45_super>: <A45_master>[B] = 0 ->  [linear] <A45>: <x0001>[B] +<x0018>[B] +<x0026>[B] >= 1;
+  [superindicator] <A46_super>: <A46_master>[B] = 0 ->  [linear] <A46>: <x0002>[B] +<x0010>[B] +<x0024>[B] >= 1;
+  [superindicator] <A47_super>: <A47_master>[B] = 0 ->  [linear] <A47>: <x0002>[B] +<x0011>[B] +<x0020>[B] >= 1;
+  [superindicator] <A48_super>: <A48_master>[B] = 0 ->  [linear] <A48>: <x0002>[B] +<x0012>[B] +<x0022>[B] >= 1;
+  [superindicator] <A49_super>: <A49_master>[B] = 0 ->  [linear] <A49>: <x0002>[B] +<x0013>[B] +<x0021>[B] >= 1;
+  [superindicator] <A50_super>: <A50_master>[B] = 0 ->  [linear] <A50>: <x0002>[B] +<x0014>[B] +<x0026>[B] >= 1;
+  [superindicator] <A51_super>: <A51_master>[B] = 0 ->  [linear] <A51>: <x0002>[B] +<x0015>[B] +<x0019>[B] >= 1;
+  [superindicator] <A52_super>: <A52_master>[B] = 0 ->  [linear] <A52>: <x0002>[B] +<x0016>[B] +<x0027>[B] >= 1;
+  [superindicator] <A53_super>: <A53_master>[B] = 0 ->  [linear] <A53>: <x0002>[B] +<x0017>[B] +<x0023>[B] >= 1;
+  [superindicator] <A54_super>: <A54_master>[B] = 0 ->  [linear] <A54>: <x0002>[B] +<x0018>[B] +<x0025>[B] >= 1;
+  [superindicator] <A55_super>: <A55_master>[B] = 0 ->  [linear] <A55>: <x0003>[B] +<x0010>[B] +<x0023>[B] >= 1;
+  [superindicator] <A56_super>: <A56_master>[B] = 0 ->  [linear] <A56>: <x0003>[B] +<x0011>[B] +<x0022>[B] >= 1;
+  [superindicator] <A57_super>: <A57_master>[B] = 0 ->  [linear] <A57>: <x0003>[B] +<x0012>[B] +<x0021>[B] >= 1;
+  [superindicator] <A58_super>: <A58_master>[B] = 0 ->  [linear] <A58>: <x0003>[B] +<x0013>[B] +<x0020>[B] >= 1;
+  [superindicator] <A59_super>: <A59_master>[B] = 0 ->  [linear] <A59>: <x0003>[B] +<x0014>[B] +<x0019>[B] >= 1;
+  [superindicator] <A60_super>: <A60_master>[B] = 0 ->  [linear] <A60>: <x0003>[B] +<x0015>[B] +<x0027>[B] >= 1;
+  [superindicator] <A61_super>: <A61_master>[B] = 0 ->  [linear] <A61>: <x0003>[B] +<x0016>[B] +<x0026>[B] >= 1;
+  [superindicator] <A62_super>: <A62_master>[B] = 0 ->  [linear] <A62>: <x0003>[B] +<x0017>[B] +<x0025>[B] >= 1;
+  [superindicator] <A63_super>: <A63_master>[B] = 0 ->  [linear] <A63>: <x0003>[B] +<x0018>[B] +<x0024>[B] >= 1;
+  [superindicator] <A64_super>: <A64_master>[B] = 0 ->  [linear] <A64>: <x0004>[B] +<x0010>[B] +<x0025>[B] >= 1;
+  [superindicator] <A65_super>: <A65_master>[B] = 0 ->  [linear] <A65>: <x0004>[B] +<x0011>[B] +<x0021>[B] >= 1;
+  [superindicator] <A66_super>: <A66_master>[B] = 0 ->  [linear] <A66>: <x0004>[B] +<x0012>[B] +<x0020>[B] >= 1;
+  [superindicator] <A67_super>: <A67_master>[B] = 0 ->  [linear] <A67>: <x0004>[B] +<x0013>[B] +<x0022>[B] >= 1;
+  [superindicator] <A68_super>: <A68_master>[B] = 0 ->  [linear] <A68>: <x0004>[B] +<x0014>[B] +<x0027>[B] >= 1;
+  [superindicator] <A69_super>: <A69_master>[B] = 0 ->  [linear] <A69>: <x0004>[B] +<x0015>[B] +<x0026>[B] >= 1;
+  [superindicator] <A70_super>: <A70_master>[B] = 0 ->  [linear] <A70>: <x0004>[B] +<x0016>[B] +<x0019>[B] >= 1;
+  [superindicator] <A71_super>: <A71_master>[B] = 0 ->  [linear] <A71>: <x0004>[B] +<x0017>[B] +<x0024>[B] >= 1;
+  [superindicator] <A72_super>: <A72_master>[B] = 0 ->  [linear] <A72>: <x0004>[B] +<x0018>[B] +<x0023>[B] >= 1;
+  [superindicator] <A73_super>: <A73_master>[B] = 0 ->  [linear] <A73>: <x0005>[B] +<x0010>[B] +<x0021>[B] >= 1;
+  [superindicator] <A74_super>: <A74_master>[B] = 0 ->  [linear] <A74>: <x0005>[B] +<x0011>[B] +<x0026>[B] >= 1;
+  [superindicator] <A75_super>: <A75_master>[B] = 0 ->  [linear] <A75>: <x0005>[B] +<x0012>[B] +<x0019>[B] >= 1;
+  [superindicator] <A76_super>: <A76_master>[B] = 0 ->  [linear] <A76>: <x0005>[B] +<x0013>[B] +<x0027>[B] >= 1;
+  [superindicator] <A77_super>: <A77_master>[B] = 0 ->  [linear] <A77>: <x0005>[B] +<x0014>[B] +<x0023>[B] >= 1;
+  [superindicator] <A78_super>: <A78_master>[B] = 0 ->  [linear] <A78>: <x0005>[B] +<x0015>[B] +<x0025>[B] >= 1;
+  [superindicator] <A79_super>: <A79_master>[B] = 0 ->  [linear] <A79>: <x0005>[B] +<x0016>[B] +<x0024>[B] >= 1;
+  [superindicator] <A80_super>: <A80_master>[B] = 0 ->  [linear] <A80>: <x0005>[B] +<x0017>[B] +<x0020>[B] >= 1;
+  [superindicator] <A81_super>: <A81_master>[B] = 0 ->  [linear] <A81>: <x0005>[B] +<x0018>[B] +<x0022>[B] >= 1;
+  [superindicator] <A82_super>: <A82_master>[B] = 0 ->  [linear] <A82>: <x0006>[B] +<x0010>[B] +<x0020>[B] >= 1;
+  [superindicator] <A83_super>: <A83_master>[B] = 0 ->  [linear] <A83>: <x0006>[B] +<x0011>[B] +<x0019>[B] >= 1;
+  [superindicator] <A84_super>: <A84_master>[B] = 0 ->  [linear] <A84>: <x0006>[B] +<x0012>[B] +<x0027>[B] >= 1;
+  [superindicator] <A85_super>: <A85_master>[B] = 0 ->  [linear] <A85>: <x0006>[B] +<x0013>[B] +<x0026>[B] >= 1;
+  [superindicator] <A86_super>: <A86_master>[B] = 0 ->  [linear] <A86>: <x0006>[B] +<x0014>[B] +<x0025>[B] >= 1;
+  [superindicator] <A87_super>: <A87_master>[B] = 0 ->  [linear] <A87>: <x0006>[B] +<x0015>[B] +<x0024>[B] >= 1;
+  [superindicator] <A88_super>: <A88_master>[B] = 0 ->  [linear] <A88>: <x0006>[B] +<x0016>[B] +<x0023>[B] >= 1;
+  [superindicator] <A89_super>: <A89_master>[B] = 0 ->  [linear] <A89>: <x0006>[B] +<x0017>[B] +<x0022>[B] >= 1;
+  [superindicator] <A90_super>: <A90_master>[B] = 0 ->  [linear] <A90>: <x0006>[B] +<x0018>[B] +<x0021>[B] >= 1;
+  [superindicator] <A91_super>: <A91_master>[B] = 0 ->  [linear] <A91>: <x0007>[B] +<x0010>[B] +<x0022>[B] >= 1;
+  [superindicator] <A92_super>: <A92_master>[B] = 0 ->  [linear] <A92>: <x0007>[B] +<x0011>[B] +<x0027>[B] >= 1;
+  [superindicator] <A93_super>: <A93_master>[B] = 0 ->  [linear] <A93>: <x0007>[B] +<x0012>[B] +<x0026>[B] >= 1;
+  [superindicator] <A94_super>: <A94_master>[B] = 0 ->  [linear] <A94>: <x0007>[B] +<x0013>[B] +<x0019>[B] >= 1;
+  [superindicator] <A95_super>: <A95_master>[B] = 0 ->  [linear] <A95>: <x0007>[B] +<x0014>[B] +<x0024>[B] >= 1;
+  [superindicator] <A96_super>: <A96_master>[B] = 0 ->  [linear] <A96>: <x0007>[B] +<x0015>[B] +<x0023>[B] >= 1;
+  [superindicator] <A97_super>: <A97_master>[B] = 0 ->  [linear] <A97>: <x0007>[B] +<x0016>[B] +<x0025>[B] >= 1;
+  [superindicator] <A98_super>: <A98_master>[B] = 0 ->  [linear] <A98>: <x0007>[B] +<x0017>[B] +<x0021>[B] >= 1;
+  [superindicator] <A99_super>: <A99_master>[B] = 0 ->  [linear] <A99>: <x0007>[B] +<x0018>[B] +<x0020>[B] >= 1;
+  [superindicator] <A100_super>: <A100_master>[B] = 0 ->  [linear] <A100>: <x0008>[B] +<x0010>[B] +<x0027>[B] >= 1;
+  [superindicator] <A101_super>: <A101_master>[B] = 0 ->  [linear] <A101>: <x0008>[B] +<x0011>[B] +<x0023>[B] >= 1;
+  [superindicator] <A102_super>: <A102_master>[B] = 0 ->  [linear] <A102>: <x0008>[B] +<x0012>[B] +<x0025>[B] >= 1;
+  [superindicator] <A103_super>: <A103_master>[B] = 0 ->  [linear] <A103>: <x0008>[B] +<x0013>[B] +<x0024>[B] >= 1;
+  [superindicator] <A104_super>: <A104_master>[B] = 0 ->  [linear] <A104>: <x0008>[B] +<x0014>[B] +<x0020>[B] >= 1;
+  [superindicator] <A105_super>: <A105_master>[B] = 0 ->  [linear] <A105>: <x0008>[B] +<x0015>[B] +<x0022>[B] >= 1;
+  [superindicator] <A106_super>: <A106_master>[B] = 0 ->  [linear] <A106>: <x0008>[B] +<x0016>[B] +<x0021>[B] >= 1;
+  [superindicator] <A107_super>: <A107_master>[B] = 0 ->  [linear] <A107>: <x0008>[B] +<x0017>[B] +<x0026>[B] >= 1;
+  [superindicator] <A108_super>: <A108_master>[B] = 0 ->  [linear] <A108>: <x0008>[B] +<x0018>[B] +<x0019>[B] >= 1;
+  [superindicator] <A109_super>: <A109_master>[B] = 0 ->  [linear] <A109>: <x0009>[B] +<x0010>[B] +<x0026>[B] >= 1;
+  [superindicator] <A110_super>: <A110_master>[B] = 0 ->  [linear] <A110>: <x0009>[B] +<x0011>[B] +<x0025>[B] >= 1;
+  [superindicator] <A111_super>: <A111_master>[B] = 0 ->  [linear] <A111>: <x0009>[B] +<x0012>[B] +<x0024>[B] >= 1;
+  [superindicator] <A112_super>: <A112_master>[B] = 0 ->  [linear] <A112>: <x0009>[B] +<x0013>[B] +<x0023>[B] >= 1;
+  [superindicator] <A113_super>: <A113_master>[B] = 0 ->  [linear] <A113>: <x0009>[B] +<x0014>[B] +<x0022>[B] >= 1;
+  [superindicator] <A114_super>: <A114_master>[B] = 0 ->  [linear] <A114>: <x0009>[B] +<x0015>[B] +<x0021>[B] >= 1;
+  [superindicator] <A115_super>: <A115_master>[B] = 0 ->  [linear] <A115>: <x0009>[B] +<x0016>[B] +<x0020>[B] >= 1;
+  [superindicator] <A116_super>: <A116_master>[B] = 0 ->  [linear] <A116>: <x0009>[B] +<x0017>[B] +<x0019>[B] >= 1;
+  [superindicator] <A117_super>: <A117_master>[B] = 0 ->  [linear] <A117>: <x0009>[B] +<x0018>[B] +<x0027>[B] >= 1;
+  [superindicator] <OB2_super>: <OB2_master>[B] = 0 ->  [linear] <OB2>: <x0001>[B] +<x0002>[B] +<x0003>[B] +<x0004>[B] +<x0005>[B] +<x0006>[B] +<x0007>[B] +<x0008>[B] +<x0009>[B] +<x0010>[B] +<x0011>[B] +<x0012>[B] +<x0013>[B] +<x0014>[B] +<x0015>[B] +<x0016>[B] +<x0017>[B] +<x0018>[B] +<x0019>[B] +<x0020>[B] +<x0021>[B] +<x0022>[B] +<x0023>[B] +<x0024>[B] +<x0025>[B] +<x0026>[B] +<x0027>[B] >= 13;
+  [superindicator] <objcut_super>: <objcut_master>[B] = 0 ->  [linear] <objcut>: <x0001>[B] +<x0002>[B] +<x0003>[B] +<x0004>[B] +<x0005>[B] +<x0006>[B] +<x0007>[B] +<x0008>[B] +<x0009>[B] +<x0010>[B] +<x0011>[B] +<x0012>[B] +<x0013>[B] +<x0014>[B] +<x0015>[B] +<x0016>[B] +<x0017>[B] +<x0018>[B] +<x0019>[B] +<x0020>[B] +<x0021>[B] +<x0022>[B] +<x0023>[B] +<x0024>[B] +<x0025>[B] +<x0026>[B] +<x0027>[B] <= 16;
+END

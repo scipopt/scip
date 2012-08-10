@@ -186,6 +186,7 @@ struct SCIP_Tree
    int                   pathlen;            /**< length of the current path */
    int                   pathsize;           /**< number of available slots in path arrays */
    int                   effectiverootdepth; /**< first depth with node with at least two children */
+   int                   appliedeffectiverootdepth; /**< the effective root depth which was already enforced (that is constraint and bound changes were made global) */
    int                   correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */
    int                   cutoffdepth;        /**< depth of first node in active path that is marked being cutoff */
    int                   repropdepth;        /**< depth of first node in active path that has to be propagated again */
@@ -199,6 +200,7 @@ struct SCIP_Tree
    SCIP_Bool             probingloadlpistate;/**< must the LP state be reloaded because of a backtrack in probing? */
    SCIP_Bool             probinglpwasrelax;  /**< was the LP a valid relaxation before we entered the probing mode? */
    SCIP_Bool             probingsolvedlp;    /**< was the LP solved during probing mode, i.e., was SCIPsolveProbingLP() called? */
+   SCIP_Bool             forcinglpmessage;   /**< was forcing LP solving message be posted */
 };
 
 #ifdef __cplusplus

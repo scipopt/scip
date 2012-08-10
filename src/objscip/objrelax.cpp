@@ -209,10 +209,10 @@ SCIP_RETCODE SCIPincludeObjRelax(
    relaxdata->deleteobject = deleteobject;
 
    /* include relaxator */
-   SCIP_CALL( SCIPincludeRelax(scip, objrelax->scip_name_, objrelax->scip_desc_, 
+   SCIP_CALL( SCIPincludeRelax(scip, objrelax->scip_name_, objrelax->scip_desc_,
          objrelax->scip_priority_, objrelax->scip_freq_,
          relaxCopyObj,
-         relaxFreeObj, relaxInitObj, relaxExitObj, 
+         relaxFreeObj, relaxInitObj, relaxExitObj,
          relaxInitsolObj, relaxExitsolObj, relaxExecObj,
          relaxdata) ); /*lint !e429*/
 

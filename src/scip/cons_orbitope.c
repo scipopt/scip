@@ -206,7 +206,8 @@ SCIP_RETCODE consdataCreate(
 /** debug method, prints variable matrix */
 static
 void printMatrix(
-   SCIP_CONSDATA*        consdata            /**< the constraint data     */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata            /**< the constraint data */
    )
 {
    int i;
@@ -218,22 +219,23 @@ void printMatrix(
    assert( consdata->vars != NULL );
 
    for (j = 0; j < consdata->nblocks; ++j)
-      printf("-");
-   printf("\n");
+      SCIPinfoMessage(scip, NULL, "-");
+
+   SCIPinfoMessage(scip, NULL, "\n");
    for (i = 0; i < consdata->nspcons; ++i)
    {
       for (j = 0; j < consdata->nblocks; ++j)
       {
          if ( SCIPvarGetUbLocal(consdata->vars[i][j]) - SCIPvarGetLbLocal(consdata->vars[i][j]) < 0.5 )
-            printf("%1.0f", REALABS(SCIPvarGetUbLocal(consdata->vars[i][j])));
+            SCIPinfoMessage(scip, NULL, "%1.0f", REALABS(SCIPvarGetUbLocal(consdata->vars[i][j])));
          else
-            printf(" ");
+            SCIPinfoMessage(scip, NULL, " ");
       }
-      printf("|\n");
+      SCIPinfoMessage(scip, NULL, "|\n");
    }
    for (j = 0; j < consdata->nblocks; ++j)
-      printf("-");
-   printf("\n");
+      SCIPinfoMessage(scip, NULL, "-");
+   SCIPinfoMessage(scip, NULL, "\n");
 }
 #endif
 
@@ -242,12 +244,12 @@ void printMatrix(
 /** Print SCI in nice form for debugging */
 static
 SCIP_RETCODE printSCI(
-   SCIP* scip,                /**< SCIP pointer */
-   int   p,                   /**< number of rows */
-   int   q,                   /**< number of columns */
-   int** cases,               /**< SCI dynamic programming table */
-   int i,                     /**< row position of bar */
-   int j                      /**< column position of bar */
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   p,                  /**< number of rows */
+   int                   q,                  /**< number of columns */
+   int**                 cases,              /**< SCI dynamic programming table */
+   int                   i,                  /**< row position of bar */
+   int                   j                   /**< column position of bar */
    )
 {
    int k;
@@ -299,27 +301,27 @@ SCIP_RETCODE printSCI(
 
    /* now output matrix M */
    for (l = 0; l < q; ++l)
-      SCIPinfoMessage(scip, 0, "-");
-   SCIPinfoMessage(scip, 0, "\n");
+      SCIPinfoMessage(scip, NULL, "-");
+   SCIPinfoMessage(scip, NULL, "\n");
 
    for (k = 0; k < p; ++k)
    {
       for (l = 0; l < q; ++l)
       {
          if ( l > k )
-            SCIPinfoMessage(scip, 0, "*");
+            SCIPinfoMessage(scip, NULL, "*");
          else
          {
             switch (M[k][l])
             {
-            case 1: 
-               SCIPinfoMessage(scip, 0, "+"); 
+            case 1:
+               SCIPinfoMessage(scip, NULL, "+");
                break;
-            case -1: 
-               SCIPinfoMessage(scip, 0, "-");
+            case -1:
+               SCIPinfoMessage(scip, NULL, "-");
                break;
-            case 0: 
-               SCIPinfoMessage(scip, 0, "#");
+            case 0:
+               SCIPinfoMessage(scip, NULL, "#");
                break;
             default:
                SCIPerrorMessage("unexpected matrix entry <%d>: should be -1, 0 or +1\n", M[k][l]);
@@ -327,12 +329,12 @@ SCIP_RETCODE printSCI(
             }
          }
       }
-      SCIPinfoMessage(scip, 0, "\n");
+      SCIPinfoMessage(scip, NULL, "\n");
    }
 
    for (l = 0; l < q; ++l)
-      SCIPinfoMessage(scip, 0, "-");
-   SCIPinfoMessage(scip, 0, "\n");
+      SCIPinfoMessage(scip, NULL, "-");
+   SCIPinfoMessage(scip, NULL, "\n");
 
    for (k = 0; k < p; ++k)
       SCIPfreeBufferArray(scip, &M[k]);
@@ -379,7 +381,7 @@ void copyValues(
  *  The values of the minimal SCIs are stored in @a weights.
  *  The array @a cases[i][j] stores which of the cases were applied to get @a weights[i][j].
  *  Here, 3 means that we have reached the upper limit.
- * 
+ *
  *  We assume that the upper right triangle is fixed to 0. Hence we can perform the computation a
  *  bit more efficient.
  */
@@ -477,11 +479,90 @@ void computeSCTable(
 }
 
 
+/** fix upper right triangle if necessary */
+static
+SCIP_RETCODE fixTriangle(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to be processed */
+   SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the node can be cut off */
+   int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   SCIP_Bool fixed;
+   int diagsize;
+   int nspcons;
+   int nblocks;
+   int i;
+   int j;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( infeasible != NULL );
+   assert( nfixedvars != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->nspcons > 0 );
+   assert( consdata->nblocks > 0 );
+   assert( consdata->vars != NULL );
+
+   *nfixedvars = 0;
+
+   if ( consdata->istrianglefixed )
+      return SCIP_OKAY;
+
+   nspcons = consdata->nspcons;
+   nblocks = consdata->nblocks;
+   vars = consdata->vars;
+
+   /* get last row of triangle */
+   diagsize = nblocks;
+   if ( nspcons < nblocks )
+      diagsize = nspcons;
+
+   /* fix variables to 0 */
+   for (i = 0; i < diagsize; ++i)
+   {
+      for (j = i+1; j < nblocks; ++j)
+      {
+         SCIP_CALL( SCIPfixVar(scip, vars[i][j], 0.0, infeasible, &fixed) );
+
+         if ( *infeasible )
+         {
+            SCIPdebugMessage("The problem is infeasible: some variable in the upper right triangle is fixed to 1.\n");
+            return SCIP_OKAY;
+         }
+
+         if ( fixed )
+            ++(*nfixedvars);
+      }
+   }
+   if ( *nfixedvars > 0 )
+   {
+      SCIPdebugMessage("<%s>: Fixed upper right triangle to 0 (fixed vars: %d).\n", SCIPconsGetName(cons), *nfixedvars);
+   }
+   else
+   {
+      SCIPdebugMessage("<%s>: Upper right triangle already fixed to 0.\n", SCIPconsGetName(cons));
+   }
+
+   consdata->istrianglefixed = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /** separates shifted column inequalities according to the solution stored in consdata->vals */
 static
 SCIP_RETCODE separateSCIs(
    SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< the constraint data     */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONSDATA*        consdata,           /**< the constraint data */
+   SCIP_Bool*            infeasible,         /**< whether we detected infeasibility */
+   int*                  nfixedvars,         /**< number of variables fixed */
    int*                  ncuts               /**< pointer to store number of separated SCIs */
    )
 {
@@ -491,14 +572,19 @@ SCIP_RETCODE separateSCIs(
    SCIP_VAR*** vars;
    SCIP_VAR** tmpvars;
    int** cases;
-
+   int nspcons;
+   int nblocks;
    int i;
    int j;
    int l;
-   int nspcons;
-   int nblocks;
 
    assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( cons != NULL );
+   assert( infeasible != NULL);
+   assert( nfixedvars != NULL );
+   assert( ncuts != NULL );
+
    assert( consdata != NULL );
    assert( consdata->nspcons > 0 );
    assert( consdata->nblocks > 0 );
@@ -509,6 +595,9 @@ SCIP_RETCODE separateSCIs(
    assert( consdata->weights != NULL );
    assert( consdata->cases != NULL );
 
+   *infeasible = FALSE;
+   *nfixedvars = 0;
+
    nspcons = consdata->nspcons;
    nblocks = consdata->nblocks;
    vars = consdata->vars;
@@ -518,8 +607,18 @@ SCIP_RETCODE separateSCIs(
    weights = consdata->weights;
    cases = consdata->cases;
 
-   /* compute table if necessary (i.e., not computed before) */
+   /* check for upper right triangle */
+   if ( ! consdata->istrianglefixed )
+   {
+      SCIP_CALL( fixTriangle(scip, cons, infeasible, nfixedvars) );
+      if ( *infeasible )
+         return SCIP_OKAY;
+      if ( *nfixedvars > 0 )
+         return SCIP_OKAY;
+   }
    assert( consdata->istrianglefixed );
+
+   /* compute table if necessary (i.e., not computed before) */
    computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
 
    /* loop through rows */
@@ -593,9 +692,9 @@ SCIP_RETCODE separateSCIs(
             /* generate cut */
 #ifdef SCIP_DEBUG
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sci_%d_%d", i, j);
-            SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #else
-            SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #endif
             SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, tmpvars, tmpvals) );
             /*SCIP_CALL( SCIPprintRow(scip, row, NULL) ); */
@@ -658,41 +757,11 @@ SCIP_RETCODE propagateCons(
    /* fix upper right triangle if still necessary */
    if ( ! consdata->istrianglefixed )
    {
-      int diagsize = nblocks;
-      SCIP_Bool fixed;
-
-      /* get last row of triangle */
-      if ( nspcons < nblocks )
-         diagsize = nspcons;
-
-      /* fix variables to 0 */
-      for (i = 0; i < diagsize; ++i)
-      {
-         for (j = i+1; j < nblocks; ++j)
-         {
-            SCIP_CALL( SCIPfixVar(scip, vars[i][j], 0.0, infeasible, &fixed) );
-
-            if ( *infeasible )
-            {
-               SCIPdebugMessage("The problem is infeasible: some variable in the upper right triangle is fixed to 1.\n");
-               return SCIP_OKAY;
-            }
-
-            if ( fixed )
-               ++(*nfixedvars);
-         }
-      }
-      if ( *nfixedvars > 0 )
-      {
-         SCIPdebugMessage("<%s>: Fixed upper right triangle to 0 (fixed vars: %d).\n", SCIPconsGetName(cons), *nfixedvars);
-      }
-      else
-      {
-         SCIPdebugMessage("<%s>: Upper right triangle already fixed to 0.\n", SCIPconsGetName(cons));
-      }
-
-      consdata->istrianglefixed = TRUE;
+      int nfixed = 0;
+      SCIP_CALL( fixTriangle(scip, cons, infeasible, &nfixed) );
+      *nfixedvars += nfixed;
    }
+   assert( consdata->istrianglefixed );
 
    /* prepare further propagation */
    SCIP_CALL( SCIPallocBufferArray(scip, &firstnonzeros, nspcons) );
@@ -701,7 +770,7 @@ SCIP_RETCODE propagateCons(
 
 #ifdef PRINT_MATRIX
    SCIPdebugMessage("Matrix:\n");
-   printMatrix(consdata);
+   printMatrix(scip, consdata);
 #endif
 
    /* propagate */
@@ -813,24 +882,31 @@ SCIP_RETCODE propagateCons(
             /* perform conflict analysis */
             SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-            /* add bounds (variables fixed to 0) that result in the first nonzero entry */
-            for (j = 0; j <= lastcolumn; ++j)
+            if ( ispart )
             {
-               if ( ispart && SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
-                  break;
-               if ( ! ispart && SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
-                  break;
+               /* add bounds (variables fixed to 0) that result in the first nonzero entry */
+               for (j = 0; j <= lastcolumn; ++j)
+               {
+                  /* add varaibles in row up to the first variable fixed to 0 */
+                  if ( SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
+                     break;
 
-               /* at this point the variable should be fixed to 0 */
-               assert( !ispart || SCIPvarGetUbLocal(vars[i][j]) < 0.5 );
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                  assert( SCIPvarGetUbLocal(vars[i][j]) < 0.5 );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+               }
             }
-
-            /* add bounds that result in the last one - check top left entry for packing case */
-            if ( ! ispart && lastones[0] == -1 )
+            else
             {
-               assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
+               /* add bounds that result in the last one - check top left entry for packing case */
+               if ( lastones[0] == -1 )
+               {
+                  assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
+               }
+
+               /* mark variable fixed to 1 */
+               assert( SCIPvarGetLbLocal(vars[i][firstnonzeroinrow]) > 0.5 );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][firstnonzeroinrow]) );
             }
 
             /* add bounds that result in the last one - pass through rows */
@@ -1086,7 +1162,7 @@ SCIP_RETCODE resolvePropagation(
 
 #ifdef PRINT_MATRIX
    SCIPdebugMessage("Matrix:\n");
-   printMatrix(consdata);
+   printMatrix(scip, consdata);
 #endif
 
    /* computation of table: this now minimizes the value of the shifted column */
@@ -1301,31 +1377,6 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOrbitope)
    return SCIP_OKAY;
 }
 
-
-/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#define consFreeOrbitope NULL
-
-
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitOrbitope NULL
-
-
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitOrbitope NULL
-
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreOrbitope NULL
-
-
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolOrbitope NULL
-
-
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#define consExitsolOrbitope NULL
-
-
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteOrbitope)
@@ -1337,7 +1388,6 @@ SCIP_DECL_CONSDELETE(consDeleteOrbitope)
 
    return SCIP_OKAY;
 }
-
 
 /** transforms constraint data into data belonging to the transformed problem */
 static
@@ -1369,11 +1419,6 @@ SCIP_DECL_CONSTRANS(consTransOrbitope)
    return SCIP_OKAY;
 }
 
-
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#define consInitlpOrbitope NULL
-
-
 /** separation method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
@@ -1388,13 +1433,16 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
    /* if solution is not integer */
    if ( SCIPgetNLPBranchCands(scip) > 0 )
    {
+      SCIP_Bool infeasible;
+      int nfixedvars = 0;
       int ncuts = 0;
       int c;
 
       *result = SCIP_DIDNOTFIND;
+      infeasible = FALSE;
 
       /* loop through constraints */
-      for (c = 0; c < nusefulconss; c++)
+      for (c = 0; c < nusefulconss && ! infeasible; c++)
       {
          SCIP_CONSDATA* consdata;
 
@@ -1409,10 +1457,19 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
          SCIPdebugMessage("Separating SCIs for orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
          /* separate */
-         SCIP_CALL( separateSCIs(scip, consdata, &ncuts) );
+         SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nfixedvars, &ncuts) );
       }
-
-      if ( ncuts > 0 )
+      if ( infeasible )
+      {
+         SCIPdebugMessage("Infeasible node.\n");
+         *result = SCIP_CUTOFF;
+      }
+      else if ( nfixedvars > 0 )
+      {
+         SCIPdebugMessage("Fixed %d variables.\n", nfixedvars);
+         *result = SCIP_REDUCEDDOM;
+      }
+      else if ( ncuts > 0 )
       {
          SCIPdebugMessage("Separated %d SCIs.\n", ncuts);
          *result = SCIP_SEPARATED;
@@ -1426,11 +1483,12 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
    return SCIP_OKAY;
 }
 
-
 /** separation method of constraint handler for arbitrary primal solutions */
 static
 SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
 {  /*lint --e{715}*/
+   SCIP_Bool infeasible = FALSE;
+   int nfixedvars = 0;
    int ncuts = 0;
    int c;
 
@@ -1442,7 +1500,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
    *result = SCIP_DIDNOTFIND;
 
    /* loop through constraints */
-   for (c = 0; c < nusefulconss; c++)
+   for (c = 0; c < nusefulconss && ! infeasible; c++)
    {
       SCIP_CONSDATA* consdata;
 
@@ -1456,10 +1514,20 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
       SCIPdebugMessage("Separating SCIs (solution) for orbitope constraint <%s> \n", SCIPconsGetName(conss[c]));
 
       /* separate */
-      SCIP_CALL( separateSCIs(scip, consdata, &ncuts) );
+      SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nfixedvars, &ncuts) );
    }
 
-   if ( ncuts > 0 )
+   if ( infeasible )
+   {
+      SCIPdebugMessage("Infeasible node.\n");
+      *result = SCIP_CUTOFF;
+   }
+   else if ( nfixedvars > 0 )
+   {
+      SCIPdebugMessage("Fixed %d variables.\n", nfixedvars);
+      *result = SCIP_REDUCEDDOM;
+   }
+   else if ( ncuts > 0 )
    {
       SCIPdebugMessage("Separated %d SCIs.\n", ncuts);
       *result = SCIP_SEPARATED;
@@ -1477,6 +1545,8 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpOrbitope)
 {  /*lint --e{715}*/
+   SCIP_Bool infeasible = FALSE;
+   int nfixedvars = 0;
    int ncuts = 0;
    int c;
 
@@ -1491,7 +1561,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbitope)
    assert( SCIPgetNLPBranchCands(scip) == 0 );
 
    /* loop through constraints */
-   for (c = 0; c < nusefulconss; c++)
+   for (c = 0; c < nusefulconss && ! infeasible; c++)
    {
       SCIP_CONSDATA* consdata;
 
@@ -1506,10 +1576,20 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbitope)
       SCIPdebugMessage("Enforcing for orbitope constraint <%s>\n", SCIPconsGetName(conss[c]));
 
       /* separate */
-      SCIP_CALL( separateSCIs(scip, consdata, &ncuts) );
+      SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nfixedvars, &ncuts) );
    }
 
-   if ( ncuts > 0 )
+   if ( infeasible )
+   {
+      SCIPdebugMessage("Infeasible node.\n");
+      *result = SCIP_CUTOFF;
+   }
+   else if ( nfixedvars > 0 )
+   {
+      SCIPdebugMessage("Fixed %d variables.\n", nfixedvars);
+      *result = SCIP_REDUCEDDOM;
+   }
+   else if ( ncuts > 0 )
    {
       SCIPdebugMessage("Separated %d SCIs during enforcement.\n", ncuts);
       *result = SCIP_SEPARATED;
@@ -1542,17 +1622,19 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
-      SCIP_Real** vals;
       SCIP_Real** weights;
+      SCIP_Real** vals;
+      SCIP_CONS* cons;
       int** cases;
-      int i;
-      int j;
       int nspcons;
       int nblocks;
+      int i;
+      int j;
 
       /* get data of constraint */
-      assert( conss[c] != 0 );
-      consdata = SCIPconsGetData(conss[c]);
+      cons = conss[c];
+      assert( cons != 0 );
+      consdata = SCIPconsGetData(cons);
 
       assert( consdata != NULL );
       assert( consdata->nspcons > 0 );
@@ -1560,6 +1642,26 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
       assert( consdata->vals != NULL );
       assert( consdata->weights != NULL );
       assert( consdata->cases != NULL );
+
+      /* check for upper right triangle */
+      if ( ! consdata->istrianglefixed )
+      {
+         SCIP_Bool infeasible = FALSE;
+         int nfixedvars = 0;
+
+         SCIP_CALL( fixTriangle(scip, cons, &infeasible, &nfixedvars) );
+         if ( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+         if ( nfixedvars > 0 )
+         {
+            *result = SCIP_REDUCEDDOM;
+            return SCIP_OKAY;
+         }
+      }
+      assert( consdata->istrianglefixed );
 
       nspcons = consdata->nspcons;
       nblocks = consdata->nblocks;
@@ -1859,10 +1961,6 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 }
 
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreOrbitope NULL
-
-
 /** propagation conflict resolving method of constraint handler */
 static
 SCIP_DECL_CONSRESPROP(consRespropOrbitope)
@@ -1916,26 +2014,6 @@ SCIP_DECL_CONSLOCK(consLockOrbitope)
 
    return SCIP_OKAY;
 }
-
-
-/** constraint activation notification method of constraint handler */
-#define consActiveOrbitope NULL
-
-
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveOrbitope NULL
-
-
-/** constraint enabling notification method of constraint handler */
-#define consEnableOrbitope NULL
-
-
-/** constraint disabling notification method of constraint handler */
-#define consDisableOrbitope NULL
-
-
-/** variable deletion method of constraint handler */
-#define consDelvarsOrbitope NULL
 
 
 /** constraint display method of constraint handler */
@@ -2238,27 +2316,33 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create orbitope constraint handler data */
    conshdlrdata = NULL;
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
-         conshdlrCopyOrbitope,
-         consFreeOrbitope, consInitOrbitope, consExitOrbitope,
-         consInitpreOrbitope, consExitpreOrbitope, consInitsolOrbitope, consExitsolOrbitope,
-         consDeleteOrbitope, consTransOrbitope, consInitlpOrbitope,
-         consSepalpOrbitope, consSepasolOrbitope, consEnfolpOrbitope, consEnfopsOrbitope, consCheckOrbitope,
-         consPropOrbitope, consPresolOrbitope, consRespropOrbitope, consLockOrbitope,
-         consActiveOrbitope, consDeactiveOrbitope, consEnableOrbitope, consDisableOrbitope,
-         consDelvarsOrbitope, consPrintOrbitope, consCopyOrbitope, consParseOrbitope,
-         consGetVarsOrbitope, consGetNVarsOrbitope, conshdlrdata) );
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpOrbitope, consEnfopsOrbitope, consCheckOrbitope, consLockOrbitope,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
 
-   /* add orbitope constraint handler parameters */
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyOrbitope, consCopyOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOrbitope, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOrbitope, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpOrbitope, consSepasolOrbitope, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOrbitope) );
 
    return SCIP_OKAY;
 }
@@ -2360,6 +2444,29 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an orbitope constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicOrbitope(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
+   SCIP_Bool             ispart,             /**< whether we deal with the partitioning case (packing otherwise) */
+   int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
+   int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
+   SCIP_Bool             resolveprop         /**< should propagation be resolved? */
+   )
+{
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, ispart, nspcons, nblocks, resolveprop,
+         TRUE, TRUE, TRUE, TRUE, TRUE,
+         FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

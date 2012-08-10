@@ -24,19 +24,20 @@
 
 #include "scip/prop_xyz.h"
 
-
+/* fundamental propagator properties */
 #define PROP_NAME              "xyz"
 #define PROP_DESC              "propagator template"
 #define PROP_PRIORITY                 0 /**< propagator priority */ 
 #define PROP_FREQ                    10 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define PROP_TIMING             SCIP_PROPTIMING_BEFORELP/**< propagation timing mask */
+
+/* optional propagator properties
+ * TODO: remove those properties if propagator does not support presolving */
 #define PROP_PRESOL_PRIORITY          0 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
 #define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
 #define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
                                          *   limit) */
-
-
 
 
 /*
@@ -51,15 +52,11 @@ struct SCIP_PropData
 };
 
 
-
-
 /*
  * Local methods
  */
 
 /* put your local methods here, and declare them static */
-
-
 
 
 /*
@@ -225,8 +222,6 @@ SCIP_DECL_PROPRESPROP(propRespropXyz)
 }
 
 
-
-
 /*
  * propagator specific interface methods
  */
@@ -237,17 +232,45 @@ SCIP_RETCODE SCIPincludePropXyz(
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_PROP* prop;
 
    /* create xyz propagator data */
    propdata = NULL;
    /* TODO: (optional) create propagator specific data here */
 
+   prop = NULL;
+
    /* include propagator */
+#if 0
+   /* use SCIPincludeProp() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
+    * new callbacks are added in future SCIP versions
+    */
    SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
          PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
          propCopyXyz, propFreeXyz, propInitXyz, propExitXyz, propInitpreXyz, propExitpreXyz,
          propInitsolXyz, propExitsolXyz, propPresolXyz, propExecXyz, propRespropXyz,
          propdata) );
+#else
+   /* use SCIPincludePropBasic() plus setter functions if you want to set callbacks one-by-one and your code should
+    * compile independent of new callbacks being added in future SCIP versions
+    */
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
+         propExecXyz, propdata) );
+
+   assert(prop != NULL);
+
+   /* set optional callbacks via setter functions */
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyXyz) );
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeXyz) );
+   SCIP_CALL( SCIPsetPropInit(scip, prop, propInitXyz) );
+   SCIP_CALL( SCIPsetPropExit(scip, prop, propExitXyz) );
+   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolXyz) );
+   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolXyz) );
+   SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreXyz) );
+   SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreXyz) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolXyz, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
+   SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropXyz) );
+#endif
 
    /* add xyz propagator parameters */
    /* TODO: (optional) add propagator specific parameters with SCIPaddTypeParam() here */

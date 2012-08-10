@@ -108,8 +108,6 @@ typedef struct LpInput LPINPUT;
 static const char commentchars[] = "\\";
 
 
-
-
 /*
  * Local methods (for reading)
  */
@@ -905,7 +903,7 @@ SCIP_RETCODE readCoefficients(
          if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the line name */
-	    (void)SCIPmemccpy(name, lpinput->tokenbuf, '\0', LP_MAX_LINELEN);
+            (void)SCIPmemccpy(name, lpinput->tokenbuf, '\0', LP_MAX_LINELEN);
 
             name[LP_MAX_LINELEN - 1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", lpinput->linenumber, name);
@@ -1210,7 +1208,7 @@ SCIP_RETCODE readObjective(
       {
          SCIP_CALL( SCIPchgVarObj(scip, vars[i], SCIPvarGetObj(vars[i]) + coefs[i]) );
       }
-      
+
       /* insert dummy variable and constraint to represent quadratic part of objective */
       if( nquadcoefs > 0 )
       {
@@ -1219,12 +1217,12 @@ SCIP_RETCODE readObjective(
          SCIP_Real  lhs;
          SCIP_Real  rhs;
          SCIP_Real  minusone;
-         
+
          SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
                SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, quadobjvar) );
-         
-         if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
+
+         if( lpinput->objsense == SCIP_OBJSENSE_MINIMIZE )
          {
             lhs = -SCIPinfinity(scip);
             rhs = 0.0;
@@ -1234,15 +1232,15 @@ SCIP_RETCODE readObjective(
             lhs = 0.0;
             rhs = SCIPinfinity(scip);
          }
-         
+
          minusone = -1.0;
          SCIP_CALL( SCIPcreateConsQuadratic(scip, &quadobjcons, "quadobj", 1, &quadobjvar, &minusone, nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
-         
+
          SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
          SCIPdebugMessage("(line %d) added constraint <%s> to represent quadratic objective: ", lpinput->linenumber, SCIPconsGetName(quadobjcons));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, quadobjcons, NULL) ) );
-         
+         SCIPdebugPrintCons(scip, quadobjcons, NULL);
+
          SCIP_CALL( SCIPreleaseCons(scip, &quadobjcons) );
          SCIP_CALL( SCIPreleaseVar(scip, &quadobjvar) );
       }
@@ -1416,7 +1414,7 @@ SCIP_RETCODE createIndicatorConstraint(
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
       lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebugPrintCons(scip, cons, NULL);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* create second constraint if it was an equation */
@@ -1430,7 +1428,7 @@ SCIP_RETCODE createIndicatorConstraint(
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
          lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
@@ -1646,7 +1644,7 @@ SCIP_RETCODE readConstraints(
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
          lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
    else
@@ -1945,7 +1943,7 @@ SCIP_RETCODE readSemicontinuous(
    SCIP_Bool created;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
-   
+
    SCIP_VAR* vars[2];
    SCIP_BOUNDTYPE boundtypes[2];
    SCIP_Real bounds[2];
@@ -1963,7 +1961,7 @@ SCIP_RETCODE readSemicontinuous(
          syntaxError(scip, lpinput, "unexpected end.");
          return SCIP_OKAY;
       }
-      
+
       if( strcasecmp(lpinput->token, "-") == 0 )
       {
          if( !getNextToken(scip, lpinput) || strcasecmp(lpinput->token, "CONTINUOUS") != 0 )
@@ -1977,7 +1975,7 @@ SCIP_RETCODE readSemicontinuous(
          pushToken(lpinput);
       }
    }
-   
+
    while( getNextToken(scip, lpinput) )
    {
       /* check if we reached a new section */
@@ -1991,35 +1989,35 @@ SCIP_RETCODE readSemicontinuous(
          syntaxError(scip, lpinput, "unknown variable in semi-continuous section.");
          return SCIP_OKAY;
       }
-      
+
       if( SCIPvarGetLbGlobal(var) <= 0.0 )
       {
          SCIPdebugMessage("ignore semi-continuity of variable <%s> with negative lower bound %g\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var));
          continue;
       }
-      
+
       oldlb = SCIPvarGetLbGlobal(var);
-      
+
       /* change the lower bound to 0.0 */
       SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
 
       /* add a bound disjunction constraint to say var <= 0.0 or var >= oldlb */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "semicont_%s", SCIPvarGetName(var));
-      
+
       vars[0] = var;
       vars[1] = var;
       boundtypes[0] = SCIP_BOUNDTYPE_UPPER;
       boundtypes[1] = SCIP_BOUNDTYPE_LOWER;
       bounds[0] = 0.0;
       bounds[1] = oldlb;
-      
+
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds,
             !dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamiccols, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
-      
+
       SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      
+      SCIPdebugPrintCons(scip, cons, NULL);
+
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
@@ -2225,7 +2223,7 @@ SCIP_RETCODE readSos(
       /* add the SOS constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", lpinput->linenumber, SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
@@ -2339,7 +2337,6 @@ SCIP_DECL_HASHKEYVAL(hashKeyValVar)
 }
 
 
-
 #if 0
 /* prints variable name LP format conform; always use this method to stay consistent
  *
@@ -2348,10 +2345,10 @@ SCIP_DECL_HASHKEYVAL(hashKeyValVar)
  */
 static
 void printVarName(
-   SCIP*                scip,               /**< SCIP data structure */
-   FILE*                file,               /**< output file (or NULL for standard output) */
-   SCIP_VAR*            var,                /**< variable */
-   SCIP_Bool            genericnames        /**< use generic variable names? */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Bool             genericnames        /**< use generic variable names? */
    )
 {
    const char* name;
@@ -2479,12 +2476,11 @@ void appendLine(
 
    (*linecnt) += (int) strlen(extension);
 
-   SCIPdebugMessage("linebuffer <%s>, length = %zu\n", linebuffer, strlen(linebuffer));
+   SCIPdebugMessage("linebuffer <%s>, length = %lu\n", linebuffer, (unsigned long)strlen(linebuffer));
    
    if( (*linecnt) > LP_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
 }
-
 
 
 /* print row in LP format to file stream */
@@ -2651,7 +2647,6 @@ SCIP_RETCODE printQuadraticCons(
 
    /* The LP format does not forbid that the variable array is empty */
    assert( nlinvars == 0 || linvars != NULL );
-   assert( nlinvars > 0 || linvars == NULL );
    assert( nquadvarterms == 0 || quadvarterms != NULL );
    assert( nbilinterms == 0 || bilinterms != NULL );
 
@@ -3122,10 +3117,6 @@ SCIP_DECL_READERCOPY(readerCopyLp)
 }
 
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeLp NULL
-
-
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadLp)
@@ -3158,15 +3149,18 @@ SCIP_RETCODE SCIPincludeReaderLp(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create lp reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include lp reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyLp,
-         readerFreeLp, readerReadLp, readerWriteLp, 
-         readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyLp) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadLp) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteLp) );
 
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -3185,10 +3179,10 @@ SCIP_RETCODE SCIPincludeReaderLp(
 
 /* reads problem from file */
 SCIP_RETCODE SCIPreadLp(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_READER*       reader,             /**< the file reader itself */
-   const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< the file reader itself */
+   const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    )
 {  /*lint --e{715}*/
    LPINPUT lpinput;
@@ -3246,23 +3240,23 @@ SCIP_RETCODE SCIPreadLp(
 
 /** writes problem to file */
 SCIP_RETCODE SCIPwriteLp(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**< output file, or NULL if standard output should be used */
-   const char*        name,               /**< problem name */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_OBJSENSE      objsense,           /**< objective sense */
-   SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-                                             extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
-   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                nvars,              /**< number of mutable variables in the problem */
-   int                nbinvars,           /**< number of binary variables */
-   int                nintvars,           /**< number of general integer variables */
-   int                nimplvars,          /**< number of implicit integer variables */
-   int                ncontvars,          /**< number of continuous variables */
-   SCIP_CONS**        conss,              /**< array with constraints of the problem */
-   int                nconss,             /**< number of constraints in the problem */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
+   const char*           name,               /**< problem name */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
+   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars,           /**< number of general integer variables */
+   int                   nimplvars,          /**< number of implicit integer variables */
+   int                   ncontvars,          /**< number of continuous variables */
+   SCIP_CONS**           conss,              /**< array with constraints of the problem */
+   int                   nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {
    int c;
@@ -3480,7 +3474,7 @@ SCIP_RETCODE SCIPwriteLp(
          weights = SCIPgetWeightsKnapsack(scip, cons);
          SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
          for( v = 0; v < nconsvars; ++v )
-            consvals[v] = weights[v];
+            consvals[v] = (SCIP_Real)weights[v];
 
          SCIP_CALL( printQuadraticCons(scip, file, consname, consvars, consvals, nconsvars,
                NULL, 0, NULL, 0, -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
@@ -3588,13 +3582,13 @@ SCIP_RETCODE SCIPwriteLp(
                SCIPgetNQuadVarTermsQuadratic(scip, cons), SCIPgetBilinTermsQuadratic(scip, cons),
                SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetLhsQuadratic(scip, cons),
                SCIPgetRhsQuadratic(scip, cons), transformed) );
-         
+
          consQuadratic[nConsQuadratic++] = cons;
       }
       else if( strcmp(conshdlrname, "soc") == 0 )
       {
          SCIP_CALL( printSOCCons(scip, file, consname, cons) );
-         
+
          consSOC[nConsSOC++] = cons;
       }
       else
@@ -3602,6 +3596,7 @@ SCIP_RETCODE SCIPwriteLp(
          SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "\\ ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
+         SCIPinfoMessage(scip, file, ";\n");
       }
    }
 

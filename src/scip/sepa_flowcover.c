@@ -38,7 +38,7 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        15 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXTRIES            100 /**< maximal number of rows to separate flow cover cuts for per separation round 
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to separate flow cover cuts for per separation round 
@@ -72,7 +72,7 @@
 
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 #define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for snf relaxation */
-
+#define MAXBOUND                  1e+10 /**< maximal value of normal bounds used for snf relaxation */
 
 
 /*
@@ -102,8 +102,6 @@ struct SCIP_SepaData
    SCIP_Bool             multbyminusone;     /**< should flow cover cuts be separated for 0-1 single node flow set with reversed arcs in addition? */
    int                   maxtestdelta;       /**< cut generation heuristic: maximal number of different deltas to try */
 };
-
-
 
 
 /*
@@ -370,6 +368,12 @@ void getClosestLb(
          *closestlbtype = -2;
       }
    }
+
+   /* due to numerical reasons, huge bounds are relaxed to infinite bounds; this way the bounds are not used for
+    * the construction of the 0-1 single node flow relaxation
+    */
+   if( *closestlb <= -MAXBOUND )
+      *closestlb = -SCIPinfinity(scip);
 }
 
 /** return global or local upper bound of given variable whichever is closer to the variables current LP solution value */
@@ -397,6 +401,12 @@ void getClosestUb(
          *closestubtype = -2;
       }
    }
+
+   /* due to numerical reasons, huge bounds are relaxed to infinite bounds; this way the bounds are not used for
+    * the construction of the 0-1 single node flow relaxation
+    */
+   if( *closestub >= MAXBOUND )
+      *closestub = SCIPinfinity(scip);
 }
 
 /** construct a 0-1 single node flow relaxation (with some additional simple constraints) of a mixed integer set 
@@ -875,6 +885,17 @@ SCIP_RETCODE constructSNFRelaxation(
                vubconsts[bestubtype], *transrhs);
          }
       }
+
+      /* relaxing the mixed integer set to a 0-1 single node flow set was not successful because coefficient of y_j and
+       * the bounds selected for the transformation together result in an infinite variable upper bound in the 0-1 single
+       * node flow set; this can be caused by huge but finite values for the bounds or the coefficient
+       */
+      if( SCIPisInfinity(scip, transvarvubcoefs[*ntransvars]) )
+      {
+         assert(!(*success));
+         goto TERMINATE;
+      }
+
       assert(boundsfortrans[probidx] > -3);
       assert(assoctransvars[probidx] >= 0 && assoctransvars[probidx] == (*ntransvars));
       assert(transvarcoefs[*ntransvars] == 1 || transvarcoefs[*ntransvars] == - 1 );
@@ -1401,7 +1422,7 @@ SCIP_RETCODE getFlowCover(
    /* there exists no flow cover if the capacity of knapsack constraint in KP^SNF_rat after fixing 
     * is less than or equal to zero 
     */ 
-   if( SCIPisFeasLE(scip, transcapacityreal, 0.0) )
+   if( SCIPisFeasLE(scip, transcapacityreal/10, 0.0) )
    {
       assert(!(*found));
       goto TERMINATE;
@@ -1893,6 +1914,7 @@ SCIP_RETCODE storeCutInArrays(
 static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_VAR**            vars,               /**< problem variables */
    int                   nvars,              /**< number of problem variables */
@@ -1901,6 +1923,7 @@ SCIP_RETCODE addCut(
    SCIP_Real*            cutcoefs,           /**< coefficients of active variables in cut */
    SCIP_Real             cutrhs,             /**< right hand side of cut */
    SCIP_Bool             cutislocal,         /**< is the cut only locally valid? */
+   int                   cutrank,            /**< rank of the cut */
    char                  normtype,           /**< type of norm to use for efficacy norm calculation */
    int*                  ncuts               /**< pointer to count the number of added cuts */
    )
@@ -1911,7 +1934,7 @@ SCIP_RETCODE addCut(
    SCIP_Real cutnorm;
    int cutlen;
    SCIP_Bool success;
-   
+
    assert(scip != NULL);
    assert(varsolvals != NULL);
    assert(cutcoefs != NULL);
@@ -1923,26 +1946,29 @@ SCIP_RETCODE addCut(
    /* gets temporary memory for storing the cut as sparse row */
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
-   
+
    /* stores the cut as sparse row, calculates activity and norm of cut */
    SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
          cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
-   
+
    if( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
    {
       SCIP_ROW* cut;
       char cutname[SCIP_MAXSTRLEN];
-      
+
       /* creates the cut */
       (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "flowcover%d_%d", SCIPgetNLPs(scip), *ncuts);
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
+      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
             cutislocal, FALSE, sepadata->dynamiccuts) );
       SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
+
+      /* set cut rank */
+      SCIProwChgRank(cut, cutrank);
 
       SCIPdebugMessage(" -> found potential flowcover cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
          cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
-      
+
 #if 0 /* tries to scale the cut to integral values */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
             10, 100.0, MAKECONTINTEGRAL, &success) );
@@ -1960,8 +1986,8 @@ SCIP_RETCODE addCut(
       /* if scaling was successful, adds the cut */
       if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
       {
-         SCIPdebugMessage(" -> found flowcover cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%g)\n",
-            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut),
+         SCIPdebugMessage(" -> found flowcover cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
+            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut),
             SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
             SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
@@ -2009,6 +2035,7 @@ SCIP_Real calcEfficacy(
 static
 SCIP_RETCODE cutGenerationHeuristic(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_VAR**            vars,               /**< active problem variables */
    int                   nvars,              /**< number of active problem variables */
@@ -2045,6 +2072,7 @@ SCIP_RETCODE cutGenerationHeuristic(
    SCIP_Real nvubcoefsmax;
    SCIP_Bool cutislocal;
    SCIP_Bool success;
+   int cutrank;
    int ncandsetdelta;
    int ntesteddeltas;
    int startidx;
@@ -2216,7 +2244,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and delta */
       SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
             (int) MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivdelta, NULL, NULL, cutcoefs, 
-            &cutrhs, &cutact, &success, &cutislocal) );
+            &cutrhs, &cutact, &success, &cutislocal, NULL) );
       assert(ALLOWLOCAL || !cutislocal);
       
       /* delta leads to c-MIRFCI which is more violated */
@@ -2264,7 +2292,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and bestdelta */
       SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
             (int) MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivbestdelta, NULL, NULL, cutcoefs, 
-            &cutrhs, &cutact, &success, &cutislocal) );
+            &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
       assert(ALLOWLOCAL || !cutislocal);
       assert(success); 
       
@@ -2272,9 +2300,9 @@ SCIP_RETCODE cutGenerationHeuristic(
          cutcoefs[i] = lambda * cutcoefs[i];
       cutrhs = lambda * cutrhs;
       cutact = lambda * cutact;
-      
-      assert(SCIPisFeasEQ(scip, bestefficacy, calcEfficacy(nvars, cutcoefs, cutrhs, cutact))); 
-      SCIP_CALL( addCut(scip, sepadata, vars, nvars, sol, varsolvals, cutcoefs, cutrhs, cutislocal, normtype, ncuts) );
+
+      assert(SCIPisFeasEQ(scip, bestefficacy, calcEfficacy(nvars, cutcoefs, cutrhs, cutact)));
+      SCIP_CALL( addCut(scip, sepa, sepadata, vars, nvars, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutrank, normtype, ncuts) );
    }
 
    /* free data structures */
@@ -2564,10 +2592,10 @@ SCIP_RETCODE separateCuts(
          assert(SCIPisFeasGT(scip, lambda, 0.0)); 
 
          /* generate most violated c-MIRFCI for different sets L1 and L2 and different values of delta and add it to the LP */
-         SCIP_CALL( cutGenerationHeuristic(scip, sepadata, vars, nvars, sol, varsolvals, rowweights, mult, boundsfortrans, 
-               boundtypesfortrans, assoctransvars, ntransvars, transvarcoefs, transbinvarsolvals, transcontvarsolvals, 
+         SCIP_CALL( cutGenerationHeuristic(scip, sepa, sepadata, vars, nvars, sol, varsolvals, rowweights, mult, boundsfortrans,
+               boundtypesfortrans, assoctransvars, ntransvars, transvarcoefs, transbinvarsolvals, transcontvarsolvals,
                transvarvubcoefs, transvarflowcoverstatus, lambda, normtype, &ncuts) );
-         
+
          wastried = TRUE;
          mult *= -1.0;
       }
@@ -2612,8 +2640,6 @@ SCIP_RETCODE separateCuts(
 }
 
 
-
-
 /*
  * Callback methods of separator
  */
@@ -2648,22 +2674,6 @@ SCIP_DECL_SEPAFREE(sepaFreeFlowcover)
 
    return SCIP_OKAY;
 }
-
-
-/** initialization method of separator (called after problem was transformed) */
-#define sepaInitFlowcover NULL
-
-
-/** deinitialization method of separator (called before transformed problem is freed) */
-#define sepaExitFlowcover NULL
-
-
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolFlowcover NULL
-
-
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolFlowcover NULL
 
 
 /** LP solution separation method of separator */
@@ -2704,7 +2714,6 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolFlowcover)
 }
 
 
-
 /*
  * separator specific interface methods
  */
@@ -2715,17 +2724,22 @@ SCIP_RETCODE SCIPincludeSepaFlowcover(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create flowcover separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, 
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyFlowcover, sepaFreeFlowcover, sepaInitFlowcover, sepaExitFlowcover, 
-         sepaInitsolFlowcover, sepaExitsolFlowcover,
          sepaExeclpFlowcover, sepaExecsolFlowcover,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyFlowcover) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeFlowcover) );
 
    /* add flow cover cuts separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

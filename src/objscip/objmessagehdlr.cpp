@@ -102,7 +102,7 @@ SCIP_DECL_MESSAGEHDLRFREE(messagehdlrFree)
    assert(messagehdlrdata->objmessagehdlr != NULL);
 
    /* call virtual method of messagehdlr object */
-   messagehdlrdata->objmessagehdlr->scip_free(messagehdlr);
+   SCIP_CALL( messagehdlrdata->objmessagehdlr->scip_free(messagehdlr) );
 
    /* free message handler object */
    if( messagehdlrdata->deleteobject )

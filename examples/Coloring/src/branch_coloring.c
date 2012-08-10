@@ -332,16 +332,6 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsColoring)
    return SCIP_OKAY;
 }
 
-
-/* define not used callbacks as NULL */
-#define branchFreeColoring NULL
-#define branchInitColoring NULL
-#define branchExitColoring NULL
-#define branchInitsolColoring NULL
-#define branchExitsolColoring NULL
-#define branchExecrelColoring NULL
-
-
 /*
  * branching rule specific interface methods
  */
@@ -352,20 +342,20 @@ SCIP_RETCODE SCIPincludeBranchruleColoring(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
 
    assert(scip != NULL);
 
    /* create branching rule data */
    branchruledata = NULL;
-
+   branchrule = NULL;
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, 
-	 BRANCHRULE_MAXBOUNDDIST,
-         branchCopyColoring,
-         branchFreeColoring, branchInitColoring, branchExitColoring,
-         branchInitsolColoring, branchExitsolColoring,
-         branchExeclpColoring, branchExecrelColoring, branchExecpsColoring,
-         branchruledata) );
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
+	 BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpColoring) );
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyColoring) );
+   SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsColoring) );
 
    return SCIP_OKAY;
 

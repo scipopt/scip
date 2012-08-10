@@ -71,8 +71,6 @@ struct SCIP_SepaData
 };
 
 
-
-
 /*
  * local methods
  */
@@ -186,8 +184,6 @@ SCIP_RETCODE storeCutInArrays(
 }
 
 
-
-
 /*
  * Callback methods
  */
@@ -225,21 +221,6 @@ SCIP_DECL_SEPAFREE(sepaFreeStrongcg)
    return SCIP_OKAY;
 }
 
-/** initialization method of separator (called when problem solving starts) */
-#define sepaInitStrongcg NULL
-
-
-/** deinitialization method of separator (called when problem solving exits) */
-#define sepaExitStrongcg NULL
-
-
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolStrongcg NULL
-
-
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolStrongcg NULL
-
 
 /** LP solution separation method of separator */
 static
@@ -267,6 +248,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    int ncuts;
    int c;
    int i;
+   int cutrank;
    SCIP_Bool success;
    SCIP_Bool cutislocal;
    char normtype;
@@ -441,7 +423,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 #endif
          /* create a strong CG cut out of the weighted LP rows using the B^-1 row as weights */
          SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
-               binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+               binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
          assert(ALLOWLOCAL || !cutislocal);
          SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
                
@@ -475,9 +457,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
             SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
                   cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
-            SCIPdebugMessage(" -> strong CG cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f\n",
+            SCIPdebugMessage(" -> strong CG cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d\n",
                c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
-               cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
+               cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm, cutrank);
 
             if( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
             {
@@ -489,10 +471,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_x%d", SCIPgetNLPs(scip), c);
                else
                   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_s%d", SCIPgetNLPs(scip), -c-1);
-               SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
-                                             cutislocal, FALSE, sepadata->dynamiccuts) );
+               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
                SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
                /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
+               SCIProwChgRank(cut, cutrank);
 
                assert(success);
 #ifdef MAKECUTINTEGRAL
@@ -579,12 +561,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 }
 
 
-/** arbitrary primal solution separation method of separator */
-#define sepaExecsolStrongcg NULL /* strong CG cuts need a basic LP solution */
-
-
-
-
 /*
  * separator specific interface methods
  */
@@ -595,18 +571,23 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
    sepadata->lastncutsfound = 0;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyStrongcg, sepaFreeStrongcg, sepaInitStrongcg, sepaExitStrongcg,
-         sepaInitsolStrongcg, sepaExitsolStrongcg, 
-         sepaExeclpStrongcg, sepaExecsolStrongcg,
+         sepaExeclpStrongcg, NULL,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyStrongcg) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeStrongcg) );
 
    /* add separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

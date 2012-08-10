@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /** creates the fracdiving heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurFracdiving(
    SCIP*                 scip                /**< SCIP data structure */
    );

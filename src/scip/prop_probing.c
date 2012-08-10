@@ -39,13 +39,11 @@
 #define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
 #define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
                                          *   limit) */
-
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 
 
 /* sorting of probing variables, two different variants are implemeneted */
 /*#define VARIANT_B*/
-
 
 
 /*
@@ -62,6 +60,7 @@
                                          *   and implications, until probing is aborted (0: don't abort) */
 #define DEFAULT_MAXSUMUSELESS        0  /**< maximal number of probings without fixings, until probing is aborted
                                          *   (0: don't abort) */
+#define DEFAULT_MAXDEPTH            -1  /**< maximal depth until propagation is executed(-1: no limit) */
 
 /*
  * Data structures
@@ -94,10 +93,9 @@ struct SCIP_PropData
    int                   nuseless;           /**< current number of successive useless probings */
    int                   ntotaluseless;      /**< current number of successive totally useless probings */
    int                   nsumuseless;        /**< current number of useless probings */
+   int                   maxdepth;           /**< maximal depth until propagation is executed */
    SCIP_Longint          lastnode;           /**< last node where probing was applied, or -1 for presolving, and -2 for not applied yet */
 };
-
-
 
 
 /*
@@ -545,8 +543,7 @@ SCIP_RETCODE applyProbing(
          }
 
          /* display probing status */
-         /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
-         if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE && (i+1) % 100 == 0 )
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && (i+1) % 100 == 0 )
          {
             SCIP_VERBLEVEL verblevel;
 
@@ -697,9 +694,7 @@ SCIP_RETCODE applyProbing(
             "   (%.1fs) probing cycle finished: starting next cycle\n", SCIPgetSolvingTime(scip));
          i = 0;
 
-         /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
-         if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE
-            && SCIPgetNBinVars(scip) != nbinvars )
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPgetNBinVars(scip) != nbinvars )
          {
             SCIP_VAR** probvars;
             int nnewvars;
@@ -757,8 +752,7 @@ SCIP_RETCODE applyProbing(
             }
          }
 
-         /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
-         if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
          {
             /* resorting here might lead to probing a second time on the same variable */
             SCIP_CALL( sortVariables(scip, propdata, propdata->sortedvars, propdata->nsortedbinvars, 0) );
@@ -784,7 +778,6 @@ SCIP_RETCODE applyProbing(
 
    return SCIP_OKAY;
 }
-
 
 
 /*
@@ -919,9 +912,6 @@ SCIP_DECL_PROPINITSOL(propInitsolProbing)
 
    return SCIP_OKAY;
 }
-
-/** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
-#define propExitsolProbing NULL
 
 
 /** presolve method of propagator */
@@ -1128,6 +1118,10 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    if( propdata->lastnode == SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) )
       return SCIP_OKAY;
 
+   /* if maximal depth for propagation is reached, stop */
+   if( propdata->maxdepth >= 0 && propdata->maxdepth < SCIPgetDepth(scip) )
+      return SCIP_OKAY;
+
    propdata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    /* get (number of) fractional variables that should be integral */
@@ -1217,8 +1211,6 @@ SCIP_DECL_PROPRESPROP(propRespropProbing)
 }
 
 
-
-
 /*
  * propagator specific interface methods
  */
@@ -1229,15 +1221,29 @@ SCIP_RETCODE SCIPincludePropProbing(
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_PROP* prop;
 
    /* create probing propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
    initPropdata(propdata);
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
-         propCopyProbing,
-         propFreeProbing, propInitProbing, propExitProbing, propInitpreProbing, propExitpreProbing, propInitsolProbing, propExitsolProbing, propPresolProbing, propExecProbing, propRespropProbing, propdata) );
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
+         propExecProbing, propdata) );
+
+   assert(prop != NULL);
+
+   /* set optional callbacks via setter functions */
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyProbing) );
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeProbing) );
+   SCIP_CALL( SCIPsetPropInit(scip, prop, propInitProbing) );
+   SCIP_CALL( SCIPsetPropExit(scip, prop, propExitProbing) );
+   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolProbing) );
+   SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreProbing) );
+   SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreProbing) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolProbing, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS,
+         PROP_PRESOL_DELAY) );
+   SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropProbing) );
 
    /* add probing propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
@@ -1264,6 +1270,10 @@ SCIP_RETCODE SCIPincludePropProbing(
          "propagating/"PROP_NAME"/maxsumuseless",
          "maximal number of probings without fixings, until probing is aborted (0: don't abort)",
          &propdata->maxsumuseless, TRUE, DEFAULT_MAXSUMUSELESS, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "propagating/"PROP_NAME"/maxdepth",
+         "maximal depth until propagation is executed(-1: no limit)",
+         &propdata->maxdepth, TRUE, DEFAULT_MAXDEPTH, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -1369,7 +1379,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
          SCIP_Bool fixed;
 
          /* in both probings, variable j is deduced to the same value: fix variable to this value */
-         fixval = SCIPselectSimpleValue(newlb - SCIPepsilon(scip), newub + SCIPepsilon(scip), MAXDNOM);
+         fixval = SCIPselectSimpleValue(newlb - 0.9 * SCIPepsilon(scip), newub + 0.9 * SCIPepsilon(scip), MAXDNOM);
          if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
          {
             SCIP_CALL( SCIPfixVar(scip, vars[j], fixval, cutoff, &fixed) );
@@ -1453,8 +1463,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
           * case leftproplbs[j] = 1, rightproblbs[j] = 0, i.e., vars[j] and probingvar are fixed to opposite values
           *    -> aggregation is 1 * vars[j] + 1 * probingvar = 1 * 1 - 0 * 0 = 0 -> correct
           */
-         /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
-         if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
          {
             SCIP_Bool aggregated;
             SCIP_Bool redundant;

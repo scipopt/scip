@@ -225,9 +225,9 @@ SCIP_RETCODE SCIPincludeObjSepa(
    sepadata->deleteobject = deleteobject;
 
    /* include cut separator */
-   SCIP_CALL( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, objsepa->scip_priority_, 
+   SCIP_CALL( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, objsepa->scip_priority_,
          objsepa->scip_freq_, objsepa->scip_maxbounddist_, objsepa->scip_usessubscip_, objsepa->scip_delay_,
-         sepaCopyObj, sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj, 
+         sepaCopyObj, sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj,
          sepaExeclpObj, sepaExecsolObj,
          sepadata) ); /*lint !e429*/
 

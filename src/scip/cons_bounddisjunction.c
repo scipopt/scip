@@ -31,35 +31,63 @@
 #include "scip/cons_linear.h"
 #include "scip/pub_misc.h"
 
+/**@name Constraint handler properties
+ *
+ * @{
+ */
 
 #define CONSHDLR_NAME          "bounddisjunction"
 #define CONSHDLR_DESC          "bound disjunction constraints"
-#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY  -3000000 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -3000000 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
+#define QUADCONSUPGD_PRIORITY    500000 /**< priority of the constraint handler for upgrading of quadratic constraints */
+
+/**@} */
+
+/**@name Event handler properties
+ *
+ * @{
+ */
+
 #define EVENTHDLR_NAME         "bounddisjunction"
 #define EVENTHDLR_DESC         "event handler for bound disjunction constraints"
+
+/**@} */
+
+/**@name Conflict handler properties
+ *
+ * @{
+ */
 
 #define CONFLICTHDLR_NAME      "bounddisjunction"
 #define CONFLICTHDLR_DESC      "conflict handler creating bound disjunction constraints"
 #define CONFLICTHDLR_PRIORITY  -3000000
 
+/**@} */
+
+/**@name Default parameter values
+ *
+ * @{
+ */
+
 #define DEFAULT_CONTINUOUSFRAC      0.4 /**< maximal percantage of continuous variables within a conflict */
 
-#define QUADCONSUPGD_PRIORITY    500000 /**< priority of the constraint handler for upgrading of quadratic constraints */
+/**@} */
 
+/**@name Age increase defines
+ *
+ * @{
+ */
 
 /* @todo make this a parameter setting */
 #if 1 /* @todo test which AGEINCREASE formula is better! */
@@ -67,6 +95,28 @@
 #else
 #define AGEINCREASE(n) (0.1*n)
 #endif
+
+/**@} */
+
+
+/**@name Comparison for two values
+ *
+ * @{
+ */
+
+#if 0 /* These only work if one also passes integral values in case of integral variables. This is not always the case and not even asserted. */
+/** use defines for numeric compare methods to be slightly faster for integral values */
+#define isFeasLT(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val2) - (val1) >  0.5 : SCIPisFeasLT(scip, val1, val2))
+#define isFeasLE(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val2) - (val1) > -0.5 : SCIPisFeasLE(scip, val1, val2))
+#define isFeasGT(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val1) - (val2) >  0.5 : SCIPisFeasGT(scip, val1, val2))
+#define isFeasGE(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val1) - (val2) > -0.5 : SCIPisFeasGE(scip, val1, val2))
+#else
+#define isFeasLT(scip, var, val1, val2) SCIPisFeasLT(scip, val1, val2)
+#define isFeasLE(scip, var, val1, val2) SCIPisFeasLE(scip, val1, val2)
+#define isFeasGT(scip, var, val1, val2) SCIPisFeasGT(scip, val1, val2)
+#define isFeasGE(scip, var, val1, val2) SCIPisFeasGE(scip, val1, val2)
+#endif
+/**@} */
 
 
 /** constraint handler data */
@@ -89,11 +139,8 @@ struct SCIP_ConsData
    int                   filterpos2;         /**< event filter position of second watched variable */
 };
 
-
-
-
-/*
- * Local methods
+/**@name  Local methods
+ *
  */
 
 /** adds rounding locks for the given variable in the given bound disjunction constraint */
@@ -208,21 +255,19 @@ SCIP_RETCODE dropEvents(
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+   SCIP_CONSHDLRDATA**   conshdlrdata,       /**< pointer to store the constraint handler data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
+   assert(scip != NULL);
    assert(conshdlrdata != NULL);
+   assert(eventhdlr != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
-   /* get event handler for catching events on watched variables */
-   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   if( (*conshdlrdata)->eventhdlr == NULL )
-   {
-      SCIPerrorMessage("event handler for bound disjunction constraints not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   
+   /* set event handler for catching events on watched variables */
+   (*conshdlrdata)->eventhdlr = eventhdlr;
+
    return SCIP_OKAY;
 }
 
@@ -545,7 +590,7 @@ SCIP_RETCODE applyGlobalBounds(
       if( consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
       {
          bnd = SCIPcomputeVarLbGlobal(scip, var);
-         if( SCIPisFeasGE(scip, bnd, consdata->bounds[v]) )
+         if( isFeasGE(scip, var, bnd, consdata->bounds[v]) )
          {
             *redundant = TRUE;
             return SCIP_OKAY;
@@ -553,7 +598,7 @@ SCIP_RETCODE applyGlobalBounds(
          else
          {
             bnd = SCIPcomputeVarUbGlobal(scip, var);
-            if( SCIPisFeasLT(scip, bnd, consdata->bounds[v]) )
+            if( isFeasLT(scip, var, bnd, consdata->bounds[v]) )
             {
                SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
             }
@@ -565,7 +610,7 @@ SCIP_RETCODE applyGlobalBounds(
       {
          assert(consdata->boundtypes[v] == SCIP_BOUNDTYPE_UPPER);
          bnd = SCIPcomputeVarUbGlobal(scip, var);
-         if( SCIPisFeasLE(scip, bnd, consdata->bounds[v]) )
+         if( isFeasLE(scip, var, bnd, consdata->bounds[v]) )
          {
             *redundant = TRUE;
             return SCIP_OKAY;
@@ -573,7 +618,7 @@ SCIP_RETCODE applyGlobalBounds(
          else
          {
             bnd = SCIPcomputeVarLbGlobal(scip, var);
-            if( SCIPisFeasGT(scip, bnd, consdata->bounds[v]) )
+            if( isFeasGT(scip, var, bnd, consdata->bounds[v]) )
             {
                SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
             }
@@ -628,11 +673,15 @@ SCIP_RETCODE removeFixedVariables(
       boundtype = consdata->boundtypes[v];
       SCIP_CALL( SCIPvarGetProbvarBound(&var, &bound, &boundtype) );
 
+      SCIPdebugMessage("in <%s>, replace <%s>[%g,%g] %c= %g by <%s>[%g,%g] %c= %g\n", SCIPconsGetName(cons),
+         SCIPvarGetName(consdata->vars[v]), SCIPvarGetLbGlobal(consdata->vars[v]), SCIPvarGetUbGlobal(consdata->vars[v]), (consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? '>' : '<'), consdata->bounds[v],
+         SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? '>' : '<'), bound);
+
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
       {
          /* if literal is satisfied, then constraint is redundant and we can stop */
-         if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLE(scip, bound, SCIPvarGetLbGlobal(var))) ||
-             (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGE(scip, bound, SCIPvarGetUbGlobal(var))) )
+         if( (boundtype == SCIP_BOUNDTYPE_LOWER && isFeasLE(scip, var, bound, SCIPvarGetLbGlobal(var))) || /*lint !e666*/
+            (boundtype == SCIP_BOUNDTYPE_UPPER && isFeasGE(scip, var, bound, SCIPvarGetUbGlobal(var))) ) /*lint !e666*/
          {
             *redundant = TRUE;
             break;
@@ -699,12 +748,12 @@ SCIP_Bool isLiteralSatisfied(
    if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
    {
       bnd = SCIPcomputeVarLbLocal(scip, consdata->vars[pos]);
-      return SCIPisFeasGE(scip, bnd, consdata->bounds[pos]);
+      return isFeasGE(scip, consdata->vars[pos], bnd, consdata->bounds[pos]);
    }
    else
    {
       bnd = SCIPcomputeVarUbLocal(scip, consdata->vars[pos]);
-      return SCIPisFeasLE(scip, bnd, consdata->bounds[pos]);
+      return isFeasLE(scip, consdata->vars[pos], bnd, consdata->bounds[pos]);
    }
 }
 
@@ -724,12 +773,12 @@ SCIP_Bool isLiteralViolated(
    if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
    {
       bnd = SCIPcomputeVarUbLocal(scip, consdata->vars[pos]);
-      return SCIPisFeasLT(scip, bnd, consdata->bounds[pos]);
+      return isFeasLT(scip, consdata->vars[pos], bnd, consdata->bounds[pos]);
    }
    else
    {
       bnd = SCIPcomputeVarLbLocal(scip, consdata->vars[pos]);
-      return SCIPisFeasGT(scip, bnd, consdata->bounds[pos]);
+      return isFeasGT(scip, consdata->vars[pos], bnd, consdata->bounds[pos]);
    }
 }
 
@@ -965,12 +1014,12 @@ SCIP_RETCODE processWatchedVars(
             boundtypes[watchedvar1] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bounds[watchedvar1], SCIPgetDepth(scip));
          if( boundtypes[watchedvar1] == SCIP_BOUNDTYPE_LOWER )
          {
-            SCIP_CALL( SCIPinferVarLbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1, FALSE,
+            SCIP_CALL( SCIPinferVarLbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1, TRUE,
                   &infbdchg, NULL) );
          }
          else
          {
-            SCIP_CALL( SCIPinferVarUbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1, FALSE,
+            SCIP_CALL( SCIPinferVarUbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1, TRUE,
                   &infbdchg, NULL) );
          }
          assert(!infbdchg);
@@ -1040,8 +1089,8 @@ SCIP_RETCODE checkCons(
    for( v = 0; v < nvars; ++v )
    {
       solval = SCIPgetSolVal(scip, sol, vars[v]);
-      if( (boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasGE(scip, solval, bounds[v]))
-         || (boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasLE(scip, solval, bounds[v])) )
+      if( (boundtypes[v] == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, vars[v], solval, bounds[v]))
+         || (boundtypes[v] == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, vars[v], solval, bounds[v])) )
       {
          *violated = FALSE;
          break;
@@ -1090,40 +1139,48 @@ SCIP_RETCODE registerBranchingCandidates(
    
    for( v = 0; v < nvars; ++v )
    {
-      /* constraint should be violated, so all bounds in the constraint have to be violated */
-      assert( !(boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasGE(scip, SCIPgetSolVal(scip, NULL, vars[v]), bounds[v])) &&
-         !(boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasLE(scip, SCIPgetSolVal(scip, NULL, vars[v]), bounds[v])) );
+      SCIP_VAR* var;
 
-      varlb = SCIPcomputeVarLbLocal(scip, vars[v]);
-      varub = SCIPcomputeVarUbLocal(scip, vars[v]);
+      var = vars[v];
+      assert(var != NULL);
+
+      /* constraint should be violated, so all bounds in the constraint have to be violated */
+      assert( !(boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasGE(scip, SCIPgetSolVal(scip, NULL, var), bounds[v])) &&
+         !(boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasLE(scip, SCIPgetSolVal(scip, NULL, var), bounds[v])) );
+
+      varlb = SCIPcomputeVarLbLocal(scip, var);
+      varub = SCIPcomputeVarUbLocal(scip, var);
+
       /* if literal is x >= varlb, but upper bound on x is < varlb, then this literal can never be satisfied,
        * thus there is no use for branching
        */
-      if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLT(scip, varub, bounds[v]) )
+      if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && isFeasLT(scip, var, varub, bounds[v]) )
          continue;
+
       /* if literal is x <= varub, but lower bound on x is > varub, then this literal can never be satisfied,
        * thus there is no use for branching
        */
-      if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGT(scip, varlb, bounds[v]) )
+      if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && isFeasGT(scip, var, varlb, bounds[v]) )
          continue;
-      /* if literal is always satisfied, then no need to branch on it
-       * may happen if propagation is disabled for some reason and due to numerics current solution does not satisfy literal, but variable bounds do
+
+      /* if literal is always satisfied, then no need to branch on it may happen if propagation is disabled for some
+       * reason and due to numerics current solution does not satisfy literal, but variable bounds do
        */
       if( isLiteralSatisfied(scip, consdata, v) )
          continue;
 
-      violation = SCIPgetSolVal(scip, NULL, vars[v]) - bounds[v];
+      violation = SCIPgetSolVal(scip, NULL, var) - bounds[v];
 
       /* if variable is continuous, then we cannot branch on one of the variable bounds */
       if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS ||
          ((SCIPisInfinity(scip, -varlb) || !SCIPisFeasEQ(scip, bounds[v], varlb)) &&
           (SCIPisInfinity(scip,  varub) || !SCIPisFeasEQ(scip, bounds[v], varub))) )
       {
-         SCIP_CALL( SCIPaddExternBranchCand(scip, vars[v], REALABS(violation), bounds[v]) );
+         SCIP_CALL( SCIPaddExternBranchCand(scip, var, REALABS(violation), bounds[v]) );
          *neednarybranch = FALSE;
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -1149,6 +1206,8 @@ SCIP_RETCODE enforceCurrentSol(
    assert(infeasible != NULL);
    assert(reduceddom != NULL);
    assert(registeredbrcand != NULL);
+
+   SCIPdebugMessage("enforce bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
 
    /* update and check the watched variables, if they were changed since last processing */
    if( SCIPconsIsPropagationEnabled(cons) )
@@ -1186,7 +1245,7 @@ static
 SCIP_RETCODE createNAryBranch(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< bound disjunction constraint to branch on */
-)
+   )
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
@@ -1217,30 +1276,36 @@ SCIP_RETCODE createNAryBranch(
    
    for( v = 0; v < nvars; ++v )
    {
-      /* constraint should be violated, so all bounds in the constraint have to be violated */
-      assert( !(boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasGE(scip, SCIPgetSolVal(scip, NULL, vars[v]), bounds[v])) &&
-         !(boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasLE(scip, SCIPgetSolVal(scip, NULL, vars[v]), bounds[v])) );
+      SCIP_VAR* var;
 
-      varlb = SCIPcomputeVarLbLocal(scip, vars[v]);
-      varub = SCIPcomputeVarUbLocal(scip, vars[v]);
+      var = vars[v];
+      assert(var != NULL);
+
+      /* constraint should be violated, so all bounds in the constraint have to be violated */
+      assert( !(boundtypes[v] == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, var, SCIPgetSolVal(scip, NULL, var), bounds[v])) && /*lint !e666*/
+         !(boundtypes[v] == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, var, SCIPgetSolVal(scip, NULL, var), bounds[v])) ); /*lint !e666*/
+
+      varlb = SCIPcomputeVarLbLocal(scip, var);
+      varub = SCIPcomputeVarUbLocal(scip, var);
+
       /* if literal is x >= varlb, but upper bound on x is < varlb, then this literal can never be satisfied,
        * thus there is no use in creating an extra child for it
        */
-      if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLT(scip, varub, bounds[v]) )
+      if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && isFeasLT(scip, var, varub, bounds[v]) )
          continue;
       /* if literal is x <= varub, but lower bound on x is > varub, then this literal can never be satisfied,
        * thus there is no use in creating an extra child for it
        */
-      if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGT(scip, varlb, bounds[v]) )
+      if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && isFeasGT(scip, var, varlb, bounds[v]) )
          continue;
       /* if literal is always satisfied, then no need to branch on it */
       if( isLiteralSatisfied(scip, consdata, v) )
          continue;
 
-      /* create a child that enforces the current literal */      
-      priority = SCIPcalcNodeselPriority(scip, vars[v], boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? 
+      /* create a child that enforces the current literal */
+      priority = SCIPcalcNodeselPriority(scip, var, boundtypes[v] == SCIP_BOUNDTYPE_LOWER ?
          SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS, bounds[v]);
-      estimate = SCIPcalcChildEstimate  (scip, vars[v], bounds[v]);
+      estimate = SCIPcalcChildEstimate  (scip, var, bounds[v]);
 
       SCIPdebugMessage(" -> creating child to enforce: <%s> %c= %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(vars[v]), boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? '>' : '<', bounds[v], priority, estimate);
@@ -1248,7 +1313,7 @@ SCIP_RETCODE createNAryBranch(
       SCIP_CALL( SCIPcreateChild(scip, &node, priority, estimate) );
 
       /* enforce current literal */
-      if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_MULTAGGR )
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
       {
          SCIP_CONS* brcons;
          SCIP_Real  one;
@@ -1257,7 +1322,7 @@ SCIP_RETCODE createNAryBranch(
          
          if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
          {
-            SCIP_CALL( SCIPcreateConsLinear(scip, &brcons, "bounddisjbranch", 1, &vars[v], &one, bounds[v], SCIPinfinity(scip),
+            SCIP_CALL( SCIPcreateConsLinear(scip, &brcons, "bounddisjbranch", 1, &var, &one, bounds[v], SCIPinfinity(scip),
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
                SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
@@ -1265,7 +1330,7 @@ SCIP_RETCODE createNAryBranch(
          }
          else
          {
-            SCIP_CALL( SCIPcreateConsLinear(scip, &brcons, "bounddisjbranch", 1, &vars[v], &one, -SCIPinfinity(scip), bounds[v],
+            SCIP_CALL( SCIPcreateConsLinear(scip, &brcons, "bounddisjbranch", 1, &var, &one, -SCIPinfinity(scip), bounds[v],
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
                SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
@@ -1276,23 +1341,29 @@ SCIP_RETCODE createNAryBranch(
       }
       else
       {
-         assert(SCIPvarIsActive(vars[v]));
+         assert(SCIPvarIsActive(var));
          if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
          {
-            SCIP_CALL( SCIPchgVarLbNode(scip, node, vars[v], bounds[v]) );
+            SCIP_CALL( SCIPchgVarLbNode(scip, node, var, bounds[v]) );
          }
          else
          {
-            SCIP_CALL( SCIPchgVarUbNode(scip, node, vars[v], bounds[v]) );
+            SCIP_CALL( SCIPchgVarUbNode(scip, node, var, bounds[v]) );
          }
       }
-      
+
       /* delete bound disjunction constraint from child node */
-      SCIP_CALL( SCIPdelConsNode(scip, node, cons) );      
+      SCIP_CALL( SCIPdelConsNode(scip, node, cons) );
    }
-   
+
    return SCIP_OKAY;
 }
+
+/**@} */
+
+/**@name Upgrading methods for special quadratic constraint
+ *
+ */
 
 /** upgrades quadratic complementarity constraints into a bounddisjunction constraint
  * If constraint is of form (x - a) * (y - b) = 0 with x >= a and y >= b for some a and b,
@@ -1326,7 +1397,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    *nupgdconss = 0;
 
    SCIPdebugMessage("upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    if( SCIPgetNLinearVarsQuadratic(scip, cons) != 0 )
       return SCIP_OKAY;
@@ -1446,7 +1517,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsStickingAtNode(cons)) );
 
          SCIPdebugMessage("created bounddisjunction constraint:\n");
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+         SCIPdebugPrintCons(scip, upgdconss[0], NULL);
 
          return SCIP_OKAY;
       }
@@ -1478,8 +1549,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsStickingAtNode(cons)) );
 
          SCIPdebugMessage("created bounddisjunction constraints:\n");
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+         SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+         SCIPdebugPrintCons(scip, upgdconss[1], NULL);
       }
       else if( SCIPisGE(scip, SCIPvarGetLbGlobal(y), b) || SCIPisLE(scip, SCIPvarGetUbGlobal(y), b) )
       {
@@ -1509,8 +1580,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsStickingAtNode(cons)) );
 
          SCIPdebugMessage("created bounddisjunction constraints:\n");
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+         SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+         SCIPdebugPrintCons(scip, upgdconss[1], NULL);
       }
       else
       {
@@ -1563,10 +1634,10 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsStickingAtNode(cons)) );
 
          SCIPdebugMessage("created bounddisjunction constraints:\n");
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[2], NULL)) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[3], NULL)) );
+         SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+         SCIPdebugPrintCons(scip, upgdconss[1], NULL);
+         SCIPdebugPrintCons(scip, upgdconss[2], NULL);
+         SCIPdebugPrintCons(scip, upgdconss[3], NULL);
       }
 
       return SCIP_OKAY;
@@ -1624,8 +1695,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          SCIPconsIsStickingAtNode(cons)) );
 
       SCIPdebugMessage("created bounddisjunction constraints:\n");
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+      SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+      SCIPdebugPrintCons(scip, upgdconss[1], NULL);
 
       *nupgdconss = 2;
 
@@ -1684,8 +1755,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          SCIPconsIsStickingAtNode(cons)) );
 
       SCIPdebugMessage("created bounddisjunction constraints:\n");
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+      SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+      SCIPdebugPrintCons(scip, upgdconss[1], NULL);
 
       *nupgdconss = 2;
    }
@@ -1693,8 +1764,11 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    return SCIP_OKAY;
 }
 
-/*
- * Callback methods of constraint handler
+/**@} */
+
+/**@name Callback methods of constraint handler
+ *
+ * @{
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
@@ -1735,34 +1809,18 @@ SCIP_DECL_CONSFREE(consFreeBounddisjunction)
 }
 
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitBounddisjunction NULL
-
-
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitBounddisjunction NULL
-
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreBounddisjunction NULL
-
-
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS* cons;
-   SCIP_CONSDATA* consdata;
    SCIP_Bool redundant;
    int c;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -1772,8 +1830,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
    {
       cons = conss[c];
       assert(cons != NULL);
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
 
       SCIPdebugMessage("exit-presolving bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
 
@@ -1786,30 +1842,15 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
          SCIP_CALL( removeFixedVariables(scip, cons, conshdlrdata->eventhdlr, &redundant) );
       }
 
-      if( redundant )
+      if( redundant && SCIPconsIsAdded(cons) )
       {
          SCIPdebugMessage("bound disjunction constraint <%s> is redundant\n", SCIPconsGetName(cons));
          SCIP_CALL( SCIPdelCons(scip, cons) );
-         continue;
-      }
-      else if( !SCIPconsIsModifiable(cons) && consdata->nvars == 0 )
-      {
-         /* if unmodifiable constraint has no variables, it is infeasible */
-         SCIPdebugMessage("bound disjunction constraint <%s> is infeasible\n", SCIPconsGetName(cons));
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
       }
    }
 
    return SCIP_OKAY;
 }
-
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolBounddisjunction NULL
-
-
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#define consExitsolBounddisjunction NULL
 
 
 /** frees specific constraint data */
@@ -1859,18 +1900,6 @@ SCIP_DECL_CONSTRANS(consTransBounddisjunction)
 
    return SCIP_OKAY;
 }
-
-
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#define consInitlpBounddisjunction NULL
-
-
-/** separation method of constraint handler for LP solutions */
-#define consSepalpBounddisjunction NULL
-
-
-/** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolBounddisjunction NULL
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -2040,7 +2069,7 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
             int v;
 
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, "violation: ");
+            SCIPinfoMessage(scip, NULL, ";\nviolation: ");
             for( v = 0; v < consdata->nvars; ++v )
             {
                assert(consdata->vars[v] != NULL);
@@ -2057,7 +2086,7 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
          return SCIP_OKAY;
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2071,6 +2100,7 @@ SCIP_DECL_CONSPROP(consPropBounddisjunction)
    SCIP_Bool infeasible;
    SCIP_Bool reduceddom;
    SCIP_Bool mustcheck;
+   SCIP_Bool consreduceddom;
    int c;
 
    assert(conshdlr != NULL);
@@ -2089,7 +2119,8 @@ SCIP_DECL_CONSPROP(consPropBounddisjunction)
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
       SCIP_CALL( processWatchedVars(scip, conss[c], conshdlrdata->eventhdlr,
-            &cutoff, &infeasible, &reduceddom, &mustcheck) );
+            &cutoff, &infeasible, &consreduceddom, &mustcheck) );
+      reduceddom = reduceddom || consreduceddom;
    }
 
    /* return the correct result */
@@ -2415,18 +2446,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBounddisjunction)
 }
 
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableBounddisjunction NULL
-
-
-/** constraint disabling notification method of constraint handler */
-#define consDisableBounddisjunction NULL
-
-
-/** variable deletion method of constraint handler */
-#define consDelvarsBounddisjunction NULL
-
-
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintBounddisjunction)
@@ -2657,9 +2676,10 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsBounddisjunction)
    return SCIP_OKAY;
 }
 
+/**@} */
 
-/*
- * Callback methods of event handler
+/**@name Callback methods of event handler
+ *
  */
 
 static
@@ -2684,11 +2704,11 @@ SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
    return SCIP_OKAY;
 }
 
+/**@} */
 
-
-
-/*
- * Callback methods of conflict handler
+/**@name Callback methods of conflict handler
+ *
+ * @{
  */
 
 /** conflict handler data struct */
@@ -2725,6 +2745,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    conflicthdlrdata = SCIPconflicthdlrGetData(conflicthdlr);
    assert(conflicthdlrdata != NULL);
 
+   *result = SCIP_DIDNOTFIND;
    ncontinuous = 0;
 
    /* create array of variables, boundtypes, and bound values in conflict constraint */
@@ -2767,13 +2788,11 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    {
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nbdchginfos, vars, boundtypes, bounds,
-            FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
+            FALSE, FALSE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       *result = SCIP_CONSADDED;
    }
-   else
-      *result = SCIP_DIDNOTFIND;
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &bounds);
@@ -2801,9 +2820,11 @@ SCIP_DECL_CONFLICTFREE(conflictFreeBounddisjunction)
    return SCIP_OKAY;
 }
 
+/**@} */
 
-/*
- * constraint specific interface methods
+/**@name Interface methods
+ *
+ * @{
  */
 
 /** creates the handler for bound disjunction constraints and includes it in SCIP */
@@ -2813,11 +2834,14 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata;
+   SCIP_CONFLICTHDLR* conflicthdlr;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_EVENTHDLR* eventhdlr;
 
    /* create event handler for events on watched variables */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecBounddisjunction, NULL) );
-   
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecBounddisjunction, NULL) );
+
    /* allocate memory for conflict handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );
 
@@ -2827,30 +2851,39 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
          &conflicthdlrdata->continuousfrac, FALSE, DEFAULT_CONTINUOUSFRAC, 0.0, 1.0, NULL, NULL) );
 
    /* create conflict handler for bound disjunction constraints */
-   SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, conflictFreeBounddisjunction, NULL, NULL, NULL, NULL, conflictExecBounddisjunction, conflicthdlrdata) );
+   SCIP_CALL( SCIPincludeConflicthdlrBasic(scip, &conflicthdlr, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+         conflictExecBounddisjunction, conflicthdlrdata) );
+
+   SCIP_CALL( SCIPsetConflicthdlrFree(scip, conflicthdlr, conflictFreeBounddisjunction) );
 
    /* create constraint handler data */
-   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
+   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata, eventhdlr) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
-         conshdlrCopyBounddisjunction,
-         consFreeBounddisjunction, consInitBounddisjunction, consExitBounddisjunction,
-         consInitpreBounddisjunction, consExitpreBounddisjunction, consInitsolBounddisjunction, consExitsolBounddisjunction,
-         consDeleteBounddisjunction, consTransBounddisjunction,
-         consInitlpBounddisjunction, consSepalpBounddisjunction, consSepasolBounddisjunction,
-         consEnfolpBounddisjunction, consEnfopsBounddisjunction, consCheckBounddisjunction,
-         consPropBounddisjunction, consPresolBounddisjunction, consRespropBounddisjunction, consLockBounddisjunction,
-         consActiveBounddisjunction, consDeactiveBounddisjunction,
-         consEnableBounddisjunction, consDisableBounddisjunction, consDelvarsBounddisjunction,
-         consPrintBounddisjunction, consCopyBounddisjunction, consParseBounddisjunction,
-         consGetVarsBounddisjunction, consGetNVarsBounddisjunction,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpBounddisjunction, consEnfopsBounddisjunction, consCheckBounddisjunction, consLockBounddisjunction,
          conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyBounddisjunction, consCopyBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBounddisjunction, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropBounddisjunction, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransBounddisjunction) );
 
    /* register upgrade of quadratic complementarity constraints in cons_quadratic */
    if( SCIPfindConshdlr(scip, "quadratic") )
@@ -2922,6 +2955,32 @@ SCIP_RETCODE SCIPcreateConsBounddisjunction(
    return SCIP_OKAY;
 }
 
+/** creates and captures an and constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsBounddisjunction(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsBounddisjunction() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicBounddisjunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< variables of the literals in the constraint */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< types of bounds of the literals (lower or upper bounds) */
+   SCIP_Real*            bounds              /**< bounds of the literals */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons, name, nvars, vars, boundtypes, bounds,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** gets number of variables in bound disjunction constraint */
 int SCIPgetNVarsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2934,8 +2993,9 @@ int SCIPgetNVarsBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
+      return 0; /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2954,8 +3014,9 @@ SCIP_VAR** SCIPgetVarsBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
+      return NULL; /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2974,8 +3035,9 @@ SCIP_BOUNDTYPE* SCIPgetBoundtypesBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
+      return NULL; /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2994,11 +3056,13 @@ SCIP_Real* SCIPgetBoundsBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
+      return NULL; /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    return consdata->bounds;
 }
 
+/**@} */

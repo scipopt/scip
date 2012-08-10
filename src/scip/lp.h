@@ -217,9 +217,10 @@ SCIP_RETCODE SCIPlpEndStrongbranch(
    SCIP_LP*              lp                  /**< LP data */
    );
 
-/** gets strong branching information on a column variable with fractional value */
-SCIP_RETCODE SCIPcolGetStrongbranchFrac(
+/** gets strong branching information on a column variable */
+SCIP_RETCODE SCIPcolGetStrongbranch(
    SCIP_COL*             col,                /**< LP column */
+   SCIP_Bool             integral,           /**< should integral strong branching be performed? */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
@@ -234,47 +235,12 @@ SCIP_RETCODE SCIPcolGetStrongbranchFrac(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    );
 
-/** gets strong branching information on a column variable with integral value */
-SCIP_RETCODE SCIPcolGetStrongbranchInt(
-   SCIP_COL*             col,                /**< LP column */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LP*              lp,                 /**< LP data */
-   int                   itlim,              /**< iteration limit for strong branchings */
-   SCIP_Real*            down,               /**< stores dual bound after branching column down */
-   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
-   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
-                                              *   otherwise, it can only be used as an estimate value */
-   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
-                                              *   otherwise, it can only be used as an estimate value */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
-   );
-
-/** gets strong branching information on column variables with fractional values */
+/** gets strong branching information on column variables */
 extern
-SCIP_RETCODE SCIPcolGetStrongbranchesFrac(
+SCIP_RETCODE SCIPcolGetStrongbranches(
    SCIP_COL**            cols,               /**< LP columns */
    int                   ncols,              /**< number of columns */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LP*              lp,                 /**< LP data */
-   int                   itlim,              /**< iteration limit for strong branchings */
-   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
-   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
-   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds, or NULL;
-                                              *   otherwise, they can only be used as an estimate value */
-   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are valid dual bounds, or NULL;
-                                              *   otherwise, they can only be used as an estimate value */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
-   );
-
-/** gets strong branching information on column variables with integral values */
-extern
-SCIP_RETCODE SCIPcolGetStrongbranchesInt(
-   SCIP_COL**            cols,               /**< LP columns */
-   int                   ncols,              /**< number of columns */
+   SCIP_Bool             integral,           /**< should integral strong branching be performed? */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
@@ -336,6 +302,8 @@ SCIP_RETCODE SCIProwCreate(
    SCIP_Real*            vals,               /**< array with coefficients of row entries */
    SCIP_Real             lhs,                /**< left hand side of row */
    SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_ROWORIGINTYPE    origintype,         /**< type of origin of row */
+   void*                 origin,             /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
    SCIP_Bool             local,              /**< is row only valid locally? */
    SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
@@ -551,6 +519,22 @@ SCIP_Real SCIProwGetLPFeasibility(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** returns the feasibility of a row in the current relaxed solution: negative value means infeasibility */
+extern
+SCIP_Real SCIProwGetRelaxFeasibility(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
+/** returns the feasibility of a row in the current NLP solution: negative value means infeasibility */
+extern
+SCIP_Real SCIProwGetNLPFeasibility(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
 /** calculates the current pseudo activity of a row */
 extern
 void SCIProwRecalcPseudoActivity(
@@ -680,6 +664,22 @@ SCIP_Bool SCIProwIsSolEfficacious(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             root                /**< should the root's minimal cut efficacy be used? */
+   );
+
+/** returns row's efficacy with respect to the relaxed solution: e = -feasibility/norm */
+extern
+SCIP_Real SCIProwGetRelaxEfficacy(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
+   );
+
+/** returns row's efficacy with respect to the NLP solution: e = -feasibility/norm */
+extern
+SCIP_Real SCIProwGetNLPEfficacy(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** gets parallelism of row with objective function: if the returned value is 1, the row is parallel to the objective
@@ -918,7 +918,8 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
    SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
-   SCIP_Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the returned cut is only valid locally */
+   int*                  cutrank             /**< pointer to store the rank of the returned cut; or NULL */
    );
 
 /* calculates a strong CG cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
@@ -943,7 +944,8 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_Real*            strongcgrhs,        /**< pointer to store the right hand side of the strong CG row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
    SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid strong CG cut */
-   SCIP_Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the returned cut is only valid locally */
+   int*                  cutrank             /**< pointer to store the rank of the returned cut; or NULL */
    );
 
 /** stores LP state (like basis information) into LP state object */
@@ -987,7 +989,7 @@ SCIP_RETCODE SCIPlpFlush(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue         /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 /** marks the LP to be flushed, even if the LP thinks it is not flushed */
@@ -1008,7 +1010,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
-   int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool             limitresolveiters,  /**< should LP iterations for resolving calls be limited?
                                               *   (limit is computed within the method w.r.t. the average LP iterations) */
    SCIP_Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
@@ -1061,7 +1063,7 @@ SCIP_Real SCIPlpGetLooseObjval(
 extern
 void SCIPlpStoreRootObjval(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set,                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob                /**< problem data */
    );
 
@@ -1406,6 +1408,8 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
    char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
+   SCIP_Real             timelimit,          /**< time limit for LP solver */
+   int                   iterlimit,          /**< iteration limit for LP solver */
    SCIP_Real*            point,              /**< array to store relative interior point on exit */
    SCIP_Bool*            success             /**< buffer to indicate whether interior point was successfully computed */
    );

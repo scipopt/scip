@@ -3,7 +3,7 @@
 # run with bash -e makeall.sh to stop on errors
 #
 
-EXAMPLES=(Coloring Binpacking Eventhdlr LOP MIPSolver Queens SamplePricer SamplePricer_C TSP VRP)
+EXAMPLES=(Coloring Binpacking Eventhdlr LOP MIPSolver Queens Scheduler Testslack TSP VRP CallableLibrary)
 LPSOLVERS=(clp cpx none spx)
 OPTS=(opt dbg)
 
@@ -42,7 +42,6 @@ do
 #	then
 #	    exit
 #        fi
-	echo
 	for LPS in ${LPSOLVERS[@]}
 	do
 	    LPILIB=../../lib/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.a

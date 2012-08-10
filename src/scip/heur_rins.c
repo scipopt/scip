@@ -301,15 +301,6 @@ SCIP_DECL_HEURINIT(heurInitRins)
    return SCIP_OKAY;
 }
 
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#define heurExitRins NULL
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolRins NULL
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolRins NULL
-
 
 /** execution method of primal heuristic */
 static
@@ -353,7 +344,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
    /* only call heuristic, if the best solution comes from transformed problem */
    assert( SCIPgetBestSol(scip) != NULL );
-   if( SCIPsolGetOrigin(SCIPgetBestSol(scip)) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
       return SCIP_OKAY;
 
    /* only call heuristic, if enough nodes were processed since last incumbent */
@@ -420,12 +411,12 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       SCIP_Bool valid;
       valid = FALSE;
 
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rins", TRUE, FALSE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rins", TRUE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {
          /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE) );
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
       }
 
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
@@ -456,9 +447,16 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit <= 0.0 || memorylimit <= 0.0 )
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
    /* set limits for the subproblem */
@@ -477,23 +475,38 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* use best estimate node selection */
-   if( SCIPfindNodesel(scip, "estimate") != NULL )
+   if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
    }
 
    /* use inference branching */
-   if( SCIPfindBranchrule(scip, "inference") != NULL )
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
    /* disable conflict analysis */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
+   if( !SCIPisParamFixed(subscip, "conflict/useprop") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/usesb") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/usepseudo") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
+   }
 
    /* add an objective cutoff */
    cutoff = SCIPinfinity(scip);
@@ -568,17 +581,22 @@ SCIP_RETCODE SCIPincludeHeurRins(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create heuristic data */
+   /* create Rins primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyRins,
-         heurFreeRins, heurInitRins, heurExitRins,
-         heurInitsolRins, heurExitsolRins, heurExecRins,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecRins, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyRins) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeRins) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitRins) );
 
    /* add RINS primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nodesofs",
@@ -606,7 +624,7 @@ SCIP_RETCODE SCIPincludeHeurRins(
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minfixingrate",
-         "minimum percentage of integer variables that have to be fixed ",
+         "minimum percentage of integer variables that have to be fixed",
          &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows",

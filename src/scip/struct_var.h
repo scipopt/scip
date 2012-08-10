@@ -108,6 +108,7 @@ struct SCIP_BdChgInfo
    SCIP_VAR*             var;                /**< active variable that changed the bounds */
    SCIP_INFERENCEDATA    inferencedata;      /**< data for infered bound changes */
    SCIP_BDCHGIDX         bdchgidx;           /**< bound change index in path from root to current node */
+   unsigned int          pos:27;             /**< position in the variable domain change array */
    unsigned int          boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
    unsigned int          boundtype:1;        /**< type of bound for var: lower or upper bound */
    unsigned int          inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
@@ -199,8 +200,10 @@ struct SCIP_Var
 #endif
    SCIP_Real             obj;                /**< objective function value of variable */
    SCIP_Real             branchfactor;       /**< factor to weigh variable's branching score with */
-   SCIP_Real             rootsol;            /**< primal solution of variable in root node, or SCIP_INVALID */
-   SCIP_Real             rootredcost;        /**< reduced costs of variable in root node, or SCIP_INVALID */
+   SCIP_Real             rootsol;            /**< last primal solution of variable in root node, or zero */
+   SCIP_Real             bestrootsol;        /**< best primal solution of variable in root node, or zero, w.r.t. root LP value and root reduced cost */
+   SCIP_Real             bestrootredcost;    /**< best reduced costs of variable in root node, or zero, w.r.t. root LP value and root solution value */
+   SCIP_Real             bestrootlpobjval;   /**< best root LP objective value, or SCIP_INVALID, w.r.t. root solution value and root reduced cost */
    SCIP_Real             relaxsol;           /**< primal solution of variable in current relaxation solution, or SCIP_INVALID */
    SCIP_Real             nlpsol;             /**< primal solution of variable in current NLP solution, or SCIP_INVALID */
    SCIP_Real             primsolavg;         /**< weighted average of all values of variable in primal feasible solutions */

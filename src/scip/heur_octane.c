@@ -82,7 +82,7 @@ void tryToInsert(
    assert(lambda != NULL);
    assert(nfacets != NULL);
 
-   if( lam <= 0.0 || SCIPisFeasGE(scip, lam, lambda[f_max-1]) )
+   if( SCIPisFeasLE(scip, lam, 0.0) || SCIPisFeasGE(scip, lam, lambda[f_max-1]) )
       return;
 
    lastfacet = facets[f_max];
@@ -487,7 +487,7 @@ void generateNeighborFacets(
 
    /* reverse search for facets from which the actual facet can be got by a single, decreasing + to - flip */
    /* a facet will be inserted into the queue, iff it is one of the fmax closest ones already found */
-   for( j = 0; j < nsubspacevars && !facets[i][j] && negquotient[j] > lambda[i]; ++j )
+   for( j = 0; j < nsubspacevars && !facets[i][j] && SCIPisFeasGT(scip, negquotient[j], lambda[i]); ++j )
    {
       if( SCIPisFeasPositive(scip, q + 2*raydirection[j]) )
       {
@@ -495,10 +495,10 @@ void generateNeighborFacets(
          tryToInsert(scip, facets, lambda, i, j, f_max, nsubspacevars, lam, nfacets);
       }
    }
-
+   
    /* reverse search for facets from which the actual facet can be got by a single, nonincreasing - to + flip */
    /* a facet will be inserted into the queue, iff it is one of the fmax closest ones already found */
-   for( j = nsubspacevars - 1; j >= 0 && facets[i][j] && negquotient[j] <= lambda[i]; --j )
+   for( j = nsubspacevars - 1; j >= 0 && facets[i][j] && SCIPisFeasLE(scip, negquotient[j], lambda[i]); --j )
    {
       if( SCIPisFeasPositive(scip, q - 2*raydirection[j]) )
       {
@@ -620,8 +620,6 @@ SCIP_DECL_HEUREXIT(heurExitOctane)
    return SCIP_OKAY;
 }
 
-#define heurInitsolOctane NULL
-#define heurExitsolOctane NULL
 
 /** execution method of primal heuristic */
 static
@@ -893,6 +891,10 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
          assert(SCIPisPositive(scip, q));
       }
 
+      /* avoid dividing by values close to 0.0 */
+      if( !SCIPisFeasPositive(scip, q) )
+         continue;
+
       /* assert necessary for flexelint */
       assert(q > 0);
       lambda[0] = p / q;
@@ -1040,16 +1042,23 @@ SCIP_RETCODE SCIPincludeHeurOctane(
    )
 {
    SCIP_HEURDATA* heurdata;
-   /* create octane primal heuristic data */
+   SCIP_HEUR* heur;
+
+   /* create Octane primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyOctane,
-         heurFreeOctane, heurInitOctane, heurExitOctane,
-         heurInitsolOctane, heurExitsolOctane, heurExecOctane,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecOctane, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyOctane) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeOctane) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitOctane) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitOctane) );
 
    /* add octane primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
@@ -1064,7 +1073,7 @@ SCIP_RETCODE SCIPincludeHeurOctane(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "heuristics/octane/usefracspace",
-         "execute OCTANE only in the space of fractional variables (TRUE) or in the full space? ",
+         "execute OCTANE only in the space of fractional variables (TRUE) or in the full space?",
          &heurdata->usefracspace, TRUE, DEFAULT_USEFRACSPACE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

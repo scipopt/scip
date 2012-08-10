@@ -170,18 +170,6 @@ SCIP_DECL_SEPAFREE(sepaFreeRapidlearning)
 }
 
 
-/** initialization method of separator (called after problem was transformed) */
-#define sepaInitRapidlearning NULL
-
-/** deinitialization method of separator (called before transformed problem is freed) */
-#define sepaExitRapidlearning NULL
-
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolRapidlearning NULL
-
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolRapidlearning NULL
-
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
@@ -280,12 +268,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    success = FALSE;
 
    /* copy the subproblem */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rapid", FALSE, FALSE, &success) );
-   
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rapid", FALSE, FALSE, TRUE, &success) );
+
    if( sepadata->copycuts )
    {
       /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, FALSE) );
+      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, FALSE, NULL) );
    }
 
    for( i = 0; i < nvars; i++ )
@@ -305,18 +293,44 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIPdebugMessage("Copying SCIP was%s successful.\n", success ? "" : " not");
    
    /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
+   if( SCIPisParamFixed(subscip, "lp/solvefreq") )
+   {
+      SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in subscip of rapidlearning\n");
+      SCIP_CALL( SCIPunfixParam(subscip, "lp/solvefreq") );
+   }
    SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "conflict/fuiplevels", 1) );
+   if( !SCIPisParamFixed(subscip, "conflict/fuiplevels") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/fuiplevels", 1) );
+   }
+   if( SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
+   {
+      SCIPwarningMessage(scip, "unfixing parameter nodeselection/dfs/stdpriority in subscip of rapidlearning\n");
+      SCIP_CALL( SCIPunfixParam(subscip, "nodeselection/dfs/stdpriority") );
+   }
    SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) ); 
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/disableenfops", TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "propagating/pseudoobj/freq", -1) );
+
+   if( !SCIPisParamFixed(subscip, "propagating/pseudoobj/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "propagating/pseudoobj/freq", -1) );
+   }
+   if( !SCIPisParamFixed(subscip, "constraints/disableenfops") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/disableenfops", TRUE) );
+   }
 
    /* use inference branching */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "branching/inference/useweightedsum", FALSE) );
+   if( !SCIPisParamFixed(subscip, "branching/inference/useweightedsum") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "branching/inference/useweightedsum", FALSE) );
+   }
 
    /* only create short conflicts */
-   SCIP_CALL( SCIPsetRealParam(subscip, "conflict/maxvarsfac", 0.05) );
-  
+   if( !SCIPisParamFixed(subscip, "conflict/maxvarsfac") )
+   {
+      SCIP_CALL( SCIPsetRealParam(subscip, "conflict/maxvarsfac", 0.05) );
+   }
+
    /* set limits for the subproblem */
    nodelimit = SCIPgetNLPIterations(scip);
    nodelimit = MAX(sepadata->minnodes, nodelimit);
@@ -329,9 +343,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    if( !SCIPisInfinity(scip, memorylimit) )   
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit <= 0.0 || memorylimit <= 0.0 )
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP
+    * for rapid learning, this does not include external memory usage, because no LPs are solved
+    */
+   if( timelimit <= 0.0 || memorylimit <= SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) );
@@ -648,8 +671,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    return SCIP_OKAY;
 }
 
-/** arbitrary primal solution separation method of separator */
-#define sepaExecsolRapidlearning NULL
 
 /*
  * separator specific interface methods
@@ -661,17 +682,22 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create rapidlearning separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyRapidlearning, sepaFreeRapidlearning, sepaInitRapidlearning, sepaExitRapidlearning, 
-         sepaInitsolRapidlearning, sepaExitsolRapidlearning,
-         sepaExeclpRapidlearning, sepaExecsolRapidlearning,
+         sepaExeclpRapidlearning, NULL,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyRapidlearning) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeRapidlearning) );
 
    /* add rapidlearning separator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applyconflicts",

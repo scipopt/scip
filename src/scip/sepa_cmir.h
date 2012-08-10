@@ -36,13 +36,14 @@ extern "C" {
  *  valid for the mixed knapsack set corresponding to the current aggregated constraint. Cuts will only be added here if 
  *  no pointer to store best scaling factor delta is given.
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
-   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
    int                   maxtestdelta,       /**< maximal number of different deltas to try (-1: unlimited) */
-   SCIP_Real*            rowweights,         /**< weight of rows in aggregated row */ 
+   SCIP_Real*            rowweights,         /**< weight of rows in aggregated row */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
@@ -60,7 +61,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    );
 
 /** creates the cmir separator and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeSepaCmir(
    SCIP*                 scip                /**< SCIP data structure */
    );

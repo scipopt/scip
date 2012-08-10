@@ -128,8 +128,47 @@ void SCIPconflicthdlrSetPriority(
    int                   priority            /**< new priority of the conflict handler */
    );
 
+/** set copy method of conflict handler */
+extern
+void SCIPconflicthdlrSetCopy(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy))   /**< copy method of the conflict handler */
+   );
 
+/** set destructor of conflict handler */
+extern
+void SCIPconflicthdlrSetFree(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTFREE((*conflictfree))   /**< destructor of conflict handler */
+   );
 
+/** set initialization method of conflict handler */
+extern
+void SCIPconflicthdlrSetInit(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINIT((*conflictinit))   /**< initialization method conflict handler */
+   );
+
+/** set deinitialization method of conflict handler */
+extern
+void SCIPconflicthdlrSetExit(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXIT((*conflictexit))   /**< deinitialization method conflict handler */
+   );
+
+/** set solving process initialization method of conflict handler */
+extern
+void SCIPconflicthdlrSetInitsol(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINITSOL((*conflictinitsol))/**< solving process initialization method of conflict handler */
+   );
+
+/** set solving process deinitialization method of conflict handler */
+extern
+void SCIPconflicthdlrSetExitsol(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol))/**< solving process deinitialization method of conflict handler */
+   );
 
 /*
  * Conflict Analysis
@@ -197,46 +236,45 @@ extern
 SCIP_RETCODE SCIPconflictIsVarUsed(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound for which the score should be increased */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_Bool*            used                /**< pointer to store if the variable is already used */
    );
 
-/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise SCIP_INFINITY */
+/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
+ *  bound
+ */
 extern
 SCIP_Real SCIPconflictGetVarLb(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus
- *  SCIP_INFINITY
+/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise the global upper
+ *  bound
  */
 extern
 SCIP_Real SCIPconflictGetVarUb(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise
- *  SCIP_INFINITY
+/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
+ *  global lower bound
  */
 extern
 SCIP_Real SCIPconflictGetVarRelaxedLb(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
- *  minus SCIP_INFINITY
+ *  the global upper bound
  */
 extern
 SCIP_Real SCIPconflictGetVarRelaxedUb(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -267,7 +305,11 @@ SCIP_RETCODE SCIPconflictFlushConss(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_TREE*            tree                /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+
    );
 
 /** returns the current number of conflict sets in the conflict set storage */
@@ -376,6 +418,8 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
@@ -492,6 +536,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_COL*             col,                /**< LP column with at least one infeasible strong branching subproblem */
    SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict constraint was created for an
                                               *   infeasible downwards branch, or NULL */
@@ -569,6 +615,8 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 

@@ -32,8 +32,6 @@
 #define NODESEL_MEMSAVEPRIORITY  100000
 
 
-
-
 /*
  * Callback methods
  */
@@ -53,26 +51,6 @@ SCIP_DECL_NODESELCOPY(nodeselCopyDfs)
 }
 
 
-/** destructor of node selector to free user data (called when SCIP is exiting) */
-#define nodeselFreeDfs NULL
-
-
-/** initialization method of node selector (called after problem was transformed) */
-#define nodeselInitDfs NULL
-
-
-/** deinitialization method of node selector (called before transformed problem is freed) */
-#define nodeselExitDfs NULL
-
-
-/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
-#define nodeselInitsolDfs NULL
-
-
-/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
-#define nodeselExitsolDfs NULL
-
-
 /** node selection method of node selector */
 static
 SCIP_DECL_NODESELSELECT(nodeselSelectDfs)
@@ -88,11 +66,11 @@ SCIP_DECL_NODESELSELECT(nodeselSelectDfs)
       *selnode = SCIPgetPrioSibling(scip);
       if( *selnode == NULL )
       {
-         SCIPdebugMessage("select best leaf");
+         SCIPdebugMessage("select best leaf\n");
          *selnode = SCIPgetBestLeaf(scip);
       }
 
-      SCIPdebugMessage("select best sibling leaf");
+      SCIPdebugMessage("select best sibling leaf\n");
    }
 
    return SCIP_OKAY;
@@ -133,9 +111,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompDfs)
 }
 
 
-
-
-
 /*
  * dfs specific interface methods
  */
@@ -146,16 +121,18 @@ SCIP_RETCODE SCIPincludeNodeselDfs(
    )
 {
    SCIP_NODESELDATA* nodeseldata;
+   SCIP_NODESEL* nodesel;
 
    /* create dfs node selector data */
    nodeseldata = NULL;
 
    /* include node selector */
-   SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-         nodeselCopyDfs,
-         nodeselFreeDfs, nodeselInitDfs, nodeselExitDfs, 
-         nodeselInitsolDfs, nodeselExitsolDfs, nodeselSelectDfs, nodeselCompDfs,
-         nodeseldata) );
+   SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+          nodeselSelectDfs, nodeselCompDfs, nodeseldata) );
+
+   assert(nodesel != NULL);
+
+   SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyDfs) );
 
    return SCIP_OKAY;
 }

@@ -145,7 +145,7 @@ SCIP_DECL_PROPINITPRE(propInitpreObj)
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   SCIP_CALL( propdata->objprop->scip_initpre(scip, prop, isunbounded, isinfeasible, result) );
+   SCIP_CALL( propdata->objprop->scip_initpre(scip, prop) );
 
    return SCIP_OKAY;
 }
@@ -162,7 +162,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreObj)
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   SCIP_CALL( propdata->objprop->scip_exitpre(scip, prop, isunbounded, isinfeasible, result) );
+   SCIP_CALL( propdata->objprop->scip_exitpre(scip, prop) );
 
    return SCIP_OKAY;
 }
@@ -196,7 +196,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolObj)
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   SCIP_CALL( propdata->objprop->scip_exitsol(scip, prop) );
+   SCIP_CALL( propdata->objprop->scip_exitsol(scip, prop, restart) );
 
    return SCIP_OKAY;
 }
@@ -281,7 +281,7 @@ SCIP_RETCODE SCIPincludeObjProp(
    propdata->deleteobject = deleteobject;
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, objprop->scip_name_, objprop->scip_desc_, 
+   SCIP_CALL( SCIPincludeProp(scip, objprop->scip_name_, objprop->scip_desc_,
          objprop->scip_priority_, objprop->scip_freq_, objprop->scip_delay_,
          objprop->scip_timingmask_, objprop->scip_presol_priority_, objprop->scip_presol_maxrounds_, objprop->scip_presol_delay_,
          propCopyObj,

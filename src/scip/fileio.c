@@ -24,6 +24,7 @@
 #include <stdarg.h>
 
 #include "scip/pub_fileio.h"
+#include "scip/pub_misc.h"
 
 
 #define BUFFER_LEN 8192
@@ -60,10 +61,15 @@ int SCIPfprintf(SCIP_FILE *stream, const char *format, ...)
    int n;
 
    va_start(ap, format); /*lint !e826*/
+#if defined(_WIN32) || defined(_WIN64)
+   n = _vsnprintf(t, (size_t) len, s, ap);
+#else
    n = vsnprintf(buffer, BUFFER_LEN, format, ap);
+#endif
    va_end(ap);
    if( n < 0 || n > BUFFER_LEN)
       buffer[BUFFER_LEN-1] = '\0';
+
    return gzputs((gzFile)stream, buffer);
 }
 
@@ -172,6 +178,8 @@ int SCIPfgetc(SCIP_FILE *stream)
 
 char* SCIPfgets(char *s, int size, SCIP_FILE *stream)
 {
+   if( size > 0 )
+      s[0] = '\0';
    return fgets(s, size, (FILE*)stream);
 }
 

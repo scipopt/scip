@@ -144,8 +144,6 @@ struct SCIP_ConshdlrData
 };
 
 
-
-
 /*
  * Local methods
  */
@@ -498,7 +496,7 @@ SCIP_RETCODE removeFixedVariables(
 
       /* replace by new variable, or NULL */
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&consdata->z, &consdata->zcoef, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &consdata->z, &consdata->zcoef, &constant) );
       if( consdata->zcoef == 0.0 )
          consdata->z = NULL;
       if( constant != 0.0 && !SCIPisInfinity(scip, -consdata->lhs) )
@@ -550,7 +548,7 @@ SCIP_RETCODE removeFixedVariables(
 
          coef = 1.0;
          constant = 0.0;
-         SCIP_CALL( SCIPvarGetProbvarSum(&var, &coef, &constant) );
+         SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &constant) );
 
          if( coef == 0.0 )
          {
@@ -626,7 +624,7 @@ SCIP_RETCODE removeFixedVariables(
 
       coef = 1.0;
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &coef, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &constant) );
       assert(coef != 0.0); /* fixed vars should have been handled above */
 
       if( coef == 1.0 && constant == 0.0 )
@@ -729,7 +727,8 @@ SCIP_RETCODE removeFixedNonlinearVariables(
             continue;
          }
 
-      } while( FALSE );
+      }
+      while( FALSE );
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("replace fixed variable <%s> by %g", SCIPvarGetName(var), constant);
@@ -1348,7 +1347,7 @@ SCIP_RETCODE generateLinearizationCut(
    /* setup SCIP row */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, rowname, -SCIPinfinity(scip), rhs, FALSE, FALSE /* modifiable */, TRUE /* removable */) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), rhs, FALSE, FALSE /* modifiable */, TRUE /* removable */) );
 
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), fgrad) );
 
@@ -1671,7 +1670,7 @@ SCIP_RETCODE generateOverestimatingHyperplaneCut(
    {
       assert(!SCIPisInfinity(scip, -consdata->lhs));
 
-      SCIP_CALL( SCIPcreateRow(scip, row, "bivaroveresthyperplanecut", 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), "bivaroveresthyperplanecut", 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
       SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
       if( consdata->z != NULL )
@@ -3085,7 +3084,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
 
    SCIPdebugMessage("generate %sestimator for convex-concave constraint <%s>\n",
       (violside == SCIP_SIDETYPE_LEFT ? "over" : "under"), SCIPconsGetName(cons));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    if( violside == SCIP_SIDETYPE_LEFT )
    {
@@ -3102,7 +3101,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
          if( success )
          {
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_overesthyperplanecut_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateRow(scip, row, cutname, 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -3134,7 +3133,8 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             coefs[0] = -cutcoeff[1] / cutcoeff[2];
             coefs[1] = -cutcoeff[0] / cutcoeff[2];
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_convexconcaveoverest_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, consdata->lhs - cutcoeff[3]/cutcoeff[2], SCIPinfinity(scip), TRUE, FALSE /* modifiable */, TRUE /* removable */) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, consdata->lhs - cutcoeff[3]/cutcoeff[2], SCIPinfinity(scip),
+                  TRUE, FALSE /* modifiable */, TRUE /* removable */) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
             {
@@ -3159,7 +3159,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
          if( success )
          {
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_underesthyperplanecut_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateRow(scip, row, cutname, 0, NULL, NULL, -SCIPinfinity(scip), consdata->rhs - constant, TRUE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, 0, NULL, NULL, -SCIPinfinity(scip), consdata->rhs - constant, TRUE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -3188,7 +3188,8 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             coefs[0] = cutcoeff[0] / cutcoeff[2];
             coefs[1] = cutcoeff[1] / cutcoeff[2];
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_convexconcaveunderest_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, -SCIPinfinity(scip), consdata->rhs + cutcoeff[3]/cutcoeff[2], TRUE, FALSE /* modifiable */, TRUE /* removable */) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, -SCIPinfinity(scip), consdata->rhs + cutcoeff[3]/cutcoeff[2],
+                  TRUE, FALSE /* modifiable */, TRUE /* removable */) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
             {
@@ -3932,7 +3933,8 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
    }
 
    rhs = consdata->rhs + cutcoeff[3]/cutcoeff[2];
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "1ConvexUnderest", -SCIPinfinity(scip), rhs, TRUE, FALSE /* modifiable */, TRUE /* removable */) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), "1ConvexUnderest", -SCIPinfinity(scip), rhs,
+         TRUE, FALSE /* modifiable */, TRUE /* removable */) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(consdata->f)[0], cutcoeff[0] / cutcoeff[2]) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(consdata->f)[1], cutcoeff[1] / cutcoeff[2]) );
    if( consdata->z != NULL )
@@ -3993,7 +3995,7 @@ SCIP_RETCODE generateCut(
    if( consdata->z != NULL )
       SCIPdebugPrintf(", %s = %g with bounds [%g, %g]", SCIPvarGetName(consdata->z), SCIPgetSolVal(scip, sol, consdata->z), SCIPvarGetLbLocal(consdata->z), SCIPvarGetUbLocal(consdata->z));
    SCIPdebugPrintf("\n");
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebugPrintCons(scip, cons, NULL);
    SCIPdebugPrintf("\n");
 
    switch( consdata->convextype )
@@ -4548,18 +4550,19 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
    return SCIP_OKAY;
 }
 
-/** replaces violated bivariate constraints where both nonlinear variables are fixed by linear constraints */
+/** enforces violated bivariate constraints where both nonlinear variables can be assumed to be fixed
+ * apply a bound change to the remaining linear variable, or recognizing infeasibility
+ */
 static
-SCIP_RETCODE replaceViolatedByLinearConstraints(
+SCIP_RETCODE enforceViolatedFixedNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
-   SCIP_Bool*            addedcons           /**< buffer to store whether a linear constraint was added */
+   SCIP_Bool*            reduceddom,         /**< whether a domain has been reduced */
+   SCIP_Bool*            infeasible          /**< whether we detected infeasibility */
    )
 {
-   SCIP_CONS*          cons;
    SCIP_CONSDATA*      consdata;
-   SCIP_RESULT         checkresult;
    SCIP_INTERVAL       nonlinact;
    SCIP_Real           lhs;
    SCIP_Real           rhs;
@@ -4567,9 +4570,11 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
-   assert(addedcons != NULL);
+   assert(reduceddom != NULL);
+   assert(infeasible != NULL);
 
-   *addedcons = FALSE;
+   *reduceddom = FALSE;
+   *infeasible = FALSE;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4598,30 +4603,77 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
       else
          rhs = SCIPinfinity(scip);
 
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, SCIPconsGetName(conss[c]),
-            consdata->z == NULL ? 0 : 1, consdata->z == NULL ? NULL : &consdata->z, &consdata->zcoef,
-            lhs, rhs,
-            SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]),
-            SCIPconsIsChecked(conss[c]), SCIPconsIsPropagated(conss[c]),  TRUE,
-            SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
-            SCIPconsIsStickingAtNode(conss[c])) );
-
-      SCIPdebugMessage("replace violated nonlinear constraint <%s> by linear constraint after all nonlinear vars have been fixed\n", SCIPconsGetName(conss[c]) );
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-
-      SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
-
-      if( checkresult != SCIP_INFEASIBLE )
+      if( consdata->z != NULL )
       {
-         SCIPdebugMessage("linear constraint is feasible, thus do not add\n");
+         SCIP_Bool tightened;
+         SCIP_Real coef;
+
+         coef = consdata->zcoef;
+         assert(!SCIPisZero(scip, coef));
+
+         SCIPdebugMessage("Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef, SCIPvarGetName(consdata->z), rhs);
+
+         /* possibly correct lhs/rhs */
+         if( coef >= 0.0 )
+         {
+            if( !SCIPisInfinity(scip, -lhs) )
+               lhs /= coef;
+            if( !SCIPisInfinity(scip,  rhs) )
+               rhs /= coef;
+         }
+         else
+         {
+            SCIP_Real h;
+            h = rhs;
+            if( !SCIPisInfinity(scip, -lhs) )
+               rhs = lhs/coef;
+            else
+               rhs = SCIPinfinity(scip);
+
+            if( !SCIPisInfinity(scip,  h) )
+               lhs = h/coef;
+            else
+               lhs = -SCIPinfinity(scip);
+         }
+         SCIPdebugMessage("Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(consdata->z), rhs);
+
+         if( !SCIPisInfinity(scip, -lhs) )
+         {
+            SCIP_CALL( SCIPtightenVarLb(scip, consdata->z, lhs, TRUE, infeasible, &tightened) );
+            if( *infeasible )
+            {
+               SCIPdebugMessage("Lower bound leads to infeasibility.\n");
+               return SCIP_OKAY;
+            }
+            if( tightened )
+            {
+               SCIPdebugMessage("Lower bound changed.\n");
+               *reduceddom = TRUE;
+               return SCIP_OKAY;
+            }
+         }
+
+         if( !SCIPisInfinity(scip, rhs) )
+         {
+            SCIP_CALL( SCIPtightenVarUb(scip, consdata->z, rhs, TRUE, infeasible, &tightened) );
+            if( *infeasible )
+            {
+               SCIPdebugMessage("Upper bound leads to infeasibility.\n");
+               return SCIP_OKAY;
+            }
+            if( tightened )
+            {
+               SCIPdebugMessage("Upper bound changed.\n");
+               *reduceddom = TRUE;
+               return SCIP_OKAY;
+            }
+         }
       }
       else
       {
-         SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
-         *addedcons = TRUE;
+         /* no variable, thus check feasibility of lhs <= 0.0 <= rhs */
+         *infeasible = SCIPisFeasGT(scip, lhs, 0.0) || SCIPisFeasLT(scip, rhs, 0.0);
       }
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
    }
 
    return SCIP_OKAY;
@@ -4630,12 +4682,12 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
 /** tightens bounds on a variable to given interval */
 static
 SCIP_RETCODE propagateBoundsTightenVar(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_VAR*             var,               /**< variable which bounds to tighten */
-   SCIP_INTERVAL         bounds,            /**< new bounds */
-   SCIP_CONS*            cons,              /**< constraint that is propagated */
-   SCIP_RESULT*          result,            /**< pointer where to update the result of the propagation call */
-   int*                  nchgbds            /**< buffer where to add the the number of changed bounds */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which bounds to tighten */
+   SCIP_INTERVAL         bounds,             /**< new bounds */
+   SCIP_CONS*            cons,               /**< constraint that is propagated */
+   SCIP_RESULT*          result,             /**< pointer where to update the result of the propagation call */
+   int*                  nchgbds             /**< buffer where to add the the number of changed bounds */
    )
 {
    SCIP_Bool infeas;
@@ -4735,7 +4787,7 @@ SCIP_RETCODE propagateBoundsCons(
    *result = SCIP_DIDNOTRUN;
    *redundant = FALSE;
 
-   /* extend interval by feastol to avoid cutoff in forward propagation if constraint is only almost feasible */
+   /* extend interval by epsilon to avoid cutoff in forward propagation if constraint is only almost feasible */
    SCIPintervalSetBounds(&consbounds,
       -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -consdata->lhs+SCIPepsilon(scip)),    /*lint !e666*/
       +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  consdata->rhs+SCIPepsilon(scip)) );  /*lint !e666*/
@@ -4956,8 +5008,8 @@ SCIP_RETCODE propagateBounds(
          *result = propresult;
          success = TRUE;
       }
-
-   } while( success && *result != SCIP_CUTOFF && ++roundnr < conshdlrdata->maxproprounds );
+   }
+   while( success && *result != SCIP_CUTOFF && ++roundnr < conshdlrdata->maxproprounds );
 
    return SCIP_OKAY;
 }
@@ -5276,7 +5328,7 @@ SCIP_RETCODE createConsFromQuadTerm(
          SCIPconsIsChecked(srccons), SCIPconsIsPropagated(srccons), SCIPconsIsLocal(srccons),
          SCIPconsIsModifiable(srccons), SCIPconsIsDynamic(srccons), SCIPconsIsRemovable(srccons),
          SCIPconsIsStickingAtNode(srccons)) );
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
+   SCIPdebugPrintCons(scip, *cons, NULL);
 
    SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -5466,7 +5518,7 @@ SCIP_RETCODE createConsFromMonomial(
             exprtree, convextype, z, zcoef, lhs, rhs,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
+   SCIPdebugPrintCons(scip, *cons, NULL);
 
    SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -5478,7 +5530,6 @@ SCIP_RETCODE createConsFromMonomial(
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 1
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBivariate)
 {  /*lint --e{715}*/
@@ -5493,12 +5544,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define conshdlrCopyBivariate NULL
-#endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#if 1
 static
 SCIP_DECL_CONSFREE(consFreeBivariate)
 {  /*lint --e{715}*/
@@ -5525,13 +5572,8 @@ SCIP_DECL_CONSFREE(consFreeBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consFreeBivariate NULL
-#endif
-
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 1
 static
 SCIP_DECL_CONSINIT(consInitBivariate)
 {  /*lint --e{715}*/
@@ -5548,13 +5590,8 @@ SCIP_DECL_CONSINIT(consInitBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitBivariate NULL
-#endif
-
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if 1
 static
 SCIP_DECL_CONSEXIT(consExitBivariate)
 {  /*lint --e{715}*/
@@ -5571,13 +5608,8 @@ SCIP_DECL_CONSEXIT(consExitBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consExitBivariate NULL
-#endif
-
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 1
 static
 SCIP_DECL_CONSINITPRE(consInitpreBivariate)
 {  /*lint --e{715}*/
@@ -5599,30 +5631,24 @@ SCIP_DECL_CONSINITPRE(consInitpreBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitpreBivariate NULL
-#endif
-
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 1
 static
 SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA*     consdata;
    int                c;
    SCIP_Bool          changed;
    SCIP_Bool          upgraded;
+#ifndef NDEBUG
+   SCIP_CONSDATA*     consdata;
+#endif
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
-   assert(result != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    if( !conshdlrdata->isremovedfixings )
    {
@@ -5633,38 +5659,31 @@ SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
 
    for( c = 0; c < nconss; ++c )
    {
-      assert(conss[c] != NULL);  /*lint !e613*/
-
-      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-      assert(consdata != NULL);
+      assert(conss != NULL);  /* for flexelint */
+      assert(conss[c] != NULL);
 
       /* make sure variable fixations have been resolved */
-      SCIP_CALL( removeFixedVariables(scip, conshdlr, conss[c], &changed, &upgraded) );  /*lint !e613*/
+      SCIP_CALL( removeFixedVariables(scip, conshdlr, conss[c], &changed, &upgraded) );
       assert(!upgraded);
+
+#ifndef NDEBUG
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
 
       assert(consdata->f != NULL);
       assert(SCIPexprtreeGetNVars(consdata->f) == 2);
       assert(consdata->z == NULL || SCIPvarIsActive(consdata->z) || SCIPvarGetStatus(consdata->z) == SCIP_VARSTATUS_MULTAGGR);
+#endif
 
       /* tell SCIP that we have something nonlinear */
-      if( SCIPconsIsEnabled(conss[c]) )
-      {
-         SCIPmarkNonlinearitiesPresent(scip);
-         if( SCIPvarGetType(SCIPexprtreeGetVars(consdata->f)[0]) >= SCIP_VARTYPE_CONTINUOUS ||
-            SCIPvarGetType( SCIPexprtreeGetVars(consdata->f)[1]) >= SCIP_VARTYPE_CONTINUOUS )
-            SCIPmarkContinuousNonlinearitiesPresent(scip);
-      }
+      if( SCIPconsIsAdded(conss[c]) )
+         SCIPenableNLP(scip);
    }
 
    return SCIP_OKAY;
 }
-#else
-#define consExitpreBivariate NULL
-#endif
-
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if 1
 static
 SCIP_DECL_CONSINITSOL(consInitsolBivariate)
 {  /*lint --e{715}*/
@@ -5793,13 +5812,8 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitsolBivariate NULL
-#endif
-
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 1
 static
 SCIP_DECL_CONSEXITSOL(consExitsolBivariate)
 {  /*lint --e{715}*/
@@ -5833,13 +5847,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consExitsolBivariate NULL
-#endif
-
 
 /** frees specific constraint data */
-#if 1
 static
 SCIP_DECL_CONSDELETE(consDeleteBivariate)
 {  /*lint --e{715}*/
@@ -5869,13 +5878,8 @@ SCIP_DECL_CONSDELETE(consDeleteBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consDeleteBivariate NULL
-#endif
-
 
 /** transforms constraint data into data belonging to the transformed problem */
-#if 1
 static
 SCIP_DECL_CONSTRANS(consTransBivariate)
 {  /*lint --e{715}*/
@@ -5908,13 +5912,8 @@ SCIP_DECL_CONSTRANS(consTransBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consTransBivariate NULL
-#endif
-
 
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#if 1
 static
 SCIP_DECL_CONSINITLP(consInitlpBivariate)
 {  /*lint --e{715}*/
@@ -6133,13 +6132,8 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitlpBivariate NULL
-#endif
-
 
 /** separation method of constraint handler for LP solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPALP(consSepalpBivariate)
 {  /*lint --e{715}*/
@@ -6166,13 +6160,8 @@ SCIP_DECL_CONSSEPALP(consSepalpBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consSepalpBivariate NULL
-#endif
-
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPASOL(consSepasolBivariate)
 {  /*lint --e{715}*/
@@ -6198,10 +6187,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consSepasolBivariate NULL
-#endif
-
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -6325,16 +6310,18 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
       SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
       if( brvar == NULL )
       {
-         /* fallback 3: all nonlinear variables in all violated constraints seem to be fixed -> replace by linear constraints */
-         SCIP_Bool addedcons;
+         /* fallback 3: all nonlinear variables in all violated constraints seem to be fixed -> treat as linear constraint in one variable */
+         SCIP_Bool reduceddom;
+         SCIP_Bool infeasible;
 
-         SCIP_CALL( replaceViolatedByLinearConstraints(scip, conss, nconss, &addedcons) );
+         SCIP_CALL( enforceViolatedFixedNonlinear(scip, conss, nconss, &reduceddom, &infeasible) );
          /* if the linear constraints are actually feasible, then adding them and returning SCIP_CONSADDED confuses SCIP when it enforces the new constraints again and nothing resolves the infeasiblity that we declare here
-          * thus, we only add them if considered violated, and otherwise claim the solution is feasible (but print a warning) */
-         if( addedcons )
-         {
-            *result = SCIP_CONSADDED;
-         }
+          * thus, we only add them if considered violated, and otherwise claim the solution is feasible (but print a warning)
+          */
+         if ( infeasible )
+            *result = SCIP_CUTOFF;
+         else if ( reduceddom )
+            *result = SCIP_REDUCEDDOM;
          else
          {
             *result = SCIP_FEASIBLE;
@@ -6476,7 +6463,7 @@ SCIP_DECL_CONSCHECK(consCheckBivariate)
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
-            if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
+            SCIPinfoMessage(scip, NULL, ";\n");
             {
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g (scaled: %.15g)\n", consdata->lhs - consdata->activity, consdata->lhsviol);
             }
@@ -6491,6 +6478,10 @@ SCIP_DECL_CONSCHECK(consCheckBivariate)
 
          if( consdata->lhsviol > maxviol || consdata->rhsviol > maxviol )
             maxviol = consdata->lhsviol + consdata->rhsviol;
+
+         /* do not try to shift linear variables if activity is at infinity (leads to setting variable to infinity in solution, which is not allowed) */
+         if( maypropfeasible && SCIPisInfinity(scip, REALABS(consdata->activity)) )
+            maypropfeasible = FALSE;
 
          if( maypropfeasible )
          {
@@ -6533,7 +6524,6 @@ SCIP_DECL_CONSCHECK(consCheckBivariate)
 }
 
 /** domain propagation method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPROP(consPropBivariate)
 {  /*lint --e{715}*/
@@ -6549,13 +6539,8 @@ SCIP_DECL_CONSPROP(consPropBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consPropBivariate NULL
-#endif
-
 
 /** presolving method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPRESOL(consPresolBivariate)
 {  /*lint --e{715}*/
@@ -6596,7 +6581,7 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
 #endif
 
       SCIPdebugMessage("process constraint <%s>\n", SCIPconsGetName(conss[c]));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+      SCIPdebugPrintCons(scip, conss[c], NULL);
 
       havechange = FALSE;
 
@@ -6610,7 +6595,7 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
       if( havechange )
       {
          SCIPdebugMessage("removed fixed variables -> ");
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebugPrintCons(scip, conss[c], NULL);
       }
    }
 
@@ -6635,25 +6620,6 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consPresolBivariate NULL
-#endif
-
-
-/** propagation conflict resolving method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSRESPROP(consRespropBivariate)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of bivariate constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consRespropBivariate NULL
-#endif
-
 
 /** variable rounding lock method of constraint handler */
 static
@@ -6698,7 +6664,6 @@ SCIP_DECL_CONSLOCK(consLockBivariate)
 
 
 /** constraint activation notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSACTIVE(consActiveBivariate)
 {  /*lint --e{715}*/
@@ -6741,13 +6706,8 @@ SCIP_DECL_CONSACTIVE(consActiveBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consActiveBivariate NULL
-#endif
-
 
 /** constraint deactivation notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSDEACTIVE(consDeactiveBivariate)
 {  /*lint --e{715}*/
@@ -6773,13 +6733,8 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consDeactiveBivariate NULL
-#endif
-
 
 /** constraint enabling notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSENABLE(consEnableBivariate)
 {  /*lint --e{715}*/
@@ -6810,13 +6765,8 @@ SCIP_DECL_CONSENABLE(consEnableBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consEnableBivariate NULL
-#endif
-
 
 /** constraint disabling notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSDISABLE(consDisableBivariate)
 {  /*lint --e{715}*/
@@ -6845,16 +6795,8 @@ SCIP_DECL_CONSDISABLE(consDisableBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consDisableBivariate NULL
-#endif
-
-
-/** variable deletion method of constraint handler */
-#define consDelvarsBivariate NULL
 
 /** constraint display method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPRINT(consPrintBivariate)
 {  /*lint --e{715}*/
@@ -6916,12 +6858,8 @@ SCIP_DECL_CONSPRINT(consPrintBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consPrintBivariate NULL
-#endif
 
 /** constraint copying method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSCOPY(consCopyBivariate)
 {  /*lint --e{715}*/
@@ -6986,25 +6924,6 @@ SCIP_DECL_CONSCOPY(consCopyBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#define consCopyBivariate NULL
-#endif
-
-
-/** constraint parsing method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPARSE(consParseBivariate)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of bivariate constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consParseBivariate NULL
-#endif
-
 
 /** constraint method of constraint handler which returns the variables (if possible) */
 static
@@ -7335,7 +7254,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
          upgdconss[*nupgdconss] = quadcons;
          ++*nupgdconss;
 
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, quadcons, NULL) ) );
+         SCIPdebugPrintCons(scip, quadcons, NULL);
 
          if( keeporig )
          {
@@ -7439,7 +7358,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformBivariate)
    SCIP_CALL( createConsFromMonomial(scip, NULL, &cons, name, x, y, auxvar,
          SCIPexprGetMonomialCoef(monomial), expx, expy, -1.0, -SCIPexprgraphGetNodePolynomialConstant(node), -SCIPexprgraphGetNodePolynomialConstant(node)) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebugPrintCons(scip, cons, NULL);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    ++*naddcons;
 
@@ -7467,27 +7386,44 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create bivariate constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
-         conshdlrCopyBivariate,
-         consFreeBivariate, consInitBivariate, consExitBivariate,
-         consInitpreBivariate, consExitpreBivariate, consInitsolBivariate, consExitsolBivariate,
-         consDeleteBivariate, consTransBivariate, consInitlpBivariate,
-         consSepalpBivariate, consSepasolBivariate, consEnfolpBivariate, consEnfopsBivariate, consCheckBivariate,
-         consPropBivariate, consPresolBivariate, consRespropBivariate, consLockBivariate,
-         consActiveBivariate, consDeactiveBivariate,
-         consEnableBivariate, consDisableBivariate, consDelvarsBivariate,
-         consPrintBivariate, consCopyBivariate, consParseBivariate,
-         consGetVarsBivariate, consGetNVarsBivariate, conshdlrdata) );
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpBivariate, consEnfopsBivariate, consCheckBivariate, consLockBivariate,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveBivariate) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyBivariate, consCopyBivariate) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveBivariate) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteBivariate) );
+   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableBivariate) );
+   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableBivariate) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitBivariate) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreBivariate) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolBivariate) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBivariate) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsBivariate) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsBivariate) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitBivariate) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreBivariate) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolBivariate) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpBivariate) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBivariate, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintBivariate) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropBivariate, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpBivariate, consSepasolBivariate, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransBivariate) );
 
    /* include the quadratic constraint upgrade in the quadratic constraint handler */
    SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdBivariate, QUADCONSUPGD_PRIORITY, FALSE, CONSHDLR_NAME) );
@@ -7520,16 +7456,18 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
          "number of reference points in each direction where to compute linear support for envelope in LP initialization",
          &conshdlrdata->ninitlprefpoints, FALSE, 3, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound tightening in a linear variable to a bivariate constraint",
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, processLinearVarEvent, NULL) );
-   conshdlrdata->linvareventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_boundchange");
+   conshdlrdata->linvareventhdlr = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->linvareventhdlr), CONSHDLR_NAME"_boundchange", "signals a bound tightening in a linear variable to a bivariate constraint",
+         processLinearVarEvent, NULL) );
+   assert(conshdlrdata->linvareventhdlr != NULL);
 
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange2", "signals a bound change in a nonlinear variable to the bivariate constraint handler",
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, processNonlinearVarEvent, (SCIP_EVENTHDLRDATA*)conshdlrdata) );
-   conshdlrdata->nonlinvareventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_boundchange2");
+   conshdlrdata->nonlinvareventhdlr = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->nonlinvareventhdlr), CONSHDLR_NAME"_boundchange2", "signals a bound change in a nonlinear variable to the bivariate constraint handler",
+         processNonlinearVarEvent, (SCIP_EVENTHDLRDATA*)conshdlrdata) );
+   assert(conshdlrdata->nonlinvareventhdlr != NULL);
 
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
+         processNewSolutionEvent, NULL) );
 
    /* create expression interpreter */
    SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &conshdlrdata->exprinterpreter) );
@@ -7621,6 +7559,34 @@ SCIP_RETCODE SCIPcreateConsBivariate(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an absolute power constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsBivariate(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsBivariate() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicBivariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_EXPRTREE*        f,                  /**< expression tree specifying bivariate function f(x,y) */
+   SCIP_BIVAR_CONVEXITY  convextype,         /**< kind of convexity of f(x,y) */
+   SCIP_VAR*             z,                  /**< linear variable in constraint */
+   SCIP_Real             zcoef,              /**< coefficient of linear variable */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsBivariate(scip, cons, name, f, convextype, z, zcoef, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

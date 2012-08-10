@@ -41,19 +41,18 @@ THREADS=$8
 FEASTOL=$9
 DISPFREQ=${10}
 CONTINUE=${11}
-VERSION=${12}
-LPS=${13}
-QUEUETYPE=${14}
-QUEUE=${15}
-PPN=${16}
-CLIENTTMPDIR=${17}
-NOWAITCLUSTER=${18}
-EXCLUSIVE=${19}
+QUEUETYPE=${12}
+QUEUE=${13}
+PPN=${14}
+CLIENTTMPDIR=${15}
+NOWAITCLUSTER=${16}
+EXCLUSIVE=${17}
+
 
 # check all variables defined
-if [ -z ${EXCLUSIVE} ]
+if test -z $EXCLUSIVE
 then
-    echo Skipping test since not all variables are defined.
+    echo Skipping test since variable EXCLUSIVE is not defined.
     exit 1;
 fi
 
@@ -116,6 +115,20 @@ HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 # we add 10% to the hard memory limit and additional 100MB to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
 
+# check whether there is enough memory on the host system, otherwise we need to submit from the target system
+if test "$QUEUETYPE" = "srun"
+then
+    HOSTMEM=`ulimit -m`
+    if test "$HOSTMEM" != "unlimited"
+    then
+        if [ `expr $HARDMEMLIMIT \* 1024` -gt $HOSTMEM ]
+        then
+            echo "Not enough memory on host system - please submit from target system (e.g. ssh opt201)."
+            exit
+        fi
+    fi
+fi
+
 # in case of qsub queue the memory is measured in kB and in case of srun the time needs to be formatted
 if test  "$QUEUETYPE" = "qsub"
 then
@@ -124,6 +137,7 @@ else
     MYMINUTES=0
     MYHOURS=0
     MYDAYS=0
+
     #calculate seconds, minutes, hours and days
     MYSECONDS=`expr $HARDTIMELIMIT % 60`
     TMP=`expr $HARDTIMELIMIT / 60`
@@ -164,6 +178,24 @@ fi
 EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
 echo > $EVALFILE
 
+
+#define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
+CLUSTERQUEUE=$QUEUE
+
+ACCOUNT="mip"
+
+if test $CLUSTERQUEUE = "opt"
+then
+    CLUSTERQUEUE="opt,opt-long"
+elif test $CLUSTERQUEUE = "opt-low"
+then
+    ACCOUNT="opt-low"
+elif test $CLUSTERQUEUE = "mip-dbg"
+then
+    ACCOUNT="mip-dbg"
+fi
+
+
 # counter to define file names for a test set uniquely
 COUNT=0
 
@@ -187,6 +219,10 @@ do
       # 1900 jobs) to submit the next job.
       if test "$NOWAITCLUSTER" != "1"
       then
+	  if test  "$QUEUETYPE" != "qsub"
+	  then
+	      echo "waitcluster does not work on slurm cluster"
+	  fi
 	  ./waitcluster.sh 1600 $QUEUE 200
       fi
 
@@ -227,9 +263,12 @@ do
       echo set limits memory $MEMLIMIT       >> $TMPFILE
       echo set lp advanced threads $THREADS  >> $TMPFILE
       echo set timing clocktype 1            >> $TMPFILE
-      echo set display verblevel 4           >> $TMPFILE
       echo set display freq $DISPFREQ        >> $TMPFILE
       echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+      if test "$LPS" = "none"
+      then
+          echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
+      fi
       echo set save $SETFILE                 >> $TMPFILE
       echo read $SCIPPATH/$i                 >> $TMPFILE
 #      echo presolve                         >> $TMPFILE
@@ -249,10 +288,10 @@ do
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $QUEUE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
+	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
       else
           # -V to copy all environment variables
-	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null runcluster.sh
       fi
   else
       echo "input file "$SCIPPATH/$i" not found!"

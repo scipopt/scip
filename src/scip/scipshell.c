@@ -34,8 +34,8 @@
 
 static
 SCIP_RETCODE readParams(
-   SCIP*                      scip,               /**< SCIP data structure */
-   const char*                filename            /**< parameter file name */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< parameter file name */
    )
 {
    if( SCIPfileExists(filename) )
@@ -51,10 +51,12 @@ SCIP_RETCODE readParams(
 
 static
 SCIP_RETCODE fromCommandLine(
-   SCIP*                      scip,               /**< SCIP data structure */
-   const char*                filename            /**< input file name */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< input file name */
    )
 {
+   SCIP_RETCODE retcode;
+
    /********************
     * Problem Creation *
     ********************/
@@ -66,8 +68,24 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "read problem <%s>\n", filename);
    SCIPinfoMessage(scip, NULL, "============\n");
    SCIPinfoMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 
+
+   retcode = SCIPreadProb(scip, filename, NULL);
+
+   switch( retcode )
+   {
+   case SCIP_NOFILE:
+      SCIPinfoMessage(scip, NULL, "file <%s> not found\n", filename);
+      return SCIP_OKAY;
+   case SCIP_PLUGINNOTFOUND:
+      SCIPinfoMessage(scip, NULL, "no reader for input file <%s> available\n", filename);
+      return SCIP_OKAY;
+   case SCIP_READERROR:
+      SCIPinfoMessage(scip, NULL, "error reading file <%s>\n", filename);
+      return SCIP_OKAY;
+   default:
+      SCIP_CALL( retcode );
+   } /*lint !e788*/
 
    /*******************
     * Problem Solving *
@@ -98,10 +116,10 @@ SCIP_RETCODE fromCommandLine(
 
 /** evaluates command line parameters and runs SCIP appropriately in the given SCIP instance */
 SCIP_RETCODE SCIPprocessShellArguments(
-   SCIP*                      scip,               /**< SCIP data structure */
-   int                        argc,               /**< number of shell parameters */
-   char**                     argv,               /**< array with shell parameters */
-   const char*                defaultsetname      /**< name of default settings file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   argc,               /**< number of shell parameters */
+   char**                argv,               /**< array with shell parameters */
+   const char*           defaultsetname      /**< name of default settings file */
    )
 {  /*lint --e{850}*/
    char* probname = NULL;
@@ -290,9 +308,9 @@ SCIP_RETCODE SCIPprocessShellArguments(
  *  and frees the SCIP instance
  */
 SCIP_RETCODE SCIPrunShell(
-   int                        argc,               /**< number of shell parameters */
-   char**                     argv,               /**< array with shell parameters */
-   const char*                defaultsetname      /**< name of default settings file */
+   int                   argc,               /**< number of shell parameters */
+   char**                argv,               /**< array with shell parameters */
+   const char*           defaultsetname      /**< name of default settings file */
    )
 {
    SCIP* scip = NULL;

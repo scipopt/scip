@@ -216,25 +216,6 @@ SCIP_DECL_BRANCHCOPY(branchCopyLeastinf)
    return SCIP_OKAY;
 }
 
-/** destructor of branching rule to free user data (called when SCIP is exiting) */
-#define branchFreeLeastinf NULL
-
-
-/** initialization method of branching rule (called after problem was transformed) */
-#define branchInitLeastinf NULL
-
-
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitLeastinf NULL
-
-
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolLeastinf NULL
-
-
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolLeastinf NULL
-
 
 /** branching execution method for fractional LP solutions */
 static
@@ -368,12 +349,6 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextLeastinf)
 }
 
 
-/** branching execution method for not completely fixed pseudo solutions */
-#define branchExecpsLeastinf NULL
-
-
-
-
 /*
  * branching specific interface methods
  */
@@ -383,13 +358,17 @@ SCIP_RETCODE SCIPincludeBranchruleLeastinf(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_BRANCHRULE* branchrule;
+
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
-         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchCopyLeastinf,
-         branchFreeLeastinf, branchInitLeastinf, branchExitLeastinf, branchInitsolLeastinf, branchExitsolLeastinf, 
-         branchExeclpLeastinf, branchExecextLeastinf, branchExecpsLeastinf,
-         NULL) );
+   branchrule = NULL;
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, NULL) );
+   assert(branchrule != NULL);
+
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyLeastinf) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpLeastinf) );
+   SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextLeastinf) );
 
    return SCIP_OKAY;
 }

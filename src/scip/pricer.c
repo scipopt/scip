@@ -49,6 +49,15 @@ SCIP_DECL_SORTPTRCOMP(SCIPpricerComp)
       return ((SCIP_PRICER*)elem2)->priority - ((SCIP_PRICER*)elem1)->priority;
 }
 
+/** comparison method for sorting pricers w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPpricerCompName)
+{
+   if( ((SCIP_PRICER*)elem1)->active != ((SCIP_PRICER*)elem2)->active )
+      return ((SCIP_PRICER*)elem1)->active ? -1 : +1;
+   else
+      return strcmp(SCIPpricerGetName((SCIP_PRICER*)elem1), SCIPpricerGetName((SCIP_PRICER*)elem2));
+}
+
 /** method to call, when the priority of a pricer was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdPricerPriority)
@@ -466,6 +475,72 @@ void SCIPpricerSetData(
    pricer->pricerdata = pricerdata;
 }
 
+/** sets copy callback of pricer */
+void SCIPpricerSetCopy(
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy))     /**< copy callback of pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->pricercopy = pricercopy;
+}
+
+/** sets destructor callback of pricer */
+void SCIPpricerSetFree(
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERFREE  ((*pricerfree))     /**< destructor of pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->pricerfree = pricerfree;
+}
+
+/** sets initialization callback of pricer */
+void SCIPpricerSetInit(
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERINIT ((*pricerinit))     /**< initialize pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->pricerinit = pricerinit;
+}
+
+/** sets deinitialization callback of pricer */
+void SCIPpricerSetExit(
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICEREXIT ((*pricerexit))     /**< deinitialize pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->pricerexit = pricerexit;
+}
+
+/** sets solving process initialization callback of pricer */
+void SCIPpricerSetInitsol(
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERINITSOL ((*pricerinitsol))/**< solving process initialization callback of pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->pricerinitsol = pricerinitsol;
+}
+
+/** sets solving process deinitialization callback of pricer */
+void SCIPpricerSetExitsol(
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICEREXITSOL ((*pricerexitsol))/**< solving process deinitialization callback of pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->pricerexitsol = pricerexitsol;
+}
+
 /** gets name of variable pricer */
 const char* SCIPpricerGetName(
    SCIP_PRICER*          pricer              /**< variable pricer */
@@ -572,7 +647,7 @@ SCIP_Bool SCIPpricerIsDelayed(
 
 /** is variable pricer initialized? */
 SCIP_Bool SCIPpricerIsInitialized(
-   SCIP_PRICER*            pricer                /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    )
 {
    assert(pricer != NULL);

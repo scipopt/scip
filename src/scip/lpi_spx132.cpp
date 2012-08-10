@@ -1324,6 +1324,16 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    return SCIP_ERROR;
 }
 
+/** gets the objective sense of the LP */
+SCIP_RETCODE SCIPlpiGetObjsen(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
+   )
+{
+   SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
+   return SCIP_ERROR;
+}
+
 /** gets objective coefficients from LP problem object */
 SCIP_RETCODE SCIPlpiGetObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2206,8 +2216,10 @@ SCIP_RETCODE SCIPlpiGetIterations(
 }
 
 /** gets information about the quality of an LP solution
- * Such information is usually only available, if also a (maybe not optimal) solution is available.
- * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+ *
+ *  Such information is usually only available, if also a (maybe not optimal) solution is available.
+ *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ */
 extern
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2273,6 +2285,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          default:
             SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -2305,6 +2318,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          default:
             SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -2354,6 +2368,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -2376,6 +2391,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    lpi->spx->setBasis(spxrstat, spxcstat);
@@ -2615,9 +2631,22 @@ SCIP_RETCODE SCIPlpiSetState(
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
 
-   /* extend the basis to the current LP */
+   /* extend the basis to the current LP beyond the previously existing columns */
    for( i = lpistate->ncols; i < lpncols; ++i )
-      lpi->cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/ /** this has to be corrected for lb = -infinity */
+   {
+      SCIP_Real bnd = lpi->spx->lower(i);
+      if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+      {
+         /* if lower bound is +/- infinity -> try upper bound */
+         bnd = lpi->spx->lower(i);
+         if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+            lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /* variable is free */
+         else
+            lpi->cstat[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+      }
+      else
+         lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+   }
    for( i = lpistate->nrows; i < lpnrows; ++i )
       lpi->rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
 

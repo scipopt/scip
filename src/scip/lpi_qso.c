@@ -36,22 +36,22 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 /** LP interface */
 struct SCIP_LPi
 {
-   QSprob prob;     /**< LP struct pointer */
-   int solstat;     /**< solution status of last optimization call */
-   int previt;      /**< previous number of simplex iterations performed */
-   int rowspace;    /**< current size of internal row-related arrays */
-   char* isen;      /**< array of length rowspace */
-   double* irhs;    /**< array of rhs rowspace */
-   double* irng;    /**< array of range rowspace */
-   int* ircnt;      /**< array of count rowspace */
-   int* irbeg;      /**< array of beginning index rowspace */
-   int colspace;    /**< current size of internal column-related arrays */
-   int* iccnt;      /**< array of length colspace */
-   char* iccha;     /**< array of type colspace */
-   int tbsz;        /**< current size of tableau-related arrays */
-   double* itab;    /**< array of length tbsz */
-   char* ibas;      /**< array of length tbsz */
-   int pricing;     /**< SCIP pricing option */
+   QSprob                prob;               /**< LP struct pointer */
+   int                   solstat;            /**< solution status of last optimization call */
+   int                   previt;             /**< previous number of simplex iterations performed */
+   int                   rowspace;           /**< current size of internal row-related arrays */
+   char*                 isen;               /**< array of length rowspace */
+   double*               irhs;               /**< array of rhs rowspace */
+   double*               irng;               /**< array of range rowspace */
+   int*                  ircnt;              /**< array of count rowspace */
+   int*                  irbeg;              /**< array of beginning index rowspace */
+   int                   colspace;           /**< current size of internal column-related arrays */
+   int*                  iccnt;              /**< array of length colspace */
+   char*                 iccha;              /**< array of type colspace */
+   int                   tbsz;               /**< current size of tableau-related arrays */
+   double*               itab;               /**< array of length tbsz */
+   char*                 ibas;               /**< array of length tbsz */
+   int                   pricing;            /**< SCIP pricing option */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
@@ -139,9 +139,9 @@ int rowpacketNum(
 /** store row and column basis status in a packed LPi state object */
 static
 void lpistatePack(
-   SCIP_LPISTATE*       lpistate,            /**< pointer to LPi state data */
-   const int*           cstat,               /**< basis status of columns in unpacked format */
-   const int*           rstat                /**< basis status of rows in unpacked format */
+   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const int*            cstat,              /**< basis status of columns in unpacked format */
+   const int*            rstat               /**< basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -155,9 +155,9 @@ void lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   const SCIP_LPISTATE* lpistate,            /**< pointer to LPi state data */
-   int*                 cstat,               /**< buffer for storing basis status of columns in unpacked format */
-   int*                 rstat                /**< buffer for storing basis status of rows in unpacked format */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
+   int*                  cstat,              /**< buffer for storing basis status of columns in unpacked format */
+   int*                  rstat               /**< buffer for storing basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -310,6 +310,7 @@ SCIP_RETCODE convertSides(
       default:
          SCIPerrorMessage("Error, constraint %d has no bounds!",i);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    return SCIP_OKAY;
@@ -520,7 +521,8 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    }
 
    /* and add the columns */
-   rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, beg, ind, val, obj, lb, ub, (const char**)colnames);
+   rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, (int*) beg, (int*) ind, (SCIP_Real*) val, (SCIP_Real*) obj,
+      (SCIP_Real*) lb, (SCIP_Real*) ub, (const char**)colnames);
 
    QS_RETURN(rval);
 }
@@ -566,7 +568,8 @@ SCIP_RETCODE SCIPlpiAddCols(
    }
 
    /* and add the columns */
-   rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, beg, ind, val, obj, lb, ub, (const char**)colnames);
+   rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, (int*) beg, (int*) ind, (SCIP_Real*) val, (SCIP_Real*) obj,
+      (SCIP_Real*) lb, (SCIP_Real*) ub, (const char**)colnames);
 
    QS_RETURN(rval);
 }
@@ -679,7 +682,8 @@ SCIP_RETCODE SCIPlpiAddRows(
       }
 
       /* now we add the rows */
-      rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, val, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames);
+      rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, (int*) beg, (int*) ind, (SCIP_Real*) val, lpi->irhs,
+         lpi->isen, lpi->irng, (const char**)rownames);
       QS_ERROR(rval, "failed adding %d rows with %d non-zeros", nrows, nnonz);
    }
    else
@@ -691,7 +695,8 @@ SCIP_RETCODE SCIPlpiAddRows(
       }
 
       /* now we add the rows */
-      rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, lpi->irbeg, ind, val, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames);
+      rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, lpi->irbeg, (int*) ind, (SCIP_Real*) val, lpi->irhs,
+         lpi->isen, lpi->irng, (const char**)rownames);
       QS_ERROR(rval, "failed adding %d rows with %d non-zeros", nrows, nnonz);
    }
 
@@ -950,13 +955,13 @@ SCIP_RETCODE SCIPlpiChgBounds(
    for( i = 0; i < ncols; ++i )
       lpi->iccha[i] = 'L';
 
-   rval = QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, lb);
+   rval = QSchange_bounds(lpi->prob, ncols, (int*) ind, lpi->iccha, (SCIP_Real*) lb);
    QS_CONDRET(rval);
 
    for( i = 0; i < ncols; ++i )
       lpi->iccha[i] = 'U';
 
-   rval = QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, ub);
+   rval = QSchange_bounds(lpi->prob, ncols, (int*) ind, lpi->iccha, (SCIP_Real*) ub);
 
    QS_RETURN(rval);
 }
@@ -1504,6 +1509,7 @@ SCIP_RETCODE SCIPlpiGetRows(
          default:
             SCIPerrorMessage("Unknown sense %c from QSopt", lsense[i]);
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -1525,6 +1531,16 @@ SCIP_RETCODE SCIPlpiGetRows(
       QSfree(lcnt);
 
    QS_RETURN(rval);
+}
+
+/** gets the objective sense of the LP */
+SCIP_RETCODE SCIPlpiGetObjsen(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
+   )
+{
+   SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
+   return SCIP_LPERROR;
 }
 
 /** gets objective coefficients from LP problem object */
@@ -1641,15 +1657,16 @@ SCIP_RETCODE SCIPlpiGetSides(
       default:
          SCIPerrorMessage("Unknown sense %c from QSopt", lsense[i]);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
  CLEANUP:
    if( lsense != NULL )
       QSfree(lsense);
-   if( lrng != NULL ) 
+   if( lrng != NULL )
       QSfree(lrng);
-   if( lrhs != NULL ) 
+   if( lrhs != NULL )
       QSfree(lrhs);
 
    QS_RETURN(rval);
@@ -1877,8 +1894,11 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
    assert(EPSISINT(psol, 1e-06));
 
    /* QSopt cannot directly strong branch on integral values! We thus return the current objective
-      value for both cases. Could also implement a manual search as in lpi_cpx.c */
+    * value for both cases. Could also implement a manual search as in lpi_cpx.c
+    */
    rval = QSget_objval(lpi->prob, &objval);
+   QS_CONDRET(rval);
+
    *down = objval;
    *up = objval;
    *downvalid = TRUE;
@@ -1920,8 +1940,11 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    SCIPdebugMessage("calling QSopt strong branching on %d variables with integral value (%d it lim)\n", ncols, itlim);
 
    /* QSopt cannot directly strong branch on integral values! We thus return the current objective
-      value for all cases. Could also implement a manual search as in lpi_cpx.c */
+    * value for all cases. Could also implement a manual search as in lpi_cpx.c
+    */
    rval = QSget_objval(lpi->prob, &objval);
+   QS_CONDRET(rval);
+
    for( j = 0; j < ncols; ++j )
    {
       assert(EPSISINT(psols[j], 1e-06));
@@ -2318,6 +2341,7 @@ SCIP_RETCODE SCIPlpiGetSol(
             {
                SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
                SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
             }
             break;
          case QS_COL_BSTAT_UPPER:
@@ -2325,6 +2349,7 @@ SCIP_RETCODE SCIPlpiGetSol(
             {
                SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
                SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
             }
             break;
          case QS_COL_BSTAT_LOWER:
@@ -2332,11 +2357,13 @@ SCIP_RETCODE SCIPlpiGetSol(
             {
                SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
                SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
             }
             break;
          default:
             SCIPerrorMessage("unknown stat col[%d] = %c, rd[%d] = %lg\n", i, icstat[i], i, redcost[i]*sense);
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -2370,6 +2397,7 @@ SCIP_RETCODE SCIPlpiGetSol(
          default:
             SCIPerrorMessage("unknown sense %c\n", lpi->isen[i]);
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -2388,7 +2416,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
 
    SCIPerrorMessage("SCIPlpiGetPrimalRay() not supported by QSopt.\n");
 
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 /** gets dual Farkas proof for infeasibility */
@@ -2433,9 +2461,10 @@ SCIP_RETCODE SCIPlpiGetIterations(
 }
 
 /** gets information about the quality of an LP solution
- * Such information is usually only available, if also a (maybe not optimal) solution is available.
- * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
-extern
+ *
+ *  Such information is usually only available, if also a (maybe not optimal) solution is available.
+ *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ */
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
@@ -2474,7 +2503,7 @@ SCIP_RETCODE SCIPlpiGetBase(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
-   SCIPdebugMessage("saving QSopt basis into %p/%p\n", cstat, rstat);
+   SCIPdebugMessage("saving QSopt basis into %p/%p\n", (void*)cstat, (void*)rstat);
 
    ncols = QSget_colcount(lpi->prob);
    nrows = QSget_rowcount(lpi->prob);
@@ -2503,6 +2532,7 @@ SCIP_RETCODE SCIPlpiGetBase(
       default:
          SCIPerrorMessage("Unknown row basic status %c", rstat[i]);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    for( i = 0; i < ncols; ++i )
@@ -2524,6 +2554,7 @@ SCIP_RETCODE SCIPlpiGetBase(
       default:
          SCIPerrorMessage("Unknown column basic status %c", cstat[i]);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    return SCIP_OKAY;
@@ -2543,7 +2574,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
-   SCIPdebugMessage("loading basis %p/%p into QSopt\n", cstat, rstat);
+   SCIPdebugMessage("loading basis %p/%p into QSopt\n", (void*)cstat, (void*)rstat);
 
    ncols = QSget_colcount(lpi->prob);
    nrows = QSget_rowcount(lpi->prob);
@@ -2570,6 +2601,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("Unknown row basic status %d", rstat[i]);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    for( i = 0; i < ncols; ++i )
@@ -2591,6 +2623,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("Unknown column basic status %d", cstat[i]);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -2663,7 +2696,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIPerrorMessage("SCIPlpiGetBInvCol() not supported by QSopt.\n");
 
    /* QSopt does not provide an interface for this yet */
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 /** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
@@ -2708,7 +2741,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIPerrorMessage("SCIPlpiGetBInvACol() not supported by QSopt.\n");
 
    /* QSopt does not provide an interface for this yet */
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 /**@} */
@@ -2742,7 +2775,7 @@ SCIP_RETCODE SCIPlpiGetState(
 
    /* allocate lpistate data */
    SCIP_CALL( lpistateCreate(lpistate, blkmem, ncols, nrows));
-   SCIPdebugMessage("storing QSopt LPI state in %p (%d cols, %d rows)\n", *lpistate, ncols, nrows);
+   SCIPdebugMessage("storing QSopt LPI state in %p (%d cols, %d rows)\n", (void*)*lpistate, ncols, nrows);
 
    /* get unpacked basis information from QSopt */
    SCIP_CALL( ensureColMem(lpi, ncols) );
@@ -2766,9 +2799,12 @@ SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    )
 {  /*lint --e{715} */
-   register int i;
-   int rval = 0, ncols, nrows;
-   char* icstat=0, *irstat=0;
+   char* icstat = 0;
+   char* irstat = 0;
+   int i;
+   int ncols;
+   int nrows;
+   int rval = 0;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2786,7 +2822,7 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpistate->ncols <= ncols);
    assert(lpistate->nrows <= nrows);
 
-   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into QSopt LP with %d cols and %d rows\n", lpistate, lpistate->ncols,
+   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into QSopt LP with %d cols and %d rows\n", (void*)lpistate, lpistate->ncols,
       lpistate->nrows, ncols, nrows);
 
    if( lpistate->ncols == 0 || lpistate->nrows == 0 )
@@ -2803,9 +2839,25 @@ SCIP_RETCODE SCIPlpiSetState(
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->iccnt, lpi->ircnt);
 
-   /* extend the basis to the current LP */
+   /* extend the basis to the current LP beyond the previously existing columns */
    for( i = lpistate->ncols; i < ncols; ++i )
-      lpi->iccnt[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/ /**@todo this has to be corrected for lb = -infinity */
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      /* get bounds from qsopt */
+      rval = QSget_bounds_list(lpi->prob, 1, &i, &lb, &ub);
+      if ( SCIPlpiIsInfinity(lpi, REALABS(lb)) )
+      {
+         /* if lower bound is +/- infinity -> try upper bound */
+         if ( SCIPlpiIsInfinity(lpi, REALABS(ub)) )
+            lpi->iccnt[i] = SCIP_BASESTAT_ZERO;  /* variable is free */
+         else
+            lpi->iccnt[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+      }
+      else
+         lpi->iccnt[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+   }
    for( i = lpistate->nrows; i < nrows; ++i )
       lpi->ircnt[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
 
@@ -2826,7 +2878,7 @@ SCIP_RETCODE SCIPlpiSetState(
       default:
          SCIPerrorMessage("Unknown row basic status %d", lpi->ircnt[i]);
          SCIPABORT();
-         break;
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    for( i = 0; i < ncols; ++i )
@@ -2848,7 +2900,7 @@ SCIP_RETCODE SCIPlpiSetState(
       default:
          SCIPerrorMessage("Unknown column basic status %d", lpi->iccnt[i]);
          SCIPABORT();
-         break;
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -2865,7 +2917,7 @@ SCIP_RETCODE SCIPlpiClearState(
    assert(lpi != NULL);
 
    /**@todo implement SCIPlpiClearState() for QSopt */
-   SCIPwarningMessage(lpi->messagehdlr, "QSopt interface does not implement SCIPlpiClearState()\n");
+   SCIPerrorMessage("QSopt interface does not implement SCIPlpiClearState()\n");
 
    return SCIP_OKAY;
 }
@@ -2897,8 +2949,8 @@ SCIP_Bool SCIPlpiHasStateBasis(
 
 /** reads LP state (like basis information from a file */
 SCIP_RETCODE SCIPlpiReadState(
-   SCIP_LPI*             lpi,               /**< LP interface structure */
-   const char*           fname              /**< file name */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
    )
 {
    int rval = 0;
@@ -2920,8 +2972,8 @@ SCIP_RETCODE SCIPlpiReadState(
 
 /** writes LP state (like basis information) to a file */
 SCIP_RETCODE SCIPlpiWriteState(
-   SCIP_LPI*             lpi,            /**< LP interface structure */
-   const char*           fname           /**< file name */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
    )
 {
    QSbas bas = 0;

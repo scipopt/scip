@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /** creates the intshifting heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeHeurIntshifting(
    SCIP*                 scip                /**< SCIP data structure */
    );

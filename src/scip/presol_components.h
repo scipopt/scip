@@ -20,7 +20,7 @@
  * @author Gerald Gamrath
  *
  * This presolver looks for independent components at the end of the presolving.
- * If independent components are found in which a maximum number of variables
+ * If independent components are found in which a maximum number of discrete variables
  * is not exceeded, the presolver tries to solve them in advance as subproblems.
  * Afterwards, if a subproblem was solved to optimality, the corresponding
  * variables/constraints can be fixed/deleted in the main problem.
@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /** creates the components presolver and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePresolComponents(
    SCIP*                 scip                /**< SCIP data structure */
    );
