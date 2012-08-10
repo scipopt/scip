@@ -23727,6 +23727,8 @@ SCIP_RETCODE SCIPchgRowLhs(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgRowLhs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert(!SCIPlpDiving(scip->lp) || (row->lppos == -1));
+
    SCIP_CALL( SCIProwChgLhs(row, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, lhs) );
 
    return SCIP_OKAY;
@@ -23747,6 +23749,8 @@ SCIP_RETCODE SCIPchgRowRhs(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPchgRowRhs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(!SCIPlpDiving(scip->lp) || (row->lppos == -1));
 
    SCIP_CALL( SCIProwChgRhs(row, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, rhs) );
 
@@ -27269,6 +27273,74 @@ SCIP_RETCODE SCIPaddRowDive(
    depth = SCIPnodeGetDepth(node);
 
    SCIP_CALL( SCIPlpAddRow(scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter, row, depth) );
+
+   return SCIP_OKAY;
+}
+
+/** changes row lhs in current dive, change will be undone after diving ends, for permanent changes use SCIPchgRowLhs()
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPchgRowLhsDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< row to change the lhs for */
+   SCIP_Real             newlhs              /**< new value for lhs */
+   )
+{
+   assert(scip != NULL);
+   assert(row != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPchgRowLhsDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      SCIPerrorMessage("not in diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPlpRecordOldRowSideDive(scip->lp, row, SCIP_SIDETYPE_LEFT) );
+   SCIP_CALL( SCIProwChgLhs(row, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, newlhs) );
+
+   return SCIP_OKAY;
+}
+
+/** changes row rhs in current dive, change will be undone after diving ends, for permanent changes use SCIPchgRowRhs()
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPchgRowRhsDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< row to change the lhs for */
+   SCIP_Real             newrhs              /**< new value for rhs */
+   )
+{
+   assert(scip != NULL);
+   assert(row != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPchgRowRhsDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      SCIPerrorMessage("not in diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPlpRecordOldRowSideDive(scip->lp, row, SCIP_SIDETYPE_RIGHT) );
+   SCIP_CALL( SCIProwChgRhs(row, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, newrhs) );
 
    return SCIP_OKAY;
 }

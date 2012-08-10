@@ -5025,7 +5025,6 @@ SCIP_RETCODE SCIProwChgLhs(
 {
    assert(row != NULL);
    assert(lp != NULL);
-   assert(!lp->diving || row->lppos == -1);
 
    if( !SCIPsetIsEQ(set, row->lhs, lhs) )
    {
@@ -5036,8 +5035,11 @@ SCIP_RETCODE SCIProwChgLhs(
       row->lhs = lhs;
       SCIP_CALL( rowSideChanged(row, set, lp, SCIP_SIDETYPE_LEFT) );
       
-      /* issue row side changed event */
-      SCIP_CALL( rowEventSideChanged(row, blkmem, set, eventqueue, SCIP_SIDETYPE_LEFT, oldlhs, lhs) );
+      if( !lp->diving )
+      {
+         /* issue row side changed event */
+         SCIP_CALL( rowEventSideChanged(row, blkmem, set, eventqueue, SCIP_SIDETYPE_LEFT, oldlhs, lhs) );
+      }
    }
 
    return SCIP_OKAY;
@@ -5055,7 +5057,6 @@ SCIP_RETCODE SCIProwChgRhs(
 {
    assert(row != NULL);
    assert(lp != NULL);
-   assert(!lp->diving || row->lppos == -1);
 
    if( !SCIPsetIsEQ(set, row->rhs, rhs) )
    {
@@ -5066,8 +5067,11 @@ SCIP_RETCODE SCIProwChgRhs(
       row->rhs = rhs;
       SCIP_CALL( rowSideChanged(row, set, lp, SCIP_SIDETYPE_RIGHT) );
 
-      /* issue row side changed event */
-      SCIP_CALL( rowEventSideChanged(row, blkmem, set, eventqueue, SCIP_SIDETYPE_RIGHT, oldrhs, rhs) );
+      if( !lp->diving )
+      {
+         /* issue row side changed event */
+         SCIP_CALL( rowEventSideChanged(row, blkmem, set, eventqueue, SCIP_SIDETYPE_RIGHT, oldrhs, rhs) );
+      }
    }
 
    return SCIP_OKAY;
@@ -7799,6 +7803,74 @@ void rowUpdateDelLP(
    }
 }
 
+static
+SCIP_RETCODE allocDiveChgSideArrays(
+   SCIP_LP*              lp,                 /**< LP data object */
+   int                   initsize            /**< initial size of the arrays */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->divechgsides == NULL);
+   assert(lp->divechgsidetypes == NULL);
+   assert(lp->divechgrows == NULL);
+   assert(lp->ndivechgsides == 0);
+   assert(lp->divechgsidessize == 0);
+   assert(initsize > 0);
+
+   lp->divechgsidessize = initsize;
+   SCIP_ALLOC( BMSallocMemoryArray(&lp->divechgsides, lp->divechgsidessize) );
+   SCIP_ALLOC( BMSallocMemoryArray(&lp->divechgsidetypes, lp->divechgsidessize) );
+   SCIP_ALLOC( BMSallocMemoryArray(&lp->divechgrows, lp->divechgsidessize) );
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE reallocDiveChgSideArrays(
+   SCIP_LP*              lp,                 /**< LP data object */
+   int                   minsize,            /**< minimal number of elements */
+   SCIP_Real             growfact            /**< growing factor */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->divechgsides != NULL);
+   assert(lp->divechgsidetypes != NULL);
+   assert(lp->divechgrows != NULL);
+   assert(lp->ndivechgsides > 0);
+   assert(lp->divechgsidessize > 0);
+   assert(minsize > 0);
+
+   if( minsize <= lp->divechgsidessize )
+      return SCIP_OKAY;
+
+   lp->divechgsidessize = MAX(minsize, (int)(lp->divechgsidessize * growfact));
+   SCIP_ALLOC( BMSreallocMemoryArray(&lp->divechgsides, lp->divechgsidessize) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&lp->divechgsidetypes, lp->divechgsidessize) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&lp->divechgrows, lp->divechgsidessize) );
+
+   return SCIP_OKAY;
+}
+
+static
+void freeDiveChgSideArrays(
+   SCIP_LP*              lp                  /**< LP data object */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->divechgsides != NULL);
+   assert(lp->divechgsidetypes != NULL);
+   assert(lp->divechgrows != NULL);
+   assert(lp->ndivechgsides == 0);
+   assert(lp->divechgsidessize > 0);
+
+   BMSfreeMemoryArrayNull(&lp->divechgsides);
+   BMSfreeMemoryArrayNull(&lp->divechgsidetypes);
+   BMSfreeMemoryArrayNull(&lp->divechgrows);
+   lp->divechgsidessize = 0;
+}
+
+#define DIVESTACKINITSIZE 100
+
 /** creates empty LP data object */
 SCIP_RETCODE SCIPlpCreate(
    SCIP_LP**             lp,                 /**< pointer to LP data object */
@@ -7888,6 +7960,11 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->divingobjchg = FALSE;
    (*lp)->divinglazyapplied = FALSE;
    (*lp)->divelpistate = NULL;
+   (*lp)->divechgsides = NULL;
+   (*lp)->divechgsidetypes = NULL;
+   (*lp)->divechgrows = NULL;
+   (*lp)->ndivechgsides = 0;
+   (*lp)->divechgsidessize = 0;
    (*lp)->ndivingrows = 0;
    (*lp)->divinglpiitlim = INT_MAX;
    (*lp)->resolvelperror = FALSE;
@@ -7906,6 +7983,9 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
    (*lp)->lpithreads = set->lp_threads;
    (*lp)->storedsolvals = NULL;
+
+   /* allocate arrays for diving */
+   allocDiveChgSideArrays(*lp, DIVESTACKINITSIZE);
 
    /* set default parameters in LP solver */
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim, &success) );
@@ -8019,6 +8099,8 @@ SCIP_RETCODE SCIPlpFree(
    assert(*lp != NULL);
    
    SCIP_CALL( SCIPlpClear(*lp, blkmem, set, eventqueue, eventfilter) );
+
+   freeDiveChgSideArrays(*lp);
 
    /* release LPI rows */
    for( i = 0; i < (*lp)->nlpirows; ++i )
@@ -16234,6 +16316,7 @@ SCIP_RETCODE SCIPlpStartDive(
    assert(lp->validsollp <= stat->lpcount);
    assert(blkmem != NULL);
    assert(set != NULL);
+   assert(lp->ndivechgsides == 0);
 
    SCIPdebugMessage("diving started (LP flushed: %u, LP solved: %u, solstat: %d)\n",
       lp->flushed, lp->solved, SCIPlpGetSolstat(lp));
@@ -16353,6 +16436,28 @@ SCIP_RETCODE SCIPlpEndDive(
    /* remove rows which were added in diving mode */
    SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, lp->ndivingrows) );
 
+   /* undo changes to left hand sides and right hand sides */
+   while( lp->ndivechgsides > 0 )
+   {
+      SCIP_Real oldside;
+      SCIP_SIDETYPE sidetype;
+      SCIP_ROW* row;
+
+      lp->ndivechgsides--;
+      oldside = lp->divechgsides[lp->ndivechgsides];
+      sidetype = lp->divechgsidetypes[lp->ndivechgsides];
+      row = lp->divechgrows[lp->ndivechgsides];
+
+      if( sidetype == SCIP_SIDETYPE_LEFT )
+      {
+         SCIP_CALL( SCIProwChgLhs(row, blkmem, set, eventqueue, lp, oldside) );
+      }
+      else
+      {
+         SCIP_CALL( SCIProwChgRhs(row, blkmem, set, eventqueue, lp, oldside) );
+      }
+   }
+
    /* restore LPI iteration limit */
    SCIP_CALL( lpSetIterationLimit(lp, lp->divinglpiitlim) );
 
@@ -16453,6 +16558,30 @@ SCIP_RETCODE SCIPlpEndDive(
       }
    }
 #endif
+
+   return SCIP_OKAY;
+}
+
+#define DIVESTACKGROWFACT 1.5
+
+/** records a current row side such that any change will be undone after diving */
+SCIP_RETCODE SCIPlpRecordOldRowSideDive(
+   SCIP_LP*              lp,                 /**< LP data object */
+   SCIP_ROW*             row,                /**< row affected by the change */
+   SCIP_SIDETYPE         sidetype            /**< side type */
+   )
+{
+   assert(lp != NULL);
+   assert(row != NULL);
+
+   if( lp->ndivechgsides == lp->divechgsidessize )
+      reallocDiveChgSideArrays(lp, lp->divechgsidessize + 1, DIVESTACKGROWFACT);
+   assert(lp->ndivechgsides < lp->divechgsidessize);
+
+   lp->divechgsides[lp->ndivechgsides] = (sidetype == SCIP_SIDETYPE_LEFT) ? row->lhs : row->rhs;
+   lp->divechgsidetypes[lp->ndivechgsides] = sidetype;
+   lp->divechgrows[lp->ndivechgsides] = row;
+   lp->ndivechgsides++;
 
    return SCIP_OKAY;
 }

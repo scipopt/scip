@@ -13600,6 +13600,40 @@ SCIP_RETCODE SCIPaddRowDive(
    SCIP_ROW*             row                 /**< row to be added */
    );
 
+/** changes row lhs in current dive, change will be undone after diving ends, for permanent changes use SCIPchgRowLhs()
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPchgRowLhsDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< row to change the lhs for */
+   SCIP_Real             newlhs              /**< new value for lhs */
+   );
+
+/** changes row rhs in current dive, change will be undone after diving ends, for permanent changes use SCIPchgRowRhs()
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPchgRowRhsDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< row to change the lhs for */
+   SCIP_Real             newrhs              /**< new value for rhs */
+   );
+
 /** gets variable's objective value in current dive
  *
  *  @return the variable's objective value in current dive.
