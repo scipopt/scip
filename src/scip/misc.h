@@ -326,50 +326,6 @@ SCIP_Real SCIPnegateReal(
    SCIP_Real             x                   /**< value to negate */
    );
 
-/*
- * Dynamic Stacks
- */
-
-/** creates a dynamic stack of real values */
-extern
-SCIP_RETCODE SCIPrealstackCreate(
-   SCIP_REALSTACK**      realstack,          /**< pointer to store the real array */
-   int                   initsize,           /**< initial size of the stack */
-   SCIP_Real             growfact            /**< growing factor */
-   );
-
-/** frees a dynamic stack of real values */
-extern
-void SCIPrealstackFree(
-   SCIP_REALSTACK**      realstack           /**< pointer to the stack of reals */
-   );
-
-/** clears the stack, but doesn't free the data elements themselves */
-extern
-void SCIPrealstackClear(
-   SCIP_REALSTACK*       realstack           /**< stack of reals */
-   );
-
-/** returns whether the stack is empty */
-extern
-SCIP_Bool SCIPrealstackIsEmpty(
-   SCIP_REALSTACK*       realstack           /**< stack of reals */
-   );
-
-/** pushes a real element to the top of the stack */
-extern
-SCIP_RETCODE SCIPrealstackPush(
-   SCIP_REALSTACK*       realstack,          /**< stack of reals */
-   SCIP_Real             elem                /**< element to be pushed */
-   );
-
-/** pops an element from the stack of reals */
-extern
-SCIP_RETCODE SCIPrealstackPop(
-   SCIP_REALSTACK*       realstack,          /**< stack of reals */
-   SCIP_Real*            elem                /**< pointer to store the popped element */
-   );
-
 #ifdef __cplusplus
 }
 #endif
