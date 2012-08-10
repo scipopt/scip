@@ -34226,7 +34226,10 @@ SCIP_RETCODE SCIPchgLpfeastol(
 
    /* mark the LP unsolved, if the primal feasibility tolerance was tightened */
    if( scip->lp != NULL && lpfeastol < SCIPsetLpfeastol(scip->set) )
+   {
       scip->lp->solved = FALSE;
+      scip->lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
 
    /* change the settings */
    SCIP_CALL( SCIPsetSetLpfeastol(scip->set, lpfeastol, printnewvalue) );
@@ -34248,7 +34251,10 @@ SCIP_RETCODE SCIPchgDualfeastol(
 
    /* mark the LP unsolved, if the dual feasibility tolerance was tightened */
    if( scip->lp != NULL && dualfeastol < SCIPsetDualfeastol(scip->set) )
+   {
       scip->lp->solved = FALSE;
+      scip->lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
 
    /* change the settings */
    SCIP_CALL( SCIPsetSetDualfeastol(scip->set, dualfeastol) );

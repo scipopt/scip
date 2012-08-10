@@ -46,6 +46,7 @@ fixed bugs:
 - fixed bug when adding binary implications with non-vartype binary variables
 - fixed bug resulting in trying to delete an upgraded linear constraint a second time in exitpre callback
 - fixed bug in nlp diving heuristic for fractional variables with values slightly outside of their domain
+- set lpsolstat to SCIP_LPSOLSTAT_NOTSOLVED in SCIPchg{Lp,Dual}feastol
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()
