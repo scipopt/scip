@@ -98,6 +98,7 @@ struct SCIP_PropData
    BOUNDGROUP*           boundgroups;        /**< array of bound groups */
    SCIP_ROW*             cutoffrow;          /**< pointer to current objective cutoff row */
    SCIP_PROP*            genvboundprop;      /**< pointer to genvbound propagator */
+   int*                  nextindices;        /**< next relative index to try per bound group */
    SCIP_Longint          itlimitresolve;     /**< iteration limit used for (re-)solving the root LP */
    SCIP_Longint          lastnode;           /**< number of last node where obbt was performed */
    SCIP_Real             dualfeastol;        /**< feasibility tolerance for reduced costs used in obbt; this value is
@@ -649,9 +650,7 @@ SCIP_RETCODE applyBoundChgs(
    SCIP_RESULT*          result              /**< result pointer */
    )
 {
-#ifdef SCIP_DEBUG
    int ntightened;                           /* stores the number of successful bound changes */
-#endif
    int i;
 
    assert(scip != NULL);
@@ -660,7 +659,7 @@ SCIP_RETCODE applyBoundChgs(
    assert(result != NULL);
    assert(*result == SCIP_DIDNOTFIND);
 
-   SCIPdebug( ntightened = 0 );
+   ntightened = 0;
 
    for( i = 0; i < propdata->nbounds; i++ )
    {
@@ -692,13 +691,13 @@ SCIP_RETCODE applyBoundChgs(
          if( tightened )
          {
             *result = SCIP_REDUCEDDOM;
-            SCIPdebug( ntightened++ );
+            ntightened++;
          }
       }
    }
 
-#ifdef SCIP_DEBUG
-   SCIPdebugMessage("tightened %d bounds\n", ntightened);
+#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
+   SCIPinfoMessage(scip, NULL, "tightened %d bounds\n", ntightened);
 #endif
 
    return SCIP_OKAY;
@@ -923,7 +922,6 @@ SCIP_RETCODE findNewBounds(
    )
 {
    SCIP_VAR** vars;                          /* array of the problems variables */
-   int* nextindices;                         /* next relative index to try per bound group */
 
    SCIP_Bool boundsleft;
    SCIP_Bool iterationsleft;
@@ -961,9 +959,6 @@ SCIP_RETCODE findNewBounds(
       SCIP_CALL( SCIPchgVarObjDive(scip, vars[i], 0.0) );
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &nextindices, propdata->nboundgroups) );
-   BMSclearMemoryArray(nextindices, propdata->nboundgroups);
-
    boundsleft = TRUE;
    iterationsleft = nleftiterations == -1 || nleftiterations > 0;
 
@@ -983,7 +978,7 @@ SCIP_RETCODE findNewBounds(
          bdgroup = &(propdata->boundgroups[i]);
          lastboundsuccessful = TRUE;
 
-         while( lastboundsuccessful && nextindices[i] < bdgroup->nbounds && iterationsleft )
+         while( lastboundsuccessful && propdata->nextindices[i] < bdgroup->nbounds && iterationsleft )
          {
             BOUND* bound;
             SCIP_VAR* var;
@@ -991,9 +986,9 @@ SCIP_RETCODE findNewBounds(
             SCIP_Bool error;
             SCIP_Bool optimal;                     /* was the LP solved to optimalilty? */
 
-            bound = propdata->bounds[bdgroup->firstbdindex + nextindices[i]];
+            bound = propdata->bounds[bdgroup->firstbdindex + propdata->nextindices[i]];
             var = bound->var;
-            nextindices[i]++;
+            propdata->nextindices[i]++;
 
             SCIPdebugMessage("   applying obbt on %s bound of <%s> (local bounds: [%f,%f])\n",
                bound->boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(var),
@@ -1028,7 +1023,6 @@ SCIP_RETCODE findNewBounds(
             /* stop this procedure if an error occured */
             if( error )
             {
-               SCIPfreeBufferArray(scip, &nextindices);
                SCIPstatisticMessage("aborting since lp error\n");
                return SCIP_OKAY;
             }
@@ -1071,7 +1065,7 @@ SCIP_RETCODE findNewBounds(
             SCIP_CALL( SCIPchgVarObjDive(scip, var, 0.0 ) );
          }
 
-         if( nextindices[i] < bdgroup->nbounds )
+         if( propdata->nextindices[i] < bdgroup->nbounds )
             boundsleft = TRUE;
       }
    }
@@ -1083,7 +1077,6 @@ SCIP_RETCODE findNewBounds(
    SCIPstatisticMessage("end obbt\n");
 #endif
 
-   SCIPfreeBufferArray(scip, &nextindices);
    return SCIP_OKAY;
 }
 
@@ -1201,7 +1194,7 @@ SCIP_RETCODE applyObbt(
       SCIP_CALL( findNewBounds(scip, propdata, itlimit) );
    }
 
-#if defined SCIP_DEBUG || SCIP_STATISTIC
+#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
    if( error )
    {
       SCIPdebugMessage("skipping obbt since an error occured in (re-)solving the LP\n");
@@ -1352,6 +1345,8 @@ SCIP_RETCODE createGroups(
 
    /* allocate bound groups array */
    SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->boundgroups), propdata->nboundgroups) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->nextindices), propdata->nboundgroups) );
+   BMSclearMemoryArray(propdata->nextindices, propdata->nboundgroups);
 
    oldscoreval = propdata->bounds[0]->score + 1;
    j = 0;
@@ -1657,6 +1652,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolObbt)
 
       /* free bound groups */
       SCIPfreeMemoryArray(scip, &(propdata->boundgroups));
+      SCIPfreeMemoryArray(scip, &(propdata->nextindices));
 
       /* free bounds */
       for( i = propdata->nbounds - 1; i >= 0; i-- )
