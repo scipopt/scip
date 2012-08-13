@@ -964,7 +964,7 @@ SCIP_RETCODE findNewBounds(
 
    /* as long as bounds are left and maxlookahead is not exceeded, iterate over all groups */
    for( obbtround = 1; boundsleft && (propdata->maxlookahead == -1 || obbtround <= propdata->maxlookahead)
-           && iterationsleft; obbtround++ )
+           && iterationsleft && !SCIPisStopped(scip); obbtround++ )
    {
       SCIPdebugMessage("obbt round %d\n", obbtround);
 
