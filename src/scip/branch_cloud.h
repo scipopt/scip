@@ -16,7 +16,8 @@
 /**@file   branch_cloud.h
  * @ingroup BRANCHINGRULES
  * @brief  cloud branching rule
- * @author Tobias Achterberg
+ * @author Timo Berthold
+ * @author Domenico Salvagnin
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

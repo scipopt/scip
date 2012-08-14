@@ -22,6 +22,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/branch_cloud.h"
 
@@ -149,18 +150,161 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolCloud)
 
 
 /** branching execution method for fractional LP solutions */
-#if 0
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of cloud branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_VAR** lpcands;
+   SCIP_VAR** lpcandscopy;
+
+   SCIP_VAR** vars;                          /* SCIP variables                */
+   SCIP_ROW** lprows;
+   SCIP_Real* lpcandsfrac;
+   SCIP_Real* lpcandssol;
+   SCIP_Real* lpcandsmin;
+   SCIP_Real* lpcandsmax;
+   SCIP_Bool newpoint;
+   SCIP_Bool lperror;
+
+   int nlpcands;
+   int nvars;
+   int bestcand;
+   int nlprows;
+   int i;
+
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   if( !SCIPisLPSolBasic(scip) )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("Execlp method of "BRANCHRULE_NAME" branching\n");
+
+   /* get branching candidates */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands) );
+   nlpcands = SCIPgetNLPBranchCands(scip);
+   assert(nlpcands > 0);
+
+   /* get problem variables and LP row data */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   nlprows = SCIPgetNLPRows(scip);
+   lprows = SCIPgetLPRows(scip);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &lpcandsmin, nlpcands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lpcandsmax, nlpcands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lpcandscopy, nlpcands) );
+   BMScopyMemoryArray(lpcandsmin, lpcandssol, nlpcands);
+   BMScopyMemoryArray(lpcandsmax, lpcandssol, nlpcands);
+   BMScopyMemoryArray(lpcandscopy, lpcands, nlpcands);
+
+   /* start diving to calculate the solution cloud */
+   SCIP_CALL( SCIPstartDive(scip) );
+
+   /* fix variables with nonzero reduced costs to reduce LP to the optimal face */
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_Real solval;
+      solval = SCIPgetSolVal(scip, NULL, vars[i]);
+
+      if( !SCIPisFeasZero(scip, SCIPgetVarRedcost(scip, vars[i])) )
+      {
+         SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], solval) );
+         SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], solval) );
+      }
+      else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_INTEGER && !SCIPisIntegral(scip, solval) )
+      {
+         SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPfloor(scip, solval)) );
+         SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPceil(scip, solval)) );
+      }
+
+      SCIP_CALL( SCIPchgVarObjDive(scip, vars[i], 0.0) );
+   }
+
+   /* fix LP rows with nonzero dual solution to reduce LP to the optimal face */
+   for( i = 0; i < nlprows; ++i )
+   {
+      SCIP_Real dualsol;
+      dualsol = SCIProwGetDualsol(lprows[i]);
+
+      if( !SCIPisZero(scip, dualsol) )
+      {
+         if( dualsol > 0 )
+         {
+            SCIP_CALL( SCIPchgRowRhsDive(scip, lprows[i], SCIProwGetLhs(lprows[i])) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgRowLhsDive(scip, lprows[i], SCIProwGetRhs(lprows[i])) );
+         }
+      }
+   }
+
+   newpoint = TRUE;
+
+   /* loop that generates new cloud point */
+   while( newpoint )
+   {
+#ifdef NDEBUG
+      SCIP_RETCODE retcode;
+#endif
+
+      /* apply feasibility pump objective function to fractional variables */
+      for( i = 0; i < nlpcands; ++i)
+      {
+         SCIP_Real frac;
+         frac = SCIPfrac(scip, SCIPgetSolVal(scip, NULL, lpcandscopy[i]));
+
+         if( !SCIPisZero(scip, frac) && !SCIPisIntegral(scip, lpcandsmin[i]) && !SCIPisIntegral(scip, lpcandsmax[i]) )
+         {
+            if( frac < 0.5 )
+            {
+               SCIP_CALL( SCIPchgVarObjDive(scip, vars[i], 1.0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgVarObjDive(scip, vars[i], -1.0) );
+            }
+         }
+      }
+
+      /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+       * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+       */
+#ifdef NDEBUG
+      retcode = SCIPsolveDiveLP(scip, -1, &lperror);
+      if( retcode != SCIP_OKAY )
+      {
+         SCIPwarningMessage(scip, "Error while solving LP in "BRANCHRULE_NAME"; LP solve terminated with code <%d>\n",retcode);
+      }
+#else
+      SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );
+#endif
+
+      newpoint = FALSE;
+      for( i = 0; i < nlpcands; ++i)
+      {
+         SCIP_Real solval;
+         solval = SCIPgetSolVal(scip, NULL, lpcandscopy[i]);
+
+         if( SCIPisIntegral(scip,solval) && !SCIPisIntegral(scip, lpcandsmin[i]) && !SCIPisIntegral(scip, lpcandsmax[i]) )
+            newpoint = TRUE;
+
+         lpcandsmin[i] = MIN(lpcandsmin[i], solval);
+         lpcandsmax[i] = MAX(lpcandsmax[i], solval);
+      }
+
+   }
+
+   /* terminate the diving */
+   SCIP_CALL( SCIPendDive(scip) );
+
+   SCIPfreeBufferArray(scip, &lpcandscopy);
+   SCIPfreeBufferArray(scip, &lpcandsmax);
+   SCIPfreeBufferArray(scip, &lpcandsmin);
 
    return SCIP_OKAY;
 }
-#else
-#define branchExeclpCloud NULL
-#endif
 
 
 /** branching execution method for external candidates */
