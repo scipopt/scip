@@ -1202,7 +1202,6 @@ SCIP_RETCODE getActiveVar(
       scalar = 1.0;
       realconstant = 0.0;
 
-      assert(SCIPvarGetUbLocal(*var) - SCIPvarGetLbLocal(*var) < 1.5);
       assert(SCIPvarGetStatus(*var) == SCIP_VARSTATUS_AGGREGATED);
 
       /* transform variable to active variable */
