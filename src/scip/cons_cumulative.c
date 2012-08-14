@@ -5292,7 +5292,7 @@ SCIP_RETCODE computeAlternativeBounds(
             int est;
 
             /* the variable has a down locked */
-            est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+            est = convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + constant;
             ect = est + consdata->durations[v];
 
             if( ect <= hmin || hmin >= hmax )
@@ -5311,7 +5311,7 @@ SCIP_RETCODE computeAlternativeBounds(
             int lst;
 
             /* the variable has a up lock locked */
-            lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+            lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + constant;
             lct = lst + consdata->durations[v];
 
             if( lst >= hmax || hmin >= hmax  )
