@@ -22,6 +22,9 @@ fixed bugs:
 - fixed bugs in parsing dis-/conjunctive constraints
 - fixed minor bug in conjunctive constraint handler printing wrong constraint
 - fixed bug in disjunctive constraint handler when enforcing a constraint
+- fixed bug with handling of empty logicor and bounddisjunction constraints
+- fixed bug which disabled iteration limit in SCIPlpSolveAndEval()
+- fixed bug in cumulative constraint handler w.r.t. getting active variables
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round

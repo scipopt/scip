@@ -577,7 +577,7 @@ SCIP_RETCODE applyGlobalBounds(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->vars != NULL);
+   assert(consdata->nvars == 0 || consdata->vars != NULL);
 
    *redundant = FALSE;
    v = 0;
@@ -2299,6 +2299,7 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->vars != NULL);
+   assert(consdata->nvars > 0);
    assert(0 <= inferinfo && inferinfo < consdata->nvars);
    assert(consdata->vars[inferinfo] == infervar);
 
