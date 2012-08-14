@@ -1425,11 +1425,11 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    int v;
 
    assert(prob != NULL);
-   
+
    /* if we know already, that the objective value is integral, nothing has to be done */
    if( prob->objisintegral )
       return SCIP_OKAY;
-   
+
    /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
    if( set->nactivepricers != 0 )
       return SCIP_OKAY;
@@ -1450,7 +1450,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
          /* if variable's objective value is fractional, the problem's objective value may also be fractional */
          if( !SCIPsetIsIntegral(set, obj) )
             break;
-         
+
          /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
          if( SCIPvarGetType(prob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
             break;
