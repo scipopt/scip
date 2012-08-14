@@ -10901,6 +10901,16 @@ SCIP_RETCODE SCIPtransformProb(
    /* switch stage to TRANSFORMED */
    scip->set->stage = SCIP_STAGE_TRANSFORMED;
 
+   /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
+    * cutoff bound if primal solution is already known
+    */
+   SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+	 scip->tree, scip->lp, scip->eventqueue) );
+
+   /* if possible, scale objective function such that it becomes integral with gcd 1 */
+   SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+	 scip->tree, scip->lp, scip->eventqueue) );
+
    /* check solution of solution candidate storage */
    nfeassols = 0;
    ncandsols = scip->origprimal->nsols;
@@ -10916,7 +10926,7 @@ SCIP_RETCODE SCIPtransformProb(
        * including modifiable constraints
        */
       SCIP_CALL( checkSolOrig(scip, sol, &feasible, scip->set->misc_printreason, FALSE, TRUE, TRUE, TRUE, TRUE) );
-      
+
       if( feasible )
       {
          SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
@@ -10932,10 +10942,10 @@ SCIP_RETCODE SCIPtransformProb(
       SCIP_CALL( SCIPsolFree(&sol, scip->mem->probmem, scip->origprimal) );
       scip->origprimal->nsols--;
    }
-   
+
    assert(scip->origprimal->nsols == 0);
    assert(scip->origprimal->nexistingsols == 0);
-   
+
    if( nfeassols > 0 )
    {
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,

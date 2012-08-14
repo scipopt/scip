@@ -1191,22 +1191,23 @@ static
 SCIP_RETCODE getActiveVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            var,                /**< pointer to store the active variable */
+   int*                  scalar,             /**< pointer to store the scalar */
    int*                  constant            /**< pointer to store the constant */
    )
 {
    if( !SCIPvarIsActive(*var) )
    {
-      SCIP_Real scalar;
+      SCIP_Real realscalar;
       SCIP_Real realconstant;
 
-      scalar = 1.0;
+      realscalar = 1.0;
       realconstant = 0.0;
 
       assert(SCIPvarGetStatus(*var) == SCIP_VARSTATUS_AGGREGATED);
 
       /* transform variable to active variable */
-      SCIP_CALL( SCIPgetProbvarSum(scip, var, &scalar, &realconstant) );
-      assert(SCIPisEQ(scip, scalar, 1.0));
+      SCIP_CALL( SCIPgetProbvarSum(scip, var, &realscalar, &realconstant) );
+      assert(!SCIPisZero(scip, realscalar));
       assert(SCIPvarIsActive(*var));
 
       if( realconstant < 0.0 )
@@ -1214,9 +1215,20 @@ SCIP_RETCODE getActiveVar(
       else
          (*constant) = convertBoundToInt(scip, realconstant);
 
+      if( realscalar < 0.0 )
+         (*scalar) = -convertBoundToInt(scip, -realscalar);
+      else
+         (*scalar) = convertBoundToInt(scip, realscalar);
+
+
    }
    else
+   {
+      (*scalar) = 1;
       (*constant) = 0;
+   }
+
+   assert(*scalar != 0);
 
    return SCIP_OKAY;
 }
@@ -5267,6 +5279,7 @@ SCIP_RETCODE computeAlternativeBounds(
 
       for( v = 0; v < nvars; ++v )
       {
+         int scalar;
          int constant;
          int idx;
 
@@ -5281,7 +5294,7 @@ SCIP_RETCODE computeAlternativeBounds(
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
             continue;
 
-         SCIP_CALL( getActiveVar(scip, &var, &constant) );
+         SCIP_CALL( getActiveVar(scip, &var, &scalar, &constant) );
          idx = SCIPvarGetProbindex(var);
          assert(idx >= 0);
 
@@ -5292,14 +5305,14 @@ SCIP_RETCODE computeAlternativeBounds(
             int est;
 
             /* the variable has a down locked */
-            est = convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + constant;
+            est = scalar * convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + constant;
             ect = est + consdata->durations[v];
 
             if( ect <= hmin || hmin >= hmax )
                downlocks[idx]++;
-            else if( est < hmin && alternativelbs[idx] >= hmin + 1 - constant )
+            else if( est < hmin && alternativelbs[idx] >= (hmin + 1 - constant) / scalar )
             {
-               alternativelbs[idx] = hmin + 1 - constant;
+               alternativelbs[idx] = (hmin + 1 - constant) / scalar;
                downlocks[idx]++;
             }
          }
@@ -5311,14 +5324,14 @@ SCIP_RETCODE computeAlternativeBounds(
             int lst;
 
             /* the variable has a up lock locked */
-            lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + constant;
+            lst = scalar * convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + constant;
             lct = lst + consdata->durations[v];
 
             if( lst >= hmax || hmin >= hmax  )
                uplocks[idx]++;
-            else if( lct > hmax && alternativeubs[idx] <= hmax - 1 - constant )
+            else if( lct > hmax && alternativeubs[idx] <= (hmax - 1 - constant) / scalar )
             {
-               alternativeubs[idx] = hmax - 1 - constant;
+               alternativeubs[idx] = (hmax - 1 - constant) / scalar;
                uplocks[idx]++;
             }
          }
