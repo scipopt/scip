@@ -4392,7 +4392,7 @@ SCIP_RETCODE SCIPvarAggregate(
       for( i = 0; i < nvbds && !(*infeasible); ++i )
       {
          SCIP_CALL( SCIPvarAddVlb(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-               vars[i], coefs[i], constants[i], TRUE, infeasible, NULL) );
+               vars[i], coefs[i], constants[i], FALSE, infeasible, NULL) );
       }
    }
    if( var->vubs != NULL )
@@ -4404,7 +4404,7 @@ SCIP_RETCODE SCIPvarAggregate(
       for( i = 0; i < nvbds && !(*infeasible); ++i )
       {
          SCIP_CALL( SCIPvarAddVub(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-               vars[i], coefs[i], constants[i], TRUE, infeasible, NULL) );
+               vars[i], coefs[i], constants[i], FALSE, infeasible, NULL) );
       }
    }
    SCIPvboundsFree(&var->vlbs, blkmem);
@@ -4435,7 +4435,7 @@ SCIP_RETCODE SCIPvarAggregate(
              *       implication to the aggregated variable?
              */
             SCIP_CALL( SCIPvarAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-                  (SCIP_Bool)i, implvars[j], impltypes[j], implbounds[j], TRUE, infeasible, NULL) );
+                  (SCIP_Bool)i, implvars[j], impltypes[j], implbounds[j], FALSE, infeasible, NULL) );
             assert(nimpls == SCIPimplicsGetNImpls(var->implics, (SCIP_Bool)i));
          }
       }
