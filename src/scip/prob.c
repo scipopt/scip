@@ -957,7 +957,6 @@ SCIP_RETCODE SCIPprobDelVar(
    assert(prob != NULL);
    assert(set != NULL);
    assert(var != NULL);
-   assert(eventqueue != NULL);
    assert(deleted != NULL);
    assert(SCIPvarGetProbindex(var) != -1);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
@@ -988,6 +987,8 @@ SCIP_RETCODE SCIPprobDelVar(
    if( prob->transformed )
    {
       SCIP_EVENT* event;
+
+      assert(eventqueue != NULL);
 
       /* issue VARDELETED event */
       SCIP_CALL( SCIPeventCreateVarDeleted(&event, blkmem, var) );
