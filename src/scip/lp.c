@@ -7404,8 +7404,6 @@ SCIP_RETCODE lpFlushChgRows(
    if( lp->nchgrows == 0 )
       return SCIP_OKAY;
 
-   assert(!lp->diving);
-
    /* get the solver's infinity value */
    lpiinf = SCIPlpiInfinity(lp->lpi);
 
