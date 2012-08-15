@@ -445,8 +445,8 @@ SCIP_RETCODE filterRound(
          objcoef = SCIPgetVarObjDive(scip, bound->var);
 
          /* change objective coefficient if it was set up for this bound */
-          if( (bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisPositive(scip, objcoef))
-             || (bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisNegative(scip, objcoef)) )
+          if( (bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisNegative(scip, objcoef))
+             || (bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisPositive(scip, objcoef)) )
          {
             SCIP_CALL( SCIPchgVarObjDive(scip, bound->var, 0.0) );
          }
