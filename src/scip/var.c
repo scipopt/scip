@@ -15045,8 +15045,8 @@ void SCIPvarSetCopyData(
 
 /** sets the initial flag of a variable; only possible for original or loose variables */
 SCIP_RETCODE SCIPvarSetInitial(
-   SCIP_VAR*            var,
-   SCIP_Bool            initial
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             initial             /**< initial flag */
    )
 {
    assert(var != NULL);
@@ -15061,8 +15061,8 @@ SCIP_RETCODE SCIPvarSetInitial(
 
 /** sets the removable flag of a variable; only possible for original or loose variables */
 SCIP_RETCODE SCIPvarSetRemovable(
-   SCIP_VAR*            var,
-   SCIP_Bool            removable
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             removable           /**< removable flag */
    )
 {
    assert(var != NULL);

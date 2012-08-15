@@ -3560,7 +3560,7 @@ void SCIPconshdlrSetData(
    conshdlr->conshdlrdata = conshdlrdata;
 }
 
-/* sets all separation related callbacks of the constraint handler */
+/** sets all separation related callbacks of the constraint handler */
 void SCIPconshdlrSetSepa(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
@@ -3581,7 +3581,7 @@ void SCIPconshdlrSetSepa(
    conshdlr->delaysepa = delaysepa;
 }
 
-/* sets both the propagation callback and the propagation frequency of the constraint handler */
+/** sets both the propagation callback and the propagation frequency of the constraint handler */
 void SCIPconshdlrSetProp(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */

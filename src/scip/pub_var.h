@@ -296,15 +296,15 @@ SCIP_RETCODE SCIPvarGetAggregatedObj(
 /** sets the initial flag of a variable; only possible for original or loose variables */
 EXTERN
 SCIP_RETCODE SCIPvarSetInitial(
-   SCIP_VAR*            var,
-   SCIP_Bool            initial
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             initial             /**< initial flag */
    );
 
 /** sets the removable flag of a variable; only possible for original or loose variables */
 EXTERN
 SCIP_RETCODE SCIPvarSetRemovable(
-   SCIP_VAR*            var,
-   SCIP_Bool            removable
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             removable           /**< removable flag */
    );
 
 #ifndef NDEBUG
