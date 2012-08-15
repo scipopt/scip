@@ -5382,8 +5382,8 @@ SCIP_Real SCIPgetNodeLowerbound(
    SCIP_NODE*            node                /**< node to get dual bound for */
    );
 
-/** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound,
- *  sets the current node's dual bound to the new value
+/** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound (in
+ *  original problem space), sets the current node's dual bound to the new value
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -5407,6 +5407,8 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN

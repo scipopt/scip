@@ -6603,28 +6603,28 @@ SCIP_RETCODE checkParallelObjective(
 
          if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
-            SCIP_Real dualbound;
+            SCIP_Real lowerbound;
 
-            dualbound = (consdata->lhs - offset) / scale;
+            lowerbound = (consdata->lhs - offset) / scale;
 
-            SCIPdebugMessage("constraint <%s> is parallel to objective function and provides a dual bound <%g>\n",
-               SCIPconsGetName(cons), dualbound);
+            SCIPdebugMessage("constraint <%s> is parallel to objective function and provides a lower bound <%g>\n",
+               SCIPconsGetName(cons), lowerbound);
 
-            SCIP_CALL( SCIPupdateLocalDualbound(scip, dualbound) );
+            SCIP_CALL( SCIPupdateLocalLowerbound(scip, lowerbound) );
          }
       }
       else
       {
          if( !SCIPisInfinity(scip, consdata->rhs) )
          {
-            SCIP_Real dualbound;
+            SCIP_Real lowerbound;
 
-            dualbound = (consdata->rhs - offset) / scale;
+            lowerbound = (consdata->rhs - offset) / scale;
 
-            SCIPdebugMessage("constraint <%s> is parallel to objective function and provides a dual bound <%g>\n",
-               SCIPconsGetName(cons), dualbound);
+            SCIPdebugMessage("constraint <%s> is parallel to objective function and provides a lower bound <%g>\n",
+               SCIPconsGetName(cons), lowerbound);
 
-            SCIP_CALL( SCIPupdateLocalDualbound(scip, dualbound) );
+            SCIP_CALL( SCIPupdateLocalLowerbound(scip, lowerbound) );
          }
 
          if( !SCIPisInfinity(scip, -consdata->lhs) )
