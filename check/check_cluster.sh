@@ -182,18 +182,23 @@ echo > $EVALFILE
 #define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
 CLUSTERQUEUE=$QUEUE
 
-ACCOUNT="mip"
 NICE=""
-if test $CLUSTERQUEUE = "opt"
+ACCOUNT="mip"
+
+if test $CLUSTERQUEUE = "dbg"
 then
-    CLUSTERQUEUE="opt"
+    CLUSTERQUEUE="mip-dbg,telekom-dbg"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "telekom-dbg"
+then
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "mip-dbg"
+then
+    ACCOUNT="mip-dbg"
 elif test $CLUSTERQUEUE = "opt-low"
 then
     CLUSTERQUEUE="opt"
     NICE="--nice=10000"
-elif test $CLUSTERQUEUE = "mip-dbg"
-then
-    ACCOUNT="mip-dbg"
 fi
 
 
