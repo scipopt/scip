@@ -240,14 +240,16 @@ fi
 
 #define account and clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
 
+NICE=""
 if test $QUEUE = "opt"
 then
-  CLUSTERQUEUE="opt,opt-long"
+  CLUSTERQUEUE="opt"
   ACCOUNT="mip"
 elif test $QUEUE = "opt-low"
 then
-  CLUSTERQUEUE="opt-low"
-  ACCOUNT="opt-low"
+  CLUSTERQUEUE="opt"
+  ACCOUNT="mip"
+  NICE="--nice=10000"
 elif test $QUEUE = "mip-dbg"
 then
   CLUSTERQUEUE="mip-dbg"
@@ -377,7 +379,7 @@ do
     case $QUEUETYPE in
       srun )
         # hard timelimit could be set via --time=0:${HARDTIMELIMIT}
-        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT ${EXCLUSIVE} --output=/dev/null rungamscluster.sh`
+        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT $NICE ${EXCLUSIVE} --output=/dev/null rungamscluster.sh`
         echo $sbatchret
         FINISHDEPEND=$FINISHDEPEND:`echo $sbatchret | cut -d " " -f 4`
         ;;

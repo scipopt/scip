@@ -183,13 +183,14 @@ echo > $EVALFILE
 CLUSTERQUEUE=$QUEUE
 
 ACCOUNT="mip"
-
+NICE=""
 if test $CLUSTERQUEUE = "opt"
 then
-    CLUSTERQUEUE="opt,opt-long"
+    CLUSTERQUEUE="opt"
 elif test $CLUSTERQUEUE = "opt-low"
 then
-    ACCOUNT="opt-low"
+    CLUSTERQUEUE="opt"
+    NICE="--nice=10000"
 elif test $CLUSTERQUEUE = "mip-dbg"
 then
     ACCOUNT="mip-dbg"
@@ -288,7 +289,7 @@ do
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
+	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
       else
           # -V to copy all environment variables
 	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null runcluster.sh
