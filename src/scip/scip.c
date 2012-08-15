@@ -10578,6 +10578,8 @@ SCIP_Real SCIPgetNodeLowerbound(
 /** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound (in
  *  original problem space), sets the current node's dual bound to the new value
  *
+ *  @note the given new bound has to be a dual bound, i.e., it has to be valid for the original problem.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -10626,6 +10628,8 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
 
 /** if given value is larger than the current node's lower bound (in transformed problem), sets the current node's
  *  lower bound to the new value
+ *
+ *  @note the given new bound has to be a lower bound, i.e., it has to be valid for the transformed problem.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -11908,7 +11912,7 @@ SCIP_RETCODE freeSolve(
       /* copy the current dual bound into the problem data structure such that it can be used initialize the new search
        * tree
        */
-      SCIPprobSetDualbound(scip->transprob, getDualbound(scip));
+      SCIPprobUpdateDualbound(scip->transprob, getDualbound(scip));
    }
 
    /* remove focus from the current focus node */
