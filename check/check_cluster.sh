@@ -184,12 +184,13 @@ CLUSTERQUEUE=$QUEUE
 
 ACCOUNT="mip"
 
-if test $CLUSTERQUEUE = "opt"
+if test $CLUSTERQUEUE = "dbg"
 then
-    CLUSTERQUEUE="opt,opt-long"
-elif test $CLUSTERQUEUE = "opt-low"
+    CLUSTERQUEUE="mip-dbg,telekom-dbg"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "telekom-dbg"
 then
-    ACCOUNT="opt-low"
+    ACCOUNT="mip-dbg"
 elif test $CLUSTERQUEUE = "mip-dbg"
 then
     ACCOUNT="mip-dbg"
