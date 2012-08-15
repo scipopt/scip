@@ -75,6 +75,10 @@ interface
 - methods SCIPparseVar(), SCIPvarParseOriginal(), and SCIPvarParseTransformed() now return the end of the parsed string
 - new methods SCIPcopyOrig(), SCIPcopyOrigProb(), SCIPcopyOrigVars(), and SCIPcopyOrigConss() which allow to copy the
   complete original problem, the problem data, variables, and constraint, respectively
+- new functions SCIPchgRowLhsDive() and SCIPchgRowRhsDive() that allow to change the sides of a row during diving
+- new function SCIPselectVarStrongBranching() to get the variable that fullstrongbranching would select
+- SCIPcalcMIR() takes an additional parameter sidetypes to determine which side of the rows to use (relevant for ranged rows)
+- New methods SCIPconshdlrIncNCutsFound(), SCIPsepaIncNCutsFound(), and SCIPsepaIncNCutsFoundAtNode() to increase the number of found cuts
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
@@ -110,6 +114,7 @@ core:
   a copy of the string to be output anymore, which makes the code much simpler (and also faster); it is passed a
   function pointer to the output function and uses it to directly output the (buffered) messages
 
+<<<<<<< HEAD
 
 SCIP version 3.0.2
 ==================
@@ -150,6 +155,8 @@ interface:
 - remove problematic function cons_indicator:SCIPsetSlackVarIndicator()
 
 
+=======
+>>>>>>> added missing CHANGELOG entries
 SCIP version 3.0.1
 ==================
 
