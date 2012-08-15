@@ -433,14 +433,23 @@ SCIP_RETCODE filterRound(
       if( (bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGE(scip, solval, boundval))
          || (bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLE(scip, solval, boundval)) )
       {
+         SCIP_Real objcoef;
+
          /* mark bound as filtered */
          bound->filtered = TRUE;
 
          /* increase number of filtered variables */
          (*nfiltered)++;
 
-         /* update objective (smooth filtering) */
-         SCIP_CALL( SCIPchgVarObjDive(scip, bound->var, 0.0) );
+         /* get the corresponding variable's objective coeffient */
+         objcoef = SCIPgetVarObjDive(scip, bound->var);
+
+         /* change objective coefficient if it was set up for this bound */
+          if( (bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisPositive(scip, objcoef))
+             || (bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisNegative(scip, objcoef)) )
+         {
+            SCIP_CALL( SCIPchgVarObjDive(scip, bound->var, 0.0) );
+         }
       }
    }
 
