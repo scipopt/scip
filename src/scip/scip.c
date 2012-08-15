@@ -10575,8 +10575,8 @@ SCIP_Real SCIPgetNodeLowerbound(
    return SCIPnodeGetLowerbound(node);
 }
 
-/** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound,
- *  sets the current node's dual bound to the new value
+/** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound (in
+ *  original problem space), sets the current node's dual bound to the new value
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -10597,12 +10597,18 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
+      /* since no root node, for which we could update the dual bound, has been create yet, update the dual bound stored in
+       * the problem data
+       */
       SCIPprobUpdateDualbound(scip->origprob, newbound);
       break;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
-      SCIPprobUpdateDualbound(scip->transprob, SCIPprobExternObjval(scip->transprob, scip->set, newbound));
+      /* since no root node, for which we could update the dual bound, has been create yet, update the dual bound stored in
+       * the problem data
+       */
+      SCIPprobUpdateDualbound(scip->transprob, newbound);
       break;
 
    case SCIP_STAGE_SOLVING:
@@ -10625,6 +10631,8 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPupdateLocalLowerbound(
@@ -10632,9 +10640,27 @@ SCIP_RETCODE SCIPupdateLocalLowerbound(
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPupdateLocalLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPupdateLocalLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPupdateNodeLowerbound(scip, SCIPtreeGetCurrentNode(scip->tree), newbound);
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+      /* since no root node, for which we could update the lower bound, has been create yet, update the dual bound stored
+       * in the problem data
+       */
+      SCIPprobUpdateDualbound(scip->transprob, SCIPprobExternObjval(scip->transprob, scip->set, newbound));
+      break;
+
+   case SCIP_STAGE_SOLVING:
+      SCIPupdateNodeLowerbound(scip, SCIPtreeGetCurrentNode(scip->tree), newbound);
+      break;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      SCIPABORT();
+      return SCIP_INVALIDCALL; /*lint !e527*/
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
