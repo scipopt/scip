@@ -215,19 +215,18 @@ void profilesInsertJob(
    int                   nprofiles,          /**< number of profiles */
    int                   starttime,          /**< start time of the job */
    int                   duration,           /**< duration of the job */
-   int*                  demands             /**< profile depending demands */
+   int*                  demands,            /**< profile depending demands */
+   SCIP_Bool*            infeasible          /**< pointer to store if the insertion is infeasible */
    )
 {
-   SCIP_Bool infeasible;
    int pos;
    int p;
 
    /* found a feasible start time, insert the job into all profiles */
-   for( p = 0; p < nprofiles; ++p )
+   for( p = 0; p < nprofiles && !(*infeasible); ++p )
    {
       /* add job to resource profile */
-      SCIPprofileInsertCore(profiles[p], starttime, starttime + duration, demands[p], &pos, &infeasible);
-      assert(!infeasible);
+      SCIPprofileInsertCore(profiles[p], starttime, starttime + duration, demands[p], &pos, infeasible);
    }
 }
 
@@ -483,7 +482,9 @@ SCIP_RETCODE performForwardScheduling(
          (*makespan) = MAX(*makespan, starttimes[idx] + duration);
 
          /* insert the job into the profiles */
-         profilesInsertJob(scip, profiles, nresources, starttimes[idx], duration, demands);
+         profilesInsertJob(scip, profiles, nresources, starttimes[idx], duration, demands, infeasible);
+         if( *infeasible )
+            break;
 
          /* propagate the new earliest start time of the job */
          propagateEst(heurdata->precedencegraph, starttimes, lsts, idx, duration, infeasible);
@@ -559,7 +560,9 @@ SCIP_RETCODE performBackwardScheduling(
             break;
 
          /* insert the job into the profiles */
-         profilesInsertJob(scip, profiles, nresources, starttimes[idx], duration, demands);
+         profilesInsertJob(scip, profiles, nresources, starttimes[idx], duration, demands, infeasible);
+         if( *infeasible )
+            break;
       }
 
       SCIPdebugMessage("job %d -> est %d\n", idx, starttimes[idx]);
