@@ -463,9 +463,18 @@ SCIP_Real getDualbound(
    SCIP_Real lowerbound;
 
    if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
-      return -SCIPinfinity(scip) * scip->transprob->objsense;
+   {
+      /* in case we are in presolving we use the stored dual bound if it exits, otherwise, minus or plus infinity
+       * depending on the objective sense
+       */
+      if( scip->transprob->dualbound < SCIP_INVALID )
+         lowerbound = SCIPprobInternObjval(scip->transprob, scip->set, scip->transprob->dualbound);
+      else
+         return -SCIPinfinity(scip) * scip->transprob->objsense;
+   }
+   else
+      lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
 
-   lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
 
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
    {
