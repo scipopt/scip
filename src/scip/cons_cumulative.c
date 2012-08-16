@@ -6924,6 +6924,9 @@ SCIP_RETCODE normalizeDemands(
 
    /**@todo sort items w.r.t. the demands, because we can stop earlier if the smaller weights are evaluated first */
 
+   assert(consdata->demands[nvars-1] <= capacity);
+   assert(consdata->demands[nvars-2] <= capacity);
+
    gcd = (SCIP_Longint)consdata->demands[nvars-1];
    mindemand1 = MIN(consdata->demands[nvars-1], consdata->demands[nvars-2]);
    mindemand2 = MAX(consdata->demands[nvars-1], consdata->demands[nvars-2]);
@@ -6931,6 +6934,8 @@ SCIP_RETCODE normalizeDemands(
    for( v = nvars-2; v >= 0 && (gcd >= 2 || mindemand1 + mindemand2 > capacity); --v )
    {
       assert(mindemand1 <= mindemand2);
+      assert(consdata->demands[v] <= capacity);
+
       gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)consdata->demands[v]);
 
       if( mindemand1 > consdata->demands[v] )
@@ -7933,8 +7938,6 @@ SCIP_RETCODE presolveCons(
    assert(consdata != NULL);
 #endif
 
-   /* over sized jobs should be removed */
-   assert(checkDemands(scip, cons));
    assert(!SCIPconsIsDeleted(cons));
 
    if( conshdlrdata->dualpresolve )
@@ -7973,12 +7976,14 @@ SCIP_RETCODE presolveCons(
       SCIPstatistic( conshdlrdata->ndualfixs += consdata->ndualfixs );
       SCIPstatistic( conshdlrdata->nalwaysruns += consdata->nalwaysruns );
 
-      /* remove jobs which have a demand larger than the capacity */
-      SCIP_CALL( removeOversizedJobs(scip, cons, nchgbds, nchgcoefs, naddconss, cutoff) );
 
       if( *cutoff || SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
    }
+
+   /* remove jobs which have a demand larger than the capacity */
+   SCIP_CALL( removeOversizedJobs(scip, cons, nchgbds, nchgcoefs, naddconss, cutoff) );
+   assert((*cutoff) || checkDemands(scip, cons));
 
    if( conshdlrdata->normalize )
    {
@@ -8087,7 +8092,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
    {
       SCIP_CALL( evaluateCumulativeness(scip, conss[c]) );
 
+#if 0
       SCIP_CALL( SCIPconsdataVisualize(scip, conss[c]) );
+#endif
    }
 
    SCIPstatisticPrintf("@33  irrelevant %d\n", conshdlrdata->nirrelevantjobs);
