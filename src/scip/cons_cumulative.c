@@ -6670,6 +6670,9 @@ SCIP_RETCODE adjustOversizedJobBounds(
    ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + duration;
    lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
 
+   /* the jobs has to have an overlap with the efficient horizon otherwise it would be already removed */
+   assert(ect - duration < consdata->hmax && lst + duration > consdata->hmin);
+
    if( ect > consdata->hmin && lst < consdata->hmax )
    {
       /* the job will at least run partly in the time interval [hmin,hmax) this means the problem is infeasible */
@@ -6759,7 +6762,10 @@ SCIP_RETCODE removeOversizedJobs(
    if( *cutoff )
       return SCIP_OKAY;
 
-   if( consdata->nvars == 0 )
+   /* do nothing if we have at most one job; in the special case of one job the deletion method evaluates if the single
+    * job is over sized
+    */
+   if( consdata->nvars <= 1 )
       return SCIP_OKAY;
 
    capacity = consdata->capacity;
@@ -7943,7 +7949,7 @@ SCIP_RETCODE presolveCons(
       if( *cutoff || *unbounded )
          return SCIP_OKAY;
 
-      /* computes the effective horizon and checks if the constraint can be decompesd */
+      /* computes the effective horizon and checks if the constraint can be decomposed */
       SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
 
       SCIPstatistic( conshdlrdata->ndecomps += consdata->ndecomps );
