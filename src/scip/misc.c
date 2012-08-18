@@ -205,7 +205,7 @@ void SCIPgmlWriteOpening(
 }
 
 /** writes the ending lines to a GML graph file, does not close a file */
-void SCIPgmlWriteCosing(
+void SCIPgmlWriteClosing(
    FILE*                 file                /**< file to close */
    )
 {
@@ -5181,7 +5181,7 @@ void SCIPdigraphPrintGml(
       }
    }
    /* write GML format closing */
-   SCIPgmlWriteCosing(file);
+   SCIPgmlWriteClosing(file);
 }
 
 /** output of the given directed graph via the given message handler */
@@ -5612,7 +5612,7 @@ void SCIPbtPrintGml(
    }
 
    /* write GML closing */
-   SCIPgmlWriteCosing(file);
+   SCIPgmlWriteClosing(file);
 }
 
 /* some simple variable functions implemented as defines */

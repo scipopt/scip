@@ -32,6 +32,9 @@ fixed bugs:
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
 
+interface
+- fixed spelling in the method name SCIPgmlWriteClosing()
+
 SCIP version 3.0.0
 ==================
 

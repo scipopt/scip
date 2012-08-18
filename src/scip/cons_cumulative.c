@@ -9564,7 +9564,7 @@ SCIP_RETCODE SCIPconsdataVisualize(
    }
 
    /* create closing of the GML format */
-   SCIPgmlWriteCosing(file);
+   SCIPgmlWriteClosing(file);
 
    /* close file */
    fclose(file);

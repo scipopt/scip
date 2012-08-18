@@ -3648,7 +3648,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    /* free the variable mapping hash map */
    SCIPhashmapFree(&hashmap);
 
-   SCIPgmlWriteCosing(gmlfile);
+   SCIPgmlWriteClosing(gmlfile);
 
    fclose(gmlfile);
 
