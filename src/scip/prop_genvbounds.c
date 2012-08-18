@@ -1376,6 +1376,22 @@ SCIP_RETCODE sortGenVBounds(
    /* remember genvboundstore as sorted */
    propdata->sorted = TRUE;
 
+#ifdef SCIP_STATISTIC
+   {
+      int maxcomponentsize;
+      int k;
+
+      SCIPstatisticMessage("average component size: %.3g\n", (SCIP_Real)propdata->ngenvbounds / (SCIP_Real)propdata->ncomponents);
+
+      maxcomponentsize = 0;
+      for( k = 0; k < propdata->ncomponents; k++ )
+      {
+         maxcomponentsize = MAX(maxcomponentsize, propdata->componentsstart[k+1] - propdata->componentsstart[k]);
+      }
+
+      SCIPstatisticMessage("max component size: %d\n", maxcomponentsize);
+   }
+#endif
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("genvbounds got: %d\n", propdata->ngenvbounds);
    for( i = 0; i < propdata->ncomponents; i++ )
