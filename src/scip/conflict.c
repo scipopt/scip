@@ -222,7 +222,7 @@ void confgraphFree(
 {
    if( confgraphfile != NULL )
    {
-      SCIPgmlWriteCosing(confgraphfile);
+      SCIPgmlWriteClosing(confgraphfile);
 
       fclose(confgraphfile);
 
