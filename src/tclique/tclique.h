@@ -49,10 +49,10 @@ typedef struct TCLIQUE_Data TCLIQUE_DATA; /**< user defined data to pass to new 
 /** return status of the TCLIQUE algorithm */
 enum TCLIQUE_Status
 {
-   TCLIQUE_ERROR,                       /**< an error occurred */
-   TCLIQUE_NODELIMIT,                   /**< the node limit was reached */
-   TCLIQUE_USERABORT,                   /**< the user call back function aborted the solving process */
-   TCLIQUE_OPTIMAL                      /**< the optimal solution was found */
+   TCLIQUE_ERROR           = 0,         /**< an error occurred */
+   TCLIQUE_NODELIMIT       = 1,         /**< the node limit was reached */
+   TCLIQUE_USERABORT       = 2,         /**< the user call back function aborted the solving process */
+   TCLIQUE_OPTIMAL         = 3          /**< the optimal solution was found */
 };
 typedef enum TCLIQUE_Status TCLIQUE_STATUS;
 
