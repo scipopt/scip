@@ -1354,7 +1354,7 @@ END {
 		  printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
 			 ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
 	       else
-		  printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-50), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+		  printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
 			 ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
  
                printf(" %4d %4d", better[s,cat], worse[s,cat]);
@@ -1400,7 +1400,7 @@ END {
 	       printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
 		      ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
 	    else
-	       printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-50), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+	       printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
 		      ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
             printf(" %4d %4d", better[s,cat], worse[s,cat]);
             printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
