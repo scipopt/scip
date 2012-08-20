@@ -187,9 +187,9 @@ ACCOUNT="mip"
 
 if test $CLUSTERQUEUE = "dbg"
 then
-    CLUSTERQUEUE="mip-dbg,telekom-dbg"
+    CLUSTERQUEUE="mip-dbg,telecom-dbg"
     ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "telekom-dbg"
+elif test $CLUSTERQUEUE = "telecom-dbg"
 then
     ACCOUNT="mip-dbg"
 elif test $CLUSTERQUEUE = "mip-dbg"
