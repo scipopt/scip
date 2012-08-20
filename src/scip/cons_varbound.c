@@ -41,6 +41,7 @@
 
 #include "scip/cons_varbound.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_setppc.h"
 
 
 /**@name Constraint handler properties
@@ -2129,7 +2130,120 @@ SCIP_RETCODE preprocessConstraintPairs(
    return SCIP_OKAY;
 }
 
-/* for all varbound constraints with two integer variables make the coefficients integral */
+/** check if we can upgrade to a set-packing constraint */
+static
+SCIP_RETCODE upgradeConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraint set */
+   int                   nconss,             /**< number of constraints in constraint set */
+   int*                  ndelconss,          /**< pointer to count the number of deleted constraints */
+   int*                  naddconss           /**< pointer to count the number of added constraints */
+   )
+{
+   SCIP_VAR* vars[2];
+   SCIP_CONS* newcons;
+   SCIP_CONS* cons;
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   assert(scip != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(ndelconss != NULL);
+   assert(naddconss != NULL);
+
+   /* if we cannot find any constraint for upgrading, stop */
+   if( SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip) <= 1 )
+      return SCIP_OKAY;
+
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   assert(conss != NULL);
+
+   for( c = nconss - 1; c >= 0; --c )
+   {
+      cons = conss[c];
+      assert(cons != NULL);
+
+      if( !SCIPconsIsActive(cons) )
+	 continue;
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+      assert(SCIPisLE(scip, consdata->lhs, consdata->rhs));
+
+      /* check if both variables are of binary type */
+      if( SCIPvarIsBinary(consdata->vbdvar) && SCIPvarIsBinary(consdata->var) )
+      {
+	 /* coefficient and should be tightened and we assume that the constraint is not redundant */
+	 assert(SCIPisEQ(scip, REALABS(consdata->vbdcoef), 1.0));
+	 assert(SCIPisZero(scip, consdata->rhs) || SCIPisEQ(scip, consdata->rhs, 1.0) || SCIPisInfinity(scip, consdata->rhs));
+	 assert(SCIPisZero(scip, consdata->lhs) || SCIPisEQ(scip, consdata->lhs, 1.0) || SCIPisInfinity(scip, -consdata->lhs));
+	 assert(!SCIPisInfinity(scip, consdata->rhs) || !SCIPisInfinity(scip, -consdata->lhs));
+
+	 /* the case x + y <= 1 or x + y >= 1 */
+	 if( consdata->vbdcoef > 0.5 )
+	 {
+	    if( SCIPisEQ(scip, consdata->rhs, 1.0) )
+	    {
+	       /* we assume that aggregations like x + y == 1 do not appear */
+	       assert(consdata->lhs < 0.5);
+
+	       vars[0] = consdata->var;
+	       vars[1] = consdata->vbdvar;
+	    }
+	    else
+	    {
+	       assert(SCIPisEQ(scip, consdata->lhs, 1.0));
+
+	       SCIP_CALL( SCIPgetNegatedVar(scip, consdata->var, &vars[0]) );
+	       SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vbdvar, &vars[1]) );
+	    }
+	 }
+	 /* the case x - y <= 0 or x - y >= 0 */
+	 else
+	 {
+	    /* the case x - y <= 0 */
+	    if( SCIPisZero(scip, consdata->rhs) )
+	    {
+	       /* we assume that aggregations like x - y == 0 do not appear */
+	       assert(consdata->lhs < -0.5);
+
+	       vars[0] = consdata->var;
+	       SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vbdvar, &vars[1]) );
+	    }
+	    /* the case x - y >= 0 */
+	    else
+	    {
+	       assert(SCIPisZero(scip, consdata->lhs));
+
+	       SCIP_CALL( SCIPgetNegatedVar(scip, consdata->var, &vars[0]) );
+	       vars[1] = consdata->vbdvar;
+	    }
+	 }
+
+	 SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, SCIPconsGetName(cons), 2, vars,
+	       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+	       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+	       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+	       SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+	 SCIP_CALL( SCIPaddCons(scip, newcons) );
+	 SCIPdebugMessage("upgraded varbound constraint <%s> to a set-packing constraint\n", SCIPconsGetName(cons));
+	 SCIPdebugPrintCons(scip, newcons, NULL);
+
+	 SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+	 ++(*naddconss);
+
+	 SCIP_CALL( SCIPdelCons(scip, cons) );
+	 ++(*ndelconss);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** for all varbound constraints with two integer variables make the coefficients integral */
 static
 SCIP_RETCODE prettifyConss(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2796,7 +2910,7 @@ SCIP_RETCODE tightenCoefs(
     *
     *             x + b*y <= rhs  =>   x + b*y <= floor(rhs)
     */
-   if( (SCIPvarGetType(consdata->var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(consdata->var) == SCIP_VARTYPE_IMPLINT)
+   if( (SCIPvarGetType(consdata->var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(consdata->var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(consdata->var) == SCIP_VARTYPE_BINARY)
       && !SCIPisIntegral(scip, consdata->vbdcoef)
       && (!SCIPisIntegral(scip, consdata->lhs) || SCIPisInfinity(scip, -consdata->lhs)
 	 || !SCIPisIntegral(scip, consdata->rhs) || SCIPisInfinity(scip, consdata->rhs)) )
@@ -3471,7 +3585,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       {
          SCIP_Bool infeasible;
          int nlocalchgbds;
-         
+
          nlocalchgbds = 0;
 
          /* if lhs is finite, we have a variable lower bound: lhs <= x + c*y  =>  x >= -c*y + lhs */
@@ -3511,6 +3625,9 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    {
       /* for varbound constraint with two integer variables make coefficients integral */
       SCIP_CALL( prettifyConss(scip, conss, nconss, nchgcoefs, nchgsides) );
+
+      /* check if we can upgrade to a set-packing constraint */
+      SCIP_CALL( upgradeConss(scip, conss, nconss, ndelconss, naddconss) );
 
       if( conshdlrdata->presolpairwise )
       {
