@@ -240,6 +240,7 @@ struct SCIP_Var
    SCIP_BDCHGINFO*       ubchginfos;         /**< bound change informations for upper bound changes from root to current node */
    SCIP_HISTORY*         history;            /**< branching and inference history information */
    SCIP_HISTORY*         historycrun;        /**< branching and inference history information for current run */
+   SCIP_VALUEHISTORY*    valuehistory;       /**< branching and inference history information which are value based, or NULL if not used */
    SCIP_Longint          closestvblpcount;   /**< LP count for which the closestvlbidx/closestvubidx entries are valid */
    int                   index;              /**< consecutively numbered variable identifier */
    int                   probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */

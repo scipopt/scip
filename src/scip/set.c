@@ -127,6 +127,10 @@
 #define SCIP_DEFAULT_DISP_LPINFO          FALSE /**< should the LP solver display status messages? */
 
 
+/* History */
+
+#define SCIP_DEFAULT_HISTORY_VALUEBASED   FALSE /**< should statistics be collected for variable domain value pairs */
+
 /* Limits */
 
 #define SCIP_DEFAULT_LIMIT_TIME           1e+20 /**< maximal time in seconds to run */
@@ -964,6 +968,13 @@ SCIP_RETCODE SCIPsetCreate(
          "display/lpinfo",
          "should the LP solver display status messages?",
          &(*set)->disp_lpinfo, FALSE, SCIP_DEFAULT_DISP_LPINFO,
+         NULL, NULL) );
+
+   /* history parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "history/valuebased",
+         "should statistics be collected for variable domain value pairs?",
+         &(*set)->history_valuebased, FALSE, SCIP_DEFAULT_HISTORY_VALUEBASED,
          NULL, NULL) );
 
    /* limit parameters */

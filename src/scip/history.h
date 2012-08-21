@@ -80,6 +80,46 @@ void SCIPhistoryUpdatePseudocost(
    );
 
 
+/**@defgroup ValueHistory Value based history
+ *
+ * Value based history methods
+ *
+ * @{
+ */
+
+/** creates an empty value history */
+extern
+SCIP_RETCODE SCIPvaluehistoryCreate(
+   SCIP_VALUEHISTORY**   valuehistory,       /**< pointer to store the value based branching and inference histories */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** frees a value history */
+extern
+void SCIPvaluehistoryFree(
+   SCIP_VALUEHISTORY**   valuehistory,       /**< pointer to value based history */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** finds for the given domain value the history if it does not exist yet it will be created */
+extern
+SCIP_RETCODE SCIPvaluehistoryFind(
+   SCIP_VALUEHISTORY*    valuehistory,       /**< value based history */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             value,              /**< domain value of interest */
+   SCIP_HISTORY**        history             /**< pointer to store the history for the given domain value */
+   );
+
+/** scales the conflict score values with the given scalar for each value history entry */
+extern
+void SCIPvaluehistoryScaleVSIDS(
+   SCIP_VALUEHISTORY*    valuehistory,       /**< value based history */
+   SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
+   );
+
+/**@} */
+
 #ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
@@ -163,8 +203,8 @@ SCIP_Real SCIPhistoryGetAvgConflictlength(
 extern
 void SCIPhistoryIncNBranchings(
    SCIP_HISTORY*         history,            /**< branching and inference history */
-   int                   depth,              /**< depth at which the bound change took place */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   int                   depth               /**< depth at which the bound change took place */
    );
 
 /** increases the number of inferences counter */
@@ -251,7 +291,7 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
 #define SCIPhistoryGetNActiveConflicts(history,dir) ((history)->nactiveconflicts[dir])
 #define SCIPhistoryGetAvgConflictlength(history,dir) ((history)->conflengthsum[dir] > 0.0 \
       ? (SCIP_Real)(history)->nactiveconflicts[dir]/(SCIP_Real)(history)->conflengthsum[dir] : 0.0)
-#define SCIPhistoryIncNBranchings(history,depth,dir) { (history)->nbranchings[dir]++; \
+#define SCIPhistoryIncNBranchings(history,dir,depth) { (history)->nbranchings[dir]++; \
       (history)->branchdepthsum[dir] += depth; }
 #define SCIPhistoryIncInferenceSum(history,dir,weight)     (history)->inferencesum[dir] += (weight)
 #define SCIPhistoryIncCutoffSum(history,dir,weight)        (history)->cutoffsum[dir] += (weight)

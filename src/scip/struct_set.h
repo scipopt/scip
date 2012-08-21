@@ -195,6 +195,9 @@ struct SCIP_Set
    int                   disp_headerfreq;    /**< frequency for displaying header lines (every n'th node information line) */
    SCIP_Bool             disp_lpinfo;        /**< should the LP solver display status messages? */
 
+   /* history settings */
+   SCIP_Bool             history_valuebased; /**< should statistics be collected for variable domain value pairs? */
+
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
    SCIP_Real             limit_memory;       /**< maximal memory usage in MB */

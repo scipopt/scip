@@ -3471,6 +3471,9 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       /* do not check pseudo solution (for performance reasons) */
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/disableenfops", TRUE, quiet) );
 
+      /* use value based history to detect a reasonable branching point */
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "history/valuebased", TRUE, quiet) );
+
       /* turn of LP relaxation */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/solvefreq", -1, quiet) );
 

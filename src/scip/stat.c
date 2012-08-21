@@ -307,6 +307,7 @@ void SCIPstatResetCurrentRun(
    stat->lastconflictnode = 0;
    stat->bestsolnode = 0;
    stat->rootlowerbound = SCIP_REAL_MIN;
+   stat->lastbranchvalue = SCIP_UNKNOWN;
    stat->lastbranchvar = NULL;
    stat->status = SCIP_STATUS_UNKNOWN;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;

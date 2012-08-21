@@ -4090,7 +4090,7 @@ SCIP_RETCODE SCIPsolveCIP(
                /* increase the cutoff counter of the branching variable */
                if( stat->lastbranchvar != NULL )
                {
-                  SCIP_CALL( SCIPvarIncCutoffSum(stat->lastbranchvar, stat, stat->lastbranchdir, 1.0) );
+                  SCIP_CALL( SCIPvarIncCutoffSum(stat->lastbranchvar, blkmem, set, stat, stat->lastbranchdir, stat->lastbranchvalue, 1.0) );
                }
                /**@todo if last branching variable is unknown, retrieve it from the nodes' boundchg arrays */
             }
