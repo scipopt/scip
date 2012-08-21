@@ -7985,6 +7985,9 @@ SCIP_RETCODE presolveCons(
    SCIP_CALL( removeOversizedJobs(scip, cons, nchgbds, nchgcoefs, naddconss, cutoff) );
    assert((*cutoff) || checkDemands(scip, cons));
 
+   if( *cutoff )
+      return SCIP_OKAY;
+
    if( conshdlrdata->normalize )
    {
       /* divide demands by their greatest common divisor */
