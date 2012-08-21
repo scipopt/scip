@@ -6515,7 +6515,7 @@ SCIP_Bool checkDemands(
    nvars = consdata->nvars;
 
    /* if no activities are associated with this cumulative then this constraint is not infeasible, return */
-   if( nvars == 0 )
+   if( nvars <= 1 )
       return TRUE;
 
    assert(consdata->vars != NULL);
@@ -6760,12 +6760,6 @@ SCIP_RETCODE removeOversizedJobs(
 
    /* if a cutoff was already detected just return */
    if( *cutoff )
-      return SCIP_OKAY;
-
-   /* do nothing if we have at most one job; in the special case of one job the deletion method evaluates if the single
-    * job is over sized
-    */
-   if( consdata->nvars <= 1 )
       return SCIP_OKAY;
 
    capacity = consdata->capacity;
@@ -7254,8 +7248,8 @@ SCIP_RETCODE presolveConsEst(
 
             (*nchgsides)++;
 
-            SCIPdebugMessage("  remove variables <%s>[%d,%d] with duration <%d> due to no uplocks, new capacity = %d\n",
-               SCIPvarGetName(cand), est, lst, duration, consdata->capacity);
+            SCIPdebugMessage("  remove variables <%s>[%d,%d] (duration <%d>, demand <%d>) due to no uplocks, new capacity = %d\n",
+               SCIPvarGetName(cand), est, lst, duration, consdata->demands[v], consdata->capacity);
 
             SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
             (*nchgcoefs)++;
