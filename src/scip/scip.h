@@ -1097,6 +1097,16 @@ SCIP_Bool SCIPisParamFixed(
    const char*           name                /**< name of the parameter */
    );
 
+/** returns the pointer to the SCIP parameter with the given name
+ *
+ *  @return pointer to the parameter with the given name
+ */
+extern
+SCIP_PARAM* SCIPgetParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   );
+
 /** gets the value of an existing SCIP_Bool parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
