@@ -40,3 +40,4 @@ To get help on command line parameters, call the scipampl binary without argumen
 WARNINGS: The executable has only been tested on the command line when running with a .nl file, not within AMPL.
           We have tested only "simple" .nl files, fancy stuff like defined variables may not work.
 
+Further Reading: http://www.zverovich.net/2012/08/using-scip-with-ampl.html
