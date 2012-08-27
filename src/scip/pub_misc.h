@@ -96,7 +96,7 @@ void SCIPgmlWriteOpening(
 
 /** writes the ending lines to a GML graph file, does not close a file */
 EXTERN
-void SCIPgmlWriteCosing(
+void SCIPgmlWriteClosing(
    FILE*                 file                /**< file to close */
    );
 

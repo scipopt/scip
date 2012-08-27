@@ -13189,7 +13189,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       || (set->conf_enable && set->conf_useinflp));
 
    /* compute the limit for the number of LP resolving iterations, if needed (i.e. if limitresolveiters == TRUE) */
-   harditlim = (int) MAX(itlim, INT_MAX);
+   harditlim = (int) MIN(itlim, INT_MAX);
    resolveitlim = ( limitresolveiters ? lpGetResolveItlim(set, stat, harditlim) : harditlim );
    assert(harditlim == -1 || (resolveitlim <= harditlim));
 

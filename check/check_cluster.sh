@@ -217,17 +217,23 @@ do
 #define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
 CLUSTERQUEUE=$QUEUE
 
+NICE=""
 ACCOUNT="mip"
 
-if test $CLUSTERQUEUE = "opt"
+if test $CLUSTERQUEUE = "dbg"
 then
-    CLUSTERQUEUE="opt,opt-long"
-elif test $CLUSTERQUEUE = "opt-low"
+    CLUSTERQUEUE="mip-dbg,telecom-dbg"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "telecom-dbg"
 then
-    ACCOUNT="opt-low"
+    ACCOUNT="mip-dbg"
 elif test $CLUSTERQUEUE = "mip-dbg"
 then
     ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "opt-low"
+then
+    CLUSTERQUEUE="opt"
+    NICE="--nice=10000"
 fi
 
 # counter to define file names for a test set uniquely

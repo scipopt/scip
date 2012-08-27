@@ -1186,6 +1186,53 @@ SCIP_RETCODE evaluateCumulativeness(
 }
 #endif
 
+/** gets the active variables together with the constant */
+static
+SCIP_RETCODE getActiveVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to store the active variable */
+   int*                  scalar,             /**< pointer to store the scalar */
+   int*                  constant            /**< pointer to store the constant */
+   )
+{
+   if( !SCIPvarIsActive(*var) )
+   {
+      SCIP_Real realscalar;
+      SCIP_Real realconstant;
+
+      realscalar = 1.0;
+      realconstant = 0.0;
+
+      assert(SCIPvarGetStatus(*var) == SCIP_VARSTATUS_AGGREGATED);
+
+      /* transform variable to active variable */
+      SCIP_CALL( SCIPgetProbvarSum(scip, var, &realscalar, &realconstant) );
+      assert(!SCIPisZero(scip, realscalar));
+      assert(SCIPvarIsActive(*var));
+
+      if( realconstant < 0.0 )
+         (*constant) = -convertBoundToInt(scip, -realconstant);
+      else
+         (*constant) = convertBoundToInt(scip, realconstant);
+
+      if( realscalar < 0.0 )
+         (*scalar) = -convertBoundToInt(scip, -realscalar);
+      else
+         (*scalar) = convertBoundToInt(scip, realscalar);
+
+
+   }
+   else
+   {
+      (*scalar) = 1;
+      (*constant) = 0;
+   }
+
+   assert(*scalar != 0);
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 /**@name Constraint handler data
@@ -5232,6 +5279,7 @@ SCIP_RETCODE computeAlternativeBounds(
 
       for( v = 0; v < nvars; ++v )
       {
+         int scalar;
          int constant;
          int idx;
 
@@ -5246,24 +5294,8 @@ SCIP_RETCODE computeAlternativeBounds(
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
             continue;
 
-         if( !SCIPvarIsActive(var) )
-         {
-            SCIP_VAR* aggrvar;
-
-            assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED);
-            assert(SCIPisEQ(scip, SCIPvarGetAggrScalar(var), 1.0));
-
-            aggrvar = SCIPvarGetAggrVar(var);
-            constant = convertBoundToInt(scip, SCIPvarGetAggrConstant(var));
-            assert(SCIPvarIsActive(aggrvar));
-
-            idx = SCIPvarGetProbindex(aggrvar);
-         }
-         else
-         {
-            idx = SCIPvarGetProbindex(var);
-            constant = 0;
-         }
+         SCIP_CALL( getActiveVar(scip, &var, &scalar, &constant) );
+         idx = SCIPvarGetProbindex(var);
          assert(idx >= 0);
 
          /* first check lower bound fixing */
@@ -5273,14 +5305,14 @@ SCIP_RETCODE computeAlternativeBounds(
             int est;
 
             /* the variable has a down locked */
-            est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+            est = scalar * convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + constant;
             ect = est + consdata->durations[v];
 
             if( ect <= hmin || hmin >= hmax )
                downlocks[idx]++;
-            else if( est < hmin && alternativelbs[idx] >= hmin + 1 - constant )
+            else if( est < hmin && alternativelbs[idx] >= (hmin + 1 - constant) / scalar )
             {
-               alternativelbs[idx] = hmin + 1 - constant;
+               alternativelbs[idx] = (hmin + 1 - constant) / scalar;
                downlocks[idx]++;
             }
          }
@@ -5292,14 +5324,14 @@ SCIP_RETCODE computeAlternativeBounds(
             int lst;
 
             /* the variable has a up lock locked */
-            lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+            lst = scalar * convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + constant;
             lct = lst + consdata->durations[v];
 
             if( lst >= hmax || hmin >= hmax  )
                uplocks[idx]++;
-            else if( lct > hmax && alternativeubs[idx] <= hmax - 1 - constant )
+            else if( lct > hmax && alternativeubs[idx] <= (hmax - 1 - constant) / scalar )
             {
-               alternativeubs[idx] = hmax - 1 - constant;
+               alternativeubs[idx] = (hmax - 1 - constant) / scalar;
                uplocks[idx]++;
             }
          }
@@ -6483,7 +6515,7 @@ SCIP_Bool checkDemands(
    nvars = consdata->nvars;
 
    /* if no activities are associated with this cumulative then this constraint is not infeasible, return */
-   if( nvars == 0 )
+   if( nvars <= 1 )
       return TRUE;
 
    assert(consdata->vars != NULL);
@@ -6638,6 +6670,9 @@ SCIP_RETCODE adjustOversizedJobBounds(
    ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + duration;
    lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
 
+   /* the jobs has to have an overlap with the efficient horizon otherwise it would be already removed */
+   assert(ect - duration < consdata->hmax && lst + duration > consdata->hmin);
+
    if( ect > consdata->hmin && lst < consdata->hmax )
    {
       /* the job will at least run partly in the time interval [hmin,hmax) this means the problem is infeasible */
@@ -6725,9 +6760,6 @@ SCIP_RETCODE removeOversizedJobs(
 
    /* if a cutoff was already detected just return */
    if( *cutoff )
-      return SCIP_OKAY;
-
-   if( consdata->nvars == 0 )
       return SCIP_OKAY;
 
    capacity = consdata->capacity;
@@ -6886,6 +6918,9 @@ SCIP_RETCODE normalizeDemands(
 
    /**@todo sort items w.r.t. the demands, because we can stop earlier if the smaller weights are evaluated first */
 
+   assert(consdata->demands[nvars-1] <= capacity);
+   assert(consdata->demands[nvars-2] <= capacity);
+
    gcd = (SCIP_Longint)consdata->demands[nvars-1];
    mindemand1 = MIN(consdata->demands[nvars-1], consdata->demands[nvars-2]);
    mindemand2 = MAX(consdata->demands[nvars-1], consdata->demands[nvars-2]);
@@ -6893,6 +6928,8 @@ SCIP_RETCODE normalizeDemands(
    for( v = nvars-2; v >= 0 && (gcd >= 2 || mindemand1 + mindemand2 > capacity); --v )
    {
       assert(mindemand1 <= mindemand2);
+      assert(consdata->demands[v] <= capacity);
+
       gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)consdata->demands[v]);
 
       if( mindemand1 > consdata->demands[v] )
@@ -7211,8 +7248,8 @@ SCIP_RETCODE presolveConsEst(
 
             (*nchgsides)++;
 
-            SCIPdebugMessage("  remove variables <%s>[%d,%d] with duration <%d> due to no uplocks, new capacity = %d\n",
-               SCIPvarGetName(cand), est, lst, duration, consdata->capacity);
+            SCIPdebugMessage("  remove variables <%s>[%d,%d] (duration <%d>, demand <%d>) due to no uplocks, new capacity = %d\n",
+               SCIPvarGetName(cand), est, lst, duration, consdata->demands[v], consdata->capacity);
 
             SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
             (*nchgcoefs)++;
@@ -7895,8 +7932,6 @@ SCIP_RETCODE presolveCons(
    assert(consdata != NULL);
 #endif
 
-   /* over sized jobs should be removed */
-   assert(checkDemands(scip, cons));
    assert(!SCIPconsIsDeleted(cons));
 
    if( conshdlrdata->dualpresolve )
@@ -7911,7 +7946,7 @@ SCIP_RETCODE presolveCons(
       if( *cutoff || *unbounded )
          return SCIP_OKAY;
 
-      /* computes the effective horizon and checks if the constraint can be decompesd */
+      /* computes the effective horizon and checks if the constraint can be decomposed */
       SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
 
       SCIPstatistic( conshdlrdata->ndecomps += consdata->ndecomps );
@@ -7935,12 +7970,17 @@ SCIP_RETCODE presolveCons(
       SCIPstatistic( conshdlrdata->ndualfixs += consdata->ndualfixs );
       SCIPstatistic( conshdlrdata->nalwaysruns += consdata->nalwaysruns );
 
-      /* remove jobs which have a demand larger than the capacity */
-      SCIP_CALL( removeOversizedJobs(scip, cons, nchgbds, nchgcoefs, naddconss, cutoff) );
 
       if( *cutoff || SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
    }
+
+   /* remove jobs which have a demand larger than the capacity */
+   SCIP_CALL( removeOversizedJobs(scip, cons, nchgbds, nchgcoefs, naddconss, cutoff) );
+   assert((*cutoff) || checkDemands(scip, cons));
+
+   if( *cutoff )
+      return SCIP_OKAY;
 
    if( conshdlrdata->normalize )
    {
@@ -8049,7 +8089,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
    {
       SCIP_CALL( evaluateCumulativeness(scip, conss[c]) );
 
+#if 0
       SCIP_CALL( SCIPconsdataVisualize(scip, conss[c]) );
+#endif
    }
 
    SCIPstatisticPrintf("@33  irrelevant %d\n", conshdlrdata->nirrelevantjobs);
@@ -9519,7 +9561,7 @@ SCIP_RETCODE SCIPconsdataVisualize(
    }
 
    /* create closing of the GML format */
-   SCIPgmlWriteCosing(file);
+   SCIPgmlWriteClosing(file);
 
    /* close file */
    fclose(file);

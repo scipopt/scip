@@ -27,6 +27,10 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** creates the list scheduling primal heuristic and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeHeurListScheduling(
@@ -46,5 +50,8 @@ SCIP_RETCODE SCIPinitializeHeurListScheduling(
    int                   nresources          /**< number of resources */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

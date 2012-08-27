@@ -6893,16 +6893,16 @@ SCIP_RETCODE checkParallelObjective(
       }
       else
       {
-         SCIP_Real dualbound;
+         SCIP_Real lowerbound;
 
          assert(SCIPisNegative(scip, scale) );
 
-         dualbound = (consdata->capacity - offset) / scale;
+         lowerbound = (consdata->capacity - offset) / scale;
 
          SCIPdebugMessage("constraint <%s> is parallel to objective function and provids a lower bound <%g>\n",
-            SCIPconsGetName(cons), dualbound);
+            SCIPconsGetName(cons), lowerbound);
 
-         SCIP_CALL( SCIPupdateLocalDualbound(scip, dualbound) );
+         SCIP_CALL( SCIPupdateLocalLowerbound(scip, lowerbound) );
       }
    }
 

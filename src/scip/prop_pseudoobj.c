@@ -2979,7 +2979,7 @@ SCIP_RETCODE propagateLowerboundVar(
    {
       SCIP_Real lb;
 
-      lb = SCIPvarGetLbLocal(var);
+      lb = SCIPvarGetLbGlobal(var);
 
       if( !SCIPvarIsIntegral(var) )
       {
@@ -2994,7 +2994,7 @@ SCIP_RETCODE propagateLowerboundVar(
    {
       SCIP_Real ub;
 
-      ub = SCIPvarGetUbLocal(var);
+      ub = SCIPvarGetUbGlobal(var);
 
       if( !SCIPvarIsIntegral(var) )
       {

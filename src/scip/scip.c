@@ -463,9 +463,18 @@ SCIP_Real getDualbound(
    SCIP_Real lowerbound;
 
    if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
-      return -SCIPinfinity(scip) * scip->transprob->objsense;
+   {
+      /* in case we are in presolving we use the stored dual bound if it exits, otherwise, minus or plus infinity
+       * depending on the objective sense
+       */
+      if( scip->transprob->dualbound < SCIP_INVALID )
+         lowerbound = SCIPprobInternObjval(scip->transprob, scip->set, scip->transprob->dualbound);
+      else
+         return -SCIPinfinity(scip) * scip->transprob->objsense;
+   }
+   else
+      lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
 
-   lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
 
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
    {
@@ -10575,8 +10584,10 @@ SCIP_Real SCIPgetNodeLowerbound(
    return SCIPnodeGetLowerbound(node);
 }
 
-/** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound,
- *  sets the current node's dual bound to the new value
+/** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound (in
+ *  original problem space), sets the current node's dual bound to the new value
+ *
+ *  @note the given new bound has to be a dual bound, i.e., it has to be valid for the original problem.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -10597,12 +10608,18 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
+      /* since no root node, for which we could update the dual bound, has been create yet, update the dual bound stored in
+       * the problem data
+       */
       SCIPprobUpdateDualbound(scip->origprob, newbound);
       break;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
-      SCIPprobUpdateDualbound(scip->transprob, SCIPprobExternObjval(scip->transprob, scip->set, newbound));
+      /* since no root node, for which we could update the dual bound, has been create yet, update the dual bound stored in
+       * the problem data
+       */
+      SCIPprobUpdateDualbound(scip->transprob, newbound);
       break;
 
    case SCIP_STAGE_SOLVING:
@@ -10621,10 +10638,14 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
 /** if given value is larger than the current node's lower bound (in transformed problem), sets the current node's
  *  lower bound to the new value
  *
+ *  @note the given new bound has to be a lower bound, i.e., it has to be valid for the transformed problem.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPupdateLocalLowerbound(
@@ -10632,9 +10653,27 @@ SCIP_RETCODE SCIPupdateLocalLowerbound(
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPupdateLocalLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPupdateLocalLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPupdateNodeLowerbound(scip, SCIPtreeGetCurrentNode(scip->tree), newbound);
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+      /* since no root node, for which we could update the lower bound, has been create yet, update the dual bound stored
+       * in the problem data
+       */
+      SCIPprobUpdateDualbound(scip->transprob, SCIPprobExternObjval(scip->transprob, scip->set, newbound));
+      break;
+
+   case SCIP_STAGE_SOLVING:
+      SCIPupdateNodeLowerbound(scip, SCIPtreeGetCurrentNode(scip->tree), newbound);
+      break;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      SCIPABORT();
+      return SCIP_INVALIDCALL; /*lint !e527*/
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -10901,6 +10940,16 @@ SCIP_RETCODE SCIPtransformProb(
    /* switch stage to TRANSFORMED */
    scip->set->stage = SCIP_STAGE_TRANSFORMED;
 
+   /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
+    * cutoff bound if primal solution is already known
+    */
+   SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+	 scip->tree, scip->lp, scip->eventqueue) );
+
+   /* if possible, scale objective function such that it becomes integral with gcd 1 */
+   SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+	 scip->tree, scip->lp, scip->eventqueue) );
+
    /* check solution of solution candidate storage */
    nfeassols = 0;
    ncandsols = scip->origprimal->nsols;
@@ -10916,7 +10965,7 @@ SCIP_RETCODE SCIPtransformProb(
        * including modifiable constraints
        */
       SCIP_CALL( checkSolOrig(scip, sol, &feasible, scip->set->misc_printreason, FALSE, TRUE, TRUE, TRUE, TRUE) );
-      
+
       if( feasible )
       {
          SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
@@ -10932,10 +10981,10 @@ SCIP_RETCODE SCIPtransformProb(
       SCIP_CALL( SCIPsolFree(&sol, scip->mem->probmem, scip->origprimal) );
       scip->origprimal->nsols--;
    }
-   
+
    assert(scip->origprimal->nsols == 0);
    assert(scip->origprimal->nexistingsols == 0);
-   
+
    if( nfeassols > 0 )
    {
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
@@ -11872,7 +11921,7 @@ SCIP_RETCODE freeSolve(
       /* copy the current dual bound into the problem data structure such that it can be used initialize the new search
        * tree
        */
-      SCIPprobSetDualbound(scip->transprob, getDualbound(scip));
+      SCIPprobUpdateDualbound(scip->transprob, getDualbound(scip));
    }
 
    /* remove focus from the current focus node */
