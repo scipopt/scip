@@ -5109,7 +5109,7 @@ SCIP_RETCODE propagateCons(
    redundant = FALSE;
 
    /* if the constraint marked to be propagated, do nothing */
-   if( consdata->propagated )
+   if( consdata->propagated && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING )
       return SCIP_OKAY;
 
    SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata,
