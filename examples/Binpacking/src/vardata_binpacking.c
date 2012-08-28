@@ -169,15 +169,13 @@ SCIP_RETCODE SCIPcreateVarBinpacking(
 {
    assert(scip != NULL);
    assert(var != NULL);
-   assert(*var != NULL);
 
    /* create a basic variable object */
    SCIP_CALL( SCIPcreateVarBasic(scip, var, name, 0.0, 1.0, obj, SCIP_VARTYPE_BINARY) );
+   assert(*var != NULL);
 
    /* set callback functions */
    SCIPvarSetData(*var, vardata);
-   SCIPvarSetDelorigData(*var, vardataDelOrig);
-   SCIPvarSetTransData(*var, vardataTrans);
    SCIPvarSetDeltransData(*var, vardataDelTrans);
 
    /* set initial and removable flag */
