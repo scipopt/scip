@@ -90,6 +90,8 @@ int SCIPfgetc(SCIP_FILE *stream)
 
 char* SCIPfgets(char *s, int size, SCIP_FILE *stream)
 {
+   if( size > 0 )
+      s[0] = '\0';
    return gzgets((gzFile)stream, s, size);
 }
 
