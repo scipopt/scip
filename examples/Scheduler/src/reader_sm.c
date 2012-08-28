@@ -43,7 +43,7 @@
 #define READER_EXTENSION        "sm"
 
 
-#define SM_MAX_LINELEN       1024     /**< size of the line buffer for reading or writing */
+#define SM_MAX_LINELEN      65536     /**< size of the line buffer for reading or writing */
 
 enum reading_states {
    ERROR = 0,
