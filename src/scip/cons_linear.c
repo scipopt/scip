@@ -11906,7 +11906,7 @@ SCIP_RETCODE SCIPaddCoefLinear(
       }
 
       /* add all active variables to constraint */
-      for( v = nconsvars; v >= 0; --v )
+      for( v = nconsvars - 1; v >= 0; --v )
       {
 	 SCIP_CALL( addCoef(scip, cons, consvars[v], consvals[v]) );
       }
