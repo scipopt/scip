@@ -1,13 +1,8 @@
 CC		=	clang
-CXX		=	clang
+CXX		=	clang++
 LINKCC		=	clang
-LINKCXX		=	clang
-FLAGS		+=	-DROUNDING_FE
-OFLAGS		+=	-O0 -g
-CFLAGS		+=
-CXXFLAGS	+=
+LINKCXX		=	clang++
 ARFLAGS		=	crs
-LDFLAGS		+=	-lm -lstdc++
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=
