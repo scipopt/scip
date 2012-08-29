@@ -2136,6 +2136,7 @@ SCIP_RETCODE upgradeConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraint set */
    int                   nconss,             /**< number of constraints in constraint set */
+   int*                  naggrvars,          /**< pointer to count the number of aggregated variables */
    int*                  ndelconss,          /**< pointer to count the number of deleted constraints */
    int*                  naddconss           /**< pointer to count the number of added constraints */
    )
@@ -2148,6 +2149,7 @@ SCIP_RETCODE upgradeConss(
 
    assert(scip != NULL);
    assert(conss != NULL || nconss == 0);
+   assert(naggrvars != NULL);
    assert(ndelconss != NULL);
    assert(naddconss != NULL);
 
@@ -2186,7 +2188,26 @@ SCIP_RETCODE upgradeConss(
 	 {
 	    if( SCIPisEQ(scip, consdata->rhs, 1.0) )
 	    {
-	       /* we assume that aggregations like x + y == 1 do not appear */
+	       /* check for aggregations like x + y == 1 */
+	       if( SCIPisEQ(scip, consdata->lhs, 1.0) )
+	       {
+		  SCIP_Bool cutoff;
+		  SCIP_Bool redundant;
+		  SCIP_Bool aggregated;
+
+		  SCIPdebugMessage("varbound constraint <%s>: aggregate <%s> + <%s> == 1\n",
+		     SCIPconsGetName(cons), SCIPvarGetName(consdata->var), SCIPvarGetName(consdata->vbdvar));
+
+		  /* aggregate both variables */
+		  SCIP_CALL( SCIPaggregateVars(scip, consdata->var, consdata->vbdvar, 1.0, 1.0, 1.0, &cutoff, &redundant, &aggregated) );
+		  assert(!cutoff);
+		  ++(*naggrvars);
+
+		  SCIP_CALL( SCIPdelCons(scip, cons) );
+		  ++(*ndelconss);
+
+		  continue;
+	       }
 	       assert(consdata->lhs < 0.5);
 
 	       vars[0] = consdata->var;
@@ -2206,7 +2227,26 @@ SCIP_RETCODE upgradeConss(
 	    /* the case x - y <= 0 */
 	    if( SCIPisZero(scip, consdata->rhs) )
 	    {
-	       /* we assume that aggregations like x - y == 0 do not appear */
+	       /* check for aggregations like x - y == 0 */
+	       if( SCIPisZero(scip, consdata->lhs) )
+	       {
+		  SCIP_Bool cutoff;
+		  SCIP_Bool redundant;
+		  SCIP_Bool aggregated;
+
+		  SCIPdebugMessage("varbound constraint <%s>: aggregate <%s> - <%s> == 0\n",
+		     SCIPconsGetName(cons), SCIPvarGetName(consdata->var), SCIPvarGetName(consdata->vbdvar));
+
+		  /* aggregate both variables */
+		  SCIP_CALL( SCIPaggregateVars(scip, consdata->var, consdata->vbdvar, 1.0, -1.0, 0.0, &cutoff, &redundant, &aggregated) );
+		  assert(!cutoff);
+		  ++(*naggrvars);
+
+		  SCIP_CALL( SCIPdelCons(scip, cons) );
+		  ++(*ndelconss);
+
+		  continue;
+	       }
 	       assert(consdata->lhs < -0.5);
 
 	       vars[0] = consdata->var;
@@ -3529,6 +3569,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    int oldnaddconss;
    int oldnchgcoefs;
    int oldnchgsides;
+   int oldnaggrvars;
    int i;
 
    assert(scip != NULL);
@@ -3546,6 +3587,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    oldnaddconss = *naddconss;
    oldnchgcoefs = *nchgcoefs;
    oldnchgsides = *nchgsides;
+   oldnaggrvars = *naggrvars;
 
    for( i = 0; i < nconss && !cutoff && !SCIPisStopped(scip); i++ )
    {
@@ -3627,7 +3669,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       SCIP_CALL( prettifyConss(scip, conss, nconss, nchgcoefs, nchgsides) );
 
       /* check if we can upgrade to a set-packing constraint */
-      SCIP_CALL( upgradeConss(scip, conss, nconss, ndelconss, naddconss) );
+      SCIP_CALL( upgradeConss(scip, conss, nconss, naggrvars, ndelconss, naddconss) );
 
       if( conshdlrdata->presolpairwise )
       {
@@ -3640,7 +3682,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    if( cutoff )
       *result = SCIP_CUTOFF;
    else if( *nchgbds > oldnchgbds || *ndelconss > oldndelconss || *naddconss > oldnaddconss
-      || *nchgcoefs > oldnchgcoefs || *nchgsides > oldnchgsides )
+      || *nchgcoefs > oldnchgcoefs || *nchgsides > oldnchgsides || *naggrvars > oldnaggrvars )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
