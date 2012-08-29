@@ -3451,10 +3451,10 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/fuiplevels", 1, quiet) );
 
       /* conflict constraints should be subject to aging to reduce the number of stored conflicts */
-      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "conflict/dynamic", FALSE, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "conflict/dynamic", TRUE, quiet) );
 
-      /* perform a restart after 100 conflict analysis calls were successful */
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/restartnum", 100, quiet) );
+      /* shrink the minimal maximum value for the conflict length */
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/minmaxvars", 10, quiet) );
 
       /* do not check pseudo solution (for performance reasons) */
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/disableenfops", TRUE, quiet) );
@@ -3463,7 +3463,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/solvefreq", -1, quiet) );
 
       /* set priority for depth first search to highest possible value */
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "nodeselection/dfs/stdpriority", INT_MAX/4, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "nodeselection/restartdfs/stdpriority", INT_MAX/4, quiet) );
 
       /* set priority for depth first search to highest possible value */
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "numerics/boundstreps", 1e-6, quiet) );
