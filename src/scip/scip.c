@@ -8975,6 +8975,7 @@ SCIP_RETCODE SCIPdelVar(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -9048,6 +9049,7 @@ SCIP_RETCODE SCIPgetVarsData(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -9097,6 +9099,7 @@ SCIP_VAR** SCIPgetVars(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -17978,6 +17981,204 @@ SCIP_Bool SCIPhaveVarsCommonClique(
 
    return (SCIPvarGetNCliques(var1, value1) + SCIPvarGetNCliques(var2, value2) > SCIPcliquetableGetNCliques(scip->cliquetable)
       || SCIPvarsHaveCommonClique(var1, value1, var2, value2, regardimplics));
+}
+
+
+/** writes the clique graph to a gml file
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note there can be duplicated arcs in the output file
+ */
+SCIP_RETCODE SCIPwriteCliqueGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 fname,              /**< name of file */
+   SCIP_Bool             writeimplications   /**< should we write the binary implications */
+   )
+{
+   FILE* gmlfile;
+   SCIP_HASHMAP* nodehashmap;
+   SCIP_CLIQUE** cliques;
+   SCIP_VAR** clqvars;
+   SCIP_VAR** allvars;
+   SCIP_VAR* var;
+   SCIP_Bool* clqvalues;
+   SCIP_BOUNDTYPE* impltypes;
+   char nodename[SCIP_MAXSTRLEN];
+   int nallvars;
+   int nbinvars;
+   int nintvars;
+   int nimplvars;
+   int nbinimpls;
+   int ncliques;
+   int start;
+   int end;
+   int a;
+   int c;
+   int d;
+   int v1;
+   int v2;
+   int id1;
+   int id2;
+
+   assert(scip != NULL);
+   assert(fname != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPwriteCliqueGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   /* get all active variables */
+   SCIP_CALL( SCIPgetVarsData(scip, &allvars, &nallvars, &nbinvars, &nintvars, &nimplvars, NULL) );
+
+   /* no possible variables for cliques exist */
+   if( nbinvars + nimplvars == 0 )
+      return SCIP_OKAY;
+
+   ncliques = SCIPgetNCliques(scip);
+
+   /* no cliques and do not wont to check for binary implications */
+   if( ncliques == 0 && !writeimplications )
+      return SCIP_OKAY;
+
+   /* open gml file */
+   gmlfile = fopen(fname, "w");
+
+   if( gmlfile == NULL )
+   {
+      SCIPerrorMessage("cannot open graph file <%s>\n", fname);
+      SCIPABORT();
+   }
+
+   /* create the hash map */
+   SCIP_CALL( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * 2 * (nbinvars+nimplvars))) );
+
+   /* write starting of gml file */
+   SCIPgmlWriteOpening(gmlfile, TRUE);
+
+   cliques = SCIPgetCliques(scip);
+
+   /* write nodes and arcs for all cliques */
+   for( c = ncliques - 1; c >= 0; --c )
+   {
+      clqvalues = SCIPcliqueGetValues(cliques[c]);
+      clqvars = SCIPcliqueGetVars(cliques[c]);
+
+      for( v1 = SCIPcliqueGetNVars(cliques[c]) - 1; v1 >= 0; --v1 )
+      {
+	 id1 = clqvalues[v1] ? SCIPvarGetProbindex(clqvars[v1]) : (nallvars + SCIPvarGetProbindex(clqvars[v1]));
+
+	 /* if corresponding node was not added yet, add it */
+	 if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id1) )
+	 {
+	    SCIP_CALL( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id1, (void*)(size_t) 1) );
+
+	    (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v1]));
+
+	    /* write new gml node for new variable */
+	    SCIPgmlWriteNode(gmlfile, id1, nodename, NULL, NULL, NULL);
+	 }
+
+	 for( v2 = SCIPcliqueGetNVars(cliques[c]) - 1; v2 >= 0; --v2 )
+	 {
+	    if( v1 == v2 )
+	       continue;
+
+	    id2 = clqvalues[v2] ? SCIPvarGetProbindex(clqvars[v2]) : (nallvars + SCIPvarGetProbindex(clqvars[v2]));
+
+	    /* if corresponding node was not added yet, add it */
+	    if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id2) )
+	    {
+	       SCIP_CALL( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id2, (void*)(size_t) 1) );
+
+	       (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
+
+	       /* write new gml node for new variable */
+	       SCIPgmlWriteNode(gmlfile, id2, nodename, NULL, NULL, NULL);
+	    }
+
+	    /* write gml arc between resultant and operand */
+	    SCIPgmlWriteArc(gmlfile, id1, id2, NULL, NULL);
+	 }
+      }
+   }
+
+   if( writeimplications )
+   {
+      /* write binary implications, new nodes and all arcs */
+      for( a = 0; a < 2; ++a )
+      {
+	 start = (a == 0 ? 0 : nbinvars + nintvars);
+	 end = (a == 0 ? nbinvars : nbinvars + nintvars + nimplvars);
+
+	 /* write arcs for implication on pure binary variables */
+	 for( v1 = start; v1 < end; ++v1 )
+	 {
+	    var = allvars[v1];
+	    assert((v < nbinvars) ? SCIPvarGetType(var) == SCIP_VARTYPE_BINARY : SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+
+	    for( d = 1; d >= 0; --d )
+	    {
+	       impltypes = SCIPvarGetImplTypes(var, d);
+	       clqvars = SCIPvarGetImplVars(var, d);
+	       id1 = (d == 1) ? SCIPvarGetProbindex(var) : (nallvars + SCIPvarGetProbindex(var));
+
+	       nbinimpls = SCIPvarGetNBinImpls(var, d);
+	       if( nbinimpls == 0 )
+		  continue;
+
+	       /* if corresponding node was not added yet, add it */
+	       if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id1) )
+	       {
+		  SCIP_CALL( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id1, (void*)(size_t) 1) );
+
+		  (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(var));
+
+		  /* write new gml node for new variable */
+		  SCIPgmlWriteNode(gmlfile, id1, nodename, NULL, NULL, NULL);
+	       }
+
+	       /* write arcs for all cliques */
+	       for( v2 = nbinimpls - 1; v2 >= 0; --v2 )
+	       {
+		  id2 = (impltypes[v2] == SCIP_BOUNDTYPE_LOWER) ? SCIPvarGetProbindex(clqvars[v2]) : (nallvars + SCIPvarGetProbindex(clqvars[v2]));
+
+		  /* if corresponding node was not added yet, add it */
+		  if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id2) )
+		  {
+		     SCIP_CALL( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id2, (void*)(size_t) 1) );
+
+		     (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
+
+		     /* write new gml node for new variable */
+		     SCIPgmlWriteNode(gmlfile, id2, nodename, NULL, NULL, NULL);
+		  }
+
+		  /* write gml arc between resultant and operand */
+		  SCIPgmlWriteArc(gmlfile, id1, id2, NULL, NULL);
+	       }
+	    }
+	 }
+      }
+   }
+
+   /* free the hash map */
+   SCIPhashmapFree(&nodehashmap);
+
+   SCIPgmlWriteCosing(gmlfile);
+   fclose(gmlfile);
+
+   return SCIP_OKAY;
 }
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
