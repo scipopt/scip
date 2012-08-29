@@ -18125,7 +18125,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 	 for( v1 = start; v1 < end; ++v1 )
 	 {
 	    var = allvars[v1];
-	    assert((v < nbinvars) ? SCIPvarGetType(var) == SCIP_VARTYPE_BINARY : SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+	    assert((v1 < nbinvars) ? SCIPvarGetType(var) == SCIP_VARTYPE_BINARY : SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
 
 	    for( d = 1; d >= 0; --d )
 	    {
@@ -18175,7 +18175,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
    /* free the hash map */
    SCIPhashmapFree(&nodehashmap);
 
-   SCIPgmlWriteCosing(gmlfile);
+   SCIPgmlWriteClosing(gmlfile);
    fclose(gmlfile);
 
    return SCIP_OKAY;
