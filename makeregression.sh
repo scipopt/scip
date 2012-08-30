@@ -90,11 +90,14 @@ GITHASH=`git describe --always --dirty`
 # continue testing if makeregression.sh did not change
 while [ $NEWSCRIPTTIMESTAMP -eq $SCRIPTTIMESTAMP ]
 do
-    # backup current download list of SCIP
+    # backup current download lists of SCIP and SoPlex
     YEAR=`date +%Y`
     MONTH=`date +%m`
     DAY=`date +%d`
     cp /www/Abt-Optimization/scip/counter/users.dat ~/download-counter/scip-$YEAR-$MONTH-$DAY-users.dat
+    cp /www/Abt-Optimization/soplex/counter/users.dat ~/download-counter/soplex-$YEAR-$MONTH-$DAY-users.dat
+    echo "created backups of download statistics"
+
     # if file named "kill" exist, stop the regression test
     if [ -f "kill" ];
     then
