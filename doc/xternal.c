@@ -5494,7 +5494,7 @@
  * @section Example
  *
  * Consider the constraint handler @p cons_linearordering.c in the
- * <a href="http://scip.zib.de/doc/examples/LOP/index.html"><b>linear ordering example</b></a>
+ * <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>linear ordering example</b></a>
  * (see @p example/LOP directory). This constraint handler propagates the equations \f$x_{ij} + x_{ji} =
  * 1\f$ and triangle inequalities \f$x_{ij} + x_{jk} + x_{ki} \leq 2\f$.
  *
