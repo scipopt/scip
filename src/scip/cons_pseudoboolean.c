@@ -2095,8 +2095,8 @@ SCIP_RETCODE createAndAddLinearCons(
    SCIP_VAR**const       andress,            /**< and-resultant variables */
    int const             nandress,           /**< number of and-resultant variables */
    SCIP_Real const*const andvals,            /**< and-resultant coefficients */
-   SCIP_Real const       lhs,                /**< left hand side of linear constraint */
-   SCIP_Real const       rhs,                /**< right hand side of linear constraint */
+   SCIP_Real*const       lhs,                /**< pointer to left hand side of linear constraint */
+   SCIP_Real*const       rhs,                /**< pointer to right hand side of linear constraint */
    SCIP_Bool const       initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool const       separate,           /**< should the constraint be separated during LP processing?
@@ -2141,6 +2141,8 @@ SCIP_RETCODE createAndAddLinearCons(
    assert(conshdlr != NULL);
    assert(nlinvars == 0 || (linvars != NULL && linvals != NULL));
    assert(nandress == 0 || (andress != NULL && andvals != NULL));
+   assert(lhs != NULL);
+   assert(rhs != NULL);
    assert(lincons != NULL);
    assert(linconstype != NULL);
    assert(nlinvars > 0 || nandress > 0);
@@ -2195,7 +2197,7 @@ SCIP_RETCODE createAndAddLinearCons(
          {
             integral = FALSE;
             break;
-         }         
+         }
       }
 
       if( integral )
@@ -2246,8 +2248,8 @@ SCIP_RETCODE createAndAddLinearCons(
           *    -> without negations:  (lhs == 1 - n  and  rhs == +inf)  or  (lhs == -inf  and  rhs = p - 1)
           */
          if( upgrconshdlr != NULL && nvars > 2 && ncoeffspone + ncoeffsnone == nvars
-            && ((SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
-               || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0))) )
+            && ((SCIPisEQ(scip, *lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, *rhs))
+               || (SCIPisInfinity(scip, -*lhs) && SCIPisEQ(scip, *rhs, ncoeffspone - 1.0))) )
          {
             SCIP_VAR** transvars;
             int mult;
@@ -2255,7 +2257,7 @@ SCIP_RETCODE createAndAddLinearCons(
             SCIPdebugMessage("linear constraint will be logic-or constraint\n");
 
             /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
-            mult = SCIPisInfinity(scip, rhs) ? +1 : -1;
+            mult = SCIPisInfinity(scip, *rhs) ? +1 : -1;
 
             /* get temporary memory */
             SCIP_CALL( SCIPallocBufferArray(scip, &transvars, nvars) );
@@ -2294,6 +2296,9 @@ SCIP_RETCODE createAndAddLinearCons(
 
             /* free temporary memory */
             SCIPfreeBufferArray(scip, &transvars);
+
+	    *lhs = 1.0;
+	    *rhs = SCIPinfinity(scip);
          }
 
          upgrconshdlr = SCIPfindConshdlr(scip, "setppc");
@@ -2318,12 +2323,12 @@ SCIP_RETCODE createAndAddLinearCons(
             SCIP_VAR** transvars;
             int mult;
 
-            if( SCIPisEQ(scip, lhs, rhs) && (SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) || SCIPisEQ(scip, lhs, ncoeffspone - 1.0)) )
+            if( SCIPisEQ(scip, *lhs, *rhs) && (SCIPisEQ(scip, *lhs, 1.0 - ncoeffsnone) || SCIPisEQ(scip, *lhs, ncoeffspone - 1.0)) )
             {
                SCIPdebugMessage("linear pseudoboolean constraint will be a set partitioning constraint\n");
 
                /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
-               mult = SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) ? +1 : -1;
+               mult = SCIPisEQ(scip, *lhs, 1.0 - ncoeffsnone) ? +1 : -1;
 
                /* get temporary memory */
                SCIP_CALL( SCIPallocBufferArray(scip, &transvars, nvars) );
@@ -2362,14 +2367,17 @@ SCIP_RETCODE createAndAddLinearCons(
 
                /* release temporary memory */
                SCIPfreeBufferArray(scip, &transvars);
+
+	       *lhs = 1.0;
+	       *rhs = 1.0;
             }
-            else if( (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, 1.0 - ncoeffsnone))
-               || (SCIPisEQ(scip, lhs, ncoeffspone - 1.0) && SCIPisInfinity(scip, rhs)) )
+            else if( (SCIPisInfinity(scip, -*lhs) && SCIPisEQ(scip, *rhs, 1.0 - ncoeffsnone))
+               || (SCIPisEQ(scip, *lhs, ncoeffspone - 1.0) && SCIPisInfinity(scip, *rhs)) )
             {
                SCIPdebugMessage("linear pseudoboolean constraint will be a set packing constraint\n");
 
                /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
-               mult = SCIPisInfinity(scip, -lhs) ? +1 : -1;
+               mult = SCIPisInfinity(scip, -*lhs) ? +1 : -1;
 
                /* get temporary memory */
                SCIP_CALL( SCIPallocBufferArray(scip, &transvars, nvars) );
@@ -2408,9 +2416,12 @@ SCIP_RETCODE createAndAddLinearCons(
 
                /* release temporary memory */
                SCIPfreeBufferArray(scip, &transvars);
+
+	       *lhs = -SCIPinfinity(scip);
+	       *rhs = 1.0;
             }
-            else if( (SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
-               || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0)) )
+            else if( (SCIPisEQ(scip, *lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, *rhs))
+               || (SCIPisInfinity(scip, -*lhs) && SCIPisEQ(scip, *rhs, ncoeffspone - 1.0)) )
             {
                if( nvars != 1 )
                {
@@ -2426,7 +2437,7 @@ SCIP_RETCODE createAndAddLinearCons(
                SCIPdebugMessage("linear pseudoboolean constraint will be a set covering constraint\n");
 
                /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
-               mult = SCIPisInfinity(scip, rhs) ? +1 : -1;
+               mult = SCIPisInfinity(scip, *rhs) ? +1 : -1;
 
                /* get temporary memory */
                SCIP_CALL( SCIPallocBufferArray(scip, &transvars, nvars) );
@@ -2465,6 +2476,9 @@ SCIP_RETCODE createAndAddLinearCons(
 
                /* release temporary memory */
                SCIPfreeBufferArray(scip, &transvars);
+
+	       *lhs = 1.0;
+	       *rhs = SCIPinfinity(scip);
             }
          }
 
@@ -2475,7 +2489,7 @@ SCIP_RETCODE createAndAddLinearCons(
           * - all coefficients must be integral
           * - exactly one of the sides must be infinite
           */
-         if( upgrconshdlr != NULL && !created && (ncoeffspone + ncoeffsnone + ncoeffspint + ncoeffsnint == nvars) && (SCIPisInfinity(scip, -lhs) != SCIPisInfinity(scip, rhs)) )
+         if( upgrconshdlr != NULL && !created && (ncoeffspone + ncoeffsnone + ncoeffspint + ncoeffsnint == nvars) && (SCIPisInfinity(scip, -*lhs) != SCIPisInfinity(scip, *rhs)) )
          {
             SCIP_VAR** transvars;
             SCIP_Longint* weights;
@@ -2492,15 +2506,15 @@ SCIP_RETCODE createAndAddLinearCons(
             /* if the right hand side is non-infinite, we have to negate all variables with negative coefficient;
              * otherwise, we have to negate all variables with positive coefficient and multiply the row with -1
              */
-            if( SCIPisInfinity(scip, rhs) )
+            if( SCIPisInfinity(scip, *rhs) )
             {
                mult = -1;
-               capacity = (SCIP_Longint)SCIPfeasFloor(scip, -lhs);
+               capacity = (SCIP_Longint)SCIPfeasFloor(scip, -*lhs);
             }
             else
             {
                mult = +1;
-               capacity = (SCIP_Longint)SCIPfeasFloor(scip, rhs);
+               capacity = (SCIP_Longint)SCIPfeasFloor(scip, *rhs);
             }
 
             /* negate positive or negative variables for linear variables */
@@ -2550,6 +2564,9 @@ SCIP_RETCODE createAndAddLinearCons(
             /* free temporary memory */
             SCIPfreeBufferArray(scip, &weights);
             SCIPfreeBufferArray(scip, &transvars);
+
+	    *lhs = -SCIPinfinity(scip);
+	    *rhs = capacity;
          }
 #if 0
 
@@ -2560,7 +2577,7 @@ SCIP_RETCODE createAndAddLinearCons(
           * - all coefficients must be integral
           * - both sides must be infinite
           */
-         if( upgrconshdlr != NULL && !created && (ncoeffspone + ncoeffsnone + ncoeffspint + ncoeffsnint == nvars) && SCIPisEQ(scip, lhs, rhs) )
+         if( upgrconshdlr != NULL && !created && (ncoeffspone + ncoeffsnone + ncoeffspint + ncoeffsnint == nvars) && SCIPisEQ(scip, *lhs, *rhs) )
          {
             SCIP_VAR** transvars;
             SCIP_Longint* weights;
@@ -2568,7 +2585,7 @@ SCIP_RETCODE createAndAddLinearCons(
             SCIP_Longint weight;
             int mult;
 
-            assert(!SCIPisInfinity(scip, rhs));
+            assert(!SCIPisInfinity(scip, *rhs));
 
             SCIPdebugMessage("linear pseudoboolean constraint will be a equality-knapsack constraint\n");
 
@@ -2576,15 +2593,15 @@ SCIP_RETCODE createAndAddLinearCons(
             SCIP_CALL( SCIPallocBufferArray(scip, &transvars, nvars) );
             SCIP_CALL( SCIPallocBufferArray(scip, &weights, nvars) );
 
-            if( SCIPisPositive(scip, rhs) )
+            if( SCIPisPositive(scip, *rhs) )
             {
                mult = +1;
-               capacity = (SCIP_Longint)SCIPfeasFloor(scip, rhs);
+               capacity = (SCIP_Longint)SCIPfeasFloor(scip, *rhs);
             }
             else
             {
                mult = -1;
-               capacity = (SCIP_Longint)SCIPfeasFloor(scip, -rhs);
+               capacity = (SCIP_Longint)SCIPfeasFloor(scip, -*rhs);
             }
 
             /* negate positive or negative variables for linear variables */
@@ -2634,6 +2651,9 @@ SCIP_RETCODE createAndAddLinearCons(
             /* free temporary memory */
             SCIPfreeBufferArray(scip, &weights);
             SCIPfreeBufferArray(scip, &transvars);
+
+	    *lhs = capacity;
+	    *rhs = capacity;
          }
 #endif
       }
@@ -2644,7 +2664,7 @@ SCIP_RETCODE createAndAddLinearCons(
 
    if( !created )
    {
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nlinvars, linvars, linvals, lhs, rhs,
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nlinvars, linvars, linvals, *lhs, *rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
       (*linconstype) = SCIP_LINEAR;
@@ -8727,8 +8747,8 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
 
    nandconss = 0;
    /* create and-constraints */
-   SCIP_CALL( createAndAddAnds(scip, conshdlr, terms, termvals, nterms, ntermvars,  
-         initial, enforce, check, local, modifiable, dynamic, stickingatnode, 
+   SCIP_CALL( createAndAddAnds(scip, conshdlr, terms, termvals, nterms, ntermvars,
+         initial, enforce, check, local, modifiable, dynamic, stickingatnode,
          andconss, andcoefs, &nandconss) );
    assert(nterms >= nandconss);
 
@@ -8749,10 +8769,10 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
 
    /* create and add linear constraint */
    /* checking for original linear constraint will be FALSE, tranformed linear constraints get the check flag like this
-    * pseudoboolean constraint, in this constraint hanlder we only will check all and-constraints
+    * pseudoboolean constraint, in this constraint handler we only will check all and-constraints
     */
-   SCIP_CALL( createAndAddLinearCons(scip, conshdlr, linvars, nlinvars, linvals, andress, nandconss, andcoefs, lhs, rhs, 
-         initial, separate, enforce, FALSE/*check*/, propagate, local, modifiable, dynamic, removable, stickingatnode, 
+   SCIP_CALL( createAndAddLinearCons(scip, conshdlr, linvars, nlinvars, linvals, andress, nandconss, andcoefs, &lhs, &rhs,
+         initial, separate, enforce, FALSE/*check*/, propagate, local, modifiable, dynamic, removable, stickingatnode,
          &lincons, &linconstype) );
    assert(lincons != NULL);
    assert(linconstype > SCIP_INVALIDCONS);
@@ -8762,12 +8782,12 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP_CALL( consdataCreate(scip, conshdlr, &consdata, lincons, linconstype, andconss, andcoefs, nandconss,
          indvar, weight, issoftcons, intvar, lhs, rhs) );
    assert(consdata != NULL);
-   
+
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &andcoefs);
    SCIPfreeBufferArray(scip, &andress);
    SCIPfreeBufferArray(scip, &andconss);
-   
+
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );

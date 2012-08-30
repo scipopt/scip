@@ -2593,16 +2593,16 @@ SCIP_RETCODE printNonLinearCons(
    assert(vars != NULL);
    assert(nvars > 0);
    assert(lhs <= rhs);
-   assert(resvars != NULL); 
-   assert(nresvars > 0); 
-   assert(andvars != NULL && nandvars != NULL); 
+   assert(resvars != NULL);
+   assert(nresvars > 0);
+   assert(andvars != NULL && nandvars != NULL);
 
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
       return SCIP_OKAY;
 
    activeconstant = 0.0;
    nactivevars = nvars;
-   
+
    /* duplicate variable and value array */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
    if( vals != NULL )
@@ -2612,14 +2612,14 @@ SCIP_RETCODE printNonLinearCons(
    else
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
-      
+
       for( v = 0; v < nactivevars; ++v )
          activevals[v] = 1.0;
    }
-   
+
    /* retransform given variables to active variables */
    SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
-   
+
    mult = 1;
 
    /* print row(s) in OPB format */
@@ -2632,7 +2632,7 @@ SCIP_RETCODE printNonLinearCons(
             andvars, nandvars, weight, &mult, multisymbol) );
    }
    else
-   { 
+   {
       if( !SCIPisInfinity(scip, -lhs) )
       {
          /* print inequality ">=" */
@@ -2949,9 +2949,10 @@ void printPBRow(
 
          negated = negatedarrays[t][v]; /*lint !e613 */
 
-         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s%s ", multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(var) : var), "x"));
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s%s", multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(var) : var), "x"));
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
       }
+      appendBuffer(scip, file, linebuffer, &linecnt, " ");
    }
    
    /* print left hand side */
@@ -3129,8 +3130,8 @@ SCIP_RETCODE writeOpbConstraints(
    SCIP_Real* consvals;
    int nconsvars;
    int v, c;
-   SCIP_HASHMAP* linconssofindicatorsmap;
-   SCIP_HASHMAP* linconssofpbsmap;
+   SCIP_HASHMAP* linconssofindicatorsmap = NULL;
+   SCIP_HASHMAP* linconssofpbsmap = NULL;
 
    assert(scip != NULL);
    assert(file != NULL);
@@ -3140,75 +3141,128 @@ SCIP_RETCODE writeOpbConstraints(
    assert(andvars != NULL || nandvars == 0);
    assert(multisymbol != NULL);
 
-   conshdlr = SCIPfindConshdlr(scip, "indicator");
-   linconssofindicatorsmap = NULL;
-
-   /* find artificial linear constraints which correspond to indicator constraints to avoid double printing */
-   if( conshdlr != NULL )
+   if( transformed )
    {
-      SCIP_CONS** indconss;
-      int nindconss;
+      conshdlr = SCIPfindConshdlr(scip, "indicator");
 
-      indconss = SCIPconshdlrGetConss(conshdlr);
-      nindconss = SCIPconshdlrGetNConss(conshdlr);
-      assert(indconss != NULL || nindconss == 0);
-
-      if( nindconss > 0 )
+      /* find artificial linear constraints which correspond to indicator constraints to avoid double printing */
+      if( conshdlr != NULL )
       {
-         SCIP_CONS* lincons;
+	 SCIP_CONS** indconss;
+	 int nindconss;
 
-         /* create the linear constraint of indicator constraints hash map */
-         SCIP_CALL( SCIPhashmapCreate(&linconssofindicatorsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nindconss)) );
-         assert(indconss != NULL);
+	 indconss = SCIPconshdlrGetConss(conshdlr);
+	 nindconss = SCIPconshdlrGetNConss(conshdlr);
+	 assert(indconss != NULL || nindconss == 0);
 
-         for( c = 0; c < nindconss; ++c )
-         {
-            assert(indconss[c] != NULL);
-            lincons = SCIPgetLinearConsIndicator(indconss[c]);
-            assert(lincons != NULL);
+	 if( nindconss > 0 )
+	 {
+	    SCIP_CONS* lincons;
 
-            /* insert constraint into mapping between */
-            SCIP_CALL( SCIPhashmapInsert(linconssofindicatorsmap, (void*)lincons, (void*)lincons) );
-         }
+	    /* create the linear constraint of indicator constraints hash map */
+	    SCIP_CALL( SCIPhashmapCreate(&linconssofindicatorsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nindconss)) );
+	    assert(indconss != NULL);
+
+	    for( c = 0; c < nindconss; ++c )
+	    {
+	       assert(indconss[c] != NULL);
+	       lincons = SCIPgetLinearConsIndicator(indconss[c]);
+	       assert(lincons != NULL);
+
+	       /* insert constraint into mapping between */
+	       SCIP_CALL( SCIPhashmapInsert(linconssofindicatorsmap, (void*)lincons, (void*)lincons) );
+	    }
+	 }
+      }
+
+      conshdlr = SCIPfindConshdlr(scip, "pseudoboolean");
+
+      /* find artifical linear constraints which correspond to indicator constraints to avoid double printing */
+      if( conshdlr != NULL )
+      {
+	 SCIP_CONS** pbconss;
+	 int npbconss;
+
+	 pbconss = SCIPconshdlrGetConss(conshdlr);
+	 npbconss = SCIPconshdlrGetNConss(conshdlr);
+	 assert(pbconss != NULL || npbconss == 0);
+
+	 if( npbconss > 0 )
+	 {
+	    SCIP_CONS* lincons;
+
+	    /* create the linear constraint of indicator constraints hash map */
+	    SCIP_CALL( SCIPhashmapCreate(&linconssofpbsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * npbconss)) );
+
+	    for( c = 0; c < npbconss; ++c )
+	    {
+	       assert(pbconss[c] != NULL);
+	       lincons = SCIPgetLinearConsPseudoboolean(scip, pbconss[c]);
+	       assert(lincons != NULL);
+
+	       /* insert constraint into mapping between */
+	       SCIP_CALL( SCIPhashmapInsert(linconssofpbsmap, (void*)lincons, (void*)lincons) );
+	    }
+	 }
       }
    }
-
-   conshdlr = SCIPfindConshdlr(scip, "pseudoboolean");
-   linconssofpbsmap = NULL;
-
-   /* find artifical linear constraints which correspond to indicator constraints to avoid double printing */
-   if( conshdlr != NULL )
+   /* in original space we cannot ask the constraint handler for its constraints, therefore we have to loop over all
+    * original to check for artificial linear once
+    */
+   else
    {
-      SCIP_CONS** pbconss;
-      int npbconss;
+      SCIP_CONS* lincons;
+      SCIP_Bool pbhashmapcreated = FALSE;
+      SCIP_Bool indhashmapcreated = FALSE;
 
-      pbconss = SCIPconshdlrGetConss(conshdlr);
-      npbconss = SCIPconshdlrGetNConss(conshdlr);
-      assert(pbconss != NULL || npbconss == 0);
-
-      if( npbconss > 0 )
+      /* loop over all constraint for printing */
+      for( c = 0; c < nconss; ++c )
       {
-         SCIP_CONS* lincons;
+	 conshdlr = SCIPconsGetHdlr(conss[c]);
+	 assert(conshdlr != NULL);
 
-         /* create the linear constraint of indicator constraints hash map */
-         SCIP_CALL( SCIPhashmapCreate(&linconssofpbsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * npbconss)) );
-         
-         for( c = 0; c < npbconss; ++c )
-         {
-            assert(pbconss[c] != NULL);
-            lincons = SCIPgetLinearConsPseudoboolean(scip, pbconss[c]);
-            assert(lincons != NULL);
+	 conshdlrname = SCIPconshdlrGetName(conshdlr);
 
-            /* insert constraint into mapping between */
-            SCIP_CALL( SCIPhashmapInsert(linconssofpbsmap, (void*)lincons, (void*)lincons) );
-         }
+	 if( strcmp(conshdlrname, "pseudoboolean") == 0 )
+	 {
+	    if( !pbhashmapcreated )
+	    {
+	       /* create the linear constraint of indicator constraints hash map */
+	       SCIP_CALL( SCIPhashmapCreate(&linconssofpbsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nconss)) );
+	       pbhashmapcreated = TRUE;
+	    }
+
+	    lincons = SCIPgetLinearConsPseudoboolean(scip, conss[c]);
+	    assert(lincons != NULL);
+
+	    /* insert constraint into mapping between */
+	    SCIP_CALL( SCIPhashmapInsert(linconssofpbsmap, (void*)lincons, (void*)lincons) );
+	 }
+	 else if( strcmp(conshdlrname, "indicator") == 0 )
+	 {
+	    if( !indhashmapcreated )
+	    {
+	       /* create the linear constraint of indicator constraints hash map */
+	       SCIP_CALL( SCIPhashmapCreate(&linconssofindicatorsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nconss)) );
+	       indhashmapcreated = TRUE;
+	    }
+
+	    lincons = SCIPgetLinearConsIndicator(conss[c]);
+	    assert(lincons != NULL);
+
+	    /* insert constraint into mapping between */
+	    SCIP_CALL( SCIPhashmapInsert(linconssofindicatorsmap, (void*)lincons, (void*)lincons) );
+	 }
       }
    }
-
 
    /* loop over all constraint for printing */
    for( c = 0; c < nconss; ++c )
    {
+      SCIP_CONS* artcons;
+
+      artcons = NULL;
+
       cons = conss[c]; /*lint !e613 */
       assert(cons != NULL);
 
@@ -3221,25 +3275,21 @@ SCIP_RETCODE writeOpbConstraints(
       /* in case the transformed is written only constraint are posted which are enabled in the current node */
       assert(!transformed || SCIPconsIsEnabled(cons));
 
-      if( strcmp(conshdlrname, "linear") == 0 )
+      if( linconssofpbsmap != NULL )
+	 artcons = (SCIP_CONS*) SCIPhashmapGetImage(linconssofpbsmap, (void*)cons);
+      if( artcons == NULL && linconssofindicatorsmap != NULL )
+	 artcons = (SCIP_CONS*) SCIPhashmapGetImage(linconssofindicatorsmap, (void*)cons);
+
+      if( artcons == NULL )
       {
-         SCIP_CONS* artcons;
-
-         artcons = NULL;
-
-         if( linconssofindicatorsmap != NULL )
-            artcons = (SCIP_CONS*) SCIPhashmapGetImage(linconssofindicatorsmap, (void*)cons);
-         if( artcons == NULL && linconssofpbsmap != NULL )
-            artcons = (SCIP_CONS*) SCIPhashmapGetImage(linconssofpbsmap, (void*)cons);
-         
-         if( artcons == NULL )
-         {
+	 if( strcmp(conshdlrname, "linear") == 0 )
+	 {
 	    if( SCIPgetNVarsLinear(scip, cons) == 0 )
 	    {
 	       if( SCIPisGT(scip, SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons)) )
 	       {
 		  SCIPerrorMessage("Cannot print empty violated constraint %s, %g <= %g is not fulfilled\n",
-                     SCIPconsGetName(cons), SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons));
+		     SCIPconsGetName(cons), SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons));
 	       }
 	       continue;
 	    }
@@ -3257,326 +3307,331 @@ SCIP_RETCODE writeOpbConstraints(
 		     SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
 		     SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), 0LL, transformed, multisymbol) );
 	    }
-         }
-      }
-      else if( strcmp(conshdlrname, "setppc") == 0 )
-      {
-         consvars = SCIPgetVarsSetppc(scip, cons);
-         nconsvars = SCIPgetNVarsSetppc(scip, cons);
-
-	 if( nconsvars == 0 )
-	    continue;
-
-         switch( SCIPgetTypeSetppc(scip, cons) )
-         {
-         case SCIP_SETPPCTYPE_PARTITIONING :
-            if( existands )
-            {
-               SCIP_CALL( printNonLinearCons(scip, file,
-                     consvars, NULL, nconsvars, 1.0, 1.0, resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
-            }
-            else
-            {
-               SCIP_CALL( printLinearCons(scip, file,
-                     consvars, NULL, nconsvars, 1.0, 1.0, 0LL, transformed, multisymbol) );
-            }
-            break;
-         case SCIP_SETPPCTYPE_PACKING :
-            if( existands )
-            {
-               SCIP_CALL( printNonLinearCons(scip, file,
-                     consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, resvars, nresvars, andvars, nandvars,
-                     0LL, transformed, multisymbol) );
-            }
-            else
-            {
-               SCIP_CALL( printLinearCons(scip, file,
-                     consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, 0LL, transformed, multisymbol) );
-            }
-            break;
-         case SCIP_SETPPCTYPE_COVERING :
-            if( existands )
-            {
-               SCIP_CALL( printNonLinearCons(scip, file,
-                     consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), resvars, nresvars, andvars, nandvars,
-                     0LL, transformed, multisymbol) );
-            }
-            else
-            {
-               SCIP_CALL( printLinearCons(scip, file,
-                     consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), 0LL, transformed, multisymbol) );
-            }
-            break;
-         }
-      }
-      else if( strcmp(conshdlrname, "logicor") == 0 )
-      {
-	 if( SCIPgetNVarsLogicor(scip, cons) == 0 )
-	    continue;
-
-         if( existands )
-         {
-            SCIP_CALL( printNonLinearCons(scip, file,
-                  SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip),
-                  resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
-         }
-         else
-         {
-            SCIP_CALL( printLinearCons(scip, file,
-                  SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
-                  1.0, SCIPinfinity(scip), 0LL, transformed, multisymbol) );
-         }
-      }
-      else if( strcmp(conshdlrname, "knapsack") == 0 )
-      {
-         SCIP_Longint* weights;
-
-         consvars = SCIPgetVarsKnapsack(scip, cons);
-         nconsvars = SCIPgetNVarsKnapsack(scip, cons);
-
-	 if( nconsvars == 0 )
-	    continue;
-
-         /* copy Longint array to SCIP_Real array */
-         weights = SCIPgetWeightsKnapsack(scip, cons);
-         SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
-         for( v = 0; v < nconsvars; ++v )
-            consvals[v] = (SCIP_Real)weights[v];
-
-         if( existands )
-         {
-            SCIP_CALL( printNonLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip),
-                  (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), resvars, nresvars, andvars, nandvars,
-                  0LL, transformed, multisymbol) );
-         }
-         else
-         {
-            SCIP_CALL( printLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip),
-                  (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), 0LL, transformed, multisymbol) );
-         }
-
-         SCIPfreeBufferArray(scip, &consvals);
-      }
-      else if( strcmp(conshdlrname, "varbound") == 0 )
-      {
-         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
-
-         consvars[0] = SCIPgetVarVarbound(scip, cons);
-         consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
-
-         consvals[0] = 1.0;
-         consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
-
-         if( existands )
-         {
-            SCIP_CALL( printNonLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
-                  SCIPgetRhsVarbound(scip, cons), resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
-         }
-         else
-         {
-            SCIP_CALL( printLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
-                  SCIPgetRhsVarbound(scip, cons), 0LL, transformed, multisymbol) );
-         }
-
-         SCIPfreeBufferArray(scip, &consvars);
-         SCIPfreeBufferArray(scip, &consvals);
-      }
-      else if( strcmp(conshdlrname, "pseudoboolean") == 0 )
-      {
-         SCIP_VAR*** termvars;
-         int* ntermvars;
-         int termvarssize;
-         SCIP_CONS** andconss;
-         SCIP_Real* andcoefs ;
-         SCIP_VAR** linvars;
-         SCIP_Real* lincoefs ;
-         int nlinvars;
-         int t;
-
-         /* get the required array size for the variables array and for the number of variables in each variable array */
-         termvarssize = SCIPgetNAndsPseudoboolean(scip, cons);
-         assert(termvarssize >= 0);
-
-         /* allocate temporary memory */
-         SCIP_CALL( SCIPallocBufferArray(scip, &andconss, termvarssize) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &termvars, termvarssize) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &andcoefs, termvarssize) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &ntermvars, termvarssize) );
-
-         /* get all corresponding and-constraints and therefor all variables */
-         SCIP_CALL( SCIPgetAndDatasPseudoboolean(scip, cons, andconss, andcoefs, &termvarssize) );
-         for( t = termvarssize - 1; t >= 0; --t )
-         {
-            termvars[t] = SCIPgetVarsAnd(scip, andconss[t]);
-            ntermvars[t] = SCIPgetNVarsAnd(scip, andconss[t]);
-         }
-
-         /* gets number of linear variables without artificial terms variables of pseudoboolean constraint */
-         nlinvars = SCIPgetNLinVarsWithoutAndPseudoboolean(scip, cons);
-
-         /* allocate temporary memory */
-         SCIP_CALL( SCIPallocBufferArray(scip, &linvars, nlinvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nlinvars) );
-
-         /* gets linear constraint of pseudoboolean constraint */
-         SCIP_CALL( SCIPgetLinDatasWithoutAndPseudoboolean(scip, cons, linvars, lincoefs, &nlinvars) );
-
-         SCIP_CALL( printPseudobooleanCons(scip, file, linvars, lincoefs, nlinvars,
-               termvars, ntermvars, andcoefs, termvarssize, SCIPgetIndVarPseudoboolean(scip, cons),
-               SCIPgetLhsPseudoboolean(scip, cons), SCIPgetRhsPseudoboolean(scip, cons), transformed, multisymbol) );
-
-         /* free temporary memory */
-         SCIPfreeBufferArray(scip, &lincoefs);
-         SCIPfreeBufferArray(scip, &linvars);
-         SCIPfreeBufferArray(scip, &ntermvars);
-         SCIPfreeBufferArray(scip, &andcoefs);
-         SCIPfreeBufferArray(scip, &termvars);
-         SCIPfreeBufferArray(scip, &andconss);
-      }
-      else if( strcmp(conshdlrname, "indicator") == 0 )
-      {
-         SCIP_CONS* lincons;
-         SCIP_VAR* indvar;
-         SCIP_VAR* slackvar;
-         SCIP_Longint weight;
-
-         /* get artificial binary indicator variables */
-         indvar = SCIPgetBinaryVarIndicator(cons);
-         assert(indvar != NULL);
-
-         if( SCIPvarGetStatus(indvar) == SCIP_VARSTATUS_NEGATED )
+	 }
+	 else if( strcmp(conshdlrname, "setppc") == 0 )
 	 {
-	    indvar = SCIPvarGetNegationVar(indvar);
-	    assert(indvar != NULL);
-	    assert(SCIPvarGetStatus(indvar) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(indvar) != SCIP_VARSTATUS_MULTAGGR);
+	    consvars = SCIPgetVarsSetppc(scip, cons);
+	    nconsvars = SCIPgetNVarsSetppc(scip, cons);
 
-	    /* get the soft cost of this constraint */
-	    weight = (SCIP_Longint) SCIPvarGetObj(indvar);
+	    if( nconsvars == 0 )
+	       continue;
+
+	    switch( SCIPgetTypeSetppc(scip, cons) )
+	    {
+	    case SCIP_SETPPCTYPE_PARTITIONING :
+	       if( existands )
+	       {
+		  SCIP_CALL( printNonLinearCons(scip, file,
+			consvars, NULL, nconsvars, 1.0, 1.0, resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
+	       }
+	       else
+	       {
+		  SCIP_CALL( printLinearCons(scip, file,
+			consvars, NULL, nconsvars, 1.0, 1.0, 0LL, transformed, multisymbol) );
+	       }
+	       break;
+	    case SCIP_SETPPCTYPE_PACKING :
+	       if( existands )
+	       {
+		  SCIP_CALL( printNonLinearCons(scip, file,
+			consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, resvars, nresvars, andvars, nandvars,
+			0LL, transformed, multisymbol) );
+	       }
+	       else
+	       {
+		  SCIP_CALL( printLinearCons(scip, file,
+			consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, 0LL, transformed, multisymbol) );
+	       }
+	       break;
+	    case SCIP_SETPPCTYPE_COVERING :
+	       if( existands )
+	       {
+		  SCIP_CALL( printNonLinearCons(scip, file,
+			consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), resvars, nresvars, andvars, nandvars,
+			0LL, transformed, multisymbol) );
+	       }
+	       else
+	       {
+		  SCIP_CALL( printLinearCons(scip, file,
+			consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), 0LL, transformed, multisymbol) );
+	       }
+	       break;
+	    }
+	 }
+	 else if( strcmp(conshdlrname, "logicor") == 0 )
+	 {
+	    if( SCIPgetNVarsLogicor(scip, cons) == 0 )
+	       continue;
+
+	    if( existands )
+	    {
+	       SCIP_CALL( printNonLinearCons(scip, file,
+		     SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip),
+		     resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
+	    }
+	    else
+	    {
+	       SCIP_CALL( printLinearCons(scip, file,
+		     SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
+		     1.0, SCIPinfinity(scip), 0LL, transformed, multisymbol) );
+	    }
+	 }
+	 else if( strcmp(conshdlrname, "knapsack") == 0 )
+	 {
+	    SCIP_Longint* weights;
+
+	    consvars = SCIPgetVarsKnapsack(scip, cons);
+	    nconsvars = SCIPgetNVarsKnapsack(scip, cons);
+
+	    if( nconsvars == 0 )
+	       continue;
+
+	    /* copy Longint array to SCIP_Real array */
+	    weights = SCIPgetWeightsKnapsack(scip, cons);
+	    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
+	    for( v = 0; v < nconsvars; ++v )
+	       consvals[v] = (SCIP_Real)weights[v];
+
+	    if( existands )
+	    {
+	       SCIP_CALL( printNonLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip),
+		     (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), resvars, nresvars, andvars, nandvars,
+		     0LL, transformed, multisymbol) );
+	    }
+	    else
+	    {
+	       SCIP_CALL( printLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip),
+		     (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), 0LL, transformed, multisymbol) );
+	    }
+
+	    SCIPfreeBufferArray(scip, &consvals);
+	 }
+	 else if( strcmp(conshdlrname, "varbound") == 0 )
+	 {
+	    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
+	    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
+
+	    consvars[0] = SCIPgetVarVarbound(scip, cons);
+	    consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
+
+	    consvals[0] = 1.0;
+	    consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
+
+	    if( existands )
+	    {
+	       SCIP_CALL( printNonLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
+		     SCIPgetRhsVarbound(scip, cons), resvars, nresvars, andvars, nandvars, 0LL, transformed, multisymbol) );
+	    }
+	    else
+	    {
+	       SCIP_CALL( printLinearCons(scip, file, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
+		     SCIPgetRhsVarbound(scip, cons), 0LL, transformed, multisymbol) );
+	    }
+
+	    SCIPfreeBufferArray(scip, &consvars);
+	    SCIPfreeBufferArray(scip, &consvals);
+	 }
+	 else if( strcmp(conshdlrname, "pseudoboolean") == 0 )
+	 {
+	    SCIP_VAR*** termvars;
+	    int* ntermvars;
+	    int termvarssize;
+	    SCIP_CONS** andconss;
+	    SCIP_Real* andcoefs ;
+	    SCIP_VAR** linvars;
+	    SCIP_Real* lincoefs ;
+	    int nlinvars;
+	    int t;
+
+	    /* get the required array size for the variables array and for the number of variables in each variable array */
+	    termvarssize = SCIPgetNAndsPseudoboolean(scip, cons);
+	    assert(termvarssize >= 0);
+
+	    /* allocate temporary memory */
+	    SCIP_CALL( SCIPallocBufferArray(scip, &andconss, termvarssize) );
+	    SCIP_CALL( SCIPallocBufferArray(scip, &termvars, termvarssize) );
+	    SCIP_CALL( SCIPallocBufferArray(scip, &andcoefs, termvarssize) );
+	    SCIP_CALL( SCIPallocBufferArray(scip, &ntermvars, termvarssize) );
+
+	    /* get all corresponding and-constraints and therefor all variables */
+	    SCIP_CALL( SCIPgetAndDatasPseudoboolean(scip, cons, andconss, andcoefs, &termvarssize) );
+	    for( t = termvarssize - 1; t >= 0; --t )
+	    {
+	       termvars[t] = SCIPgetVarsAnd(scip, andconss[t]);
+	       ntermvars[t] = SCIPgetNVarsAnd(scip, andconss[t]);
+	    }
+
+	    /* gets number of linear variables without artificial terms variables of pseudoboolean constraint */
+	    nlinvars = SCIPgetNLinVarsWithoutAndPseudoboolean(scip, cons);
+
+	    /* allocate temporary memory */
+	    SCIP_CALL( SCIPallocBufferArray(scip, &linvars, nlinvars) );
+	    SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nlinvars) );
+
+	    /* gets linear constraint of pseudoboolean constraint */
+	    SCIP_CALL( SCIPgetLinDatasWithoutAndPseudoboolean(scip, cons, linvars, lincoefs, &nlinvars) );
+
+	    SCIP_CALL( printPseudobooleanCons(scip, file, linvars, lincoefs, nlinvars,
+		  termvars, ntermvars, andcoefs, termvarssize, SCIPgetIndVarPseudoboolean(scip, cons),
+		  SCIPgetLhsPseudoboolean(scip, cons), SCIPgetRhsPseudoboolean(scip, cons), transformed, multisymbol) );
+
+	    /* free temporary memory */
+	    SCIPfreeBufferArray(scip, &lincoefs);
+	    SCIPfreeBufferArray(scip, &linvars);
+	    SCIPfreeBufferArray(scip, &ntermvars);
+	    SCIPfreeBufferArray(scip, &andcoefs);
+	    SCIPfreeBufferArray(scip, &termvars);
+	    SCIPfreeBufferArray(scip, &andconss);
+	 }
+	 else if( strcmp(conshdlrname, "indicator") == 0 )
+	 {
+	    SCIP_CONS* lincons;
+	    SCIP_VAR* indvar;
+	    SCIP_VAR* slackvar;
+	    SCIP_Longint weight;
+
+	    /* get artificial binary indicator variables */
+	    indvar = SCIPgetBinaryVarIndicator(cons);
+	    assert(indvar != NULL);
+
+	    if( SCIPvarGetStatus(indvar) == SCIP_VARSTATUS_NEGATED )
+	    {
+	       indvar = SCIPvarGetNegationVar(indvar);
+	       assert(indvar != NULL);
+	       assert(SCIPvarGetStatus(indvar) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(indvar) != SCIP_VARSTATUS_MULTAGGR);
+
+	       /* get the soft cost of this constraint */
+	       weight = (SCIP_Longint) SCIPvarGetObj(indvar);
+	    }
+	    else
+	    {
+	       assert(SCIPvarGetStatus(indvar) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(indvar) != SCIP_VARSTATUS_MULTAGGR);
+
+	       /* get the soft cost of this constraint */
+	       weight = -(SCIP_Longint) SCIPvarGetObj(indvar);
+	    }
+
+	    /* get artificial slack variable */
+	    slackvar = SCIPgetSlackVarIndicator(cons);
+	    assert(slackvar != NULL);
+
+	    /* only need to print indicator constraints with weights on their indicator variable */
+	    if( weight != 0 )
+	    {
+	       SCIP_Bool cont;
+	       int nonbinarypos;
+
+	       lincons = SCIPgetLinearConsIndicator(cons);
+	       assert(lincons != NULL);
+
+	       nconsvars = SCIPgetNVarsLinear(scip, lincons);
+
+	       /* allocate temporary memory */
+	       SCIP_CALL( SCIPduplicateBufferArray(scip, &consvars, SCIPgetVarsLinear(scip, lincons), nconsvars) );
+	       SCIP_CALL( SCIPduplicateBufferArray(scip, &consvals, SCIPgetValsLinear(scip, lincons), nconsvars) );
+
+	       nonbinarypos = -1;
+	       cont = FALSE;
+
+	       /* find non-binary variable */
+	       for( v = 0; v < nconsvars; ++v )
+	       {
+		  if( SCIPvarGetType(consvars[v]) != SCIP_VARTYPE_BINARY )
+		  {
+		     if( consvars[v] == slackvar )
+		     {
+			assert(nonbinarypos == -1);
+			nonbinarypos = v;
+		     }
+		     else
+		     {
+			SCIPwarningMessage(scip, "cannot print linear constraint <%s> of indicator constraint <%s> because it has more than one non-binary variable\n", SCIPconsGetName(lincons), SCIPconsGetName(cons) );
+			SCIPinfoMessage(scip, file, "* ");
+			SCIP_CALL( SCIPprintCons(scip, cons, file) );
+			SCIPinfoMessage(scip, file, ";\n");
+			cont = TRUE;
+			break;
+		     }
+		  }
+	       }
+
+	       /* if we have not found any non-binary variable we do not print the constraint, maybe we should ??? */
+	       if( nonbinarypos == -1 )
+	       {
+		  SCIPwarningMessage(scip, "cannot print linear constraint <%s> of indicator constraint <%s> because it has no slack variable\n", SCIPconsGetName(lincons), SCIPconsGetName(cons) );
+		  SCIPinfoMessage(scip, file, "* ");
+		  SCIP_CALL( SCIPprintCons(scip, cons, file) );
+		  SCIPinfoMessage(scip, file, ";\n");
+
+		  /* free temporary memory */
+		  SCIPfreeBufferArray(scip, &consvals);
+		  SCIPfreeBufferArray(scip, &consvars);
+		  continue;
+	       }
+
+	       /* if the constraint has more than two non-binary variables is not printable and we go to the next */
+	       if( cont )
+	       {
+		  /* free temporary memory */
+		  SCIPfreeBufferArray(scip, &consvals);
+		  SCIPfreeBufferArray(scip, &consvars);
+		  continue;
+	       }
+
+	       assert(0 <= nonbinarypos && nonbinarypos < nconsvars);
+
+	       /* remove slackvariable in linear constraint for printing */
+	       --nconsvars;
+	       consvars[nonbinarypos] = consvars[nconsvars];
+	       consvals[nonbinarypos] = consvals[nconsvars];
+
+	       if( existands )
+	       {
+		  SCIP_CALL( printNonLinearCons(scip, file,
+			consvars, consvals, nconsvars, SCIPgetLhsLinear(scip, lincons),  SCIPgetRhsLinear(scip, lincons),
+			resvars, nresvars, andvars, nandvars,
+			weight, transformed, multisymbol) );
+	       }
+	       else
+	       {
+		  SCIP_CALL( printLinearCons(scip, file,
+			consvars, consvals, nconsvars, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons),
+			weight, transformed, multisymbol) );
+	       }
+
+	       /* free temporary memory */
+	       SCIPfreeBufferArray(scip, &consvals);
+	       SCIPfreeBufferArray(scip, &consvars);
+	    }
+	    else
+	    {
+	       SCIPwarningMessage(scip, "indicator constraint <%s> will not be printed because the indicator variable has no objective value(= weight of this soft constraint)\n", SCIPconsGetName(cons) );
+	       SCIPinfoMessage(scip, file, "* ");
+	       SCIP_CALL( SCIPprintCons(scip, cons, file) );
+	       SCIPinfoMessage(scip, file, ";\n");
+	    }
+	 }
+	 else if( strcmp(conshdlrname, "and") == 0 )
+	 {
+	    /* all resultants of the and constraint will be replaced by all corresponding variables of this constraint,
+	     * so no and-constraint will be printed directly */
+	    assert(existandconshdlr);
 	 }
 	 else
 	 {
-	    assert(SCIPvarGetStatus(indvar) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(indvar) != SCIP_VARSTATUS_MULTAGGR);
-
-	    /* get the soft cost of this constraint */
-	    weight = -(SCIP_Longint) SCIPvarGetObj(indvar);
+	    SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
+	    SCIPinfoMessage(scip, file, "* ");
+	    SCIP_CALL( SCIPprintCons(scip, cons, file) );
+	    SCIPinfoMessage(scip, file, ";\n");
 	 }
-
-         /* get artificial slack variable */
-         slackvar = SCIPgetSlackVarIndicator(cons);
-         assert(slackvar != NULL);
-
-         /* only need to print indicator constraints with weights on their indicator variable */
-         if( weight != 0 )
-         {
-            SCIP_Bool cont;
-            int nonbinarypos;
-
-            lincons = SCIPgetLinearConsIndicator(cons);
-            assert(lincons != NULL);
-
-            nconsvars = SCIPgetNVarsLinear(scip, lincons);
-
-            /* allocate temporary memory */
-            SCIP_CALL( SCIPduplicateBufferArray(scip, &consvars, SCIPgetVarsLinear(scip, lincons), nconsvars) );
-            SCIP_CALL( SCIPduplicateBufferArray(scip, &consvals, SCIPgetValsLinear(scip, lincons), nconsvars) );
-
-            nonbinarypos = -1;
-            cont = FALSE;
-
-            /* find non-binary variable */
-            for( v = 0; v < nconsvars; ++v )
-            {
-               if( SCIPvarGetType(consvars[v]) != SCIP_VARTYPE_BINARY )
-               {
-                  if( consvars[v] == slackvar )
-                  {
-                     assert(nonbinarypos == -1);
-                     nonbinarypos = v;
-                  }
-                  else
-                  {
-                     SCIPwarningMessage(scip, "cannot print linear constraint <%s> of indicator constraint <%s> because it has more than one non-binary variable\n", SCIPconsGetName(lincons), SCIPconsGetName(cons) );
-                     SCIPinfoMessage(scip, file, "* ");
-                     SCIP_CALL( SCIPprintCons(scip, cons, file) );
-                     SCIPinfoMessage(scip, file, ";\n");
-                     cont = TRUE;
-                     break;
-                  }
-               }
-            }
-
-            /* if we have not found any non-binary variable we do not print the constraint, maybe we should ??? */
-            if( nonbinarypos == -1 )
-            {
-               SCIPwarningMessage(scip, "cannot print linear constraint <%s> of indicator constraint <%s> because it has no slack variable\n", SCIPconsGetName(lincons), SCIPconsGetName(cons) );
-               SCIPinfoMessage(scip, file, "* ");
-               SCIP_CALL( SCIPprintCons(scip, cons, file) );
-               SCIPinfoMessage(scip, file, ";\n");
-
-               /* free temporary memory */
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-               continue;
-            }
-
-            /* if the constraint has more than two non-binary variables is not printable and we go to the next */
-            if( cont )
-            {
-               /* free temporary memory */
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-               continue;
-            }
-
-            assert(0 <= nonbinarypos && nonbinarypos < nconsvars);
-            
-            /* remove slackvariable in linear constraint for printing */
-            --nconsvars;
-            consvars[nonbinarypos] = consvars[nconsvars];
-            consvals[nonbinarypos] = consvals[nconsvars];
-
-            if( existands )
-            {
-               SCIP_CALL( printNonLinearCons(scip, file,
-                     consvars, consvals, nconsvars, SCIPgetLhsLinear(scip, lincons),  SCIPgetRhsLinear(scip, lincons), 
-                     resvars, nresvars, andvars, nandvars, 
-                     weight, transformed, multisymbol) );
-            }            
-            else
-            {
-               SCIP_CALL( printLinearCons(scip, file,
-                     consvars, consvals, nconsvars, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons),
-                     weight, transformed, multisymbol) );
-            }
-
-            /* free temporary memory */
-            SCIPfreeBufferArray(scip, &consvals);
-            SCIPfreeBufferArray(scip, &consvars);
-         }
-         else
-         {
-            SCIPwarningMessage(scip, "indicator constraint <%s> will not be printed because the indicator variable has no objective value(= weight of this soft constraint)\n", SCIPconsGetName(cons) );
-            SCIPinfoMessage(scip, file, "* ");
-            SCIP_CALL( SCIPprintCons(scip, cons, file) );
-            SCIPinfoMessage(scip, file, ";\n");
-         }
-      }
-      else if( strcmp(conshdlrname, "and") == 0 )
-      {
-         /* all resultants of the and constraint will be replaced by all corresponding variables of this constraint, 
-          * so no and-constraint will be printed directly */
-         assert(existandconshdlr);
-      }
-      else
-      {
-         SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
-         SCIPinfoMessage(scip, file, "* ");
-         SCIP_CALL( SCIPprintCons(scip, cons, file) );
-         SCIPinfoMessage(scip, file, ";\n");
       }
    }
 
+   if( linconssofpbsmap != NULL )
+   {
+      /* free hash map */
+      SCIPhashmapFree(&linconssofpbsmap);
+   }
    if( linconssofindicatorsmap != NULL )
    {
       /* free hash map */
