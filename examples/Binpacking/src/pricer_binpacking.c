@@ -192,13 +192,14 @@ SCIP_RETCODE addBranchingDecisionConss(
        *
        * - branching type SAME:  x1 = x2 <=> x1 - x2 = 0 <=> 0 <= x1 - x2 <= 0
        *
-       * - branching type DIFFER:  x1 - x2 <= 1 <=> -inf <= x1 - x2 <= 1
+       * - branching type DIFFER:  x1 + x2 <= 1 <=> -inf <= x1 + x2 <= 1
        *
+       * note a setppc constraint would be sufficient and even better suitable for such kind of constraint
        */
       SCIP_CALL( SCIPcreateConsBasicVarbound(subscip, &cons, SCIPconsGetName(conss[c]),
             vars[id1], vars[id2], vbdcoef, lhs, rhs) );
-      
-      SCIPdebug( SCIPprintCons(subscip, cons, NULL) );
+
+      SCIPdebugPrintCons(subscip, cons, NULL);
 
       SCIP_CALL( SCIPaddCons(subscip, cons) );
       SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
