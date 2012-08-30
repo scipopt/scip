@@ -463,9 +463,18 @@ SCIP_Real getDualbound(
    SCIP_Real lowerbound;
 
    if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
-      return -SCIPinfinity(scip) * scip->transprob->objsense;
+   {
+      /* in case we are in presolving we use the stored dual bound if it exits, otherwise, minus or plus infinity
+       * depending on the objective sense
+       */
+      if( scip->transprob->dualbound < SCIP_INVALID )
+         lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
+      else
+         return -SCIPinfinity(scip) * scip->transprob->objsense;
+   }
+   else
+      lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
 
-   lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
 
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
    {
@@ -2748,6 +2757,20 @@ SCIP_Bool SCIPisParamFixed(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisParamFixed", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPsetIsParamFixed(scip->set, name);
+}
+
+/** returns the pointer to the SCIP parameter with the given name
+ *
+ *  @return pointer to the parameter with the given name
+ */
+SCIP_PARAM* SCIPgetParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetBoolParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetGetParam(scip->set, name);
 }
 
 /** gets the value of an existing SCIP_Bool parameter
@@ -8973,6 +8996,7 @@ SCIP_RETCODE SCIPdelVar(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -9046,6 +9070,7 @@ SCIP_RETCODE SCIPgetVarsData(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -9095,6 +9120,7 @@ SCIP_VAR** SCIPgetVars(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -10596,8 +10622,10 @@ SCIP_Real SCIPgetNodeLowerbound(
    return SCIPnodeGetLowerbound(node);
 }
 
-/** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound,
- *  sets the current node's dual bound to the new value
+/** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound (in
+ *  original problem space), sets the current node's dual bound to the new value
+ *
+ *  @note the given new bound has to be a dual bound, i.e., it has to be valid for the original problem.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -10618,11 +10646,17 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
+      /* since no root node, for which we could update the dual bound, has been create yet, update the dual bound stored in
+       * the problem data
+       */
       SCIPprobUpdateDualbound(scip->origprob, newbound);
       break;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
+      /* since no root node, for which we could update the dual bound, has been create yet, update the dual bound stored in
+       * the problem data
+       */
       SCIPprobUpdateDualbound(scip->transprob, SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, newbound));
       break;
 
@@ -10642,10 +10676,14 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
 /** if given value is larger than the current node's lower bound (in transformed problem), sets the current node's
  *  lower bound to the new value
  *
+ *  @note the given new bound has to be a lower bound, i.e., it has to be valid for the transformed problem.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPupdateLocalLowerbound(
@@ -10653,9 +10691,27 @@ SCIP_RETCODE SCIPupdateLocalLowerbound(
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPupdateLocalLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPupdateLocalLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPupdateNodeLowerbound(scip, SCIPtreeGetCurrentNode(scip->tree), newbound);
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+      /* since no root node, for which we could update the lower bound, has been create yet, update the dual bound stored
+       * in the problem data
+       */
+      SCIPprobUpdateDualbound(scip->transprob, SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, newbound));
+      break;
+
+   case SCIP_STAGE_SOLVING:
+      SCIPupdateNodeLowerbound(scip, SCIPtreeGetCurrentNode(scip->tree), newbound);
+      break;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      SCIPABORT();
+      return SCIP_INVALIDCALL; /*lint !e527*/
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -10922,6 +10978,16 @@ SCIP_RETCODE SCIPtransformProb(
    /* switch stage to TRANSFORMED */
    scip->set->stage = SCIP_STAGE_TRANSFORMED;
 
+   /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
+    * cutoff bound if primal solution is already known
+    */
+   SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+	 scip->tree, scip->lp, scip->eventqueue) );
+
+   /* if possible, scale objective function such that it becomes integral with gcd 1 */
+   SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+	 scip->tree, scip->lp, scip->eventqueue) );
+
    /* check solution of solution candidate storage */
    nfeassols = 0;
    ncandsols = scip->origprimal->nsols;
@@ -10937,7 +11003,7 @@ SCIP_RETCODE SCIPtransformProb(
        * including modifiable constraints
        */
       SCIP_CALL( checkSolOrig(scip, sol, &feasible, scip->set->misc_printreason, FALSE, TRUE, TRUE, TRUE, TRUE) );
-      
+
       if( feasible )
       {
          SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
@@ -10953,10 +11019,10 @@ SCIP_RETCODE SCIPtransformProb(
       SCIP_CALL( SCIPsolFree(&sol, scip->mem->probmem, scip->origprimal) );
       scip->origprimal->nsols--;
    }
-   
+
    assert(scip->origprimal->nsols == 0);
    assert(scip->origprimal->nexistingsols == 0);
-   
+
    if( nfeassols > 0 )
    {
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
@@ -11475,8 +11541,8 @@ SCIP_RETCODE presolveRound(
             assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID); /*lint !e777*/
             
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-               "feasible solution found by %s heuristic, objective value %.6e\n",
-               SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip, sol));
+               "feasible solution found by %s heuristic after %.1f seconds, objective value %.6e\n",
+               SCIPgetSolvingTime(scip), SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip, sol));
          }
       }
    }
@@ -11550,8 +11616,8 @@ SCIP_RETCODE presolve(
          assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID);  /*lint !e777*/
          
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "feasible solution found by %s heuristic, objective value %.6e\n",
-            SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip, sol));
+            "feasible solution found by %s heuristic after %.1f seconds, objective value %.6e\n",
+            SCIPgetSolvingTime(scip), SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip, sol));
       }
    }
 
@@ -11893,7 +11959,7 @@ SCIP_RETCODE freeSolve(
       /* copy the current dual bound into the problem data structure such that it can be used initialize the new search
        * tree
        */
-      SCIPprobSetDualbound(scip->transprob, getDualbound(scip));
+      SCIPprobUpdateDualbound(scip->transprob, getDualbound(scip));
    }
 
    /* remove focus from the current focus node */
@@ -17984,6 +18050,204 @@ SCIP_Bool SCIPhaveVarsCommonClique(
 
    return (SCIPvarGetNCliques(var1, value1) + SCIPvarGetNCliques(var2, value2) > SCIPcliquetableGetNCliques(scip->cliquetable)
       || SCIPvarsHaveCommonClique(var1, value1, var2, value2, regardimplics));
+}
+
+
+/** writes the clique graph to a gml file
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note there can be duplicated arcs in the output file
+ */
+SCIP_RETCODE SCIPwriteCliqueGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 fname,              /**< name of file */
+   SCIP_Bool             writeimplications   /**< should we write the binary implications */
+   )
+{
+   FILE* gmlfile;
+   SCIP_HASHMAP* nodehashmap;
+   SCIP_CLIQUE** cliques;
+   SCIP_VAR** clqvars;
+   SCIP_VAR** allvars;
+   SCIP_VAR* var;
+   SCIP_Bool* clqvalues;
+   SCIP_BOUNDTYPE* impltypes;
+   char nodename[SCIP_MAXSTRLEN];
+   int nallvars;
+   int nbinvars;
+   int nintvars;
+   int nimplvars;
+   int nbinimpls;
+   int ncliques;
+   int start;
+   int end;
+   int a;
+   int c;
+   int d;
+   int v1;
+   int v2;
+   int id1;
+   int id2;
+
+   assert(scip != NULL);
+   assert(fname != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPwriteCliqueGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   /* get all active variables */
+   SCIP_CALL( SCIPgetVarsData(scip, &allvars, &nallvars, &nbinvars, &nintvars, &nimplvars, NULL) );
+
+   /* no possible variables for cliques exist */
+   if( nbinvars + nimplvars == 0 )
+      return SCIP_OKAY;
+
+   ncliques = SCIPgetNCliques(scip);
+
+   /* no cliques and do not wont to check for binary implications */
+   if( ncliques == 0 && !writeimplications )
+      return SCIP_OKAY;
+
+   /* open gml file */
+   gmlfile = fopen(fname, "w");
+
+   if( gmlfile == NULL )
+   {
+      SCIPerrorMessage("cannot open graph file <%s>\n", fname);
+      SCIPABORT();
+   }
+
+   /* create the hash map */
+   SCIP_CALL( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * 2 * (nbinvars+nimplvars))) );
+
+   /* write starting of gml file */
+   SCIPgmlWriteOpening(gmlfile, TRUE);
+
+   cliques = SCIPgetCliques(scip);
+
+   /* write nodes and arcs for all cliques */
+   for( c = ncliques - 1; c >= 0; --c )
+   {
+      clqvalues = SCIPcliqueGetValues(cliques[c]);
+      clqvars = SCIPcliqueGetVars(cliques[c]);
+
+      for( v1 = SCIPcliqueGetNVars(cliques[c]) - 1; v1 >= 0; --v1 )
+      {
+	 id1 = clqvalues[v1] ? SCIPvarGetProbindex(clqvars[v1]) : (nallvars + SCIPvarGetProbindex(clqvars[v1]));
+
+	 /* if corresponding node was not added yet, add it */
+	 if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id1) )
+	 {
+	    SCIP_CALL( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id1, (void*)(size_t) 1) );
+
+	    (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v1]));
+
+	    /* write new gml node for new variable */
+	    SCIPgmlWriteNode(gmlfile, id1, nodename, NULL, NULL, NULL);
+	 }
+
+	 for( v2 = SCIPcliqueGetNVars(cliques[c]) - 1; v2 >= 0; --v2 )
+	 {
+	    if( v1 == v2 )
+	       continue;
+
+	    id2 = clqvalues[v2] ? SCIPvarGetProbindex(clqvars[v2]) : (nallvars + SCIPvarGetProbindex(clqvars[v2]));
+
+	    /* if corresponding node was not added yet, add it */
+	    if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id2) )
+	    {
+	       SCIP_CALL( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id2, (void*)(size_t) 1) );
+
+	       (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
+
+	       /* write new gml node for new variable */
+	       SCIPgmlWriteNode(gmlfile, id2, nodename, NULL, NULL, NULL);
+	    }
+
+	    /* write gml arc between resultant and operand */
+	    SCIPgmlWriteArc(gmlfile, id1, id2, NULL, NULL);
+	 }
+      }
+   }
+
+   if( writeimplications )
+   {
+      /* write binary implications, new nodes and all arcs */
+      for( a = 0; a < 2; ++a )
+      {
+	 start = (a == 0 ? 0 : nbinvars + nintvars);
+	 end = (a == 0 ? nbinvars : nbinvars + nintvars + nimplvars);
+
+	 /* write arcs for implication on pure binary variables */
+	 for( v1 = start; v1 < end; ++v1 )
+	 {
+	    var = allvars[v1];
+	    assert((v1 < nbinvars) ? SCIPvarGetType(var) == SCIP_VARTYPE_BINARY : SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+
+	    for( d = 1; d >= 0; --d )
+	    {
+	       impltypes = SCIPvarGetImplTypes(var, d);
+	       clqvars = SCIPvarGetImplVars(var, d);
+	       id1 = (d == 1) ? SCIPvarGetProbindex(var) : (nallvars + SCIPvarGetProbindex(var));
+
+	       nbinimpls = SCIPvarGetNBinImpls(var, d);
+	       if( nbinimpls == 0 )
+		  continue;
+
+	       /* if corresponding node was not added yet, add it */
+	       if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id1) )
+	       {
+		  SCIP_CALL( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id1, (void*)(size_t) 1) );
+
+		  (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(var));
+
+		  /* write new gml node for new variable */
+		  SCIPgmlWriteNode(gmlfile, id1, nodename, NULL, NULL, NULL);
+	       }
+
+	       /* write arcs for all cliques */
+	       for( v2 = nbinimpls - 1; v2 >= 0; --v2 )
+	       {
+		  id2 = (impltypes[v2] == SCIP_BOUNDTYPE_LOWER) ? SCIPvarGetProbindex(clqvars[v2]) : (nallvars + SCIPvarGetProbindex(clqvars[v2]));
+
+		  /* if corresponding node was not added yet, add it */
+		  if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id2) )
+		  {
+		     SCIP_CALL( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id2, (void*)(size_t) 1) );
+
+		     (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
+
+		     /* write new gml node for new variable */
+		     SCIPgmlWriteNode(gmlfile, id2, nodename, NULL, NULL, NULL);
+		  }
+
+		  /* write gml arc between resultant and operand */
+		  SCIPgmlWriteArc(gmlfile, id1, id2, NULL, NULL);
+	       }
+	    }
+	 }
+      }
+   }
+
+   /* free the hash map */
+   SCIPhashmapFree(&nodehashmap);
+
+   SCIPgmlWriteClosing(gmlfile);
+   fclose(gmlfile);
+
+   return SCIP_OKAY;
 }
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score

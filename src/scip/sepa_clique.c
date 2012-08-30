@@ -69,6 +69,7 @@ struct SCIP_SepaData
    int                   ncuts;              /**< number of cuts found */
    SCIP_Bool             tcliquegraphloaded; /**< TRUE if tcliquegraph is already loaded (tcliquegraph can be NULL),
                                               *   FALSE otherwise */
+   SCIP_RETCODE          retcode;            /**< error code which might occur during the maximal clique algorithm */
 };
 
 /** tclique graph data */
@@ -1243,6 +1244,14 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
                   *stopsolving = TRUE;
             }
          }
+         else
+         {
+            /* in case an internal SCIP error occurred we stop the algorithm and store the error code for later
+             * evaluation
+             */
+            sepadata->retcode = retcode;
+            *stopsolving = TRUE;
+         }
       }
    }
 }
@@ -1325,12 +1334,17 @@ SCIP_RETCODE separateCuts(
 
    SCIPdebugMessage("searching for violated clique cuts\n");
 
+   sepadata->retcode = SCIP_OKAY;
+
    /* finds maximum weight clique in tclique */
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, tcliquegraph->nnodes) );
    tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique,
       tcliquegraph, tcliqueNewsolClique, (TCLIQUE_DATA*)sepadata,
       cliquenodes, &ncliquenodes, &cliqueweight, (int)sepadata->scaleval-1, (int)sepadata->scaleval+1,
       maxtreenodes, sepadata->backtrackfreq, maxzeroextensions, -1, NULL, &tcliquestatus);
+
+   /* in case an internal error occurred during the maximal clique computation, evaluate that one */
+   SCIP_CALL( sepadata->retcode );
 
    SCIPdebugMessage("finished searching clique cuts: found %d cuts\n", sepadata->ncuts);
 

@@ -4395,7 +4395,7 @@ SCIP_RETCODE SCIPvarAggregate(
       for( i = 0; i < nvbds && !(*infeasible); ++i )
       {
          SCIP_CALL( SCIPvarAddVlb(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-               vars[i], coefs[i], constants[i], TRUE, infeasible, NULL) );
+               vars[i], coefs[i], constants[i], FALSE, infeasible, NULL) );
       }
    }
    if( var->vubs != NULL )
@@ -4407,7 +4407,7 @@ SCIP_RETCODE SCIPvarAggregate(
       for( i = 0; i < nvbds && !(*infeasible); ++i )
       {
          SCIP_CALL( SCIPvarAddVub(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-               vars[i], coefs[i], constants[i], TRUE, infeasible, NULL) );
+               vars[i], coefs[i], constants[i], FALSE, infeasible, NULL) );
       }
    }
    SCIPvboundsFree(&var->vlbs, blkmem);
@@ -4438,7 +4438,7 @@ SCIP_RETCODE SCIPvarAggregate(
              *       implication to the aggregated variable?
              */
             SCIP_CALL( SCIPvarAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-                  (SCIP_Bool)i, implvars[j], impltypes[j], implbounds[j], TRUE, infeasible, NULL) );
+                  (SCIP_Bool)i, implvars[j], impltypes[j], implbounds[j], FALSE, infeasible, NULL) );
             assert(nimpls == SCIPimplicsGetNImpls(var->implics, (SCIP_Bool)i));
          }
       }
@@ -15026,6 +15026,7 @@ void SCIPvarSetTransData(
    )
 {
    assert(var != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL);
 
    var->vartrans = vartrans;
 }
@@ -15054,8 +15055,8 @@ void SCIPvarSetCopyData(
 
 /** sets the initial flag of a variable; only possible for original or loose variables */
 SCIP_RETCODE SCIPvarSetInitial(
-   SCIP_VAR*            var,
-   SCIP_Bool            initial
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             initial             /**< initial flag */
    )
 {
    assert(var != NULL);
@@ -15070,8 +15071,8 @@ SCIP_RETCODE SCIPvarSetInitial(
 
 /** sets the removable flag of a variable; only possible for original or loose variables */
 SCIP_RETCODE SCIPvarSetRemovable(
-   SCIP_VAR*            var,
-   SCIP_Bool            removable
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             removable           /**< removable flag */
    )
 {
    assert(var != NULL);

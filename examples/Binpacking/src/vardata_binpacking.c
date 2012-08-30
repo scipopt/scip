@@ -82,24 +82,6 @@ SCIP_RETCODE vardataDelete(
  * @{
  */
 
-/** frees user data of original variable (called when the original variable is freed) */
-static
-SCIP_DECL_VARDELORIG(vardataDelOrig)
-{
-   SCIP_CALL( vardataDelete(scip, vardata) );
-
-   return SCIP_OKAY;
-}
-
-/** creates transformed variable for original user variable */
-static
-SCIP_DECL_VARTRANS(vardataTrans)
-{
-   SCIP_CALL( vardataCreate(scip, targetdata, sourcedata->consids, sourcedata->nconsids) );
-
-   return SCIP_OKAY;
-}
-
 /** frees user data of transformed variable (called when the transformed variable is freed) */
 static
 SCIP_DECL_VARDELTRANS(vardataDelTrans)
@@ -169,15 +151,13 @@ SCIP_RETCODE SCIPcreateVarBinpacking(
 {
    assert(scip != NULL);
    assert(var != NULL);
-   assert(*var != NULL);
 
    /* create a basic variable object */
    SCIP_CALL( SCIPcreateVarBasic(scip, var, name, 0.0, 1.0, obj, SCIP_VARTYPE_BINARY) );
+   assert(*var != NULL);
 
    /* set callback functions */
    SCIPvarSetData(*var, vardata);
-   SCIPvarSetDelorigData(*var, vardataDelOrig);
-   SCIPvarSetTransData(*var, vardataTrans);
    SCIPvarSetDeltransData(*var, vardataDelTrans);
 
    /* set initial and removable flag */

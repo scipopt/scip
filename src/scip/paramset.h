@@ -154,6 +154,13 @@ SCIP_Bool SCIPparamsetIsFixed(
    const char*           name                /**< name of the parameter */
    );
 
+/** returns the pointer to an existing SCIP parameter */
+extern
+SCIP_PARAM* SCIPparamsetGetParam(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name                /**< name of the parameter */
+   );
+
 /** gets the value of an existing SCIP_Bool parameter */
 extern
 SCIP_RETCODE SCIPparamsetGetBool(

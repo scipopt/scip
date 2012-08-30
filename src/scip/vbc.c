@@ -214,6 +214,10 @@ SCIP_RETCODE SCIPvbcNewChild(
    if( vbc->file == NULL )
       return SCIP_OKAY;
 
+   /* vbc is disabled on probing nodes */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+      return SCIP_OKAY;
+
    /* insert mapping node -> nodenum into hash map */
    if( stat->ncreatednodesrun >= (SCIP_Longint)INT_MAX )
    {
@@ -296,6 +300,10 @@ void SCIPvbcSolvedNode(
    if( vbc->file == NULL )
       return;
 
+   /* vbc is disabled on probing nodes */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+      return;
+
    /* get node num from hash map */
    nodenum = (size_t)SCIPhashmapGetImage(vbc->nodenum, node);
    assert(nodenum > 0);
@@ -328,6 +336,12 @@ void SCIPvbcCutoffNode(
    SCIP_NODE*            node                /**< node, that was cut off */
    )
 {
+   assert(node != NULL);
+
+   /* vbc is disabled on probing nodes */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+      return;
+
    vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_CUTOFF);
 }
 
@@ -338,6 +352,12 @@ void SCIPvbcFoundConflict(
    SCIP_NODE*            node                /**< node, where the conflict was found */
    )
 {
+   assert(node != NULL);
+
+   /* vbc is disabled on probing nodes */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+      return;
+
    vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_CONFLICT);
 }
 
@@ -349,7 +369,11 @@ void SCIPvbcMarkedRepropagateNode(
    )
 {
    assert(node != NULL);
-   
+
+   /* vbc is disabled on probing nodes */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+      return;
+
    /* if the node number is zero, then SCIP is currently in probing and wants to mark a probing node; however this node
     * is not part of the search tree */
    if( SCIPnodeGetNumber(node) > 0 )
@@ -363,6 +387,12 @@ void SCIPvbcRepropagatedNode(
    SCIP_NODE*            node                /**< node, that was repropagated */
    )
 {
+   assert(node != NULL);
+
+   /* vbc is disabled on probing nodes */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+      return;
+
    vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_REPROP);
 }
 
@@ -375,7 +405,13 @@ void SCIPvbcFoundSolution(
    )
 {
    if( node != NULL && set->vbc_dispsols )
+   {
+      /* vbc is disabled on probing nodes */
+      if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+	 return;
+
       vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_SOLUTION);
+   }
 }
 
 /** outputs a new global lower bound to the VBC output file */

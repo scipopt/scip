@@ -78,7 +78,7 @@ void SCIPconshdlrSetData(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< new constraint handler user data */
    );
 
-/* sets all separation related callbacks of the constraint handler */
+/** sets all separation related callbacks of the constraint handler */
 EXTERN
 void SCIPconshdlrSetSepa(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -89,7 +89,7 @@ void SCIPconshdlrSetSepa(
    SCIP_Bool             delaysepa           /**< should separation method be delayed, if other separators found cuts? */
    );
 
-/* sets both the propagation callback and the propagation frequency of the constraint handler */
+/** sets both the propagation callback and the propagation frequency of the constraint handler */
 EXTERN
 void SCIPconshdlrSetProp(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */

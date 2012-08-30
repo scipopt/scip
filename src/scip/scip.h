@@ -1097,6 +1097,16 @@ SCIP_Bool SCIPisParamFixed(
    const char*           name                /**< name of the parameter */
    );
 
+/** returns the pointer to the SCIP parameter with the given name
+ *
+ *  @return pointer to the parameter with the given name
+ */
+extern
+SCIP_PARAM* SCIPgetParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   );
+
 /** gets the value of an existing SCIP_Bool parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -4525,6 +4535,7 @@ SCIP_RETCODE SCIPdelVar(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -4551,6 +4562,7 @@ SCIP_RETCODE SCIPgetVarsData(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -4576,6 +4588,7 @@ SCIP_VAR** SCIPgetVars(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -5396,8 +5409,10 @@ SCIP_Real SCIPgetNodeLowerbound(
    SCIP_NODE*            node                /**< node to get dual bound for */
    );
 
-/** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound,
- *  sets the current node's dual bound to the new value
+/** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound (in
+ *  original problem space), sets the current node's dual bound to the new value
+ *
+ *  @note the given new bound has to be a dual bound, i.e., it has to be valid for the original problem.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -5417,10 +5432,14 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
 /** if given value is larger than the current node's lower bound (in transformed problem), sets the current node's
  *  lower bound to the new value
  *
+ *  @note the given new bound has to be a lower bound, i.e., it has to be valid for the transformed problem.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
@@ -7897,6 +7916,32 @@ SCIP_Bool SCIPhaveVarsCommonClique(
    SCIP_Bool             value2,             /**< value of second variable */
    SCIP_Bool             regardimplics       /**< should the implication graph also be searched for a clique? */
    );
+
+/** writes the clique graph to a gml file
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note there can be duplicated arcs in the output file
+ */
+EXTERN
+SCIP_RETCODE SCIPwriteCliqueGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 fname,              /**< name of file */
+   SCIP_Bool             writeimplications   /**< should we write the binary implications */
+   );
+
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
  *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching

@@ -1883,6 +1883,17 @@ SCIP_Bool SCIPsetIsParamFixed(
    return SCIPparamsetIsFixed(set->paramset, name);
 }
 
+/** returns the pointer to the SCIP parameter with the given name */
+SCIP_PARAM* SCIPsetGetParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   return SCIPparamsetGetParam(set->paramset, name);
+}
+
 /** gets the value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPsetGetBoolParam(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1901,7 +1912,7 @@ SCIP_RETCODE SCIPsetGetBoolParam(
 SCIP_RETCODE SCIPsetGetIntParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   int*                  value               /**< pointer to store the parameter */
+   int*                  value               /**< pointer to store the value of the parameter */
    )
 {
    assert(set != NULL);
@@ -1915,7 +1926,7 @@ SCIP_RETCODE SCIPsetGetIntParam(
 SCIP_RETCODE SCIPsetGetLongintParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Longint*         value               /**< pointer to store the parameter */
+   SCIP_Longint*         value               /**< pointer to store the value of the parameter */
    )
 {
    assert(set != NULL);
@@ -1929,7 +1940,7 @@ SCIP_RETCODE SCIPsetGetLongintParam(
 SCIP_RETCODE SCIPsetGetRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real*            value               /**< pointer to store the parameter */
+   SCIP_Real*            value               /**< pointer to store the value of the parameter */
    )
 {
    assert(set != NULL);
@@ -1943,7 +1954,7 @@ SCIP_RETCODE SCIPsetGetRealParam(
 SCIP_RETCODE SCIPsetGetCharParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   char*                 value               /**< pointer to store the parameter */
+   char*                 value               /**< pointer to store the value of the parameter */
    )
 {
    assert(set != NULL);
@@ -1957,7 +1968,7 @@ SCIP_RETCODE SCIPsetGetCharParam(
 SCIP_RETCODE SCIPsetGetStringParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   char**                value               /**< pointer to store the parameter */
+   char**                value               /**< pointer to store the value of the parameter */
    )
 {
    assert(set != NULL);

@@ -76,15 +76,15 @@ scip:
 
 .PHONY: doc
 doc:
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
+		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/scip.css);
+		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/pictures/scippy.png);
+		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/pictures/miniscippy.png);
+		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/scipfooter.html footer.html);
 		cd doc; $(DOXY) scheduler.dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
-		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
+		cd $(dir $@) && $(LN_s) $(notdir $(MAINFILE)) $(notdir $@)
 
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
@@ -97,10 +97,10 @@ $(CHECKDIR):
 
 .PHONY: test
 test:		$(CHECKDIR)
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastproblem.awk);
+		@-(cd check && $(LN_s) ../$(SCIPDIR)/check/check.sh);
+		@-(cd check && $(LN_s) ../$(SCIPDIR)/check/evalcheck.sh);
+		@-(cd check && $(LN_s) ../$(SCIPDIR)/check/check.awk);
+		@-(cd check && $(LN_s) ../$(SCIPDIR)/check/getlastproblem.awk);
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 

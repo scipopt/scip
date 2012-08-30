@@ -6673,7 +6673,7 @@ SCIP_RETCODE SCIPnodePrintAncestorBranchings(
    }
 
    /* print closing in GML format */
-   SCIPgmlWriteCosing(file);
+   SCIPgmlWriteClosing(file);
 
    return SCIP_OKAY;
 }

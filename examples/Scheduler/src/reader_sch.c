@@ -39,7 +39,7 @@
 #define READER_EXTENSION        "sch"
 
 
-#define SCH_MAX_LINELEN       1024     /**< size of the line buffer for reading or writing */
+#define SCH_MAX_LINELEN      65536     /**< size of the line buffer for reading or writing */
 
 /*
  * Local methods

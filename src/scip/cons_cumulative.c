@@ -1186,6 +1186,53 @@ SCIP_RETCODE evaluateCumulativeness(
 }
 #endif
 
+/** gets the active variables together with the constant */
+static
+SCIP_RETCODE getActiveVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to store the active variable */
+   int*                  scalar,             /**< pointer to store the scalar */
+   int*                  constant            /**< pointer to store the constant */
+   )
+{
+   if( !SCIPvarIsActive(*var) )
+   {
+      SCIP_Real realscalar;
+      SCIP_Real realconstant;
+
+      realscalar = 1.0;
+      realconstant = 0.0;
+
+      assert(SCIPvarGetStatus(*var) == SCIP_VARSTATUS_AGGREGATED);
+
+      /* transform variable to active variable */
+      SCIP_CALL( SCIPgetProbvarSum(scip, var, &realscalar, &realconstant) );
+      assert(!SCIPisZero(scip, realscalar));
+      assert(SCIPvarIsActive(*var));
+
+      if( realconstant < 0.0 )
+         (*constant) = -convertBoundToInt(scip, -realconstant);
+      else
+         (*constant) = convertBoundToInt(scip, realconstant);
+
+      if( realscalar < 0.0 )
+         (*scalar) = -convertBoundToInt(scip, -realscalar);
+      else
+         (*scalar) = convertBoundToInt(scip, realscalar);
+
+
+   }
+   else
+   {
+      (*scalar) = 1;
+      (*constant) = 0;
+   }
+
+   assert(*scalar != 0);
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 /**@name Constraint handler data
@@ -5062,7 +5109,7 @@ SCIP_RETCODE propagateCons(
    redundant = FALSE;
 
    /* if the constraint marked to be propagated, do nothing */
-   if( consdata->propagated )
+   if( consdata->propagated && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING )
       return SCIP_OKAY;
 
    SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata,
@@ -5232,6 +5279,7 @@ SCIP_RETCODE computeAlternativeBounds(
 
       for( v = 0; v < nvars; ++v )
       {
+         int scalar;
          int constant;
          int idx;
 
@@ -5246,24 +5294,8 @@ SCIP_RETCODE computeAlternativeBounds(
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
             continue;
 
-         if( !SCIPvarIsActive(var) )
-         {
-            SCIP_VAR* aggrvar;
-
-            assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED);
-            assert(SCIPisEQ(scip, SCIPvarGetAggrScalar(var), 1.0));
-
-            aggrvar = SCIPvarGetAggrVar(var);
-            constant = convertBoundToInt(scip, SCIPvarGetAggrConstant(var));
-            assert(SCIPvarIsActive(aggrvar));
-
-            idx = SCIPvarGetProbindex(aggrvar);
-         }
-         else
-         {
-            idx = SCIPvarGetProbindex(var);
-            constant = 0;
-         }
+         SCIP_CALL( getActiveVar(scip, &var, &scalar, &constant) );
+         idx = SCIPvarGetProbindex(var);
          assert(idx >= 0);
 
          /* first check lower bound fixing */
@@ -5273,14 +5305,14 @@ SCIP_RETCODE computeAlternativeBounds(
             int est;
 
             /* the variable has a down locked */
-            est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+            est = scalar * convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + constant;
             ect = est + consdata->durations[v];
 
             if( ect <= hmin || hmin >= hmax )
                downlocks[idx]++;
-            else if( est < hmin && alternativelbs[idx] >= hmin + 1 - constant )
+            else if( est < hmin && alternativelbs[idx] >= (hmin + 1 - constant) / scalar )
             {
-               alternativelbs[idx] = hmin + 1 - constant;
+               alternativelbs[idx] = (hmin + 1 - constant) / scalar;
                downlocks[idx]++;
             }
          }
@@ -5292,14 +5324,14 @@ SCIP_RETCODE computeAlternativeBounds(
             int lst;
 
             /* the variable has a up lock locked */
-            lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+            lst = scalar * convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + constant;
             lct = lst + consdata->durations[v];
 
             if( lst >= hmax || hmin >= hmax  )
                uplocks[idx]++;
-            else if( lct > hmax && alternativeubs[idx] <= hmax - 1 - constant )
+            else if( lct > hmax && alternativeubs[idx] <= (hmax - 1 - constant) / scalar )
             {
-               alternativeubs[idx] = hmax - 1 - constant;
+               alternativeubs[idx] = (hmax - 1 - constant) / scalar;
                uplocks[idx]++;
             }
          }
@@ -6483,7 +6515,7 @@ SCIP_Bool checkDemands(
    nvars = consdata->nvars;
 
    /* if no activities are associated with this cumulative then this constraint is not infeasible, return */
-   if( nvars == 0 )
+   if( nvars <= 1 )
       return TRUE;
 
    assert(consdata->vars != NULL);
@@ -6638,6 +6670,9 @@ SCIP_RETCODE adjustOversizedJobBounds(
    ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + duration;
    lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
 
+   /* the jobs has to have an overlap with the efficient horizon otherwise it would be already removed */
+   assert(ect - duration < consdata->hmax && lst + duration > consdata->hmin);
+
    if( ect > consdata->hmin && lst < consdata->hmax )
    {
       /* the job will at least run partly in the time interval [hmin,hmax) this means the problem is infeasible */
@@ -6725,9 +6760,6 @@ SCIP_RETCODE removeOversizedJobs(
 
    /* if a cutoff was already detected just return */
    if( *cutoff )
-      return SCIP_OKAY;
-
-   if( consdata->nvars == 0 )
       return SCIP_OKAY;
 
    capacity = consdata->capacity;
@@ -6851,6 +6883,75 @@ SCIP_RETCODE fixIntegerVariableLb(
    return SCIP_OKAY;
 }
 
+/** normalize cumulative condition */
+static
+SCIP_RETCODE normalizeCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int*                  capacity,           /**< pointer to store the changed cumulative capacity */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
+   int*                  nchgsides           /**< pointer to count number of side changes */
+   )
+{
+   SCIP_Longint gcd;
+   int mindemand1;
+   int mindemand2;
+   int v;
+
+   assert(demands[nvars-1] <= *capacity);
+   assert(demands[nvars-2] <= *capacity);
+
+   gcd = (SCIP_Longint)demands[nvars-1];
+   mindemand1 = MIN(demands[nvars-1], demands[nvars-2]);
+   mindemand2 = MAX(demands[nvars-1], demands[nvars-2]);
+
+   for( v = nvars-2; v >= 0 && (gcd >= 2 || mindemand1 + mindemand2 > *capacity); --v )
+   {
+      assert(mindemand1 <= mindemand2);
+      assert(demands[v] <= *capacity);
+
+      gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)demands[v]);
+
+      if( mindemand1 > demands[v] )
+      {
+         mindemand2 = mindemand1;
+         mindemand1 = demands[v];
+      }
+      else if( mindemand2 > demands[v] )
+         mindemand2 = demands[v];
+   }
+
+   if( mindemand1 + mindemand2 > *capacity )
+   {
+      SCIPdebugMessage("update cumulative condition (%d + %d > %d) to unary cumulative condition\n", mindemand1, mindemand2, *capacity);
+
+      for( v = 0; v < nvars; ++v )
+         demands[v] = 1;
+
+      (*capacity) = 1;
+
+      (*nchgcoefs) += nvars;
+      (*nchgsides)++;
+   }
+   else if( gcd >= 2 )
+   {
+      SCIPdebugMessage("cumulative condition: dividing demands by %"SCIP_LONGINT_FORMAT"\n", gcd);
+
+      for( v = 0; v < nvars; ++v )
+         demands[v] /= gcd;
+
+      (*capacity) /= gcd;
+
+      (*nchgcoefs) += nvars;
+      (*nchgsides)++;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** divides demands by their greatest common divisor and divides capacity by the same value, rounding down the result;
  *  in case the the smallest demands add up to more than the capacity we reductions all demands to one as well as the
  *  capacity since in that case none of the jobs can run in parallel
@@ -6864,12 +6965,6 @@ SCIP_RETCODE normalizeDemands(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Longint gcd;
-   int capacity;
-   int mindemand1;
-   int mindemand2;
-   int nvars;
-   int v;
 
    assert(nchgcoefs != NULL);
    assert(nchgsides != NULL);
@@ -6878,56 +6973,13 @@ SCIP_RETCODE normalizeDemands(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   capacity = consdata->capacity;
-   nvars = consdata->nvars;
-
-   if( consdata->normalized || capacity == 1 || nvars <= 1 )
+   if( consdata->normalized || consdata->capacity == 1 || consdata->nvars <= 1 )
       return SCIP_OKAY;
 
    /**@todo sort items w.r.t. the demands, because we can stop earlier if the smaller weights are evaluated first */
 
-   gcd = (SCIP_Longint)consdata->demands[nvars-1];
-   mindemand1 = MIN(consdata->demands[nvars-1], consdata->demands[nvars-2]);
-   mindemand2 = MAX(consdata->demands[nvars-1], consdata->demands[nvars-2]);
-
-   for( v = nvars-2; v >= 0 && (gcd >= 2 || mindemand1 + mindemand2 > capacity); --v )
-   {
-      assert(mindemand1 <= mindemand2);
-      gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)consdata->demands[v]);
-
-      if( mindemand1 > consdata->demands[v] )
-      {
-         mindemand2 = mindemand1;
-         mindemand1 = consdata->demands[v];
-      }
-      else if( mindemand2 > consdata->demands[v] )
-         mindemand2 = consdata->demands[v];
-   }
-
-   if( mindemand1 + mindemand2 > capacity )
-   {
-      SCIPdebugMessage("update cumulative constraint <%s> (%d + %d > %d) to unary cumulative constraint\n", SCIPconsGetName(cons), mindemand1, mindemand2, capacity);
-
-      for( v = 0; v < nvars; ++v )
-         consdata->demands[v] = 1;
-
-      consdata->capacity = 1;
-
-      (*nchgcoefs) += nvars;
-      (*nchgsides)++;
-   }
-   else if( gcd >= 2 )
-   {
-      SCIPdebugMessage("cumulative constraint <%s>: dividing demands by %"SCIP_LONGINT_FORMAT"\n", SCIPconsGetName(cons), gcd);
-
-      for( v = 0; v < nvars; ++v )
-         consdata->demands[v] /= gcd;
-
-      consdata->capacity /= gcd;
-
-      (*nchgcoefs) += nvars;
-      (*nchgsides)++;
-   }
+   SCIP_CALL( normalizeCumulativeCondition(scip, consdata->nvars, consdata->vars, consdata->durations,
+         consdata->demands, &consdata->capacity, nchgcoefs, nchgsides) );
 
    consdata->normalized = TRUE;
 
@@ -7211,8 +7263,8 @@ SCIP_RETCODE presolveConsEst(
 
             (*nchgsides)++;
 
-            SCIPdebugMessage("  remove variables <%s>[%d,%d] with duration <%d> due to no uplocks, new capacity = %d\n",
-               SCIPvarGetName(cand), est, lst, duration, consdata->capacity);
+            SCIPdebugMessage("  remove variables <%s>[%d,%d] (duration <%d>, demand <%d>) due to no uplocks, new capacity = %d\n",
+               SCIPvarGetName(cand), est, lst, duration, consdata->demands[v], consdata->capacity);
 
             SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
             (*nchgcoefs)++;
@@ -7895,8 +7947,6 @@ SCIP_RETCODE presolveCons(
    assert(consdata != NULL);
 #endif
 
-   /* over sized jobs should be removed */
-   assert(checkDemands(scip, cons));
    assert(!SCIPconsIsDeleted(cons));
 
    if( conshdlrdata->dualpresolve )
@@ -7911,7 +7961,7 @@ SCIP_RETCODE presolveCons(
       if( *cutoff || *unbounded )
          return SCIP_OKAY;
 
-      /* computes the effective horizon and checks if the constraint can be decompesd */
+      /* computes the effective horizon and checks if the constraint can be decomposed */
       SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
 
       SCIPstatistic( conshdlrdata->ndecomps += consdata->ndecomps );
@@ -7935,12 +7985,17 @@ SCIP_RETCODE presolveCons(
       SCIPstatistic( conshdlrdata->ndualfixs += consdata->ndualfixs );
       SCIPstatistic( conshdlrdata->nalwaysruns += consdata->nalwaysruns );
 
-      /* remove jobs which have a demand larger than the capacity */
-      SCIP_CALL( removeOversizedJobs(scip, cons, nchgbds, nchgcoefs, naddconss, cutoff) );
 
       if( *cutoff || SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
    }
+
+   /* remove jobs which have a demand larger than the capacity */
+   SCIP_CALL( removeOversizedJobs(scip, cons, nchgbds, nchgcoefs, naddconss, cutoff) );
+   assert((*cutoff) || checkDemands(scip, cons));
+
+   if( *cutoff )
+      return SCIP_OKAY;
 
    if( conshdlrdata->normalize )
    {
@@ -8049,7 +8104,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
    {
       SCIP_CALL( evaluateCumulativeness(scip, conss[c]) );
 
+#if 0
       SCIP_CALL( SCIPconsdataVisualize(scip, conss[c]) );
+#endif
    }
 
    SCIPstatisticPrintf("@33  irrelevant %d\n", conshdlrdata->nirrelevantjobs);
@@ -9356,6 +9413,24 @@ SCIP_RETCODE SCIPcheckCumulativeCondition(
    return SCIP_OKAY;
 }
 
+/** normalize cumulative condition */
+SCIP_RETCODE SCIPnormalizeCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int*                  capacity,           /**< pointer to store the changed cumulative capacity */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
+   int*                  nchgsides           /**< pointer to count number of side changes */
+   )
+{
+   SCIP_CALL( normalizeCumulativeCondition(scip, nvars, vars, durations, demands, capacity,
+         nchgcoefs, nchgsides) );
+
+   return SCIP_OKAY;
+}
+
 /** propagate the given cumulative condition */
 SCIP_RETCODE SCIPpropCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9519,7 +9594,7 @@ SCIP_RETCODE SCIPconsdataVisualize(
    }
 
    /* create closing of the GML format */
-   SCIPgmlWriteCosing(file);
+   SCIPgmlWriteClosing(file);
 
    /* close file */
    fclose(file);

@@ -560,7 +560,7 @@ SCIP_RETCODE primalAddSol(
    }
 
    /* if its the first primal solution, store the relevant statistics */
-   if(primal->nsolsfound == 1 )
+   if( primal->nsolsfound == 1 )
    {
       SCIP_Real primalsolval;
 

@@ -4,6 +4,8 @@ SCIP version NEXT
 features:
 - added new dual presolving for setppc-constraints
 - changed dualfix presolver to propagator such that dual fixing can also be applied during repropagation of the root node
+- added upgrade from varbound constraints to set-packing constraints
+- added SCIPwriteCliqueGraph() to scip.{c,h} to write the clique graph in GML format into a given file
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
@@ -22,9 +24,17 @@ fixed bugs:
 - fixed bugs in parsing dis-/conjunctive constraints
 - fixed minor bug in conjunctive constraint handler printing wrong constraint
 - fixed bug in disjunctive constraint handler when enforcing a constraint
+- fixed bug with handling of empty logicor and bounddisjunction constraints
+- fixed bug which disabled iteration limit in SCIPlpSolveAndEval()
+- fixed bug in cumulative constraint handler w.r.t. getting active variables
+- fixed bug concerning usage of dualbound and lowerbound
+- fixed bug trying to color probing nodes, which are not added to the vbc output anymore
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
+
+interface
+- fixed spelling in the method name SCIPgmlWriteClosing()
 
 SCIP version 3.0.0
 ==================
