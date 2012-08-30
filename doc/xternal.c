@@ -836,14 +836,14 @@
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project.
  *
  *    We suggest the use one of the following examples:
- *     - The <a href="http://scip.zib.de/doc/examples/VRP/index.html"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
+ *     - The <a href="http://scip.zib.de/doc/examples/VRP/index.shtml"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/Coloring/index.html"><b>Coloring</b></a>
- *        and the <a href="http://scip.zib.de/doc/examples/Binpacking/index.html"><b>Binpacking</b></a>-example are
+ *     - The <a href="http://scip.zib.de/doc/examples/Coloring/index.shtml"><b>Coloring</b></a>
+ *        and the <a href="http://scip.zib.de/doc/examples/Binpacking/index.shtml"><b>Binpacking</b></a>-example are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/TSP/index.html"><b>TSP</b></a>-example
+ *     - The <a href="http://scip.zib.de/doc/examples/TSP/index.shtml"><b>TSP</b></a>-example
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/LOP/index.html"><b>LOP</b></a>-example
+ *     - The <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>LOP</b></a>-example
  *         is a <b>branch-and-cut</b>-code in <b>C</b>.
 
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
