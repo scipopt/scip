@@ -27957,6 +27957,9 @@ SCIP_RETCODE SCIPbranchVarHole(
  *  if x' is integral, three child nodes are created
  *  (x <= x'-1, x == x', x >= x'+1)
  *
+ *  for continuous variables, it is possible to pass SCIP_INVALID as val, in which case the value of the
+ *  value in the current LP/pseudo solution is choosen (possibly adjusted if too close to the bounds or too large)
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
