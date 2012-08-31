@@ -10721,10 +10721,10 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
 
    /* if lowerbound exceeds the cutoffbound the node will be marked to be cutoff
     *
-    * If the node is an inner node (,not a child,) we need to cutoff the node manually if we exceed the
-    * cutoffbound. Internally the lowerbound is only changed before branching and the node is always a child, so
-    * therefore, we only implement this for the user.
-    *
+    * If the node is an inner node (,not a child node,) we need to cutoff the node manually if we exceed the
+    * cutoffbound. This is only relevant if a user updates the lower bound; in the main solving process of SCIP the
+    * lowerbound is only changed before branching and the given node is always a child node. Therefore, we only check
+    * for a cutoff here in the user function instead of in SCIPnodeUpdateLowerbound().
     */
    if( SCIPisGE(scip, newbound, scip->primal->cutoffbound) )
       SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree);
