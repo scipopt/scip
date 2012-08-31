@@ -17,6 +17,7 @@ fixed bugs:
 - fixed bug concerning usage of dualbound and lowerbound
 - fixed bug trying to color probing nodes, which are not added to the vbc output anymore
 - fixed bug in sorting template
+- fixed bug in cons_orbitope: in rare cases one cannot repropagate
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
