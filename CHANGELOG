@@ -16,6 +16,7 @@ fixed bugs:
 - fixed bug in cumulative constraint handler w.r.t. getting active variables
 - fixed bug concerning usage of dualbound and lowerbound
 - fixed bug trying to color probing nodes, which are not added to the vbc output anymore
+- fixed bug in sorting template
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
