@@ -6773,7 +6773,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< indicator constraint */
    SCIP_SOL*             sol,                /**< solution */
-   SCIP_Bool*            changed             /**< whether the solution has been changed */
+   SCIP_Bool*            changed             /**< pointer to store whether the solution has been changed */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -6938,7 +6938,7 @@ SCIP_RETCODE SCIPmakeIndicatorsFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
    SCIP_SOL*             sol,                /**< solution */
-   SCIP_Bool*            changed             /**< whether the solution has been changed */
+   SCIP_Bool*            changed             /**< pointer to store whether the solution has been changed */
    )
 {
    SCIP_CONS** conss;
