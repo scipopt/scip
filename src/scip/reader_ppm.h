@@ -38,7 +38,7 @@ SCIP_RETCODE SCIPincludeReaderPpm(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* writes problem to file */
+/** writes problem to file */
 EXTERN
 SCIP_RETCODE SCIPwritePpm(
    SCIP*                 scip,               /**< SCIP data structure */
