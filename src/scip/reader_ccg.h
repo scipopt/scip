@@ -40,7 +40,7 @@ SCIP_RETCODE SCIPincludeReaderCcg(
    );
 
 
-/* writes problem to file */
+/** writes problem to file */
 EXTERN
 SCIP_RETCODE SCIPwriteCcg(
    SCIP*                 scip,               /**< SCIP data structure */

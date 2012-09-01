@@ -376,7 +376,7 @@ SCIP_RETCODE SCIPincludeReaderCcg(
 }
 
 
-/* writes problem to file */
+/** writes problem to file */
 SCIP_RETCODE SCIPwriteCcg(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */
