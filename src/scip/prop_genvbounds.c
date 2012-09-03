@@ -1471,14 +1471,39 @@ SCIP_RETCODE applyGenVBounds(
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->genvboundstore != NULL);
-   assert(propdata->sorted);
-
-   startingcomponents = global ? propdata->gstartcomponents : propdata->startcomponents;
-   startingindices = global ? propdata->gstartindices : propdata->startindices;
-   nindices = global ? propdata->ngindices : propdata->nindices;
 
    if( *result == SCIP_DIDNOTRUN )
       *result = SCIP_DIDNOTFIND;
+
+   /* if the genvbounds are not sorted, i.e. if root node processing has not been finished, yet, we just propagate in
+    * the order in which they have been added to genvboundstore
+    */
+   if( !propdata->sorted )
+   {
+      int j;
+
+      assert(SCIPinProbing(scip) || SCIPgetDepth(scip) == 0);
+
+      for( j = 0; j < propdata->ngenvbounds && *result != SCIP_CUTOFF; j++ )
+      {
+         if( SCIPvarGetStatus(propdata->genvboundstore[j]->var) == SCIP_VARSTATUS_MULTAGGR )
+         {
+            /**@todo resolve multiaggregation in exitpre */
+         }
+         else
+         {
+            SCIPdebugMessage("applying genvbound with index %d (unsorted mode)\n", j);
+            SCIP_CALL( applyGenVBound(scip, prop, propdata->genvboundstore[j], global, result) );
+         }
+      }
+
+      return SCIP_OKAY;
+   }
+
+   /* otherwise, we propagate only components affected by the latest bound changes */
+   startingcomponents = global ? propdata->gstartcomponents : propdata->startcomponents;
+   startingindices = global ? propdata->gstartindices : propdata->startindices;
+   nindices = global ? propdata->ngindices : propdata->nindices;
 
    for( i = 0; i < nindices && *result != SCIP_CUTOFF; i++ )
    {
@@ -1593,7 +1618,10 @@ SCIP_RETCODE execGenVBounds(
    assert(propdata->prop != NULL);
    assert(result != NULL);
 
-   if( !propdata->sorted )
+   /* we only sort after the root node is finished; this avoids having to sort again after adding more genvbounds; if
+    * the genvbounds are not sorted, we will simply propagate all of them in the order given
+    */
+   if( !propdata->sorted && !SCIPinProbing(scip) && SCIPgetDepth(scip) > 0 )
    {
       *result = SCIP_DIDNOTFIND;
 
