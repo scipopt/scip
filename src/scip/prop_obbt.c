@@ -15,7 +15,7 @@
 
 /**@file    prop_obbt.c
  * @ingroup PROPAGATORS
- * @brief   optimality-based bound tightening propagator
+ * @brief   optimization-based bound tightening propagator
  * @author  Stefan Weltge
  */
 
@@ -41,7 +41,7 @@
 #include "scip/prop_genvbounds.h"
 
 #define PROP_NAME                       "obbt"
-#define PROP_DESC                       "optimality-based bound tightening propagator"
+#define PROP_DESC                       "optimization-based bound tightening propagator"
 #define PROP_TIMING                     SCIP_PROPTIMING_AFTERLPLOOP
 #define PROP_PRIORITY                -1000000      /**< propagator priority */
 #define PROP_FREQ                           0      /**< propagator frequency */
