@@ -15,10 +15,10 @@
 
 /**@file    prop_obbt.h
  * @ingroup PROPAGATORS
- * @brief   optimality-based bound tightening propagator
+ * @brief   optimization-based bound tightening propagator
  * @author  Stefan Weltge
  *
- * In Optimality-Based Bound Tightening (OBBT), we solve auxiliary LPs of the form
+ * In Optimization-Based Bound Tightening (OBBT), we solve auxiliary LPs of the form
  * \f[
  *      \min / \max \, \{ x_i \mid x \in P' \},
  * \f]
