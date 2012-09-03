@@ -6,6 +6,7 @@ features:
 - changed dualfix presolver to propagator such that dual fixing can also be applied during repropagation of the root node
 - added upgrade from varbound constraints to set-packing constraints
 - added SCIPwriteCliqueGraph() to scip.{c,h} to write the clique graph in GML format into a given file
+- added upgrade from bounddisjunction constraints to set-packing/logicor constraints
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
