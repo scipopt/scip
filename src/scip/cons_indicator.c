@@ -4054,6 +4054,40 @@ SCIP_RETCODE separateIndicators(
    return SCIP_OKAY;
 }
 
+/** initializes the constraint handler data */
+static
+void initConshdlrData(
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+   )
+{
+   assert(conshdlrdata != NULL);
+
+   conshdlrdata->removable = TRUE;
+   conshdlrdata->scaled = FALSE;
+   conshdlrdata->altlp = NULL;
+   conshdlrdata->nrows = 0;
+   conshdlrdata->varhash = NULL;
+   conshdlrdata->slackhash = NULL;
+   conshdlrdata->lbhash = NULL;
+   conshdlrdata->ubhash = NULL;
+   conshdlrdata->nlbbounds = 0;
+   conshdlrdata->nubbounds = 0;
+   conshdlrdata->nslackvars = 0;
+   conshdlrdata->roundingminthres = 0.1;
+   conshdlrdata->roundingmaxthres = 0.6;
+   conshdlrdata->roundingrounds = 1;
+   conshdlrdata->roundingoffset = 0.1;
+   conshdlrdata->addedcouplingcons = FALSE;
+   conshdlrdata->addlincons = NULL;
+   conshdlrdata->naddlincons = 0;
+   conshdlrdata->maxaddlincons = 0;
+   conshdlrdata->ninitconss = 0;
+   conshdlrdata->nbinvarszero = 0;
+   conshdlrdata->performedrestart = FALSE;
+   conshdlrdata->objindicatoronly = FALSE;
+   conshdlrdata->minabsobj = 0.0;
+}
+
 
 /* ---------------------------- constraint handler callback methods ----------------------*/
 
@@ -4088,11 +4122,34 @@ SCIP_DECL_CONSINIT(consInitIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
+   initConshdlrData(conshdlrdata);
+
    /* find trysol heuristic */
    if ( conshdlrdata->trysolutions && conshdlrdata->heurtrysol == NULL )
    {
       conshdlrdata->heurtrysol = SCIPfindHeur(scip, "trysol");
    }
+
+   return SCIP_OKAY;
+}
+
+
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
+static
+SCIP_DECL_CONSEXIT(consExitIndicator)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->addlincons, conshdlrdata->maxaddlincons);
+   conshdlrdata->maxaddlincons = 0;
+   conshdlrdata->naddlincons = 0;
+   conshdlrdata->nrows = 0;
 
    return SCIP_OKAY;
 }
@@ -4115,8 +4172,7 @@ SCIP_DECL_CONSFREE(consFreeIndicator)
    assert( conshdlrdata->lbhash == NULL );
    assert( conshdlrdata->ubhash == NULL );
    assert( conshdlrdata->slackhash == NULL );
-
-   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->addlincons, conshdlrdata->maxaddlincons);
+   assert(conshdlrdata->addlincons == NULL);
 
    SCIPfreeMemory(scip, &conshdlrdata);
 
@@ -5805,40 +5861,13 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   conshdlrdata->removable = TRUE;
-   conshdlrdata->scaled = FALSE;
-   conshdlrdata->altlp = NULL;
-   conshdlrdata->nrows = 0;
-   conshdlrdata->varhash = NULL;
-   conshdlrdata->slackhash = NULL;
-   conshdlrdata->lbhash = NULL;
-   conshdlrdata->ubhash = NULL;
-   conshdlrdata->nlbbounds = 0;
-   conshdlrdata->nubbounds = 0;
-   conshdlrdata->nslackvars = 0;
-   conshdlrdata->roundingminthres =     0.1;
-   conshdlrdata->roundingmaxthres =     0.6;
-   conshdlrdata->roundingrounds = 1;
-   conshdlrdata->roundingoffset = 0.1;
-   conshdlrdata->branchindicators = TRUE;
-   conshdlrdata->genlogicor = TRUE;
-   conshdlrdata->addcoupling = FALSE;
-   conshdlrdata->addcouplingcons = FALSE;
    conshdlrdata->heurtrysol = NULL;
-   conshdlrdata->addedcouplingcons = FALSE;
-   conshdlrdata->addlincons = NULL;
-   conshdlrdata->nbinvarszero = 0;
-   conshdlrdata->ninitconss = 0;
-   conshdlrdata->performedrestart = FALSE;
-   conshdlrdata->naddlincons = 0;
-   conshdlrdata->maxaddlincons = 0;
-   conshdlrdata->generatebilinear = FALSE;
-   conshdlrdata->objindicatoronly = FALSE;
-   conshdlrdata->minabsobj = 0.0;
-
    conshdlrdata->sepaalternativelp = DEFAULT_SEPAALTERNATIVELP;
    conshdlrdata->nolinconscont = DEFAULT_NOLINCONSCONT;
    conshdlrdata->forcerestart = DEFAULT_FORCERESTART;
+
+   /* initialize constraint handler data */
+   initConshdlrData(conshdlrdata);
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -5853,6 +5882,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteIndicator) );
    SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableIndicator) );
    SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableIndicator) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitIndicator) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolIndicator) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeIndicator) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsIndicator) );
