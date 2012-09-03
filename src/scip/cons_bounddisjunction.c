@@ -753,7 +753,7 @@ SCIP_RETCODE upgradeCons(
       {
 	 if( consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
 	 {
-	    assert(SCIPisEQ(scip, consdata->bounds[v], 1.0));
+	    assert(SCIPisFeasGT(scip, consdata->bounds[v], 0.0));
 
 	    if( nvars == 2 )
 	    {
@@ -765,7 +765,7 @@ SCIP_RETCODE upgradeCons(
 	 else
 	 {
 	    assert(consdata->boundtypes[v] == SCIP_BOUNDTYPE_UPPER);
-	    assert(SCIPisZero(scip, consdata->bounds[v]));
+	    assert(SCIPisFeasLT(scip, consdata->bounds[v], 1.0));
 
 	    if( nvars > 2 )
 	    {
