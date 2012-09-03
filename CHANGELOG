@@ -32,6 +32,8 @@ fixed bugs:
 - fixed bug trying to color probing nodes, which are not added to the vbc output anymore
 - fixed bug in sorting template
 - fixed bug in cons_orbitope: in rare cases one cannot repropagate
+- fixed behaviour change of indicator constraint handler when solving a another instance after solving a one using the
+  interactive shell
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
