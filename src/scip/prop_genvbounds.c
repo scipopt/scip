@@ -35,7 +35,7 @@
 #define PROP_NAME                            "genvbounds"
 #define PROP_DESC                            "generalized variable bounds propagator"
 #define PROP_TIMING   SCIP_PROPTIMING_ALWAYS
-#define PROP_PRIORITY                    -10 /**< propagator priority */
+#define PROP_PRIORITY                3000000 /**< propagator priority */
 #define PROP_FREQ                          1 /**< propagator frequency */
 #define PROP_DELAY                     FALSE /**< should propagation method be delayed, if other propagators
                                               *   found reductions? */
