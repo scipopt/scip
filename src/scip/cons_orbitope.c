@@ -1110,6 +1110,7 @@ SCIP_RETCODE resolvePropagation(
 
    assert( scip != NULL );
    assert( cons != NULL );
+   assert( result != NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -1250,104 +1251,107 @@ SCIP_RETCODE resolvePropagation(
       assert( 0 <= i && i < nspcons );
       assert( 0 <= j && j < nblocks );
 
-      /* find SCI with value 1 */
-      assert( weights[i-1][j-1] > 0.5 && weights[i-1][j-1] < 1.5 );
-
-      SCIPdebugMessage(" -> reason for x[%d][%d] = 1 was the following SC:\n", i, j);
-#ifdef SCIP_DEBUG
-      (void) SCIPsnprintf(str, SCIP_MAXSTRLEN, "SC:");
-#endif
-
-      p1 = i-1;
-      p2 = j-1;
-#ifndef NDEBUG
-      pos1 = -1;
-      pos2 = -1;
-#endif
-      do
+      /* In rare cases it might happen that we fixed a variable to 1, but the node later becomes infeasible by globally
+       * fixing variables to 0. In this case, it might happen that we find a SC with value 0 instead of 1. We then
+       * cannot use this SC to repropagate (and do not know how to reconstruct the original reasoning). */
+      if ( weights[i-1][j-1] > 0.5 && weights[i-1][j-1] < 1.5 )
       {
-         assert( cases[p1][p2] != -1 );
-         assert( p1 >= 0 && p1 < i );
-         assert( p2 >= 0 && p2 < j );
+         SCIPdebugMessage(" -> reason for x[%d][%d] = 1 was the following SC:\n", i, j);
+#ifdef SCIP_DEBUG
+         (void) SCIPsnprintf(str, SCIP_MAXSTRLEN, "SC:");
+#endif
 
-         /* if case 1 */
-         if ( cases[p1][p2] == 1 )
-            --p2;   /* decrease column */
-         else
+         p1 = i-1;
+         p2 = j-1;
+#ifndef NDEBUG
+         pos1 = -1;
+         pos2 = -1;
+#endif
+         do
          {
-            /* case 2 or 3: reason are formed by variables in SC fixed to 0 */
-            assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
-            if ( SCIPvarGetUbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 )
+            assert( cases[p1][p2] != -1 );
+            assert( p1 >= 0 && p1 < i );
+            assert( p2 >= 0 && p2 < j );
+
+            /* if case 1 */
+            if ( cases[p1][p2] == 1 )
+               --p2;   /* decrease column */
+            else
             {
-               SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx) );
-               *result = SCIP_SUCCESS;
+               /* case 2 or 3: reason are formed by variables in SC fixed to 0 */
+               assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
+               if ( SCIPvarGetUbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 )
+               {
+                  SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx) );
+                  *result = SCIP_SUCCESS;
 
 #ifdef SCIP_DEBUG
-               (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", p1, p2);
+                  (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", p1, p2);
+                  (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+#endif
+               }
+#ifndef NDEBUG
+               else
+               {
+                  assert( SCIPvarGetLbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 );
+                  assert( pos1 == -1 && pos2 == -1 );
+                  pos1 = p1;
+                  pos2 = p2;
+               }
+#endif
+               if ( cases[p1][p2] == 3 )
+                  break;
+            }
+            --p1;  /* decrease row */
+         }
+         while ( p1 >= 0 );   /* should always be true, i.e., the break should end the loop */
+         assert( cases[p1][p2] == 3 );
+         assert( pos1 >= 0 && pos2 >= 0 );
+
+         /* distinguish partitioning/packing */
+         if ( ispart )
+         {
+            /* partitioning case */
+#ifdef SCIP_DEBUG
+            (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, "  before bar: ");
+            (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+#endif
+            /* add variables before the bar in the partitioning case */
+            for (k = 0; k < j; ++k)
+            {
+               assert( SCIPvarGetUbAtIndex(vars[i][k], bdchgidx, FALSE) < 0.5 );
+               SCIP_CALL( SCIPaddConflictUb(scip, vars[i][k], bdchgidx) );
+               *result = SCIP_SUCCESS;
+#ifdef SCIP_DEBUG
+               (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", i, k);
                (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
 #endif
             }
-#ifndef NDEBUG
-            else
-            {
-               assert( SCIPvarGetLbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 );
-               assert( pos1 == -1 && pos2 == -1 );
-               pos1 = p1;
-               pos2 = p2;
-            }
-#endif
-            if ( cases[p1][p2] == 3 )
-               break;
-         }
-         --p1;  /* decrease row */
-      }
-      while ( p1 >= 0 );   /* should always be true, i.e., the break should end the loop */
-      assert( cases[p1][p2] == 3 );
-      assert( pos1 >= 0 && pos2 >= 0 );
 
-      /* distinguish partitioning/packing */
-      if ( ispart )
-      {
-         /* partitioning case */
 #ifdef SCIP_DEBUG
-         (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, "  before bar: ");
-         (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
-#endif
-         /* add variables before the bar in the partitioning case */
-         for (k = 0; k < j; ++k)
-         {
-            assert( SCIPvarGetUbAtIndex(vars[i][k], bdchgidx, FALSE) < 0.5 );
-            SCIP_CALL( SCIPaddConflictUb(scip, vars[i][k], bdchgidx) );
-            *result = SCIP_SUCCESS;
-#ifdef SCIP_DEBUG
-            (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", i, k);
-            (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+            SCIPdebugMessage("%s\n", str);
 #endif
          }
-
-#ifdef SCIP_DEBUG
-         SCIPdebugMessage("%s\n", str);
-#endif
-      }
-      else
-      {
-         /* packing case */
-         int lastcolumn;
-
-         /* last column considered as part of the bar: */
-         lastcolumn = nblocks - 1;
-         if ( lastcolumn > i )
-            lastcolumn = i;
-
-         /* search for variable in the bar that is fixed to 1 in the packing case */
-         for (k = j; k <= lastcolumn; ++k)
+         else
          {
-            if ( SCIPvarGetLbAtIndex(vars[i][k], bdchgidx, FALSE) > 0.5 )
+            /* packing case */
+            int lastcolumn;
+
+            /* last column considered as part of the bar: */
+            lastcolumn = nblocks - 1;
+            if ( lastcolumn > i )
+               lastcolumn = i;
+
+            /* search for variable in the bar that is fixed to 1 in the packing case */
+            for (k = j; k <= lastcolumn; ++k)
             {
-               SCIP_CALL( SCIPaddConflictLb(scip, vars[i][k], bdchgidx) );
-               *result = SCIP_SUCCESS;
-               SCIPdebugMessage("   and variable x[%d][%d] fixed to 1.\n", i, k);
-               break;
+               if ( SCIPvarGetLbAtIndex(vars[i][k], bdchgidx, FALSE) > 0.5 )
+               {
+                  SCIP_CALL( SCIPaddConflictLb(scip, vars[i][k], bdchgidx) );
+                  *result = SCIP_SUCCESS;
+                  SCIPdebugMessage("   and variable x[%d][%d] fixed to 1.\n", i, k);
+                  break;
+               }
             }
          }
       }
