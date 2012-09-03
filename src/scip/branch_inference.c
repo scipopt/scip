@@ -210,6 +210,7 @@ SCIP_RETCODE performBranching(
    /* perform the branching */
    if( candsols != NULL )
    {
+      assert(bestval != SCIP_INVALID); /*lint !e777*/
       SCIP_CALL( SCIPbranchVarVal(scip, bestcand, bestval, NULL, NULL, NULL) );
    }
    else
