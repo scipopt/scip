@@ -27975,13 +27975,12 @@ SCIP_RETCODE SCIPbranchVarVal(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPbranchVarVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-   
-   /* for a continuous variable, their will either be variable fixing or a branching
-    * fixing is done if RelEQ(lb,ub)
-    * in the other case, the given branching value should be such that it does not sits on one of the bounds
-    * we assert this by requiring that it is at least eps/2 away from each bound
-    * the /2 is there, because ub-lb may be in (eps, 2eps], in which case there is no way to choose a branching value that is at least eps away from both bounds
-    * however, if variable bounds are below/above -/+infinity/2.1, then SCIPisLT will give an assert, so we omit the check then
+
+   /* A continuous variable will be fixed if SCIPisRelEQ(lb,ub) is true. Otherwise, the given branching value should be
+    * such that its value is not equal to one of the bounds. We assert this by requiring that it is at least eps/2 away
+    * from each bound. The 2.1 is there, because ub-lb may be in (eps, 2*eps], in which case there is no way to choose a
+    * branching value that is at least eps away from both bounds. However, if the variable bounds are below/above
+    * -/+infinity * 2.1, then SCIPisLT will give an assert, so we omit the check in this case.
     */
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
       SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) ||
