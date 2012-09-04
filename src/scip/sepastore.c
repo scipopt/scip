@@ -451,7 +451,7 @@ SCIP_RETCODE sepastoreApplyLb(
    if( local )
    {
       /* apply the local bound change or detect a cutoff */
-      if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
+      if( SCIPsetIsFeasGT(set, bound, SCIPvarGetLbLocal(var)) )
       {
          SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bound, SCIPvarGetUbLocal(var));
@@ -472,7 +472,7 @@ SCIP_RETCODE sepastoreApplyLb(
    else
    {
       /* apply the global bound change or detect a global cutoff which means we can cutoff the root node */
-      if( SCIPsetIsGT(set, bound, SCIPvarGetLbGlobal(var)) )
+      if( SCIPsetIsFeasGT(set, bound, SCIPvarGetLbGlobal(var)) )
       {
          SCIPdebugMessage(" -> applying global bound change: <%s>: [%g,%g] -> [%g,%g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), bound, SCIPvarGetUbGlobal(var));
@@ -522,7 +522,7 @@ SCIP_RETCODE sepastoreApplyUb(
    if( local )
    {
       /* apply the local bound change or detect a cutoff */
-      if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
+      if( SCIPsetIsFeasLT(set, bound, SCIPvarGetUbLocal(var)) )
       {
          SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), bound);
@@ -543,7 +543,7 @@ SCIP_RETCODE sepastoreApplyUb(
    else
    {
       /* apply the global bound change or detect a global cutoff which means we can cutoff the root node */
-      if( SCIPsetIsLT(set, bound, SCIPvarGetUbGlobal(var)) )
+      if( SCIPsetIsFeasLT(set, bound, SCIPvarGetUbGlobal(var)) )
       {
          SCIPdebugMessage(" -> applying global bound change: <%s>: [%g,%g] -> [%g,%g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), SCIPvarGetLbGlobal(var), bound);
