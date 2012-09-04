@@ -18004,7 +18004,7 @@ SCIP_Bool SCIPhaveVarsCommonClique(
  */
 SCIP_RETCODE SCIPwriteCliqueGraph(
    SCIP*                 scip,               /**< SCIP data structure */
-   char*                 fname,              /**< name of file */
+   const char*           fname,              /**< name of file */
    SCIP_Bool             writeimplications   /**< should we write the binary implications */
    )
 {
