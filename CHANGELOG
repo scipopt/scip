@@ -34,6 +34,7 @@ fixed bugs:
 - fixed bug in cons_orbitope: in rare cases one cannot repropagate
 - fixed behaviour change of indicator constraint handler when solving a another instance after solving a one using the
   interactive shell
+- fixed bug of wrong result code in propagation in prop_genvbound.c
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
