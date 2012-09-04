@@ -12,7 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define SCIP_DEBUG
+#define SCIP_STATISTIC
+/* #define SCIP_DEBUG */
+
 /**@file   branch_cloud.c
  * @brief  cloud branching rule
  * @author Timo Berthold
@@ -47,8 +49,10 @@ struct SCIP_BranchruleData
 {
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
    SCIP_Bool             usecloud;           /**< should a cloud of points be used? */
+   SCIP_CLOCK*           cloudclock;         /**< clock for cloud diving */
+   int                   ntried;             /**< number of times the cloud was tried */
+   int                   nuseful;            /**< number of times the cloud was useful */
 };
-
 
 /*
  * Local methods
@@ -86,6 +90,9 @@ SCIP_DECL_BRANCHFREE(branchFreeCloud)
 
    /* free branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
+   SCIPstatisticMessage("time spent diving in cloud branching: %g\n", SCIPgetClockTime(scip, branchruledata->cloudclock));
+   SCIPstatisticMessage("success rate of cloud branching: %g\n", (SCIP_Real)branchruledata->nuseful / branchruledata->ntried);
+   SCIP_CALL( SCIPfreeClock(scip, &(branchruledata->cloudclock)) );
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
@@ -102,6 +109,9 @@ SCIP_DECL_BRANCHINIT(branchInitCloud)
    /* initialize branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    branchruledata->lastcand = 0;
+   branchruledata->nuseful = 0;
+   branchruledata->ntried = 0;
+   SCIP_CALL( SCIPcreateClock(scip, &(branchruledata->cloudclock)) );
 
    return SCIP_OKAY;
 }
@@ -223,6 +233,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    BMScopyMemoryArray(lpcandsfraccopy, lpcandsfrac, nlpcands);
    BMScopyMemoryArray(lpcandscopy, lpcands, nlpcands);
 
+   SCIP_CALL(  SCIPstartClock(scip, branchruledata->cloudclock) );
+   branchruledata->ntried++;
+
    /* start diving to calculate the solution cloud */
    SCIP_CALL( SCIPstartDive(scip) );
 
@@ -234,13 +247,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
       if( !SCIPisFeasZero(scip, SCIPgetVarRedcost(scip, vars[i])) )
       {
-         //      printf("var: %s [%g,%g] : redcost %g solval %g\n",SCIPvarGetName(vars[i]), SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]),SCIPgetVarRedcost(scip, vars[i]), solval );
+         /* printf("var: %s [%g,%g] : redcost %g solval %g\n",SCIPvarGetName(vars[i]), SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]),SCIPgetVarRedcost(scip, vars[i]), solval ); */
          SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], solval) );
          SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], solval) );
       }
       else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_INTEGER && !SCIPisIntegral(scip, solval) )
       {
-         //      printf("var: %s [%g,%g] : redcost %g solval %g\n",SCIPvarGetName(vars[i]), SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]),SCIPgetVarRedcost(scip, vars[i]), solval );
+         /* printf("var: %s [%g,%g] : redcost %g solval %g\n",SCIPvarGetName(vars[i]), SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]),SCIPgetVarRedcost(scip, vars[i]), solval ); */
          SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPfloor(scip, solval)) );
          SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPceil(scip, solval)) );
       }
@@ -257,12 +270,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       {
          if( dualsol > 0 && SCIPisFeasEQ(scip,SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
          {
-            //            printf("row %s lhs: %g = activity: %g   rhs: %g dualsol: %g \n", SCIProwGetName(lprows[i]),SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i]),SCIProwGetRhs(lprows[i]), dualsol);
+            /* printf("row %s lhs: %g = activity: %g   rhs: %g dualsol: %g \n", SCIProwGetName(lprows[i]),SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i]),SCIProwGetRhs(lprows[i]), dualsol); */
             SCIP_CALL( SCIPchgRowRhsDive(scip, lprows[i], SCIProwGetLhs(lprows[i])) );
          }
          else if( dualsol < 0 && SCIPisFeasEQ(scip,SCIProwGetRhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
          {
-            //            printf("row %s lhs: %g   activity: %g = rhs: %g dualsol: %g \n", SCIProwGetName(lprows[i]),SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i]),SCIProwGetRhs(lprows[i]), dualsol);
+            /* printf("row %s lhs: %g   activity: %g = rhs: %g dualsol: %g \n", SCIProwGetName(lprows[i]),SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i]),SCIProwGetRhs(lprows[i]), dualsol); */
             SCIP_CALL( SCIPchgRowLhsDive(scip, lprows[i], SCIProwGetRhs(lprows[i])) );
          }
       }
@@ -277,7 +290,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 #ifdef NDEBUG
       SCIP_RETCODE retcode;
 #endif
-      counter++;
 
       /* apply feasibility pump objective function to fractional variables */
       for( i = 0; i < nlpcands; ++i)
@@ -324,13 +336,17 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          lpcandsmax[i] = MAX(lpcandsmax[i], solval);
       }
 
+      if( newpoint )
+         counter++;
    }
-   SCIPdebugMessage("considered %d points in the cloud\n",counter);
+   SCIPdebugMessage("considered %d additional points in the cloud\n",counter);
 
    /* terminate the diving */
    SCIP_CALL( SCIPendDive(scip) );
 
-   if( counter > 1 )
+   SCIP_CALL(  SCIPstopClock(scip, branchruledata->cloudclock) );
+
+   if( counter > 0 )
    {
       counter = 0;
 
@@ -345,7 +361,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
             counter++;
          }
       }
-      SCIPdebugMessage("skipped %d/%d strong branching candidates\n", nlpcands-counter, nlpcands);
+      SCIPdebugMessage("skipped %d/%d strong branching candidates\n", nlpcands - counter, nlpcands);
+      if( nlpcands - counter > 0 )
+         branchruledata->nuseful++;
    }
    else
       counter = nlpcands;
@@ -355,7 +373,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    /* perform the branching */
-   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED && counter > 0 ) //???????
+   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED && counter > 0 ) /* ??????? */
    {
       SCIP_NODE* downchild;
       SCIP_NODE* upchild;
@@ -392,9 +410,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       }
       SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
       SCIPdebugMessage(" -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
-
-      // if(SCIPnodeGetNumber(downchild) == 559 || SCIPnodeGetNumber(upchild) == 559 )
-      //    SCIPABORT();
 
       *result = SCIP_BRANCHED;
    }
