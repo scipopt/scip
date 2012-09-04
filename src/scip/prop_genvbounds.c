@@ -1830,6 +1830,12 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    /* propagate locally only in SCIP_PROPTIMING_BEFORELP, but globally always if the cutoff bound has improved */
    SCIP_CALL( execGenVBounds(scip, propdata, result, (proptiming == SCIP_PROPTIMING_BEFORELP)) );
 
+   /* when called in presolving stage the result is set to SCIP_SUCCESS instead of SCIP_REDUCEDDOM, this is corrected
+    * here
+    */
+   if( *result == SCIP_SUCCESS )
+      *result = SCIP_REDUCEDDOM;
+
    return SCIP_OKAY;
 }
 
