@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+//#define SCIP_DEBUG
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
  * @author Tobias Achterberg
@@ -108,7 +108,6 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    int                   npriolpcands,       /**< number of priority branching candidates             */
    int*                  start,              /**< starting index in lpcands                           */
    SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
-   int                   reevalage,          /**< reevaluation age threshold                          */
    int*                  bestcand,           /**< best candidate for branching                        */
    SCIP_Real*            bestdown,           /**< objective value of the down branch for bestcand     */
    SCIP_Real*            bestup,             /**< objective value of the up branch for bestcand       */
@@ -119,6 +118,9 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_RESULT*          result              /**< result pointer                                      */
    )
 {
+   SCIP_BRANCHRULE* branchrule;
+   SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_Longint reevalage;
    SCIP_Real down;
    SCIP_Real up;
    SCIP_Real downgain;
@@ -183,6 +185,15 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    *bestscore = -SCIPinfinity(scip);
    if( nlpcands == 1)
       return SCIP_OKAY;
+
+   /* auto-setting for reevalage */
+   branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
+   assert(branchrule != NULL);
+
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+   reevalage = branchruledata->reevalage;
 
     /* initialize strong branching */
    SCIP_CALL( SCIPstartStrongbranch(scip) );
@@ -376,7 +387,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
    assert(npriolpcands > 0);
 
    SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcands, lpcandssol, lpcandsfrac, nlpcands, npriolpcands,
-      &branchruledata->lastcand, allowaddcons, branchruledata->reevalage,
+      &branchruledata->lastcand, allowaddcons,
       &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) ); 
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )

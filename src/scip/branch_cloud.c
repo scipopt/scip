@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+//#define SCIP_DEBUG
 /**@file   branch_cloud.c
  * @brief  cloud branching rule
  * @author Timo Berthold
@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "scip/branch_cloud.h"
+#include "scip/branch_fullstrong.h"
 
 
 #define BRANCHRULE_NAME            "cloud"
@@ -33,6 +34,7 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
+#define DEFAULT_USECLOUD           TRUE      /**< should a cloud of points be used? */
 
 /*
  * Data structures
@@ -43,6 +45,8 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
+   int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
+   SCIP_Bool             usecloud;           /**< should a cloud of points be used? */
 };
 
 
@@ -75,33 +79,32 @@ SCIP_DECL_BRANCHCOPY(branchCopyCloud)
 #endif
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
-#if 0
 static
 SCIP_DECL_BRANCHFREE(branchFreeCloud)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of cloud branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* free branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   SCIPfreeMemory(scip, &branchruledata);
+   SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
 }
-#else
-#define branchFreeCloud NULL
-#endif
 
 
 /** initialization method of branching rule (called after problem was transformed) */
-#if 0
 static
 SCIP_DECL_BRANCHINIT(branchInitCloud)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of cloud branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* initialize branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   branchruledata->lastcand = 0;
 
    return SCIP_OKAY;
 }
-#else
-#define branchInitCloud NULL
-#endif
 
 
 /** deinitialization method of branching rule (called before transformed problem is freed) */
@@ -153,6 +156,8 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolCloud)
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 {  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
    SCIP_VAR** lpcands;
    SCIP_VAR** lpcandscopy;
 
@@ -160,16 +165,28 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    SCIP_ROW** lprows;
    SCIP_Real* lpcandsfrac;
    SCIP_Real* lpcandssol;
+   SCIP_Real* lpcandsfraccopy;
+   SCIP_Real* lpcandssolcopy;
    SCIP_Real* lpcandsmin;
    SCIP_Real* lpcandsmax;
+
+   SCIP_Real bestdown;
+   SCIP_Real bestup;
+   SCIP_Real bestscore;
+   SCIP_Real provedbound;
+
+   SCIP_Bool bestdownvalid;
+   SCIP_Bool bestupvalid;
    SCIP_Bool newpoint;
    SCIP_Bool lperror;
 
    int nlpcands;
+   int npriolpcands;
    int nvars;
    int bestcand;
    int nlprows;
    int i;
+   int counter;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -181,8 +198,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
    SCIPdebugMessage("Execlp method of "BRANCHRULE_NAME" branching\n");
 
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, &npriolpcands) );
    nlpcands = SCIPgetNLPBranchCands(scip);
    assert(nlpcands > 0);
 
@@ -194,8 +215,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandsmin, nlpcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandsmax, nlpcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandscopy, nlpcands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lpcandsfraccopy, nlpcands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lpcandssolcopy, nlpcands) );
    BMScopyMemoryArray(lpcandsmin, lpcandssol, nlpcands);
    BMScopyMemoryArray(lpcandsmax, lpcandssol, nlpcands);
+   BMScopyMemoryArray(lpcandssolcopy, lpcandssol, nlpcands);
+   BMScopyMemoryArray(lpcandsfraccopy, lpcandsfrac, nlpcands);
    BMScopyMemoryArray(lpcandscopy, lpcands, nlpcands);
 
    /* start diving to calculate the solution cloud */
@@ -209,11 +234,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
       if( !SCIPisFeasZero(scip, SCIPgetVarRedcost(scip, vars[i])) )
       {
+         //      printf("var: %s [%g,%g] : redcost %g solval %g\n",SCIPvarGetName(vars[i]), SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]),SCIPgetVarRedcost(scip, vars[i]), solval );
          SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], solval) );
          SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], solval) );
       }
       else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_INTEGER && !SCIPisIntegral(scip, solval) )
       {
+         //      printf("var: %s [%g,%g] : redcost %g solval %g\n",SCIPvarGetName(vars[i]), SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]),SCIPgetVarRedcost(scip, vars[i]), solval );
          SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPfloor(scip, solval)) );
          SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPceil(scip, solval)) );
       }
@@ -226,28 +253,31 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    {
       SCIP_Real dualsol;
       dualsol = SCIProwGetDualsol(lprows[i]);
-
       if( !SCIPisZero(scip, dualsol) )
       {
-         if( dualsol > 0 )
+         if( dualsol > 0 && SCIPisFeasEQ(scip,SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
          {
+            //            printf("row %s lhs: %g = activity: %g   rhs: %g dualsol: %g \n", SCIProwGetName(lprows[i]),SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i]),SCIProwGetRhs(lprows[i]), dualsol);
             SCIP_CALL( SCIPchgRowRhsDive(scip, lprows[i], SCIProwGetLhs(lprows[i])) );
          }
-         else
+         else if( dualsol < 0 && SCIPisFeasEQ(scip,SCIProwGetRhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
          {
+            //            printf("row %s lhs: %g   activity: %g = rhs: %g dualsol: %g \n", SCIProwGetName(lprows[i]),SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i]),SCIProwGetRhs(lprows[i]), dualsol);
             SCIP_CALL( SCIPchgRowLhsDive(scip, lprows[i], SCIProwGetRhs(lprows[i])) );
          }
       }
    }
 
    newpoint = TRUE;
+   counter = 0;
 
    /* loop that generates new cloud point */
-   while( newpoint )
+   while( newpoint && branchruledata->usecloud )
    {
 #ifdef NDEBUG
       SCIP_RETCODE retcode;
 #endif
+      counter++;
 
       /* apply feasibility pump objective function to fractional variables */
       for( i = 0; i < nlpcands; ++i)
@@ -287,7 +317,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          SCIP_Real solval;
          solval = SCIPgetSolVal(scip, NULL, lpcandscopy[i]);
 
-         if( SCIPisIntegral(scip,solval) && !SCIPisIntegral(scip, lpcandsmin[i]) && !SCIPisIntegral(scip, lpcandsmax[i]) )
+         if( SCIPisFeasIntegral(scip,solval) && !SCIPisFeasIntegral(scip, lpcandsmin[i]) && !SCIPisFeasIntegral(scip, lpcandsmax[i]) )
             newpoint = TRUE;
 
          lpcandsmin[i] = MIN(lpcandsmin[i], solval);
@@ -295,11 +325,83 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       }
 
    }
+   SCIPdebugMessage("considered %d points in the cloud\n",counter);
 
    /* terminate the diving */
    SCIP_CALL( SCIPendDive(scip) );
 
+   if( counter > 1 )
+   {
+      counter = 0;
+
+      for( i = 0; i < nlpcands; ++i)
+      {
+         if( !SCIPisFeasIntegral(scip, lpcandsmin[i]) && !SCIPisFeasIntegral(scip, lpcandsmax[i]) )
+         {
+            assert(counter <= i);
+            lpcandscopy[counter] = lpcandscopy[i];
+            lpcandssolcopy[counter] = lpcandssolcopy[i];
+            lpcandsfraccopy[counter] = lpcandsfraccopy[i];
+            counter++;
+         }
+      }
+      SCIPdebugMessage("skipped %d/%d strong branching candidates\n", nlpcands-counter, nlpcands);
+   }
+   else
+      counter = nlpcands;
+
+   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, counter, counter, /* replace second counter ??????????? */
+      &branchruledata->lastcand, allowaddcons,
+      &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
+
+   /* perform the branching */
+   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED && counter > 0 ) //???????
+   {
+      SCIP_NODE* downchild;
+      SCIP_NODE* upchild;
+      SCIP_VAR* var;
+      SCIP_Bool allcolsinlp;
+      SCIP_Bool exactsolve;
+
+      assert(*result == SCIP_DIDNOTRUN);
+      assert(0 <= bestcand && bestcand < nlpcands);
+      assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
+
+      var = lpcandscopy[bestcand];
+
+      /* perform the branching */
+      SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
+         counter, bestcand, SCIPvarGetName(var), lpcandssolcopy[bestcand], bestdown, bestup, bestscore);
+      SCIP_CALL( SCIPbranchVar(scip, var, &downchild, NULL, &upchild) );
+      assert(downchild != NULL);
+      assert(upchild != NULL);
+
+      /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
+       * for cutting off sub problems and improving lower bounds of children
+       */
+      exactsolve = SCIPisExactSolve(scip);
+
+      /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
+      allcolsinlp = SCIPallColsInLP(scip);
+
+      /* update the lower bounds in the children */
+      if( allcolsinlp && !exactsolve )
+      {
+         SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
+         SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
+      }
+      SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
+      SCIPdebugMessage(" -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
+
+      // if(SCIPnodeGetNumber(downchild) == 559 || SCIPnodeGetNumber(upchild) == 559 )
+      //    SCIPABORT();
+
+      *result = SCIP_BRANCHED;
+   }
+
    SCIPfreeBufferArray(scip, &lpcandscopy);
+   SCIPfreeBufferArray(scip, &lpcandssolcopy);
+   SCIPfreeBufferArray(scip, &lpcandsfraccopy);
    SCIPfreeBufferArray(scip, &lpcandsmax);
    SCIPfreeBufferArray(scip, &lpcandsmin);
 
@@ -350,12 +452,11 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
    SCIP_BRANCHRULE* branchrule;
 
    /* create cloud branching rule data */
-   branchruledata = NULL;
-   /* TODO: (optional) create branching rule specific data here */
-
-   branchrule = NULL;
+   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   branchruledata->lastcand = 0;
 
    /* include branching rule */
+   branchrule = NULL;
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
 
@@ -373,7 +474,11 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
    SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsCloud) );
 
    /* add cloud branching rule parameters */
-   /* TODO: (optional) add branching rule specific parameters with SCIPaddTypeParam() here */
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/"BRANCHRULE_NAME"/usecloud",
+         "should a cloud of points be used? ",
+         &branchruledata->usecloud, FALSE, DEFAULT_USECLOUD, NULL, NULL) );
 
    return SCIP_OKAY;
 }

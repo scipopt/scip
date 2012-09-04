@@ -72,7 +72,6 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    int                   npriolpcands,       /**< number of priority branching candidates             */
    int*                  start,              /**< starting index in lpcands                           */
    SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
-   int                   reevalage,          /**< reevaluation age threshold                          */
    int*                  bestcand,           /**< best candidate for branching                        */
    SCIP_Real*            bestdown,           /**< objective value of the down branch for bestcand     */
    SCIP_Real*            bestup,             /**< objective value of the up branch for bestcand       */
