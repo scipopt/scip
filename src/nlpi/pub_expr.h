@@ -43,7 +43,7 @@ extern "C" {
 /**@{ */
 
 #ifndef NDEBUG
-/* gives curvature for a sum of two functions with given curvature */
+/** gives curvature for a sum of two functions with given curvature */
 EXTERN
 SCIP_EXPRCURV SCIPexprcurvAdd(
    SCIP_EXPRCURV         curv1,              /**< curvature of first summand */
@@ -59,14 +59,14 @@ SCIP_EXPRCURV SCIPexprcurvNegate(
    SCIP_EXPRCURV         curvature           /**< curvature of function */
    );
 
-/* gives curvature for a functions with given curvature multiplied by a constant factor */
+/** gives curvature for a functions with given curvature multiplied by a constant factor */
 EXTERN
 SCIP_EXPRCURV SCIPexprcurvMultiply(
    SCIP_Real             factor,             /**< constant factor */
    SCIP_EXPRCURV         curvature           /**< curvature of other factor */
    );
 
-/* gives curvature for base^exponent for given bounds and curvature of base-function and constant exponent */
+/** gives curvature for base^exponent for given bounds and curvature of base-function and constant exponent */
 EXTERN
 SCIP_EXPRCURV SCIPexprcurvPower(
    SCIP_INTERVAL         basebounds,         /**< bounds on base function */
@@ -74,7 +74,7 @@ SCIP_EXPRCURV SCIPexprcurvPower(
    SCIP_Real             exponent            /**< exponent */
    );
 
-/* gives curvature for a monomial with given curvatures and bounds for each factor */
+/** gives curvature for a monomial with given curvatures and bounds for each factor */
 EXTERN
 SCIP_EXPRCURV SCIPexprcurvMonomial(
    int                   nfactors,           /**< number of factors in monomial */

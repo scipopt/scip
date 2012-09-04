@@ -42,7 +42,7 @@ SCIP_RETCODE SCIPincludeReaderGms(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* writes problem to file */
+/** writes problem to file */
 EXTERN
 SCIP_RETCODE SCIPwriteGms(
    SCIP*                 scip,               /**< SCIP data structure */
