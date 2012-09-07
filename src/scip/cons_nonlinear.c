@@ -5427,7 +5427,11 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
       }
 
       /* check if we have a bound change */
-      if ( consdata->nlinvars == 1 )
+      if ( consdata->nlinvars == 0 )
+      {
+         assert(SCIPisFeasLE(scip, lhs, rhs));
+      }
+      else if ( consdata->nlinvars == 1 )
       {
          SCIP_Bool tightened;
          SCIP_Real coef;
