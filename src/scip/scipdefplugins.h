@@ -32,6 +32,7 @@
  */
 #include "scip/branch_allfullstrong.h"
 #include "scip/branch_fullstrong.h"
+#include "scip/branch_fullstrongprop.h"
 #include "scip/branch_inference.h"
 #include "scip/branch_leastinf.h"
 #include "scip/branch_mostinf.h"
