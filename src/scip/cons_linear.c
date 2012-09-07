@@ -11502,7 +11502,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
    /* for the solving process we need linear rows, containing only active variables; therefore when creating a linear
     * constraint after presolving we have to ensure that it holds active variables
     */
-   if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE && nvars > 0 )
    {
       SCIP_VAR** consvars;
       SCIP_Real* consvals;
