@@ -175,9 +175,6 @@ else
     fi
 fi
 
-EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
-echo > $EVALFILE
-
 
 #define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
 CLUSTERQUEUE=$QUEUE
@@ -208,6 +205,8 @@ COUNT=0
 # loop over permutations
 for ((p = 0; $p <= $PERMUTE; p++))
 do
+    EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"#p"$p.eval
+    echo > $EVALFILE
 
     # loop over testset
     for i in `cat testset/$TSTNAME.test` DONE
@@ -303,20 +302,19 @@ do
 	    echo checksol                          >> $TMPFILE
 	    echo quit                              >> $TMPFILE
 
-            # additional environment variables needed by runcluster.sh
-	    export SOLVERPATH=$SCIPPATH
-	    export EXECNAME=$SCIPPATH/../$BINNAME
-	    export BASENAME=$PROBNAME
-	    export FILENAME=$i
-	    export CLIENTTMPDIR=$CLIENTTMPDIR
-
             # check queue type
 	    if test  "$QUEUETYPE" = "srun"
 	    then
+                # additional environment variables needed by runcluster.sh
+		export SOLVERPATH=$SCIPPATH
+		export EXECNAME=$SCIPPATH/../$BINNAME
+		export BASENAME=$PROBNAME
+		export FILENAME=$i
+		export CLIENTTMPDIR=$CLIENTTMPDIR
 		sbatch --job-name=SCIP$SHORTPROBNAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
 	    else
                 # -V to copy all environment variables
-		qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTPROBNAME -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null runcluster.sh
+		qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTPROBNAME -v SOLVERPATH=$SCIPPATH,EXECNAME=$SCIPPATH/../$BINNAME,BASENAME=$PROBNAME,FILENAME=$i,CLIENTTMPDIR=$CLIENTTMPDIR -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null runcluster.sh
 	    fi
 	else
 	    echo "input file "$SCIPPATH/$i" not found!"
