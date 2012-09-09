@@ -56,7 +56,6 @@
  * @todo Check whether one can weaken the conditions on the continuous variables.
  * @todo Use pointers to originating separators to sort out cuts that should not be used.
  *
- * @warning This plugin is not yet fully tested.
  * @warning This separator should be used carefully - it may require a long separation time.
  */
 
@@ -174,9 +173,6 @@ struct SCIP_SepaData
    SCIP_Bool             addviolationcons;   /**< Add constraint to subscip that only allows violated cuts? */
    SCIP_Bool             addviolconshdlr;    /**< Add constraint handler to filter out violated cuts? */
    SCIP_Bool             conshdlrusenorm;    /**< Should the violation constraint handler use the cut-norm to check for feasibility? */
-#if 1
-   SCIP_Real             firstlptime;        /**< time for first lp */
-#endif
 };
 
 
@@ -3331,12 +3327,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
 
    depth = SCIPgetDepth(scip);
 
-   if ( sepadata->firstlptime == SCIP_INVALID )   /*lint !e777*/
-   {
-      /* approximate time for first LP */
-      sepadata->firstlptime = SCIPgetSolvingTime(scip) - SCIPgetPresolvingTime(scip);
-   }
-
    /* only call separator, if we are not close to terminating */
    if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
@@ -3376,7 +3366,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
       SCIP_Real firstlptime;
 
       separate = FALSE;
-      firstlptime = sepadata->firstlptime;
+      firstlptime = SCIPgetFirstLPTime(scip);
 
       if ( nrows <= 136.00 && firstlptime <= 0.05 && ncols <= 143.00 )
          separate = TRUE;
@@ -3482,7 +3472,6 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
 
    /* create separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
-   sepadata->firstlptime = SCIP_INVALID;
 
    sepa = NULL;
    /* include separator */
