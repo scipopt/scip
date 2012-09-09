@@ -580,10 +580,6 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          "minimal integrality violation of a basis variable in order to try Gomory cut",
          &sepadata->away, FALSE, DEFAULT_AWAY, 0.0, 0.5, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/gomory/away",
-         "minimal integrality violation of a basis variable in order to try Gomory cut",
-         &sepadata->away, FALSE, DEFAULT_AWAY, 0.0, 0.5, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gomory/maxweightrange",
          "maximal valid range max(|weights|)/min(|weights|) of row weights",
          &sepadata->maxweightrange, TRUE, DEFAULT_MAXWEIGHTRANGE, 1.0, SCIP_REAL_MAX, NULL, NULL) );
