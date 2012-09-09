@@ -17567,6 +17567,28 @@ SCIP_Real SCIPgetPresolvingTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets the time need to solve the first LP in the root node
+ *
+ *  @return the solving time for the first LP in the root node in seconds.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_Real SCIPgetFirstLPTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@} */
 
 

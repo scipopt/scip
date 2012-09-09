@@ -10,7 +10,7 @@ features:
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
-  the rank of a cut can be changed (deafult rank is 0)
+  the rank of a cut can be changed (default rank is 0)
 
 SCIP version 3.0.1
 ==================
@@ -41,6 +41,8 @@ features:
 
 interface
 - fixed spelling in the method name SCIPgmlWriteClosing()
+- added function SCIPgetFirstLPTime to return the time needed to solve the first LP of the root node
+
 
 SCIP version 3.0.0
 ==================
