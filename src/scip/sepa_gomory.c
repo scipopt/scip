@@ -63,16 +63,16 @@
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of gomory separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of gomory cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT      50 /**< maximal number of gomory cuts separated per separation round in root node */
+#define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of gomory cuts separated per separation round in root node */
 #define DEFAULT_MAXRANK               0 /**< maximal rank of a gomory cut that could not be scaled to integral coefficients (-1: unlimited) */
 #define DEFAULT_MAXRANKINTEGRAL      -1 /**< maximal rank of a gomory cut that could be scaled to integral coefficients (-1: unlimited) */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MAXWEIGHTRANGE    1e+04 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
-#define DEFAULT_AWAY               0.05 /**< minimal integrality violation of a basis variable in order to try Gomory cut */
+#define DEFAULT_AWAY               0.01 /**< minimal integrality violation of a basis variable in order to try Gomory cut */
 #define DEFAULT_MAKEINTEGRAL       TRUE /**< try to scale all cuts to integral coefficients */
-#define DEFAULT_FORCECUTS         FALSE /**< if conversion to integral coefficients failed still consider the cut */
+#define DEFAULT_FORCECUTS          TRUE /**< if conversion to integral coefficients failed still consider the cut */
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack */
-#define DEFAULT_DELAYEDCUTS       FALSE /**< should cuts be added to the delayed cut pool? */
+#define DEFAULT_DELAYEDCUTS        TRUE /**< should cuts be added to the delayed cut pool? */
 
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
 #define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
@@ -575,6 +575,10 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          "separating/gomory/maxrankintegral",
          "maximal rank of a gomory cut that could be scaled to integral coefficients (-1: unlimited)",
          &sepadata->maxrankintegral, FALSE, DEFAULT_MAXRANKINTEGRAL, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/gomory/away",
+         "minimal integrality violation of a basis variable in order to try Gomory cut",
+         &sepadata->away, FALSE, DEFAULT_AWAY, 0.0, 0.5, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gomory/away",
          "minimal integrality violation of a basis variable in order to try Gomory cut",

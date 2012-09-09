@@ -1373,7 +1373,8 @@ SCIP_RETCODE consdataCreate(
    int                   nvars,              /**< number of variables */
    int                   capacity,           /**< available cumulative capacity */
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
-   int                   hmax                /**< right bound of time axis to be considered (not including hmax) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool             check               /**< is the corresponding constraint a check constraint */
    )
 {
    int v;
@@ -1431,8 +1432,9 @@ SCIP_RETCODE consdataCreate(
       /* initialize locking arrays */
       for( v = 0; v < nvars; ++v )
       {
-         (*consdata)->downlocks[v] = TRUE;
-         (*consdata)->uplocks[v] = TRUE;
+         /* the locks are only used if the contraint is a check constraint */
+         (*consdata)->downlocks[v] = check;
+         (*consdata)->uplocks[v] = check;
       }
 
       if( linkingconss != NULL )
@@ -7949,7 +7951,8 @@ SCIP_RETCODE presolveCons(
 
    assert(!SCIPconsIsDeleted(cons));
 
-   if( conshdlrdata->dualpresolve )
+   /* only perform dual reductions on model constraints */
+   if( conshdlrdata->dualpresolve && SCIPconsIsChecked(cons) )
    {
       SCIPstatistic( conshdlrdata->ndecomps -= consdata->ndecomps );
 
@@ -8197,7 +8200,7 @@ SCIP_DECL_CONSTRANS(consTransCumulative)
    /* create constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->vars, sourcedata->linkingconss,
          sourcedata->durations, sourcedata->demands, sourcedata->nvars, sourcedata->capacity,
-         sourcedata->hmin, sourcedata->hmax) );
+         sourcedata->hmin, sourcedata->hmax, SCIPconsIsChecked(sourcecons)) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -9149,7 +9152,7 @@ SCIP_RETCODE SCIPcreateConsCumulative(
    SCIPdebugMessage("create cumulative constraint <%s> with %d jobs\n", name, nvars);
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, vars, NULL, durations, demands, nvars, capacity, 0, INT_MAX) );
+   SCIP_CALL( consdataCreate(scip, &consdata, vars, NULL, durations, demands, nvars, capacity, 0, INT_MAX, check) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata,
