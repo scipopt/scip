@@ -41,6 +41,21 @@ extern "C" {
 
 #endif
 
+/*
+ * Define the marco EXTERN depending if the OS is Windows or not
+ */
+#ifndef EXTERN
+
+#if defined(_WIN32) || defined(_WIN64)
+#define EXTERN __declspec(dllexport)
+#else
+#define EXTERN extern
+#endif
+
+#endif
+
+
+
 /*************************************************************************************
  * Standard Memory Management
  *
@@ -122,7 +137,7 @@ extern "C" {
 #endif
 
 /** allocates memory and initializes it with 0; returns NULL if memory allocation failed */
-extern
+EXTERN
 void* BMSallocClearMemory_call(
    size_t                num,                /**< number of memory element to allocate */
    size_t                size,               /**< size of memory element to allocate */
@@ -131,7 +146,7 @@ void* BMSallocClearMemory_call(
    );
 
 /** allocates memory; returns NULL if memory allocation failed */
-extern
+EXTERN
 void* BMSallocMemory_call(
    size_t                size,               /**< size of memory element to allocate */
    const char*           filename,           /**< source file where the allocation is performed */
@@ -139,7 +154,7 @@ void* BMSallocMemory_call(
    );
 
 /** allocates memory; returns NULL if memory allocation failed */
-extern
+EXTERN
 void* BMSreallocMemory_call(
    void*                 ptr,                /**< pointer to memory to reallocate */
    size_t                size,               /**< new size of memory element */
@@ -148,14 +163,14 @@ void* BMSreallocMemory_call(
    );
 
 /** clears a memory element (i.e. fills it with zeros) */
-extern
+EXTERN
 void BMSclearMemory_call(
    void*                 ptr,                /**< pointer to memory element */
    size_t                size                /**< size of memory element */
    );
 
 /** copies the contents of one memory element into another memory element */
-extern
+EXTERN
 void BMScopyMemory_call(
    void*                 ptr,                /**< pointer to target memory element */
    const void*           source,             /**< pointer to source memory element */
@@ -165,7 +180,7 @@ void BMScopyMemory_call(
 /** moves the contents of one memory element into another memory element, should be used if both elements overlap,
  *  otherwise BMScopyMemory is faster
  */
-extern
+EXTERN
 void BMSmoveMemory_call(
    void*                 ptr,                /**< pointer to target memory element */
    const void*           source,             /**< pointer to source memory element */
@@ -173,7 +188,7 @@ void BMSmoveMemory_call(
    );
 
 /** allocates memory and copies the contents of the given memory element into the new memory element */
-extern
+EXTERN
 void* BMSduplicateMemory_call(
    const void*           source,             /**< pointer to source memory element */
    size_t                size,               /**< size of memory element to copy */
@@ -182,7 +197,7 @@ void* BMSduplicateMemory_call(
    );
 
 /** frees an allocated memory element */
-extern
+EXTERN
 void BMSfreeMemory_call(
    void*                 ptr,                /**< pointer to memory element */
    const char*           filename,           /**< source file where the deallocation is performed */
@@ -190,25 +205,25 @@ void BMSfreeMemory_call(
    );
 
 /** returns the size of an allocated memory element */
-extern
+EXTERN
 size_t BMSgetPointerSize_call(
    const void*           ptr                 /**< pointer to allocated memory */
    );
 
 /** outputs information about currently allocated memory to the screen */
-extern
+EXTERN
 void BMSdisplayMemory_call(
    void
    );
 
 /** displays a warning message on the screen, if allocated memory exists */
-extern
+EXTERN
 void BMScheckEmptyMemory_call(
    void
    );
 
 /** returns total number of allocated bytes */
-extern
+EXTERN
 long long BMSgetMemoryUsed_call(
    void
    );
@@ -265,19 +280,19 @@ typedef struct BMS_ChkMem BMS_CHKMEM;           /**< collection of memory chunks
 
 
 /** aligns the given byte size corresponding to the minimal alignment for chunk and block memory */
-extern
+EXTERN
 void BMSalignMemsize(
    size_t*               size                /**< pointer to the size to align */
    );
 
 /** checks whether the given size meets the alignment conditions for chunk and block memory  */
-extern
+EXTERN
 int BMSisAligned(
    size_t                size                /**< size to check for alignment */
    );
 
 /** creates a new chunk block data structure */
-extern
+EXTERN
 BMS_CHKMEM* BMScreateChunkMemory_call(
    size_t                size,               /**< element size of the chunk block */
    int                   initchunksize,      /**< number of elements in the first chunk of the chunk block */
@@ -288,7 +303,7 @@ BMS_CHKMEM* BMScreateChunkMemory_call(
    );
 
 /** clears a chunk block data structure */
-extern
+EXTERN
 void BMSclearChunkMemory_call(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
    const char*           filename,           /**< source file of the function call */
@@ -296,7 +311,7 @@ void BMSclearChunkMemory_call(
    );
 
 /** destroys and frees a chunk block data structure */
-extern
+EXTERN
 void BMSdestroyChunkMemory_call(
    BMS_CHKMEM**          chkmem,             /**< pointer to chunk block */
    const char*           filename,           /**< source file of the function call */
@@ -304,7 +319,7 @@ void BMSdestroyChunkMemory_call(
    );
 
 /** allocates a memory element of the given chunk block */
-extern
+EXTERN
 void* BMSallocChunkMemory_call(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
    size_t                size,               /**< size of memory element to allocate (only needed for sanity check) */
@@ -313,7 +328,7 @@ void* BMSallocChunkMemory_call(
    );
 
 /** duplicates a given memory element by allocating a new element of the same chunk block and copying the data */
-extern
+EXTERN
 void* BMSduplicateChunkMemory_call(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
    const void*           source,             /**< source memory element */
@@ -323,7 +338,7 @@ void* BMSduplicateChunkMemory_call(
    );
 
 /** frees a memory element of the given chunk block */
-extern
+EXTERN
 void BMSfreeChunkMemory_call(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
    void*                 ptr,                /**< memory element to free */
@@ -333,13 +348,13 @@ void BMSfreeChunkMemory_call(
    );
 
 /** calls garbage collection of chunk block and frees chunks without allocated memory elements */
-extern
+EXTERN
 void BMSgarbagecollectChunkMemory_call(
    BMS_CHKMEM*           chkmem              /**< chunk block */
    );
 
 /** returns the number of allocated bytes in the chunk block */
-extern
+EXTERN
 long long BMSgetChunkMemoryUsed_call(
    const BMS_CHKMEM*     chkmem              /**< chunk block */
    );
@@ -449,7 +464,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 
 
 /** creates a block memory allocation data structure */
-extern
+EXTERN
 BMS_BLKMEM* BMScreateBlockMemory_call(
    int                   initchunksize,      /**< number of elements in the first chunk of each chunk block */
    int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
@@ -459,7 +474,7 @@ BMS_BLKMEM* BMScreateBlockMemory_call(
    );
 
 /** frees all chunk blocks in the block memory */
-extern
+EXTERN
 void BMSclearBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           filename,           /**< source file of the function call */
@@ -467,7 +482,7 @@ void BMSclearBlockMemory_call(
    );
 
 /** clears and deletes block memory */
-extern
+EXTERN
 void BMSdestroyBlockMemory_call(
    BMS_BLKMEM**          blkmem,             /**< pointer to block memory */
    const char*           filename,           /**< source file of the function call */
@@ -483,7 +498,7 @@ void* BMSallocBlockMemory_call(
    );
 
 /** resizes memory element in the block memory pool, and copies the data */
-extern
+EXTERN
 void* BMSreallocBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    void*                 ptr,                /**< memory element to reallocated */
@@ -494,7 +509,7 @@ void* BMSreallocBlockMemory_call(
    );
 
 /** duplicates memory element in the block memory pool, and copies the data */
-extern
+EXTERN
 void* BMSduplicateBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const void*           source,             /**< memory element to duplicate */
@@ -504,7 +519,7 @@ void* BMSduplicateBlockMemory_call(
    );
 
 /** frees memory element in the block memory pool */
-extern
+EXTERN
 void BMSfreeBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    void*                 ptr,                /**< memory element to free */
@@ -516,32 +531,32 @@ void BMSfreeBlockMemory_call(
 /** calls garbage collection of block memory, frees chunks without allocated memory elements, and frees
  *  chunk blocks without any chunks
  */
-extern
+EXTERN
 void BMSgarbagecollectBlockMemory_call(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** returns the number of allocated bytes in the block memory */
-extern
+EXTERN
 long long BMSgetBlockMemoryUsed_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
 /** returns the size of the given memory element; returns 0, if the element is not member of the block memory */
-extern
+EXTERN
 size_t BMSgetBlockPointerSize_call(
    const BMS_BLKMEM*     blkmem,             /**< block memory */
    const void*           ptr                 /**< memory element */
    );
 
 /** outputs allocation diagnostics of block memory */
-extern
+EXTERN
 void BMSdisplayBlockMemory_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
 /** outputs warning messages, if there are allocated elements in the block memory */
-extern
+EXTERN
 void BMScheckEmptyBlockMemory_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );

@@ -3414,6 +3414,7 @@ SCIP_RETCODE solveNode(
    fullpropagation = TRUE;
    forcedlpsolve = FALSE;
    nloops = 0;
+
    while( !(*cutoff) && (solverelaxagain || solvelpagain || propagateagain) && nlperrors < MAXNLPERRORS && !(*restart) )
    {
       SCIP_Bool lperror;
@@ -3423,6 +3424,9 @@ SCIP_RETCODE solveNode(
       SCIP_Bool forcedenforcement;
 
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+
+      *unbounded = FALSE;
+      *infeasible = FALSE;
 
       nloops++;
       lperror = FALSE;

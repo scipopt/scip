@@ -2766,7 +2766,8 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
       /* check, if this LP solution was already enforced at this node */
       if( conshdlr->lastenfolplpcount == stat->lpcount
          && conshdlr->lastenfolpdomchgcount == stat->domchgcount
-         && conshdlr->lastenfolpnode == stat->nnodes )
+         && conshdlr->lastenfolpnode == stat->nnodes
+         && conshdlr->lastenfolpresult != SCIP_CONSADDED )
       {
          assert(conshdlr->lastenfolpresult != SCIP_CUTOFF);
          assert(conshdlr->lastenfolpresult != SCIP_BRANCHED);
@@ -2778,7 +2779,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
           * following; however, the result of the last call for the old constraint is still valid and we have to ensure
           * that an infeasibility in the last call is not lost because we only enforce new constraints
           */
-         if( conshdlr->lastenfolpresult == SCIP_INFEASIBLE || conshdlr->lastenfolpresult == SCIP_CONSADDED )
+         if( conshdlr->lastenfolpresult == SCIP_INFEASIBLE )
          {
             *result = SCIP_INFEASIBLE;
             lastinfeasible = TRUE;
@@ -2952,7 +2953,11 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       SCIP_Bool lastinfeasible;
 
       /* check, if this LP solution was already enforced at this node */
-      if( !forced && conshdlr->lastenfopsdomchgcount == stat->domchgcount && conshdlr->lastenfopsnode == stat->nnodes )
+      if( !forced && conshdlr->lastenfopsdomchgcount == stat->domchgcount
+         && conshdlr->lastenfopsnode == stat->nnodes
+         && conshdlr->lastenfopsresult != SCIP_CONSADDED
+         && conshdlr->lastenfopsresult != SCIP_SOLVELP
+         )
       {
          assert(conshdlr->lastenfopsresult != SCIP_CUTOFF);
          assert(conshdlr->lastenfopsresult != SCIP_BRANCHED);
@@ -2963,8 +2968,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
           * following; however, the result of the last call for the old constraint is still valid and we have to ensure
           * that an infeasibility in the last call is not lost because we only enforce new constraints
           */
-         if( conshdlr->lastenfopsresult == SCIP_INFEASIBLE || conshdlr->lastenfopsresult == SCIP_CONSADDED
-            || conshdlr->lastenfopsresult == SCIP_SOLVELP )
+         if( conshdlr->lastenfopsresult == SCIP_INFEASIBLE )
          {
             *result = SCIP_INFEASIBLE;
             lastinfeasible = TRUE;

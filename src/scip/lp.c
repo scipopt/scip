@@ -4470,7 +4470,7 @@ SCIP_RETCODE SCIProwCreate(
          (*row)->linkpos[i] = -1;
          if( SCIPsetIsIntegral(set, (*row)->vals[i]) )
          {
-            vals[i] = SCIPsetRound(set, (*row)->vals[i]);
+            (*row)->vals[i] = SCIPsetRound(set, (*row)->vals[i]);
             (*row)->integral = (*row)->integral && SCIPvarIsIntegral(var);
          }
          else
