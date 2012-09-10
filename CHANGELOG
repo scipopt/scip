@@ -41,6 +41,7 @@ fixed bugs:
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
+- sepa_cgmip can now take the objective row into account
 
 interface
 - fixed spelling in the method name SCIPgmlWriteClosing()

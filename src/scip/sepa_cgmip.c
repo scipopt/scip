@@ -112,6 +112,8 @@
 #define DEFAULT_ADDVIOLATIONCONS  FALSE /**< Add constraint to subscip that only allows violated cuts (otherwise add obj. limit)?*/
 #define DEFAULT_ADDVIOLCONSHDLR   FALSE /**< Add constraint handler to filter out violated cuts? */
 #define DEFAULT_CONSHDLRUSENORM    TRUE /**< Should the violation constraint handler use the norm of a cut to check for feasibility? */
+#define DEFAULT_USEOBJUB          FALSE /**< Use upper bound on objective function (via primal solution)? */
+#define DEFAULT_USEOBJLB          FALSE /**< Use lower bound on objective function (via lower bound)? */
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
 #define NCOLSTOOSMALL                 5 /**< only separate if the number of columns is larger than this number */
@@ -173,6 +175,8 @@ struct SCIP_SepaData
    SCIP_Bool             addviolationcons;   /**< Add constraint to subscip that only allows violated cuts? */
    SCIP_Bool             addviolconshdlr;    /**< Add constraint handler to filter out violated cuts? */
    SCIP_Bool             conshdlrusenorm;    /**< Should the violation constraint handler use the cut-norm to check for feasibility? */
+   SCIP_Bool             useobjub;           /**< Use upper bound on objective function (via primal solution)? */
+   SCIP_Bool             useobjlb;           /**< Use lower bound on objective function (via lower bound)? */
 };
 
 
@@ -196,6 +200,7 @@ struct CGMIP_MIPData
    unsigned int          n;                  /**< number of variables of subscip */
    unsigned int          nrows;              /**< number of rows of original LP */
    unsigned int          ncols;              /**< number of columns of original LP */
+   unsigned int          ntotalrows;         /**< number of total rows used (possibly including objective rows) */
 
    SCIP_VAR**            alpha;              /**< cut coefficient variable (NULL if not in separating MIP) */
    SCIP_VAR*             beta;               /**< rhs of cut */
@@ -629,6 +634,19 @@ SCIP_RETCODE transformColumn(
          rhs[pos] += sigma * colvals[i] * offset;
    }
 
+   /* check objective function */
+   if ( sepadata->useobjub || sepadata->useobjlb )
+   {
+      assert( SCIPisEQ(scip, SCIPcolGetObj(col), SCIPvarGetObj(SCIPcolGetVar(col))) );
+      assert( mipdata->ntotalrows == mipdata->nrows + 1 );
+
+      if ( ! SCIPisInfinity(scip, -lhs[mipdata->nrows]) )
+         lhs[mipdata->nrows] += sigma * SCIPcolGetObj(col) * offset;
+
+      if ( ! SCIPisInfinity(scip, rhs[mipdata->nrows]) )
+         rhs[mipdata->nrows] += sigma * SCIPcolGetObj(col) * offset;
+   }
+
    /* correct lower and upper bounds and solution */
    if ( SCIPisNegative(scip, sigma) )
    {
@@ -793,6 +811,9 @@ SCIP_RETCODE transformColumn(
  *  - If required, i.e., parameter @p primalseparation is true, we force a primal separation step. For
  *    this we require that the cut is tight at the currently best solution. To get reliable solutions
  *    we relax equality by EPSILONVALUE.
+ *
+ * - If required (via parameters @p useobjub or @p useobjlb), we add a row corresponding to the objective function with
+ *   respect to the current lower and upper bounds.
  */
 static
 SCIP_RETCODE createSubscip(
@@ -813,6 +834,7 @@ SCIP_RETCODE createSubscip(
 
    int ncols;
    int nrows;
+   int ntotalrows;
    int maxrowsize;
    int i, j;
    unsigned int cnt;
@@ -843,6 +865,10 @@ SCIP_RETCODE createSubscip(
    mipdata->n = 0;
    mipdata->nrows = (unsigned int) nrows;
    mipdata->ncols = (unsigned int) ncols;
+   mipdata->ntotalrows = mipdata->nrows;
+   if ( sepadata->useobjub || sepadata->useobjlb )
+      mipdata->ntotalrows = mipdata->nrows + 1;
+   ntotalrows = mipdata->ntotalrows;
 
    /* copy value */
    mipdata->conshdlrusenorm = sepadata->conshdlrusenorm;
@@ -867,13 +893,13 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->coltype), ncols) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->iscomplemented), ncols) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->isshifted), ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->ylhs), nrows) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->yrhs), nrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->ylhs), ntotalrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->yrhs), ntotalrows) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->z), 2*ncols) );
 
    /* get temporary storage */
-   SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhs, ntotalrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rhs, ntotalrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lb, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ub, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &primsol, ncols) );
@@ -898,8 +924,6 @@ SCIP_RETCODE createSubscip(
          val = SCIPfeasFloor(scip, val); /* row is integral: round right hand side down */
       rhs[i] = val;
 
-      /* determine maximal row size: */
-
       /* skip modifiable rows and local rows, unless allowed */
       if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
          continue;
@@ -916,7 +940,7 @@ SCIP_RETCODE createSubscip(
             continue;
       }
 
-      /* compute max size */
+      /* determine maximal row size: */
       val = SCIPgetRowLPActivity(scip, row);
       if ( ! SCIPisInfinity(scip, REALABS(lhs[i])) )
       {
@@ -939,6 +963,26 @@ SCIP_RETCODE createSubscip(
       }
    }
    assert( maxrowsize > 0 );
+
+   /* add cuts for objective function if required */
+   if ( sepadata->useobjub )
+   {
+      assert( mipdata->ntotalrows == mipdata->nrows + 1 );
+      rhs[mipdata->nrows] = SCIPgetUpperbound(scip);
+      assert( ! SCIPisObjIntegral(scip) || SCIPisIntegral(scip, SCIPgetUpperbound(scip)) );
+
+      if ( ! SCIPisInfinity(scip, SCIPgetUpperbound(scip)) && SCIPgetNObjVars(scip) > maxrowsize )
+         maxrowsize = SCIPgetNObjVars(scip);
+   }
+   if ( sepadata->useobjlb )
+   {
+      assert( mipdata->ntotalrows == mipdata->nrows + 1 );
+      lhs[mipdata->nrows] = SCIPgetLowerbound(scip);
+      assert( ! SCIPisObjIntegral(scip) || SCIPisIntegral(scip, SCIPgetLowerbound(scip)) );
+
+      if ( ! SCIPisInfinity(scip, -SCIPgetLowerbound(scip)) && SCIPgetNObjVars(scip) > maxrowsize )
+         maxrowsize = SCIPgetNObjVars(scip);
+   }
 
    /* store lb/ub for complementing and perform preprocessing */
    nshifted = 0;
@@ -1250,6 +1294,53 @@ SCIP_RETCODE createSubscip(
    assert( (int) cnt <= 2 * nrows );
    mipdata->n += cnt;
 
+   /* create artificial variables for objective function (if required) (y-variables) */
+   if ( sepadata->useobjub || sepadata->useobjlb )
+   {
+      SCIP_Real weight = 0.0;
+
+      assert( mipdata->ntotalrows == mipdata->nrows + 1 );
+      mipdata->ylhs[mipdata->nrows] = NULL;
+      mipdata->yrhs[mipdata->nrows] = NULL;
+      cnt = 0;
+
+      if ( sepadata->objweighsize )
+         weight = -(sepadata->objweight * SCIPgetNObjVars(scip)/((SCIP_Real) maxrowsize));
+      else
+         weight = -sepadata->objweight;
+
+      /* create variable for upper objective bound if necessary */
+      if ( sepadata->useobjub && ! SCIPisInfinity(scip, rhs[mipdata->nrows]) )
+      {
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yobjub");
+         SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[mipdata->nrows]), name, 0.0, multvarub,
+               weight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPaddVar(subscip, mipdata->yrhs[mipdata->nrows]) );
+         ++cnt;
+
+#ifdef SCIP_MORE_DEBUG
+         SCIPdebugMessage("Created variable <%s> for upper bound on objective (weight: %f).\n", name, weight);
+#endif
+      }
+
+      /* create variable for lower bound objective if necessary */
+      if ( sepadata->useobjlb && ! SCIPisInfinity(scip, -lhs[mipdata->nrows]) )
+      {
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yobjlb");
+         SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[mipdata->nrows]), name, 0.0, multvarub,
+               weight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPaddVar(subscip, mipdata->ylhs[mipdata->nrows]) );
+         ++cnt;
+
+#ifdef SCIP_MORE_DEBUG
+         SCIPdebugMessage("Created variable <%s> for lower bound on objective (weight: %f).\n", name, weight);
+#endif
+      }
+
+      assert( (int) cnt <= 2 * ntotalrows );
+      mipdata->n += cnt;
+   }
+
    /* create alpha, bound, and fractional variables */
    cnt = 0;
    ucnt = 0;
@@ -1403,6 +1494,28 @@ SCIP_RETCODE createSubscip(
          ++nconsvars;
          assert( nconsvars <= (int) mipdata->n );
 
+         /* check for lower and upper objective bounds */
+         if ( (sepadata->useobjub || sepadata->useobjlb) && ! SCIPisZero(scip, SCIPcolGetObj(cols[j])) )
+         {
+            /* add upper objective bound */
+            if ( mipdata->yrhs[mipdata->nrows] != NULL )
+            {
+               assert( sepadata->useobjub );
+               consvars[nconsvars] = mipdata->yrhs[mipdata->nrows];
+               consvals[nconsvars] = -sigma * SCIPcolGetObj(cols[j]);
+               ++nconsvars;
+            }
+
+            /* add lower objective bound */
+            if ( mipdata->ylhs[mipdata->nrows] != NULL )
+            {
+               assert( sepadata->useobjlb );
+               consvars[nconsvars] = mipdata->ylhs[mipdata->nrows];
+               consvals[nconsvars] = -sigma * SCIPcolGetObj(cols[j]);
+               ++nconsvars;
+            }
+         }
+
          /* add linear constraint */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "alpha_%d", j);
          SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, name, nconsvars, consvars, consvals, 0.0, 0.0,
@@ -1458,6 +1571,28 @@ SCIP_RETCODE createSubscip(
             assert( nconsvars <= (int) mipdata->n );
          }
 
+         /* check for lower and upper objective bounds */
+         if ( (sepadata->useobjub || sepadata->useobjlb) && ! SCIPisZero(scip, SCIPcolGetObj(cols[j])) )
+         {
+            /* add upper objective bound */
+            if ( mipdata->yrhs[mipdata->nrows] )
+            {
+               assert( sepadata->useobjub );
+               consvars[nconsvars] = mipdata->yrhs[mipdata->nrows];
+               consvals[nconsvars] = -sigma * SCIPcolGetObj(cols[j]);
+               ++nconsvars;
+            }
+
+            /* add lower objective bound */
+            if ( mipdata->ylhs[mipdata->nrows] )
+            {
+               assert( sepadata->useobjlb );
+               consvars[nconsvars] = mipdata->ylhs[mipdata->nrows];
+               consvals[nconsvars] = -sigma * SCIPcolGetObj(cols[j]);
+               ++nconsvars;
+            }
+         }
+
          /* add linear constraint */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cont_%d", j);
 
@@ -1508,6 +1643,31 @@ SCIP_RETCODE createSubscip(
       }
       assert( nconsvars <= (int) mipdata->n );
    }
+
+   if ( sepadata->useobjub || sepadata->useobjlb )
+   {
+      /* add upper objective bound */
+      if ( mipdata->yrhs[mipdata->nrows] != NULL && ! SCIPisZero(scip, rhs[mipdata->nrows]) )
+      {
+         assert( sepadata->useobjub );
+         assert( ! SCIPisInfinity(scip, rhs[mipdata->nrows]) );
+         consvars[nconsvars] = mipdata->yrhs[mipdata->nrows];
+         consvals[nconsvars] = rhs[mipdata->nrows];
+         ++nconsvars;
+      }
+
+      /* add lower objective bound */
+      if ( mipdata->ylhs[mipdata->nrows] != NULL && ! SCIPisZero(scip, lhs[mipdata->nrows]) )
+      {
+         assert( sepadata->useobjlb );
+         assert( ! SCIPisInfinity(scip, -lhs[mipdata->nrows]) );
+         consvars[nconsvars] = mipdata->ylhs[mipdata->nrows];
+         consvals[nconsvars] = lhs[mipdata->nrows];
+         ++nconsvars;
+      }
+      assert( nconsvars <= (int) mipdata->n );
+   }
+
    /* next for the columns */
    for (j = 0; j < ncols; ++j)
    {
@@ -2072,6 +2232,36 @@ SCIP_RETCODE computeCut(
          maxabsweight = weight;
    }
 
+   /* get weight from objective cuts */
+   if ( sepadata->useobjub || sepadata->useobjlb )
+   {
+      SCIP_Real weight = 0.0;
+
+      assert( mipdata->ntotalrows == mipdata->nrows + 1 );
+
+      if ( mipdata->ylhs[mipdata->nrows] != NULL )
+      {
+         val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[mipdata->nrows]);
+         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         if ( SCIPisFeasPositive(scip, val) )
+            weight = -val;
+      }
+      if ( mipdata->yrhs[mipdata->nrows] != NULL )
+      {
+         val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[mipdata->nrows]);
+         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
+         if ( SCIPisFeasGT(scip, val, ABS(weight)) )
+            weight = val;
+      }
+
+      weight = REALABS(weight);
+      if ( weight > maxabsweight )
+         maxabsweight = weight;
+   }
+
    /* calculate the row summation */
    for (i = 0; i < nrows; ++i)
    {
@@ -2167,6 +2357,73 @@ SCIP_RETCODE computeCut(
          (*cutrhs) += weight * val;
 
          *localrowsused = *localrowsused || SCIProwIsLocal(row);
+      }
+   }
+
+   /* get weight from objective bounds */
+   if ( sepadata->useobjub || sepadata->useobjlb )
+   {
+      SCIP_Real weight = 0.0;
+      SCIP_Bool uselhs = FALSE;
+      SCIP_Real absweight;
+
+      assert( mipdata->ntotalrows == mipdata->nrows + 1 );
+
+      if ( mipdata->ylhs[mipdata->nrows] != NULL )
+      {
+         val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[mipdata->nrows]);
+         assert( ! SCIPisFeasNegative(subscip, val) );
+         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
+         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         if ( SCIPisFeasPositive(scip, val) )
+         {
+            uselhs = TRUE;
+            weight = -val;
+         }
+      }
+      if ( mipdata->yrhs[mipdata->nrows] != NULL )
+      {
+         val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[mipdata->nrows]);
+         assert( ! SCIPisFeasNegative(subscip, val) );
+         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
+         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
+         if ( SCIPisFeasGT(scip, val, ABS(weight)) )
+            weight = val;
+      }
+
+      /* add objective row if weight is nonzero and lies within range */
+      absweight = REALABS(weight);
+      if ( ! SCIPisSumZero(scip, weight) && absweight * MAXWEIGHTRANGE >= maxabsweight )
+      {
+         SCIP_Real obj = 0.0;
+
+         /* add the objective row coefficients to the sum */
+         for (j = 0; j < ncols; ++j)
+         {
+            obj = SCIPcolGetObj(cols[j]);
+            if ( ! SCIPisZero(scip, obj) )
+               cutcoefs[j] += weight * obj;
+         }
+
+         /* compute rhs */
+         if ( uselhs )
+         {
+            val = SCIPgetLowerbound(scip);
+            assert( ! SCIPisInfinity(scip, -val) );
+            if ( SCIPisObjIntegral(scip) )
+               val = SCIPfeasCeil(scip, val); /* objective is integral: round left hand side up */
+         }
+         else
+         {
+            val = SCIPgetUpperbound(scip);
+            assert( ! SCIPisInfinity(scip, val) );
+            if ( SCIPisObjIntegral(scip) )
+               val = SCIPfeasFloor(scip, val); /* objective is integral: round right hand side down */
+         }
+         (*cutrhs) += weight * val;
       }
    }
 
@@ -3073,9 +3330,9 @@ SCIP_RETCODE createCGCuts(
    int* boundsfortrans;
    char normtype;
    int nprevrows;
+   int ntotalrows;
    int nsols;
    int nvars;
-   int nrows;
    int k;
    int s;
 
@@ -3111,12 +3368,13 @@ SCIP_RETCODE createCGCuts(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* allocate temporary memory */
-   nrows = SCIPgetNLPRows(scip);
+   ntotalrows = mipdata->ntotalrows;
+   assert( ntotalrows >= SCIPgetNLPRows(scip) && ntotalrows <= SCIPgetNLPRows(scip) + 1 );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varsolvals, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &weights, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &weights, ntotalrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &prevrows, 2 * nsols) );
 
    /* prepare arrays for bound information, if requested */
@@ -3195,14 +3453,21 @@ SCIP_RETCODE createCGCuts(
 static
 SCIP_RETCODE freeSubscip(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator data */
    CGMIP_MIPDATA*        mipdata             /**< data for sub-MIP */
    )
 {
+   SCIP_SEPADATA* sepadata;
    unsigned int i, j;
    SCIP* subscip;
 
    assert( scip != NULL );
+   assert( sepa != NULL );
    assert( mipdata != NULL );
+
+   /* free separator data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert( sepadata != NULL );
 
    SCIPdebugMessage("Freeing subscip ...\n");
 
@@ -3233,6 +3498,18 @@ SCIP_RETCODE freeSubscip(
       }
    }
 
+   if ( sepadata->useobjub || sepadata->useobjlb )
+   {
+      if ( mipdata->yrhs[mipdata->nrows] )
+      {
+         SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->yrhs[mipdata->nrows])) );
+      }
+      if ( mipdata->ylhs[mipdata->nrows] )
+      {
+         SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->ylhs[mipdata->nrows])) );
+      }
+   }
+
    for (j = 0; j < mipdata->ncols; ++j)
    {
       if ( mipdata->z[j] != NULL )
@@ -3247,8 +3524,8 @@ SCIP_RETCODE freeSubscip(
    }
 
    SCIPfreeBlockMemoryArray(scip, &(mipdata->z), 2*mipdata->ncols);
-   SCIPfreeBlockMemoryArray(scip, &(mipdata->yrhs), mipdata->nrows);
-   SCIPfreeBlockMemoryArray(scip, &(mipdata->ylhs), mipdata->nrows);
+   SCIPfreeBlockMemoryArray(scip, &(mipdata->yrhs), mipdata->ntotalrows);
+   SCIPfreeBlockMemoryArray(scip, &(mipdata->ylhs), mipdata->ntotalrows);
    SCIPfreeBlockMemoryArray(scip, &(mipdata->isshifted), mipdata->ncols);
    SCIPfreeBlockMemoryArray(scip, &(mipdata->iscomplemented), mipdata->ncols);
    SCIPfreeBlockMemoryArray(scip, &(mipdata->coltype), mipdata->ncols);
@@ -3353,6 +3630,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    if ( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
+   /* check for parameters */
+   if ( ( sepadata->useobjub || sepadata->useobjlb ) && ( sepadata->usecmir || sepadata->usestrongcg ) )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Using objective function bounds and CMIR or Strong-CG functions is useless. Turning off usage of objective function bounds.\n");
+      SCIPsetBoolParam(scip, "separating/cgmip/useobjub", FALSE);
+      SCIPsetBoolParam(scip, "separating/cgmip/useobjlb", FALSE);
+   }
+
    /* get LP data */
    ncols = SCIPgetNLPCols(scip);
    nrows = SCIPgetNLPRows(scip);
@@ -3441,7 +3726,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
       }
    }
 
-   SCIP_CALL( freeSubscip(scip, mipdata) );
+   SCIP_CALL( freeSubscip(scip, sepa, mipdata) );
    SCIPfreeBlockMemory(scip, &mipdata);
 
    SCIPdebugMessage("Found %u CG-cuts.\n", ngen);
@@ -3619,6 +3904,14 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "separating/cgmip/conshdlrusenorm",
          "should the violation constraint handler use the norm of a cut to check for feasibility?",
          &sepadata->conshdlrusenorm, FALSE, DEFAULT_CONSHDLRUSENORM, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/useobjub",
+         "Use upper bound on objective function (via primal solution)?",
+         &sepadata->useobjub, FALSE, DEFAULT_USEOBJUB, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/useobjlb",
+         "Use lower bound on objective function (via primal solution)?",
+         &sepadata->useobjlb, FALSE, DEFAULT_USEOBJLB, NULL, NULL) );
 
    return SCIP_OKAY;
 }
