@@ -4050,6 +4050,93 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/*
+ * Resulting activity
+ */
+
+/** create a resource activity */
+SCIP_RETCODE SCIPactivityCreate(
+   SCIP_RESOURCEACTIVITY** activity,         /**< pointer to store the resource activity */
+   SCIP_VAR*             var,                /**< start time variable of the activitie */
+   int                   duration,           /**< duration of the activity */
+   int                   demand              /**< demand of the activity */
+   )
+{
+   assert(activity != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(activity) );
+
+   (*activity)->var = var;
+   (*activity)->duration = duration;
+   (*activity)->demand = demand;
+
+   return SCIP_OKAY;
+}
+
+/** frees a resource activity */
+void SCIPactivityFree(
+   SCIP_RESOURCEACTIVITY** activity          /**< pointer to the resource activity */
+   )
+{
+   assert(activity != NULL);
+   assert(*activity != NULL);
+
+   BMSfreeMemory(activity);
+}
+
+/* some simple variable functions implemented as defines */
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPactivityGetVar
+#undef SCIPactivityGetDuration
+#undef SCIPactivityGetDemand
+#undef SCIPactivityGetEnergy
+
+/** returns the start time variable of the resource activity */
+SCIP_VAR* SCIPactivityGetVar(
+   SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
+   )
+{
+   assert(activity != NULL);
+
+   return activity->var;
+}
+
+/** returns the duration of the resource activity */
+int SCIPactivityGetDuration(
+   SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
+   )
+{
+   assert(activity != NULL);
+
+   return activity->duration;
+}
+
+/** returns the demand of the resource activity */
+int SCIPactivityGetDemand(
+   SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
+   )
+{
+   assert(activity != NULL);
+
+   return activity->demand;
+}
+
+/** returns the energy of the resource activity */
+int SCIPactivityGetEnergy(
+   SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
+   )
+{
+   assert(activity != NULL);
+
+   return activity->duration * activity->demand ;
+}
+
 
 /*
  * Resource Profile

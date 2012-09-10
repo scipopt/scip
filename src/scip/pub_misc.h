@@ -539,6 +539,70 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
 
 /**@} */
 
+
+
+/*
+ * Activity
+ */
+
+/**@defgroup ResourceActivity Resource activity
+ *
+ *@{
+ */
+
+/** create a resource activity */
+EXTERN
+SCIP_RETCODE SCIPactivityCreate(
+   SCIP_RESOURCEACTIVITY** activity,         /**< pointer to store the resource activity */
+   SCIP_VAR*             var,                /**< start time variable of the activitie */
+   int                   duration,           /**< duration of the activity */
+   int                   demand              /**< demand of the activity */
+   );
+
+/** frees a resource activity */
+EXTERN
+void SCIPactivityFree(
+   SCIP_RESOURCEACTIVITY** activity          /**< pointer to the resource activity */
+   );
+
+#ifndef NDEBUG
+
+/** returns the start time variable of the resource activity */
+EXTERN
+SCIP_VAR* SCIPactivityGetVar(
+   SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
+   );
+
+/** returns the duration of the resource activity */
+EXTERN
+int SCIPactivityGetDuration(
+   SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
+   );
+
+/** returns the demand of the resource activity */
+EXTERN
+int SCIPactivityGetDemand(
+   SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
+   );
+
+/** returns the energy of the resource activity */
+EXTERN
+int SCIPactivityGetEnergy(
+   SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
+   );
+
+#else
+
+#define SCIPactivityGetVar(activity)         ((activity)->var)
+#define SCIPactivityGetDuration(activity)    ((activity)->duration)
+#define SCIPactivityGetDemand(activity)      ((activity)->demand)
+#define SCIPactivityGetEnergy(activity)      ((activity)->duration * (activity)->demand)
+
+#endif
+
+/**@} */
+
+
 /*
  * Resource Profile
  */

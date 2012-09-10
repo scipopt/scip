@@ -148,6 +148,14 @@ struct SCIP_PtrArray
    int                   maxusedidx;         /**< index of last non zero element in vals array */
 };
 
+/** resource activity */
+struct SCIP_ResourceActivity
+{
+   SCIP_VAR*             var;                /**< start time variable of the activitie */
+   int                   duration;           /**< duration of the activity */
+   int                   demand;             /**< demand of the activity */
+};
+
 /** resource profile */
 struct SCIP_Profile
 {
