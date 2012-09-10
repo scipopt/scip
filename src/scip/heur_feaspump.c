@@ -49,7 +49,7 @@
 #define DEFAULT_MINFLIPS           10   /**< minimum number of random variables to flip, if a 1-cycle is encountered */
 #define DEFAULT_CYCLELENGTH         3   /**< maximum length of cycles to be checked explicitly in each round */
 #define DEFAULT_PERTURBFREQ       100   /**< number of iterations until a random perturbation is forced */
-#define DEFAULT_OBJFACTOR         1.0   /**< factor by which the regard of the objective is decreased in each round,
+#define DEFAULT_OBJFACTOR         0.1   /**< factor by which the regard of the objective is decreased in each round,
                                          *   1.0 for dynamic, depending on solutions already found */
 #define DEFAULT_ALPHA             1.0   /**< initial weight of the objective function in the convex combination */
 #define DEFAULT_ALPHADIFF         1.0   /**< threshold difference for the convex parameter to perform perturbation */
