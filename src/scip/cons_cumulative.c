@@ -479,24 +479,23 @@ static
 SCIP_RETCODE createWorstCaseProfile(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROFILE*         profile,            /**< resource profile */
-   SCIP_CONSDATA*        consdata            /**< constraint data to use for filling the worst case profile */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity            /**< available cumulative capacity */
    )
 {
-   SCIP_VAR** vars;
    SCIP_VAR* var;
    SCIP_HASHMAP* addedvars;
-   int* demands;
+   int* copydemands;
    int* perm;
    int duration;
-   int nvars;
    int impliedest;
    int est;
    int impliedlct;
    int lct;
    int v;
-
-   nvars = consdata->nvars;
-   vars = consdata->vars;
 
    assert(SCIPgetDepth(scip) <= 0);
 
@@ -504,15 +503,15 @@ SCIP_RETCODE createWorstCaseProfile(
    SCIP_CALL( SCIPhashmapCreate(&addedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars)) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &demands, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &copydemands, nvars) );
 
    /* sort variables  w.r.t. job demands */
    for( v = 0; v < nvars; ++v )
    {
-      demands[v] = consdata->demands[v];
+      copydemands[v] = demands[v];
       perm[v] = v;
    }
-   SCIPsortDownIntInt(demands, perm, nvars);
+   SCIPsortDownIntInt(copydemands, perm, nvars);
 
    /* add each job with its earliest start and latest completion time into the resource profile */
    for( v = 0; v < nvars; ++v )
@@ -525,7 +524,7 @@ SCIP_RETCODE createWorstCaseProfile(
          var = vars[idx];
       assert(var != NULL);
 
-      duration = consdata->durations[idx];
+      duration = durations[idx];
       assert(duration > 0);
 
       est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
@@ -539,7 +538,7 @@ SCIP_RETCODE createWorstCaseProfile(
          SCIP_Bool infeasible;
          int pos;
 
-         SCIP_CALL( SCIPprofileInsertCore(profile, impliedest, impliedlct, demands[v], &pos, &infeasible) );
+         SCIP_CALL( SCIPprofileInsertCore(profile, impliedest, impliedlct, copydemands[v], &pos, &infeasible) );
          assert(!infeasible);
          assert(pos == -1);
       }
@@ -550,7 +549,7 @@ SCIP_RETCODE createWorstCaseProfile(
       }
    }
 
-   SCIPfreeBufferArray(scip, &demands);
+   SCIPfreeBufferArray(scip, &copydemands);
    SCIPfreeBufferArray(scip, &perm);
 
    SCIPhashmapFree(&addedvars);
@@ -5260,7 +5259,8 @@ SCIP_RETCODE computeAlternativeBounds(
          SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
          /* create worst case resource profile */
-         SCIP_CALL( createWorstCaseProfile(scip, profile, consdata) );
+         SCIP_CALL( createWorstCaseProfile(scip, profile,
+               consdata->nvars, consdata->vars, consdata->durations, consdata->demands, consdata->capacity) );
 
          hmin = computeHmin(scip, profile, consdata->capacity);
          hmax = computeHmax(scip, profile, consdata->capacity);
@@ -6906,6 +6906,9 @@ SCIP_RETCODE normalizeCumulativeCondition(
    assert(demands[nvars-1] <= *capacity);
    assert(demands[nvars-2] <= *capacity);
 
+   if( *capacity == 1 || nvars <= 1 )
+      return SCIP_OKAY;
+
    gcd = (SCIP_Longint)demands[nvars-1];
    mindemand1 = MIN(demands[nvars-1], demands[nvars-2]);
    mindemand2 = MAX(demands[nvars-1], demands[nvars-2]);
@@ -6975,7 +6978,7 @@ SCIP_RETCODE normalizeDemands(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->normalized || consdata->capacity == 1 || consdata->nvars <= 1 )
+   if( consdata->normalized )
       return SCIP_OKAY;
 
    /**@todo sort items w.r.t. the demands, because we can stop earlier if the smaller weights are evaluated first */
@@ -6988,73 +6991,40 @@ SCIP_RETCODE normalizeDemands(
    return SCIP_OKAY;
 }
 
-
-/** computes the effective horizon and checks if the constraint can be decompesd */
+/** computes for the given cumulative condition the effective horizon */
 static
-SCIP_RETCODE computeEffectiveHorizon(
+SCIP_RETCODE computeEffectiveHorizonCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< cumulative constraint */
-   int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
-   int*                  naddconss,          /**< pointer to store the number of added constraints */
-   int*                  nchgsides           /**< pointer to store the number of changed sides */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< available cumulative capacity */
+   int*                  hmin,               /**< pointer to store the left bound of the effective horizon */
+   int*                  hmax,               /**< pointer to store the right bound of the effective horizon */
+   int*                  split               /**< point were the cumulative condition can be split */
    )
 {
-   SCIP_CONSDATA* consdata;
    SCIP_PROFILE* profile;
-   int capacity;
-   int hmin;
-   int hmax;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   if( consdata->nvars <= 1 )
-      return SCIP_OKAY;
-
-   capacity = consdata->capacity;
 
    /* create empty resource profile with infinity resource capacity */
    SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
    /* create worst case resource profile */
-   SCIP_CALL( createWorstCaseProfile(scip, profile, consdata) );
+   SCIP_CALL( createWorstCaseProfile(scip, profile, nvars, vars, durations, demands, capacity) );
 
    /* print resource profile in if SCIP_DEBUG is defined */
    SCIPdebug( SCIPprofilePrint(profile, SCIPgetMessagehdlr(scip), NULL) );
 
    /* computes the first time point where the resource capacity can be violated */
-   hmin = computeHmin(scip, profile, capacity);
-
-   /* check if this time point improves the effective horizon */
-   if( consdata->hmin < hmin )
-   {
-      SCIPdebugMessage("cumulative constraint <%s> adjust hmin <%d> -> <%d>\n", SCIPconsGetName(cons), consdata->hmin, hmin);
-
-      consdata->hmin = hmin;
-      (*nchgsides)++;
-   }
+   (*hmin) = computeHmin(scip, profile, capacity);
 
    /* computes the first time point where the resource capacity is satisfied for sure */
-   hmax = computeHmax(scip, profile, capacity);
+   (*hmax) = computeHmax(scip, profile, capacity);
 
-   /* check if this time point improves the effective horizon */
-   if( consdata->hmax > hmax )
-   {
-      SCIPdebugMessage("cumulative constraint <%s> adjust hmax <%d> -> <%d>\n", SCIPconsGetName(cons), consdata->hmax,  hmax);
-      consdata->hmax = hmax;
-      (*nchgsides)++;
-   }
+   (*split) = (*hmax);
 
-   /* check if the constraint is redundant */
-   if( consdata->hmax <= consdata->hmin )
-   {
-      SCIPdebugMessage("constraint <%s> is redundant since hmax(%d) <= hmin(%d)\n",
-         SCIPconsGetName(cons), consdata->hmax, consdata->hmin);
-
-      SCIP_CALL( SCIPdelCons(scip, cons) );
-      (*ndelconss)++;
-   }
-   else if( !SCIPinRepropagation(scip) )
+   if( *hmin < *hmax && !SCIPinRepropagation(scip) )
    {
       int* timepoints;
       int* loads;
@@ -7077,11 +7047,11 @@ SCIP_RETCODE computeEffectiveHorizon(
       for( t = 0; t < ntimepoints; ++t )
       {
          /* ignore all time points before the effective horizon */
-         if( timepoints[t] <= consdata->hmin )
+         if( timepoints[t] <= *hmin )
             continue;
 
          /* ignore all time points after the effective horizon */
-         if( timepoints[t] >= consdata->hmax )
+         if( timepoints[t] >= *hmax )
             break;
 
          /* check if the current time point does not exceed the capacity w.r.t. worst case resource profile; if so we
@@ -7089,36 +7059,7 @@ SCIP_RETCODE computeEffectiveHorizon(
           */
          if( loads[t] <= capacity )
          {
-            SCIP_CONS* splitcons;
-            char name[SCIP_MAXSTRLEN];
-
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "(%s)'", SCIPconsGetName(cons));
-
-            SCIPdebugMessage("split cumulative constraint <%s>[%d,%d) with %d jobs at time point %d\n",
-               SCIPconsGetName(cons), consdata->hmin, consdata->hmax, consdata->nvars, timepoints[t]);
-
-            SCIP_CALL( SCIPcreateConsCumulative(scip, &splitcons, name, consdata->nvars, consdata->vars,
-                  consdata->durations, consdata->demands, capacity,
-                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-
-            /* adjust the effective time horizon of the new constraint */
-            SCIP_CALL( SCIPsetHminCumulative(scip, splitcons, timepoints[t]) );
-            SCIP_CALL( SCIPsetHmaxCumulative(scip, splitcons, consdata->hmax) );
-
-            assert(timepoints[t] < consdata->hmax);
-
-            /* add and release new cumulative constraint */
-            SCIP_CALL( SCIPaddCons(scip, splitcons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &splitcons) );
-
-            /* adjust the effective time horizon of the constraint */
-            consdata->hmax = timepoints[t];
-
-            assert(consdata->hmin < consdata->hmax);
-
-            SCIPstatistic( consdata->ndecomps++ );
-            (*naddconss)++;
+            (*split) = timepoints[t];
             break;
          }
       }
@@ -7126,6 +7067,93 @@ SCIP_RETCODE computeEffectiveHorizon(
 
    /* free worst case profile */
    SCIPprofileFree(&profile);
+
+   return SCIP_OKAY;
+}
+
+/** computes the effective horizon and checks if the constraint can be decompsed */
+static
+SCIP_RETCODE computeEffectiveHorizon(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< cumulative constraint */
+   int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
+   int*                  naddconss,          /**< pointer to store the number of added constraints */
+   int*                  nchgsides           /**< pointer to store the number of changed sides */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int hmin;
+   int hmax;
+   int split;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nvars <= 1 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( computeEffectiveHorizonCumulativeCondition(scip, consdata->nvars, consdata->vars,
+         consdata->durations, consdata->demands, consdata->capacity, &hmin, &hmax, &split) );
+
+   /* check if this time point improves the effective horizon */
+   if( consdata->hmin < hmin )
+   {
+      SCIPdebugMessage("cumulative constraint <%s> adjust hmin <%d> -> <%d>\n", SCIPconsGetName(cons), consdata->hmin, hmin);
+
+      consdata->hmin = hmin;
+      (*nchgsides)++;
+   }
+
+   /* check if this time point improves the effective horizon */
+   if( consdata->hmax > hmax )
+   {
+      SCIPdebugMessage("cumulative constraint <%s> adjust hmax <%d> -> <%d>\n", SCIPconsGetName(cons), consdata->hmax,  hmax);
+      consdata->hmax = hmax;
+      (*nchgsides)++;
+   }
+
+   /* check if the constraint is redundant */
+   if( consdata->hmax <= consdata->hmin )
+   {
+      SCIPdebugMessage("constraint <%s> is redundant since hmax(%d) <= hmin(%d)\n",
+         SCIPconsGetName(cons), consdata->hmax, consdata->hmin);
+
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      (*ndelconss)++;
+   }
+   else if( consdata->hmin < split && split < consdata->hmax )
+   {
+      SCIP_CONS* splitcons;
+      char name[SCIP_MAXSTRLEN];
+
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "(%s)'", SCIPconsGetName(cons));
+
+      SCIPdebugMessage("split cumulative constraint <%s>[%d,%d) with %d jobs at time point %d\n",
+         SCIPconsGetName(cons), consdata->hmin, consdata->hmax, consdata->nvars, split);
+
+      SCIP_CALL( SCIPcreateConsCumulative(scip, &splitcons, name, consdata->nvars, consdata->vars,
+            consdata->durations, consdata->demands, consdata->capacity,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+      /* adjust the effective time horizon of the new constraint */
+      SCIP_CALL( SCIPsetHminCumulative(scip, splitcons, split) );
+      SCIP_CALL( SCIPsetHmaxCumulative(scip, splitcons, consdata->hmax) );
+
+      assert(split < consdata->hmax);
+
+      /* add and release new cumulative constraint */
+      SCIP_CALL( SCIPaddCons(scip, splitcons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &splitcons) );
+
+      /* adjust the effective time horizon of the constraint */
+      consdata->hmax = split;
+
+      assert(consdata->hmin < consdata->hmax);
+
+      SCIPstatistic( consdata->ndecomps++ );
+      (*naddconss)++;
+   }
 
    return SCIP_OKAY;
 }
@@ -8108,7 +8136,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
       SCIP_CALL( evaluateCumulativeness(scip, conss[c]) );
 
 #if 0
-      SCIP_CALL( SCIPconsdataVisualize(scip, conss[c]) );
+      SCIP_CALL( SCIPvisualizeConsCumulative(scip, conss[c]) );
 #endif
    }
 
@@ -9434,6 +9462,26 @@ SCIP_RETCODE SCIPnormalizeCumulativeCondition(
    return SCIP_OKAY;
 }
 
+/** searches for a time point within the cumulative condition were the cumulative condition can be split */
+EXTERN
+SCIP_RETCODE SCIPsplitCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< available cumulative capacity */
+   int*                  hmin,               /**< pointer to store the left bound of the effective horizon */
+   int*                  hmax,               /**< pointer to store the right bound of the effective horizon */
+   int*                  split               /**< point were the cumulative condition can be split */
+   )
+{
+   SCIP_CALL( computeEffectiveHorizonCumulativeCondition(scip, nvars, vars, durations, demands, capacity,
+         hmin, hmax, split) );
+
+   return SCIP_OKAY;
+}
+
 /** propagate the given cumulative condition */
 SCIP_RETCODE SCIPpropCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9507,7 +9555,7 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
 }
 
 /** this method visualizes the cumulative structure in GML format */
-SCIP_RETCODE SCIPconsdataVisualize(
+SCIP_RETCODE SCIPvisualizeConsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< cumulative constraint */
    )

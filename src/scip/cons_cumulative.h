@@ -212,6 +212,20 @@ SCIP_RETCODE SCIPnormalizeCumulativeCondition(
    int*                  nchgsides           /**< pointer to count number of side changes */
    );
 
+/** searches for a time point within the cumulative condition were the cumulative condition can be split */
+EXTERN
+SCIP_RETCODE SCIPsplitCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< available cumulative capacity */
+   int*                  hmin,               /**< pointer to store the left bound of the effective horizon */
+   int*                  hmax,               /**< pointer to store the right bound of the effective horizon */
+   int*                  split               /**< point were the cumulative condition can be split */
+   );
+
 /** propagate the given cumulative condition */
 EXTERN
 SCIP_RETCODE SCIPpropCumulativeCondition(
@@ -251,7 +265,7 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
 
 /** this method visualizes the cumulative structure in GML format */
 EXTERN
-SCIP_RETCODE SCIPconsdataVisualize(
+SCIP_RETCODE SCIPvisualizeConsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< cumulative constraint */
    );
