@@ -335,6 +335,11 @@ public:
 #endif
    }
 
+   bool isPerturbed()
+   {
+      return (shift() >= epsilon());
+   }
+
    /** set iteration limit (-1 = unbounded) */
    void setIterationLimit(
       const int          itlim
@@ -3293,7 +3298,8 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    basestatus = lpi->spx->basis().status();
 
-   return (basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::OPTIMAL || basestatus == SPxBasis::UNBOUNDED);
+   return (basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::OPTIMAL || basestatus == SPxBasis::UNBOUNDED)
+      && !lpi->spx->isPerturbed();
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -3336,7 +3342,8 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->getStatus() == SPxSolver::INFEASIBLE && lpi->spx->basis().status() == SPxBasis::DUAL);
+   return (lpi->spx->getStatus() == SPxSolver::INFEASIBLE && lpi->spx->basis().status() == SPxBasis::DUAL
+      && !lpi->spx->isPerturbed());
 }
 
 /** returns TRUE iff LP is dual infeasible */
@@ -3366,7 +3373,7 @@ SCIP_Bool SCIPlpiIsDualFeasible(
 
    basestatus = lpi->spx->basis().status();
 
-   return (basestatus == SPxBasis::DUAL || basestatus == SPxBasis::OPTIMAL);
+   return (basestatus == SPxBasis::DUAL && !lpi->spx->isPerturbed()) || basestatus == SPxBasis::OPTIMAL;
 }
 
 /** returns TRUE iff LP was solved to optimality */
