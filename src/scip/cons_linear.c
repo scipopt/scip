@@ -13,6 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#define SCIP_STATISTIC
+
+
 /**@file   cons_linear.c
  * @brief Constraint handler for linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.
  * @author Tobias Achterberg
@@ -10050,11 +10053,47 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreLinear)
 {  /*lint --e{715}*/
    int c;
+#ifdef SCIP_STATISTIC
+   int ngoodconss;
+   int nallconss;
+#endif
 
    /* delete all linear constraints that were upgraded to a more specific constraint type;
     * make sure, only active variables remain in the remaining constraints
     */
    assert(scip != NULL);
+
+#ifdef SCIP_STATISTIC
+   /* count number of well behaved linear constraints */
+
+   ngoodconss = 0;
+   nallconss = 0;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata;
+
+      if( SCIPconsIsDeleted(conss[c]) )
+         continue;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->upgraded )
+         continue;
+
+      nallconss++;
+
+      consdataRecomputeMaxActivityDelta(scip, consdata);
+
+      if( SCIPisLT(scip, consdata->maxactdelta, MAXACTIVITYDELTATHR) )
+         ngoodconss++;
+   }
+   if( nallconss )
+   {
+      SCIPstatisticMessage("below threshold: %d / %d ratio= %g\n", ngoodconss, nallconss, (100.0 * ngoodconss / nallconss));
+   }
+#endif
 
    for( c = 0; c < nconss; ++c )
    {
@@ -10079,6 +10118,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
          SCIP_CALL( applyFixings(scip, conss[c], NULL) );
       }
    }
+
 
    return SCIP_OKAY;
 }
