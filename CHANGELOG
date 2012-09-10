@@ -11,6 +11,9 @@ features:
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
   the rank of a cut can be changed (default rank is 0)
+- methods SCIPlpiIs{PrimalFeasible,DualFeasible,DualUnbounded}() in the SoPlex interface (lpi_spx.cpp) now check that
+  LP is not perturbed, which may happen when stopping due to iteration or time limit
+
 
 SCIP version 3.0.1
 ==================
