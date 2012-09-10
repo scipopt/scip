@@ -21,6 +21,7 @@
  * @author Kati Wolter
  * @author Michael Winkler
  * @author Gerald Gamrath
+ * @author Domenico Salvagnin
  *
  *  Linear constraints are separated with a high priority, because they are easy
  *  to separate. Instead of using the global cut pool, the same effect can be
@@ -105,8 +106,8 @@
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
 #define MAXSCALEDCOEFINTEGER        1e+06 /**< maximal coefficient value after scaling if all variables are of integral
-					   *   type
-					   */
+					                            *   type
+					                            */
 
 #define HASHSIZE_LINEARCONS        131101 /**< minimal size of hash table in linear constraint tables */
 
@@ -163,6 +164,7 @@ struct SCIP_ConsData
                                               *   over all contributing values */
    SCIP_Real             lastglbmaxactivity; /**< last global maximal activity which was computed by complete summation
                                               *   over all contributing values */
+   SCIP_Real             maxactdelta;        /**< maximal activity contribution of a single variable, or -1 if invalid */
    SCIP_Longint          possignature;       /**< bit signature of coefficients that may take a positive value */
    SCIP_Longint          negsignature;       /**< bit signature of coefficients that may take a negative value */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
@@ -219,7 +221,7 @@ struct SCIP_ConsData
 /** event data for bound change event */
 struct SCIP_EventData
 {
-   SCIP_CONSDATA*        consdata;           /**< linear constraint data to process the bound change for */
+   SCIP_CONS*            cons;               /**< linear constraint to process the bound change for */
    int                   varpos;             /**< position of variable in vars array */
    int                   filterpos;          /**< position of event in variable's event filter */
 };
@@ -630,16 +632,21 @@ SCIP_RETCODE unlockRounding(
 
 /** creates event data for variable at given position, and catches events */
 static
-SCIP_RETCODE consdataCatchEvent(
+SCIP_RETCODE consCatchEvent(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int                   pos                 /**< array position of variable to catch bound change events for */
    )
 {
+   SCIP_CONSDATA* consdata;
    assert(scip != NULL);
-   assert(consdata != NULL);
+   assert(cons != NULL);
    assert(eventhdlr != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
    assert(0 <= pos && pos < consdata->nvars);
    assert(consdata->vars != NULL);
    assert(consdata->vars[pos] != NULL);
@@ -648,7 +655,7 @@ SCIP_RETCODE consdataCatchEvent(
    assert(consdata->eventdatas[pos] == NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &(consdata->eventdatas[pos])) ); /*lint !e866*/
-   consdata->eventdatas[pos]->consdata = consdata;
+   consdata->eventdatas[pos]->cons = cons;
    consdata->eventdatas[pos]->varpos = pos;
 
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[pos],
@@ -661,21 +668,26 @@ SCIP_RETCODE consdataCatchEvent(
 
 /** deletes event data for variable at given position, and drops events */
 static
-SCIP_RETCODE consdataDropEvent(
+SCIP_RETCODE consDropEvent(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int                   pos                 /**< array position of variable to catch bound change events for */
    )
 {
+   SCIP_CONSDATA* consdata;
    assert(scip != NULL);
-   assert(consdata != NULL);
+   assert(cons != NULL);
    assert(eventhdlr != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
    assert(0 <= pos && pos < consdata->nvars);
    assert(consdata->vars[pos] != NULL);
    assert(consdata->eventdatas != NULL);
    assert(consdata->eventdatas[pos] != NULL);
-   assert(consdata->eventdatas[pos]->consdata == consdata);
+   assert(consdata->eventdatas[pos]->cons == cons);
    assert(consdata->eventdatas[pos]->varpos == pos);
 
    SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos],
@@ -690,15 +702,19 @@ SCIP_RETCODE consdataDropEvent(
 
 /** catches bound change events for all variables in transformed linear constraint */
 static
-SCIP_RETCODE consdataCatchAllEvents(
+SCIP_RETCODE consCatchAllEvents(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
+   SCIP_CONSDATA* consdata;
    int i;
 
    assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->eventdatas == NULL);
 
@@ -710,7 +726,7 @@ SCIP_RETCODE consdataCatchAllEvents(
    /* catch event for every single variable */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( consdataCatchEvent(scip, consdata, eventhdlr, i) );
+      SCIP_CALL( consCatchEvent(scip, cons, eventhdlr, i) );
    }
 
    return SCIP_OKAY;
@@ -718,22 +734,26 @@ SCIP_RETCODE consdataCatchAllEvents(
 
 /** drops bound change events for all variables in transformed linear constraint */
 static
-SCIP_RETCODE consdataDropAllEvents(
+SCIP_RETCODE consDropAllEvents(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
+   SCIP_CONSDATA* consdata;
    int i;
 
    assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->eventdatas != NULL);
 
    /* drop event of every single variable */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( consdataDropEvent(scip, consdata, eventhdlr, i) );
+      SCIP_CALL( consDropEvent(scip, cons, eventhdlr, i) );
    }
 
    /* free eventdatas array */
@@ -759,7 +779,6 @@ static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA**       consdata,           /**< pointer to linear constraint data */
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int                   nvars,              /**< number of nonzeros in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
    SCIP_Real*            vals,               /**< array with coefficients of constraint entries */
@@ -830,6 +849,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->maxactivity = SCIP_INVALID;
    (*consdata)->lastminactivity = SCIP_INVALID;
    (*consdata)->lastmaxactivity = SCIP_INVALID;
+   (*consdata)->maxactdelta = -1.0;
    (*consdata)->pseudoactivityneginf = -1;
    (*consdata)->pseudoactivityposinf = -1;
    (*consdata)->pseudoactivityneghuge = -1;
@@ -884,13 +904,6 @@ SCIP_RETCODE consdataCreate(
    {
       /* get transformed variables */
       SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
-
-      /* catch bound change events of variables */
-      if( needEvents(scip) )
-      {
-         SCIP_CALL( consdataCatchAllEvents(scip, *consdata, eventhdlr) );
-         assert((*consdata)->eventdatas != NULL);
-      }
    }
 
    /* capture variables */
@@ -908,8 +921,7 @@ SCIP_RETCODE consdataCreate(
 static
 SCIP_RETCODE consdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA**       consdata,           /**< pointer to linear constraint data */
-   SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+   SCIP_CONSDATA**       consdata            /**< pointer to linear constraint data */
    )
 {
    int v;
@@ -924,14 +936,6 @@ SCIP_RETCODE consdataFree(
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
    }
-
-   /* free event datas */
-   if( (*consdata)->eventdatas != NULL )
-   {
-      /* drop bound change events of variables */
-      SCIP_CALL( consdataDropAllEvents(scip, *consdata, eventhdlr) );
-   }
-   assert((*consdata)->eventdatas == NULL);
 
    /* release variables */
    for( v = 0; v < (*consdata)->nvars; v++ )
@@ -1006,6 +1010,7 @@ void consdataInvalidateActivities(
    consdata->maxactivity = SCIP_INVALID;
    consdata->lastminactivity = SCIP_INVALID;
    consdata->lastmaxactivity = SCIP_INVALID;
+   consdata->maxactdelta = -1.0;
    consdata->pseudoactivityneginf = -1;
    consdata->pseudoactivityposinf = -1;
    consdata->pseudoactivityneghuge = -1;
@@ -1163,6 +1168,37 @@ void consdataRecomputeGlbMaxactivity(
 
    /* the activity was just computed from scratch, mark it to be reliable */
    consdata->lastglbmaxactivity = consdata->glbmaxactivity;
+}
+
+/** recompute maximal activity contribution for a single variable */
+static
+void consdataRecomputeMaxActivityDelta(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata            /**< linear constraint data */
+   )
+{
+   int i;
+   SCIP_Real domain;
+   SCIP_Real delta;
+   SCIP_Real lb;
+   SCIP_Real ub;
+
+   consdata->maxactdelta = -1.0;
+
+   for( i = consdata->nvars - 1; i >= 0; --i )
+   {
+      lb = SCIPvarGetLbLocal(consdata->vars[i]);
+      ub = SCIPvarGetUbLocal(consdata->vars[i]);
+      if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
+      {
+         consdata->maxactdelta = SCIPinfinity(scip);
+         return;
+      }
+      domain = SCIPvarGetUbLocal(consdata->vars[i]) - SCIPvarGetLbLocal(consdata->vars[i]);
+      delta = REALABS(consdata->vals[i]) * domain;
+      if( delta > consdata->maxactdelta )
+         consdata->maxactdelta = delta;
+   }
 }
 
 
@@ -1367,7 +1403,7 @@ void consdataUpdateActivities(
    {
       assert((*activityposinf) >= 1);
 
-      /* we only have to do something ig the new bound is not again +infinity */
+      /* we only have to do something if the new bound is not again +infinity */
       if( !SCIPisInfinity(scip, newbound) )
       {
          /* decrease the counter for positive infinite contributions */
@@ -3301,7 +3337,7 @@ SCIP_RETCODE addCoef(
          consdata->eventdatas[consdata->nvars-1] = NULL;
 
          /* catch bound change events of variable */
-         SCIP_CALL( consdataCatchEvent(scip, consdata, conshdlrdata->eventhdlr, consdata->nvars-1) );
+         SCIP_CALL( consCatchEvent(scip, cons, conshdlrdata->eventhdlr, consdata->nvars-1) );
       }
 
       /* update minimum and maximum activities */
@@ -3383,7 +3419,7 @@ SCIP_RETCODE delCoefPos(
       /* drop bound change events of variable */
       if( consdata->eventdatas != NULL )
       {
-         SCIP_CALL( consdataDropEvent(scip, consdata, conshdlrdata->eventhdlr, pos) );
+         SCIP_CALL( consDropEvent(scip, cons, conshdlrdata->eventhdlr, pos) );
          assert(consdata->eventdatas[pos] == NULL);
       }
    }
@@ -4518,6 +4554,324 @@ SCIP_RETCODE analyzeConflict(
    return SCIP_OKAY;
 }
 
+/** check if there is any hope of tightening some bounds */
+static
+SCIP_Bool canTightenBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< linear constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int infcount = 0;
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   infcount = consdata->minactivityneginf
+         + consdata->minactivityposinf
+         + consdata->minactivityneghuge
+         + consdata->minactivityposhuge
+         + consdata->maxactivityneginf
+         + consdata->maxactivityposinf
+         + consdata->maxactivityneghuge
+         + consdata->maxactivityposhuge;
+   
+   if( infcount > 1 )
+      return FALSE;
+
+   return TRUE;
+}
+
+/** tighten upper bound */
+static
+SCIP_RETCODE tightenVarUB(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   int                   pos,                /**< variable position */
+   PROPRULE              proprule,           /**< propagation rule that deduced the value */
+   SCIP_Real             newub,              /**< new upper bound */
+   SCIP_Real             oldub,              /**< old upper bound */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   int*                  nchgbds,            /**< pointer to count the total number of tightened bounds */
+   SCIP_Bool             force               /**< should a possible bound change be forced even if below bound strengthening tolerance */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
+   SCIP_Real lb;
+   SCIP_Bool infeasible;
+   SCIP_Bool tightened;
+
+   assert(cons != NULL);
+   assert(!SCIPisInfinity(scip, newub));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   var = consdata->vars[pos];
+   assert(var != NULL);
+
+   lb = SCIPvarGetLbLocal(var);
+
+   if( force || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, oldub)) || SCIPisUbBetter(scip, newub, lb, oldub) )
+   {
+      /* tighten upper bound */
+      SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
+         SCIPconsGetName(cons), SCIPvarGetName(var), lb, oldub, consdata->vals[pos], consdata->minactivity, consdata->maxactivity, consdata->lhs, consdata->rhs, newub);
+      SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(proprule, pos), force,
+            &infeasible, &tightened) );
+      if( infeasible )
+      {
+         SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
+            SCIPconsGetName(cons), SCIPvarGetName(var), lb, newub);
+
+         /* analyze conflict */
+         SCIP_CALL( analyzeConflict(scip, cons, TRUE) );
+
+         *cutoff = TRUE;
+         return SCIP_OKAY;
+      }
+      if( tightened )
+      {
+         newub = SCIPvarGetUbLocal(var); /* get bound again: it may be additionally modified due to integrality */
+         assert(SCIPisFeasLE(scip, newub, oldub));
+         (*nchgbds)++;
+
+         SCIPdebugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.15g,%.15g]\n",
+            SCIPconsGetName(cons), SCIPvarGetName(var), lb, newub);
+      }
+   }
+   return SCIP_OKAY;
+}
+
+/** tighten lower bound */
+static
+SCIP_RETCODE tightenVarLB(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   int                   pos,                /**< variable position */
+   PROPRULE              proprule,           /**< propagation rule that deduced the value */
+   SCIP_Real             newlb,              /**< new lower bound */
+   SCIP_Real             oldlb,              /**< old lower bound */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   int*                  nchgbds,            /**< pointer to count the total number of tightened bounds */
+   SCIP_Bool             force               /**< should a possible bound change be forced even if below bound strengthening tolerance */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
+   SCIP_Real ub;
+   SCIP_Bool infeasible;
+   SCIP_Bool tightened;
+
+   assert(cons != NULL);
+   assert(!SCIPisInfinity(scip, newlb));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   var = consdata->vars[pos];
+   assert(var != NULL);
+
+   ub = SCIPvarGetUbLocal(var);
+
+   if( force || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, oldlb)) || SCIPisLbBetter(scip, newlb, oldlb, ub) )
+   {
+      /* tighten lower bound */
+      SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
+         SCIPconsGetName(cons), SCIPvarGetName(var), oldlb, ub, consdata->vals[pos], consdata->minactivity, consdata->maxactivity, consdata->lhs, consdata->rhs, newlb);
+      SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(proprule, pos), force,
+            &infeasible, &tightened) );
+      if( infeasible )
+      {
+         SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
+            SCIPconsGetName(cons), SCIPvarGetName(var), newlb, ub);
+
+         /* analyze conflict */
+         SCIP_CALL( analyzeConflict(scip, cons, FALSE) );
+
+         *cutoff = TRUE;
+         return SCIP_OKAY;
+      }
+      if( tightened )
+      {
+         newlb = SCIPvarGetLbLocal(var); /* get bound again: it may be additionally modified due to integrality */
+         assert(SCIPisFeasGE(scip, newlb, oldlb));
+         (*nchgbds)++;
+         SCIPdebugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.15g,%.15g]\n",
+            SCIPconsGetName(cons), SCIPvarGetName(var), newlb, ub);
+      }
+   }
+   return SCIP_OKAY;
+}
+
+/** tightens bounds of a single variable due to activity bounds (easy case) */
+static
+SCIP_RETCODE tightenVarBoundsEasy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   int                   pos,                /**< position of the variable in the vars array */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   int*                  nchgbds,            /**< pointer to count the total number of tightened bounds */
+   SCIP_Bool             force               /**< should a possible bound change be forced even if below bound strengthening tolerance */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
+   SCIP_Real val;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(cutoff != NULL);
+   assert(nchgbds != NULL);
+
+   /* we cannot tighten variables' bounds, if the constraint may be not complete */
+   if( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+
+   *cutoff = FALSE;
+
+   var = consdata->vars[pos];
+   assert(var != NULL);
+
+   /* we cannot tighten bounds of multi-aggregated variables */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+      return SCIP_OKAY;
+
+   val = consdata->vals[pos];
+   lhs = consdata->lhs;
+   rhs = consdata->rhs;
+   assert(!SCIPisZero(scip, val));
+   assert(!SCIPisInfinity(scip, lhs));
+   assert(!SCIPisInfinity(scip, -rhs));   
+
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   assert(SCIPisLE(scip, lb, ub));
+
+   /* recompute activities if needed */
+   if( !consdata->validactivities )
+      consdataCalcActivities(scip, consdata);
+   assert(consdata->validactivities);
+   
+   if( val > 0.0 )
+   {
+      /* check, if we can tighten the variable's upper bound */
+      if( !SCIPisInfinity(scip, rhs) )
+      {
+         SCIP_Real slack;
+         SCIP_Real alpha;
+         
+         slack = rhs - consdata->minactivity;
+         if( SCIPisNegative(scip, slack) )
+         {
+            *cutoff = TRUE;
+            return SCIP_OKAY;
+         }
+
+         alpha = val * (ub - lb);
+         assert(!SCIPisNegative(scip, alpha));
+         
+         if( SCIPisSumGT(scip, alpha, slack) )
+         {
+            SCIP_Real newub = lb + (slack / val);
+            SCIP_CALL( tightenVarUB(scip, cons, pos, PROPRULE_1_RHS, newub, ub, cutoff, nchgbds, force) );
+            ub = SCIPvarGetUbLocal(var);
+            if( *cutoff )
+               return SCIP_OKAY;
+         }
+      }
+
+      /* check, if we can tighten the variable's lower bound */
+      if( !SCIPisInfinity(scip, -lhs) )
+      {
+         SCIP_Real slack;
+         SCIP_Real alpha;
+
+         slack = consdata->maxactivity - lhs;
+         if( SCIPisNegative(scip, slack) )
+         {
+            *cutoff = TRUE;
+            return SCIP_OKAY;
+         }
+         
+         alpha = val * (ub - lb);
+         assert(!SCIPisNegative(scip, alpha));
+         
+         if( SCIPisSumGT(scip, alpha, slack) )
+         {
+            SCIP_Real newlb = ub - (slack / val);
+            SCIP_CALL( tightenVarLB(scip, cons, pos, PROPRULE_1_LHS, newlb, lb, cutoff, nchgbds, force) );
+            lb = SCIPvarGetLbLocal(var);
+            if( *cutoff )
+               return SCIP_OKAY;
+         }
+      }
+   }
+   else
+   {
+      /* check, if we can tighten the variable's lower bound */
+      if( !SCIPisInfinity(scip, rhs) )
+      {
+         SCIP_Real slack;
+         SCIP_Real alpha;
+
+         slack = rhs - consdata->minactivity;
+         if( SCIPisNegative(scip, slack) )
+         {
+            *cutoff = TRUE;
+            return SCIP_OKAY;
+         }
+         
+         alpha = val * (lb - ub);
+         assert(!SCIPisNegative(scip, alpha));
+
+         if( SCIPisSumGT(scip, alpha, slack) )
+         {
+            SCIP_Real newlb = ub + slack / val;
+            SCIP_CALL( tightenVarLB(scip, cons, pos, PROPRULE_1_RHS, newlb, lb, cutoff, nchgbds, force) ); 
+            lb = SCIPvarGetLbLocal(var);
+            if( *cutoff )
+               return SCIP_OKAY;
+         }
+      }
+
+      /* check, if we can tighten the variable's upper bound */
+      if( !SCIPisInfinity(scip, -lhs) )
+      {
+         SCIP_Real slack;
+         SCIP_Real alpha;
+
+         slack = consdata->maxactivity - lhs;
+         if( SCIPisNegative(scip, slack) )
+         {
+            *cutoff = TRUE;
+            return SCIP_OKAY;
+         }
+         
+         alpha = val * (lb - ub);
+         assert(!SCIPisNegative(scip, alpha));
+         
+         if( SCIPisSumGT(scip, alpha, slack) )
+         {
+            SCIP_Real newub = lb - (slack / val);
+            SCIP_CALL( tightenVarUB(scip, cons, pos, PROPRULE_1_LHS, newub, ub, cutoff, nchgbds, force) );
+            ub = SCIPvarGetUbLocal(var);
+            if( *cutoff )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** tightens bounds of a single variable due to activity bounds */
 static
 SCIP_RETCODE tightenVarBounds(
@@ -4789,6 +5143,8 @@ SCIP_RETCODE tightenVarBounds(
 }
 
 #define MAXTIGHTENROUNDS 10
+#define MAXACTIVITYDELTATHR 1e6
+
 /** tightens bounds of variables in constraint due to activity bounds */
 static
 SCIP_RETCODE tightenBounds(
@@ -4800,19 +5156,27 @@ SCIP_RETCODE tightenBounds(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Real slack;
+   SCIP_Real surplus;
+   SCIP_Real minactivity;
+   SCIP_Real maxactivity;
    int nvars;
    int nrounds;
    int lastchange;
    int oldnchgbds;
    int v;
    SCIP_Bool force;
-   
+   SCIP_Bool minisrelax;
+   SCIP_Bool maxisrelax;
+   SCIP_Bool easycase;
+
    assert(scip != NULL);
    assert(cons != NULL);
    assert(nchgbds != NULL);
    assert(cutoff != NULL);
 
    *cutoff = FALSE;
+   easycase = FALSE;
 
    /* we cannot tighten variables' bounds, if the constraint may be not complete */
    if( SCIPconsIsModifiable(cons) )
@@ -4824,6 +5188,10 @@ SCIP_RETCODE tightenBounds(
     */
    SCIP_CALL( applyFixings(scip, cons, cutoff) );
    if( *cutoff )
+      return SCIP_OKAY;
+
+   /* check if constraint has any chances of tightening bounds */
+   if( !canTightenBounds(scip, cons) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -4838,6 +5206,33 @@ SCIP_RETCODE tightenBounds(
       SCIP_CALL( consdataSort(scip, consdata) );
       assert(consdata->binvarssorted);
    }
+
+   /* update maximal activity delta if necessary */
+   if( consdata->maxactdelta < 0.0 )
+      consdataRecomputeMaxActivityDelta(scip, consdata);
+
+   /* this may happen if all variables are fixed */
+   if( !SCIPisPositive(scip, consdata->maxactdelta) )
+   {
+      consdata->maxactdelta = -1.0;
+      return SCIP_OKAY;
+   }
+
+   /* use maximal activity delta to skip propagation (cannot deduce anything) */
+   consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minisrelax, &maxisrelax);
+   assert(!SCIPisInfinity(scip, minactivity));
+   assert(!SCIPisInfinity(scip, -maxactivity));
+
+   slack = (SCIPisInfinity(scip, consdata->rhs) || SCIPisInfinity(scip, -minactivity)) ? SCIPinfinity(scip) : (consdata->rhs - minactivity);
+   surplus = (SCIPisInfinity(scip, -consdata->lhs) || SCIPisInfinity(scip, maxactivity)) ? SCIPinfinity(scip) : (maxactivity - consdata->lhs);
+   if( SCIPisLE(scip, consdata->maxactdelta, MIN(slack, surplus)) )
+      return SCIP_OKAY;
+
+   /* check if we can use fast implementation for easy and numerically well behaved cases */
+   easycase = SCIPisLT(scip, consdata->maxactdelta, MAXACTIVITYDELTATHR);
+
+   /* reset maximal activity delta, so that it will be recalculated on the next real propagation */
+   consdata->maxactdelta = -1.0;
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
@@ -4855,13 +5250,20 @@ SCIP_RETCODE tightenBounds(
 
          assert(!sortvars || SCIPgetStage(scip) < SCIP_STAGE_SOLVING || consdata->binvarssorted);
 
-         SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds, force) );
+         if( easycase )
+         {
+            SCIP_CALL( tightenVarBoundsEasy(scip, cons, v, cutoff, nchgbds, force) );
+         }
+         else
+         {
+            SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds, force) );  
+         }
          
          /* if there was no progress, skip the rest of the binary variables */
          if( *nchgbds > oldnchgbds )
          {
             lastchange = v;
-            v++;
+            ++v;
          }
          else if( consdata->binvarssorted && v < consdata->nbinvars - 1
             && !SCIPisFeasEQ(scip, SCIPvarGetUbLocal(consdata->vars[v]), SCIPvarGetLbLocal(consdata->vars[v])) )
@@ -5123,7 +5525,7 @@ SCIP_RETCODE propagateCons(
    if( consdata->propagated && (!tightenbounds || consdata->boundstightened) )
       return SCIP_OKAY;
 
-   /* mark constraint to be propagated */
+   /* mark constraint as propagated */
    consdata->propagated = TRUE;
 
    /* we can only infer activity bounds of the linear constraint, if it is not modifiable */
@@ -9342,15 +9744,8 @@ SCIP_DECL_CONSINIT(consInitLinear)
    /* catch events for the constraints */
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CONSDATA* consdata;
-
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-      assert(consdata->eventdatas == NULL);
-
       /* catch all events */
-      SCIP_CALL( consdataCatchAllEvents(scip, consdata, conshdlrdata->eventhdlr) );
-      assert(consdata->eventdatas != NULL);
+      SCIP_CALL( consCatchAllEvents(scip, conss[c], conshdlrdata->eventhdlr) );
    }
 
    return SCIP_OKAY;
@@ -9382,7 +9777,7 @@ SCIP_DECL_CONSEXIT(consExitLinear)
       if( consdata->eventdatas != NULL )
       {
          /* drop all events */
-         SCIP_CALL( consdataDropAllEvents(scip, consdata, conshdlrdata->eventhdlr) );
+         SCIP_CALL( consDropAllEvents(scip, conss[c], conshdlrdata->eventhdlr) );
          assert(consdata->eventdatas == NULL);
       }
    }
@@ -9749,6 +10144,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
    {
       SCIP_CONSDATA* consdata;
 
+      if( SCIPconsIsDeleted(conss[c]) )
+         continue;
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
@@ -9832,8 +10230,16 @@ SCIP_DECL_CONSDELETE(consDeleteLinear)
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->eventhdlr != NULL);
 
+   /* free event datas */
+   if( (*consdata)->eventdatas != NULL )
+   {
+      /* drop bound change events of variables */
+      SCIP_CALL( consDropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+   }
+   assert((*consdata)->eventdatas == NULL);
+
    /* free linear constraint */
-   SCIP_CALL( consdataFree(scip, consdata, conshdlrdata->eventhdlr) );
+   SCIP_CALL( consdataFree(scip, consdata) );
 
    return SCIP_OKAY;
 }
@@ -9866,8 +10272,7 @@ SCIP_DECL_CONSTRANS(consTransLinear)
    assert(conshdlrdata->eventhdlr != NULL);
 
    /* create linear constraint data for target constraint */
-   SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
-         sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
+   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
 
    /* copy the donotupgrade mark */
    targetdata->donotupgrade = sourcedata->donotupgrade;
@@ -9878,6 +10283,13 @@ SCIP_DECL_CONSTRANS(consTransLinear)
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+
+   if( SCIPisTransformed(scip) && needEvents(scip) )
+   {
+      /* catch bound change events of variables */
+      SCIP_CALL( consCatchAllEvents(scip, *targetcons, conshdlrdata->eventhdlr) );
+      assert(targetdata->eventdatas != NULL);
+   }
 
    return SCIP_OKAY;
 }
@@ -10174,7 +10586,7 @@ SCIP_DECL_CONSPROP(consPropLinear)
    SCIP_Bool tightenbounds;
    SCIP_Bool cutoff;
    int nchgbds;
-   int c;
+   int i;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -10205,12 +10617,13 @@ SCIP_DECL_CONSPROP(consPropLinear)
    cutoff = FALSE;
    nchgbds = 0;
 
-   /* process useful constraints */
-   for( c = 0; c < nusefulconss && !cutoff; ++c )
+   /* process constraints marked for propagation */
+   for( i = 0; i < nmarkedconss && !cutoff; i++ )
    {
-      SCIP_CALL( propagateCons(scip, conss[c], tightenbounds, conshdlrdata->sortvars, &cutoff, &nchgbds) );
+      SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
+      SCIP_CALL( propagateCons(scip, conss[i], tightenbounds, conshdlrdata->sortvars, &cutoff, &nchgbds) );
    }
-   
+
    /* adjust result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
@@ -10953,6 +11366,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsLinear)
 static
 SCIP_DECL_EVENTEXEC(eventExecLinear)
 {  /*lint --e{715}*/
+   SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
    SCIP_EVENTTYPE eventtype;
@@ -10963,7 +11377,9 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
 
-   consdata = eventdata->consdata;
+   cons = eventdata->cons;
+   assert(cons != NULL);
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    eventtype = SCIPeventGetType(event);
@@ -10997,7 +11413,15 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
 
       /* bound change can turn the constraint infeasible or redundant only if it was a tightening */
       if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
+      {
          consdata->propagated = FALSE;
+         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+      }
+      else
+      {
+         /* if relaxing, we should reset the maximum activity contribution */
+         consdata->maxactdelta = -1.0;
+      }
 
       /* check whether bound tightening might now be successful (if the current bound was relaxed, it might be
        * that it can be tightened again)
@@ -11602,7 +12026,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
       }
 
       /* create constraint data */
-      SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nconsvars, consvars, consvals, lhs, rhs) );
+      SCIP_CALL( consdataCreate(scip, &consdata, nconsvars, consvars, consvals, lhs, rhs) );
       assert(consdata != NULL);
 
       SCIPfreeBufferArray(scip, &consvals);
@@ -11611,13 +12035,20 @@ SCIP_RETCODE SCIPcreateConsLinear(
    else
    {
       /* create constraint data */
-      SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, vals, lhs, rhs) );
+      SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars, vals, lhs, rhs) );
       assert(consdata != NULL);
    }
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   if( SCIPisTransformed(scip) && needEvents(scip) )
+   {
+      /* catch bound change events of variables */
+      SCIP_CALL( consCatchAllEvents(scip, *cons, conshdlrdata->eventhdlr) );
+      assert(consdata->eventdatas != NULL);
+   }
 
    return SCIP_OKAY;
 }
