@@ -45,10 +45,11 @@
 extern "C" {
 #endif
 
-/*
- * Column methods
- */
 
+/**@defgroup ColumnMethods Column methods
+ *
+ * @{
+ */
 
 /** sorts column entries such that LP rows precede non-LP rows and inside both parts lower row indices precede higher ones
  */
@@ -234,11 +235,13 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 
 #endif
 
+/**@} */
 
 
 
-/*
- * Row methods
+/**@defgroup RowMethods Row methods
+ *
+ * @{
  */
 
 /** comparison method for sorting rows by non-decreasing index */
@@ -495,6 +498,8 @@ SCIP_Bool SCIProwIsInLP(
 #define SCIProwIsInLP(row)              ((row)->lppos >= 0)
 
 #endif
+
+/**@} */
 
 #ifdef __cplusplus
 }

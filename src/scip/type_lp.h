@@ -79,9 +79,24 @@ typedef enum SCIP_LPAlgo SCIP_LPALGO;
 typedef struct SCIP_ColSolVals SCIP_COLSOLVALS;   /**< collected values of a column which depend on the LP solution */
 typedef struct SCIP_RowSolVals SCIP_ROWSOLVALS;   /**< collected values of a row which depend on the LP solution */
 typedef struct SCIP_LpSolVals SCIP_LPSOLVALS;     /**< collected values of the LP data which depend on the LP solution */
-typedef struct SCIP_Col SCIP_COL;                 /**< column of an LP */
-typedef struct SCIP_Row SCIP_ROW;                 /**< row of an LP */
-typedef struct SCIP_Lp SCIP_LP;                   /**< current LP data */
+
+/** column of an LP
+ *
+ *  - \ref ColumnMethods "List of all available methods"
+ */
+typedef struct SCIP_Col SCIP_COL;
+
+/** row of an LP
+ *
+ *  - \ref RowMethods "List of all available methods"
+ */
+typedef struct SCIP_Row SCIP_ROW;
+
+/** row of an LP
+ *
+ *  - \ref LPMethods "List of all available methods"
+ */
+typedef struct SCIP_Lp SCIP_LP;
 
 #ifdef __cplusplus
 }
