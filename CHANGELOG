@@ -18,6 +18,8 @@ interface
   LP is not perturbed, which may happen when stopping due to iteration or time limit
 - new methods for the SCIP_QUEUE data structure in pub_misc.h, misc.c SCIPqueueCreate(), SCIPqueueFree(),
   SCIPqueueClear(), SCIPqueueInsert(), SCIPqueueRemove(), SCIPqueueFirst(), SCIPqueueIsEmpty(), SCIPqueueNElems()
+- added number of constraints which are marked for propagation to callback method consprop
+
 
 
 SCIP version 3.0.1

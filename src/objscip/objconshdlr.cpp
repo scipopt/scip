@@ -351,7 +351,7 @@ SCIP_DECL_CONSPROP(consPropObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_prop(scip, conshdlr, conss, nconss, nusefulconss, proptiming, result) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_prop(scip, conshdlr, conss, nconss, nusefulconss, nmarkedconss, proptiming, result) );
 
    return SCIP_OKAY;
 }

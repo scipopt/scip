@@ -21069,7 +21069,7 @@ SCIP_RETCODE SCIPenableConsSeparation(
    return SCIP_OKAY;
 }
 
-/** disables constraint's separation capabilities s.t. the constraint is not propagated anymore until the separation
+/** disables constraint's separation capabilities s.t. the constraint is not separated anymore until the separation
  *  is enabled again with a call to SCIPenableConsSeparation(); in contrast to SCIPdelConsLocal() and SCIPdelConsNode(),
  *  the disabling is not associated to a node in the tree and does not consume memory; therefore, the constraint
  *  is neither automatically enabled on leaving the node nor automatically disabled again on entering the node again
@@ -21150,6 +21150,58 @@ SCIP_RETCODE SCIPdisableConsPropagation(
    SCIP_CALL( checkStage(scip, "SCIPdisableConsPropagation", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsDisablePropagation(cons, scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** marks constraint to be propagated
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @note if a constraint is marked to be propagated, the age of the constraint will be ignored for propagation
+ */
+SCIP_RETCODE SCIPmarkConsPropagate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPmarkConsPropagate", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsMarkPropagate(cons, scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** unmarks the constraint to be propagated
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPunmarkConsPropagate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPunmarkConsPropagate", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsUnmarkPropagate(cons, scip->set) );
 
    return SCIP_OKAY;
 }
