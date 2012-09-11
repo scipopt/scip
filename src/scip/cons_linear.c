@@ -107,8 +107,8 @@
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
 #define MAXSCALEDCOEFINTEGER        1e+06 /**< maximal coefficient value after scaling if all variables are of integral
-					                            *   type
-					                            */
+                                           *   type
+                                           */
 
 #define HASHSIZE_LINEARCONS        131101 /**< minimal size of hash table in linear constraint tables */
 
@@ -841,7 +841,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->maxactivity = SCIP_INVALID;
    (*consdata)->lastminactivity = SCIP_INVALID;
    (*consdata)->lastmaxactivity = SCIP_INVALID;
-   (*consdata)->maxactdelta = -1.0;
+   (*consdata)->maxactdelta = SCIP_INVALID;
    (*consdata)->minactivityneginf = -1;
    (*consdata)->minactivityposinf = -1;
    (*consdata)->maxactivityneginf = -1;
@@ -995,7 +995,7 @@ void consdataInvalidateActivities(
    consdata->maxactivity = SCIP_INVALID;
    consdata->lastminactivity = SCIP_INVALID;
    consdata->lastmaxactivity = SCIP_INVALID;
-   consdata->maxactdelta = -1.0;
+   consdata->maxactdelta = SCIP_INVALID;
    consdata->minactivityneginf = -1;
    consdata->minactivityposinf = -1;
    consdata->maxactivityneginf = -1;
@@ -1052,9 +1052,9 @@ SCIP_Real consdataComputePseudoActivity(
          if( SCIPisInfinity(scip, -bound) )
          {
             if( val > 0.0 )
-            pseudoactivityneginf++;
-         else
-            pseudoactivityposinf++;
+               pseudoactivityneginf++;
+            else
+               pseudoactivityposinf++;
          }
          else
             pseudoactivity += val * bound;
@@ -1182,27 +1182,29 @@ void consdataRecomputeMaxActivityDelta(
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
 {
-   int i;
    SCIP_Real domain;
    SCIP_Real delta;
    SCIP_Real lb;
    SCIP_Real ub;
+   int i;
 
-   consdata->maxactdelta = -1.0;
+   consdata->maxactdelta = 0.0;
 
-   for( i = consdata->nvars - 1; i >= 0; --i )
+   for( i = 0; i < consdata->nvars; ++i )
    {
       lb = SCIPvarGetLbLocal(consdata->vars[i]);
       ub = SCIPvarGetUbLocal(consdata->vars[i]);
+
       if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
       {
          consdata->maxactdelta = SCIPinfinity(scip);
-         return;
+         break;
       }
+
       domain = SCIPvarGetUbLocal(consdata->vars[i]) - SCIPvarGetLbLocal(consdata->vars[i]);
       delta = REALABS(consdata->vals[i]) * domain;
-      if( delta > consdata->maxactdelta )
-         consdata->maxactdelta = delta;
+
+      consdata->maxactdelta = MAX(delta, consdata->maxactdelta);
    }
 }
 
@@ -4479,20 +4481,20 @@ SCIP_Bool canTightenBounds(
    )
 {
    SCIP_CONSDATA* consdata;
-   int infcount = 0;
-   
+   int infcount;
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    infcount = consdata->minactivityneginf
-         + consdata->minactivityposinf
-         + consdata->minactivityneghuge
-         + consdata->minactivityposhuge
-         + consdata->maxactivityneginf
-         + consdata->maxactivityposinf
-         + consdata->maxactivityneghuge
-         + consdata->maxactivityposhuge;
-   
+      + consdata->minactivityposinf
+      + consdata->minactivityneghuge
+      + consdata->minactivityposhuge
+      + consdata->maxactivityneginf
+      + consdata->maxactivityposinf
+      + consdata->maxactivityneghuge
+      + consdata->maxactivityposhuge;
+
    if( infcount > 1 )
       return FALSE;
 
@@ -4501,7 +4503,7 @@ SCIP_Bool canTightenBounds(
 
 /** tighten upper bound */
 static
-SCIP_RETCODE tightenVarUB(
+SCIP_RETCODE tightenVarUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    int                   pos,                /**< variable position */
@@ -4529,13 +4531,16 @@ SCIP_RETCODE tightenVarUB(
 
    lb = SCIPvarGetLbLocal(var);
 
-   if( force || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, oldub)) || SCIPisUbBetter(scip, newub, lb, oldub) )
+   if( force || SCIPisUbBetter(scip, newub, lb, oldub) )
    {
-      /* tighten upper bound */
+      assert(force || SCIPisFeasLT(scip, newub, oldub));
+
       SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
          SCIPconsGetName(cons), SCIPvarGetName(var), lb, oldub, consdata->vals[pos], consdata->minactivity, consdata->maxactivity, consdata->lhs, consdata->rhs, newub);
-      SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(proprule, pos), force,
-            &infeasible, &tightened) );
+
+      /* tighten upper bound */
+      SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(proprule, pos), force, &infeasible, &tightened) );
+
       if( infeasible )
       {
          SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
@@ -4545,16 +4550,14 @@ SCIP_RETCODE tightenVarUB(
          SCIP_CALL( analyzeConflict(scip, cons, TRUE) );
 
          *cutoff = TRUE;
-         return SCIP_OKAY;
       }
-      if( tightened )
+      else if( tightened )
       {
-         newub = SCIPvarGetUbLocal(var); /* get bound again: it may be additionally modified due to integrality */
-         assert(SCIPisFeasLE(scip, newub, oldub));
-         (*nchgbds)++;
-
+         assert(SCIPisFeasLE(scip, SCIPvarGetUbLocal(var), oldub));
          SCIPdebugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.15g,%.15g]\n",
-            SCIPconsGetName(cons), SCIPvarGetName(var), lb, newub);
+            SCIPconsGetName(cons), SCIPvarGetName(var), lb, SCIPvarGetUbLocal(var));
+
+         (*nchgbds)++;
       }
    }
    return SCIP_OKAY;
@@ -4562,7 +4565,7 @@ SCIP_RETCODE tightenVarUB(
 
 /** tighten lower bound */
 static
-SCIP_RETCODE tightenVarLB(
+SCIP_RETCODE tightenVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    int                   pos,                /**< variable position */
@@ -4590,13 +4593,16 @@ SCIP_RETCODE tightenVarLB(
 
    ub = SCIPvarGetUbLocal(var);
 
-   if( force || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, oldlb)) || SCIPisLbBetter(scip, newlb, oldlb, ub) )
+   if( force || SCIPisLbBetter(scip, newlb, oldlb, ub) )
    {
-      /* tighten lower bound */
+      assert(force || SCIPisFeasGT(scip, newlb, oldlb));
+
       SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
          SCIPconsGetName(cons), SCIPvarGetName(var), oldlb, ub, consdata->vals[pos], consdata->minactivity, consdata->maxactivity, consdata->lhs, consdata->rhs, newlb);
-      SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(proprule, pos), force,
-            &infeasible, &tightened) );
+
+      /* tighten lower bound */
+      SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(proprule, pos), force, &infeasible, &tightened) );
+
       if( infeasible )
       {
          SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
@@ -4606,15 +4612,14 @@ SCIP_RETCODE tightenVarLB(
          SCIP_CALL( analyzeConflict(scip, cons, FALSE) );
 
          *cutoff = TRUE;
-         return SCIP_OKAY;
       }
-      if( tightened )
+      else if( tightened )
       {
-         newlb = SCIPvarGetLbLocal(var); /* get bound again: it may be additionally modified due to integrality */
-         assert(SCIPisFeasGE(scip, newlb, oldlb));
-         (*nchgbds)++;
+         assert(SCIPisFeasGE(scip, SCIPvarGetLbLocal(var), oldlb));
          SCIPdebugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.15g,%.15g]\n",
-            SCIPconsGetName(cons), SCIPvarGetName(var), newlb, ub);
+            SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetLbLocal(var), ub);
+
+         (*nchgbds)++;
       }
    }
    return SCIP_OKAY;
@@ -4666,7 +4671,7 @@ SCIP_RETCODE tightenVarBoundsEasy(
    rhs = consdata->rhs;
    assert(!SCIPisZero(scip, val));
    assert(!SCIPisInfinity(scip, lhs));
-   assert(!SCIPisInfinity(scip, -rhs));   
+   assert(!SCIPisInfinity(scip, -rhs));
 
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
@@ -4676,7 +4681,7 @@ SCIP_RETCODE tightenVarBoundsEasy(
    if( !consdata->validactivities )
       consdataCalcActivities(scip, consdata);
    assert(consdata->validactivities);
-   
+
    if( val > 0.0 )
    {
       /* check, if we can tighten the variable's upper bound */
@@ -4684,7 +4689,7 @@ SCIP_RETCODE tightenVarBoundsEasy(
       {
          SCIP_Real slack;
          SCIP_Real alpha;
-         
+
          slack = rhs - consdata->minactivity;
          if( SCIPisNegative(scip, slack) )
          {
@@ -4694,14 +4699,21 @@ SCIP_RETCODE tightenVarBoundsEasy(
 
          alpha = val * (ub - lb);
          assert(!SCIPisNegative(scip, alpha));
-         
+
          if( SCIPisSumGT(scip, alpha, slack) )
          {
-            SCIP_Real newub = lb + (slack / val);
-            SCIP_CALL( tightenVarUB(scip, cons, pos, PROPRULE_1_RHS, newub, ub, cutoff, nchgbds, force) );
-            ub = SCIPvarGetUbLocal(var);
+            SCIP_Real newub;
+
+            /* compute new upper bound */
+            newub = lb + (slack / val);
+
+            SCIP_CALL( tightenVarUb(scip, cons, pos, PROPRULE_1_RHS, newub, ub, cutoff, nchgbds, force) );
+
             if( *cutoff )
                return SCIP_OKAY;
+
+            /* collect the new upper bound which is needed for the lower bound computation */
+            ub = SCIPvarGetUbLocal(var);
          }
       }
 
@@ -4717,15 +4729,19 @@ SCIP_RETCODE tightenVarBoundsEasy(
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
-         
+
          alpha = val * (ub - lb);
          assert(!SCIPisNegative(scip, alpha));
-         
+
          if( SCIPisSumGT(scip, alpha, slack) )
          {
-            SCIP_Real newlb = ub - (slack / val);
-            SCIP_CALL( tightenVarLB(scip, cons, pos, PROPRULE_1_LHS, newlb, lb, cutoff, nchgbds, force) );
-            lb = SCIPvarGetLbLocal(var);
+            SCIP_Real newlb;
+
+            /* compute new lower bound */
+            newlb = ub - (slack / val);
+
+            SCIP_CALL( tightenVarLb(scip, cons, pos, PROPRULE_1_LHS, newlb, lb, cutoff, nchgbds, force) );
+
             if( *cutoff )
                return SCIP_OKAY;
          }
@@ -4745,17 +4761,24 @@ SCIP_RETCODE tightenVarBoundsEasy(
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
-         
+
          alpha = val * (lb - ub);
          assert(!SCIPisNegative(scip, alpha));
 
          if( SCIPisSumGT(scip, alpha, slack) )
          {
-            SCIP_Real newlb = ub + slack / val;
-            SCIP_CALL( tightenVarLB(scip, cons, pos, PROPRULE_1_RHS, newlb, lb, cutoff, nchgbds, force) ); 
-            lb = SCIPvarGetLbLocal(var);
+            SCIP_Real newlb;
+
+            /* compute new lower bound */
+            newlb = ub + slack / val;
+
+            SCIP_CALL( tightenVarLb(scip, cons, pos, PROPRULE_1_RHS, newlb, lb, cutoff, nchgbds, force) );
+
             if( *cutoff )
                return SCIP_OKAY;
+
+            /* collect the new lower bound which is needed for the upper bound computation */
+            lb = SCIPvarGetLbLocal(var);
          }
       }
 
@@ -4771,15 +4794,19 @@ SCIP_RETCODE tightenVarBoundsEasy(
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
-         
+
          alpha = val * (lb - ub);
          assert(!SCIPisNegative(scip, alpha));
-         
+
          if( SCIPisSumGT(scip, alpha, slack) )
          {
-            SCIP_Real newub = lb - (slack / val);
-            SCIP_CALL( tightenVarUB(scip, cons, pos, PROPRULE_1_LHS, newub, ub, cutoff, nchgbds, force) );
-            ub = SCIPvarGetUbLocal(var);
+            SCIP_Real newub;
+
+            /* compute new upper bound */
+            newub = lb - (slack / val);
+
+            SCIP_CALL( tightenVarUb(scip, cons, pos, PROPRULE_1_LHS, newub, ub, cutoff, nchgbds, force) );
+
             if( *cutoff )
                return SCIP_OKAY;
          }
@@ -5093,7 +5120,6 @@ SCIP_RETCODE tightenBounds(
    assert(cutoff != NULL);
 
    *cutoff = FALSE;
-   easycase = FALSE;
 
    /* we cannot tighten variables' bounds, if the constraint may be not complete */
    if( SCIPconsIsModifiable(cons) )
@@ -5125,15 +5151,15 @@ SCIP_RETCODE tightenBounds(
    }
 
    /* update maximal activity delta if necessary */
-   if( consdata->maxactdelta < 0.0 )
+   if( consdata->maxactdelta == SCIP_INVALID ) /*lint !e777*/
       consdataRecomputeMaxActivityDelta(scip, consdata);
 
+   assert(consdata->maxactdelta != SCIP_INVALID); /*lint !e777*/
+   assert(!SCIPisFeasNegative(scip, consdata->maxactdelta));
+
    /* this may happen if all variables are fixed */
-   if( !SCIPisPositive(scip, consdata->maxactdelta) )
-   {
-      consdata->maxactdelta = -1.0;
+   if( SCIPisFeasZero(scip, consdata->maxactdelta) )
       return SCIP_OKAY;
-   }
 
    /* use maximal activity delta to skip propagation (cannot deduce anything) */
    consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minisrelax, &maxisrelax);
@@ -5142,14 +5168,13 @@ SCIP_RETCODE tightenBounds(
 
    slack = (SCIPisInfinity(scip, consdata->rhs) || SCIPisInfinity(scip, -minactivity)) ? SCIPinfinity(scip) : (consdata->rhs - minactivity);
    surplus = (SCIPisInfinity(scip, -consdata->lhs) || SCIPisInfinity(scip, maxactivity)) ? SCIPinfinity(scip) : (maxactivity - consdata->lhs);
+
+   /* check if the constraint will propagate */
    if( SCIPisLE(scip, consdata->maxactdelta, MIN(slack, surplus)) )
       return SCIP_OKAY;
 
    /* check if we can use fast implementation for easy and numerically well behaved cases */
    easycase = SCIPisLT(scip, consdata->maxactdelta, MAXACTIVITYDELTATHR);
-
-   /* reset maximal activity delta, so that it will be recalculated on the next real propagation */
-   consdata->maxactdelta = -1.0;
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
@@ -5158,8 +5183,9 @@ SCIP_RETCODE tightenBounds(
       /* mark the constraint to have the variables' bounds tightened */
       consdata->boundstightened = TRUE;
 
-      /* try to tighten the bounds of each variable in the constraint. During solving process, 
-       * the binary variable sorting enables skipping variables */
+      /* try to tighten the bounds of each variable in the constraint. During solving process, the binary variable
+       * sorting enables skipping variables
+       */
       v = 0;
       while( v < nvars && v != lastchange && !(*cutoff) )
       {
@@ -5173,9 +5199,9 @@ SCIP_RETCODE tightenBounds(
          }
          else
          {
-            SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds, force) );  
+            SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds, force) );
          }
-         
+
          /* if there was no progress, skip the rest of the binary variables */
          if( *nchgbds > oldnchgbds )
          {
@@ -11354,6 +11380,9 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       assert(consdata->vars[varpos] == var);
       val = consdata->vals[varpos];
 
+      /* reset maximal activity delta, so that it will be recalculated on the next real propagation */
+      consdata->maxactdelta = SCIP_INVALID;
+
       /* update the activity values */
       if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
          consdataUpdateActivitiesLb(scip, consdata, var, oldbound, newbound, val, TRUE);
@@ -11370,11 +11399,6 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       {
          consdata->propagated = FALSE;
          SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
-      }
-      else
-      {
-         /* if relaxing, we should reset the maximum activity contribution */
-         consdata->maxactdelta = -1.0;
       }
 
       /* check whether bound tightening might now be successful (if the current bound was relaxed, it might be
