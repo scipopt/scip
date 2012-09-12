@@ -1101,7 +1101,7 @@ SCIP_Bool SCIPisParamFixed(
  *
  *  @return pointer to the parameter with the given name
  */
-extern
+EXTERN
 SCIP_PARAM* SCIPgetParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of the parameter */
