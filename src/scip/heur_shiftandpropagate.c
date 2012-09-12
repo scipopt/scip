@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 #define SCIP_STATISTIC
 /**@file   heur_shiftandpropagate.c
  * @brief  shiftandpropagate primal heuristic
@@ -1706,8 +1707,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
       /* compute optimal shift value for variable */
       SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, rowweights, &optimalshiftvalue, &nviolations) );
-      assert(SCIPisFeasGE(scip, optimalshiftvalue, 0.0));
-      assert(!SCIPisInfinity(scip, optimalshiftvalue));
+      assert(SCIPisFeasGE(scip, optimalshiftvalue, 0.0) && !SCIPisInfinity(scip, optimalshiftvalue));
 
       /* in case the problem is already feasible, do not shift in the direction which deteriorates current objective */
       if( nviolatedrows == 0 && SCIPisFeasGT(scip, obj, 0.0) )
@@ -1747,8 +1747,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          assert(probing);
 
          ++ncutoffs;
-         ++lastindexofsusp;
-         assert(lastindexofsusp >= 0 && lastindexofsusp <= c);
 
          /* only continue heuristic if number of cutoffs occured so far is reasonably small */
          if( heurdata->cutoffbreaker >= 0 && ncutoffs >= heurdata->cutoffbreaker )
@@ -1756,14 +1754,56 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
          cutoff = FALSE;
 
+         /* backtrack to the parent of the current node */
+         assert(SCIPgetProbingDepth(scip) >= 1);
+         SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
+
+
+         /* if the variable were to be set to one of its bounds, repropagate by tightening this bound by 1.0
+          * into the direction of the other bound, if possible */
+         if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), origsolval) )
+         {
+            assert(SCIPisFeasGE(scip, SCIPvarGetUbLocal(var), origsolval + 1.0));
+
+            ndomredsfound = 0;
+            SCIP_CALL( SCIPnewProbingNode(scip) );
+            SCIP_CALL( SCIPchgVarLbProbing(scip, var, origsolval + 1.0) );
+            SCIP_CALL( SCIPpropagateProbing(scip, heurdata->nproprounds, &cutoff, &ndomredsfound) );
+
+            SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
+
+            /* if the tightened bound again leads to a cutoff, both subproblems are proven infeasible and the heuristic
+             * can be stopped */
+            if( cutoff )
+               break;
+         }
+         else if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), origsolval) )
+         {
+            assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(var), origsolval - 1.0));
+
+            ndomredsfound = 0;
+
+            SCIP_CALL( SCIPnewProbingNode(scip) );
+            SCIP_CALL( SCIPchgVarUbProbing(scip, var, origsolval - 1.0) );
+            SCIP_CALL( SCIPpropagateProbing(scip, heurdata->nproprounds, &cutoff, &ndomredsfound) );
+
+            SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
+
+            /* if the tightened bound again leads to a cutoff, both subproblems are proven infeasible and the heuristic
+             * can be stopped */
+            if( cutoff )
+               break;
+         }
+
+         /* mark the variable as suspicious */
          assert(permutedvarindex == permutation[c]);
+
+         ++lastindexofsusp;
+         assert(lastindexofsusp >= 0 && lastindexofsusp <= c);
 
          permutation[c] = permutation[lastindexofsusp];
          permutation[lastindexofsusp] = permutedvarindex;
 
-         /* backtrack to the parent of the current node */
-         assert(SCIPgetProbingDepth(scip) >= 1);
-         SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
          SCIPdebugMessage("  Suspicious variable! Postponed from pos <%d> to position <%d>\n", c, lastindexofsusp);
       }
       else
