@@ -43,7 +43,7 @@ SCIP_RETCODE SCIPincludeReaderPip(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* reads problem from file */
+/** reads problem from file */
 EXTERN
 SCIP_RETCODE SCIPreadPip(
    SCIP*                 scip,               /**< SCIP data structure */

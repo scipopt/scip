@@ -245,6 +245,7 @@ void SCIPstatReset(
    stat->barrierzeroittime = 0.0;
    stat->maxcopytime = SCIP_REAL_MIN;
    stat->mincopytime = SCIP_REAL_MAX;
+   stat->firstlptime = 0.0;
    stat->ncopies = 0;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;

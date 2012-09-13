@@ -1045,6 +1045,20 @@ SCIP_RETCODE SCIPconsDisablePropagation(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** marks the constraint to be propagated (update might be delayed) */
+extern
+SCIP_RETCODE SCIPconsMarkPropagate(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** unmarks the constraint to be propagated (update might be delayed) */
+extern
+SCIP_RETCODE SCIPconsUnmarkPropagate(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** adds given value to age of constraint, but age can never become negative;
  *  should be called
  *   - in constraint separation, if no cut was found for this constraint,
@@ -1090,6 +1104,20 @@ SCIP_RETCODE SCIPconsIncAge(
 extern
 SCIP_RETCODE SCIPconsResetAge(
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+SCIP_RETCODE SCIPconsPushProp(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+SCIP_CONS* SCIPconshdlrFrontProp(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+SCIP_RETCODE SCIPconshdlrPopProp(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

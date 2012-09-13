@@ -36,6 +36,7 @@ TIME     	=  	3600
 NODES           =       2100000000
 MEM		=	6144
 THREADS         =       1
+PERMUTE         =       0
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	short
@@ -154,6 +155,7 @@ include make/make.$(BASE)
 -include make/local/make.$(HOSTNAME)
 -include make/local/make.$(HOSTNAME).$(COMP)
 -include make/local/make.$(HOSTNAME).$(COMP).$(OPT)
+-include make/local/make.local
 #-----------------------------------------------------------------------------
 
 FLAGS		+=	$(USRFLAGS)

@@ -325,6 +325,203 @@ SCIP_Longint* SCIPsparseSolGetUbs(
    return sparsesol->ubvalues;
 }
 
+/*
+ * Queue
+ */
+
+/** resizes element memory to hold at least the given number of elements */
+static
+SCIP_RETCODE queueResize(
+   SCIP_QUEUE*           queue,              /**< pointer to a queue */
+   int                   minsize             /**< minimal number of storable elements */
+   )
+{
+   assert(queue != NULL);
+   assert(minsize > 0);
+
+   if( minsize <= queue->size )
+      return SCIP_OKAY;
+
+   queue->size = MAX(minsize, (int)(queue->size * queue->sizefac));
+   SCIP_ALLOC( BMSreallocMemoryArray(&queue->slots, queue->size) );
+
+   return SCIP_OKAY;
+}
+
+
+/** creates a (circular) queue, best used if the size will be fixed or will not be increased that much */
+SCIP_RETCODE SCIPqueueCreate(
+   SCIP_QUEUE**          queue,              /**< pointer to the new queue */
+   int                   initsize,           /**< initial number of available element slots */
+   SCIP_Real             sizefac             /**< memory growing factor applied, if more element slots are needed */
+   )
+{
+   assert(queue != NULL);
+
+   initsize = MAX(1, initsize);
+   sizefac = MAX(1.0, sizefac);
+
+   SCIP_ALLOC( BMSallocMemory(queue) );
+   (*queue)->firstfree = 0;
+   (*queue)->firstused = -1;
+   (*queue)->size = 0;
+   (*queue)->sizefac = sizefac;
+   (*queue)->slots = NULL;
+
+   SCIP_CALL( queueResize(*queue, initsize) );
+
+   return SCIP_OKAY;
+}
+
+/** frees queue, but not the data elements themselves */
+void SCIPqueueFree(
+   SCIP_QUEUE**          queue               /**< pointer to a queue */
+   )
+{
+   assert(queue != NULL);
+
+   BMSfreeMemoryArray(&(*queue)->slots);
+   BMSfreeMemory(queue);
+}
+
+/** clears the queue, but doesn't free the data elements themselves */
+void SCIPqueueClear(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   assert(queue != NULL);
+
+   queue->firstfree = 0;
+   queue->firstused = -1;
+}
+
+/** inserts element at the end of the queue */
+SCIP_RETCODE SCIPqueueInsert(
+   SCIP_QUEUE*           queue,              /**< queue */
+   void*                 elem                /**< element to be inserted */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->slots != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+   assert(elem != NULL);
+
+   if( queue->firstfree == queue->firstused )
+   {
+      int sizediff;
+      int oldsize = queue->size;
+
+      SCIP_CALL( queueResize(queue, queue->size+1) );
+      assert(oldsize < queue->size);
+
+      sizediff = queue->size - oldsize;
+
+      /* move the used memory at the slots to the end */
+      BMSmoveMemoryArray(&(queue->slots[queue->firstused + sizediff]), &(queue->slots[queue->firstused]), oldsize - queue->firstused); /*lint !e866*/
+      queue->firstused += sizediff;
+   }
+   assert(queue->firstfree != queue->firstused);
+
+   /* insert element as leaf in the tree, move it towards the root as long it is better than its parent */
+   queue->slots[queue->firstfree] = elem;
+   ++(queue->firstfree);
+
+   /* if we saved the value at the last position we need to reset the firstfree position */
+   if( queue->firstfree == queue->size )
+      queue->firstfree = 0;
+
+   /* if a first element was added, we need to update the firstused counter */
+   if( queue->firstused == -1 )
+      queue->firstused = 0;
+
+   return SCIP_OKAY;
+}
+
+/** removes and returns the first element of the queue */
+void* SCIPqueueRemove(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   int pos;
+
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   if( queue->firstused == -1 )
+      return NULL;
+
+   assert(queue->slots != NULL);
+
+   pos = queue->firstused;
+   ++(queue->firstused);
+
+   /* if we removed the value at the last position we need to reset the firstused position */
+   if( queue->firstused == queue->size )
+      queue->firstused = 0;
+
+   /* if we reached the first free position we can reset both, firstused and firstused, positions */
+   if( queue->firstused == queue->firstfree )
+   {
+      queue->firstused = -1;
+      queue->firstfree = 0; /* this is not necessary but looks better if we have an empty list to reset this value */
+   }
+
+   return (queue->slots[pos]);
+}
+
+/** returns the first element of the queue without removing it */
+void* SCIPqueueFirst(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   if( queue->firstused == -1 )
+      return NULL;
+
+   assert(queue->slots != NULL);
+
+   return queue->slots[queue->firstused];
+}
+
+/** returns whether the queue is empty */
+SCIP_Bool SCIPqueueIsEmpty(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   return (queue->firstused == -1);
+}
+
+/** returns the number of elements in the queue */
+int SCIPqueueNElems(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   if( queue->firstused < queue->firstfree )
+      return queue->firstfree - queue->firstused;
+   else if( queue->firstused == queue->firstfree )
+      return queue->size;
+   else
+      return queue->firstfree + (queue->size - queue->firstused);
+}
+
 
 /*
  * Priority Queue

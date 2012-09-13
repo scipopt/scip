@@ -29,6 +29,8 @@
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_setppc.h"
 #include "scip/pub_misc.h"
 
 /**@name Constraint handler properties
@@ -697,6 +699,116 @@ SCIP_RETCODE removeFixedVariables(
       /* remove old literal */
       SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** try to upgrade the bounddisjunction constraint
+ *
+ *  if only binary variables are left, we can upgrade a bounddisjunction to a logicor constraint(, if only two variables
+ *  are left, this logicor constraint can be formulated as set-packing constraint as well)
+ *
+ *  e.g.: bounddisjunction( x1 >= 1, x2 <= 0; x3 >= 1; x4 <= 0 )   =>   x1 + ~x2 + x3 + ~x4 >= 1
+ */
+static
+SCIP_RETCODE upgradeCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< bound disjunction constraint that detected the conflict */
+   int*                  ndelconss,          /**< pointer to store the number of delete constraint */
+   int*                  naddconss           /**< pointer to store the number of added constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** newvars;
+   SCIP_Bool allbinary;
+   int nvars;
+   int v;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(ndelconss != NULL);
+   assert(naddconss != NULL);
+   assert(naddconss != NULL);
+   assert(!SCIPconsIsModifiable(cons));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   nvars = consdata->nvars;
+   assert(nvars >= 2);
+   assert(consdata->vars != NULL);
+
+   allbinary = TRUE;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &newvars, nvars) );
+
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      if( !SCIPvarIsBinary(consdata->vars[v]) )
+      {
+	 allbinary = FALSE;
+	 break;
+      }
+      else
+      {
+	 if( consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
+	 {
+	    assert(SCIPisFeasGT(scip, consdata->bounds[v], 0.0));
+
+	    if( nvars == 2 )
+	    {
+	       SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[v], &(newvars[v])) );
+	    }
+	    else
+	       newvars[v] = consdata->vars[v];
+	 }
+	 else
+	 {
+	    assert(consdata->boundtypes[v] == SCIP_BOUNDTYPE_UPPER);
+	    assert(SCIPisFeasLT(scip, consdata->bounds[v], 1.0));
+
+	    if( nvars > 2 )
+	    {
+	       SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[v], &(newvars[v])) );
+	    }
+	    else
+	       newvars[v] = consdata->vars[v];
+	 }
+      }
+   }
+
+   if( allbinary )
+   {
+      SCIP_CONS* newcons;
+
+      if( nvars == 2 )
+      {
+	 SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, SCIPconsGetName(cons), nvars, newvars,
+	       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+	       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+	       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+	       SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+      }
+      else
+      {
+	 SCIP_CALL( SCIPcreateConsLogicor(scip, &newcons, SCIPconsGetName(cons), nvars, newvars,
+	       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+	       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+	       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+	       SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+      }
+
+      SCIPdebugMessage("updated constraint <%s> to the following %s constraint\n", SCIPconsGetName(cons), (nvars == 2 ? "setppc" : "logicor"));
+      SCIPdebugPrintCons(scip, newcons, NULL);
+      SCIP_CALL( SCIPaddCons(scip, newcons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      ++(*naddconss);
+
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+   }
+
+   SCIPfreeBufferArray(scip, &newvars);
 
    return SCIP_OKAY;
 }
@@ -2208,7 +2320,7 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
          {
             SCIPdebugMessage("bound disjunction constraint <%s> has only one undecided literal\n",
                SCIPconsGetName(cons));
-            
+
             assert(consdata->vars != NULL);
             assert(!isLiteralSatisfied(scip, consdata, 0));
             assert(!isLiteralViolated(scip, consdata, 0));
@@ -2269,9 +2381,14 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
             *result = SCIP_SUCCESS;
             continue;
          }
+	 else
+	 {
+	    /* try to upgrade the bounddisjunction constraint */
+	    SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
+	 }
       }
    }
-   
+
    /**@todo preprocess pairs of bound disjunction constraints */
 
    return SCIP_OKAY;

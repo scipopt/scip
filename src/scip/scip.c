@@ -18356,7 +18356,7 @@ SCIP_Bool SCIPhaveVarsCommonClique(
  */
 SCIP_RETCODE SCIPwriteCliqueGraph(
    SCIP*                 scip,               /**< SCIP data structure */
-   char*                 fname,              /**< name of file */
+   const char*           fname,              /**< name of file */
    SCIP_Bool             writeimplications   /**< should we write the binary implications */
    )
 {
@@ -21421,7 +21421,7 @@ SCIP_RETCODE SCIPenableConsSeparation(
    return SCIP_OKAY;
 }
 
-/** disables constraint's separation capabilities s.t. the constraint is not propagated anymore until the separation
+/** disables constraint's separation capabilities s.t. the constraint is not separated anymore until the separation
  *  is enabled again with a call to SCIPenableConsSeparation(); in contrast to SCIPdelConsLocal() and SCIPdelConsNode(),
  *  the disabling is not associated to a node in the tree and does not consume memory; therefore, the constraint
  *  is neither automatically enabled on leaving the node nor automatically disabled again on entering the node again
@@ -21502,6 +21502,58 @@ SCIP_RETCODE SCIPdisableConsPropagation(
    SCIP_CALL( checkStage(scip, "SCIPdisableConsPropagation", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsDisablePropagation(cons, scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** marks constraint to be propagated
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @note if a constraint is marked to be propagated, the age of the constraint will be ignored for propagation
+ */
+SCIP_RETCODE SCIPmarkConsPropagate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPmarkConsPropagate", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsMarkPropagate(cons, scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** unmarks the constraint to be propagated
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPunmarkConsPropagate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPunmarkConsPropagate", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsUnmarkPropagate(cons, scip->set) );
 
    return SCIP_OKAY;
 }
@@ -28327,13 +28379,12 @@ SCIP_RETCODE SCIPbranchVarVal(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPbranchVarVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-   
-   /* for a continuous variable, their will either be variable fixing or a branching
-    * fixing is done if RelEQ(lb,ub)
-    * in the other case, the given branching value should be such that it does not sits on one of the bounds
-    * we assert this by requiring that it is at least eps/2 away from each bound
-    * the /2 is there, because ub-lb may be in (eps, 2eps], in which case there is no way to choose a branching value that is at least eps away from both bounds
-    * however, if variable bounds are below/above -/+infinity/2.1, then SCIPisLT will give an assert, so we omit the check then
+
+   /* A continuous variable will be fixed if SCIPisRelEQ(lb,ub) is true. Otherwise, the given branching value should be
+    * such that its value is not equal to one of the bounds. We assert this by requiring that it is at least eps/2 away
+    * from each bound. The 2.1 is there, because ub-lb may be in (eps, 2*eps], in which case there is no way to choose a
+    * branching value that is at least eps away from both bounds. However, if the variable bounds are below/above
+    * -/+infinity * 2.1, then SCIPisLT will give an assert, so we omit the check in this case.
     */
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
       SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) ||
@@ -34561,6 +34612,31 @@ SCIP_Real SCIPgetPresolvingTime(
    return SCIPclockGetTime(scip->stat->presolvingtime);
 }
 
+/** gets the time need to solve the first LP in the root node
+ *
+ *  @return the solving time for the first LP in the root node in seconds.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_Real SCIPgetFirstLPTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetFirstLPTime", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return scip->stat->firstlptime;
+}
 
 
 

@@ -1186,6 +1186,8 @@ SCIP_RETCODE solveNodeInitialLP(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
 {
+   SCIP_Real starttime = 0.0;
+
    assert(stat != NULL);
    assert(tree != NULL);
    assert(lp != NULL);
@@ -1207,11 +1209,18 @@ SCIP_RETCODE solveNodeInitialLP(
    SCIP_CALL( SCIPtreeLoadLPState(tree, blkmem, set, stat, eventqueue, lp) );
 
    /* solve initial LP */
+   starttime = SCIPclockGetTime(stat->solvingtime);
    SCIPdebugMessage("node: solve initial LP\n");
    SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob,
          SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) == 0 ? set->lp_rootiterlim : set->lp_iterlim, TRUE, TRUE, FALSE, lperror) );
    assert(lp->flushed);
    assert(lp->solved || *lperror);
+
+   /* save time for very first LP in root node */
+   if ( stat->nnodelps == 0 && SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) == 0 )
+   {
+      stat->firstlptime = SCIPclockGetTime(stat->solvingtime) - starttime;
+   }
 
    /* remove previous primal ray, store new one if LP is unbounded */
    SCIP_CALL( updatePrimalRay(blkmem, set, stat, prob, primal, tree, lp, *lperror) );
@@ -3405,6 +3414,7 @@ SCIP_RETCODE solveNode(
    fullpropagation = TRUE;
    forcedlpsolve = FALSE;
    nloops = 0;
+
    while( !(*cutoff) && (solverelaxagain || solvelpagain || propagateagain) && nlperrors < MAXNLPERRORS && !(*restart) )
    {
       SCIP_Bool lperror;
@@ -3414,6 +3424,9 @@ SCIP_RETCODE solveNode(
       SCIP_Bool forcedenforcement;
 
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+
+      *unbounded = FALSE;
+      *infeasible = FALSE;
 
       nloops++;
       lperror = FALSE;

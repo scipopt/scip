@@ -1,15 +1,26 @@
 SCIP version NEXT
 ==================
 
+data structures
+- new data structure for (circluar) queues (SCIP_QUEUE)
+
 features:
 - added new dual presolving for setppc-constraints
 - changed dualfix presolver to propagator such that dual fixing can also be applied during repropagation of the root node
 - added upgrade from varbound constraints to set-packing constraints
 - added SCIPwriteCliqueGraph() to scip.{c,h} to write the clique graph in GML format into a given file
+- added upgrade from bounddisjunction constraints to set-packing/logicor constraints
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
-  the rank of a cut can be changed (deafult rank is 0)
+  the rank of a cut can be changed (default rank is 0)
+- methods SCIPlpiIs{PrimalFeasible,DualFeasible,DualUnbounded}() in the SoPlex interface (lpi_spx.cpp) now check that
+  LP is not perturbed, which may happen when stopping due to iteration or time limit
+- new methods for the SCIP_QUEUE data structure in pub_misc.h, misc.c SCIPqueueCreate(), SCIPqueueFree(),
+  SCIPqueueClear(), SCIPqueueInsert(), SCIPqueueRemove(), SCIPqueueFirst(), SCIPqueueIsEmpty(), SCIPqueueNElems()
+- added number of constraints which are marked for propagation to callback method consprop
+
+
 
 SCIP version 3.0.1
 ==================
@@ -31,12 +42,18 @@ fixed bugs:
 - fixed bug trying to color probing nodes, which are not added to the vbc output anymore
 - fixed bug in sorting template
 - fixed bug in cons_orbitope: in rare cases one cannot repropagate
+- fixed behaviour change of indicator constraint handler when solving a another instance after solving a one using the
+  interactive shell
+- fixed bug of wrong result code in propagation in prop_genvbound.c
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
+- sepa_cgmip can now take the objective row into account
 
 interface
 - fixed spelling in the method name SCIPgmlWriteClosing()
+- added function SCIPgetFirstLPTime to return the time needed to solve the first LP of the root node
+
 
 SCIP version 3.0.0
 ==================

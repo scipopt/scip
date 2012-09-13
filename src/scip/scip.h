@@ -1101,7 +1101,7 @@ SCIP_Bool SCIPisParamFixed(
  *
  *  @return pointer to the parameter with the given name
  */
-extern
+EXTERN
 SCIP_PARAM* SCIPgetParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of the parameter */
@@ -7971,7 +7971,7 @@ SCIP_Bool SCIPhaveVarsCommonClique(
 EXTERN
 SCIP_RETCODE SCIPwriteCliqueGraph(
    SCIP*                 scip,               /**< SCIP data structure */
-   char*                 fname,              /**< name of file */
+   const char*           fname,              /**< name of file */
    SCIP_Bool             writeimplications   /**< should we write the binary implications */
    );
 
@@ -9932,6 +9932,47 @@ SCIP_RETCODE SCIPenableConsPropagation(
  */
 EXTERN
 SCIP_RETCODE SCIPdisableConsPropagation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+
+/** marks constraint to be propagated
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @note if a constraint is marked to be propagated, the age of the constraint will be ignored for propagation
+ */
+EXTERN
+SCIP_RETCODE SCIPmarkConsPropagate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** unmarks the constraint to be propagated
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_RETCODE SCIPunmarkConsPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
@@ -17611,6 +17652,28 @@ SCIP_Real SCIPgetReadingTime(
  */
 EXTERN
 SCIP_Real SCIPgetPresolvingTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the time need to solve the first LP in the root node
+ *
+ *  @return the solving time for the first LP in the root node in seconds.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_Real SCIPgetFirstLPTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

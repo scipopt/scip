@@ -110,6 +110,7 @@ void SCIPgmlWriteClosing(
  * @{
  */
 
+
 /*
  * Sparse solution
  */
@@ -164,6 +165,70 @@ SCIP_Longint* SCIPsparseSolGetUbs(
    SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
    );
 
+/**@} */
+
+
+/*
+ * Queue
+ */
+
+/**@defgroup Queue Queue
+ *
+ * @{
+ */
+
+
+/** creates a (circular) queue, best used if the size will be fixed or will not be increased that much */
+extern
+SCIP_RETCODE SCIPqueueCreate(
+   SCIP_QUEUE**          queue,              /**< pointer to the new queue */
+   int                   initsize,           /**< initial number of available element slots */
+   SCIP_Real             sizefac             /**< memory growing factor applied, if more element slots are needed */
+   );
+
+
+/** frees queue, but not the data elements themselves */
+extern
+void SCIPqueueFree(
+   SCIP_QUEUE**          queue               /**< pointer to a queue */
+   );
+
+/** clears the queue, but doesn't free the data elements themselves */
+extern
+void SCIPqueueClear(
+   SCIP_QUEUE*           queue               /**< queue */
+   );
+
+/** inserts element at the end of the queue */
+extern
+SCIP_RETCODE SCIPqueueInsert(
+   SCIP_QUEUE*           queue,              /**< queue */
+   void*                 elem                /**< element to be inserted */
+   );
+
+/** removes and returns the first element of the queue */
+extern
+void* SCIPqueueRemove(
+   SCIP_QUEUE*           queue               /**< queue */
+   );
+
+/** returns the first element of the queue without removing it */
+extern
+void* SCIPqueueFirst(
+   SCIP_QUEUE*           queue               /**< queue */
+   );
+
+/** returns whether the queue is empty */
+extern
+SCIP_Bool SCIPqueueIsEmpty(
+   SCIP_QUEUE*           queue               /**< queue */
+   );
+
+/** returns the number of elements in the queue */
+extern
+int SCIPqueueNElems(
+   SCIP_QUEUE*           queue               /**< queue */
+   );
 
 /**@} */
 

@@ -96,7 +96,6 @@ struct SCIP_ConsData
    SCIP_Real             rhs;                /**< right hand side of variable bound inequality */
    SCIP_VAR*             var;                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar;             /**< binary, integer or implicit integer bounding variable y */
-   SCIP_VAR**            vars;               /**< array containing both variable which is need for consGetVarsDataVarbound */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    unsigned int          propagated:1;       /**< is the variable bound constraint already propagated? */
    unsigned int          presolved:1;        /**< is the variable bound constraint already presolved? */
@@ -104,7 +103,6 @@ struct SCIP_ConsData
    unsigned int          changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
    unsigned int          tightened:1;        /**< were the vbdcoef and all sides already tightened? */
 };
-
 
 /** constraint handler data */
 struct SCIP_ConshdlrData
@@ -217,18 +215,18 @@ void conshdlrdataFree(
 static
 SCIP_RETCODE catchEvents(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< variable bound constraint data */
+   SCIP_CONS*            cons,               /**< variable bound constraint */
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
-   assert(consdata != NULL);
+   SCIP_CONSDATA* consdata;
+   assert(cons != NULL);
    assert(eventhdlr != NULL);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
-   /* catch bound change events on variables */
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, eventhdlr,
-         (SCIP_EVENTDATA*)consdata, NULL) );
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, eventhdlr,
-         (SCIP_EVENTDATA*)consdata, NULL) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) );
 
    return SCIP_OKAY;
 }
@@ -237,18 +235,18 @@ SCIP_RETCODE catchEvents(
 static
 SCIP_RETCODE dropEvents(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< variable bound constraint data */
+   SCIP_CONS*            cons,               /**< variable bound constraint */
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
-   assert(consdata != NULL);
+   SCIP_CONSDATA* consdata;
+   assert(cons != NULL);
    assert(eventhdlr != NULL);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
-   /* drop events on variables */
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, eventhdlr,
-         (SCIP_EVENTDATA*)consdata, -1) );
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, eventhdlr,
-         (SCIP_EVENTDATA*)consdata, -1) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)cons, -1) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)cons, -1) );
 
    return SCIP_OKAY;
 }
@@ -258,7 +256,6 @@ static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA**       consdata,           /**< pointer to store the variable bound constraint data */
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_VAR*             var,                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar,             /**< binary, integer or implicit integer bounding variable y */
    SCIP_Real             vbdcoef,            /**< coefficient c of bounding variable y */
@@ -310,14 +307,7 @@ SCIP_RETCODE consdataCreate(
    {
       SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->var, &(*consdata)->var) );
       SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vbdvar, &(*consdata)->vbdvar) );
-
-      /* catch events for variables */
-      SCIP_CALL( catchEvents(scip, *consdata, eventhdlr) );
    }
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, 2) );  /*lint !e506*/
-   (*consdata)->vars[0] = (*consdata)->var;
-   (*consdata)->vars[1] = (*consdata)->vbdvar;
 
    /* capture variables */
    SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->var) );
@@ -330,8 +320,7 @@ SCIP_RETCODE consdataCreate(
 static
 SCIP_RETCODE consdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA**       consdata,           /**< pointer to the variable bound constraint */
-   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
+   SCIP_CONSDATA**       consdata            /**< pointer to the variable bound constraint */
    )
 {
    assert(consdata != NULL);
@@ -343,17 +332,10 @@ SCIP_RETCODE consdataFree(
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
    }
 
-   /* drop events */
-   if( SCIPisTransformed(scip) )
-   {
-      SCIP_CALL( dropEvents(scip, *consdata, eventhdlr) );
-   }
-
    /* release variables */
    SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->var) );
    SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->vbdvar) );
 
-   SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, 2);
    SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
@@ -2568,7 +2550,7 @@ SCIP_RETCODE applyFixings(
       /* if the variables should be replaced, drop the events and catch the events on the new variables afterwards */
       if( varschanged )
       {
-         SCIP_CALL( dropEvents(scip, consdata, eventhdlr) );
+         SCIP_CALL( dropEvents(scip, cons, eventhdlr) );
       }
 
       /* apply aggregation on x */
@@ -2749,7 +2731,7 @@ SCIP_RETCODE applyFixings(
       /* catch the events again on the new variables */
       if( varschanged )
       {
-         SCIP_CALL( catchEvents(scip, consdata, eventhdlr) );
+         SCIP_CALL( catchEvents(scip, cons, eventhdlr) );
       }
    }
 
@@ -3315,7 +3297,13 @@ SCIP_DECL_CONSDELETE(consDeleteVarbound)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( consdataFree(scip, consdata, conshdlrdata->eventhdlr) );
+   /* drop events */
+   if( SCIPisTransformed(scip) )
+   {
+      SCIP_CALL( dropEvents(scip, cons, conshdlrdata->eventhdlr) );
+   }
+
+   SCIP_CALL( consdataFree(scip, consdata) );
 
    return SCIP_OKAY;
 }
@@ -3338,7 +3326,7 @@ SCIP_DECL_CONSTRANS(consTransVarbound)
    assert(sourcedata != NULL);
 
    /* create target constraint data */
-   SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
+   SCIP_CALL( consdataCreate(scip, &targetdata,
          sourcedata->var, sourcedata->vbdvar, sourcedata->vbdcoef, sourcedata->lhs, sourcedata->rhs) );
 
    /* create target constraint */
@@ -3347,6 +3335,9 @@ SCIP_DECL_CONSTRANS(consTransVarbound)
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+
+   /* catch events for variables */
+   SCIP_CALL( catchEvents(scip, *targetcons, conshdlrdata->eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -3541,10 +3532,12 @@ SCIP_DECL_CONSPROP(consPropVarbound)
    cutoff = FALSE;
    nchgbds = 0;
 
-   for( i = 0; i < nusefulconss && !cutoff; i++ )
+   /* process constraints marked for propagation */
+   for( i = 0; i < nmarkedconss && !cutoff; i++ )
    {
       SCIP_CALL( propagateCons(scip, conss[i], conshdlrdata->usebdwidening, &cutoff, &nchgbds, NULL) );
-   } 
+      SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
+   }
 
    if( cutoff )
       *result = SCIP_CUTOFF;
@@ -3797,7 +3790,7 @@ SCIP_DECL_CONSCOPY(consCopyVarbound)
    SCIP_VAR** vars;
    SCIP_Real* coefs;
    const char* consname;
-   
+
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, 2) );
 
@@ -3816,7 +3809,7 @@ SCIP_DECL_CONSCOPY(consCopyVarbound)
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, 2, vars, coefs,
          SCIPgetLhsVarbound(sourcescip, sourcecons), SCIPgetRhsVarbound(sourcescip, sourcecons), varmap, consmap, 
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
-   
+
    SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &vars);
 
@@ -3988,13 +3981,18 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsVarbound)
 static
 SCIP_DECL_EVENTEXEC(eventExecVarbound)
 {  /*lint --e{715}*/
+   SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
 
-   consdata = (SCIP_CONSDATA*)eventdata;
+   cons = (SCIP_CONS*)eventdata;
+   assert(cons != NULL);
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    consdata->propagated = FALSE;
    consdata->presolved = FALSE;
+
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -4124,11 +4122,17 @@ SCIP_RETCODE SCIPcreateConsVarbound(
    assert(conshdlrdata != NULL);
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, var, vbdvar, vbdcoef, lhs, rhs) );
+   SCIP_CALL( consdataCreate(scip, &consdata, var, vbdvar, vbdcoef, lhs, rhs) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   if( SCIPisTransformed(scip) )
+   {
+      /* catch events for variables */
+      SCIP_CALL( catchEvents(scip, *cons, conshdlrdata->eventhdlr) );
+   }
 
    return SCIP_OKAY;
 }

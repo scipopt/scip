@@ -50,7 +50,7 @@
                                          *   average reset age by this factor */
 
 
-/*#define CHECKCONSARRAYS*/
+/* #define CHECKCONSARRAYS */
 
 
 /*
@@ -299,11 +299,21 @@ void checkConssArrays(
       assert(conshdlr->propconss[c]->active);
       assert(conshdlr->propconss[c]->propagate);
       assert(conshdlr->propconss[c]->propenabled);
-      assert(conshdlr->propconss[c]->obsolete == (c >= conshdlr->nusefulpropconss));
+      assert(conshdlr->propconss[c]->markpropagate == (c < conshdlr->nmarkedpropconss));
+      assert(conshdlr->propconss[c]->markpropagate || (conshdlr->propconss[c]->obsolete == (c >= conshdlr->nusefulpropconss)));
    }
 }
 #endif
 #endif
+
+/** returns whether the constraint updates of the constraint handler are currently delayed */
+static
+SCIP_Bool conshdlrAreUpdatesDelayed(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   return (conshdlr->delayupdatecount > 0);
+}
 
 /** returns the exponentially decaying weighted age average for age resets */
 static
@@ -378,6 +388,7 @@ SCIP_RETCODE conshdlrMarkConsObsolete(
    assert(cons != NULL);
    assert(!cons->original);
    assert(!cons->obsolete);
+   assert(!conshdlrAreUpdatesDelayed(conshdlr));
 
    cons->obsolete = TRUE;
    
@@ -456,7 +467,11 @@ SCIP_RETCODE conshdlrMarkConsObsolete(
          
          conshdlr->nusefulenfoconss--;
       }
-      if( cons->propagate && cons->propenabled )
+      /* in case the constraint is marked to be propagated, we do not move it in the propconss array since the first
+       * part of the array contains all marked constraints independently of their age
+       */
+      assert(!cons->markpropagate == (cons->propconsspos < conshdlr->nmarkedpropconss));
+      if( cons->propagate && cons->propenabled && !cons->markpropagate )
       {
          assert(0 <= cons->propconsspos && cons->propconsspos < conshdlr->nusefulpropconss);
          
@@ -501,6 +516,7 @@ SCIP_RETCODE conshdlrMarkConsUseful(
    assert(cons != NULL);
    assert(!cons->original);
    assert(cons->obsolete);
+   assert(!conshdlrAreUpdatesDelayed(conshdlr));
 
    cons->obsolete = FALSE;
 
@@ -554,7 +570,11 @@ SCIP_RETCODE conshdlrMarkConsUseful(
          
          conshdlr->nusefulenfoconss++;
       }
-      if( cons->propagate && cons->propenabled )
+      /* in case the constraint is marked to be propagated, we do not move it in the propconss array since the first
+       * part of the array contains all marked constraints independently of their age
+       */
+      assert(!cons->markpropagate == (cons->propconsspos < conshdlr->nmarkedpropconss));
+      if( cons->propagate && cons->propenabled && !cons->markpropagate)
       {
          assert(conshdlr->nusefulpropconss <= cons->propconsspos && cons->propconsspos < conshdlr->npropconss);
          
@@ -575,6 +595,162 @@ SCIP_RETCODE conshdlrMarkConsUseful(
 
    return SCIP_OKAY;
 }
+
+/** marks constraint to be propagated in the next propagation round;
+ *
+ *  @note the propagation array is divided into three parts in contrast to the other constraint arrays;
+ *        the first part contains constraints which were marked to be propagated (independently of its age)
+ *        the second part contains the useful (non-obsolete) constraints which are not marked to be propagated
+ *        finally, the third part contains obsolete constraints which are not marked to be propagated
+ *
+ *  @note if a constraint gets marked for propagation we put it into the first part regardless of its age
+ */
+static
+void conshdlrMarkConsPropagate(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS*            cons                /**< constraint to be marked obsolete */
+   )
+{
+   SCIP_CONS* tmpcons;
+
+   assert(conshdlr != NULL);
+   assert(conshdlr->nmarkedpropconss <= conshdlr->nusefulpropconss);
+   assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(cons != NULL);
+   assert(!cons->original);
+   assert(!conshdlrAreUpdatesDelayed(conshdlr));
+
+   /* it may happen that the constraint is deleted while updates are delayed: in this case we just return */
+   if( !cons->enabled )
+      return;
+
+   if( cons->markpropagate )
+      return;
+
+   cons->markpropagate = TRUE;
+
+   /* propagation of the constraint is globally or locally disabled, so we do not have to move the constraint in the
+    * propconss array
+    */
+   if( !cons->propagate || !cons->propenabled )
+   {
+      assert(cons->propconsspos == -1);
+      return;
+   }
+   assert(cons->propconsspos >= conshdlr->nmarkedpropconss);
+
+   /* if the constraint is obsolete, we need to move it first to the non-obsolete part of the array */
+   if( cons->obsolete )
+   {
+      assert(conshdlr->nusefulpropconss <= cons->propconsspos && cons->propconsspos < conshdlr->npropconss);
+
+      /* switch the first obsolete prop constraint with this constraint */
+      tmpcons = conshdlr->propconss[conshdlr->nusefulpropconss];
+      assert(tmpcons->propconsspos == conshdlr->nusefulpropconss);
+
+      conshdlr->propconss[conshdlr->nusefulpropconss] = cons;
+      conshdlr->propconss[cons->propconsspos] = tmpcons;
+      tmpcons->propconsspos = cons->propconsspos;
+      cons->propconsspos = conshdlr->nusefulpropconss;
+
+      conshdlr->nusefulpropconss++;
+   }
+   assert(conshdlr->nmarkedpropconss <= cons->propconsspos && cons->propconsspos < conshdlr->nusefulpropconss);
+
+   /* switch the first useful prop constraint with this constraint */
+   tmpcons = conshdlr->propconss[conshdlr->nmarkedpropconss];
+   assert(tmpcons->propconsspos == conshdlr->nmarkedpropconss);
+
+   conshdlr->propconss[conshdlr->nmarkedpropconss] = cons;
+   conshdlr->propconss[cons->propconsspos] = tmpcons;
+   tmpcons->propconsspos = cons->propconsspos;
+   cons->propconsspos = conshdlr->nmarkedpropconss;
+
+   conshdlr->nmarkedpropconss++;
+
+   checkConssArrays(conshdlr);
+}
+
+/** unmarks constraint to be propagated in the next propagation round;
+ *
+ *  @note the propagation array is divided into three parts in contrast to the other constraint arrays;
+ *        the first part contains constraints which were marked to be propagated (independently of its age)
+ *        the second part contains the useful (non-obsolete) constraints which are not marked to be propagated
+ *        finally, the third part contains obsolete constraints which are not marked to be propagated
+ *
+ *  @note if a constraint gets unmarked for propagation, it is put into the right part depending on its age
+ */
+static
+void conshdlrUnmarkConsPropagate(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS*            cons                /**< constraint to be marked obsolete */
+   )
+{
+   SCIP_CONS* tmpcons;
+
+   assert(conshdlr != NULL);
+   assert(conshdlr->nmarkedpropconss <= conshdlr->nusefulpropconss);
+   assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(cons != NULL);
+   assert(!cons->original);
+   assert(!conshdlrAreUpdatesDelayed(conshdlr));
+
+   /* it may happen that the constraint is deleted while updates are delayed: in this case we just return */
+   if( !cons->enabled )
+      return;
+
+   if( !cons->markpropagate )
+      return;
+
+   cons->markpropagate = FALSE;
+
+   /* propagation of the constraint is globally or locally disabled, so we do not have to move the constraint in the
+    * propconss array
+    */
+   if( !cons->propagate || !cons->propenabled )
+   {
+      assert(cons->propconsspos == -1);
+      return;
+   }
+   assert(cons->propconsspos >= 0);
+   assert(cons->propconsspos < conshdlr->nmarkedpropconss);
+
+   /* first, move the constraint out of the first part to the second part of the constraint array */
+   if( cons->propconsspos < conshdlr->nmarkedpropconss - 1 )
+   {
+      conshdlr->nmarkedpropconss--;
+
+      /* switch the last marked prop constraint with this constraint */
+      tmpcons = conshdlr->propconss[conshdlr->nmarkedpropconss];
+      assert(tmpcons->propconsspos == conshdlr->nmarkedpropconss);
+
+      conshdlr->propconss[conshdlr->nmarkedpropconss] = cons;
+      conshdlr->propconss[cons->propconsspos] = tmpcons;
+      tmpcons->propconsspos = cons->propconsspos;
+      cons->propconsspos = conshdlr->nmarkedpropconss;
+   }
+   else if( cons->propconsspos == conshdlr->nmarkedpropconss - 1 )
+      conshdlr->nmarkedpropconss--;
+   assert(cons->propconsspos == conshdlr->nmarkedpropconss);
+
+   /* if the constraint is obsolete, move it to the last part of the constraint array */
+   if( cons->obsolete )
+   {
+      conshdlr->nusefulpropconss--;
+
+      /* switch the last useful prop constraint with this constraint */
+      tmpcons = conshdlr->propconss[conshdlr->nusefulpropconss];
+      assert(tmpcons->propconsspos == conshdlr->nusefulpropconss);
+
+      conshdlr->propconss[conshdlr->nusefulpropconss] = cons;
+      conshdlr->propconss[cons->propconsspos] = tmpcons;
+      tmpcons->propconsspos = cons->propconsspos;
+      cons->propconsspos = conshdlr->nusefulpropconss;
+   }
+
+   checkConssArrays(conshdlr);
+}
+
 
 /** adds constraint to the conss array of constraint handler */
 static
@@ -978,6 +1154,7 @@ SCIP_RETCODE conshdlrAddPropcons(
    assert(cons->propconsspos == -1);
    assert(set != NULL);
    assert(cons->scip == set->scip);
+   assert(!conshdlrAreUpdatesDelayed(conshdlr));
 
    /* add constraint to the propagation array */
    SCIP_CALL( conshdlrEnsurePropconssMem(conshdlr, set, conshdlr->npropconss+1) );
@@ -995,6 +1172,16 @@ SCIP_RETCODE conshdlrAddPropcons(
    conshdlr->propconss[insertpos] = cons;
    cons->propconsspos = insertpos;
    conshdlr->npropconss++;
+
+   /* if the constraint is marked to be propagated, we have to move it to the first part of the array */
+   if( cons->markpropagate )
+   {
+      /* temporarily unmark the constraint to be propagated, such that we can use the method below */
+      cons->markpropagate = FALSE;
+
+      conshdlrMarkConsPropagate(cons->conshdlr, cons);
+      assert(cons->markpropagate);
+   }
 
    checkConssArrays(conshdlr);
 
@@ -1019,8 +1206,18 @@ void conshdlrDelPropcons(
    assert(cons->propenabled);
    assert(cons->propconsspos != -1);
 
+   /* unmark constraint to be propagated; this will move the constraint to the obsolete or non-obsolete part of the
+    * array, depending on its age
+    */
+   if( cons->markpropagate )
+   {
+      conshdlrUnmarkConsPropagate(cons->conshdlr, cons);
+      assert(!cons->markpropagate);
+   }
+
    /* delete constraint from the propagation array */
    delpos = cons->propconsspos;
+   assert(delpos >= conshdlr->nmarkedpropconss);
    if( !cons->obsolete )
    {
       assert(0 <= delpos && delpos < conshdlr->nusefulpropconss);
@@ -1036,6 +1233,7 @@ void conshdlrDelPropcons(
       assert(conshdlr->lastnusefulpropconss >= 0);
    }
    assert(conshdlr->nusefulpropconss <= delpos && delpos < conshdlr->npropconss);
+
    if( delpos < conshdlr->npropconss-1 )
    {
       conshdlr->propconss[delpos] = conshdlr->propconss[conshdlr->npropconss-1];
@@ -1444,21 +1642,13 @@ SCIP_RETCODE conshdlrDeactivateCons(
    return SCIP_OKAY;
 }
 
-/** returns whether the constraint updates of the constraint handler are currently delayed */
-static
-SCIP_Bool conshdlrAreUpdatesDelayed(
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   )
-{
-   return (conshdlr->delayupdatecount > 0);
-}
-
 /** processes all delayed updates of constraints:
  *  recently (de)activated constraints will be (de)activated;
  *  recently en/disabled constraints will be en/disabled;
  *  recent obsolete non-check constraints will be globally deleted;
  *  recent obsolete check constraints will be moved to the last positions in the sepa-, enfo-, check-, and prop-arrays;
  *  recent useful constraints will be moved to the first positions in the sepa-, enfo-, check-, and prop-arrays;
+ *  constraints which were recently marked to be propagated are moved to the first positions in the prop-array;
  *  no longer used constraints will be freed and removed from the conss array
  */
 static
@@ -1492,7 +1682,8 @@ SCIP_RETCODE conshdlrProcessUpdates(
          || cons->updateenable || cons->updatedisable
          || cons->updatesepaenable || cons->updatesepadisable
          || cons->updatepropenable || cons->updatepropdisable
-         || cons->updateobsolete || cons->updatefree);
+         || cons->updateobsolete || cons->updatefree
+         || cons->updatemarkpropagate || cons->updateunmarkpropagate);
 
       SCIPdebugMessage(" -> constraint <%s>: insert=%u, activate=%u, deactivate=%u, enable=%u, disable=%u, sepaenable=%u, sepadisable=%u, propenable=%u, propdisable=%u, obsolete=%u, free=%u (consdata=%p)\n",
          cons->name, cons->updateinsert, cons->updateactivate, cons->updatedeactivate, 
@@ -1598,20 +1789,37 @@ SCIP_RETCODE conshdlrProcessUpdates(
          cons->updatefree = FALSE;
          cons->updateobsolete = FALSE;
       }
-      else if( cons->updateobsolete )
+      else
       {
-         if( !cons->obsolete && consExceedsObsoleteage(cons, set) )
+         if( cons->updateobsolete )
          {
-            /* the constraint's status must be switched to obsolete */
-            SCIP_CALL( conshdlrMarkConsObsolete(conshdlr, cons) );
+            if( !cons->obsolete && consExceedsObsoleteage(cons, set) )
+            {
+               /* the constraint's status must be switched to obsolete */
+               SCIP_CALL( conshdlrMarkConsObsolete(conshdlr, cons) );
+            }
+            else if( cons->obsolete && !consExceedsObsoleteage(cons, set) )
+            {
+               /* the constraint's status must be switched to useful */
+               SCIP_CALL( conshdlrMarkConsUseful(conshdlr, cons) );
+            }
+            cons->updateobsolete = FALSE;
          }
-         else if( cons->obsolete && !consExceedsObsoleteage(cons, set) )
+
+         if( cons->updatemarkpropagate )
          {
-            /* the constraint's status must be switched to useful */
-            SCIP_CALL( conshdlrMarkConsUseful(conshdlr, cons) );
+            /* the constraint must be marked to be propagated */
+            conshdlrMarkConsPropagate(conshdlr, cons);
+            cons->updatemarkpropagate = FALSE;
          }
-         cons->updateobsolete = FALSE;
+         else if( cons->updateunmarkpropagate )
+         {
+            /* the constraint must be unmarked to be propagated */
+            conshdlrUnmarkConsPropagate(conshdlr, cons);
+            cons->updateunmarkpropagate = FALSE;
+         }
       }
+
       assert(!cons->updateinsert);
       assert(!cons->updateactivate);
       assert(!cons->updatedeactivate);
@@ -1622,6 +1830,8 @@ SCIP_RETCODE conshdlrProcessUpdates(
       assert(!cons->updatepropenable);
       assert(!cons->updatepropdisable);
       assert(!cons->updateobsolete);
+      assert(!cons->updatemarkpropagate);
+      assert(!cons->updateunmarkpropagate);
       assert(!cons->updatefree);
       cons->update = FALSE;
 
@@ -1666,6 +1876,7 @@ SCIP_RETCODE conshdlrForceUpdates(
       conshdlr->name, conshdlr->delayupdatecount);
    conshdlr->delayupdatecount--;
 
+   /* only run the update if all delays are taken away (reference counting) */
    if( !conshdlrAreUpdatesDelayed(conshdlr) )
    {
       SCIP_CALL( conshdlrProcessUpdates(conshdlr, blkmem, set, stat) );
@@ -1880,6 +2091,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->propconsssize = 0;
    (*conshdlr)->npropconss = 0;
    (*conshdlr)->nusefulpropconss = 0;
+   (*conshdlr)->nmarkedpropconss = 0;
    (*conshdlr)->updateconss = NULL;
    (*conshdlr)->updateconsssize = 0;
    (*conshdlr)->nupdateconss = 0;
@@ -1946,6 +2158,9 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->presolwasdelayed = FALSE;
    (*conshdlr)->initialized = FALSE;
 
+   (*conshdlr)->pendingconss = NULL;
+   SCIP_CALL( SCIPqueueCreate( &((*conshdlr)->pendingconss), 100, 1.5 ) );
+
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/sepafreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
@@ -2001,6 +2216,8 @@ SCIP_RETCODE SCIPconshdlrFree(
    assert(!(*conshdlr)->initialized);
    assert((*conshdlr)->nconss == 0);
    assert(set != NULL);
+
+   SCIPqueueFree( &((*conshdlr)->pendingconss) );
 
    /* call destructor of constraint handler */
    if( (*conshdlr)->consfree != NULL )
@@ -2155,6 +2372,11 @@ SCIP_RETCODE SCIPconshdlrExit(
       return SCIP_INVALIDCALL;
    }
 
+   while( !SCIPqueueIsEmpty(conshdlr->pendingconss) )
+   {
+      SCIP_CALL( SCIPconshdlrPopProp(conshdlr, blkmem, set) );
+   }
+
    /* call deinitialization method of constraint handler */
    if( conshdlr->consexit != NULL )
    {
@@ -2288,6 +2510,12 @@ SCIP_RETCODE SCIPconshdlrExitpre(
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
+
+   /* empty the queue: the solving process will use a new one in any case */
+   while( !SCIPqueueIsEmpty(conshdlr->pendingconss) )
+   {
+      SCIP_CALL( SCIPconshdlrPopProp(conshdlr, blkmem, set) );
+   }
 
    /* call presolving deinitialization method of constraint handler */
    if( conshdlr->consexitpre != NULL )
@@ -2766,7 +2994,8 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
       /* check, if this LP solution was already enforced at this node */
       if( conshdlr->lastenfolplpcount == stat->lpcount
          && conshdlr->lastenfolpdomchgcount == stat->domchgcount
-         && conshdlr->lastenfolpnode == stat->nnodes )
+         && conshdlr->lastenfolpnode == stat->nnodes
+         && conshdlr->lastenfolpresult != SCIP_CONSADDED )
       {
          assert(conshdlr->lastenfolpresult != SCIP_CUTOFF);
          assert(conshdlr->lastenfolpresult != SCIP_BRANCHED);
@@ -2778,7 +3007,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
           * following; however, the result of the last call for the old constraint is still valid and we have to ensure
           * that an infeasibility in the last call is not lost because we only enforce new constraints
           */
-         if( conshdlr->lastenfolpresult == SCIP_INFEASIBLE || conshdlr->lastenfolpresult == SCIP_CONSADDED )
+         if( conshdlr->lastenfolpresult == SCIP_INFEASIBLE )
          {
             *result = SCIP_INFEASIBLE;
             lastinfeasible = TRUE;
@@ -2952,7 +3181,11 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       SCIP_Bool lastinfeasible;
 
       /* check, if this LP solution was already enforced at this node */
-      if( !forced && conshdlr->lastenfopsdomchgcount == stat->domchgcount && conshdlr->lastenfopsnode == stat->nnodes )
+      if( !forced && conshdlr->lastenfopsdomchgcount == stat->domchgcount
+         && conshdlr->lastenfopsnode == stat->nnodes
+         && conshdlr->lastenfopsresult != SCIP_CONSADDED
+         && conshdlr->lastenfopsresult != SCIP_SOLVELP
+         )
       {
          assert(conshdlr->lastenfopsresult != SCIP_CUTOFF);
          assert(conshdlr->lastenfopsresult != SCIP_BRANCHED);
@@ -2963,8 +3196,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
           * following; however, the result of the last call for the old constraint is still valid and we have to ensure
           * that an infeasibility in the last call is not lost because we only enforce new constraints
           */
-         if( conshdlr->lastenfopsresult == SCIP_INFEASIBLE || conshdlr->lastenfopsresult == SCIP_CONSADDED
-            || conshdlr->lastenfopsresult == SCIP_SOLVELP )
+         if( conshdlr->lastenfopsresult == SCIP_INFEASIBLE )
          {
             *result = SCIP_INFEASIBLE;
             lastinfeasible = TRUE;
@@ -3192,7 +3424,10 @@ SCIP_RETCODE SCIPconshdlrPropagate(
       {
          int nconss;
          int nusefulconss;
+         int nmarkedpropconss;
          int firstcons;
+
+         nmarkedpropconss = conshdlr->nmarkedpropconss;
 
          /* check, if the current domains were already propagated */
          if( !fullpropagation && conshdlr->lastpropdomchgcount == stat->domchgcount )
@@ -3254,7 +3489,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             SCIPclockStart(conshdlr->proptime, set);
 
             /* call external method */
-            SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, proptiming, result) );
+            SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, nmarkedpropconss, proptiming, result) );
             SCIPdebugMessage(" -> propagation returned result <%d>\n", *result);
 
             /* stop timing */
@@ -5080,6 +5315,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->age = 0.0;
    (*cons)->nlockspos = 0;
    (*cons)->nlocksneg = 0;
+   (*cons)->markedprop = FALSE;
    (*cons)->initial = initial;
    (*cons)->separate = separate;
    (*cons)->enforce = enforce;
@@ -5097,6 +5333,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->active = FALSE;
    (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
+   (*cons)->markpropagate = FALSE;
    (*cons)->deleted = FALSE;
    (*cons)->update = FALSE;
    (*cons)->updateinsert = FALSE;
@@ -5109,6 +5346,8 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->updatepropenable = FALSE;
    (*cons)->updatepropdisable = FALSE;
    (*cons)->updateobsolete = FALSE;
+   (*cons)->updatemarkpropagate = FALSE;
+   (*cons)->updateunmarkpropagate = FALSE;
    (*cons)->updatefree = FALSE;
    (*cons)->updateactfocus = FALSE;
 
@@ -6159,6 +6398,67 @@ SCIP_RETCODE SCIPconsDisablePropagation(
    return SCIP_OKAY;
 }
 
+/** marks the constraint to be propagated (update might be delayed) */
+SCIP_RETCODE SCIPconsMarkPropagate(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->conshdlr != NULL);
+   assert(set != NULL);
+   assert(cons->scip == set->scip);
+
+   if( cons->updatemarkpropagate || (cons->markpropagate && !cons->updateunmarkpropagate) )
+         return SCIP_OKAY;
+
+   if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
+   {
+      cons->updateunmarkpropagate = FALSE;
+      cons->updatemarkpropagate = TRUE;
+      SCIP_CALL( conshdlrAddUpdateCons(cons->conshdlr, set, cons) );
+      assert(cons->update);
+   }
+   else
+   {
+      conshdlrMarkConsPropagate(cons->conshdlr, cons);
+      assert(cons->markpropagate || !cons->enabled);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** unmarks the constraint to be propagated (update might be delayed) */
+SCIP_RETCODE SCIPconsUnmarkPropagate(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->conshdlr != NULL);
+   assert(set != NULL);
+   assert(cons->scip == set->scip);
+
+   if( cons->updateunmarkpropagate || (!cons->markpropagate && !cons->updatemarkpropagate) )
+      return SCIP_OKAY;
+
+   if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
+   {
+      cons->updatemarkpropagate = FALSE;
+      cons->updateunmarkpropagate = TRUE;
+      SCIP_CALL( conshdlrAddUpdateCons(cons->conshdlr, set, cons) );
+      assert(cons->update);
+   }
+   else
+   {
+      conshdlrUnmarkConsPropagate(cons->conshdlr, cons);
+      assert(!cons->markpropagate || !cons->enabled);
+   }
+
+   return SCIP_OKAY;
+
+}
+
 /** adds given value to age of constraint, but age can never become negative;
  *  should be called
  *   - in constraint separation, if no cut was found for this constraint,
@@ -6276,6 +6576,58 @@ SCIP_RETCODE SCIPconsResetAge(
          assert(!cons->obsolete);
       }
    }
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPconsPushProp(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->conshdlr != NULL);
+
+   if( !SCIPconsIsActive(cons) )
+      return SCIP_OKAY;
+
+   if( !cons->markedprop )
+   {
+      SCIP_CALL( SCIPqueueInsert(cons->conshdlr->pendingconss, (void*)cons) );
+      SCIPconsCapture(cons);
+      cons->markedprop = TRUE;
+   }
+   assert(cons->markedprop);
+
+   return SCIP_OKAY;
+}
+
+SCIP_CONS* SCIPconshdlrFrontProp(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   if( SCIPqueueIsEmpty(conshdlr->pendingconss) )
+      return NULL;
+
+   return (SCIP_CONS*)SCIPqueueFirst(conshdlr->pendingconss);
+}
+
+SCIP_RETCODE SCIPconshdlrPopProp(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_CONS* cons;
+
+   if( SCIPqueueIsEmpty(conshdlr->pendingconss) )
+      return SCIP_OKAY;
+
+   cons = (SCIP_CONS*)SCIPqueueFirst(conshdlr->pendingconss);
+   assert(cons != NULL);
+
+   cons->markedprop = FALSE;
+   SCIPqueueRemove(conshdlr->pendingconss);
+   SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
 
    return SCIP_OKAY;
 }
@@ -6642,7 +6994,7 @@ SCIP_RETCODE SCIPconsProp(
    /* call external method */
    if( conshdlr->consprop != NULL )
    {
-      SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, &cons, 1, 1, proptiming, result) );
+      SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, &cons, 1, 1, 1, proptiming, result) );
       SCIPdebugMessage(" -> prop returned result <%d>\n", *result);
 
       if( *result != SCIP_CUTOFF

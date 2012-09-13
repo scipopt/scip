@@ -36,6 +36,12 @@ extern "C" {
  */
 typedef struct SCIP_SparseSol SCIP_SPARSESOL;
 
+/** (circular) Queue data structure
+ *
+ *  - \ref Queue "List of all available methods"
+ */
+typedef struct SCIP_Queue SCIP_QUEUE;
+
 /** Priority queue data structure
  *
  *  - \ref PriorityQueue "List of all available methods"
