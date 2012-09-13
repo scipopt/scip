@@ -6717,10 +6717,14 @@ SCIP_Real SCIPgetRelaxSolObj(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note if propagation is enabled, strong branching is not done directly on the LP, but probing nodes are created
+ *        which allow to perform propagation but also creates some overhead
  */
 EXTERN
 SCIP_RETCODE SCIPstartStrongbranch(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             enablepropagation   /**< should propagation be done before solving the strong branching LP? */
    );
 
 /** end strong branching - call after any strong branching
@@ -6751,6 +6755,49 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get strong branching values for */
    int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            downinf,            /**< pointer to store whether the downwards branch is infeasible, or NULL */
+   SCIP_Bool*            upinf,              /**< pointer to store whether the upwards branch is infeasible, or NULL */
+   SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict constraint was created for an
+                                              *   infeasible downwards branch, or NULL */
+   SCIP_Bool*            upconflict,         /**< pointer to store whether a conflict constraint was created for an
+                                              *   infeasible upwards branch, or NULL */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred or the
+                                              *   solving process should be stopped (e.g., due to a time limit) */
+   );
+
+/** gets strong branching information on column variable with fractional value
+ *
+ *  Before calling this method, the strong branching mode must have been activated by calling SCIPstartStrongbranch();
+ *  after strong branching was done for all candidate variables, the strong branching mode must be ended by
+ *  SCIPendStrongbranch(). Since this method applies domain propagation before strongbranching, propagation has to be be
+ *  enabled in the SCIPstartStrongbranch() call.
+ *
+ *  Before solving the strong branching LP, domain propagation can be performed. The number of propagation rounds
+ *  can be specified by the parameter @p maxproprounds; if it is not set to zero, propagation has to be enabled
+ *  in the call of SCIPstartStrongbranch().
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to get strong branching values for */
+   SCIP_Real             solval,             /**< value of the variable in the current LP solution */
+   SCIP_Real             lpobjval,           /**< LP objective value of the current LP solution */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   int                   maxproprounds,      /**< maximum number of propagation rounds (-1: no limit, -2: parameter
+                                              *   settings) */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
    SCIP_Real*            up,                 /**< stores dual bound after branching column up */
    SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;

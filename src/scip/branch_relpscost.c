@@ -521,7 +521,7 @@ SCIP_RETCODE execRelpscost(
          if( !initstrongbranching )
          {
             initstrongbranching = TRUE;
-            SCIP_CALL( SCIPstartStrongbranch(scip) );
+            SCIP_CALL( SCIPstartStrongbranch(scip, FALSE) );
          }
          SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, branchcands[c], inititer, 
                &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );

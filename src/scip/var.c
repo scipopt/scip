@@ -11824,7 +11824,7 @@ void SCIPvarStoreRootSol(
    var->rootsol = SCIPvarGetSol(var, roothaslp);
 }
 
-/** updates the current solution as best root solution in the problem variables if is better */
+/** updates the current solution as best root solution of the given variable if it is better */
 void SCIPvarUpdateBestRootSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */

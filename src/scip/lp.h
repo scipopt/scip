@@ -1353,6 +1353,18 @@ SCIP_RETCODE SCIPlpEndProbing(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** informs the LP that the probing mode is used for strongbranching */
+extern
+void SCIPlpStartStrongbranchProbing(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** informs the LP that the probing mode is not used for strongbranching anymore */
+extern
+void SCIPlpEndStrongbranchProbing(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
 /** gets proven lower (dual) bound of last LP solution */
 extern
 SCIP_RETCODE SCIPlpGetProvedLowerbound(

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define SCIP_DEBUG
+
 /**@file   branch_fullstrongprop.c
  * @brief  full strong LP branching rule
  * @author Tobias Achterberg
@@ -43,156 +43,6 @@ struct SCIP_BranchruleData
                                               *   value for a variable that was already evaluated at the current node */
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
 };
-
-
-/** gets strong branching information with propagation on column variable with fractional value */
-static
-SCIP_RETCODE getVarStrongbranchPropFrac(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable to get strong branching values for */
-   SCIP_Real             solval,             /**< ??????????????????? */
-   int                   itlim,              /**< iteration limit for strong branchings */
-   SCIP_Real*            down,               /**< stores dual bound after branching column down */
-   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
-   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
-                                              *   otherwise, it can only be used as an estimate value */
-   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
-                                              *   otherwise, it can only be used as an estimate value */
-   SCIP_Bool*            downinf,            /**< pointer to store whether the downwards branch is infeasible, or NULL */
-   SCIP_Bool*            upinf,              /**< pointer to store whether the upwards branch is infeasible, or NULL */
-   SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict constraint was created for an
-                                              *   infeasible downwards branch, or NULL */
-   SCIP_Bool*            upconflict,         /**< pointer to store whether a conflict constraint was created for an
-                                              *   infeasible upwards branch, or NULL */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred or the
-                                              *   solving process should be stopped (e.g., due to a time limit) */
-   )
-{
-   SCIP_Bool cutoff;
-
-   assert(lperror != NULL);
-
-   if( downvalid != NULL )
-      *downvalid = FALSE;
-   if( upvalid != NULL )
-      *upvalid = FALSE;
-   if( downinf != NULL )
-      *downinf = FALSE;
-   if( upinf != NULL )
-      *upinf = FALSE;
-   if( downconflict != NULL )
-      *downconflict = FALSE;
-   if( upconflict != NULL )
-      *upconflict = FALSE;
-
-   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
-   {
-      SCIPerrorMessage("cannot get strong branching information on non-COLUMN variable <%s>\n", SCIPvarGetName(var));
-      return SCIP_INVALIDDATA;
-   }
-
-   assert(SCIPinProbing(scip));
-
-   /* check if the solving process should be aborted */
-   if( SCIPisStopped(scip) )
-   {
-      /* mark this as if the LP failed */
-      *lperror = TRUE;
-      return SCIP_OKAY;
-   }
-
-   assert(SCIPisFeasGE(scip, solval, SCIPvarGetLbLocal(var)));
-   assert(SCIPisFeasLE(scip, solval, SCIPvarGetUbLocal(var)));
-
-   SCIP_CALL( SCIPnewProbingNode(scip) );
-
-   SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfloor(scip, solval)) );
-
-   SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
-
-   if( cutoff )
-   {
-      if( downinf != NULL )
-         *downinf = TRUE;
-
-      *down = SCIPinfinity(scip);
-
-      if( downvalid != NULL )
-         *downvalid = TRUE;
-   }
-   else
-   {
-      SCIP_CALL( SCIPsolveProbingLP(scip, -1, lperror) );
-
-      SCIPdebugMessage("probing LP solution status: %d\n", SCIPgetLPSolstat(scip));
-
-      if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
-      {
-         *down = SCIPgetLPObjval(scip);
-
-         if( downvalid != NULL )
-            *downvalid = TRUE;
-      }
-      else if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OBJLIMIT || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE )
-      {
-         if( downinf != NULL )
-            *downinf = TRUE;
-
-         *down = SCIPinfinity(scip);
-
-         if( downvalid != NULL )
-            *downvalid = TRUE;
-      }
-   }
-   SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
-
-   SCIP_CALL( SCIPnewProbingNode(scip) );
-
-   if( SCIPisGT(scip, SCIPceil(scip, solval), SCIPvarGetLbLocal(var)) )
-   {
-      SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPceil(scip, solval)) );
-   }
-
-   SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
-
-   if( cutoff )
-   {
-      if( upinf != NULL )
-         *upinf = TRUE;
-
-      *up = SCIPinfinity(scip);
-
-      if( upvalid != NULL )
-         *upvalid = TRUE;
-   }
-   else
-   {
-      SCIP_CALL( SCIPsolveProbingLP(scip, -1, lperror) );
-
-      SCIPdebugMessage("probing LP solution status: %d\n", SCIPgetLPSolstat(scip));
-
-      if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
-      {
-         *up = SCIPgetLPObjval(scip);
-
-         if( upvalid != NULL )
-            *upvalid = TRUE;
-      }
-      else if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OBJLIMIT || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE )
-      {
-         if( upinf != NULL )
-            *upinf = TRUE;
-
-         *up = SCIPinfinity(scip);
-
-         if( upvalid != NULL )
-            *upvalid = TRUE;
-      }
-   }
-   SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
-
-   return SCIP_OKAY;
-}
 
 
 /*
@@ -326,7 +176,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrongprop)
       int c;
 
       /* initialize strong branching */
-      SCIP_CALL( SCIPstartProbing(scip) );
+      SCIP_CALL( SCIPstartStrongbranch(scip, TRUE) );
 
       /* get current node number */
       nodenum = SCIPgetNNodes(scip);
@@ -340,6 +190,29 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrongprop)
          c = c % nlpcands;
          assert(lpcands[c] != NULL);
 
+         /* don't use strong branching on variables that have already been initialized at the current node,
+          * and that were evaluated not too long ago
+          */
+         if( SCIPgetVarStrongbranchNode(scip, lpcands[c]) == nodenum
+            && SCIPgetVarStrongbranchLPAge(scip, lpcands[c]) < branchruledata->reevalage )
+         {
+            SCIP_Real lastlpobjval;
+
+            /* use the score of the strong branching call at the current node */
+            SCIP_CALL( SCIPgetVarStrongbranchLast(scip, lpcands[c], &down, &up, NULL, NULL, NULL, &lastlpobjval) );
+            downgain = MAX(down - lastlpobjval, 0.0);
+            upgain = MAX(up - lastlpobjval, 0.0);
+            downvalid = FALSE;
+            upvalid = FALSE;
+            downinf = FALSE;
+            upinf = FALSE;
+            downconflict = FALSE;
+            upconflict = FALSE;
+            lperror = FALSE;
+            SCIPdebugMessage("strong branching on variable <%s> already performed (lpage=%"SCIP_LONGINT_FORMAT", down=%g (%+g), up=%g (%+g))\n",
+               SCIPvarGetName(lpcands[c]), SCIPgetVarStrongbranchLPAge(scip, lpcands[c]), down, downgain, up, upgain);
+         }
+         else
          {
             SCIPdebugMessage("applying strong branching on variable <%s> with solution %g\n",
                SCIPvarGetName(lpcands[c]), lpcandssol[c]);
@@ -348,8 +221,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrongprop)
             assert(SCIPisFeasLE(scip, lpcandssol[c], SCIPvarGetUbLocal(lpcands[c])));
 
             /* apply strong branching */
-            SCIP_CALL( getVarStrongbranchPropFrac(scip, lpcands[c], lpcandssol[c], INT_MAX,
-                  &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+            SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, lpcands[c], lpcandssol[c],
+                  INT_MAX, -2, &down, &up, &downvalid, &upvalid, &downinf, &upinf,
+                  &downconflict, &upconflict, &lperror) );
             nsbcalls++;
 
             /* display node information line */
@@ -401,28 +275,30 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrongprop)
                }
                else if( downinf )
                {
-                  SCIP_CALL( SCIPendProbing(scip) );
+                  SCIP_Bool infeasible;
+                  SCIP_Bool tightened;
 
                   /* downwards rounding is infeasible -> change lower bound of variable to upward rounding */
-                  if( SCIPisGT(scip, SCIPfeasCeil(scip, lpcandssol[c]), SCIPvarGetLbLocal(lpcands[c])) )
-                  {
-                     SCIP_CALL( SCIPchgVarLb(scip, lpcands[c], SCIPfeasCeil(scip, lpcandssol[c])) );
-                  }
+                  SCIP_CALL( SCIPtightenVarLb(scip, lpcands[c], SCIPfeasCeil(scip, lpcandssol[c]), TRUE, &infeasible, &tightened) );
+                  assert(!infeasible);
+                  assert(tightened);
+
                   *result = SCIP_REDUCEDDOM;
                   SCIPdebugMessage(" -> variable <%s> is infeasible in downward branch\n", SCIPvarGetName(lpcands[c]));
                   break; /* terminate initialization loop, because LP was changed */
                }
                else
                {
+                  SCIP_Bool infeasible;
+                  SCIP_Bool tightened;
+
                   assert(upinf);
 
-                  SCIP_CALL( SCIPendProbing(scip) );
-
                   /* upwards rounding is infeasible -> change upper bound of variable to downward rounding */
-                  if( SCIPisLT(scip, SCIPfeasFloor(scip, lpcandssol[c]), SCIPvarGetUbLocal(lpcands[c])) )
-                  {
-                     SCIP_CALL( SCIPchgVarUb(scip, lpcands[c], SCIPfeasFloor(scip, lpcandssol[c])) );
-                  }
+                  SCIP_CALL( SCIPtightenVarUb(scip, lpcands[c], SCIPfeasFloor(scip, lpcandssol[c]), TRUE, &infeasible, &tightened) );
+                  assert(!infeasible);
+                  assert(tightened);
+
                   *result = SCIP_REDUCEDDOM;
                   SCIPdebugMessage(" -> variable <%s> is infeasible in upward branch\n", SCIPvarGetName(lpcands[c]));
                   break; /* terminate initialization loop, because LP was changed */
@@ -467,10 +343,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrongprop)
       }
 
       /* end strong branching */
-      if( SCIPinProbing(scip) )
-      {
-         SCIP_CALL( SCIPendProbing(scip) );
-      }
+      SCIP_CALL( SCIPendStrongbranch(scip) );
 
       /* remember last evaluated candidate */
       branchruledata->lastcand = c;

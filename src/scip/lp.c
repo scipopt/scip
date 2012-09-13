@@ -22,7 +22,7 @@
  * @author Gerald Gamrath
  *
  *  In LP management, we have to differ between the current LP and the SCIP_LP
- *  stored in the LP solver. All LP methods affect the current LP only. 
+ *  stored in the LP solver. All LP methods affect the current LP only.
  *  Before solving the current LP with the LP solver or setting an LP state,
  *  the LP solvers data has to be updated to the current LP with a call to
  *  lpFlush().
@@ -3710,6 +3710,99 @@ SCIP_RETCODE SCIPlpEndStrongbranch(
    return SCIP_OKAY;
 }
 
+/** sets strong branching information for a column variable */
+void SCIPcolSetStrongbranchData(
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Real             lpobjval,           /**< objective value of the current LP */
+   SCIP_Real             primsol,            /**< primal solution value of the column in the current LP */
+   SCIP_Real             sbdown,             /**< dual bound after branching column down */
+   SCIP_Real             sbup,               /**< dual bound after branching column up */
+   SCIP_Bool             sbdownvalid,        /**< is the returned down value is a valid dual bound? */
+   SCIP_Bool             sbupvalid,          /**< is the returned up value is a valid dual bound? */
+   int                   iter,               /**< total number of strong branching iterations */
+   int                   itlim               /**< iteration limit applied to the strong branching call */
+   )
+{
+   assert(col != NULL);
+   assert(col->var != NULL);
+   assert(SCIPcolIsIntegral(col));
+   assert(SCIPvarIsIntegral(col->var));
+   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetCol(col->var) == col);
+   assert(col->primsol < SCIP_INVALID);
+   assert(col->lpipos >= 0);
+   assert(col->lppos >= 0);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(lp != NULL);
+   assert(lp->strongbranchprobing);
+   assert(col->lppos < lp->ncols);
+   assert(lp->cols[col->lppos] == col);
+   assert(itlim >= 1);
+
+   col->sblpobjval = lpobjval;
+   col->sbsolval = primsol;
+   col->validsblp = stat->lpcount - stat->ndivinglps;
+   col->sbnode = stat->nnodes;
+
+   col->sbitlim = itlim;
+   col->nsbcalls++;
+
+   col->sbdown = MIN(sbdown, lp->cutoffbound);
+   col->sbup = MIN(sbup, lp->cutoffbound);
+   col->sbdownvalid = sbdownvalid;
+   col->sbupvalid = sbupvalid;
+
+   stat->nstrongbranchs++;
+   stat->nsblpiterations += iter;
+   if( stat->nnodes == 1 )
+   {
+      stat->nrootstrongbranchs++;
+      stat->nrootsblpiterations += iter;
+   }
+}
+
+/** invalidates strong branching information for a column variable */
+void SCIPcolInvalidateStrongbranchData(
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_LP*              lp                  /**< LP data */
+   )
+{
+   assert(col != NULL);
+   assert(col->var != NULL);
+   assert(SCIPcolIsIntegral(col));
+   assert(SCIPvarIsIntegral(col->var));
+   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetCol(col->var) == col);
+   assert(col->primsol < SCIP_INVALID);
+   assert(col->lpipos >= 0);
+   assert(col->lppos >= 0);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(lp != NULL);
+   assert(lp->strongbranchprobing);
+   assert(col->lppos < lp->ncols);
+   assert(lp->cols[col->lppos] == col);
+
+   col->sbdown = SCIP_INVALID;
+   col->sbup = SCIP_INVALID;
+   col->sbdownvalid = FALSE;
+   col->sbupvalid = FALSE;
+   col->validsblp = -1;
+   col->sbsolval = SCIP_INVALID;
+   col->sblpobjval = SCIP_INVALID;
+   col->sbnode = -1;
+   col->sbitlim = -1;
+}
+
+
 /** gets strong branching information on a column variable */
 SCIP_RETCODE SCIPcolGetStrongbranch(
    SCIP_COL*             col,                /**< LP column */
@@ -3742,6 +3835,7 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(lp->strongbranching);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
    assert(lp->validsollp == stat->lpcount);
    assert(col->lppos < lp->ncols);
@@ -3753,9 +3847,9 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
 
    *lperror = FALSE;
 
-   if( col->validsblp != stat->lpcount || itlim > col->sbitlim )
+   if( col->validsblp != stat->lpcount - stat->ndivinglps || itlim > col->sbitlim )
    {
-      col->validsblp = stat->lpcount;
+      col->validsblp = stat->lpcount - stat->ndivinglps;
       col->sbsolval = col->primsol;
       col->sblpobjval = SCIPlpGetObjval(lp, set, prob);
       col->sbnode = stat->nnodes;
@@ -3939,9 +4033,9 @@ SCIP_RETCODE SCIPcolGetStrongbranches(
       assert(col->lpipos >= 0);
       assert(col->lppos >= 0);
 
-      if( col->validsblp != stat->lpcount || itlim > col->sbitlim )
+      if( col->validsblp != stat->lpcount - stat->ndivinglps || itlim > col->sbitlim )
       {
-         col->validsblp = stat->lpcount;
+         col->validsblp = stat->lpcount - stat->ndivinglps;
          col->sbsolval = col->primsol;
          col->sblpobjval = SCIPlpGetObjval(lp, set, prob);
          col->sbnode = stat->nnodes;
@@ -4137,7 +4231,7 @@ SCIP_Longint SCIPcolGetStrongbranchLPAge(
    assert(col != NULL);
    assert(stat != NULL);
 
-   return (col->sbnode != stat->nnodes ? SCIP_LONGINT_MAX : stat->lpcount - col->validsblp);
+   return (col->sbnode != stat->nnodes ? SCIP_LONGINT_MAX : stat->lpcount - stat->ndivinglps - col->validsblp);
 }
 
 
@@ -7806,6 +7900,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->isrelax = TRUE;
    (*lp)->installing = FALSE;
    (*lp)->strongbranching = FALSE;
+   (*lp)->strongbranchprobing = FALSE;
    (*lp)->probing = FALSE;
    (*lp)->diving = FALSE;
    (*lp)->divingobjchg = FALSE;
@@ -14929,7 +15024,7 @@ SCIP_RETCODE SCIPlpGetSol(
       *dualfeasible = TRUE;
 
    /* check if the values are already calculated */
-   if( lp->validsollp == stat->lpcount )
+   if( lp->validsollp == stat->lpcount)
       return SCIP_OKAY;
    lp->validsollp = stat->lpcount;
 
@@ -16299,6 +16394,8 @@ SCIP_RETCODE SCIPlpStartProbing(
 {
    assert(lp != NULL);
    assert(!lp->probing);
+   assert(!lp->strongbranching);
+   assert(!lp->strongbranchprobing);
 
    lp->probing = TRUE;
 
@@ -16312,10 +16409,38 @@ SCIP_RETCODE SCIPlpEndProbing(
 {
    assert(lp != NULL);
    assert(lp->probing);
+   assert(!lp->strongbranching);
+   assert(!lp->strongbranchprobing);
 
    lp->probing = FALSE;
 
    return SCIP_OKAY;
+}
+
+/** informs the LP that the probing mode is used for strongbranching */
+void SCIPlpStartStrongbranchProbing(
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->probing);
+   assert(!lp->strongbranching);
+   assert(!lp->strongbranchprobing);
+
+   lp->strongbranchprobing = TRUE;
+}
+
+/** informs the LP that the probing mode is not used for strongbranching anymore */
+void SCIPlpEndStrongbranchProbing(
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->probing);
+   assert(!lp->strongbranching);
+   assert(lp->strongbranchprobing);
+
+   lp->strongbranchprobing = FALSE;
 }
 
 /** calculates y*b + min{(c - y*A)*x | lb <= x <= ub} for given vectors y and c;
