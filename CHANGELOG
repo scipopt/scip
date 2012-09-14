@@ -45,6 +45,7 @@ fixed bugs:
 - fixed behaviour change of indicator constraint handler when solving a another instance after solving a one using the
   interactive shell
 - fixed bug of wrong result code in propagation in prop_genvbound.c
+- fixed several issue in cumulative constraint handler
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
