@@ -112,6 +112,28 @@ else
     EXCLUSIVE=""
 fi
 
+#define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
+CLUSTERQUEUE=$QUEUE
+
+NICE=""
+ACCOUNT="mip"
+
+if test $CLUSTERQUEUE = "dbg"
+then
+    CLUSTERQUEUE="mip-dbg,telecom-dbg"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "telecom-dbg"
+then
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "mip-dbg"
+then
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "opt-low"
+then
+    CLUSTERQUEUE="opt"
+    NICE="--nice=10000"
+fi
+
 
 # we add 10% to the hard memory limit and additional 100MB to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
@@ -212,42 +234,6 @@ do
 	HARDTIMELIMIT=${MYDAYS}-${MYHOURS}:${MYMINUTES}:${MYSECONDS}
     fi
   fi
-
-
-#define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
-CLUSTERQUEUE=$QUEUE
-
-NICE=""
-ACCOUNT="mip"
-
-if test $CLUSTERQUEUE = "dbg"
-then
-    CLUSTERQUEUE="mip-dbg,telecom-dbg"
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "telecom-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "mip-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "opt-low"
-then
-    CLUSTERQUEUE="opt"
-    NICE="--nice=10000"
-fi
-
-# counter to define file names for a test set uniquely
-COUNT=0
-
-for i in `cat testset/$TSTNAME.test` DONE
-do
-  if test "$i" = "DONE"
-      then
-      break
-  fi
-
-  # increase the index for the inctance tried to solve, even if the filename does not exist
-  COUNT=`expr $COUNT + 1`
 
   # check if problem instance exists
   if test -f $SCIPPATH/$i
