@@ -6903,11 +6903,11 @@ SCIP_RETCODE normalizeCumulativeCondition(
    int mindemand2;
    int v;
 
-   assert(demands[nvars-1] <= *capacity);
-   assert(demands[nvars-2] <= *capacity);
-
    if( *capacity == 1 || nvars <= 1 )
       return SCIP_OKAY;
+
+   assert(demands[nvars-1] <= *capacity);
+   assert(demands[nvars-2] <= *capacity);
 
    gcd = (SCIP_Longint)demands[nvars-1];
    mindemand1 = MIN(demands[nvars-1], demands[nvars-2]);
