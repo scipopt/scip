@@ -2111,6 +2111,10 @@ SCIP_RETCODE resolvePropagationCoretimes(
       {
          capacity -= demands[j];
          reported[j] = TRUE;
+
+         if( explanation != NULL )
+            explanation[j] = TRUE;
+
          continue;
       }
 
@@ -2235,7 +2239,12 @@ SCIP_RETCODE resolvePropagationEdgeFinding(
       assert(var != NULL);
 
       if( var == infervar )
+      {
+         if( explanation != NULL )
+            explanation[j] = TRUE;
+
          continue;
+      }
 
       lb = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
       ub = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
@@ -2341,6 +2350,9 @@ SCIP_RETCODE respropCumulativeCondition(
 
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity,
             infervar, inferdemand, inferpeak, bdchgidx, usebdwidening, explanation) );
+
+      if( explanation != NULL )
+         explanation[inferpos] = TRUE;
 
       break;
    }
@@ -3032,7 +3044,7 @@ SCIP_RETCODE coretimesUpdateLb(
    int                   capacity,           /**< cumulative capacity */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_PROFILE*         profile,            /**< resource profile */
-   int                   pos,                /**< position of the variable to propagate */
+   int                   idx,                /**< position of the variable to propagate */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
    SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
@@ -3048,14 +3060,15 @@ SCIP_RETCODE coretimesUpdateLb(
    int newlb;
    int est;
    int lst;
+   int pos;
 
-   var = vars[pos];
+   var = vars[idx];
    assert(var != NULL);
 
-   duration = durations[pos];
+   duration = durations[idx];
    assert(duration > 0);
 
-   demand = demands[pos];
+   demand = demands[idx];
    assert(demand > 0);
 
    est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
@@ -3123,10 +3136,11 @@ SCIP_RETCODE coretimesUpdateLb(
          SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
                var, duration, demand, newlb-1, usebdwidening, initialized, explanation) );
 
+         if( explanation != NULL )
+            explanation[idx] = TRUE;
+
          *infeasible = TRUE;
 
-         if( explanation != NULL )
-            explanation[pos] = TRUE;
 
          break;
       }
@@ -3398,10 +3412,10 @@ SCIP_RETCODE propagateCoretimes(
             SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
                   var, duration, demand, SCIPprofileGetTime(profile, pos), usebdwidening, initialized, explanation) );
 
-            *cutoff = TRUE;
-
             if( explanation != NULL )
-               explanation[pos] = TRUE;
+               explanation[j] = TRUE;
+
+            *cutoff = TRUE;
 
             break;
          }
@@ -3490,10 +3504,10 @@ SCIP_RETCODE propagateCoretimes(
                SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
                      var, duration, demand, SCIPprofileGetTime(profile, pos), usebdwidening, initialized, explanation) );
 
-               *cutoff = TRUE;
-
                if( explanation != NULL )
-                  explanation[pos] = TRUE;
+                  explanation[j] = TRUE;
+
+               *cutoff = TRUE;
 
                break;
             }
