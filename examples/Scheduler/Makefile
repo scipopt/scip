@@ -35,7 +35,10 @@ include $(SCIPDIR)/make/make.project
 
 MAINNAME	=	scip
 MAINOBJ		=	cmain.o \
+			cons_optcumulative.o \
 			heur_listscheduling.o \
+			heur_optcumulative.o \
+			reader_cmin.o \
 			reader_sch.o \
 			reader_sm.o \
 			reader_rcp.o
