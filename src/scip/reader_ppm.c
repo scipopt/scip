@@ -511,7 +511,7 @@ SCIP_RETCODE SCIPincludeReaderPpm(
 }
 
 
-/* writes problem to file */
+/** writes problem to file */
 SCIP_RETCODE SCIPwritePpm(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */

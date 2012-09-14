@@ -3749,7 +3749,7 @@ SCIP_RETCODE writeOpb(
  * extern methods
  */
 
-/* reads problem from file */
+/** reads problem from file */
 SCIP_RETCODE SCIPreadOpb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< the file reader itself */
@@ -3818,7 +3818,7 @@ SCIP_RETCODE SCIPreadOpb(
    return SCIP_OKAY;
 }
 
-/* writes problem to file */
+/** writes problem to file */
 SCIP_RETCODE SCIPwriteOpb(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */

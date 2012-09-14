@@ -2186,18 +2186,20 @@ SCIP_RETCODE priceAndCutLoop(
          }
 
          /* delayed global cut pool separation */
-         if( SCIPsepastoreGetNCuts(sepastore) == 0 )
+         if( !(*cutoff) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPsepastoreGetNCuts(sepastore) == 0 )
          {
+            assert( !(*lperror) );
+
             SCIP_CALL( cutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, actdepth, &enoughcuts, cutoff) );
 
             if( *cutoff )
             {
                SCIPdebugMessage(" -> delayed global cut pool detected cutoff\n");
             }
+            assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
+            assert(lp->flushed);
+            assert(lp->solved);
          }
-         assert(lp->flushed);
-         assert(lp->solved);
-         assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
          assert(*cutoff || *lperror || SCIPlpIsSolved(lp));
          assert(!SCIPlpIsSolved(lp)
@@ -3403,6 +3405,7 @@ SCIP_RETCODE solveNode(
    fullpropagation = TRUE;
    forcedlpsolve = FALSE;
    nloops = 0;
+
    while( !(*cutoff) && (solverelaxagain || solvelpagain || propagateagain) && nlperrors < MAXNLPERRORS && !(*restart) )
    {
       SCIP_Bool lperror;
@@ -3412,6 +3415,9 @@ SCIP_RETCODE solveNode(
       SCIP_Bool forcedenforcement;
 
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+
+      *unbounded = FALSE;
+      *infeasible = FALSE;
 
       nloops++;
       lperror = FALSE;

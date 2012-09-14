@@ -1101,7 +1101,7 @@ SCIP_Bool SCIPisParamFixed(
  *
  *  @return pointer to the parameter with the given name
  */
-extern
+EXTERN
 SCIP_PARAM* SCIPgetParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of the parameter */
@@ -14917,12 +14917,23 @@ SCIP_Bool SCIPareSolsEqual(
    SCIP_SOL*             sol2                /**< second primal CIP solution */
    );
 
-/** outputs non-zero variables of solution in original problem space to file stream
+/** outputs non-zero variables of solution in original problem space to the given file stream
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called if SCIP is in one of the following stages:
+ *  @pre In case the solution pointer @p sol is NULL (askinking for the current LP/pseudo solution), this method can be
+ *       called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @pre In case the solution pointer @p sol is @b not NULL, this method can be called if @p scip is in one of the
+ *       following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE

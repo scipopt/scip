@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_cumulative.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for cumulative constraints
  * @author Timo Berthold
  * @author Stefan Heinz
@@ -196,6 +197,19 @@ SCIP_RETCODE SCIPcheckCumulativeCondition(
    SCIP_Bool*            violated,           /**< pointer to store if the cumulative condition is violated */
    SCIP_CONS*            cons,               /**< constraint which is checked */
    SCIP_Bool             printreason         /**< should the reason for the violation be printed? */
+   );
+
+/** normalize cumulative condition */
+EXTERN
+SCIP_RETCODE SCIPnormalizeCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int*                  capacity,           /**< pointer to store the changed cumulative capacity */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
+   int*                  nchgsides           /**< pointer to count number of side changes */
    );
 
 /** propagate the given cumulative condition */

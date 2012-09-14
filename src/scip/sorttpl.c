@@ -181,10 +181,11 @@ void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
 
    for( k = 2; k >= 0; --k )
    {
-      int h;
+      int h = incs[k];
+      int first = h + start;
       int i;
 
-      for( h = incs[k], i = h + start; i <= end; ++i )
+      for( i = first; i <= end; ++i )
       {
          int j;
          SORTTPL_KEYTYPE tempkey = key[i];
@@ -197,7 +198,7 @@ void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
          SORTTPL_HASFIELD6( SORTTPL_FIELD6TYPE tempfield6 = field6[i]; )
 
          j = i;
-         while( j >= h && SORTTPL_ISBETTER(tempkey, key[j-h]) )
+         while( j >= first && SORTTPL_ISBETTER(tempkey, key[j-h]) )
          {
             key[j] = key[j-h];
             SORTTPL_HASFIELD1( field1[j] = field1[j-h]; )

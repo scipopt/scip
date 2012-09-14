@@ -15019,6 +15019,7 @@ void SCIPvarSetTransData(
    )
 {
    assert(var != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL);
 
    var->vartrans = vartrans;
 }

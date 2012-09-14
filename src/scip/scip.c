@@ -10735,10 +10735,10 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
 
    /* if lowerbound exceeds the cutoffbound the node will be marked to be cutoff
     *
-    * If the node is an inner node (,not a child,) we need to cutoff the node manually if we exceed the
-    * cutoffbound. Internally the lowerbound is only changed before branching and the node is always a child, so
-    * therefore, we only implement this for the user.
-    *
+    * If the node is an inner node (,not a child node,) we need to cutoff the node manually if we exceed the
+    * cutoffbound. This is only relevant if a user updates the lower bound; in the main solving process of SCIP the
+    * lowerbound is only changed before branching and the given node is always a child node. Therefore, we only check
+    * for a cutoff here in the user function instead of in SCIPnodeUpdateLowerbound().
     */
    if( SCIPisGE(scip, newbound, scip->primal->cutoffbound) )
       SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree);
@@ -10978,7 +10978,9 @@ SCIP_RETCODE SCIPtransformProb(
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints
        */
-      SCIP_CALL( checkSolOrig(scip, sol, &feasible, scip->set->misc_printreason, FALSE, TRUE, TRUE, TRUE, TRUE) );
+      SCIP_CALL( checkSolOrig(scip, sol, &feasible,
+            (scip->set->disp_verblevel >= SCIP_VERBLEVEL_HIGH ? scip->set->misc_printreason : FALSE),
+            FALSE, TRUE, TRUE, TRUE, TRUE) );
 
       if( feasible )
       {
@@ -27774,13 +27776,12 @@ SCIP_RETCODE SCIPbranchVarVal(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPbranchVarVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-   
-   /* for a continuous variable, their will either be variable fixing or a branching
-    * fixing is done if RelEQ(lb,ub)
-    * in the other case, the given branching value should be such that it does not sits on one of the bounds
-    * we assert this by requiring that it is at least eps/2 away from each bound
-    * the /2 is there, because ub-lb may be in (eps, 2eps], in which case there is no way to choose a branching value that is at least eps away from both bounds
-    * however, if variable bounds are below/above -/+infinity/2.1, then SCIPisLT will give an assert, so we omit the check then
+
+   /* A continuous variable will be fixed if SCIPisRelEQ(lb,ub) is true. Otherwise, the given branching value should be
+    * such that its value is not equal to one of the bounds. We assert this by requiring that it is at least eps/2 away
+    * from each bound. The 2.1 is there, because ub-lb may be in (eps, 2*eps], in which case there is no way to choose a
+    * branching value that is at least eps away from both bounds. However, if the variable bounds are below/above
+    * -/+infinity * 2.1, then SCIPisLT will give an assert, so we omit the check in this case.
     */
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
       SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) ||
@@ -28961,12 +28962,23 @@ SCIP_Bool SCIPareSolsEqual(
    return SCIPsolsAreEqual(sol1, sol2, scip->set, scip->stat, scip->origprob, scip->transprob);
 }
 
-/** outputs non-zero variables of solution in original problem space to file stream
+/** outputs non-zero variables of solution in original problem space to the given file stream
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called if SCIP is in one of the following stages:
+ *  @pre In case the solution pointer @p sol is NULL (askinking for the current LP/pseudo solution), this method can be
+ *       called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @pre In case the solution pointer @p sol is @b not NULL, this method can be called if @p scip is in one of the
+ *       following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -29234,9 +29246,12 @@ SCIP_SOL* SCIPgetBestSol(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetBestSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetBestSol", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
    switch( scip->set->stage )
    {
+   case SCIP_STAGE_INIT:
+      return NULL;
+      break;
    case SCIP_STAGE_PROBLEM:
       assert(scip->origprimal != NULL);
       if(  scip->origprimal->nsols > 0 )
@@ -29265,7 +29280,6 @@ SCIP_SOL* SCIPgetBestSol(
       }
       break;
       
-   case SCIP_STAGE_INIT:
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_FREETRANS:
    default:

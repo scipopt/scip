@@ -1373,7 +1373,8 @@ SCIP_RETCODE consdataCreate(
    int                   nvars,              /**< number of variables */
    int                   capacity,           /**< available cumulative capacity */
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
-   int                   hmax                /**< right bound of time axis to be considered (not including hmax) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool             check               /**< is the corresponding constraint a check constraint */
    )
 {
    int v;
@@ -1431,8 +1432,9 @@ SCIP_RETCODE consdataCreate(
       /* initialize locking arrays */
       for( v = 0; v < nvars; ++v )
       {
-         (*consdata)->downlocks[v] = TRUE;
-         (*consdata)->uplocks[v] = TRUE;
+         /* the locks are only used if the contraint is a check constraint */
+         (*consdata)->downlocks[v] = check;
+         (*consdata)->uplocks[v] = check;
       }
 
       if( linkingconss != NULL )
@@ -2109,6 +2111,10 @@ SCIP_RETCODE resolvePropagationCoretimes(
       {
          capacity -= demands[j];
          reported[j] = TRUE;
+
+         if( explanation != NULL )
+            explanation[j] = TRUE;
+
          continue;
       }
 
@@ -2233,7 +2239,12 @@ SCIP_RETCODE resolvePropagationEdgeFinding(
       assert(var != NULL);
 
       if( var == infervar )
+      {
+         if( explanation != NULL )
+            explanation[j] = TRUE;
+
          continue;
+      }
 
       lb = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
       ub = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
@@ -2339,6 +2350,9 @@ SCIP_RETCODE respropCumulativeCondition(
 
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity,
             infervar, inferdemand, inferpeak, bdchgidx, usebdwidening, explanation) );
+
+      if( explanation != NULL )
+         explanation[inferpos] = TRUE;
 
       break;
    }
@@ -3030,7 +3044,7 @@ SCIP_RETCODE coretimesUpdateLb(
    int                   capacity,           /**< cumulative capacity */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_PROFILE*         profile,            /**< resource profile */
-   int                   pos,                /**< position of the variable to propagate */
+   int                   idx,                /**< position of the variable to propagate */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
    SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
@@ -3046,14 +3060,15 @@ SCIP_RETCODE coretimesUpdateLb(
    int newlb;
    int est;
    int lst;
+   int pos;
 
-   var = vars[pos];
+   var = vars[idx];
    assert(var != NULL);
 
-   duration = durations[pos];
+   duration = durations[idx];
    assert(duration > 0);
 
-   demand = demands[pos];
+   demand = demands[idx];
    assert(demand > 0);
 
    est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
@@ -3121,10 +3136,11 @@ SCIP_RETCODE coretimesUpdateLb(
          SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
                var, duration, demand, newlb-1, usebdwidening, initialized, explanation) );
 
+         if( explanation != NULL )
+            explanation[idx] = TRUE;
+
          *infeasible = TRUE;
 
-         if( explanation != NULL )
-            explanation[pos] = TRUE;
 
          break;
       }
@@ -3396,10 +3412,10 @@ SCIP_RETCODE propagateCoretimes(
             SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
                   var, duration, demand, SCIPprofileGetTime(profile, pos), usebdwidening, initialized, explanation) );
 
-            *cutoff = TRUE;
-
             if( explanation != NULL )
-               explanation[pos] = TRUE;
+               explanation[j] = TRUE;
+
+            *cutoff = TRUE;
 
             break;
          }
@@ -3488,10 +3504,10 @@ SCIP_RETCODE propagateCoretimes(
                SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
                      var, duration, demand, SCIPprofileGetTime(profile, pos), usebdwidening, initialized, explanation) );
 
-               *cutoff = TRUE;
-
                if( explanation != NULL )
-                  explanation[pos] = TRUE;
+                  explanation[j] = TRUE;
+
+               *cutoff = TRUE;
 
                break;
             }
@@ -5109,7 +5125,7 @@ SCIP_RETCODE propagateCons(
    redundant = FALSE;
 
    /* if the constraint marked to be propagated, do nothing */
-   if( consdata->propagated )
+   if( consdata->propagated && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING )
       return SCIP_OKAY;
 
    SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata,
@@ -6883,6 +6899,75 @@ SCIP_RETCODE fixIntegerVariableLb(
    return SCIP_OKAY;
 }
 
+/** normalize cumulative condition */
+static
+SCIP_RETCODE normalizeCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int*                  capacity,           /**< pointer to store the changed cumulative capacity */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
+   int*                  nchgsides           /**< pointer to count number of side changes */
+   )
+{
+   SCIP_Longint gcd;
+   int mindemand1;
+   int mindemand2;
+   int v;
+
+   assert(demands[nvars-1] <= *capacity);
+   assert(demands[nvars-2] <= *capacity);
+
+   gcd = (SCIP_Longint)demands[nvars-1];
+   mindemand1 = MIN(demands[nvars-1], demands[nvars-2]);
+   mindemand2 = MAX(demands[nvars-1], demands[nvars-2]);
+
+   for( v = nvars-2; v >= 0 && (gcd >= 2 || mindemand1 + mindemand2 > *capacity); --v )
+   {
+      assert(mindemand1 <= mindemand2);
+      assert(demands[v] <= *capacity);
+
+      gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)demands[v]);
+
+      if( mindemand1 > demands[v] )
+      {
+         mindemand2 = mindemand1;
+         mindemand1 = demands[v];
+      }
+      else if( mindemand2 > demands[v] )
+         mindemand2 = demands[v];
+   }
+
+   if( mindemand1 + mindemand2 > *capacity )
+   {
+      SCIPdebugMessage("update cumulative condition (%d + %d > %d) to unary cumulative condition\n", mindemand1, mindemand2, *capacity);
+
+      for( v = 0; v < nvars; ++v )
+         demands[v] = 1;
+
+      (*capacity) = 1;
+
+      (*nchgcoefs) += nvars;
+      (*nchgsides)++;
+   }
+   else if( gcd >= 2 )
+   {
+      SCIPdebugMessage("cumulative condition: dividing demands by %"SCIP_LONGINT_FORMAT"\n", gcd);
+
+      for( v = 0; v < nvars; ++v )
+         demands[v] /= gcd;
+
+      (*capacity) /= gcd;
+
+      (*nchgcoefs) += nvars;
+      (*nchgsides)++;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** divides demands by their greatest common divisor and divides capacity by the same value, rounding down the result;
  *  in case the the smallest demands add up to more than the capacity we reductions all demands to one as well as the
  *  capacity since in that case none of the jobs can run in parallel
@@ -6896,12 +6981,6 @@ SCIP_RETCODE normalizeDemands(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Longint gcd;
-   int capacity;
-   int mindemand1;
-   int mindemand2;
-   int nvars;
-   int v;
 
    assert(nchgcoefs != NULL);
    assert(nchgsides != NULL);
@@ -6910,61 +6989,13 @@ SCIP_RETCODE normalizeDemands(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   capacity = consdata->capacity;
-   nvars = consdata->nvars;
-
-   if( consdata->normalized || capacity == 1 || nvars <= 1 )
+   if( consdata->normalized || consdata->capacity == 1 || consdata->nvars <= 1 )
       return SCIP_OKAY;
 
    /**@todo sort items w.r.t. the demands, because we can stop earlier if the smaller weights are evaluated first */
 
-   assert(consdata->demands[nvars-1] <= capacity);
-   assert(consdata->demands[nvars-2] <= capacity);
-
-   gcd = (SCIP_Longint)consdata->demands[nvars-1];
-   mindemand1 = MIN(consdata->demands[nvars-1], consdata->demands[nvars-2]);
-   mindemand2 = MAX(consdata->demands[nvars-1], consdata->demands[nvars-2]);
-
-   for( v = nvars-2; v >= 0 && (gcd >= 2 || mindemand1 + mindemand2 > capacity); --v )
-   {
-      assert(mindemand1 <= mindemand2);
-      assert(consdata->demands[v] <= capacity);
-
-      gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)consdata->demands[v]);
-
-      if( mindemand1 > consdata->demands[v] )
-      {
-         mindemand2 = mindemand1;
-         mindemand1 = consdata->demands[v];
-      }
-      else if( mindemand2 > consdata->demands[v] )
-         mindemand2 = consdata->demands[v];
-   }
-
-   if( mindemand1 + mindemand2 > capacity )
-   {
-      SCIPdebugMessage("update cumulative constraint <%s> (%d + %d > %d) to unary cumulative constraint\n", SCIPconsGetName(cons), mindemand1, mindemand2, capacity);
-
-      for( v = 0; v < nvars; ++v )
-         consdata->demands[v] = 1;
-
-      consdata->capacity = 1;
-
-      (*nchgcoefs) += nvars;
-      (*nchgsides)++;
-   }
-   else if( gcd >= 2 )
-   {
-      SCIPdebugMessage("cumulative constraint <%s>: dividing demands by %"SCIP_LONGINT_FORMAT"\n", SCIPconsGetName(cons), gcd);
-
-      for( v = 0; v < nvars; ++v )
-         consdata->demands[v] /= gcd;
-
-      consdata->capacity /= gcd;
-
-      (*nchgcoefs) += nvars;
-      (*nchgsides)++;
-   }
+   SCIP_CALL( normalizeCumulativeCondition(scip, consdata->nvars, consdata->vars, consdata->durations,
+         consdata->demands, &consdata->capacity, nchgcoefs, nchgsides) );
 
    consdata->normalized = TRUE;
 
@@ -7934,7 +7965,8 @@ SCIP_RETCODE presolveCons(
 
    assert(!SCIPconsIsDeleted(cons));
 
-   if( conshdlrdata->dualpresolve )
+   /* only perform dual reductions on model constraints */
+   if( conshdlrdata->dualpresolve && SCIPconsIsChecked(cons) )
    {
       SCIPstatistic( conshdlrdata->ndecomps -= consdata->ndecomps );
 
@@ -8182,7 +8214,7 @@ SCIP_DECL_CONSTRANS(consTransCumulative)
    /* create constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->vars, sourcedata->linkingconss,
          sourcedata->durations, sourcedata->demands, sourcedata->nvars, sourcedata->capacity,
-         sourcedata->hmin, sourcedata->hmax) );
+         sourcedata->hmin, sourcedata->hmax, SCIPconsIsChecked(sourcecons)) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -9134,7 +9166,7 @@ SCIP_RETCODE SCIPcreateConsCumulative(
    SCIPdebugMessage("create cumulative constraint <%s> with %d jobs\n", name, nvars);
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, vars, NULL, durations, demands, nvars, capacity, 0, INT_MAX) );
+   SCIP_CALL( consdataCreate(scip, &consdata, vars, NULL, durations, demands, nvars, capacity, 0, INT_MAX, check) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata,
@@ -9394,6 +9426,24 @@ SCIP_RETCODE SCIPcheckCumulativeCondition(
 
    SCIP_CALL( checkCumulativeCondition(scip, sol, nvars, vars, durations, demands, capacity, hmin, hmax,
          violated, cons, printreason) );
+
+   return SCIP_OKAY;
+}
+
+/** normalize cumulative condition */
+SCIP_RETCODE SCIPnormalizeCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int*                  capacity,           /**< pointer to store the changed cumulative capacity */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
+   int*                  nchgsides           /**< pointer to count number of side changes */
+   )
+{
+   SCIP_CALL( normalizeCumulativeCondition(scip, nvars, vars, durations, demands, capacity,
+         nchgcoefs, nchgsides) );
 
    return SCIP_OKAY;
 }
