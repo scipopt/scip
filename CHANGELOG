@@ -42,13 +42,13 @@ fixed bugs:
 - fixed bug trying to color probing nodes, which are not added to the vbc output anymore
 - fixed bug in sorting template
 - fixed bug in cons_orbitope: in rare cases one cannot repropagate
-- fixed behaviour change of indicator constraint handler when solving a another instance after solving a one using the
+- fixed behaviour change of indicator constraint handler when solving another instance after solving one using the
   interactive shell
 - fixed bug of wrong result code in propagation in prop_genvbound.c
-- fixed several issue in cumulative constraint handler
+- fixed several issues in cumulative constraint handler
 
 features:
-- added delayed cutpool which only get separated if the sepastore is empty after a separation round
+- added delayed cutpool which only gets separated if the sepastore is empty after a separation round
 - sepa_cgmip can now take the objective row into account
 
 interface

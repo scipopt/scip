@@ -16,6 +16,10 @@
 /**@file   misc.c
  * @brief  miscellaneous methods
  * @author Tobias Achterberg
+ * @author Gerald Gamrath
+ * @author Stefan Heinz
+ * @author Michael Winkler
+ * @author Kati Wolter
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -4057,7 +4061,7 @@ void SCIPsortDown(
 /** create a resource activity */
 SCIP_RETCODE SCIPactivityCreate(
    SCIP_RESOURCEACTIVITY** activity,         /**< pointer to store the resource activity */
-   SCIP_VAR*             var,                /**< start time variable of the activitie */
+   SCIP_VAR*             var,                /**< start time variable of the activity */
    int                   duration,           /**< duration of the activity */
    int                   demand              /**< demand of the activity */
    )

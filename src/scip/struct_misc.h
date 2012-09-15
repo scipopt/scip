@@ -151,7 +151,7 @@ struct SCIP_PtrArray
 /** resource activity */
 struct SCIP_ResourceActivity
 {
-   SCIP_VAR*             var;                /**< start time variable of the activitie */
+   SCIP_VAR*             var;                /**< start time variable of the activity */
    int                   duration;           /**< duration of the activity */
    int                   demand;             /**< demand of the activity */
 };

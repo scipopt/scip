@@ -16,6 +16,8 @@
 /**@file   pub_misc.h
  * @brief  public data structures and miscellaneous methods
  * @author Tobias Achterberg
+ * @author Stefan Heinz
+ * @author Michael Winkler
  *
  * This file contains a bunch of data structures and miscellaneous methods:
  *
@@ -554,7 +556,7 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
 EXTERN
 SCIP_RETCODE SCIPactivityCreate(
    SCIP_RESOURCEACTIVITY** activity,         /**< pointer to store the resource activity */
-   SCIP_VAR*             var,                /**< start time variable of the activitie */
+   SCIP_VAR*             var,                /**< start time variable of the activity */
    int                   duration,           /**< duration of the activity */
    int                   demand              /**< demand of the activity */
    );
