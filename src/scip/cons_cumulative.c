@@ -1171,8 +1171,8 @@ SCIP_RETCODE evaluateCumulativeness(
             &ntimepoints, &maxdemand, &minfreecapacity) );
 
       /* free buffer arrays */
-      SCIPfreeBufferArray(scip, &timepoints);
       SCIPfreeBufferArray(scip, &estimateddemands);
+      SCIPfreeBufferArray(scip, &timepoints);
 
       consdata->estimatedstrength = (SCIP_Real)(capacity - minfreecapacity) / (SCIP_Real) capacity;
    }
@@ -1405,8 +1405,9 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->bcoverrowssize = 0;
    (*consdata)->nvars = nvars;
    (*consdata)->varssize = nvars;
-   (*consdata)->covercuts = FALSE;
    (*consdata)->normalized = FALSE;
+   (*consdata)->covercuts = FALSE;
+   (*consdata)->propagated = FALSE;
 
 #ifdef SCIP_STATISTIC
    (*consdata)->nirrelevantjobs = 0;
@@ -1742,37 +1743,31 @@ SCIP_RETCODE consdataCollectLinkingCons(
  * @{
  */
 
-/** comparison method for two variables w.r.t. the lower bounds (earliest start time) */
-static
-SCIP_DECL_SORTPTRCOMP(compVarsEst)
-{
-   int est1;
-   int est2;
-
-   est1 = (int)(SCIPvarGetLbLocal((SCIP_VAR*)elem1) + 0.5);
-   est2 = (int)(SCIPvarGetLbLocal((SCIP_VAR*)elem2) + 0.5);
-
-   return (est1 - est2);
-}
-
 /** check if the variables are sorted in a non-increasing w.r.t. the earliest start time */
 #ifndef NDEBUG
 static
 void checkSortVariablesEst(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
-   int                   nvars               /**< number of variables to check */
+   int                   nvars,              /**< number of start time variables */
+   SCIP_VAR**            vars,               /**< start time variables */
+   int*                  perm                /**< array to store the permutation w.r.t. latest completion time */
    )
 {
    int i;
-   int lb1;
-   int lb2;
 
    for( i = 0; i < nvars-1; ++i )
    {
-      lb1 = convertBoundToInt(scip, SCIPvarGetLbGlobal(consdata->vars[i]));
-      lb2 = convertBoundToInt(scip, SCIPvarGetLbGlobal(consdata->vars[i+1]));
-      assert(lb1 >= lb2);
+      int idx1;
+      int est1;
+      int idx2;
+      int est2;
+
+      idx1 = perm[i];
+      idx2 = perm[i+1];
+
+      est1 = convertBoundToInt(scip, SCIPvarGetLbGlobal(vars[idx1]));
+      est2 = convertBoundToInt(scip, SCIPvarGetLbGlobal(vars[idx2]));
+      assert(est1 <= est2);
    }
 }
 #endif
@@ -1781,23 +1776,32 @@ void checkSortVariablesEst(
 static
 SCIP_RETCODE sortVariablesEst(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< cumulative constraint */
+   int                   nvars,              /**< number of start time variables */
+   SCIP_VAR**            vars,               /**< start time variables */
+   int*                  perm                /**< array to store the permutation w.r.t. latest completion time */
    )
 {
-   SCIP_CONSDATA* consdata;
+   int* ests;
+   int v;
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->nvars == 0 || consdata->vars != NULL);
-   assert(consdata->nvars == 0 || consdata->durations != NULL);
+   SCIP_CALL( SCIPallocBufferArray(scip, &ests, nvars) );
+
+   assert(nvars == 0 || vars != NULL);
+
+   for( v = 0; v < nvars; ++v )
+   {
+      perm[v] = v;
+      ests[v] = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v]));
+   }
 
    /* sort array w.r.t. earliest start time */
-   SCIPsortDownPtrIntIntBoolBool((void**)consdata->vars, consdata->durations, consdata->demands, consdata->downlocks, consdata->uplocks,
-      compVarsEst, consdata->nvars);
+   SCIPsortIntInt(ests, perm, nvars);
 
 #ifndef NDEBUG
-   checkSortVariablesEst(scip, consdata, consdata->nvars);
+   checkSortVariablesEst(scip, nvars, vars, perm);
 #endif
+
+   SCIPfreeBufferArray(scip, &ests);
 
    return SCIP_OKAY;
 }
@@ -1807,19 +1811,27 @@ SCIP_RETCODE sortVariablesEst(
 static
 void checkSortVariablesLct(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
-   int                   nvars               /**< number of variables to check */
+   int                   nvars,              /**< number of start time variables */
+   SCIP_VAR**            vars,               /**< start time variables */
+   int*                  durations,          /**< durations */
+   int*                  perm                /**< array to store the permutation w.r.t. latest completion time */
    )
 {
    int i;
-   int ub1;
-   int ub2;
 
    for( i = 0; i < nvars-1; ++i )
    {
-      ub1 = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[i])) + consdata->durations[i];
-      ub2 = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[i+1]))  + consdata->durations[i+1];
-      assert(ub1 <= ub2);
+      int idx1;
+      int lct1;
+      int idx2;
+      int lct2;
+
+      idx1 = perm[i];
+      idx2 = perm[i+1];
+
+      lct1 = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[idx1])) + durations[idx1];
+      lct2 = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[idx2]))  + durations[idx2];
+      assert(lct1 <= lct2);
    }
 }
 #endif
@@ -1828,31 +1840,31 @@ void checkSortVariablesLct(
 static
 SCIP_RETCODE sortVariablesLct(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< cumulative constraint */
+   int                   nvars,              /**< number of start time variables */
+   SCIP_VAR**            vars,               /**< start time variables */
+   int*                  durations,          /**< durations */
+   int*                  perm                /**< array to store the permutation w.r.t. latest completion time */
    )
 {
-   SCIP_CONSDATA* consdata;
    int* lcts;
-   int nvars;
    int v;
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->nvars == 0 || consdata->vars != NULL);
-   assert(consdata->nvars == 0 || consdata->durations != NULL);
-
-   nvars = consdata->nvars;
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || durations != NULL);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lcts, nvars) );
 
    for( v = 0; v < nvars; ++v )
-      lcts[v] = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[v])) + consdata->durations[v];
+   {
+      perm[v] = v;
+      lcts[v] = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v])) + durations[v];
+   }
 
-   /* sort of three joint arrays of ints/ints/Ptr, sorted by first array in non-decreasing order via sort template */
-   SCIPsortIntPtrIntIntBoolBool(lcts, (void**)consdata->vars, consdata->durations, consdata->demands, consdata->downlocks, consdata->uplocks, nvars);
+   /* sort arrays w.r.t. latest completion */
+   SCIPsortIntInt(lcts, perm, nvars);
 
 #ifndef NDEBUG
-   checkSortVariablesLct(scip, consdata, consdata->nvars);
+   checkSortVariablesLct(scip, nvars, vars, durations, perm);
 #endif
 
    SCIPfreeBufferArray(scip, &lcts);
@@ -7187,59 +7199,59 @@ SCIP_RETCODE computeEffectiveHorizon(
 static
 SCIP_RETCODE presolveConsEst(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< cumulative constraint */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int*                  capacity,           /**< pointer to cumulative capacity (which might change) */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   SCIP_Bool*            downlocks,          /**< array to store if the variable has a down lock, or NULL */
+   SCIP_Bool*            uplocks,            /**< array to store if the variable has an up lock, or NULL */
+   SCIP_CONS*            cons,               /**< underlying constraint, or NULL */
+   SCIP_Bool*            delvars,            /**< array storing the variable which can be deleted from the constraint */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
    int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
    int*                  nchgsides,          /**< pointer to store the number of changed sides */
    SCIP_Bool*            cutoff              /**< pointer to store if a cutoff was detected */
    )
 {
-   SCIP_CONSDATA* consdata;
-   SCIP_VAR* cand;
-   SCIP_Bool downlock;
-   SCIP_Bool uplock;
-   int duration;
-   int nvars;
-   int hmin;
-   int est;
-   int lst;
-   int ect;
-   int lct;
+   int* perm;
    int v;
 
    assert(scip != NULL);
-   assert(cons != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   nvars = consdata->nvars;
+   assert(nvars > 1);
 
    /* check if a cutoff was already detected */
    if( *cutoff )
       return SCIP_OKAY;
 
-   if( nvars <= 1 )
-      return SCIP_OKAY;
+   SCIPdebugMessage("presolve cumulative condition (hmin %d) <= %d w.r.t. earlier start time\n", hmin, *capacity);
 
-   hmin = consdata->hmin;
-   assert(hmin < consdata->hmax);
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nvars) );
 
-   SCIPdebugMessage("presolve constraint <%s>[%d,%d) <= %d w.r.t. earlier start time\n", SCIPconsGetName(cons), hmin, consdata->hmax, consdata->capacity);
+   /* make sure, the variables are sorted w.r.t. the earliest start times */
+   SCIP_CALL( sortVariablesEst(scip, nvars, vars, perm) );
 
-   /* make sure, the variables are sorted by non-increasing order of the earliest start times */
-   SCIP_CALL( sortVariablesEst(scip, cons) );
-
-   for( v = nvars-1; v >= 0 && nvars > 1; --v )
+   /* loop over all variables w.r.t. earliest start times */
+   for( v = 0; v < nvars; ++v )
    {
+      SCIP_VAR* cand;
+      int duration;
+      int est;
+      int lst;
+      int ect;
+      int lct;
+      int idx;
+
+      idx = perm[v];
+      assert(idx >= 0 && idx < nvars);
+
 #ifndef NDEBUG
-      checkSortVariablesEst(scip, consdata, v);
+      checkSortVariablesEst(scip, nvars, vars, perm);
 #endif
 
-      cand = consdata->vars[v];
-      duration = consdata->durations[v];
-      downlock = consdata->downlocks[v];
-      uplock = consdata->uplocks[v];
+      cand = vars[idx];
+      duration = durations[idx];
 
       /* collect latest completion time (lct) and earliest completion time (ect) from last job */
       est = convertBoundToInt(scip, SCIPvarGetLbGlobal(cand));
@@ -7256,11 +7268,8 @@ SCIP_RETCODE presolveConsEst(
             SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), duration);
 
          /* delete variable at the given position */
-         SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+         delvars[idx] = TRUE;
          (*nchgcoefs)++;
-
-         /* adjust nvars after deleting the variable */
-         nvars = consdata->nvars;
 
          SCIPstatistic( consdata->nirrelevantjobs++ );
 
@@ -7276,20 +7285,21 @@ SCIP_RETCODE presolveConsEst(
          /* job can be removed from the constraint only if the integer start time variable can be fixed to its lower
           * bound;
           */
-
-         /* fix integer start time variable if possible to it lower bound */
-         SCIP_CALL( fixIntegerVariableLb(scip, cand, downlock, nfixedvars) );
+         if( downlocks != NULL )
+         {
+            /* fix integer start time variable if possible to it lower bound */
+            SCIP_CALL( fixIntegerVariableLb(scip, cand, downlocks[idx], nfixedvars) );
+         }
 
          if( SCIPvarGetLbGlobal(cand) + 0.5 > SCIPvarGetUbGlobal(cand) )
          {
             SCIPdebugMessage("  remove variable <%s>[%d,%d] with duration <%d> is irrelevant due to dual reductions wrt EST\n",
                SCIPvarGetName(cand), est, lct, duration);
 
-            SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+            delvars[idx] = TRUE;
             (*nchgcoefs)++;
 
             /* adjust nvars after deleting the variable */
-            nvars = consdata->nvars;
             SCIPstatistic( consdata->ndualfixs++ );
 
             continue;
@@ -7299,8 +7309,21 @@ SCIP_RETCODE presolveConsEst(
       /* check if the jobs overlaps with the time point hmin if it overlaps at all with the effective horizon; if so the
        * down lock can be omitted
        */
-      if( lst <= hmin )
+      if( lst <= hmin && cons != NULL )
       {
+         SCIP_Bool downlock;
+         SCIP_Bool uplock;
+         int demand;
+
+         assert(downlocks != NULL);
+         assert(uplocks != NULL);
+
+         demand = demands[idx];
+         assert(demand > 0);
+
+         downlock = downlocks[idx];
+         uplock = uplocks[idx];
+
          if( !uplock )
          {
             /* the variables has no up lock and we can also remove the down lock;
@@ -7308,37 +7331,33 @@ SCIP_RETCODE presolveConsEst(
              * => remove job and reduce capacity by the demand of that job
              */
 
-            assert(ect >= consdata->hmax);
-
             /* if the capacity is smaller than the demand we detected an infeasibility */
-            if( consdata->capacity < consdata->demands[v] )
+            if( *capacity < demand )
             {
                (*cutoff) = TRUE;
                break;
             }
 
-            consdata->capacity -= consdata->demands[v];
-            assert(consdata->capacity >= 0);
+            (*capacity) -= demand;
+            assert(*capacity >= 0);
 
             (*nchgsides)++;
 
             SCIPdebugMessage("  remove variables <%s>[%d,%d] (duration <%d>, demand <%d>) due to no uplocks, new capacity = %d\n",
-               SCIPvarGetName(cand), est, lst, duration, consdata->demands[v], consdata->capacity);
+               SCIPvarGetName(cand), est, lst, duration, demand, *capacity);
 
-            SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+            delvars[idx] = TRUE;
             (*nchgcoefs)++;
 
-            /* adjust nvars after deleting the variable */
-            nvars = consdata->nvars;
             SCIPstatistic( consdata->nalwaysruns++ );
          }
          else if( downlock )
          {
             SCIPdebugMessage("  remove down lock of variable <%s>[%g,%g] with duration <%d>\n",
-               SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), consdata->durations[v]);
+               SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), duration);
 
             SCIP_CALL( SCIPunlockVarCons(scip, cand, cons, TRUE, FALSE) );
-            consdata->downlocks[v] = FALSE;
+            downlocks[idx] = FALSE;
             (*nchgsides)++;
 
             SCIPstatistic( consdata->nremovedlocks++ );
@@ -7347,6 +7366,8 @@ SCIP_RETCODE presolveConsEst(
       else if ( est >= hmin )
          break;
    }
+
+   SCIPfreeBufferArray(scip, &perm);
 
    return SCIP_OKAY;
 }
@@ -7366,61 +7387,54 @@ SCIP_RETCODE presolveConsEst(
 static
 SCIP_RETCODE presolveConsLct(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< cumulative constraint */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int*                  capacity,           /**< pointer to cumulative capacity (which might change) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool*            downlocks,          /**< array to store if the variable has a down lock, or NULL */
+   SCIP_Bool*            uplocks,            /**< array to store if the variable has an up lock, or NULL */
+   SCIP_CONS*            cons,               /**< underlying constraint, or NULL */
+   SCIP_Bool*            delvars,            /**< array storing the variable which can be deleted from the constraint */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
    int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
    int*                  nchgsides,          /**< pointer to store the number of changed sides */
    SCIP_Bool*            cutoff              /**< pointer to store if a cutoff was detected */
    )
 {
-   SCIP_CONSDATA* consdata;
-   SCIP_VAR* cand;
-   SCIP_Bool downlock;
-   SCIP_Bool uplock;
-   int duration;
-   int nvars;
-   int hmin;
-   int hmax;
-   int est;
-   int lst;
-   int ect;
-   int lct;
+   int* perm;
    int v;
 
    assert(scip != NULL);
-   assert(cons != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
+   assert(nvars > 1);
 
    /* check if a cutoff was already detected */
    if( *cutoff )
       return SCIP_OKAY;
 
-   nvars = consdata->nvars;
+   SCIPdebugMessage("presolve cumulative condition (hmax %d) <= %d w.r.t. latest completion time\n",  hmax, *capacity);
 
-   if( nvars <= 1 )
-      return SCIP_OKAY;
-
-   hmin = consdata->hmin;
-   hmax = consdata->hmax;
-   assert(hmin < hmax);
-
-   SCIPdebugMessage("presolve constraint <%s>[%d,%d) <= %d w.r.t. latest completion time\n", SCIPconsGetName(cons), hmin, hmax, consdata->capacity);
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nvars) );
 
    /* make sure, the variables are sorted by non-increasing order of the latest completion time */
-   SCIP_CALL( sortVariablesLct(scip, cons) );
+   SCIP_CALL( sortVariablesLct(scip, nvars, vars, durations, perm) );
 
-   for( v = nvars-1; v >= 0 && nvars > 1; --v )
+   for( v = nvars-1; v >= 0; --v )
    {
-#ifndef NDEBUG
-      checkSortVariablesLct(scip, consdata, v);
-#endif
+      SCIP_VAR* cand;
+      int duration;
+      int est;
+      int lst;
+      int ect;
+      int lct;
+      int idx;
 
-      cand = consdata->vars[v];
-      duration = consdata->durations[v];
-      downlock = consdata->downlocks[v];
-      uplock = consdata->uplocks[v];
+      idx = perm[v];
+      assert(idx >= 0 && idx < nvars);
+
+      cand = vars[idx];
+      duration = durations[idx];
 
       /* collect latest completion time (lct) and earliest completion time (ect) from last job */
       est = convertBoundToInt(scip, SCIPvarGetLbGlobal(cand));
@@ -7437,11 +7451,8 @@ SCIP_RETCODE presolveConsLct(
             SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), duration);
 
          /* delete variable at the given position */
-         SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+         delvars[idx] = TRUE;
          (*nchgcoefs)++;
-
-         /* adjust nvars after deleting the variable */
-         nvars = consdata->nvars;
 
          SCIPstatistic( consdata->nirrelevantjobs++ );
 
@@ -7457,20 +7468,20 @@ SCIP_RETCODE presolveConsLct(
          /* job can be removed from the constraint only if the integer start time variable can be fixed to its upper
           * bound
           */
-
-         /* fix integer start time variable if possible to its upper bound */
-         SCIP_CALL( fixIntegerVariableUb(scip, cand, uplock, nfixedvars) );
+         if( uplocks != NULL )
+         {
+            /* fix integer start time variable if possible to its upper bound */
+            SCIP_CALL( fixIntegerVariableUb(scip, cand, uplocks[idx], nfixedvars) );
+         }
 
          if( SCIPvarGetLbGlobal(cand) + 0.5 > SCIPvarGetUbGlobal(cand) )
          {
             SCIPdebugMessage("  remove variable <%s>[%d,%d] with duration <%d> is irrelevant due to dual reductions wrt LCT\n",
                SCIPvarGetName(cand), est, lst, duration);
 
-            SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+            delvars[idx] = TRUE;
             (*nchgcoefs)++;
 
-            /* adjust nvars after deleting the variable */
-            nvars = consdata->nvars;
             SCIPstatistic( consdata->ndualfixs++ );
 
             continue;
@@ -7480,8 +7491,21 @@ SCIP_RETCODE presolveConsLct(
       /* check if the jobs overlaps with the time point hmax if it overlaps at all with the effective horizon; if so the
        * up lock can be omitted
        */
-      if( ect >= hmax )
+      if( ect >= hmax && cons != NULL )
       {
+         SCIP_Bool downlock;
+         SCIP_Bool uplock;
+         int demand;
+
+         assert(downlocks != NULL);
+         assert(uplocks != NULL);
+
+         downlock = downlocks[idx];
+         uplock = uplocks[idx];
+
+         demand = demands[idx];
+         assert(demand > 0);
+
          if( !downlock )
          {
             /* the variables has no down lock and we can also remove the up lock;
@@ -7489,38 +7513,33 @@ SCIP_RETCODE presolveConsLct(
              * => remove job and reduce capacity by the demand of that job
              */
 
-            assert(lst <= consdata->hmin);
-
             /* if the capacity is smaller than the demand we detected an infeasibility */
-            if( consdata->capacity < consdata->demands[v] )
+            if( *capacity < demand )
             {
                (*cutoff) = TRUE;
                break;
             }
 
-            consdata->capacity -= consdata->demands[v];
-            assert(consdata->capacity >= 0);
+            (*capacity) -= demand;
+            assert(*capacity >= 0);
 
             (*nchgsides)++;
 
             SCIPdebugMessage("  remove variables <%s>[%d,%d] with duration <%d> due to no downlocks, new capacity = %d\n",
-               SCIPvarGetName(cand), est, lst, duration, consdata->capacity);
+               SCIPvarGetName(cand), est, lst, duration, *capacity);
 
-            SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+            delvars[idx] = TRUE;
             (*nchgcoefs)++;
-
-            /* adjust nvars after deleting the variable */
-            nvars = consdata->nvars;
 
             SCIPstatistic( consdata->nalwaysruns++ );
          }
          else if( uplock )
          {
             SCIPdebugMessage("  remove up lock of variable <%s>[%g,%g] with duration <%d>\n",
-               SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), consdata->durations[v]);
+               SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), duration);
 
             SCIP_CALL( SCIPunlockVarCons(scip, cand, cons, FALSE, TRUE) );
-            consdata->uplocks[v] = FALSE;
+            uplocks[idx] = FALSE;
             (*nchgsides)++;
 
             SCIPstatistic( consdata->nremovedlocks++ );
@@ -7529,6 +7548,64 @@ SCIP_RETCODE presolveConsLct(
       else if( lct <= hmax )
          break;
    }
+
+   SCIPfreeBufferArray(scip, &perm);
+
+   return SCIP_OKAY;
+}
+
+/** presolve cumulative constraint w.r.t. the boundary of the effective horizon */
+static
+SCIP_RETCODE presolveConsEffectiveHorizon(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< cumulative constraint */
+   int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
+   int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
+   int*                  nchgsides,          /**< pointer to store the number of changed sides */
+   SCIP_Bool*            cutoff              /**< pointer to store if a cutoff was detected */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool* delvars;
+   int nvars;
+   int v;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   nvars = consdata->nvars;
+
+   if( nvars <= 1 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &delvars, nvars) );
+   BMSclearMemoryArray(delvars, nvars);
+
+   /* presolve constraint form the earlier start time point of view */
+   SCIP_CALL( presolveConsEst(scip, nvars, consdata->vars, consdata->durations, consdata->demands, &consdata->capacity,
+         consdata->hmin, consdata->downlocks, consdata->uplocks, cons,
+         delvars, nfixedvars, nchgcoefs, nchgsides, cutoff) );
+
+   /* presolve constraint form the latest completion time point of view */
+   SCIP_CALL( presolveConsLct(scip, nvars, consdata->vars, consdata->durations, consdata->demands, &consdata->capacity,
+         consdata->hmax, consdata->downlocks, consdata->uplocks, cons,
+         delvars, nfixedvars, nchgcoefs, nchgsides, cutoff) );
+
+   /* remove variables from the cumulative constraint which are marked to be deleted; we need to that in the reverse
+    * order to ensure a correct behaviour
+    */
+   for( v = nvars-1; v >= 0; --v )
+   {
+      if( delvars[v] )
+      {
+         SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &delvars);
 
    return SCIP_OKAY;
 }
@@ -8021,7 +8098,6 @@ SCIP_RETCODE presolveCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 #endif
-
    assert(!SCIPconsIsDeleted(cons));
 
    /* only perform dual reductions on model constraints */
@@ -8050,17 +8126,12 @@ SCIP_RETCODE presolveCons(
       SCIPstatistic( conshdlrdata->ndualfixs -= consdata->ndualfixs );
       SCIPstatistic( conshdlrdata->nalwaysruns -= consdata->nalwaysruns );
 
-      /* presolve constraint form the earlier start time point of view */
-      SCIP_CALL( presolveConsEst(scip, cons, nfixedvars, nchgcoefs, nchgsides, cutoff) );
-
-      /* presolve constraint form the latest completion time point of view */
-      SCIP_CALL( presolveConsLct(scip, cons, nfixedvars, nchgcoefs, nchgsides, cutoff) );
+      SCIP_CALL( presolveConsEffectiveHorizon(scip, cons, nfixedvars, nchgcoefs, nchgsides, cutoff) );
 
       SCIPstatistic( conshdlrdata->nirrelevantjobs += consdata->nirrelevantjobs );
       SCIPstatistic( conshdlrdata->nremovedlocks += consdata->nremovedlocks );
       SCIPstatistic( conshdlrdata->ndualfixs += consdata->ndualfixs );
       SCIPstatistic( conshdlrdata->nalwaysruns += consdata->nalwaysruns );
-
 
       if( *cutoff || SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
@@ -8159,6 +8230,8 @@ SCIP_DECL_CONSINITPRE(consInitpreCumulative)
        * hmax)
        */
       SCIP_CALL( removeIrrelevantJobs(scip, conss[c]) );
+
+      
    }
 
    return SCIP_OKAY;
@@ -9523,6 +9596,39 @@ SCIP_RETCODE SCIPsplitCumulativeCondition(
 {
    SCIP_CALL( computeEffectiveHorizonCumulativeCondition(scip, nvars, vars, durations, demands, capacity,
          hmin, hmax, split) );
+
+   return SCIP_OKAY;
+}
+
+/** presolve cumulative condition w.r.t. effective horizon */
+SCIP_RETCODE SCIPpresolveCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int*                  capacity,           /**< pointer to cumulative capacity (which might change) */
+   int                   hmin,               /**< left bound of time axis to be considered */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool*            delvars,            /**< array storing the variable which can be deleted from the constraint */
+   int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
+   int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
+   int*                  nchgsides,          /**< pointer to store the number of changed sides */
+   SCIP_Bool*            cutoff              /**< pointer to store if a cutoff was detected */
+   )
+{
+   if( nvars <= 1 )
+      return SCIP_OKAY;
+
+   /* presolve constraint form the earlier start time point of view */
+   SCIP_CALL( presolveConsEst(scip, nvars, vars, durations, demands, capacity,
+         hmin, NULL, NULL, NULL,
+         delvars, nfixedvars, nchgcoefs, nchgsides, cutoff) );
+
+   /* presolve constraint form the latest completion time point of view */
+   SCIP_CALL( presolveConsLct(scip, nvars, vars, durations, demands, capacity,
+         hmax, NULL, NULL, NULL,
+         delvars, nfixedvars, nchgcoefs, nchgsides, cutoff) );
 
    return SCIP_OKAY;
 }

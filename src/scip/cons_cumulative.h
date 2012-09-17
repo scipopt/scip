@@ -226,6 +226,24 @@ SCIP_RETCODE SCIPsplitCumulativeCondition(
    int*                  split               /**< point were the cumulative condition can be split */
    );
 
+/** presolve cumulative condition w.r.t. effective horizon */
+EXTERN
+SCIP_RETCODE SCIPpresolveCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int*                  capacity,           /**< pointer to cumulative capacity (which might change) */
+   int                   hmin,               /**< left bound of time axis to be considered */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool*            delvars,            /**< array storing the variable which can be deleted from the constraint */
+   int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
+   int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
+   int*                  nchgsides,          /**< pointer to store the number of changed sides */
+   SCIP_Bool*            cutoff              /**< pointer to store if a cutoff was detected */
+   );
+
 /** propagate the given cumulative condition */
 EXTERN
 SCIP_RETCODE SCIPpropCumulativeCondition(
