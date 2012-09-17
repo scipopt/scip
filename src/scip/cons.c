@@ -618,7 +618,6 @@ void conshdlrMarkConsPropagate(
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(cons != NULL);
    assert(!cons->original);
-   assert(!conshdlrAreUpdatesDelayed(conshdlr));
 
    /* it may happen that the constraint is deleted while updates are delayed: in this case we just return */
    if( !cons->enabled )
@@ -693,7 +692,6 @@ void conshdlrUnmarkConsPropagate(
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(cons != NULL);
    assert(!cons->original);
-   assert(!conshdlrAreUpdatesDelayed(conshdlr));
 
    /* it may happen that the constraint is deleted while updates are delayed: in this case we just return */
    if( !cons->enabled )
