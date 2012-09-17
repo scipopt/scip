@@ -4533,7 +4533,7 @@ SCIP_RETCODE tightenVarUb(
 
    if( force || SCIPisUbBetter(scip, newub, lb, oldub) )
    {
-      assert(force || SCIPisFeasLT(scip, newub, oldub));
+      assert(force || SCIPisLT(scip, newub, oldub));
 
       SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
          SCIPconsGetName(cons), SCIPvarGetName(var), lb, oldub, consdata->vals[pos], consdata->minactivity, consdata->maxactivity, consdata->lhs, consdata->rhs, newub);
@@ -4595,7 +4595,7 @@ SCIP_RETCODE tightenVarLb(
 
    if( force || SCIPisLbBetter(scip, newlb, oldlb, ub) )
    {
-      assert(force || SCIPisFeasGT(scip, newlb, oldlb));
+      assert(force || SCIPisGT(scip, newlb, oldlb));
 
       SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
          SCIPconsGetName(cons), SCIPvarGetName(var), oldlb, ub, consdata->vals[pos], consdata->minactivity, consdata->maxactivity, consdata->lhs, consdata->rhs, newlb);
