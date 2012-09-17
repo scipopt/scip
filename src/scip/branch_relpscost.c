@@ -46,6 +46,8 @@
 #define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0      /**< iteration limit for strong branching initialization of pseudo cost entries (0: auto) */
 #define DEFAULT_MAXBDCHGS        5      /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
+#define DEFAULT_MAXPROPROUNDS    0      /**< maximum number of propagation rounds to be performed during strong branching
+                                         *   before solving the LP (-1: no limit, -2: parameter settings) */
 
 
 /** branching rule data */
@@ -64,6 +66,8 @@ struct SCIP_BranchruleData
    int                   initcand;           /**< maximal number of candidates initialized with strong branching per node */
    int                   inititer;           /**< iteration limit for strong branching initialization of pseudo cost entries (0: auto) */
    int                   maxbdchgs;          /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
+   int                   maxproprounds;      /**< maximum number of propagation rounds to be performed during strong branching
+                                              *   before solving the LP (-1: no limit, -2: parameter settings) */
 };
 
 
@@ -160,10 +164,27 @@ SCIP_RETCODE applyBdchgs(
    SCIP_Real*            lpcandssol,         /**< LP solution array of branching candidates */
    int*                  bdchginds,          /**< bound change index array */
    SCIP_Bool*            bdchgdowninfs,      /**< bound change direction array */
-   int                   nbdchgs             /**< number of bound changes */
+   int                   nbdchgs,            /**< number of bound changes */
+   SCIP_RESULT*          result              /**< result pointer */
    )
 {
+#ifndef NDEBUG
+   SCIP_BRANCHRULE* branchrule;
+   SCIP_BRANCHRULEDATA* branchruledata;
+#endif
+   SCIP_Bool infeasible;
+   SCIP_Bool tightened;
    int i;
+
+#ifndef NDEBUG
+   /* find branching rule */
+   branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
+   assert(branchrule != NULL);
+
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+#endif
 
    SCIPdebugMessage("applying %d bound changes\n", nbdchgs);
 
@@ -175,12 +196,29 @@ SCIP_RETCODE applyBdchgs(
       if( bdchgdowninfs[i] )
       {
          /* downwards rounding is infeasible -> change lower bound of variable to upward rounding */
-         SCIP_CALL( SCIPchgVarLb(scip, lpcands[c], SCIPfeasCeil(scip, lpcandssol[c])) );
+         SCIP_CALL( SCIPtightenVarLb(scip, lpcands[c], SCIPfeasCeil(scip, lpcandssol[c]), TRUE, &infeasible, &tightened) );
+         if( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         /* if we did propagation, the bound change might already have been added */
+         assert(tightened || (branchruledata->maxproprounds != 0));
+
       }
       else
       {
          /* upwards rounding is infeasible -> change upper bound of variable to downward rounding */
-         SCIP_CALL( SCIPchgVarUb(scip, lpcands[c], SCIPfeasFloor(scip, lpcandssol[c])) );
+         SCIP_CALL( SCIPtightenVarUb(scip, lpcands[c], SCIPfeasFloor(scip, lpcandssol[c]), TRUE, &infeasible, &tightened) );
+         if( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         /* if we did propagation, the bound change might already have been added */
+         assert(tightened || (branchruledata->maxproprounds != 0));
       }
       SCIPdebugMessage(" -> <%s> (sol:%g) -> [%g,%g]\n",
          SCIPvarGetName(lpcands[c]), lpcandssol[c], SCIPvarGetLbLocal(lpcands[c]), SCIPvarGetUbLocal(lpcands[c]));
@@ -280,6 +318,7 @@ SCIP_RETCODE execRelpscost(
       SCIP_Real maxlookahead;
       SCIP_Real lookahead;
       SCIP_Bool initstrongbranching;
+      SCIP_Bool propagate;
       SCIP_Longint nodenum;
       SCIP_Longint nlpiterationsquot;
       SCIP_Longint nsblpiterations;
@@ -304,6 +343,7 @@ SCIP_RETCODE execRelpscost(
       avgpscostscore = MAX(avgpscostscore, 0.1);
 
       initstrongbranching = FALSE;
+      propagate = FALSE;
 
       /* get maximal number of candidates to initialize with strong branching; if the current solutions is not basic,
        * we cannot apply the simplex algorithm and therefore don't initialize any candidates
@@ -520,11 +560,25 @@ SCIP_RETCODE execRelpscost(
          /* use strong branching on candidate */
          if( !initstrongbranching )
          {
+            /* check whether propagation should be performed */
+            propagate = (branchruledata->maxproprounds != 0);
             initstrongbranching = TRUE;
-            SCIP_CALL( SCIPstartStrongbranch(scip, FALSE) );
+            SCIP_CALL( SCIPstartStrongbranch(scip, propagate) );
          }
-         SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, branchcands[c], inititer, 
-               &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+
+         if( propagate )
+         {
+            /* apply strong branching */
+            SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, branchcands[c], branchcandssol[c], lpobjval, inititer,
+                  branchruledata->maxproprounds, &down, &up, &downvalid, &upvalid, &downinf, &upinf,
+                  &downconflict, &upconflict, &lperror) );
+         }
+         else
+         {
+            /* apply strong branching */
+            SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, branchcands[c], inititer,
+                  &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+         }
 
          /* check for an error in strong branching */
          if( lperror )
@@ -560,7 +614,7 @@ SCIP_RETCODE execRelpscost(
          /* check if there are infeasible roundings */
          if( downinf || upinf )
          {
-            assert(allcolsinlp);
+            assert(allcolsinlp || propagate);
             assert(!exactsolve);
             
             /* if for both infeasibilities, a conflict constraint was created, we don't need to fix the variable by hand,
@@ -570,8 +624,8 @@ SCIP_RETCODE execRelpscost(
             if( allowaddcons && downinf == downconflict && upinf == upconflict )
             {
                SCIPdebugMessage(" -> variable <%s> is infeasible in %s: conflict constraint added\n",
-                  SCIPvarGetName(branchcands[c]), 
-                  downinf && upinf ? "both directions" : (downinf ? "downward branch" : "upwardbranch"));
+                  SCIPvarGetName(branchcands[c]),
+                  downinf && upinf ? "both directions" : (downinf ? "downward branch" : "upward branch"));
                *result = SCIP_CONSADDED;
                nbdconflicts++;
                if( (downinf && upinf)
@@ -698,8 +752,9 @@ SCIP_RETCODE execRelpscost(
       {
          if( *result != SCIP_CUTOFF )
          {
-            SCIP_CALL( applyBdchgs(scip, branchcands, branchcandssol, bdchginds, bdchgdowninfs, nbdchgs) );
-            *result = SCIP_REDUCEDDOM;
+            SCIP_CALL( applyBdchgs(scip, branchcands, branchcandssol, bdchginds, bdchgdowninfs, nbdchgs, result) );
+            if( *result != SCIP_CUTOFF )
+               *result = SCIP_REDUCEDDOM;
          }
          freeBdchgs(scip, &bdchginds, &bdchgdowninfs, &nbdchgs);
       }
@@ -903,6 +958,11 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "branching/relpscost/maxbdchgs", 
          "maximal number of bound tightenings before the node is reevaluated (-1: unlimited)",
          &branchruledata->maxbdchgs, TRUE, DEFAULT_MAXBDCHGS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "branching/relpscost/maxproprounds",
+         "maximum number of propagation rounds to be performed during strong branching before solving the LP (-1: no limit, -2: parameter settings)",
+         &branchruledata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -2, INT_MAX, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }

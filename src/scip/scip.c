@@ -14983,10 +14983,12 @@ SCIP_RETCODE SCIPendStrongbranch(
       {
          if( boundtypes[i] == SCIP_BOUNDTYPE_LOWER )
          {
+            SCIPdebugMessage("apply probing lower bound change <%s> >= %.9g\n", SCIPvarGetName(boundchgvars[i]), bounds[i]);
             SCIP_CALL( SCIPchgVarLb(scip, boundchgvars[i], bounds[i]) );
          }
          else
          {
+            SCIPdebugMessage("apply probing upper bound change <%s> <= %.9g\n", SCIPvarGetName(boundchgvars[i]), bounds[i]);
             SCIP_CALL( SCIPchgVarUb(scip, boundchgvars[i], bounds[i]) );
          }
       }
@@ -15205,11 +15207,18 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    )
 {
    SCIP_COL* col;
+   SCIP_Real newub;
+   SCIP_Real newlb;
    SCIP_Bool propagate;
    SCIP_Bool cutoff;
    int oldnconflicts;
    int oldniters;
 
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(SCIPvarIsIntegral(var));
+   assert(down != NULL);
+   assert(up != NULL);
    assert(lperror != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchWithPropagationFrac", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -15234,6 +15243,9 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
       *downconflict = FALSE;
    if( upconflict != NULL )
       *upconflict = FALSE;
+   *lperror = FALSE;
+
+   cutoff = FALSE;
 
    /* check if the solving process should be aborted */
    if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) )
@@ -15259,19 +15271,69 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    }
 
    oldnconflicts = SCIPconflictGetNConflicts(scip->conflict);
-   oldniters = stat->ndivinglpiterations;
+   oldniters = scip->stat->ndivinglpiterations;
+
+   newlb = SCIPfeasFloor(scip, solval + 1);
+   newub = SCIPfeasCeil(scip, solval - 1);
+
+   /* up branch is infeasible due to branching bound change */
+   if( newlb > SCIPvarGetUbLocal(var) + 0.5 )
+   {
+      *up = SCIPinfinity(scip);
+
+      if( upinf != NULL )
+         *upinf = TRUE;
+
+      if( upvalid != NULL )
+         *upvalid = TRUE;
+
+      /* bound changes are applied in SCIPendStrongbranch(), which can be seen as a conflict constraint */
+      if( upconflict != NULL )
+         *upconflict = TRUE;
+
+      /* we do not regard the down branch; its valid pointer stays set to FALSE */
+      return SCIP_OKAY;
+   }
+
+   /* down branch is infeasible due to branching bound change */
+   if( newub < SCIPvarGetLbLocal(var) - 0.5 )
+   {
+      *down = SCIPinfinity(scip);
+
+      if( downinf != NULL )
+         *downinf = TRUE;
+
+      if( downvalid != NULL )
+         *downvalid = TRUE;
+
+      /* bound changes are applied in SCIPendStrongbranch(), which can be seen as a conflict constraint */
+      if( downconflict != NULL )
+         *downconflict = TRUE;
+
+      /* we do not regard the up branch; its valid pointer stays set to FALSE */
+      return SCIP_OKAY;
+   }
 
    /* start timing */
    SCIPclockStart(scip->stat->strongbranchtime, scip->set);
 
+   SCIPdebugMessage("strong branching on var <%s>: solval=%g, lb=%g, ub=%g\n", SCIPvarGetName(var), solval, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+
    /* create a new probing node and apply the new upper bound for the variable */
    SCIP_CALL( SCIPnewProbingNode(scip) );
-   SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfloor(scip, solval)) );
+
+   /* if the new upper bound is greater equal the current upper bound, the up branch should have been detected
+    * to be infeasible
+    */
+   assert(SCIPisLT(scip, newub, SCIPvarGetUbLocal(var)));
+   SCIP_CALL( SCIPchgVarUbProbing(scip, var, newub) );
 
    /* propagate domains at the probing node */
    if( propagate )
    {
       SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, NULL) );
+      if( cutoff )
+         SCIPdebugMessage("down branch of var <%s> detected infeasible during propagation\n", SCIPvarGetName(var));
    }
 
    if( !cutoff )
@@ -15292,7 +15354,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
       case SCIP_LPSOLSTAT_OBJLIMIT:
       case SCIP_LPSOLSTAT_INFEASIBLE:
          if( SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
+         {
+            SCIPdebugMessage("down branch of var <%s> detected infeasible in LP solving: status=%d\n", SCIPvarGetName(var), SCIPgetLPSolstat(scip));
             cutoff = TRUE;
+         }
          break;
       case SCIP_LPSOLSTAT_ITERLIMIT:
       case SCIP_LPSOLSTAT_TIMELIMIT:
@@ -15324,30 +15389,33 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
       if( downvalid != NULL )
          *downvalid = TRUE;
 
-      if( downconflict != NULL && (SCIPvarGetUbLocal(var) < solval || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
+      if( downconflict != NULL && (SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
          *downconflict = TRUE;
+
+      /* stop timing */
+      SCIPclockStop(scip->stat->strongbranchtime, scip->set);
+
+      /* we do not regard the up branch; its valid pointer stays set to FALSE */
+      return SCIP_OKAY;
    }
 
    oldnconflicts = SCIPconflictGetNConflicts(scip->conflict);
+   cutoff = FALSE;
 
    /* create a new probing node and apply the new lower bound for the variable, if this was not already done by a
     * conflict resulting from the infeasibility of the down branch
     */
    SCIP_CALL( SCIPnewProbingNode(scip) );
-   if( SCIPisGT(scip, SCIPceil(scip, solval), SCIPvarGetLbLocal(var)) )
-   {
-      SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPceil(scip, solval)) );
-   }
-#ifndef NDEBUG
-   /* if the lower bound was already increased, this should be due to an infeasible down branch */
-   else
-      assert(cutoff);
-#endif
+
+   assert(SCIPisGT(scip, newlb, SCIPvarGetLbLocal(var)));
+   SCIP_CALL( SCIPchgVarLbProbing(scip, var, newlb) );
 
    /* propagate domains at the probing node */
    if( propagate )
    {
       SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, NULL) );
+      if( cutoff )
+         SCIPdebugMessage("up branch of var <%s> detected infeasible during propagation\n", SCIPvarGetName(var));
    }
 
    if( !cutoff )
@@ -15368,7 +15436,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
       case SCIP_LPSOLSTAT_OBJLIMIT:
       case SCIP_LPSOLSTAT_INFEASIBLE:
          if( SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
+         {
+            SCIPdebugMessage("up branch of var <%s> detected infeasible in LP solving: status=%d\n", SCIPvarGetName(var), SCIPgetLPSolstat(scip));
             cutoff = TRUE;
+         }
          break;
       case SCIP_LPSOLSTAT_ITERLIMIT:
       case SCIP_LPSOLSTAT_TIMELIMIT:
@@ -15400,11 +15471,17 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
       if( upvalid != NULL )
          *upvalid = TRUE;
 
-      if( upconflict != NULL && (SCIPvarGetLbLocal(var) > solval || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
+      if( upconflict != NULL && (SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
          *upconflict = TRUE;
+
+      /* stop timing */
+      SCIPclockStop(scip->stat->strongbranchtime, scip->set);
+
+      /* we do not regard the up branch; its valid pointer stays set to FALSE */
+      return SCIP_OKAY;
    }
 
-   /* check return code for errors */
+   /* set strong branching information in column */
    if( *lperror )
    {
       SCIPcolInvalidateStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp);
@@ -15412,7 +15489,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    else
    {
       SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
-         *down, *up, *downvalid, *upvalid, stat->ndivinglpiterations - oldniters, INT_MAX);
+         *down, *up, *downvalid, *upvalid, scip->stat->ndivinglpiterations - oldniters, INT_MAX);
    }
 
    /* stop timing */
@@ -17814,10 +17891,14 @@ SCIP_RETCODE SCIPaddVarVlb(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
 {
+   int nlocalbdchgs;
+
    SCIP_CALL( checkStage(scip, "SCIPaddVarVlb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPvarAddVlb(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-         scip->branchcand, scip->eventqueue, vlbvar, vlbcoef, vlbconstant, TRUE, infeasible, nbdchgs) );
+         scip->branchcand, scip->eventqueue, vlbvar, vlbcoef, vlbconstant, TRUE, infeasible, &nlocalbdchgs) );
+
+   *nbdchgs = nlocalbdchgs;
 
    /* if x is not continuous we add a variable bound for z; do not add it if cofficient would be too small or we already
     * detected infeasibility
@@ -17828,14 +17909,15 @@ SCIP_RETCODE SCIPaddVarVlb(
       {
          /* if b > 0, we have a variable upper bound: x >= b*z + d  =>  z <= (x-d)/b */
          SCIP_CALL( SCIPvarAddVub(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-               scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef, TRUE, infeasible, nbdchgs) );
+               scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef, TRUE, infeasible, &nlocalbdchgs) );
       }
       else
       {
          /* if b < 0, we have a variable lower bound: x >= b*z + d  =>  z >= (x-d)/b */
          SCIP_CALL( SCIPvarAddVlb(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-               scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef, TRUE, infeasible, nbdchgs) );
+               scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef, TRUE, infeasible, &nlocalbdchgs) );
       }
+      *nbdchgs += nlocalbdchgs;
    }
 
    return SCIP_OKAY;
@@ -17865,10 +17947,14 @@ SCIP_RETCODE SCIPaddVarVub(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
 {
+   int nlocalbdchgs;
+
    SCIP_CALL( checkStage(scip, "SCIPaddVarVub", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPvarAddVub(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-         scip->branchcand, scip->eventqueue, vubvar, vubcoef, vubconstant, TRUE, infeasible, nbdchgs) );
+         scip->branchcand, scip->eventqueue, vubvar, vubcoef, vubconstant, TRUE, infeasible, &nlocalbdchgs) );
+
+   *nbdchgs = nlocalbdchgs;
 
    /* if x is not continuous we add a variable bound for z; do not add it if cofficient would be too small or we already
     * detected infeasibility
@@ -17879,14 +17965,15 @@ SCIP_RETCODE SCIPaddVarVub(
       {
          /* if b < 0, we have a variable lower bound: x >= b*z + d  =>  z >= (x-d)/b */
          SCIP_CALL( SCIPvarAddVlb(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-               scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef, TRUE, infeasible, nbdchgs) );
+               scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef, TRUE, infeasible, &nlocalbdchgs) );
       }
       else
       {
          /* if b > 0, we have a variable upper bound: x >= b*z + d  =>  z <= (x-d)/b */
          SCIP_CALL( SCIPvarAddVub(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-               scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef, TRUE, infeasible, nbdchgs) );
+               scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef, TRUE, infeasible, &nlocalbdchgs) );
       }
+      *nbdchgs += nlocalbdchgs;
    }
 
    return SCIP_OKAY;

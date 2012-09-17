@@ -221,7 +221,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrongprop)
             assert(SCIPisFeasLE(scip, lpcandssol[c], SCIPvarGetUbLocal(lpcands[c])));
 
             /* apply strong branching */
-            SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, lpcands[c], lpcandssol[c],
+            SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, lpcands[c], lpcandssol[c], lpobjval,
                   INT_MAX, -2, &down, &up, &downvalid, &upvalid, &downinf, &upinf,
                   &downconflict, &upconflict, &lperror) );
             nsbcalls++;
