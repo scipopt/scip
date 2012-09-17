@@ -522,7 +522,7 @@ SCIP_DECL_HEUREXEC(heurExecOptcumulative)
    nstallnodes += heurdata->nodesofs;
 
    /* determine the node limit for the current process */
-   nstallnodes -= heurdata->usednodes;
+   /* nstallnodes -= heurdata->usednodes; */
    nstallnodes = MIN(nstallnodes, heurdata->maxnodes);
 
    /* check whether we have enough nodes left to call subproblem solving */
