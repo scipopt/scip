@@ -7219,11 +7219,6 @@ SCIP_RETCODE presolveConsEst(
       lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(cand));
       lct = lst + duration;
 
-#ifndef NDEBUG
-      if( v > 0 && v == nvars-1 && lct <= convertBoundToInt(scip, SCIPvarGetLbGlobal(consdata->vars[v-1])) )
-         assert(hmin >= convertBoundToInt(scip, SCIPvarGetLbGlobal(consdata->vars[v-1])));
-#endif
-
       /* check if the job runs completely before the effective horizon; if so the job can be removed form the
        * cumulative condition
        */
@@ -7404,11 +7399,6 @@ SCIP_RETCODE presolveConsLct(
       ect = est + duration;
       lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(cand));
       lct = lst + duration;
-
-#ifndef NDEBUG
-      if( v > 0 && v == nvars-1 && est >= convertBoundToInt(scip, SCIPvarGetUbGlobal(consdata->vars[v-1])) + consdata->durations[v-1] )
-         assert(hmax <= convertBoundToInt(scip, SCIPvarGetUbGlobal(consdata->vars[v-1])) + consdata->durations[v-1]);
-#endif
 
       /* check if the job runs completely after the effective horizon; if so the job can be removed form the cumulative
        * condition
