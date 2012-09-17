@@ -7247,8 +7247,10 @@ SCIP_RETCODE presolveConsEst(
       lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(cand));
       lct = lst + duration;
 
-      /* ???????????? second condition ?????? */
-      if( lct <= hmin || (v > 0 && v == nvars-1 && lct <= convertBoundToInt(scip, SCIPvarGetLbGlobal(consdata->vars[v-1]))) )
+      /* check if the job runs completely before the effective horizon; if so the job can be removed form the
+       * cumulative condition
+       */
+      if( lct <= hmin )
       {
          SCIPdebugMessage("  remove variable <%s>[%g,%g] with duration <%d> is irrelevant\n",
             SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), duration);
@@ -7261,8 +7263,15 @@ SCIP_RETCODE presolveConsEst(
          nvars = consdata->nvars;
 
          SCIPstatistic( consdata->nirrelevantjobs++ );
+
+         continue;
       }
-      else if( ect <= hmin )
+
+      /* check if the job can finish before the effective horizon starts; if so and the job can be fixed to its earliest
+       * start time (which implies that it finishes before the effective horizon starts), the job can be removed form
+       * the cumulative condition after it was fixed to its earliest start time
+       */
+      if( ect <= hmin )
       {
          /* job can be removed from the constraint only if the integer start time variable can be fixed to its lower
           * bound;
@@ -7282,9 +7291,15 @@ SCIP_RETCODE presolveConsEst(
             /* adjust nvars after deleting the variable */
             nvars = consdata->nvars;
             SCIPstatistic( consdata->ndualfixs++ );
+
+            continue;
          }
       }
-      else if( lst <= hmin )
+
+      /* check if the jobs overlaps with the time point hmin if it overlaps at all with the effective horizon; if so the
+       * down lock can be omitted
+       */
+      if( lst <= hmin )
       {
          if( !uplock )
          {
@@ -7413,7 +7428,10 @@ SCIP_RETCODE presolveConsLct(
       lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(cand));
       lct = lst + duration;
 
-      if( est >= hmax || (v > 0 && v == nvars-1 && est >= convertBoundToInt(scip, SCIPvarGetUbGlobal(consdata->vars[v-1])) + consdata->durations[v-1]) )
+      /* check if the job runs completely after the effective horizon; if so the job can be removed form the cumulative
+       * condition
+       */
+      if( est >= hmax )
       {
          SCIPdebugMessage("  remove variable <%s>[%g,%g] with duration <%d> is irrelevant\n",
             SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), duration);
@@ -7426,8 +7444,15 @@ SCIP_RETCODE presolveConsLct(
          nvars = consdata->nvars;
 
          SCIPstatistic( consdata->nirrelevantjobs++ );
+
+         continue;
       }
-      else if( lst >= hmax )
+
+      /* check if the job can start after the effective horizon finishes; if so and the job can be fixed to its latest
+       * start time (which implies that it starts after the effective horizon finishes), the job can be removed form
+       * the cumulative condition after it was fixed to its latest start time
+       */
+      if( lst >= hmax )
       {
          /* job can be removed from the constraint only if the integer start time variable can be fixed to its upper
           * bound
@@ -7447,9 +7472,15 @@ SCIP_RETCODE presolveConsLct(
             /* adjust nvars after deleting the variable */
             nvars = consdata->nvars;
             SCIPstatistic( consdata->ndualfixs++ );
+
+            continue;
          }
       }
-      else if( ect >= hmax )
+
+      /* check if the jobs overlaps with the time point hmax if it overlaps at all with the effective horizon; if so the
+       * up lock can be omitted
+       */
+      if( ect >= hmax )
       {
          if( !downlock )
          {
