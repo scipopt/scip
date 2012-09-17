@@ -2166,7 +2166,7 @@ SCIP_RETCODE upgradeConss(
 	 assert(!SCIPisInfinity(scip, consdata->rhs) || !SCIPisInfinity(scip, -consdata->lhs));
 
 	 /* the case x + y <= 1 or x + y >= 1 */
-	 if( consdata->vbdcoef > 0.5 )
+	 if( consdata->vbdcoef > 0.0 )
 	 {
 	    if( SCIPisEQ(scip, consdata->rhs, 1.0) )
 	    {
@@ -3620,8 +3620,9 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       {
          SCIP_Bool infeasible;
          int nlocalchgbds;
+         int localoldnchgbds;
 
-         nlocalchgbds = 0;
+         localoldnchgbds = *nchgbds;
 
          /* if lhs is finite, we have a variable lower bound: lhs <= x + c*y  =>  x >= -c*y + lhs */
          if( !SCIPisInfinity(scip, -consdata->lhs) )
@@ -3653,6 +3654,12 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
             *nchgbds += nlocalchgbds;
          }
          consdata->varboundsadded = TRUE;
+
+         if( *nchgbds > localoldnchgbds )
+         {
+            /* tighten variable bound coefficient */
+            SCIP_CALL( tightenCoefs(scip, conss[i], nchgcoefs, nchgsides, ndelconss) );
+         }
       }
    }
 
@@ -3991,6 +3998,7 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
 
    consdata->propagated = FALSE;
    consdata->presolved = FALSE;
+   consdata->tightened = FALSE;
 
    SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
