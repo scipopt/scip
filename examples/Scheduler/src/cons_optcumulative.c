@@ -1175,6 +1175,22 @@ SCIP_RETCODE upgradeCons(
       (*ndelconss)++;
       (*mustpropagate) = FALSE;
    }
+   else if( nvars == 1 )
+   {
+      if( consdata->capacity < consdata->demands[0] )
+      {
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
+
+         SCIP_CALL( SCIPfixVar(scip, consdata->binvars[0], 0.0, &infeasible, &tightened) );
+         assert(!infeasible);
+         assert(tightened);
+      }
+
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      (*ndelconss)++;
+      (*mustpropagate) = FALSE;
+   }
    else if( consdata->nglbfixedones == nvars )
    {
       SCIP_CONS* cumulativecons;
@@ -2058,35 +2074,6 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
       /* remove all jobs for which the binary variable is fixed to zero */
       SCIP_CALL( applyFixings(scip, cons, nchgbds) );
 
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
-
-      nvars = consdata->nvars;
-
-#if 0
-      SCIP_CALL( SCIPallocBufferArray(scip, &delvars, nvars) );
-      BMSclearMemoryArray(delvars, nvars);
-
-      /* use presolving of cumulative constraint handler to process cumulative condition */
-      SCIP_CALL( SCIPdetectIrrelevantJobsCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
-            consdata->demands, consdata->capacity, cons, delvars, nfixedvars) );
-
-      /* remove all variable which are irrelevant; note we have to iterate backwards do to the functionality of of
-       * deletePos()
-       */
-      for( v = nvars-1; v >= 0; --v )
-      {
-         if( delvars[v] )
-         {
-            /* delete variable at the given position */
-            SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
-         }
-      }
-      SCIPfreeBufferArray(scip, &delvars);
-
-      nvars = consdata->nvars;
-#endif
-
       /* try to upgrade machine choice to cumulative constraint which is possible if all remaining binary variables are
        * fixed to one; in case the constraint has no variable left it is removed
        */
@@ -2098,6 +2085,9 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
          int hmin;
          int hmax;
          int split;
+
+         consdata = SCIPconsGetData(cons);
+         assert(consdata != NULL);
 
          /* divide demands and capacity by their greatest common divisor */
          SCIP_CALL( SCIPnormalizeCumulativeCondition(scip, consdata->nvars, consdata->vars, consdata->durations,
@@ -2134,8 +2124,11 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
 
             SCIP_CALL( SCIPdelCons(scip, cons) );
             (*ndelconss)++;
+
+            continue;
          }
-         else if( consdata->hmin < split && split < consdata->hmax )
+
+         if( consdata->hmin < split && split < consdata->hmax )
          {
             SCIP_CONS* splitcons;
             SCIP_CONSDATA* splitconsdata;
@@ -2171,6 +2164,30 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
 
             (*naddconss)++;
          }
+
+         nvars = consdata->nvars;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &delvars, nvars) );
+         BMSclearMemoryArray(delvars, nvars);
+
+         /* use presolving of cumulative constraint handler to process cumulative condition */
+         SCIP_CALL( SCIPpresolveCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
+               consdata->demands, &consdata->capacity, consdata->hmin, consdata->hmax,
+               delvars, nfixedvars, nchgcoefs, nchgsides, &cutoff) );
+
+         /* remove all variable which are irrelevant; note we have to iterate backwards do to the functionality of of
+          * consdataDeletePos()
+          */
+         for( v = nvars-1; v >= 0; --v )
+         {
+            if( delvars[v] )
+            {
+               /* delete variable at the given position */
+               SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+            }
+         }
+         SCIPfreeBufferArray(scip, &delvars);
+
       }
    }
 
