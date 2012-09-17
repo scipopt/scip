@@ -7219,8 +7219,12 @@ SCIP_RETCODE presolveConsEst(
       lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(cand));
       lct = lst + duration;
 
-      /* ???????????? second condition ?????? */
-      if( lct <= hmin || (v > 0 && v == nvars-1 && lct <= convertBoundToInt(scip, SCIPvarGetLbGlobal(consdata->vars[v-1]))) )
+#ifndef NDEBUG
+      if( v > 0 && v == nvars-1 && lct <= convertBoundToInt(scip, SCIPvarGetLbGlobal(consdata->vars[v-1])) )
+         assert(hmin >= convertBoundToInt(scip, SCIPvarGetLbGlobal(consdata->vars[v-1])));
+#endif
+
+      if( lct <= hmin )
       {
          SCIPdebugMessage("  remove variable <%s>[%g,%g] with duration <%d> is irrelevant\n",
             SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), duration);
@@ -7385,7 +7389,11 @@ SCIP_RETCODE presolveConsLct(
       lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(cand));
       lct = lst + duration;
 
-      if( est >= hmax || (v > 0 && v == nvars-1 && est >= convertBoundToInt(scip, SCIPvarGetUbGlobal(consdata->vars[v-1])) + consdata->durations[v-1]) )
+#ifndef NDEBUG
+      if( v > 0 && v == nvars-1 && est >= convertBoundToInt(scip, SCIPvarGetUbGlobal(consdata->vars[v-1])) + consdata->durations[v-1] )
+         assert(hmax <= convertBoundToInt(scip, SCIPvarGetUbGlobal(consdata->vars[v-1])) + consdata->durations[v-1]);
+#endif
+      if( est >= hmax )
       {
          SCIPdebugMessage("  remove variable <%s>[%g,%g] with duration <%d> is irrelevant\n",
             SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), duration);
