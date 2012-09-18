@@ -153,6 +153,8 @@ void checkCounters(
    assert(nfixedones == consdata->nglbfixedones);
    assert(nfixedzeors == consdata->nglbfixedzeros);
 }
+#else
+#define checkCounters(x) /* */
 #endif
 
 #ifndef NDEBUG
@@ -487,7 +489,7 @@ SCIP_RETCODE catchAllEvents(
       SCIP_CALL( catchEvent(scip, cons, eventhdlr, v) );
    }
 
-   SCIPdebug( checkCounters(consdata) );
+   checkCounters(consdata);
 
    return SCIP_OKAY;
 }
@@ -949,7 +951,8 @@ SCIP_RETCODE solveSubproblem(
    SCIP_VAR* var;
    int v;
 
-   assert(nvars > 0);
+   if( nvars == 0 )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
@@ -1167,7 +1170,7 @@ SCIP_RETCODE upgradeCons(
 
    nvars = consdata->nvars;
 
-   SCIPdebug( checkCounters(consdata) );
+   checkCounters(consdata);
 
    if( nvars == 0 )
    {
@@ -1344,7 +1347,7 @@ SCIP_RETCODE consdataDeletePos(
 
    consdata->nvars--;
 
-   SCIPdebug( checkCounters(consdata) );
+   checkCounters(consdata);
 
    return SCIP_OKAY;
 }
@@ -1383,7 +1386,7 @@ SCIP_RETCODE applyZeroFixings(
       }
    }
 
-   SCIPdebug( checkCounters(consdata) );
+   checkCounters(consdata);
 
    /* check that all variables fixed to zero are removed */
    assert(consdata->nglbfixedzeros == 0);
@@ -1478,6 +1481,7 @@ SCIP_RETCODE propagateCons(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->nvars > 1);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvars, consdata->nvars) );
@@ -1527,7 +1531,6 @@ SCIP_RETCODE propagateCons(
     */
    if( !(*cutoff) && !SCIPinProbing(scip) && !SCIPinRepropagation(scip) )
    {
-#if 0
       if( nfixedzeros + nfixedones == consdata->nvars )
       {
          SCIP_CALL( solveSubproblem(scip, cons, binvars, vars, durations, demands,
@@ -1535,7 +1538,6 @@ SCIP_RETCODE propagateCons(
       }
       else
       {
-#endif
          /* check if the not selected variables can be discard from the machine */
          for( v = 0; v < consdata->nvars && !(*cutoff); ++v )
          {
@@ -1575,8 +1577,6 @@ SCIP_RETCODE propagateCons(
                lb = SCIPvarGetLbLocal(var);
                ub = SCIPvarGetUbLocal(var);
 
-               //SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
-
                /* end probing mode */
                SCIP_CALL( SCIPendProbing(scip) );
                SCIPdebugMessage("end probing\n");
@@ -1613,12 +1613,12 @@ SCIP_RETCODE propagateCons(
                   /* probing was feasible, therefore, we can adjust the bounds of the start time variable for that job */
                   SCIPdebugMessage("  probing stayed feasible\n");
 
-                  assert(SCIPvarGetNLocksUp(var) >= 1);
-                  if( SCIPvarGetNLocksUp(var) == 1 )
+                  assert(SCIPvarGetNLocksUp(var) >= (int)consdata->uplocks[v]);
+                  if( SCIPvarGetNLocksUp(var) == (int)consdata->uplocks[v] )
                   {
                      SCIPdebugMessage("  variable <%s> change lower bound from <%g> to <%g>\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), lb);
 
-                     /* for this boound change there is no inference information needed since no other constraint can
+                     /* for this bound change there is no inference information needed since no other constraint can
                       * use this bound change to reason somethingx
                       */
                      SCIP_CALL( SCIPtightenVarLb(scip, var, lb, FALSE, &infeasible, &tightened) );
@@ -1633,8 +1633,8 @@ SCIP_RETCODE propagateCons(
                         (*nchgbds)++;
                   }
 
-                  assert(SCIPvarGetNLocksDown(var) >= 1);
-                  if( SCIPvarGetNLocksDown(var) == 1 )
+                  assert(SCIPvarGetNLocksDown(var) >= (int)consdata->downlocks[v]);
+                  if( SCIPvarGetNLocksDown(var) == (int)consdata->downlocks[v] )
                   {
                      SCIPdebugMessage("  variable <%s> change upper bound from <%g> to <%g>\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var), ub);
 
@@ -1655,9 +1655,7 @@ SCIP_RETCODE propagateCons(
                SCIP_CALL( fixIntegerVariable(scip, var, nchgbds) );
             }
          }
-#if 0
       }
-#endif
    }
 
    /* free all buffers */
@@ -2073,7 +2071,6 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
    for( c = 0; c < nconss && !cutoff; ++c )
    {
       SCIP_CONSDATA* consdata;
-      SCIP_Bool* delvars;
       int nvars;
       int v;
 
@@ -2091,18 +2088,23 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
 
       if( mustpropagate )
       {
+         SCIP_Bool* irrelevants;
          int hmin;
          int hmax;
          int split;
 
          consdata = SCIPconsGetData(cons);
          assert(consdata != NULL);
+         assert(consdata->nvars > 1);
 
          /* divide demands and capacity by their greatest common divisor */
          SCIP_CALL( SCIPnormalizeCumulativeCondition(scip, consdata->nvars, consdata->vars, consdata->durations,
                consdata->demands, &consdata->capacity, nchgcoefs, nchgsides) );
 
          SCIP_CALL( propagateCons(scip, cons,  FALSE, nchgbds, &cutoff) );
+
+         if( cutoff )
+            break;
 
          /* compute splitting point */
          SCIP_CALL( SCIPsplitCumulativeCondition(scip, consdata->nvars, consdata->vars, consdata->durations,
@@ -2176,27 +2178,68 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
 
          nvars = consdata->nvars;
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &delvars, nvars) );
-         BMSclearMemoryArray(delvars, nvars);
+         SCIP_CALL( SCIPallocBufferArray(scip, &irrelevants, nvars) );
+         BMSclearMemoryArray(irrelevants, nvars);
 
          /* use presolving of cumulative constraint handler to process cumulative condition */
          SCIP_CALL( SCIPpresolveCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
-               consdata->demands, &consdata->capacity, consdata->hmin, consdata->hmax,
-               consdata->downlocks, consdata->uplocks, cons, delvars, nfixedvars, nchgcoefs, nchgsides, &cutoff) );
+               consdata->hmin, consdata->hmax,
+               consdata->downlocks, consdata->uplocks, cons, irrelevants, nfixedvars, nchgsides) );
 
          /* remove all variable which are irrelevant; note we have to iterate backwards do to the functionality of of
           * consdataDeletePos()
           */
          for( v = nvars-1; v >= 0; --v )
          {
-            if( delvars[v] )
+            SCIP_VAR* var;
+            int ect;
+            int lst;
+
+            if( !irrelevants[v] )
+               continue;
+
+            var = consdata->vars[v];
+            assert(var != NULL);
+
+            ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + consdata->durations[v];
+            lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
+
+            /* check if the jobs runs completely during the effective horizon */
+            if( lst <= consdata->hmin && ect >= consdata->hmax )
             {
-               /* delete variable at the given position */
+               if( consdata->capacity < consdata->demands[v] )
+               {
+                  SCIP_Bool infeasible;
+                  SCIP_Bool tightened;
+
+                  SCIP_CALL( SCIPfixVar(scip, consdata->binvars[0], 0.0, &infeasible, &tightened) );
+                  assert(!infeasible);
+                  assert(tightened);
+                  (*nfixedvars)++;
+
+                  consdata->capacity -= consdata->demands[v];
+
+                  SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+                  (*nchgcoefs)++;
+               }
+            }
+            else
+            {
                SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+               (*nchgcoefs)++;
             }
          }
-         SCIPfreeBufferArray(scip, &delvars);
 
+         SCIPfreeBufferArray(scip, &irrelevants);
+
+         if( !cutoff )
+         {
+            /* try to upgrade optcumulative to cumulative constraint which is possible if all remaining binary variables
+             * are fixed to one; in case the constraint has no variable left it is removed
+             */
+            assert(!SCIPinProbing(scip));
+            SCIP_CALL( upgradeCons(scip, cons, ndelconss, nupgdconss, &mustpropagate) );
+         }
       }
    }
 
@@ -2493,7 +2536,7 @@ SCIP_DECL_EVENTEXEC(eventExecOptcumulative)
       return SCIP_INVALIDDATA;
    }
 
-   SCIPdebug( checkCounters(consdata) );
+   checkCounters(consdata);
 
    return SCIP_OKAY;
 }
