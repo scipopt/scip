@@ -2687,6 +2687,8 @@ SCIP_RETCODE solveIndependentCons(
    int nvars;
    int v;
 
+   assert(scip != NULL);
+   assert(!SCIPinProbing(scip));
    assert(!SCIPconsIsModifiable(cons));
    assert(SCIPgetNConss(scip) > 0);
 
@@ -2727,7 +2729,8 @@ SCIP_RETCODE solveIndependentCons(
    nvars = consdata->nvars;
    vars = consdata->vars;
 
-   SCIPdebugMessage("the cumulative constraint <%s> is independent from rest of the problem\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("the cumulative constraint <%s> is independent from rest of the problem (%d variables, %d constraints)\n",
+      SCIPconsGetName(cons), SCIPgetNVars(scip), SCIPgetNConss(scip));
    SCIPdebugPrintCons(scip, cons, NULL);
 
    /* initialize the subproblem */
@@ -2739,26 +2742,35 @@ SCIP_RETCODE solveIndependentCons(
    /* copy all plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
-   /* get name of the original problem and add the string "_cumulative" */
-   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_cumulative", SCIPgetProbName(scip));
+   /* get name of the original problem and add the string of the constraint name */
+   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(scip), SCIPconsGetName(cons));
 
    /* create the subproblem */
-   SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProbBasic(subscip, probname) );
 
    /* copy cumulative constraint */
    SCIP_CALL( SCIPgetConsCopy(scip, subscip, cons, &targetcons, SCIPconsGetHdlr(cons), varmapfw, NULL, NULL,
          FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, &succeed) );
 
-   if( succeed )
+   if( succeed && SCIPgetNConss(subscip) == 1 )
    {
+      SCIP_Longint nodelimit;
+
+      SCIP_CALL( SCIPgetLongintParam(scip, "limits/nodes", &nodelimit) );
+
       /* add constraint to subscip */
       SCIP_CALL( SCIPaddCons(subscip, targetcons) );
+
+      /* set CP solver settings */
+      SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
 
       /* do not abort subproblem on CTRL-C */
       SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
       /* disable output to console */
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+
+      maxnodes = MIN(nodelimit, maxnodes);
 
       /* set limits for the subproblem */
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) );
