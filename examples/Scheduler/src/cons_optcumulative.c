@@ -95,7 +95,7 @@ struct SCIP_ConsData
    SCIP_VAR**            vars;               /**< array of variable representing the start time of each job */
    SCIP_VAR**            binvars;            /**< array of variable representing if the job has to be processed on this machine */
    SCIP_Bool*            downlocks;          /**< array to store if the start time variable has a down lock */
-   SCIP_Bool*            uplocks;            /**< array to store if the start time variable has a down lock */
+   SCIP_Bool*            uplocks;            /**< array to store if the start time variable has an up lock */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    SCIP_CONS*            cons;               /**< knapsack relaxation, if created */
    int*                  demands;            /**< array containing corresponding demands */
@@ -380,14 +380,16 @@ SCIP_RETCODE unlockRounding(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< optcumulative constraint */
    SCIP_VAR*             binvar,             /**< decision variable */
-   SCIP_VAR*             var                 /**< start time variable */
+   SCIP_VAR*             var,                /**< start time variable */
+   SCIP_Bool             downlock,           /**< has the integer start time variable a down lock */
+   SCIP_Bool             uplock              /**< has the integer start time variable an up lock */
    )
 {
    /* rounding up may violate the constraint */
    SCIP_CALL( SCIPunlockVarCons(scip, binvar, cons, FALSE, TRUE) );
 
    /* rounding in both directions may violate the constraint */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, downlock, uplock) );
 
    return SCIP_OKAY;
 }
@@ -1177,6 +1179,8 @@ SCIP_RETCODE upgradeCons(
    }
    else if( nvars == 1 )
    {
+      SCIPdebugMessage("delete optcumulative constraint <%s> since it contains only one jobs\n", SCIPconsGetName(cons));
+
       if( consdata->capacity < consdata->demands[0] )
       {
          SCIP_Bool infeasible;
@@ -1203,6 +1207,8 @@ SCIP_RETCODE upgradeCons(
       SCIP_CALL( SCIPcreateConsCumulative(scip, &cumulativecons, name, consdata->nvars, consdata->vars, consdata->durations, consdata->demands, consdata->capacity,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+      SCIP_CALL( SCIPsetHminCumulative(scip, cumulativecons, consdata->hmin) );
+      SCIP_CALL( SCIPsetHmaxCumulative(scip, cumulativecons, consdata->hmax) );
       SCIP_CALL( SCIPaddCons(scip, cumulativecons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cumulativecons) );
 
@@ -1304,7 +1310,11 @@ SCIP_RETCODE consdataDeletePos(
    assert(pos < consdata->nvars);
 
    /* remove the rounding locks for the deleted variable */
-   SCIP_CALL( unlockRounding(scip, cons, consdata->binvars[pos], consdata->vars[pos]) );
+   SCIP_CALL( unlockRounding(scip, cons, consdata->binvars[pos],
+         consdata->vars[pos], consdata->downlocks[pos], consdata->uplocks[pos]) );
+
+   consdata->downlocks[pos] = FALSE;
+   consdata->uplocks[pos] = FALSE;
 
    if( SCIPconsIsTransformed(cons) )
    {
@@ -1339,27 +1349,20 @@ SCIP_RETCODE consdataDeletePos(
    return SCIP_OKAY;
 }
 
-/** remove all jobs for which the binary variable is fixed to zero */
+/** remove all jobs for which the binary variable is globally fixed to zero */
 static
-SCIP_RETCODE applyFixings(
+SCIP_RETCODE applyZeroFixings(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be checked */
+   int*                  nchgcoefs,          /**< pointer to store the number changed coefficients */
    int*                  nchgbds             /**< pointer to store the number changed variable bounds */
    )
 {
    SCIP_CONSDATA* consdata;
-#if 0
-   int nvars;
-#endif
    int v;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   v = 0;
-#if 0
-   nvars = consdata->nvars;
-#endif
 
    for( v = consdata->nvars-1; v >= 0 && consdata->nglbfixedzeros > 0; --v )
    {
@@ -1376,6 +1379,7 @@ SCIP_RETCODE applyFixings(
 
          /* remove the job */
          SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+         (*nchgcoefs)++;
       }
    }
 
@@ -1968,10 +1972,9 @@ SCIP_DECL_CONSPROP(consPropOptcumulative)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS* cons;
    SCIP_Bool cutoff;
-   SCIP_Bool mustpropagate;
-   int oldnchgbds;
    int nupgdconss;
    int ndelconss;
+   int nchgcoefs;
    int nchgbds;
    int c;
 
@@ -1983,6 +1986,7 @@ SCIP_DECL_CONSPROP(consPropOptcumulative)
 
    nupgdconss = 0;
    ndelconss = 0;
+   nchgcoefs = 0;
    nchgbds = 0;
    cutoff = FALSE;
 
@@ -1991,12 +1995,17 @@ SCIP_DECL_CONSPROP(consPropOptcumulative)
    /* first propagate only the useful constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
+      SCIP_Bool mustpropagate;
+      int oldnchgcoefs;
+      int oldnchgbds;
+
       cons = conss[c];
       mustpropagate = TRUE;
+      oldnchgcoefs = nchgcoefs;
       oldnchgbds = nchgbds;
 
-      /* remove all jobs for which the binary variable is fixed to zero */
-      SCIP_CALL( applyFixings(scip, cons, &nchgbds) );
+      /* remove all jobs for which the binary variable is globally fixed to zero */
+      SCIP_CALL( applyZeroFixings(scip, cons, &nchgcoefs, &nchgbds) );
 
       /* try to upgrade optcumulative to cumulative constraint which is possible if all remaining binary variables are
        * fixed to one; in case the constraint has no variable left it is removed
@@ -2012,7 +2021,7 @@ SCIP_DECL_CONSPROP(consPropOptcumulative)
       }
 
       /* update the age of the constraint w.r.t. success of the propagation rule */
-      if( oldnchgbds < nchgbds )
+      if( oldnchgbds < nchgbds || oldnchgcoefs < nchgcoefs )
       {
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
@@ -2071,8 +2080,8 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
       cons = conss[c];
       mustpropagate = TRUE;
 
-      /* remove all jobs for which the binary variable is fixed to zero */
-      SCIP_CALL( applyFixings(scip, cons, nchgbds) );
+      /* remove all jobs for which the binary variable is globally fixed to zero */
+      SCIP_CALL( applyZeroFixings(scip, cons, nchgcoefs, nchgbds) );
 
       /* try to upgrade optcumulative to cumulative constraint which is possible if all remaining binary variables are
        * fixed to one; in case the constraint has no variable left it is removed
@@ -2173,7 +2182,7 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
          /* use presolving of cumulative constraint handler to process cumulative condition */
          SCIP_CALL( SCIPpresolveCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
                consdata->demands, &consdata->capacity, consdata->hmin, consdata->hmax,
-               delvars, nfixedvars, nchgcoefs, nchgsides, &cutoff) );
+               consdata->downlocks, consdata->uplocks, cons, delvars, nfixedvars, nchgcoefs, nchgsides, &cutoff) );
 
          /* remove all variable which are irrelevant; note we have to iterate backwards do to the functionality of of
           * consdataDeletePos()
@@ -2316,6 +2325,7 @@ static
 SCIP_DECL_CONSLOCK(consLockOptcumulative)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
    int v;
 
    assert(scip != NULL);
@@ -2324,11 +2334,25 @@ SCIP_DECL_CONSLOCK(consLockOptcumulative)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   vars = consdata->vars;
+   assert(vars != NULL);
+
    for( v = 0; v < consdata->nvars; ++v )
    {
-      /* the integer start variable should not get rounded in both direction  */
       assert(consdata->vars[v] != NULL);
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[v], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      if( consdata->downlocks[v] && consdata->uplocks[v] )
+      {
+         /* the integer start variable should not get rounded in both direction  */
+         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      }
+      else if( consdata->downlocks[v]  )
+      {
+         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlockspos, nlocksneg) );
+      }
+      else if( consdata->uplocks[v] )
+      {
+         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlocksneg, nlockspos) );
+      }
 
       /* the binary decision variable should not get rounded up; rounding down does not influence the feasibility */
       assert(consdata->binvars[v] != NULL);
