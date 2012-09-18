@@ -23,8 +23,8 @@
  * on that machine (otherwise it is zero), an integer start time variables \f$S_j\f$, a processing time \f$p_j\f$, and a
  * demands \f$d_j\f$. Besides that an integer resource capacity \f$C\f$.
  *
- * The machine choice enfoces the cumulative conditions for those jobs which are assigned to that machine. Let \f$J'\f$
- * be the subset of jobs assigned to that machine choice constraint, then the cumulative constraint ensures that for
+ * The optcumulative enfoces the cumulative conditions for those jobs which are assigned to that machine. Let \f$J'\f$
+ * be the subset of jobs assigned to that optcumulative constraint, then the cumulative constraint ensures that for
  * each point in time \f$t\f$ \f$\sum_{j\in J': S_j \leq t < S_j + p_j} d_j \leq C\f$ holds.
  *
  *
@@ -78,7 +78,7 @@
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 #define EVENTHDLR_NAME         "optcumulative"
-#define EVENTHDLR_DESC         "bound change event handler for set machine choice constraints"
+#define EVENTHDLR_DESC         "bound change event handler for optcumulative constraints"
 
 #define DEFAULT_ROWRELAX          FALSE /**< add linear relaxation as LP row (otherwise a knapsack constraint is created)? */
 #define DEFAULT_CONFLICT           TRUE /**< participate in conflict analysis?" */
@@ -131,7 +131,7 @@ struct SCIP_ConshdlrData
 /** check constraint state (nglbfixedones and nglbfixedzeros) */
 static
 void checkCounters(
-   SCIP_CONSDATA*        consdata            /**< machine choice constraint data */
+   SCIP_CONSDATA*        consdata            /**< optcumulative constraint data */
    )
 {
    int nfixedones;
@@ -174,7 +174,7 @@ int convertBoundToInt(
 #define convertBoundToInt(x, y) ((int)((y) + 0.5))
 #endif
 
-/** creates constraint data of machine choice constraint */
+/** creates constraint data of optcumulative constraint */
 static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -265,7 +265,7 @@ SCIP_RETCODE consdataCreate(
 }
 
 
-/** frees a machine choice constraint data */
+/** frees a optcumulative constraint data */
 static
 SCIP_RETCODE consdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -308,11 +308,11 @@ SCIP_RETCODE consdataFree(
    return SCIP_OKAY;
 }
 
-/** prints machine choice constraint to file stream */
+/** prints optcumulative constraint to file stream */
 static
 SCIP_RETCODE consdataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< machine choice constraint data */
+   SCIP_CONSDATA*        consdata,           /**< optcumulative constraint data */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
@@ -374,11 +374,11 @@ SCIP_RETCODE conshdlrdataFree(
    return SCIP_OKAY;
 }
 
-/** removes rounding locks for the given variable in the given machine choice constraint */
+/** removes rounding locks for the given variable in the given optcumulative constraint */
 static
 SCIP_RETCODE unlockRounding(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< machine choice constraint */
+   SCIP_CONS*            cons,               /**< optcumulative constraint */
    SCIP_VAR*             binvar,             /**< decision variable */
    SCIP_VAR*             var                 /**< start time variable */
    )
@@ -463,7 +463,7 @@ SCIP_RETCODE dropEvent(
    return SCIP_OKAY;
 }
 
-/** catches bound change events for all variables in transformed machine choice constraint */
+/** catches bound change events for all variables in transformed optcumulative constraint */
 static
 SCIP_RETCODE catchAllEvents(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -490,7 +490,7 @@ SCIP_RETCODE catchAllEvents(
    return SCIP_OKAY;
 }
 
-/** drops bound change events for all variables in transformed machine choice constraint */
+/** drops bound change events for all variables in transformed optcumulative constraint */
 static
 SCIP_RETCODE dropAllEvents(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -563,7 +563,7 @@ void createSortedEventpoints(
 static
 SCIP_RETCODE collectVars(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< machine choice constraint data */
+   SCIP_CONSDATA*        consdata,           /**< optcumulative constraint data */
    SCIP_VAR**            vars,               /**< array to store the variables */
    SCIP_Longint*         weights,            /**< array to store the weights */
    int*                  nvars,              /**< pointer to store the number of collected variables */
@@ -597,7 +597,7 @@ SCIP_RETCODE collectVars(
    return SCIP_OKAY;
 }
 
-/** creates and adds knapsack constraint as linearization for the machine choice constraint */
+/** creates and adds knapsack constraint as linearization for the optcumulative constraint */
 static
 SCIP_RETCODE createKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -626,7 +626,7 @@ SCIP_RETCODE createKnapsack(
    return SCIP_OKAY;
 }
 
-/** creates and adds an LP row in a machine choice constraint data */
+/** creates and adds an LP row in a optcumulative constraint data */
 static
 SCIP_RETCODE createRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -673,7 +673,7 @@ SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data structure */
-   SCIP_CONS*            cons                /**< machine choice constraint */
+   SCIP_CONS*            cons                /**< optcumulative constraint */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -687,7 +687,7 @@ SCIP_RETCODE addRelaxation(
    if( consdata->relaxadded )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("add relaxation for machine choice constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("add relaxation for optcumulative constraint <%s>\n", SCIPconsGetName(cons));
 
    if( conshdlrdata->intervalrelax )
    {
@@ -755,7 +755,7 @@ SCIP_RETCODE addRelaxation(
 
                if( conshdlrdata->rowrelax )
                {
-                  /* creates and adds an LP row in a machine choice constraint data */
+                  /* creates and adds an LP row in a optcumulative constraint data */
                   SCIP_CALL( createRow(scip, conshdlr, name, vars, weights, nvars, capacity, SCIPconsIsLocal(cons)) );
                }
                else
@@ -823,7 +823,7 @@ SCIP_RETCODE addRelaxation(
 
          if( conshdlrdata->rowrelax )
          {
-            /* creates and adds an LP row in a machine choice constraint data */
+            /* creates and adds an LP row in a optcumulative constraint data */
             SCIP_CALL( createRow(scip, conshdlr, name, consdata->binvars, weights, nvars, capacity, SCIPconsIsLocal(cons)) );
          }
          else
@@ -1052,7 +1052,7 @@ SCIP_RETCODE checkCons(
    assert(cons != NULL);
    assert(violated != NULL);
 
-   SCIPdebugMessage("check machine choice constraints <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("check optcumulative constraints <%s>\n", SCIPconsGetName(cons));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1102,7 +1102,7 @@ SCIP_RETCODE enfoCons(
    assert(cons != NULL);
    assert(violated != NULL);
 
-   SCIPdebugMessage("check machine choice constraints <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("check optcumulative constraints <%s>\n", SCIPconsGetName(cons));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1169,7 +1169,7 @@ SCIP_RETCODE upgradeCons(
 
    if( nvars == 0 )
    {
-      SCIPdebugMessage("delete machine choice constraint <%s> since it contains no jobs\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("delete optcumulative constraint <%s> since it contains no jobs\n", SCIPconsGetName(cons));
       //SCIP_CALL( SCIPdisableCons(scip, cons) );
       SCIP_CALL( SCIPdelCons(scip, cons) );
       (*ndelconss)++;
@@ -1196,7 +1196,7 @@ SCIP_RETCODE upgradeCons(
       SCIP_CONS* cumulativecons;
       char name[SCIP_MAXSTRLEN];
 
-      SCIPdebugMessage("upgrade machine choice constraint <%s> to cumulative constraint\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("upgrade optcumulative constraint <%s> to cumulative constraint\n", SCIPconsGetName(cons));
 
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_cumu", SCIPconsGetName(cons));
 
@@ -1247,7 +1247,7 @@ SCIP_RETCODE fixIntegerVariable(
 
    if( SCIPisZero(scip, objval) )
    {
-      /* the integer start time variable has a zero objective value; if only the machine choice constraint
+      /* the integer start time variable has a zero objective value; if only the optcumulative constraint
        * handler has a problem with rounding it down or up, then this issue is obsolete since binary
        * variable is fixed zero; therefore, rounding the integer down or up up is feasible dual reduction
        */
@@ -1260,7 +1260,7 @@ SCIP_RETCODE fixIntegerVariable(
    }
    else if( SCIPisNegative(scip, objval) && SCIPvarGetNLocksUp(var) == 1 )
    {
-      /* the integer start time variable has a negative objective value and only the machine choice constraint
+      /* the integer start time variable has a negative objective value and only the optcumulative constraint
        * handler has a problem with rounding it up; since the binary variable is fixed the rounding up
        * issue is obsolete; there rounding it to the upper bound is the best thing we can do
        */
@@ -1268,7 +1268,7 @@ SCIP_RETCODE fixIntegerVariable(
    }
    else if( SCIPisPositive(scip, objval) && SCIPvarGetNLocksDown(var) == 1 )
    {
-      /* the integer start time variable has a positive objective value and only the machine choice
+      /* the integer start time variable has a positive objective value and only the optcumulative
        * constraint handler has a problem with rounding it down; since the binary variable is fixed the
        * rounding down issue is obsolete; there rounding it to the lower bound is the best thing we can do
        */
@@ -1277,7 +1277,7 @@ SCIP_RETCODE fixIntegerVariable(
    else
       return SCIP_OKAY;
 
-   /* the integer start time variable has a positive objective value and only the machine choice
+   /* the integer start time variable has a positive objective value and only the optcumulative
     * constraint handler has a problem with rounding it down; since the binary variable is fixed the
     * rounding down issue is obsolete; there rounding it to the lower bound is the best thing we can do
     */
@@ -1321,7 +1321,7 @@ SCIP_RETCODE consdataDeletePos(
       SCIP_CALL( dropEvent(scip, cons, conshdlrdata->eventhdlr, pos) );
    }
 
-   SCIPdebugMessage("remove variable <%s> from machine choice constraint <%s>\n",
+   SCIPdebugMessage("remove variable <%s> from optcumulative constraint <%s>\n",
       SCIPvarGetName(consdata->binvars[pos]), SCIPconsGetName(cons));
 
    if( pos != consdata->nvars - 1 )
@@ -1784,7 +1784,7 @@ SCIP_DECL_CONSDELETE(consDeleteOptcumulative)
       SCIP_CALL( dropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
    }
 
-   /* free machine choice constraint data */
+   /* free optcumulative constraint data */
    SCIP_CALL( consdataFree(scip, consdata) );
 
    return SCIP_OKAY;
@@ -1812,7 +1812,7 @@ SCIP_DECL_CONSTRANS(consTransOptcumulative)
    assert(sourcedata != NULL);
    assert(sourcedata->row == NULL);
 
-   SCIPdebugMessage("transform machine choice constraint <%s>\n", SCIPconsGetName(sourcecons));
+   SCIPdebugMessage("transform optcumulative constraint <%s>\n", SCIPconsGetName(sourcecons));
 
    /* create constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->binvars,
@@ -1986,7 +1986,7 @@ SCIP_DECL_CONSPROP(consPropOptcumulative)
    nchgbds = 0;
    cutoff = FALSE;
 
-   SCIPdebugMessage("propagate %d machine choice constraints (probing: %u)\n", nusefulconss, SCIPinProbing(scip));
+   SCIPdebugMessage("propagate %d optcumulative constraints (probing: %u)\n", nusefulconss, SCIPinProbing(scip));
 
    /* first propagate only the useful constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
@@ -1998,7 +1998,7 @@ SCIP_DECL_CONSPROP(consPropOptcumulative)
       /* remove all jobs for which the binary variable is fixed to zero */
       SCIP_CALL( applyFixings(scip, cons, &nchgbds) );
 
-      /* try to upgrade machine choice to cumulative constraint which is possible if all remaining binary variables are
+      /* try to upgrade optcumulative to cumulative constraint which is possible if all remaining binary variables are
        * fixed to one; in case the constraint has no variable left it is removed
        */
       if( !SCIPinProbing(scip) )
@@ -2059,7 +2059,7 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
    oldnupgdconss = *nupgdconss;
    cutoff = FALSE;
 
-   SCIPdebugMessage("presolve %d machine choice constraints\n", nconss);
+   SCIPdebugMessage("presolve %d optcumulative constraints\n", nconss);
 
    for( c = 0; c < nconss && !cutoff; ++c )
    {
@@ -2074,7 +2074,7 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
       /* remove all jobs for which the binary variable is fixed to zero */
       SCIP_CALL( applyFixings(scip, cons, nchgbds) );
 
-      /* try to upgrade machine choice to cumulative constraint which is possible if all remaining binary variables are
+      /* try to upgrade optcumulative to cumulative constraint which is possible if all remaining binary variables are
        * fixed to one; in case the constraint has no variable left it is removed
        */
       assert(!SCIPinProbing(scip));
@@ -2232,7 +2232,7 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("resolve propagate of machine choice constraints <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("resolve propagate of optcumulative constraints <%s>\n", SCIPconsGetName(cons));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2579,7 +2579,7 @@ SCIP_RETCODE SCIPcreateConsOptcumulative(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /* the machine choice constraint handler currently does not support modifiable constraints */
+   /* the optcumulative constraint handler currently does not support modifiable constraints */
    assert(modifiable == FALSE);
 
    /* create constraint data */
