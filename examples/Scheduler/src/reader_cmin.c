@@ -907,7 +907,7 @@ SCIP_RETCODE readFile(
       SCIPsplitFilename(str, NULL, &probname, NULL, NULL);
 
       /* initialize problem data */
-      SCIP_CALL( SCIPcreateProb(scip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
 
       SCIPfreeBufferArray(scip, &str);
 
