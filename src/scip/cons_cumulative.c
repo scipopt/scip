@@ -129,7 +129,7 @@ struct SCIP_ConsData
 {
    SCIP_VAR**            vars;               /**< array of variable representing the start time of each job */
    SCIP_Bool*            downlocks;          /**< array to store if the variable has a down lock */
-   SCIP_Bool*            uplocks;            /**< array to store if the variable has a down lock */
+   SCIP_Bool*            uplocks;            /**< array to store if the variable has an uplock */
    SCIP_CONS**           linkingconss;       /**< array of linking constraints for the integer variables */
    SCIP_ROW**            demandrows;         /**< array of rows of linear relaxation of this problem */
    SCIP_ROW**            scoverrows;         /**< array of rows of small cover cuts of this problem */
@@ -519,9 +519,9 @@ SCIP_RETCODE createWorstCaseProfile(
       int idx;
 
       idx = perm[v];
-      assert(idx >= 0 && idx < nvars),
+      assert(idx >= 0 && idx < nvars);
 
-         var = vars[idx];
+      var = vars[idx];
       assert(var != NULL);
 
       duration = durations[idx];
@@ -9610,6 +9610,9 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
    int*                  capacity,           /**< pointer to cumulative capacity (which might change) */
    int                   hmin,               /**< left bound of time axis to be considered */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool*            downlocks,          /**< array storing if the variable has a down lock, or NULL */
+   SCIP_Bool*            uplocks,            /**< array storing if the variable has an uplock, or NULL */
+   SCIP_CONS*            cons,               /**< constraint which gets propagated, or NULL */
    SCIP_Bool*            delvars,            /**< array storing the variable which can be deleted from the constraint */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
    int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
@@ -9622,12 +9625,12 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
 
    /* presolve constraint form the earlier start time point of view */
    SCIP_CALL( presolveConsEst(scip, nvars, vars, durations, demands, capacity,
-         hmin, NULL, NULL, NULL,
+         hmin, downlocks, uplocks, cons,
          delvars, nfixedvars, nchgcoefs, nchgsides, cutoff) );
 
    /* presolve constraint form the latest completion time point of view */
    SCIP_CALL( presolveConsLct(scip, nvars, vars, durations, demands, capacity,
-         hmax, NULL, NULL, NULL,
+         hmax, downlocks, uplocks, cons,
          delvars, nfixedvars, nchgcoefs, nchgsides, cutoff) );
 
    return SCIP_OKAY;

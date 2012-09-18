@@ -237,6 +237,9 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
    int*                  capacity,           /**< pointer to cumulative capacity (which might change) */
    int                   hmin,               /**< left bound of time axis to be considered */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool*            downlocks,          /**< array storing if the variable has a down lock, or NULL */
+   SCIP_Bool*            uplocks,            /**< array storing if the variable has an uplock, or NULL */
+   SCIP_CONS*            cons,               /**< constraint which gets propagated, or NULL */
    SCIP_Bool*            delvars,            /**< array storing the variable which can be deleted from the constraint */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
    int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
