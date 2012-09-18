@@ -330,11 +330,13 @@ SCIP_RETCODE consdataPrint(
 
       SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[v], FALSE) );
 
-      SCIPinfoMessage(scip, file, "[%g,%g](%d,%d)<%s>", SCIPvarGetLbLocal(consdata->vars[v]),
-         SCIPvarGetUbLocal(consdata->vars[v]), consdata->durations[v], consdata->demands[v],
-         SCIPvarGetName(consdata->binvars[v]));
+      SCIPinfoMessage(scip, file, "[%g,%g](%d,%d)", SCIPvarGetLbLocal(consdata->vars[v]),
+         SCIPvarGetUbLocal(consdata->vars[v]), consdata->durations[v], consdata->demands[v]);
+
+      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->binvars[v], FALSE) );
+
    }
-   SCIPinfoMessage(scip, file, " <= %d", consdata->capacity);
+   SCIPinfoMessage(scip, file, " [%d,%d]<= %d", consdata->hmin, consdata->hmax, consdata->capacity);
 
    return SCIP_OKAY;
 }
@@ -923,7 +925,9 @@ void collectSolActivities(
          (*nvars)++;
 
          /* check the locks on the integer start time variable to determine if its a auxiliary variable */
-         if( SCIPvarGetNLocksDown(consdata->vars[v]) > 1 || SCIPvarGetNLocksUp(consdata->vars[v]) > 1 )
+         if( SCIPvarGetNLocksDown(consdata->vars[v]) > (int)consdata->downlocks[v]
+            || SCIPvarGetNLocksUp(consdata->vars[v]) > (int)consdata->uplocks[v]
+            )
             (*auxiliary) = FALSE;
       }
    }
@@ -1057,10 +1061,10 @@ SCIP_RETCODE checkCons(
    assert(cons != NULL);
    assert(violated != NULL);
 
-   SCIPdebugMessage("check optcumulative constraints <%s>\n", SCIPconsGetName(cons));
-
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   SCIPdebugMessage("check optcumulative constraints <%s>\n", SCIPconsGetName(cons));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &binvars, consdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
@@ -1223,6 +1227,8 @@ SCIP_RETCODE upgradeCons(
       (*nupgdconss)++;
       (*mustpropagate) = FALSE;
    }
+   else
+      assert(consdata->nvars > 1);
 
    return SCIP_OKAY;
 }
@@ -1234,6 +1240,8 @@ static
 SCIP_RETCODE fixIntegerVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< integer variable to fix */
+   SCIP_Bool             downlock,           /**< does the variable has down lock given by the optcumulative constraint */
+   SCIP_Bool             uplock,             /**< does the variable has up lock given by the optcumulative constraint */
    int*                  nchgbds             /**< pointer to store the number changed variable bounds */
    )
 {
@@ -1251,8 +1259,8 @@ SCIP_RETCODE fixIntegerVariable(
    if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
-   assert(SCIPvarGetNLocksDown(var) >= 1);
-   assert(SCIPvarGetNLocksUp(var) >= 1);
+   assert(SCIPvarGetNLocksDown(var) >= (int)downlock);
+   assert(SCIPvarGetNLocksUp(var) >= (int)uplock);
 
    if( SCIPisZero(scip, objval) )
    {
@@ -1260,14 +1268,14 @@ SCIP_RETCODE fixIntegerVariable(
        * handler has a problem with rounding it down or up, then this issue is obsolete since binary
        * variable is fixed zero; therefore, rounding the integer down or up up is feasible dual reduction
        */
-      if( SCIPvarGetNLocksDown(var) == 1 )
+      if( SCIPvarGetNLocksDown(var) == (int)uplock )
          fixvalue = SCIPvarGetLbLocal(var);
-      else if( SCIPvarGetNLocksUp(var) == 1 )
+      else if( SCIPvarGetNLocksUp(var) == (int)downlock )
          fixvalue = SCIPvarGetUbLocal(var);
       else
          return SCIP_OKAY;
    }
-   else if( SCIPisNegative(scip, objval) && SCIPvarGetNLocksUp(var) == 1 )
+   else if( SCIPisNegative(scip, objval) && SCIPvarGetNLocksUp(var) == (int)uplock )
    {
       /* the integer start time variable has a negative objective value and only the optcumulative constraint
        * handler has a problem with rounding it up; since the binary variable is fixed the rounding up
@@ -1275,7 +1283,7 @@ SCIP_RETCODE fixIntegerVariable(
        */
       fixvalue = SCIPvarGetUbLocal(var);
    }
-   else if( SCIPisPositive(scip, objval) && SCIPvarGetNLocksDown(var) == 1 )
+   else if( SCIPisPositive(scip, objval) && SCIPvarGetNLocksDown(var) == (int)downlock )
    {
       /* the integer start time variable has a positive objective value and only the optcumulative
        * constraint handler has a problem with rounding it down; since the binary variable is fixed the
@@ -1343,6 +1351,8 @@ SCIP_RETCODE consdataDeletePos(
       consdata->vars[pos] = consdata->vars[consdata->nvars-1];
       consdata->demands[pos] = consdata->demands[consdata->nvars-1];
       consdata->durations[pos] = consdata->durations[consdata->nvars-1];
+      consdata->downlocks[pos] = consdata->downlocks[consdata->nvars-1];
+      consdata->uplocks[pos] = consdata->uplocks[consdata->nvars-1];
    }
 
    consdata->nvars--;
@@ -1377,7 +1387,7 @@ SCIP_RETCODE applyZeroFixings(
          /* fix integer start time variable if possible */
          if( SCIPconsIsChecked(cons) )
          {
-            SCIP_CALL( fixIntegerVariable(scip, consdata->vars[v], nchgbds) );
+            SCIP_CALL( fixIntegerVariable(scip, consdata->vars[v], consdata->downlocks[v], consdata->uplocks[v], nchgbds) );
          }
 
          /* remove the job */
@@ -1525,6 +1535,7 @@ SCIP_RETCODE propagateCons(
 
       SCIPfreeBufferArray(scip, &explanation);
    }
+   assert(consdata->nvars > 1);
 
    /* if we are still feasible we can try to perform dual reductions; Note that we have to avoid dual reductions during
     * probing since these dual reductions can lead to wrong implications the same hold in case of repropagating
@@ -1602,7 +1613,7 @@ SCIP_RETCODE propagateCons(
                       */
                      if( SCIPconsIsChecked(cons) )
                      {
-                        SCIP_CALL( fixIntegerVariable(scip, var, nchgbds) );
+                        SCIP_CALL( fixIntegerVariable(scip, var, consdata->downlocks[v], consdata->uplocks[v], nchgbds) );
                      }
                   }
                }
@@ -1652,7 +1663,7 @@ SCIP_RETCODE propagateCons(
             else if( SCIPvarGetUbLocal(binvar) < 0.5 && SCIPconsIsChecked(cons) )
             {
                /* if the binary choice variable is fixed to zero we can try to perform a dual reductions */
-               SCIP_CALL( fixIntegerVariable(scip, var, nchgbds) );
+               SCIP_CALL( fixIntegerVariable(scip, var, consdata->downlocks[v], consdata->uplocks[v], nchgbds) );
             }
          }
       }
@@ -2002,14 +2013,21 @@ SCIP_DECL_CONSPROP(consPropOptcumulative)
       oldnchgcoefs = nchgcoefs;
       oldnchgbds = nchgbds;
 
-      /* remove all jobs for which the binary variable is globally fixed to zero */
-      SCIP_CALL( applyZeroFixings(scip, cons, &nchgcoefs, &nchgbds) );
+      /* it might be that the constraint is already deleted which can be case if SCIP is in probing mode */
+      if( SCIPconsIsDeleted(cons) )
+      {
+         assert(SCIPinProbing(scip));
+         continue;
+      }
 
       /* try to upgrade optcumulative to cumulative constraint which is possible if all remaining binary variables are
        * fixed to one; in case the constraint has no variable left it is removed
        */
       if( !SCIPinProbing(scip) )
       {
+         /* remove all jobs for which the binary variable is globally fixed to zero */
+         SCIP_CALL( applyZeroFixings(scip, cons, &nchgcoefs, &nchgbds) );
+
          SCIP_CALL( upgradeCons(scip, cons, &ndelconss, &nupgdconss, &mustpropagate) );
       }
 
@@ -2207,6 +2225,9 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
             /* check if the jobs runs completely during the effective horizon */
             if( lst <= consdata->hmin && ect >= consdata->hmax )
             {
+               assert(!consdata->downlocks[v]);
+               assert(!consdata->uplocks[v]);
+
                if( consdata->capacity < consdata->demands[v] )
                {
                   SCIP_Bool infeasible;
@@ -2229,6 +2250,9 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
                (*nchgcoefs)++;
             }
          }
+
+         SCIPdebugMessage("constraint <%s>[%d,%d) <= %d has %d variables left\n", SCIPconsGetName(cons),
+            consdata->hmin, consdata->hmax, consdata->capacity, consdata->nvars);
 
          SCIPfreeBufferArray(scip, &irrelevants);
 
