@@ -1883,6 +1883,7 @@ SCIP_RETCODE checkCumulativeCondition(
 
    return SCIP_OKAY;
 }
+
 /** check if the given constrait is valid; checks each starting point of a job whether the remaining capacity is at
  *  least zero or not. If not (*violated) is set to TRUE
  */
@@ -6432,7 +6433,10 @@ SCIP_Bool checkDemands(
 }
 #endif
 
-/** delete constraint if it consists of at most one job */
+/** delete constraint if it consists of at most one job
+ *
+ *  @todo this method needs to be adjusted w.r.t. effective horizon
+ */
 static
 SCIP_RETCODE deleteTrivilCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7175,7 +7179,7 @@ SCIP_RETCODE presolveConsEst(
              * We mark the job to be deletable. The removement together with the capacity reducion is done later
              */
 
-            SCIPdebugMessage("  variables <%s>[%d,%d] (duration <%d>) is irrelevant due to no uplocks\n",
+            SCIPdebugMessage("  variables <%s>[%d,%d] (duration <%d>) is irrelevant due to no up lock\n",
                SCIPvarGetName(var), ect - duration, lst, duration);
 
             /* mark variable to be irrelevant */
@@ -7316,7 +7320,7 @@ SCIP_RETCODE presolveConsLct(
              * => lst <= hmin and ect >= hmax
              * => remove job and reduce capacity by the demand of that job
              */
-            SCIPdebugMessage("  variables <%s>[%d,%d] with duration <%d> is irrelevant due to no downlocks\n",
+            SCIPdebugMessage("  variables <%s>[%d,%d] with duration <%d> is irrelevant due to no down lock\n",
                SCIPvarGetName(var), est, lst, duration);
 
             /* mark variable to be irrelevant */
