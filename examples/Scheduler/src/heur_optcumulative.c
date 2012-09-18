@@ -281,7 +281,7 @@ SCIP_RETCODE applyOptcumulative(
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_optcumulative", FALSE, FALSE, FALSE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "optcumulative", FALSE, FALSE, FALSE, &valid) );
 
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
