@@ -26,6 +26,7 @@
 #include "scip/scipshell.h"
 
 #include "cons_optcumulative.h"
+#include "heur_optcumulative.h"
 #include "heur_listscheduling.h"
 #include "reader_cmin.h"
 #include "reader_sch.h"
