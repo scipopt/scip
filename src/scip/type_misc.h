@@ -78,6 +78,12 @@ typedef struct SCIP_BoolArray SCIP_BOOLARRAY;
 /** dynamic array for storing pointers */
 typedef struct SCIP_PtrArray SCIP_PTRARRAY;
 
+/** Resource activity data structure
+ *
+ *  - \ref ResourceActivity "List of all available methods"
+ */
+typedef struct SCIP_ResourceActivity SCIP_RESOURCEACTIVITY;
+
 /** Resource profile data structure
  *
  *  - \ref ResourceProfile "List of all available methods"
