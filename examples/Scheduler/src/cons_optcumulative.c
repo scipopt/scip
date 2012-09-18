@@ -951,28 +951,57 @@ SCIP_RETCODE solveSubproblem(
    SCIP* subscip;
    SCIP_CONS* cons;
    SCIP_VAR** vars;
-   SCIP_VAR* origvar;
    SCIP_VAR* var;
+   SCIP_Real timelimit;
+   SCIP_Real memorylimit;
+   char probname[SCIP_MAXSTRLEN];
    int v;
+
+   assert(scip != NULL);
+   assert(!SCIPinProbing(scip));
 
    if( nvars == 0 )
       return SCIP_OKAY;
 
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+   if( !SCIPisInfinity(scip, memorylimit) )
+   {
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+      return SCIP_OKAY;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
+   /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
 
+   /* copy all plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
-   SCIP_CALL( SCIPcreateProb(subscip, SCIPconsGetName(origcons), NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   /* get name of the original problem and add the string "_cumulative" */
+   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_cumulative", SCIPgetProbName(scip));
+
+   /* create the subproblem */
+   SCIP_CALL( SCIPcreateProbBasic(subscip, probname) );
 
    /* create for each job a start time variable */
    for( v = 0; v < nvars; ++v )
    {
-      origvar = origvars[v];
+      var = origvars[v];
+      assert(var != NULL);
 
-      SCIP_CALL( SCIPcreateVar(subscip, &var, SCIPvarGetName(origvar), SCIPvarGetLbLocal(origvar), SCIPvarGetUbLocal(origvar),
-            0.0, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVarBasic(subscip, &var, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+            0.0, SCIP_VARTYPE_INTEGER) );
 
       SCIP_CALL( SCIPaddVar(subscip, var) );
       vars[v] = var;
@@ -980,22 +1009,33 @@ SCIP_RETCODE solveSubproblem(
    }
 
    /* add cumulative constraint */
-   SCIP_CALL( SCIPcreateConsCumulative(subscip, &cons, SCIPconsGetName(origcons), nvars, vars,
-         durations, demands, capacity, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcreateConsBasicCumulative(subscip, &cons, SCIPconsGetName(origcons), nvars, vars,
+         durations, demands, capacity) );
 
+   /* add cumulative constraint */
    SCIP_CALL( SCIPaddCons(subscip, cons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+
+   /* set CP solver settings */
+   SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-#ifndef SCIP_DEBUG
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-#endif
 
+   /* set limits for the subproblem */
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+
+   /* forbid recursive call of heuristics and separators solving subMIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
+
+   /* solve sub problem */
    SCIP_CALL( SCIPsolve(subscip) );
 
+   /* check solution status */
    if( SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE )
    {
       *cutoff = TRUE;
@@ -1019,6 +1059,8 @@ SCIP_RETCODE solveSubproblem(
       sol = SCIPgetBestSol(subscip);
       assert(sol != NULL);
 
+      /* THIS FIXING IN ONLY POSSIBLE IF THE START TIME VARIABLES ARE INDEPENDENT !!!! */
+
       for( v = 0; v < nvars; ++v )
       {
          /* fix start time variable */
@@ -1030,6 +1072,7 @@ SCIP_RETCODE solveSubproblem(
       }
    }
 
+   /* free subproblem */
    SCIP_CALL( SCIPfree(&subscip) );
 
    SCIPfreeBufferArray(scip, &vars);
@@ -1209,7 +1252,7 @@ SCIP_RETCODE upgradeCons(
 
       SCIPdebugMessage("upgrade optcumulative constraint <%s> to cumulative constraint\n", SCIPconsGetName(cons));
 
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_cumu", SCIPconsGetName(cons));
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_cumulative", SCIPconsGetName(cons));
 
       SCIP_CALL( SCIPcreateConsCumulative(scip, &cumulativecons, name, consdata->nvars, consdata->vars, consdata->durations, consdata->demands, consdata->capacity,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
@@ -2078,6 +2121,7 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
 
    assert(scip != NULL);
    assert(nconss > 0);
+   assert(!SCIPinProbing(scip));
 
    oldnchgbds = *nchgbds;
    oldndelconss = *ndelconss;
@@ -2089,7 +2133,6 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
    for( c = 0; c < nconss && !cutoff; ++c )
    {
       SCIP_CONSDATA* consdata;
-      int nvars;
       int v;
 
       cons = conss[c];
@@ -2099,24 +2142,26 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
       SCIP_CALL( applyZeroFixings(scip, cons, nchgcoefs, nchgbds) );
 
       /* try to upgrade optcumulative to cumulative constraint which is possible if all remaining binary variables are
-       * fixed to one; in case the constraint has no variable left it is removed
+       * fixed to one; in case the constraint has no or one variable left it is removed
        */
-      assert(!SCIPinProbing(scip));
       SCIP_CALL( upgradeCons(scip, cons, ndelconss, nupgdconss, &mustpropagate) );
 
       if( mustpropagate )
       {
          SCIP_Bool* irrelevants;
+         int nvars;
          int hmin;
          int hmax;
          int split;
 
          consdata = SCIPconsGetData(cons);
          assert(consdata != NULL);
-         assert(consdata->nvars > 1);
+
+         nvars = consdata->nvars;
+         assert(nvars > 1);
 
          /* divide demands and capacity by their greatest common divisor */
-         SCIP_CALL( SCIPnormalizeCumulativeCondition(scip, consdata->nvars, consdata->vars, consdata->durations,
+         SCIP_CALL( SCIPnormalizeCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
                consdata->demands, &consdata->capacity, nchgcoefs, nchgsides) );
 
          SCIP_CALL( propagateCons(scip, cons,  FALSE, nchgbds, &cutoff) );
@@ -2124,8 +2169,8 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
          if( cutoff )
             break;
 
-         /* compute splitting point */
-         SCIP_CALL( SCIPsplitCumulativeCondition(scip, consdata->nvars, consdata->vars, consdata->durations,
+         /* check if the optimal cumulative constraint can be decomposed */
+         SCIP_CALL( SCIPsplitCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
                consdata->demands, consdata->capacity, &hmin, &hmax, &split) );
 
          /* check if this time point improves the effective horizon */
@@ -2157,6 +2202,7 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
             continue;
          }
 
+         /* check if the cumulative constraint can be decomposed */
          if( consdata->hmin < split && split < consdata->hmax )
          {
             SCIP_CONS* splitcons;
@@ -2166,9 +2212,9 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "(%s)'", SCIPconsGetName(cons));
 
             SCIPdebugMessage("split optcumulative constraint <%s>[%d,%d) with %d jobs at time point %d\n",
-               SCIPconsGetName(cons), consdata->hmin, consdata->hmax, consdata->nvars, split);
+               SCIPconsGetName(cons), consdata->hmin, consdata->hmax, nvars, split);
 
-            SCIP_CALL( SCIPcreateConsOptcumulative(scip, &splitcons, name, consdata->nvars, consdata->vars, consdata->binvars,
+            SCIP_CALL( SCIPcreateConsOptcumulative(scip, &splitcons, name, nvars, consdata->vars, consdata->binvars,
                   consdata->durations, consdata->demands, consdata->capacity,
                   SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
                   SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
@@ -2194,15 +2240,13 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
             (*naddconss)++;
          }
 
-         nvars = consdata->nvars;
-
          SCIP_CALL( SCIPallocBufferArray(scip, &irrelevants, nvars) );
          BMSclearMemoryArray(irrelevants, nvars);
 
          /* use presolving of cumulative constraint handler to process cumulative condition */
          SCIP_CALL( SCIPpresolveCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
-               consdata->hmin, consdata->hmax,
-               consdata->downlocks, consdata->uplocks, cons, irrelevants, nfixedvars, nchgsides) );
+               consdata->hmin, consdata->hmax, consdata->downlocks, consdata->uplocks,
+               cons, irrelevants, nfixedvars, nchgsides) );
 
          /* remove all variable which are irrelevant; note we have to iterate backwards do to the functionality of of
           * consdataDeletePos()
@@ -2252,7 +2296,7 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
          }
 
          SCIPdebugMessage("constraint <%s>[%d,%d) <= %d has %d variables left\n", SCIPconsGetName(cons),
-            consdata->hmin, consdata->hmax, consdata->capacity, consdata->nvars);
+            consdata->hmin, consdata->hmax, consdata->capacity, nvars);
 
          SCIPfreeBufferArray(scip, &irrelevants);
 
