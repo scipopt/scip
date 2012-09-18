@@ -672,6 +672,9 @@ SCIP_RETCODE collectIntVars(
    int mindelta;
    int counter;
 
+   assert(curtime >= consdata->hmin);
+   assert(curtime < consdata->hmax);
+
    counter = 0;
    sumofstarts = 0;
 
@@ -698,7 +701,7 @@ SCIP_RETCODE collectIntVars(
       else
          starttime = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
 
-      endtime = starttime + duration;
+      endtime = MIN(starttime + duration, consdata->hmax);
 
       /* check the end time of this job is larger than the curtime; in this case the job is still running */
       if( endtime > curtime )
@@ -835,6 +838,8 @@ void createSelectedSortedEventpointsSol(
    {
       var = consdata->vars[j];
       assert(var != NULL);
+      assert(consdata->durations[j] > 0);
+      assert(consdata->demands[j] > 0);
 
       if( lower )
       {
@@ -843,8 +848,6 @@ void createSelectedSortedEventpointsSol(
             || !SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var)) )
             continue;
 
-         if( consdata->durations[j] == 0 || consdata->demands[j] == 0 )
-            continue;
 
          starttimes[*nvars] = convertBoundToInt(scip, SCIPgetSolVal(scip, sol, var));
          startindices[*nvars] = j;
@@ -852,12 +855,13 @@ void createSelectedSortedEventpointsSol(
          endtimes[*nvars] =  starttimes[*nvars] + consdata->durations[j];
          endindices[*nvars] = j;
 
-         (*nvars) = *nvars + 1;
+         SCIPdebugMessage("%d: variable <%s>[%g,%g] (sol %g, duration %d) starttime %d, endtime = %d, demand = %d\n",
+            *nvars, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPgetSolVal(scip, sol, var),
+            consdata->durations[j],
+            starttimes[*nvars], starttimes[*nvars] + consdata->durations[startindices[*nvars]],
+            consdata->demands[startindices[*nvars]]);
 
-         SCIPdebugMessage("lower bounds are considered:\n");
-         SCIPdebugMessage("%d: job[%d] starttime %d, endtime = %d, demand = %d\n", *nvars-1,
-            startindices[*nvars-1], starttimes[*nvars-1], starttimes[*nvars-1] + consdata->durations[startindices[*nvars-1]],
-            consdata->demands[startindices[*nvars-1]]);
+         (*nvars)++;
       }
       else
       {
@@ -871,12 +875,13 @@ void createSelectedSortedEventpointsSol(
          endtimes[*nvars] =  starttimes[*nvars] + consdata->durations[j];
          endindices[*nvars] = j;
 
-         (*nvars) = *nvars + 1;
+         SCIPdebugMessage("%d: variable <%s>[%g,%g] (sol %g, duration %d) starttime %d, endtime = %d, demand = %d\n",
+            *nvars, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPgetSolVal(scip, sol, var),
+            consdata->durations[j],
+            starttimes[*nvars], starttimes[*nvars] + consdata->durations[startindices[*nvars]],
+            consdata->demands[startindices[*nvars]]);
 
-         SCIPdebugMessage("upper bounds are considered:\n");
-         SCIPdebugMessage("%d: job[%d] starttime %d, endtime = %d, demand = %d\n", *nvars-1,
-            startindices[*nvars-1], starttimes[*nvars-1], starttimes[*nvars-1] + consdata->durations[startindices[*nvars-1]],
-            consdata->demands[startindices[*nvars-1]]);
+         (*nvars)++;
       }
    }
 
@@ -6251,19 +6256,21 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    {
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "lower(%d)", curtime);
 
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, (SCIP_Real) lhs, SCIPinfinity(scip),  TRUE, FALSE, SCIPconsIsRemovable(cons)) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, (SCIP_Real) lhs, SCIPinfinity(scip),
+            TRUE, FALSE, SCIPconsIsRemovable(cons)) );
    }
    else
    {
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "upper(%d)", curtime);
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) lhs, TRUE, FALSE, SCIPconsIsRemovable(cons)) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) lhs,
+            TRUE, FALSE, SCIPconsIsRemovable(cons)) );
    }
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
    for( v = 0; v < nstarted - nfinished; ++v )
    {
-      SCIP_CALL( SCIPaddVarToRow(scip, row, activevars[v], 1.) );
+      SCIP_CALL( SCIPaddVarToRow(scip, row, activevars[v], 1.0) );
    }
 
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
