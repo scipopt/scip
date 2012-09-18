@@ -7097,7 +7097,6 @@ SCIP_RETCODE presolveConsEst(
    {
       SCIP_VAR* var;
       int duration;
-      int est;
       int lst;
       int ect;
       int lct;
@@ -7147,7 +7146,7 @@ SCIP_RETCODE presolveConsEst(
          if( SCIPvarGetLbGlobal(var) + 0.5 > SCIPvarGetUbGlobal(var) )
          {
             SCIPdebugMessage("  variable <%s>[%d,%d] with duration <%d> is irrelevant due to dual fixing wrt EST\n",
-               SCIPvarGetName(var), est, lct, duration);
+               SCIPvarGetName(var), ect - duration, lst, duration);
 
             /* mark variable to be irrelevant */
             irrelevants[v] = TRUE;
@@ -7177,7 +7176,7 @@ SCIP_RETCODE presolveConsEst(
              */
 
             SCIPdebugMessage("  variables <%s>[%d,%d] (duration <%d>) is irrelevant due to no uplocks\n",
-               SCIPvarGetName(var), est, lst, duration);
+               SCIPvarGetName(var), ect - duration, lst, duration);
 
             /* mark variable to be irrelevant */
             irrelevants[v] = TRUE;
