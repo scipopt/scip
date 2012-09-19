@@ -7164,6 +7164,9 @@ SCIP_RETCODE presolveConsEst(
             SCIPdebugMessage("  variable <%s>[%d,%d] with duration <%d> is irrelevant due to dual fixing wrt EST\n",
                SCIPvarGetName(var), ect - duration, lst, duration);
 
+            /* after fixing the start time variable to its lower bound, the (new) earliest completion time should be smaller or equal ti hmin */
+            assert(convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + duration <= hmin);
+
             /* mark variable to be irrelevant */
             irrelevants[v] = TRUE;
 
@@ -7308,6 +7311,9 @@ SCIP_RETCODE presolveConsLct(
          {
             SCIPdebugMessage("  variable <%s>[%d,%d] with duration <%d> is irrelevant due to dual fixing wrt LCT\n",
                SCIPvarGetName(var), est, lst, duration);
+
+            /* after fixing the start time variable to its upper bound, the (new) latest start time should be greather or equal ti hmax */
+            assert(convertBoundToInt(scip, SCIPvarGetUbGlobal(var)) >= hmax);
 
             /* mark variable to be irrelevant */
             irrelevants[v] = TRUE;
