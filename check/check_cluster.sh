@@ -49,13 +49,30 @@ NOWAITCLUSTER=${16}
 EXCLUSIVE=${17}
 PERMUTE=${18}
 
-# check all variables defined
-if test -z $EXCLUSIVE
+# check if all variables defined (by checking the last one)
+if test -z $PERMUTE
 then
-    echo Skipping test since variable EXCLUSIVE is not defined.
+    echo Skipping test since not all variables are define
+    echo "TSTNAME       = $TSTNAME"
+    echo "BINNAME       = $BINNAME"
+    echo "SETNAME       = $SETNAME"
+    echo "BINID         = $BINID"
+    echo "TIMELIMIT     = $TIMELIMIT"
+    echo "NODELIMIT     = $NODELIMIT"
+    echo "MEMLIMIT      = $MEMLIMIT"
+    echo "THREADS       = $THREADS"
+    echo "FEASTOL       = $FEASTOL"
+    echo "DISPFREQ      = $DISPFREQ"
+    echo "CONTINUE      = $CONTINUE"
+    echo "QUEUETYPE     = $QUEUETYPE"
+    echo "QUEUE         = $QUEUE"
+    echo "PPN           = $PPN"
+    echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
+    echo "NOWAITCLUSTER = $NOWAITCLUSTER"
+    echo "EXCLUSIVE     = $EXCLUSIVE"
+    echo "PERMUTE       = $PERMUTE"
     exit 1;
 fi
-
 
 # get current SCIP path
 SCIPPATH=`pwd`
@@ -205,7 +222,13 @@ COUNT=0
 # loop over permutations
 for ((p = 0; $p <= $PERMUTE; p++))
 do
-    EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"#p"$p.eval
+    # if number of permutations is positive, add postfix
+    if test $PERMUTE -gt 0
+    then
+	EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"#p"$p.eval
+    else
+	EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
+    fi
     echo > $EVALFILE
 
     # loop over testset
