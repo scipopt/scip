@@ -1595,6 +1595,9 @@ SCIP_RETCODE colAddCoef(
       col->nlprows++;
    }
 
+   /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
+   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+
    /* insert the row at the correct position and update the links */
    col->rows[pos] = row;
    col->vals[pos] = val;
@@ -1731,6 +1734,9 @@ SCIP_RETCODE colChgCoefPos(
 
    /*debugMessage("changing coefficient %g * <%s> at position %d of column <%s> to %g\n", 
      col->vals[pos], col->rows[pos]->name, pos, SCIPvarGetName(col->var), val);*/
+
+   /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
+   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
 
    if( SCIPsetIsZero(set, val) )
    {
@@ -1908,10 +1914,13 @@ SCIP_RETCODE rowAddCoef(
       row->nlpcols++;
    }
 
+   /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
+   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+
    /* insert the column at the correct position and update the links */
    row->cols[pos] = col;
    row->cols_index[pos] = col->index;
-   row->vals[pos] = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+   row->vals[pos] = val;
    row->linkpos[pos] = linkpos;
    row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
    if( linkpos == -1 )
@@ -2078,6 +2087,9 @@ SCIP_RETCODE rowChgCoefPos(
       return SCIP_INVALIDDATA;
    }
 
+   /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
+   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+
    if( SCIPsetIsZero(set, val) )
    {
       /* delete existing coefficient */
@@ -2091,7 +2103,7 @@ SCIP_RETCODE rowChgCoefPos(
       
       /* change existing coefficient */
       rowDelNorms(row, set, row->cols[pos], row->vals[pos], FALSE);
-      row->vals[pos] = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+      row->vals[pos] = val;
       row->integral = row->integral && SCIPcolIsIntegral(row->cols[pos]) && SCIPsetIsIntegral(set, val);
       rowAddNorms(row, set, row->cols[pos], row->vals[pos]);
       coefChanged(row, row->cols[pos], lp);
@@ -5378,14 +5390,15 @@ void rowMerge(
          {
             /* merge entries with equal column */
             vals[t] += vals[s];
-            if( SCIPsetIsIntegral(set, vals[t]) )
-               vals[t] = SCIPsetRound(set, vals[t]);
          }
          else
          {
             /* go to the next entry, overwriting current entry if coefficient is zero */
             if( !SCIPsetIsZero(set, vals[t]) )
             {
+               /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
+               vals[t] = SCIPsetIsIntegral(set, vals[t]) ? SCIPsetRound(set, vals[t]) : vals[t];
+
                row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
                t++;
             }
