@@ -1026,6 +1026,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
    /* set limits for the subproblem */
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 10000) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
