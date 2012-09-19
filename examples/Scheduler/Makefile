@@ -105,7 +105,7 @@ test:		$(CHECKDIR)
 		@-(cd check && $(LN_s) ../$(SCIPDIR)/check/check.awk);
 		@-(cd check && $(LN_s) ../$(SCIPDIR)/check/getlastproblem.awk);
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND);
 
 # include local targets
 -include $(SCIPDIR)/make/local/make.targets
