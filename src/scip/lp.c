@@ -1595,6 +1595,9 @@ SCIP_RETCODE colAddCoef(
       col->nlprows++;
    }
 
+   /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
+   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+
    /* insert the row at the correct position and update the links */
    col->rows[pos] = row;
    col->vals[pos] = val;
@@ -1908,10 +1911,13 @@ SCIP_RETCODE rowAddCoef(
       row->nlpcols++;
    }
 
+   /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
+   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+
    /* insert the column at the correct position and update the links */
    row->cols[pos] = col;
    row->cols_index[pos] = col->index;
-   row->vals[pos] = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+   row->vals[pos] = val;
    row->linkpos[pos] = linkpos;
    row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
    if( linkpos == -1 )
