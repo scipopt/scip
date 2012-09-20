@@ -2761,7 +2761,11 @@ SCIP_RETCODE solveIndependentCons(
       /* add constraint to subscip */
       SCIP_CALL( SCIPaddCons(subscip, targetcons) );
 
-      /* set CP solver settings */
+      /* set CP solver settings
+      *
+      * @note This "meta" setting has to be set first since this call overwrite all parameters including for example the
+      *       time limit.
+      */
       SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
 
       /* do not abort subproblem on CTRL-C */
