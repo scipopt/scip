@@ -37,6 +37,8 @@
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
 #define DEFAULT_USECLOUD           TRUE      /**< should a cloud of points be used? */
+#define DEFAULT_MAXPOINTS          -1        /**< maximum number of points for the cloud (-1 means no limit) */
+#define DEFAULT_MINSUCCESSRATE     0.0       /**< minimum success rate for the cloud */
 
 /*
  * Data structures
@@ -49,6 +51,8 @@ struct SCIP_BranchruleData
 {
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
    SCIP_Bool             usecloud;           /**< should a cloud of points be used? */
+   int                   maxpoints;          /**< maximum number of points for the cloud (-1 means no limit) */
+   SCIP_Real             minsuccessrate;     /**< minimum success rate for the cloud */
    SCIP_CLOCK*           cloudclock;         /**< clock for cloud diving */
    int                   ntried;             /**< number of times the cloud was tried */
    int                   nuseful;            /**< number of times the cloud was useful */
@@ -90,9 +94,13 @@ SCIP_DECL_BRANCHFREE(branchFreeCloud)
 
    /* free branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
-   SCIPstatisticMessage("time spent diving in cloud branching: %g\n", SCIPgetClockTime(scip, branchruledata->cloudclock));
-   SCIPstatisticMessage("success rate of cloud branching: %g\n", (SCIP_Real)branchruledata->nuseful / branchruledata->ntried);
-   SCIP_CALL( SCIPfreeClock(scip, &(branchruledata->cloudclock)) );
+
+   if( branchruledata->cloudclock != NULL)
+   {
+      SCIPstatisticMessage("time spent diving in cloud branching: %g\n", SCIPgetClockTime(scip, branchruledata->cloudclock));
+      SCIPstatisticMessage("success rate of cloud branching: %g\n", (SCIP_Real)branchruledata->nuseful / branchruledata->ntried);
+      SCIP_CALL( SCIPfreeClock(scip, &(branchruledata->cloudclock)) );
+   }
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
@@ -338,6 +346,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
       if( newpoint )
          counter++;
+
+      if( branchruledata->maxpoints != -1 && counter >= branchruledata->maxpoints )
+         break;
    }
    SCIPdebugMessage("considered %d additional points in the cloud\n",counter);
 
@@ -367,6 +378,15 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    }
    else
       counter = nlpcands;
+
+   /* if cloud sampling was not successful enough, disable it */
+   if( branchruledata->usecloud &&
+      branchruledata->ntried > 100 &&
+      SCIPisLT(scip, (SCIP_Real)branchruledata->nuseful / branchruledata->ntried, branchruledata->minsuccessrate) )
+   {
+      SCIPdebugMessage("Disabling cloud branching (not effective)\n");
+      branchruledata->usecloud = FALSE;
+   }
 
    SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, counter, counter, /* replace second counter ??????????? */
       &branchruledata->lastcand, allowaddcons,
@@ -494,6 +514,14 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
          "branching/"BRANCHRULE_NAME"/usecloud",
          "should a cloud of points be used? ",
          &branchruledata->usecloud, FALSE, DEFAULT_USECLOUD, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "branching/"BRANCHRULE_NAME"/maxpoints",
+         "maximum number of points for the cloud (-1 means no limit)",
+         &branchruledata->maxpoints, FALSE, DEFAULT_MAXPOINTS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "branching/"BRANCHRULE_NAME"/minsuccessrate",
+         "minimum success rate for the cloud",
+         &branchruledata->minsuccessrate, FALSE, DEFAULT_MINSUCCESSRATE, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
