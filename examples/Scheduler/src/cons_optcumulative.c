@@ -114,7 +114,7 @@ struct SCIP_ConsData
    int                   est;                /**< used earliest start time for the relaxation */
    int                   lct;                /**< used latest completion time for the relaxation */
    unsigned int          relaxadded:1;       /**< was relaxation added? */
-   unsigned int          tryedsolving:1;     /**< bool to store if it was tryed to solve the cumulative sub-problem */
+   unsigned int          triedsolving:1;     /**< bool to store if it was tried to solve the cumulative sub-problem */
 };
 
 /** constraint handler data */
@@ -217,7 +217,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->nglbfixedzeros = 0;
    (*consdata)->nglbfixedones = 0;
    (*consdata)->relaxadded = FALSE;
-   (*consdata)->tryedsolving = FALSE;
+   (*consdata)->triedsolving = FALSE;
 
    if( nvars > 0 )
    {
@@ -505,6 +505,7 @@ SCIP_RETCODE catchAllEvents(
       SCIP_CALL( catchEvent(scip, cons, eventhdlr, v) );
    }
 
+   /* (debug) check if the counter of the constraint are correct */
    checkCounters(consdata);
 
    return SCIP_OKAY;
@@ -954,7 +955,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CONS*            origcons,           /**< optcumulative constraint which collapsed to a cumulative constraint locally */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_VAR**            binvars,            /**< array of variable representing if the job has to be processed on this machine */
-   SCIP_VAR**            origvars,           /**< start time variables of the activities which are assigned */
+   SCIP_VAR**            vars,               /**< start time variables of the activities which are assigned */
    int*                  durations,          /**< durations of the activities */
    int*                  demands,            /**< demands of the activities */
    int                   capacity,           /**< available cumulative capacity */
@@ -963,110 +964,33 @@ SCIP_RETCODE solveSubproblem(
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is violated */
    )
 {
-   SCIP* subscip;
-   SCIP_CONS* cons;
-   SCIP_VAR** vars;
-   SCIP_VAR* var;
-   SCIP_Real timelimit;
-   SCIP_Real memorylimit;
-   char probname[SCIP_MAXSTRLEN];
-   int v;
+   SCIP_Bool unbounded;
+   SCIP_Real* lbs;
+   SCIP_Real* ubs;
 
    assert(scip != NULL);
    assert(!SCIPinProbing(scip));
 
-   /* if we already tryed solving this subproblem we do not do it again */
-   if( consdata->tryedsolving )
+   /* if we already tried solving this subproblem we do not do it again */
+   if( consdata->triedsolving )
       return SCIP_OKAY;
 
-   consdata->tryedsolving = TRUE;
+   consdata->triedsolving = TRUE;
 
    if( nvars == 0 )
       return SCIP_OKAY;
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
 
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
+   /* solve the cumulative condition separately */
+   SCIP_CALL( SCIPsolveCumulativeCondition(scip, nvars, vars, durations, demands,
+         consdata->capacity, consdata->hmin, consdata->hmax, lbs, ubs, 1000LL, cutoff, &unbounded) );
+   assert(!unbounded);
+
+   if( *cutoff )
    {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-
-   /* initialize the subproblem */
-   SCIP_CALL( SCIPcreate(&subscip) );
-
-   /* copy all plugins */
-   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-
-   /* get name of the original problem and add the string "_cumulative" */
-   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_cumulative", SCIPgetProbName(scip));
-
-   /* create the subproblem */
-   SCIP_CALL( SCIPcreateProbBasic(subscip, probname) );
-
-   /* create for each job a start time variable */
-   for( v = 0; v < nvars; ++v )
-   {
-      assert(SCIPvarGetLbLocal(binvars[v]) > 0.5);
-
-      var = origvars[v];
-      assert(var != NULL);
-
-      SCIP_CALL( SCIPcreateVarBasic(subscip, &var, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-            0.0, SCIP_VARTYPE_INTEGER) );
-
-      SCIP_CALL( SCIPaddVar(subscip, var) );
-      vars[v] = var;
-      SCIP_CALL( SCIPreleaseVar(subscip, &var) );
-   }
-
-   /* add cumulative constraint */
-   SCIP_CALL( SCIPcreateConsBasicCumulative(subscip, &cons, SCIPconsGetName(origcons),
-         nvars, vars, durations, demands, capacity) );
-
-   /* add cumulative constraint */
-   SCIP_CALL( SCIPaddCons(subscip, cons) );
-   SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-
-   /* set CP solver settings
-    *
-    * @note This "meta" setting has to be set first since this call overwrite all parameters including for example the
-    *       time limit.
-    */
-   SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
-
-   /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-   /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-
-   /* set limits for the subproblem */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 100) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-
-   /* forbid recursive call of heuristics and separators solving subMIPs */
-   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
-
-   /* solve sub problem */
-   SCIP_CALL( SCIPsolve(subscip) );
-
-   /* check solution status */
-   if( SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE )
-   {
-      *cutoff = TRUE;
+      int v;
 
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
@@ -1078,21 +1002,24 @@ SCIP_RETCODE solveSubproblem(
       /* perform conflict analysis */
       SCIP_CALL( SCIPanalyzeConflictCons(scip, origcons, NULL) );
    }
-   else if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
+   else
    {
-      SCIP_SOL* sol;
       SCIP_Bool infeasible;
       SCIP_Bool tightened;
-
-      sol = SCIPgetBestSol(subscip);
-      assert(sol != NULL);
-
-      /* THIS FIXING IN ONLY POSSIBLE IF THE START TIME VARIABLES ARE INDEPENDENT !!!! */
+      int v;
 
       for( v = 0; v < nvars; ++v )
       {
-         /* fix start time variable */
-         SCIP_CALL( SCIPfixVar(scip, origvars[v], SCIPgetSolVal(subscip, sol, vars[v]), &infeasible, &tightened) );
+         SCIP_CALL( SCIPtightenVarLb(scip, vars[v], lbs[v], TRUE, &infeasible, &tightened) );
+         assert(!infeasible);
+
+         SCIP_CALL( SCIPtightenVarLb(scip, vars[v], lbs[v], TRUE, &infeasible, &tightened) );
+         assert(!infeasible);
+
+         if( tightened )
+            (*nchgbds)++;
+
+         SCIP_CALL( SCIPtightenVarUb(scip, vars[v], ubs[v], TRUE, &infeasible, &tightened) );
          assert(!infeasible);
 
          if( tightened )
@@ -1100,10 +1027,8 @@ SCIP_RETCODE solveSubproblem(
       }
    }
 
-   /* free subproblem */
-   SCIP_CALL( SCIPfree(&subscip) );
-
-   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &ubs);
+   SCIPfreeBufferArray(scip, &lbs);
 
    return SCIP_OKAY;
 }
@@ -1245,6 +1170,7 @@ SCIP_RETCODE upgradeCons(
 
    nvars = consdata->nvars;
 
+   /* (debug) check if the counter of the constraint are correct */
    checkCounters(consdata);
 
    if( nvars == 0 )
@@ -1428,6 +1354,7 @@ SCIP_RETCODE consdataDeletePos(
 
    consdata->nvars--;
 
+   /* (debug) check if the counter of the constraint are correct */
    checkCounters(consdata);
 
    return SCIP_OKAY;
@@ -1467,6 +1394,7 @@ SCIP_RETCODE applyZeroFixings(
       }
    }
 
+   /* (debug) check if the counter of the constraint are correct */
    checkCounters(consdata);
 
    /* check that all variables fixed to zero are removed */
@@ -1563,6 +1491,9 @@ SCIP_RETCODE propagateCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->nvars > 1);
+
+   /* (debug) check if the counter of the constraint are correct */
+   checkCounters(consdata);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvars, consdata->nvars) );
@@ -2629,14 +2560,12 @@ SCIP_DECL_EVENTEXEC(eventExecOptcumulative)
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBRELAXED:
-      consdata->tryedsolving = FALSE;
+      consdata->triedsolving = FALSE;
       break;
    default:
       SCIPerrorMessage("invalid event type %x\n", eventtype);
       return SCIP_INVALIDDATA;
    }
-
-   checkCounters(consdata);
 
    return SCIP_OKAY;
 }
