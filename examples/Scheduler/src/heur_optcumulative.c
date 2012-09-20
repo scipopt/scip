@@ -224,6 +224,9 @@ SCIP_RETCODE applyOptcumulative(
    )
 {
    SCIP_SOL* newsol;
+   SCIP_Real lowerbound;
+   SCIP_Real upperbound;
+   SCIP_Real pseudoobj;
    SCIP_Bool infeasible;
 
    assert(heur != NULL);
@@ -243,8 +246,12 @@ SCIP_RETCODE applyOptcumulative(
    /* apply the variable fixings */
    SCIP_CALL( applyOptcumulativeFixings(scip, heurdata, &infeasible) );
 
+   lowerbound =  SCIPgetLowerbound(scip);
+   upperbound =  SCIPgetUpperbound(scip);
+   pseudoobj = SCIPgetPseudoObjval(scip);
+
    /* if a solution has been found --> fix all other variables by subscip if necessary */
-   if( !infeasible )
+   if( !infeasible && pseudoobj >= lowerbound && pseudoobj < upperbound )
    {
 #if 0
       SCIP_Bool success;
@@ -321,7 +328,6 @@ SCIP_RETCODE applyOptcumulative(
       /* if there is already a solution, add an objective cutoff */
       if( SCIPgetNSols(scip) > 0 )
       {
-         SCIP_Real upperbound;
          SCIP_Real minimprove;
          SCIP_Real cutoff;
 
@@ -329,7 +335,7 @@ SCIP_RETCODE applyOptcumulative(
          cutoff = SCIPinfinity(scip);
          assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
-         upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+         upperbound -= SCIPsumepsilon(scip);
 
          if( !SCIPisInfinity(scip,-1.0*SCIPgetLowerbound(scip)) )
          {
