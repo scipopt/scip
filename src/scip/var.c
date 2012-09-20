@@ -10574,6 +10574,23 @@ SCIP_DECL_SORTPTRCOMP(SCIPvarComp)
    return SCIPvarCompare((SCIP_VAR*)elem1, (SCIP_VAR*)elem2);
 }
 
+/** comparison method for sorting variables by non-decreasing objective coefficient */
+SCIP_DECL_SORTPTRCOMP(SCIPvarCompObj)
+{
+   SCIP_Real obj1;
+   SCIP_Real obj2;
+
+   obj1 = SCIPvarGetObj((SCIP_VAR*)elem1);
+   obj2 = SCIPvarGetObj((SCIP_VAR*)elem2);
+
+   if( obj1 < obj2 )
+      return -1;
+   else if( obj1 > obj2 )
+      return +1;
+   else
+      return 0;
+}
+
 /** hash key retrieval function for variables */
 SCIP_DECL_HASHGETKEY(SCIPvarGetHashkey)
 {  /*lint --e{715}*/

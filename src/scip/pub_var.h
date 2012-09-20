@@ -101,6 +101,10 @@ int SCIPvarCompare(
 EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPvarComp);
 
+/** comparison method for sorting variables by non-decreasing objective coefficient */
+EXTERN
+SCIP_DECL_SORTPTRCOMP(SCIPvarCompObj);
+
 /** hash key retrieval function for variables */
 EXTERN
 SCIP_DECL_HASHGETKEY(SCIPvarGetHashkey);
