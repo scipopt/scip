@@ -409,6 +409,7 @@ SCIP_RETCODE catchEvent(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_EVENTTYPE eventtype;
    SCIP_VAR* binvar;
 
    consdata = SCIPconsGetData(cons);
@@ -420,8 +421,17 @@ SCIP_RETCODE catchEvent(
    binvar = consdata->binvars[pos];
    assert(binvar != NULL);
 
+   /* we are catching the following events for the binary variables:
+    *
+    * - SCIP_EVENTTYPE_GBDCHANGED: This allows to check if the optcumulative can be converted into an cumulative
+    *   constraint
+    * - SCIP_EVENTTYPE_BOUNDRELAXED: This allows us to detect the moment when we can retry to solve a local cumulative
+    *   constraint again
+    */
+   eventtype = SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_BOUNDRELAXED;
+
    /* catch bound change events on variable */
-   SCIP_CALL( SCIPcatchVarEvent(scip, binvar, SCIP_EVENTTYPE_GBDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, binvar, eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
 
    /* update the fixed variables counter for this variable */
    if( SCIPvarGetUbGlobal(binvar) < 0.5)
@@ -444,6 +454,7 @@ SCIP_RETCODE dropEvent(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_EVENTTYPE eventtype;
    SCIP_VAR* binvar;
 
    consdata = SCIPconsGetData(cons);
@@ -455,8 +466,10 @@ SCIP_RETCODE dropEvent(
    binvar = consdata->binvars[pos];
    assert(binvar != NULL);
 
+   eventtype = SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_BOUNDRELAXED;
+
    /* drop events on variable */
-   SCIP_CALL( SCIPdropVarEvent(scip, binvar, SCIP_EVENTTYPE_GBDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
+   SCIP_CALL( SCIPdropVarEvent(scip, binvar, eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
 
    /* update the fixed variables counter for this variable */
    if( SCIPvarGetUbGlobal(binvar) < 0.5)
@@ -938,7 +951,8 @@ void collectSolActivities(
 static
 SCIP_RETCODE solveSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            origcons,           /**< constraint to be checked */
+   SCIP_CONS*            origcons,           /**< optcumulative constraint which collapsed to a cumulative constraint locally */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_VAR**            binvars,            /**< array of variable representing if the job has to be processed on this machine */
    SCIP_VAR**            origvars,           /**< start time variables of the activities which are assigned */
    int*                  durations,          /**< durations of the activities */
@@ -960,6 +974,12 @@ SCIP_RETCODE solveSubproblem(
 
    assert(scip != NULL);
    assert(!SCIPinProbing(scip));
+
+   /* if we already tryed solving this subproblem we do not do it again */
+   if( consdata->tryedsolving )
+      return SCIP_OKAY;
+
+   consdata->tryedsolving = TRUE;
 
    if( nvars == 0 )
       return SCIP_OKAY;
@@ -998,6 +1018,8 @@ SCIP_RETCODE solveSubproblem(
    /* create for each job a start time variable */
    for( v = 0; v < nvars; ++v )
    {
+      assert(SCIPvarGetLbLocal(binvars[v]) > 0.5);
+
       var = origvars[v];
       assert(var != NULL);
 
@@ -1010,8 +1032,8 @@ SCIP_RETCODE solveSubproblem(
    }
 
    /* add cumulative constraint */
-   SCIP_CALL( SCIPcreateConsBasicCumulative(subscip, &cons, SCIPconsGetName(origcons), nvars, vars,
-         durations, demands, capacity) );
+   SCIP_CALL( SCIPcreateConsBasicCumulative(subscip, &cons, SCIPconsGetName(origcons),
+         nvars, vars, durations, demands, capacity) );
 
    /* add cumulative constraint */
    SCIP_CALL( SCIPaddCons(subscip, cons) );
@@ -1593,10 +1615,8 @@ SCIP_RETCODE propagateCons(
    {
       if( nfixedzeros + nfixedones == consdata->nvars )
       {
-         SCIP_CALL( solveSubproblem(scip, cons, binvars, vars, durations, demands,
+         SCIP_CALL( solveSubproblem(scip, cons, consdata, binvars, vars, durations, demands,
                consdata->capacity, nfixedones, nchgbds, cutoff) );
-
-         consdata->tryedsolving = TRUE;
       }
       else
       {
@@ -2607,8 +2627,12 @@ SCIP_DECL_EVENTEXEC(eventExecOptcumulative)
    case SCIP_EVENTTYPE_GUBCHANGED:
       consdata->nglbfixedzeros++;
       break;
+   case SCIP_EVENTTYPE_LBRELAXED:
+   case SCIP_EVENTTYPE_UBRELAXED:
+      consdata->tryedsolving = FALSE;
+      break;
    default:
-      SCIPerrorMessage("invalid event type\n");
+      SCIPerrorMessage("invalid event type %x\n", eventtype);
       return SCIP_INVALIDDATA;
    }
 
