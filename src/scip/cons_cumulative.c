@@ -9586,6 +9586,8 @@ SCIP_RETCODE SCIPsolveCumulativeCondition(
 
    for( v = 0; v < nvars; ++v )
    {
+      assert(vars[v] != NULL);
+
       lbs[v] = SCIPvarGetLbLocal(vars[v]);
       ubs[v] = SCIPvarGetUbLocal(vars[v]);
    }
