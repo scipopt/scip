@@ -3342,6 +3342,15 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
+
 /* SCIPsortPtrRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     PtrRealIntInt
 #define SORTTPL_KEYTYPE     void*
