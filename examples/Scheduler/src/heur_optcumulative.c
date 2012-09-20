@@ -298,6 +298,13 @@ SCIP_RETCODE applyOptcumulative(
       /* free hash map */
       SCIPhashmapFree(&varmap);
 
+      /* set CP solver settings since the remaining problem consists only of cumulative constraints
+       *
+       * @note This "meta" setting has to be set first since this call overwrite all parameters including for example
+       *       the time limit.
+       */
+      SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
+
       /* do not abort subproblem on CTRL-C */
       SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
@@ -312,12 +319,6 @@ SCIP_RETCODE applyOptcumulative(
 
       /* forbid call of heuristics and separators solving sub-CIPs */
       SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
-
-      /* disable cutting plane separation */
-      SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
-
-      /* disable expensive presolving */
-      SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
 #ifdef SCIP_DEBUG
       /* for debugging optcumulative heuristic, enable MIP output */
