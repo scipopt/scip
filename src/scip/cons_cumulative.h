@@ -287,6 +287,30 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
    SCIP_CONS*            cons                /**< cumulative constraint */
    );
 
+/** solves given cumulative condition as independent sub problem
+ *
+ *  @note The time and memory limit of the SCIP environment in transferred to sub solver
+ *
+ *  @note If the problem was solved to optimized the lbs and ubs array constain the solution values; If the problem was
+ *        not solved to optimized these two arrays constain the global bounds at the time the sub solver was interrupted
+ */
+EXTERN
+SCIP_RETCODE SCIPsolveCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Real*            lbs,                /**< array to store the lower bounds after solving */
+   SCIP_Real*            ubs,                /**< array to store the upper bounds after solving */
+   SCIP_Longint          maxnodes,           /**< maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit) */
+   SCIP_Bool*            cutoff,             /**< pointer to store if the constraint is infeasible */
+   SCIP_Bool*            unbounded           /**< pointer to store if the constraint is unbounded */
+   );
+
 #ifdef __cplusplus
 }
 #endif

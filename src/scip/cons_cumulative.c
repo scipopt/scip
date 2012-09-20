@@ -158,6 +158,7 @@ struct SCIP_ConsData
    unsigned int          normalized:1;       /**< is the constraint normalized */
    unsigned int          covercuts:1;        /**< cover cuts are created? */
    unsigned int          propagated:1;       /**< is constraint propagted */
+   unsigned int          triedsolving:1;     /**< bool to store if we tried already to solve that constraint as independent subproblem */
 
 #ifdef SCIP_STATISTIC
    int                   maxpeak;
@@ -1413,6 +1414,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->normalized = FALSE;
    (*consdata)->covercuts = FALSE;
    (*consdata)->propagated = FALSE;
+   (*consdata)->triedsolving = FALSE;
 
 #ifdef SCIP_STATISTIC
    (*consdata)->nirrelevantjobs = 0;
@@ -2675,17 +2677,11 @@ SCIP_RETCODE solveIndependentCons(
    SCIP_Bool*            unbounded           /**< pointer to store if the constraint is unbounded */
    )
 {
-   SCIP* subscip;
    SCIP_CONSDATA* consdata;
-   SCIP_HASHMAP* varmapfw;
-   SCIP_CONS* targetcons;
    SCIP_VAR** vars;
-   SCIP_Real timelimit;
-   SCIP_Real memorylimit;
-   SCIP_Bool succeed;
-   char probname[SCIP_MAXSTRLEN];
+   SCIP_Real* lbs;
+   SCIP_Real* ubs;
    int nvars;
-   int v;
 
    assert(scip != NULL);
    assert(!SCIPinProbing(scip));
@@ -2702,177 +2698,89 @@ SCIP_RETCODE solveIndependentCons(
    if( !SCIPconsIsChecked(cons) )
       return SCIP_OKAY;
 
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check if already tried to solve that constraint as independent sub problem; we do not want to try it again if we
+    * fail on the first place
+    */
+   if( consdata->triedsolving )
+      return SCIP_OKAY;
+
    /* check if constraint is independently */
    if( !isConsIndependently(scip, cons) )
       return SCIP_OKAY;
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
-      return SCIP_OKAY;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   nvars = consdata->nvars;
-   vars = consdata->vars;
+   /* mark the constraint to be tried of solving it as independent sub problem; in case that is successful the
+    * constraint is deleted; otherwise, we want to ensure that we do not try that again
+    */
+   consdata->triedsolving = TRUE;
 
    SCIPdebugMessage("the cumulative constraint <%s> is independent from rest of the problem (%d variables, %d constraints)\n",
       SCIPconsGetName(cons), SCIPgetNVars(scip), SCIPgetNConss(scip));
    SCIPdebugPrintCons(scip, cons, NULL);
 
-   /* initialize the subproblem */
-   SCIP_CALL( SCIPcreate(&subscip) );
+   nvars = consdata->nvars;
+   vars = consdata->vars;
 
-   /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
 
-   /* copy all plugins */
-   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+   /* solve the cumulative condition separately */
+   SCIP_CALL( SCIPsolveCumulativeCondition(scip, nvars, vars, consdata->durations, consdata->demands, consdata->capacity,
+         consdata->hmin, consdata->hmax, lbs, ubs, maxnodes, cutoff, unbounded) );
 
-   /* get name of the original problem and add the string of the constraint name */
-   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(scip), SCIPconsGetName(cons));
-
-   /* create the subproblem */
-   SCIP_CALL( SCIPcreateProbBasic(subscip, probname) );
-
-   /* copy cumulative constraint */
-   SCIP_CALL( SCIPgetConsCopy(scip, subscip, cons, &targetcons, SCIPconsGetHdlr(cons), varmapfw, NULL, NULL,
-         FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, &succeed) );
-
-   if( succeed && SCIPgetNConss(subscip) == 1 )
+   if( !(*cutoff) && !(*unbounded) )
    {
-      SCIP_Longint nodelimit;
+      SCIP_Bool infeasible;
+      SCIP_Bool tightened;
+      SCIP_Bool allfixed;
+      int v;
 
-      SCIP_CALL( SCIPgetLongintParam(scip, "limits/nodes", &nodelimit) );
+      allfixed = TRUE;
 
-      /* add constraint to subscip */
-      SCIP_CALL( SCIPaddCons(subscip, targetcons) );
-
-      /* set CP solver settings
-      *
-      * @note This "meta" setting has to be set first since this call overwrite all parameters including for example the
-      *       time limit.
-      */
-      SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
-
-      /* do not abort subproblem on CTRL-C */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-      /* disable output to console */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-
-      maxnodes = MIN(nodelimit, maxnodes);
-
-      /* set limits for the subproblem */
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) );
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-
-      /* forbid recursive call of heuristics and separators solving subMIPs */
-      SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
-
-      /* solve single cumulative constraint by branch and bound */
-      SCIP_CALL( SCIPsolve(subscip) );
-
-      /* evaluated solution status */
-      switch( SCIPgetStatus(subscip) )
+      for( v = 0; v < nvars; ++v )
       {
-      case SCIP_STATUS_INFORUNBD:
-      case SCIP_STATUS_INFEASIBLE:
-         *cutoff = TRUE;
-         break;
-      case SCIP_STATUS_UNBOUNDED:
-         *unbounded = TRUE;
-         break;
-      case SCIP_STATUS_OPTIMAL:
-      {
-         /* copy optimal as dual reduction into the original SCIP instance */
-         SCIP_SOL* sol;
+         SCIP_CALL( SCIPtightenVarLb(scip, vars[v], lbs[v], TRUE, &infeasible, &tightened) );
+         assert(!infeasible);
 
-         sol = SCIPgetBestSol(subscip);
-
-         for( v = 0; v < nvars; ++v )
+         /* check if variable is fixed */
+         if( lbs[v] + 0.5 > ubs[v] )
          {
-            SCIP_VAR* subvar;
-            SCIP_VAR* var;
-            SCIP_Real fixval;
-            SCIP_Bool infeasible;
-            SCIP_Bool fixed;
-
-            var = vars[v];
-
-            subvar = (SCIP_VAR*)SCIPhashmapGetImage(varmapfw, var);
-            fixval =  SCIPgetSolVal(subscip, sol, subvar);
-
-            SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
+            SCIP_CALL( SCIPfixVar(scip, vars[v], lbs[v], &infeasible, &tightened) );
             assert(!infeasible);
 
-            if( fixed )
+            if( tightened )
                (*nfixedvars)++;
          }
+         else
+         {
+            SCIP_CALL( SCIPtightenVarLb(scip, vars[v], lbs[v], TRUE, &infeasible, &tightened) );
+            assert(!infeasible);
 
+            if( tightened )
+               (*nchgbds)++;
+
+            SCIP_CALL( SCIPtightenVarUb(scip, vars[v], ubs[v], TRUE, &infeasible, &tightened) );
+            assert(!infeasible);
+
+            if( tightened )
+               (*nchgbds)++;
+
+            allfixed = FALSE;
+         }
+      }
+
+      /* if all variables are fixed, remove the cumulative constraint since it is redundant */
+      if( allfixed )
+      {
          SCIP_CALL( SCIPdelCons(scip, cons) );
          (*ndelconss)++;
-
-         break;
-      }
-      case SCIP_STATUS_NODELIMIT:
-      case SCIP_STATUS_TIMELIMIT:
-      case SCIP_STATUS_MEMLIMIT:
-      {
-         SCIP_VAR* var;
-         SCIP_Bool infeasible;
-         SCIP_Bool tightened;
-
-         /* transfer the bound changes */
-         for( v = 0; v < nvars; ++v )
-         {
-            var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[v]);
-
-            SCIP_CALL( SCIPtightenVarLb(scip, vars[v], SCIPvarGetLbGlobal(var), TRUE, &infeasible, &tightened) );
-            assert(!infeasible);
-
-            if( tightened )
-               (*nchgbds)++;
-
-            SCIP_CALL( SCIPtightenVarUb(scip, vars[v], SCIPvarGetUbGlobal(var), TRUE, &infeasible, &tightened) );
-            assert(!infeasible);
-
-            if( tightened )
-               (*nchgbds)++;
-
-         }
-         break;
-      }
-      case SCIP_STATUS_UNKNOWN:
-      case SCIP_STATUS_USERINTERRUPT:
-      case SCIP_STATUS_STALLNODELIMIT:
-      case SCIP_STATUS_GAPLIMIT:
-      case SCIP_STATUS_SOLLIMIT:
-      case SCIP_STATUS_BESTSOLLIMIT:
-      case SCIP_STATUS_TOTALNODELIMIT:
-         SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
-         return SCIP_INVALIDDATA;
       }
    }
 
-   /* free hash map */
-   SCIPhashmapFree(&varmapfw);
-
-   SCIP_CALL( SCIPfree(&subscip) );
+   SCIPfreeBufferArray(scip, &ubs);
+   SCIPfreeBufferArray(scip, &lbs);
 
    return SCIP_OKAY;
 }
@@ -9640,5 +9548,187 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
 
    return SCIP_OKAY;
 }
+
+/** solves given cumulative condition as independent sub problem
+ *
+ *  @note The time and memory limit of the SCIP environment in transferred to sub solver
+ *
+ *  @note If the problem was solved to optimized the lbs and ubs array constain the solution values; If the problem was
+ *        not solved to optimized these two arrays constain the global bounds at the time the sub solver was interrupted
+ */
+SCIP_RETCODE SCIPsolveCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Real*            lbs,                /**< array to store the lower bounds after solving */
+   SCIP_Real*            ubs,                /**< array to store the upper bounds after solving */
+   SCIP_Longint          maxnodes,           /**< maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit) */
+   SCIP_Bool*            cutoff,             /**< pointer to store if the constraint is infeasible */
+   SCIP_Bool*            unbounded           /**< pointer to store if the constraint is unbounded */
+   )
+{
+
+   SCIP* subscip;
+   SCIP_VAR** subvars;
+   SCIP_CONS* cons;
+   SCIP_Real timelimit;
+   SCIP_Real memorylimit;
+   char probname[SCIP_MAXSTRLEN];
+   int v;
+
+   (*cutoff) = FALSE;
+   (*unbounded) = FALSE;
+
+   for( v = 0; v < nvars; ++v )
+   {
+      lbs[v] = SCIPvarGetLbLocal(vars[v]);
+      ubs[v] = SCIPvarGetUbLocal(vars[v]);
+   }
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+   if( !SCIPisInfinity(scip, memorylimit) )
+   {
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+      return SCIP_OKAY;
+
+   /* initialize the sub-problem */
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   /* copy all plugins */
+   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+
+   /* get name of the original problem and add the string "_cumulative" */
+   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_cumulative", SCIPgetProbName(scip));
+
+   /* create the subproblem */
+   SCIP_CALL( SCIPcreateProbBasic(subscip, probname) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+
+   /* create for each job a start time variable */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_VAR* var;
+
+      var = vars[v];
+      assert(var != NULL);
+
+      SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[v], SCIPvarGetName(var),
+            lbs[v], ubs[v], SCIPvarGetObj(var), SCIP_VARTYPE_INTEGER) );
+      SCIP_CALL( SCIPaddVar(subscip, subvars[v]) );
+   }
+
+   /* create cumulative constraint */
+   SCIP_CALL( SCIPcreateConsBasicCumulative(subscip, &cons, "cumulative",
+         nvars, subvars, durations, demands, capacity) );
+
+   /* set effective horizon */
+   SCIP_CALL( SCIPsetHminCumulative(scip, cons, hmin) );
+   SCIP_CALL( SCIPsetHmaxCumulative(scip, cons, hmax) );
+
+   /* add cumulative constraint */
+   SCIP_CALL( SCIPaddCons(subscip, cons) );
+   SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+
+   /* set CP solver settings
+    *
+    * @note This "meta" setting has to be set first since this call overwrite all parameters including for example the
+    *       time limit.
+    */
+   SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+
+   /* disable output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+
+   /* set limits for the subproblem */
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+
+   /* forbid recursive call of heuristics and separators solving subMIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
+
+   /* solve single cumulative constraint by branch and bound */
+   SCIP_CALL( SCIPsolve(subscip) );
+
+   /* evaluated solution status */
+   switch( SCIPgetStatus(subscip) )
+   {
+   case SCIP_STATUS_INFORUNBD:
+   case SCIP_STATUS_INFEASIBLE:
+      *cutoff = TRUE;
+      break;
+   case SCIP_STATUS_UNBOUNDED:
+      *unbounded = TRUE;
+      break;
+   case SCIP_STATUS_OPTIMAL:
+   {
+      SCIP_SOL* sol;
+      SCIP_Real solval;
+
+      sol = SCIPgetBestSol(subscip);
+
+      for( v = 0; v < nvars; ++v )
+      {
+         solval = SCIPgetSolVal(subscip, sol, subvars[v]);
+
+         lbs[v] = solval;
+         ubs[v] = solval;
+      }
+      break;
+   }
+   case SCIP_STATUS_NODELIMIT:
+   case SCIP_STATUS_TIMELIMIT:
+   case SCIP_STATUS_MEMLIMIT:
+      /* transfer the bound changes */
+      for( v = 0; v < nvars; ++v )
+      {
+         lbs[v] = SCIPvarGetLbGlobal(subvars[v]);
+         ubs[v] = SCIPvarGetUbGlobal(subvars[v]);
+      }
+      break;
+
+   case SCIP_STATUS_UNKNOWN:
+   case SCIP_STATUS_USERINTERRUPT:
+   case SCIP_STATUS_STALLNODELIMIT:
+   case SCIP_STATUS_GAPLIMIT:
+   case SCIP_STATUS_SOLLIMIT:
+   case SCIP_STATUS_BESTSOLLIMIT:
+   case SCIP_STATUS_TOTALNODELIMIT:
+      SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
+      return SCIP_INVALIDDATA;
+   }
+
+   /* release all variables */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_CALL( SCIPreleaseVar(subscip, &subvars[v]) );
+   }
+
+   SCIP_CALL( SCIPfree(&subscip) );
+
+   SCIPfreeBufferArray(scip, &subvars);
+
+   return SCIP_OKAY;
+   }
 
 /**@} */
