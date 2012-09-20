@@ -1632,8 +1632,7 @@ SCIP_RETCODE consdataDeletePos(
    assert(consdata != NULL);
    assert(cons != NULL);
    assert(SCIPconsIsTransformed(cons));
-
-   assert(pos < consdata->nvars);
+   assert(!SCIPinProbing(scip));
 
    SCIPdebugMessage("cumulative constraint <%s>: remove variable <%s>\n",
       SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[pos]));
@@ -5247,7 +5246,7 @@ SCIP_RETCODE propagateAllConss(
    int nvars;
    int v;
 
-   if( SCIPinProbing(scip) )
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
    nvars = SCIPgetNVars(scip);
@@ -6625,7 +6624,7 @@ SCIP_RETCODE fixIntegerVariableUb(
    /* if SCIP is in probing mode we cannot perform this dual reductions since this dual reduction would end in an
     * implication which can lead to an infeasible cutoff (optimal solution)
     */
-   if( SCIPinProbing(scip) )
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
    /* rounding the variable to the upper bound is only a feasible dual reduction if the cumulative constraint
@@ -6677,7 +6676,7 @@ SCIP_RETCODE fixIntegerVariableLb(
    /* if SCIP is in probing mode we cannot perform this dual reductions since this dual reduction would end in an
     * implication which can lead to cutoff the optimal solution
     */
-   if( SCIPinProbing(scip) )
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
    /* rounding the variable to the lower bound is only a feasible dual reduction if the cumulative constraint
