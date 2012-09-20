@@ -40,10 +40,12 @@
  */
 
 /*
- * @todo find subsets \f$J'\f$ of jobs which are together not schedulable and create knapsack constraint
+ * @todo Find subsets \f$J'\f$ of jobs which are together not schedulable and create knapsack constraint
  *       \f$\sum_{j\in J'} p_j \cdot d_j \leq (lct(J') - est(J')) \cdot C\f$
- * @todo use a rectangle relaxation to determine if jobs which run in a certain interval can be packed feasible. this
+ * @todo Use a rectangle relaxation to determine if jobs which run in a certain interval can be packed feasible. this
  *       relaxation ignores the actual start and end time of a job.
+ * @todo Adjsut relaxation after jobs are removed during search
+ *
  */
 
 
@@ -111,7 +113,8 @@ struct SCIP_ConsData
    int                   nglbfixedones;      /**< number of binary variable globally fixed to one */
    int                   est;                /**< used earliest start time for the relaxation */
    int                   lct;                /**< used latest completion time for the relaxation */
-   SCIP_Bool             relaxadded;         /**< was relaxation added? */
+   unsigned int          relaxadded:1;       /**< was relaxation added? */
+   unsigned int          tryedsolving:1;     /**< bool to store if it was tryed to solve the cumulative sub-problem */
 };
 
 /** constraint handler data */
@@ -214,6 +217,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->nglbfixedzeros = 0;
    (*consdata)->nglbfixedones = 0;
    (*consdata)->relaxadded = FALSE;
+   (*consdata)->tryedsolving = FALSE;
 
    if( nvars > 0 )
    {
@@ -345,20 +349,17 @@ SCIP_RETCODE consdataPrint(
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+   SCIP_CONSHDLRDATA**   conshdlrdata,       /**< pointer to store the constraint handler data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< used event handler for tracing bound changes on binary variables */
    )
 {
+   assert(scip != NULL);
    assert(conshdlrdata != NULL);
+   assert(eventhdlr != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
-   /* get event handler for bound change events */
-   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   if( (*conshdlrdata)->eventhdlr == NULL )
-   {
-      SCIPerrorMessage("event handler for set partitioning / packing / covering constraints not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
+   (*conshdlrdata)->eventhdlr = eventhdlr;
 
    return SCIP_OKAY;
 }
@@ -428,7 +429,7 @@ SCIP_RETCODE catchEvent(
    else if( SCIPvarGetLbGlobal(binvar) > 0.5 )
       consdata->nglbfixedones++;
 
-   assert(consdata->nglbfixedzeros + consdata->nglbfixedones<= consdata->nvars);
+   assert(consdata->nglbfixedzeros + consdata->nglbfixedones <= consdata->nvars);
 
    return SCIP_OKAY;
 }
@@ -1016,7 +1017,11 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPaddCons(subscip, cons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
 
-   /* set CP solver settings */
+   /* set CP solver settings
+    *
+    * @note This "meta" setting has to be set first since this call overwrite all parameters including for example the
+    *       time limit.
+    */
    SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
 
    /* do not abort subproblem on CTRL-C */
@@ -1026,7 +1031,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
    /* set limits for the subproblem */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 10000) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 100) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
@@ -1590,6 +1595,8 @@ SCIP_RETCODE propagateCons(
       {
          SCIP_CALL( solveSubproblem(scip, cons, binvars, vars, durations, demands,
                consdata->capacity, nfixedones, nchgbds, cutoff) );
+
+         consdata->tryedsolving = TRUE;
       }
       else
       {
@@ -2620,14 +2627,14 @@ SCIP_RETCODE SCIPincludeConshdlrOptcumulative(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-
+   SCIP_EVENTHDLR* eventhdlr;
 
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecOptcumulative, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecOptcumulative, NULL) );
 
    /* create constraint handler data */
-   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
+   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata, eventhdlr) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
