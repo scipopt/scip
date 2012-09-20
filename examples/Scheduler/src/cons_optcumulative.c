@@ -879,14 +879,19 @@ void collectActivities(
    int*                  durations,          /**< durations of the activities */
    int*                  demands,            /**< demands of the activities */
    int*                  nfixedones,         /**< pointer to store number of activities assigned to that machine */
-   int*                  nfixedzeros         /**< pointer to store number of binary variables fixed to zeor */
+   int*                  nfixedzeros,        /**< pointer to store number of binary variables fixed to zeor */
+   SCIP_Bool*            auxiliary           /**< pointer to store if the integer start time variables of the assigned
+                                              *   activities are auxiliary variables; that is the case if the machine
+                                              *   choice constraints is the only one haveing locks on these variables */
    )
 {
    int v;
 
    /* collect all jobs which have to be processed */
+   (*auxiliary) = TRUE;
    (*nfixedones) = 0;
    (*nfixedzeros) = 0;
+
    for( v = 0; v < consdata->nvars; ++v )
    {
       if( SCIPvarGetLbLocal(consdata->binvars[v]) > 0.5 )
@@ -900,6 +905,12 @@ void collectActivities(
          demands[*nfixedones] = consdata->demands[v];
 
          (*nfixedones)++;
+
+         /* check the locks on the integer start time variable to determine if its a auxiliary variable */
+         if( SCIPvarGetNLocksDown(consdata->vars[v]) > (int)consdata->downlocks[v]
+            || SCIPvarGetNLocksUp(consdata->vars[v]) > (int)consdata->uplocks[v]
+            )
+            (*auxiliary) = FALSE;
       }
       else if( SCIPvarGetUbLocal(consdata->binvars[v]) < 0.5 )
          (*nfixedzeros)++;
@@ -952,7 +963,7 @@ void collectSolActivities(
 static
 SCIP_RETCODE solveSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            origcons,           /**< optcumulative constraint which collapsed to a cumulative constraint locally */
+   SCIP_CONS*            cons,               /**< optcumulative constraint which collapsed to a cumulative constraint locally */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_VAR**            binvars,            /**< array of variable representing if the job has to be processed on this machine */
    SCIP_VAR**            vars,               /**< start time variables of the activities which are assigned */
@@ -1000,7 +1011,7 @@ SCIP_RETCODE solveSubproblem(
       }
 
       /* perform conflict analysis */
-      SCIP_CALL( SCIPanalyzeConflictCons(scip, origcons, NULL) );
+      SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
    }
    else
    {
@@ -1479,6 +1490,7 @@ SCIP_RETCODE propagateCons(
    SCIP_CONSDATA* consdata;
    SCIP_VAR** binvars;
    SCIP_VAR** vars;
+   SCIP_Bool auxiliary;
    int* durations;
    int* demands;
    int nfixedones;
@@ -1501,7 +1513,7 @@ SCIP_RETCODE propagateCons(
    SCIP_CALL( SCIPallocBufferArray(scip, &durations, consdata->nvars) );
 
    /* collect all activities which are locally assigned to that machine */
-   collectActivities(consdata, binvars, vars, durations, demands, &nfixedones, &nfixedzeros);
+   collectActivities(consdata, binvars, vars, durations, demands, &nfixedones, &nfixedzeros, &auxiliary);
 
    /* if more than one variable is assigned to that machine propagate the cumulative condition */
    if( nfixedones > 1 )
@@ -1546,8 +1558,11 @@ SCIP_RETCODE propagateCons(
    {
       if( nfixedzeros + nfixedones == consdata->nvars )
       {
-         SCIP_CALL( solveSubproblem(scip, cons, consdata, binvars, vars, durations, demands,
-               consdata->capacity, nfixedones, nchgbds, cutoff) );
+         if( auxiliary )
+         {
+            SCIP_CALL( solveSubproblem(scip, cons, consdata, binvars, vars, durations, demands,
+                  consdata->capacity, nfixedones, nchgbds, cutoff) );
+         }
       }
       else
       {
@@ -1635,12 +1650,7 @@ SCIP_RETCODE propagateCons(
                       * use this bound change to reason somethingx
                       */
                      SCIP_CALL( SCIPtightenVarLb(scip, var, lb, FALSE, &infeasible, &tightened) );
-
-                     if( infeasible )
-                     {
-                        (*cutoff) = TRUE;
-                        break;
-                     }
+                     assert(!infeasible);
 
                      if( tightened )
                         (*nchgbds)++;
