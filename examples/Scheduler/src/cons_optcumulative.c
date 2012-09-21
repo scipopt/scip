@@ -1488,6 +1488,355 @@ SCIP_RETCODE removeIrrelevantJobs(
    return SCIP_OKAY;
 }
 
+/** presolve cumulative condition w.r.t. effective horizon by detecting irrelevant variables */
+static
+SCIP_RETCODE presolveCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to be checked */
+   int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
+   int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
+   int*                  nchgsides           /**< pointer to store the number of side changes */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool* irrelevants;
+   int nvars;
+   int v;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   nvars = consdata->nvars;
+   assert(nvars > 1);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &irrelevants, nvars) );
+   BMSclearMemoryArray(irrelevants, nvars);
+
+   /* use presolving of cumulative constraint handler to process cumulative condition */
+   SCIP_CALL( SCIPpresolveCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
+         consdata->hmin, consdata->hmax, consdata->downlocks, consdata->uplocks,
+         cons, irrelevants, nfixedvars, nchgsides) );
+
+   /* remove all variable which are irrelevant; note we have to iterate backwards do to the functionality of of
+    * consdataDeletePos()
+    */
+   for( v = nvars-1; v >= 0; --v )
+   {
+      SCIP_VAR* var;
+      int ect;
+      int lst;
+
+      if( !irrelevants[v] )
+         continue;
+
+      var = consdata->vars[v];
+      assert(var != NULL);
+
+      ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + consdata->durations[v];
+      lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
+
+      /* check if the jobs runs completely during the effective horizon */
+      if( lst <= consdata->hmin && ect >= consdata->hmax )
+      {
+         assert(!consdata->downlocks[v]);
+         assert(!consdata->uplocks[v]);
+
+         if( consdata->capacity < consdata->demands[v] )
+         {
+            SCIP_Bool infeasible;
+            SCIP_Bool tightened;
+
+            SCIP_CALL( SCIPfixVar(scip, consdata->binvars[0], 0.0, &infeasible, &tightened) );
+            assert(!infeasible);
+            assert(tightened);
+            (*nfixedvars)++;
+
+            consdata->capacity -= consdata->demands[v];
+
+            SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+            (*nchgcoefs)++;
+         }
+      }
+      else
+      {
+         SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+         (*nchgcoefs)++;
+      }
+   }
+
+   SCIPdebugMessage("constraint <%s>[%d,%d) <= %d has %d variables left\n", SCIPconsGetName(cons),
+      consdata->hmin, consdata->hmax, consdata->capacity, nvars);
+
+   SCIPfreeBufferArray(scip, &irrelevants);
+
+   return SCIP_OKAY;
+}
+
+/** create an an set partitioning constraint */
+static
+SCIP_RETCODE createSetPackingCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var1,               /**< first variable */
+   SCIP_VAR*             var2                /**< second variable */
+   )
+{
+   SCIP_CONS* cons;
+
+   SCIP_CALL( SCIPcreateConsBasicSetpack(scip, &cons, "implication", 0, NULL) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   SCIP_CALL( SCIPaddCoefSetppc(scip, cons, var1) );
+   SCIP_CALL( SCIPaddCoefSetppc(scip, cons, var2) );
+   SCIPdebugPrintCons(scip, cons, NULL);
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   return SCIP_OKAY;
+}
+
+/** create variable bound constraint */
+static
+SCIP_RETCODE createVarboundCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             binvar,             /**< binary variable x */
+   SCIP_VAR*             intvar,             /**< integer variable y */
+   int                   bound,              /**< variable bound */
+   SCIP_Bool             lower               /**< variable lower bound? (Otherwise upper bound) */
+   )
+{
+   SCIP_CONS* cons;
+   SCIP_Real coef;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+
+   assert(scip != NULL);
+
+   if( lower )
+   {
+      lhs = SCIPvarGetLbGlobal(intvar);
+      rhs = SCIPinfinity(scip);
+      coef = lhs - bound;
+   }
+   else
+   {
+      lhs = -SCIPinfinity(scip);
+      rhs = SCIPvarGetUbGlobal(intvar);
+      coef = rhs - bound;
+   }
+
+   SCIP_CALL( SCIPcreateConsBasicVarbound(scip, &cons, "implication", intvar, binvar, coef, lhs, rhs) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIPdebugPrintCons(scip, cons, NULL);
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   return SCIP_OKAY;
+}
+
+/** detect implication */
+static
+SCIP_RETCODE detectImplications(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< optcumulative constraint */
+   int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
+   int*                  naddconss           /**< pointer to store the number of added constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** binvars;
+   SCIP_VAR** vars;
+   int* durations;
+   int hmin;
+   int hmax;
+   int v;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   vars = consdata->vars;
+   binvars = consdata->binvars;
+   durations = consdata->durations;
+
+   hmin = consdata->hmin;
+   hmax = consdata->hmax;
+   assert(hmin < hmax);
+
+   SCIPdebugMessage("search for implications <%s>[%d,%d) <= %d\n", SCIPconsGetName(cons), hmin, hmax, consdata->capacity);
+
+   /* we loop backwards since we are deleting variable out of the constraint */
+   for( v = consdata->nvars-1; v >= 0; --v )
+   {
+      SCIP_VAR* var;
+      int start;
+      int end;
+
+      var = vars[v];
+      assert(var != NULL);
+
+      /* skip start time variables which are not globally fixed */
+      if( SCIPvarGetLbGlobal(var) + 0.5 < SCIPvarGetUbGlobal(var) )
+         continue;
+
+      start = convertBoundToInt(scip, SCIPvarGetLbGlobal(var));
+      assert(start < hmax);
+
+      end = start + durations[v];
+      assert(end > hmin);
+
+      SCIPdebugMessage("candidate <%s> (start %d, end %d, demand %d)\n", SCIPvarGetName(var), start, end, consdata->demands[v]);
+
+      if( start <= hmin && end >= hmax )
+      {
+         int j;
+
+         /* job runs during the complete time horizon */
+         for( j = 0; j < consdata->nvars; ++j )
+         {
+            SCIP_VAR* implvar;
+            int est;
+            int ect;
+            int lst;
+            int lct;
+
+            if( j == v )
+               continue;
+
+            implvar = vars[j];
+            assert(implvar != NULL);
+
+            est = convertBoundToInt(scip, SCIPvarGetLbGlobal(implvar));
+            ect = est + durations[j];
+            lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(implvar));
+            lct = lst + durations[j];
+
+            SCIPdebugMessage("variable <%s>[%d,%d] (duration %d, demand %d)\n", SCIPvarGetName(implvar), est, lst, durations[j], consdata->demands[j]);
+
+            /* check if the job will overlap with effective horizon, if only one of the two jobs can be scheduled on
+             * that machine
+             */
+            if( ect > hmin || lst < hmax )
+            {
+               SCIP_CALL( createSetPackingCons(scip, binvars[v], binvars[j]) );
+               (*naddconss)++;
+            }
+            else if( lct <= hmax )
+            {
+               SCIP_CALL( createVarboundCons(scip, binvars[v], implvar, hmin - durations[j], FALSE) );
+               (*naddconss)++;
+            }
+            else if( est >= hmin )
+            {
+               SCIP_CALL( createVarboundCons(scip, binvars[v], implvar, hmax, TRUE) );
+               (*naddconss)++;
+            }
+            else
+            {
+               SCIPerrorMessage("not implemented yet\n");
+               abort();
+            }
+         }
+      }
+      else if( start <= hmin )
+      {
+         int j;
+
+         assert(end > hmin);
+
+         /* job overlaps with hmin */
+         for( j = 0; j < consdata->nvars; ++j )
+         {
+            SCIP_VAR* implvar;
+            int est;
+            int ect;
+            int lst;
+
+            if( j == v )
+               continue;
+
+            implvar = vars[j];
+            assert(implvar != NULL);
+
+            est = convertBoundToInt(scip, SCIPvarGetLbGlobal(implvar));
+            ect = est + durations[j];
+            lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(implvar));
+
+            SCIPdebugMessage("variable <%s>[%d,%d] (duration %d, demand %d)\n", SCIPvarGetName(implvar), est, lst, durations[j], consdata->demands[j]);
+
+            if( lst < ect && hmin < ect && lst < end )
+            {
+               /* job j has a core which overlaps with job v within the effective horizon, hence, both jobs cannot run
+                * at same time on that machine
+                */
+               SCIP_CALL( createSetPackingCons(scip, binvars[v], binvars[j]) );
+            }
+            else if( end > lst )
+            {
+               SCIP_CALL( createSetPackingCons(scip, binvars[v], binvars[j]) );
+            }
+            else if( est < end )
+            {
+               SCIP_CALL( createVarboundCons(scip, binvars[v], implvar, end, TRUE) );
+               (*naddconss)++;
+            }
+         }
+      }
+      else if( end >= hmax )
+      {
+         int j;
+
+         assert(start < hmax);
+
+         /* job overlaps with hmax; that means if the job is scheduled on that machine all other jobs have to finish
+          * before that job starts
+          */
+         for( j = 0; j < consdata->nvars; ++j )
+         {
+            SCIP_VAR* implvar;
+            int ect;
+            int lst;
+            int lct;
+
+            if( j == v )
+               continue;
+
+            implvar = vars[j];
+            assert(implvar != NULL);
+
+            ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(implvar)) + durations[j];
+            lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(implvar));
+            lct = lst + durations[j];
+
+            SCIPdebugMessage("variable <%s>[%d,%d] (duration %d, demand %d)\n", SCIPvarGetName(implvar), ect - durations[j], lst, durations[j], consdata->demands[j]);
+
+            if( lst < ect && start < ect && lst < hmax )
+            {
+               /* job j has a core which overlaps with job v within the effective horizon, hence, both jobs cannot run
+                * at same time on that machine
+                */
+               SCIP_CALL( createSetPackingCons(scip, binvars[v], binvars[j]) );
+            }
+            else if( start < ect )
+            {
+               SCIP_CALL( createSetPackingCons(scip, binvars[v], binvars[j]) );
+            }
+            else if( lct > start )
+            {
+               /* job j potentially finishes to late, hence, if job v runs on that machine we can bound the start time
+                * variable of job j form above
+                */
+               SCIP_CALL( createVarboundCons(scip, binvars[v], implvar, start - durations[j], FALSE) );
+               (*naddconss)++;
+            }
+         }
+      }
+      else
+         continue;
+
+      consdataDeletePos(scip, consdata, cons, v);
+      (*nchgcoefs)++;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** propgates given constraint */
 static
 SCIP_RETCODE propagateCons(
@@ -2145,7 +2494,6 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
    for( c = 0; c < nconss && !cutoff; ++c )
    {
       SCIP_CONSDATA* consdata;
-      int v;
 
       cons = conss[c];
       mustpropagate = TRUE;
@@ -2160,7 +2508,6 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
 
       if( mustpropagate )
       {
-         SCIP_Bool* irrelevants;
          int nvars;
          int hmin;
          int hmax;
@@ -2176,8 +2523,10 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
          SCIP_CALL( SCIPnormalizeCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
                consdata->demands, &consdata->capacity, nchgcoefs, nchgsides) );
 
+         /* propagate the constaint */
          SCIP_CALL( propagateCons(scip, cons,  FALSE, nchgbds, &cutoff) );
 
+         /* if a cutoff was detected we are done */
          if( cutoff )
             break;
 
@@ -2252,74 +2601,17 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
             (*naddconss)++;
          }
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &irrelevants, nvars) );
-         BMSclearMemoryArray(irrelevants, nvars);
+         /* presolve cumulative condition w.r.t. effective horizon by detecting irrelevant variables */
+         SCIP_CALL( presolveCumulativeCondition(scip, cons, nfixedvars, nchgcoefs, nchgsides) );
 
-         /* use presolving of cumulative constraint handler to process cumulative condition */
-         SCIP_CALL( SCIPpresolveCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
-               consdata->hmin, consdata->hmax, consdata->downlocks, consdata->uplocks,
-               cons, irrelevants, nfixedvars, nchgsides) );
+         /* detect implications */
+         SCIP_CALL( detectImplications(scip, cons, nchgcoefs, naddconss) );
 
-         /* remove all variable which are irrelevant; note we have to iterate backwards do to the functionality of of
-          * consdataDeletePos()
+         /* try to upgrade optcumulative to cumulative constraint which is possible if all remaining binary variables
+          * are fixed to one; in case the constraint has no variable left it is removed
           */
-         for( v = nvars-1; v >= 0; --v )
-         {
-            SCIP_VAR* var;
-            int ect;
-            int lst;
-
-            if( !irrelevants[v] )
-               continue;
-
-            var = consdata->vars[v];
-            assert(var != NULL);
-
-            ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + consdata->durations[v];
-            lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
-
-            /* check if the jobs runs completely during the effective horizon */
-            if( lst <= consdata->hmin && ect >= consdata->hmax )
-            {
-               assert(!consdata->downlocks[v]);
-               assert(!consdata->uplocks[v]);
-
-               if( consdata->capacity < consdata->demands[v] )
-               {
-                  SCIP_Bool infeasible;
-                  SCIP_Bool tightened;
-
-                  SCIP_CALL( SCIPfixVar(scip, consdata->binvars[0], 0.0, &infeasible, &tightened) );
-                  assert(!infeasible);
-                  assert(tightened);
-                  (*nfixedvars)++;
-
-                  consdata->capacity -= consdata->demands[v];
-
-                  SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
-                  (*nchgcoefs)++;
-               }
-            }
-            else
-            {
-               SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
-               (*nchgcoefs)++;
-            }
-         }
-
-         SCIPdebugMessage("constraint <%s>[%d,%d) <= %d has %d variables left\n", SCIPconsGetName(cons),
-            consdata->hmin, consdata->hmax, consdata->capacity, nvars);
-
-         SCIPfreeBufferArray(scip, &irrelevants);
-
-         if( !cutoff )
-         {
-            /* try to upgrade optcumulative to cumulative constraint which is possible if all remaining binary variables
-             * are fixed to one; in case the constraint has no variable left it is removed
-             */
-            assert(!SCIPinProbing(scip));
-            SCIP_CALL( upgradeCons(scip, cons, ndelconss, nupgdconss, &mustpropagate) );
-         }
+         assert(!SCIPinProbing(scip));
+         SCIP_CALL( upgradeCons(scip, cons, ndelconss, nupgdconss, &mustpropagate) );
       }
    }
 
