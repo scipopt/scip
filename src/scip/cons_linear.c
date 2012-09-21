@@ -13,7 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-
 /**@file   cons_linear.c
  * @brief Constraint handler for linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.
  * @author Tobias Achterberg
@@ -4677,6 +4676,12 @@ SCIP_RETCODE tightenVarBoundsEasy(
    if( !consdata->validactivities )
       consdataCalcActivities(scip, consdata);
    assert(consdata->validactivities);
+   if( !consdata->validminact )
+      consdataRecomputeMinactivity(scip, consdata);
+   assert(consdata->validminact);
+   if( !consdata->validmaxact )
+      consdataRecomputeMaxactivity(scip, consdata);
+   assert(consdata->validmaxact);
 
    if( val > 0.0 )
    {
@@ -4689,6 +4694,9 @@ SCIP_RETCODE tightenVarBoundsEasy(
          slack = rhs - consdata->minactivity;
          if( SCIPisNegative(scip, slack) )
          {
+            SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, minactivity=%.15g > rhs=%.15g\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), consdata->minactivity, rhs);
+
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
@@ -4706,7 +4714,12 @@ SCIP_RETCODE tightenVarBoundsEasy(
             SCIP_CALL( tightenVarUb(scip, cons, pos, PROPRULE_1_RHS, newub, ub, cutoff, nchgbds, force) );
 
             if( *cutoff )
+            {
+               SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
+                  SCIPconsGetName(cons), SCIPvarGetName(var), lb, newub);
+
                return SCIP_OKAY;
+            }
 
             /* collect the new upper bound which is needed for the lower bound computation */
             ub = SCIPvarGetUbLocal(var);
@@ -4722,6 +4735,9 @@ SCIP_RETCODE tightenVarBoundsEasy(
          slack = consdata->maxactivity - lhs;
          if( SCIPisNegative(scip, slack) )
          {
+            SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, maxactivity=%.15g < lhs=%.15g\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), consdata->maxactivity, lhs);
+
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
@@ -4739,7 +4755,12 @@ SCIP_RETCODE tightenVarBoundsEasy(
             SCIP_CALL( tightenVarLb(scip, cons, pos, PROPRULE_1_LHS, newlb, lb, cutoff, nchgbds, force) );
 
             if( *cutoff )
+            {
+               SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
+                  SCIPconsGetName(cons), SCIPvarGetName(var), newlb, ub);
+
                return SCIP_OKAY;
+            }
          }
       }
    }
@@ -4754,6 +4775,9 @@ SCIP_RETCODE tightenVarBoundsEasy(
          slack = rhs - consdata->minactivity;
          if( SCIPisNegative(scip, slack) )
          {
+            SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, minactivity=%.15g > rhs=%.15g\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), consdata->minactivity, rhs);
+
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
@@ -4771,8 +4795,12 @@ SCIP_RETCODE tightenVarBoundsEasy(
             SCIP_CALL( tightenVarLb(scip, cons, pos, PROPRULE_1_RHS, newlb, lb, cutoff, nchgbds, force) );
 
             if( *cutoff )
-               return SCIP_OKAY;
+            {
+               SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
+                  SCIPconsGetName(cons), SCIPvarGetName(var), newlb, ub);
 
+               return SCIP_OKAY;
+            }
             /* collect the new lower bound which is needed for the upper bound computation */
             lb = SCIPvarGetLbLocal(var);
          }
@@ -4787,6 +4815,9 @@ SCIP_RETCODE tightenVarBoundsEasy(
          slack = consdata->maxactivity - lhs;
          if( SCIPisNegative(scip, slack) )
          {
+            SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, maxactivity=%.15g < lhs=%.15g\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), consdata->maxactivity, lhs);
+
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
@@ -4804,7 +4835,12 @@ SCIP_RETCODE tightenVarBoundsEasy(
             SCIP_CALL( tightenVarUb(scip, cons, pos, PROPRULE_1_LHS, newub, ub, cutoff, nchgbds, force) );
 
             if( *cutoff )
+            {
+               SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
+                  SCIPconsGetName(cons), SCIPvarGetName(var), lb, newub);
+
                return SCIP_OKAY;
+            }
          }
       }
    }
