@@ -1631,6 +1631,52 @@ SCIP_RETCODE createVarboundCons(
    return SCIP_OKAY;
 }
 
+/** create bound disjunction constraint */
+static
+SCIP_RETCODE createBounddisjunctionCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             binvar,             /**< binary variable x */
+   SCIP_VAR*             intvar,             /**< integer variable y */
+   int                   lb,                 /**< lower bound */
+   int                   ub                  /**< lower bound */
+   )
+{
+   SCIP_CONS* cons;
+   SCIP_VAR** vars;
+   SCIP_BOUNDTYPE* boundtypes;
+   SCIP_Real* bounds;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, 3) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, 3) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounds, 3) );
+
+   /* intvar >= ub */
+   vars[0] = intvar;
+   boundtypes[0] = SCIP_BOUNDTYPE_LOWER;
+   bounds[0] = ub;
+
+   /* intvar <= lb */
+   vars[1] = intvar;
+   boundtypes[1] = SCIP_BOUNDTYPE_UPPER;
+   bounds[1] = lb;
+
+   /* binvar <= 0.0 */
+   vars[2] = binvar;
+   boundtypes[2] = SCIP_BOUNDTYPE_LOWER;
+   bounds[2] = 0.0;
+
+   SCIP_CALL( SCIPcreateConsBasicBounddisjunction(scip, &cons, "implication", 3, vars, boundtypes, bounds) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIPdebugPrintCons(scip, cons, NULL);
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &boundtypes);
+   SCIPfreeBufferArray(scip, &bounds);
+
+   return SCIP_OKAY;
+}
+
 /** detect implication */
 static
 SCIP_RETCODE detectImplications(
@@ -1694,7 +1740,6 @@ SCIP_RETCODE detectImplications(
             int est;
             int ect;
             int lst;
-            int lct;
 
             if( j == v )
                continue;
@@ -1705,32 +1750,31 @@ SCIP_RETCODE detectImplications(
             est = convertBoundToInt(scip, SCIPvarGetLbGlobal(implvar));
             ect = est + durations[j];
             lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(implvar));
-            lct = lst + durations[j];
 
             SCIPdebugMessage("variable <%s>[%d,%d] (duration %d, demand %d)\n", SCIPvarGetName(implvar), est, lst, durations[j], consdata->demands[j]);
 
-            /* check if the job will overlap with effective horizon, if only one of the two jobs can be scheduled on
+            /* check if the job will overlap with effective horizon, hence, only one of the two jobs can be scheduled on
              * that machine
              */
-            if( ect > hmin || lst < hmax )
+            if( ect > hmin && lst < hmax )
             {
                SCIP_CALL( createSetPackingCons(scip, binvars[v], binvars[j]) );
                (*naddconss)++;
             }
-            else if( lct <= hmax )
+            else if( lst < hmax )
             {
                SCIP_CALL( createVarboundCons(scip, binvars[v], implvar, hmin - durations[j], FALSE) );
                (*naddconss)++;
             }
-            else if( est >= hmin )
+            else if( ect > hmin )
             {
                SCIP_CALL( createVarboundCons(scip, binvars[v], implvar, hmax, TRUE) );
                (*naddconss)++;
             }
             else
             {
-               SCIPerrorMessage("not implemented yet\n");
-               abort();
+               SCIP_CALL( createBounddisjunctionCons(scip, binvars[v], implvar, hmin - durations[j], hmax) );
+               (*naddconss)++;
             }
          }
       }
@@ -1766,10 +1810,12 @@ SCIP_RETCODE detectImplications(
                 * at same time on that machine
                 */
                SCIP_CALL( createSetPackingCons(scip, binvars[v], binvars[j]) );
+               (*naddconss)++;
             }
             else if( end > lst )
             {
                SCIP_CALL( createSetPackingCons(scip, binvars[v], binvars[j]) );
+               (*naddconss)++;
             }
             else if( est < end )
             {
@@ -1812,10 +1858,12 @@ SCIP_RETCODE detectImplications(
                 * at same time on that machine
                 */
                SCIP_CALL( createSetPackingCons(scip, binvars[v], binvars[j]) );
+               (*naddconss)++;
             }
             else if( start < ect )
             {
                SCIP_CALL( createSetPackingCons(scip, binvars[v], binvars[j]) );
+               (*naddconss)++;
             }
             else if( lct > start )
             {
