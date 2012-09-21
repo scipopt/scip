@@ -1008,6 +1008,10 @@ SCIP_RETCODE solveSubproblem(
       for( v = 0; v < nvars; ++v )
       {
          SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[v]) );
+
+         /* we have to add the lower and upper bounds of of the start time variable to have a valid reason */
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[v], NULL) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[v], NULL) );
       }
 
       /* perform conflict analysis */
@@ -1021,9 +1025,6 @@ SCIP_RETCODE solveSubproblem(
 
       for( v = 0; v < nvars; ++v )
       {
-         SCIP_CALL( SCIPtightenVarLb(scip, vars[v], lbs[v], TRUE, &infeasible, &tightened) );
-         assert(!infeasible);
-
          SCIP_CALL( SCIPtightenVarLb(scip, vars[v], lbs[v], TRUE, &infeasible, &tightened) );
          assert(!infeasible);
 
