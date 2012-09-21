@@ -694,7 +694,9 @@ SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data structure */
-   SCIP_CONS*            cons                /**< optcumulative constraint */
+   SCIP_CONS*            cons,               /**< optcumulative constraint */
+   SCIP_Bool*            rowadded,           /**< pointer to store if a row was added */
+   SCIP_Bool*            consadded           /**< pointer to store if a constraint was added */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -778,11 +780,13 @@ SCIP_RETCODE addRelaxation(
                {
                   /* creates and adds an LP row in a optcumulative constraint data */
                   SCIP_CALL( createRow(scip, conshdlr, name, vars, weights, nvars, capacity, SCIPconsIsLocal(cons)) );
+                  (*rowadded) = TRUE;
                }
                else
                {
                   /* creates and add knapsack constraint */
                   SCIP_CALL( createKnapsack(scip, name, vars, weights, nvars, capacity, SCIPconsIsLocal(cons)) );
+                  (*consadded) = TRUE;
                }
             }
          }
@@ -840,17 +844,19 @@ SCIP_RETCODE addRelaxation(
 
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s[%d,%d]", SCIPconsGetName(cons), est, lct);
 
-         SCIPdebugMessage("create linear relaxation for <%s>time interval [%d,%d] <= %"SCIP_LONGINT_FORMAT"\n", SCIPconsGetName(cons), est, lct, capacity);
+         SCIPdebugMessage("create linear relaxation for <%s> (nvars %d) time interval [%d,%d] <= %"SCIP_LONGINT_FORMAT"\n", SCIPconsGetName(cons), nvars, est, lct, capacity);
 
          if( conshdlrdata->rowrelax )
          {
             /* creates and adds an LP row in a optcumulative constraint data */
             SCIP_CALL( createRow(scip, conshdlr, name, consdata->binvars, weights, nvars, capacity, SCIPconsIsLocal(cons)) );
+            (*rowadded) = TRUE;
          }
          else
          {
             /* creates and add knapsack constraint */
             SCIP_CALL( createKnapsack(scip, name, consdata->binvars, weights, nvars, capacity, SCIPconsIsLocal(cons)) );
+            (*consadded) = TRUE;
          }
       }
 
@@ -860,10 +866,12 @@ SCIP_RETCODE addRelaxation(
 
    consdata->relaxadded = TRUE;
 
+#if 0
    if( !conshdlrdata->rowrelax )
    {
       SCIP_CALL( SCIPrestartSolve(scip) );
    }
+#endif
 
    return SCIP_OKAY;
 }
@@ -1369,6 +1377,8 @@ SCIP_RETCODE consdataDeletePos(
    /* (debug) check if the counter of the constraint are correct */
    checkCounters(consdata);
 
+   consdata->relaxadded = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -1648,7 +1658,7 @@ SCIP_RETCODE propagateCons(
                      SCIPdebugMessage("  variable <%s> change lower bound from <%g> to <%g>\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), lb);
 
                      /* for this bound change there is no inference information needed since no other constraint can
-                      * use this bound change to reason somethingx
+                      * use this bound change to reason something
                       */
                      SCIP_CALL( SCIPtightenVarLb(scip, var, lb, FALSE, &infeasible, &tightened) );
                      assert(!infeasible);
@@ -1663,7 +1673,7 @@ SCIP_RETCODE propagateCons(
                      SCIPdebugMessage("  variable <%s> change upper bound from <%g> to <%g>\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var), ub);
 
                      /* for this boound change there is no inference information needed since no other constraint can
-                      * use this bound change to reason somethingx
+                      * use this bound change to reason something
                       */
                      SCIP_CALL( SCIPtightenVarUb(scip, var, ub, FALSE, &infeasible, &tightened) );
                      assert(!infeasible);
@@ -1866,15 +1876,20 @@ static
 SCIP_DECL_CONSINITLP(consInitlpOptcumulative)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool rowadded;
+   SCIP_Bool consadded;
    int c;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   rowadded = FALSE;
+   consadded = FALSE;
+
    for( c = 0; c < nconss; ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addRelaxation(scip, conshdlr, conshdlrdata, conss[c]) );
+      SCIP_CALL( addRelaxation(scip, conshdlr, conshdlrdata, conss[c], &rowadded, &consadded) );
    }
 
    return SCIP_OKAY;
@@ -1882,7 +1897,34 @@ SCIP_DECL_CONSINITLP(consInitlpOptcumulative)
 
 
 /** separation method of constraint handler for LP solutions */
-#define consSepalpOptcumulative NULL
+static
+SCIP_DECL_CONSSEPALP(consSepalpOptcumulative)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool rowadded;
+   SCIP_Bool consadded;
+   int c;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   rowadded = FALSE;
+   consadded = FALSE;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CALL( addRelaxation(scip, conshdlr, conshdlrdata, conss[c], &rowadded, &consadded) );
+   }
+
+   if( consadded )
+      *result = SCIP_CONSADDED;
+   else if( rowadded )
+      *result = SCIP_SEPARATED;
+   else
+      *result = SCIP_DIDNOTFIND;
+
+   return SCIP_OKAY;
+}
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
