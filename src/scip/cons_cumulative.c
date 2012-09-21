@@ -2683,9 +2683,14 @@ SCIP_RETCODE solveIndependentCons(
    int nvars;
 
    assert(scip != NULL);
-   assert(!SCIPinProbing(scip));
    assert(!SCIPconsIsModifiable(cons));
    assert(SCIPgetNConss(scip) > 0);
+
+   /* if SCIP is in probing mode or repropagation we cannot perform this dual reductions since this dual reduction
+    * would/could end in an implication which can lead to cutoff of the/all optimal solution
+    */
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
+      return SCIP_OKAY;
 
    /* if the cumulative constraint is the only constraint do nothing */
    if( SCIPgetNConss(scip) == 1 )
@@ -6621,8 +6626,8 @@ SCIP_RETCODE fixIntegerVariableUb(
    SCIP_Bool infeasible;
    SCIP_Bool tightened;
 
-   /* if SCIP is in probing mode we cannot perform this dual reductions since this dual reduction would end in an
-    * implication which can lead to an infeasible cutoff (optimal solution)
+   /* if SCIP is in probing mode or repropagation we cannot perform this dual reductions since this dual reduction
+    * would/could end in an implication which can lead to cutoff of the/all optimal solution
     */
    if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
@@ -6673,8 +6678,8 @@ SCIP_RETCODE fixIntegerVariableLb(
    SCIP_Bool infeasible;
    SCIP_Bool tightened;
 
-   /* if SCIP is in probing mode we cannot perform this dual reductions since this dual reduction would end in an
-    * implication which can lead to cutoff the optimal solution
+   /* if SCIP is in probing mode or repropagation we cannot perform this dual reductions since this dual reduction
+    * would/could end in an implication which can lead to cutoff of the/all optimal solution
     */
    if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
