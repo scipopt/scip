@@ -9588,12 +9588,16 @@ SCIP_RETCODE SCIPsolveCumulativeCondition(
    (*cutoff) = FALSE;
    (*unbounded) = FALSE;
 
+   SCIPdebugMessage("solve independent cumulative condition with %d variables\n", nvars);
+
    for( v = 0; v < nvars; ++v )
    {
       assert(vars[v] != NULL);
 
       lbs[v] = SCIPvarGetLbLocal(vars[v]);
       ubs[v] = SCIPvarGetUbLocal(vars[v]);
+
+      SCIPdebug( SCIP_CALL( SCIPprintVar(scip, vars[v], NULL) ) )
    }
 
    /* check whether there is enough time and memory left */
@@ -9645,8 +9649,8 @@ SCIP_RETCODE SCIPsolveCumulativeCondition(
          nvars, subvars, durations, demands, capacity) );
 
    /* set effective horizon */
-   SCIP_CALL( SCIPsetHminCumulative(scip, cons, hmin) );
-   SCIP_CALL( SCIPsetHmaxCumulative(scip, cons, hmax) );
+   SCIP_CALL( SCIPsetHminCumulative(subscip, cons, hmin) );
+   SCIP_CALL( SCIPsetHmaxCumulative(subscip, cons, hmax) );
 
    /* add cumulative constraint */
    SCIP_CALL( SCIPaddCons(subscip, cons) );
@@ -9675,6 +9679,8 @@ SCIP_RETCODE SCIPsolveCumulativeCondition(
 
    /* solve single cumulative constraint by branch and bound */
    SCIP_CALL( SCIPsolve(subscip) );
+
+   SCIPdebugMessage("solved single cumulative condition with status %d\n", SCIPgetStatus(subscip));
 
    /* evaluated solution status */
    switch( SCIPgetStatus(subscip) )
@@ -9735,6 +9741,6 @@ SCIP_RETCODE SCIPsolveCumulativeCondition(
    SCIPfreeBufferArray(scip, &subvars);
 
    return SCIP_OKAY;
-   }
+}
 
 /**@} */
