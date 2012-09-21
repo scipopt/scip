@@ -9720,7 +9720,7 @@ SCIP_RETCODE SCIPsolveCumulativeCondition(
    case SCIP_STATUS_SOLLIMIT:
    case SCIP_STATUS_BESTSOLLIMIT:
    case SCIP_STATUS_TOTALNODELIMIT:
-      SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
+      SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(subscip));
       return SCIP_INVALIDDATA;
    }
 
