@@ -9709,8 +9709,10 @@ SCIP_RETCODE SCIPsolveCumulativeCondition(
       break;
    }
    case SCIP_STATUS_NODELIMIT:
+   case SCIP_STATUS_TOTALNODELIMIT:
    case SCIP_STATUS_TIMELIMIT:
    case SCIP_STATUS_MEMLIMIT:
+   case SCIP_STATUS_USERINTERRUPT:
       /* transfer the bound changes */
       for( v = 0; v < nvars; ++v )
       {
@@ -9720,12 +9722,10 @@ SCIP_RETCODE SCIPsolveCumulativeCondition(
       break;
 
    case SCIP_STATUS_UNKNOWN:
-   case SCIP_STATUS_USERINTERRUPT:
    case SCIP_STATUS_STALLNODELIMIT:
    case SCIP_STATUS_GAPLIMIT:
    case SCIP_STATUS_SOLLIMIT:
    case SCIP_STATUS_BESTSOLLIMIT:
-   case SCIP_STATUS_TOTALNODELIMIT:
       SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(subscip));
       return SCIP_INVALIDDATA;
    }
