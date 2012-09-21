@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_STATISTIC
+
 /**@file   heur_shiftandpropagate.c
  * @brief  shiftandpropagate primal heuristic
  * @author Timo Berthold
@@ -793,6 +793,7 @@ SCIP_RETCODE getOptimalShiftingValue(
    SCIP*                 scip,               /**< current scip instance */
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object */
    int                   varindex,           /**< index of variable which should be shifted */
+   int                   direction,          /**< the direction for this variable */
    int*                  rowweights,         /**< weighting of rows for best shift calculation */
    SCIP_Real*            steps,              /**< buffer array to store the individual steps for individual rows */
    int*                  violationchange,    /**< buffer array to store the individual change of feasibility of row */
@@ -817,6 +818,7 @@ SCIP_RETCODE getOptimalShiftingValue(
    assert(rowweights != NULL);
    assert(steps != NULL);
    assert(violationchange != NULL);
+   assert(direction == 1 || direction == -1);
 
    upperbound = matrix->upperbounds[varindex];
 
@@ -832,6 +834,7 @@ SCIP_RETCODE getOptimalShiftingValue(
    {
       SCIP_Real lhs;
       SCIP_Real rhs;
+      SCIP_Real val;
       int rowpos;
       SCIP_Bool rowisviolated;
       int rowweight;
@@ -842,6 +845,7 @@ SCIP_RETCODE getOptimalShiftingValue(
       lhs = matrix->lhs[rowpos];
       rhs = matrix->rhs[rowpos];
       rowweight = rowweights[rowpos];
+      val = direction * vals[i];
       assert(rowweight == DEFAULT_WEIGHT_INEQUALITY ||
         (!SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs)));
 
@@ -860,18 +864,18 @@ SCIP_RETCODE getOptimalShiftingValue(
          /* feasibility can only be violated if the variable has a lock in the corresponding direction,
           * i.e. a positive coefficient for a "<="-constraint, a negative coefficient for a ">="-constraint.
           */
-         if( SCIPisFeasGT(scip, vals[i], 0.0) && !SCIPisInfinity(scip, rhs) )
-            maxfeasshift = SCIPfeasFloor(scip, rhs/vals[i]);
-         else if( SCIPisFeasLT(scip, vals[i], 0.0) && !SCIPisInfinity(scip, -lhs) )
-            maxfeasshift = SCIPfeasFloor(scip, lhs/vals[i]);
+         if( SCIPisFeasGT(scip, val, 0.0) && !SCIPisInfinity(scip, rhs) )
+            maxfeasshift = SCIPfeasFloor(scip, rhs/val);
+         else if( SCIPisFeasLT(scip, val, 0.0) && !SCIPisInfinity(scip, -lhs) )
+            maxfeasshift = SCIPfeasFloor(scip, lhs/val);
 
          /* if the variable has no lock in the current row, it can still help to increase the slack of this row;
           * we measure slack increase for shifting by one
           */
-         if( SCIPisFeasGT(scip, vals[i], 0.0) && SCIPisInfinity(scip, rhs) )
-            slacksurplus += vals[i];
-         if( SCIPisFeasLT(scip, vals[i], 0.0) && SCIPisInfinity(scip, -lhs) )
-            slacksurplus -= vals[i];
+         if( SCIPisFeasGT(scip, val, 0.0) && SCIPisInfinity(scip, rhs) )
+            slacksurplus += val;
+         if( SCIPisFeasLT(scip, val, 0.0) && SCIPisInfinity(scip, -lhs) )
+            slacksurplus -= val;
 
          /* check if the least violating shift lies within variable bounds and set corresponding array values */
          if( SCIPisFeasLE(scip, maxfeasshift + 1.0, upperbound) )
@@ -898,10 +902,10 @@ SCIP_RETCODE getOptimalShiftingValue(
          /* if coefficient has the right sign to make row feasible, determine the minimum integer to shift variable
           * to obtain feasibility
           */
-         if( SCIPisFeasLT(scip, -lhs, 0.0) && SCIPisFeasGT(scip, vals[i], 0.0) )
-            minfeasshift = SCIPfeasCeil(scip, lhs/vals[i]);
-         else if( SCIPisFeasLT(scip, rhs,0.0) && SCIPisFeasLT(scip, vals[i], 0.0) )
-            minfeasshift = SCIPfeasCeil(scip, rhs/vals[i]);
+         if( SCIPisFeasLT(scip, -lhs, 0.0) && SCIPisFeasGT(scip, val, 0.0) )
+            minfeasshift = SCIPfeasCeil(scip, lhs/val);
+         else if( SCIPisFeasLT(scip, rhs,0.0) && SCIPisFeasLT(scip, val, 0.0) )
+            minfeasshift = SCIPfeasCeil(scip, rhs/val);
 
          /* check if the minimum feasibility recovery shift lies within variable bounds and set corresponding array
           * values
@@ -925,7 +929,7 @@ SCIP_RETCODE getOptimalShiftingValue(
     */
    if( allzero )
    {
-      *beststep = SCIPisFeasGT(scip, slacksurplus, 0.0) ? upperbound : 0.0;
+      *beststep = SCIPisFeasGT(scip, slacksurplus, 0.0) ? direction * upperbound : 0.0;
       return SCIP_OKAY;
    }
 
@@ -952,7 +956,7 @@ SCIP_RETCODE getOptimalShiftingValue(
       if( (i == nrows-1 || steps[i+1] > steps[i]) && sum < *rowviolations )
       {
          *rowviolations = sum;
-         *beststep = steps[i];
+         *beststep = direction * steps[i];
       }
    }
    assert(*rowviolations <= 0);
@@ -1641,29 +1645,33 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          continue;
       }
 
-      /* Variables with FREE transform status are currently not dealt with */
-      /* @todo change matrix representation and shiftval methods to treat FREE variables better */
+      /* compute optimal shift value for variable */
+      SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, 1, rowweights, steps, violationchange,
+            &optimalshiftvalue, &nviolations) );
+      assert(SCIPisFeasGE(scip, optimalshiftvalue, 0.0));
+
+      /* Variables with FREE transform have to be dealt with twice */
       if( matrix->transformstatus[permutedvarindex] == TRANSFORMSTATUS_FREE )
       {
-         ++lastindexofsusp;
-         assert(lastindexofsusp >= 0 && lastindexofsusp <= c);
+         SCIP_Real downshiftvalue;
+         int ndownviolations;
 
-         assert(permutedvarindex == permutation[c]);
+         downshiftvalue = 0.0;
+         ndownviolations = 0;
+         SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, -1, rowweights, steps, violationchange,
+               &downshiftvalue, &ndownviolations) );
 
-         permutation[c] = permutation[lastindexofsusp];
-         permutation[lastindexofsusp] = permutedvarindex;
+         assert(SCIPisLE(scip, downshiftvalue, 0.0));
 
-         SCIPdebugMessage("  Variable %s postponed from pos <%d> to <%d> due to FREE transform status\n", SCIPvarGetName(var), c, lastindexofsusp);
-
-         continue;
+         /* compare to positive direction and select the direction which makes more rows feasible */
+         if( ndownviolations < nviolations )
+         {
+            optimalshiftvalue = downshiftvalue;
+         }
       }
 
-      /* compute optimal shift value for variable */
-      SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, rowweights, steps, violationchange, &optimalshiftvalue, &nviolations) );
-      assert(SCIPisFeasGE(scip, optimalshiftvalue, 0.0) && !SCIPisInfinity(scip, optimalshiftvalue));
-
       /* in case the problem is already feasible, do not shift in the direction which deteriorates current objective */
-      if( nviolatedrows == 0 && SCIPisFeasGT(scip, obj, 0.0) )
+      if( nviolatedrows == 0 && SCIPisFeasGT(scip, obj * optimalshiftvalue, 0.0) )
          optimalshiftvalue = 0.0;
 
       /* retransform the solution value from the heuristic transformation space */
