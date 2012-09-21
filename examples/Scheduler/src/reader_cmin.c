@@ -656,8 +656,7 @@ SCIP_RETCODE createCipFormulation(
       /* construct constraint name */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d", j);
 
-      SCIP_CALL( SCIPcreateConsSetpart(scip, &cons, name, 0, NULL,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateConsBasicSetpart(scip, &cons, name, 0, NULL) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       conss[j] = cons;
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
