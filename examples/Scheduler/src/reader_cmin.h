@@ -27,12 +27,19 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** includes the cmin file reader into SCIP */
 extern
 SCIP_RETCODE SCIPincludeReaderCmin(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 
