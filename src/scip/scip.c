@@ -470,7 +470,7 @@ SCIP_Real getDualbound(
       if( scip->transprob->dualbound < SCIP_INVALID )
          lowerbound = SCIPprobInternObjval(scip->transprob, scip->set, scip->transprob->dualbound);
       else
-         return -SCIPinfinity(scip) * scip->transprob->objsense;
+         return SCIPprobExternObjval(scip->transprob, scip->set, -SCIPinfinity(scip));
    }
    else
       lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
