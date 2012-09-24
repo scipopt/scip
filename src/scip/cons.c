@@ -1916,6 +1916,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->lastenfopsdomchgcount = -1;
    (*conshdlr)->lastenfolpnode = -1;
    (*conshdlr)->lastenfopsnode = -1;
+   (*conshdlr)->lastenfolpresult = SCIP_DIDNOTRUN;
+   (*conshdlr)->lastenfopsresult = SCIP_DIDNOTRUN;
    (*conshdlr)->lastnfixedvars = 0;
    (*conshdlr)->lastnaggrvars = 0;
    (*conshdlr)->lastnchgvartypes = 0;
@@ -2076,6 +2078,8 @@ SCIP_RETCODE SCIPconshdlrInit(
       conshdlr->lastenfopsdomchgcount = -1;
       conshdlr->lastenfolpnode = -1;
       conshdlr->lastenfopsnode = -1;
+      conshdlr->lastenfolpresult = SCIP_DIDNOTRUN;
+      conshdlr->lastenfopsresult = SCIP_DIDNOTRUN;
       conshdlr->maxnactiveconss = conshdlr->nactiveconss;
       conshdlr->startnactiveconss = 0;
       conshdlr->lastsepalpcount = -1;
@@ -2198,6 +2202,8 @@ SCIP_RETCODE SCIPconshdlrInitpre(
    conshdlr->lastenfopsdomchgcount = -1;
    conshdlr->lastenfolpnode = -1;
    conshdlr->lastenfopsnode = -1;
+   conshdlr->lastenfolpresult = SCIP_DIDNOTRUN;
+   conshdlr->lastenfopsresult = SCIP_DIDNOTRUN;
    conshdlr->maxnactiveconss = conshdlr->nactiveconss;
    conshdlr->startnactiveconss = 0;
    conshdlr->lastsepalpcount = -1;
@@ -2769,6 +2775,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          && conshdlr->lastenfolpnode == stat->nnodes
          && conshdlr->lastenfolpresult != SCIP_CONSADDED )
       {
+         assert(conshdlr->lastenfolpresult != SCIP_DIDNOTRUN);
          assert(conshdlr->lastenfolpresult != SCIP_CUTOFF);
          assert(conshdlr->lastenfolpresult != SCIP_BRANCHED);
          assert(conshdlr->lastenfolpresult != SCIP_REDUCEDDOM);
