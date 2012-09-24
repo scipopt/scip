@@ -2939,7 +2939,7 @@ SCIP_RETCODE solveIndependentCons(
       /* if all variables are fixed, remove the cumulative constraint since it is redundant */
       if( allfixed )
       {
-         SCIP_CALL( SCIPdelCons(scip, cons) );
+         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          (*ndelconss)++;
       }
    }

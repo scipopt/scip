@@ -313,7 +313,7 @@ SCIP_RETCODE applyOptcumulative(
          assert(!unbounded);
          assert(!error);
 
-         if( infeasible )
+         if( infeasible || error )
          {
             SCIPdebugMessage("infeasible :-(\n");
             break;

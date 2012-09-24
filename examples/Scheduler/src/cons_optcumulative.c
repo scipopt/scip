@@ -115,6 +115,7 @@ struct SCIP_ConsData
    int                   lct;                /**< used latest completion time for the relaxation */
    unsigned int          relaxadded:1;       /**< was relaxation added? */
    unsigned int          triedsolving:1;     /**< bool to store if it was tried to solve the cumulative sub-problem */
+   unsigned int          normalized:1;       /**< is the constraint normalized */
 };
 
 /** constraint handler data */
@@ -218,6 +219,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->nglbfixedones = 0;
    (*consdata)->relaxadded = FALSE;
    (*consdata)->triedsolving = FALSE;
+   (*consdata)->normalized = FALSE;
 
    if( nvars > 0 )
    {
@@ -979,7 +981,9 @@ SCIP_RETCODE solveSubproblem(
    int*                  demands,            /**< demands of the activities */
    int                   capacity,           /**< available cumulative capacity */
    int                   nvars,              /**< number of activities assigned to that machine */
-   int*                  nchgbds,            /**< number of changed bounds */
+   int*                  nfixedvars,         /**< pointer to store the numbver of fixed variables */
+   int*                  nchgbds,            /**< pointer to store the number of changed bounds */
+   int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is violated */
    )
 {
@@ -1007,45 +1011,80 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, durations, demands,
          consdata->capacity, consdata->hmin, consdata->hmax, lbs, ubs, 1000LL, cutoff, &unbounded, &error) );
    assert(!unbounded);
-   assert(!error);
 
-   if( *cutoff )
+   if( !error )
    {
-      int v;
-
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-      for( v = 0; v < nvars; ++v )
+      if( *cutoff )
       {
-         SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[v]) );
+         int v;
 
-         /* we have to add the lower and upper bounds of of the start time variable to have a valid reason */
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[v], NULL) );
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[v], NULL) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+         for( v = 0; v < nvars; ++v )
+         {
+            SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[v]) );
+
+            /* we have to add the lower and upper bounds of of the start time variable to have a valid reason */
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[v], NULL) );
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[v], NULL) );
+         }
+
+         /* perform conflict analysis */
+         SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
       }
-
-      /* perform conflict analysis */
-      SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
-   }
-   else
-   {
-      SCIP_Bool infeasible;
-      SCIP_Bool tightened;
-      int v;
-
-      for( v = 0; v < nvars; ++v )
+      else
       {
-         SCIP_CALL( SCIPtightenVarLb(scip, vars[v], lbs[v], TRUE, &infeasible, &tightened) );
-         assert(!infeasible);
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
+         SCIP_Bool allfixed;
+         int v;
 
-         if( tightened )
-            (*nchgbds)++;
+         allfixed = TRUE;
 
-         SCIP_CALL( SCIPtightenVarUb(scip, vars[v], ubs[v], TRUE, &infeasible, &tightened) );
-         assert(!infeasible);
+         for( v = 0; v < nvars; ++v )
+         {
+            /* check if variable is fixed */
+            if( lbs[v] + 0.5 > ubs[v] )
+            {
+               SCIP_CALL( SCIPfixVar(scip, vars[v], lbs[v], &infeasible, &tightened) );
+               assert(!infeasible);
 
-         if( tightened )
-            (*nchgbds)++;
+               if( tightened )
+               {
+                  (*nfixedvars)++;
+                  consdata->triedsolving = FALSE;
+               }
+            }
+            else
+            {
+               SCIP_CALL( SCIPtightenVarLb(scip, vars[v], lbs[v], TRUE, &infeasible, &tightened) );
+               assert(!infeasible);
+
+               if( tightened )
+               {
+                  (*nchgbds)++;
+                  consdata->triedsolving = FALSE;
+               }
+
+               SCIP_CALL( SCIPtightenVarUb(scip, vars[v], ubs[v], TRUE, &infeasible, &tightened) );
+               assert(!infeasible);
+
+               if( tightened )
+               {
+                  (*nchgbds)++;
+                  consdata->triedsolving = FALSE;
+               }
+
+               allfixed = FALSE;
+            }
+         }
+
+         /* if all variables are fixed, remove the optcumulative constraint since it is redundant */
+         if( allfixed )
+         {
+            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+            (*ndelconss)++;
+         }
       }
    }
 
@@ -1380,6 +1419,7 @@ SCIP_RETCODE consdataDeletePos(
    checkCounters(consdata);
 
    consdata->relaxadded = FALSE;
+   consdata->normalized = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1723,6 +1763,10 @@ SCIP_RETCODE detectImplications(
       if( SCIPvarGetLbGlobal(var) + 0.5 < SCIPvarGetUbGlobal(var) )
          continue;
 
+      /* adjust the code for resources with capacity larger than one ??????????????? */
+      if( consdata->demands[v] < consdata->capacity )
+         continue;
+
       start = convertBoundToInt(scip, SCIPvarGetLbGlobal(var));
       assert(start < hmax);
 
@@ -1893,7 +1937,9 @@ SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be checked */
    SCIP_Bool             conflict,           /**< should conflict analysis be called for infeasible subproblems */
+   int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
    int*                  nchgbds,            /**< pointer to store the number changed variable bounds */
+   int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
    SCIP_Bool*            cutoff              /**< pointer to store if a cutoff (infeasibility) was detected */
    )
 {
@@ -1971,7 +2017,7 @@ SCIP_RETCODE propagateCons(
          if( auxiliary )
          {
             SCIP_CALL( solveSubproblem(scip, cons, consdata, binvars, vars, durations, demands,
-                  consdata->capacity, nfixedones, nchgbds, cutoff) );
+                  consdata->capacity, nfixedones, nfixedvars, nchgbds, ndelconss, cutoff) );
          }
       }
       else
@@ -2338,7 +2384,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOptcumulative)
    SCIP_Bool rowadded;
    int c;
 
-   SCIPdebugMessage("method: enforce pseudo solution\n");
+   SCIPdebugMessage("method: enforce LP solution (%d constraints)\n", nconss);
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -2435,6 +2481,7 @@ SCIP_DECL_CONSPROP(consPropOptcumulative)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS* cons;
    SCIP_Bool cutoff;
+   int nfixedvars;
    int nupgdconss;
    int ndelconss;
    int nchgcoefs;
@@ -2447,6 +2494,7 @@ SCIP_DECL_CONSPROP(consPropOptcumulative)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   nfixedvars = 0;
    nupgdconss = 0;
    ndelconss = 0;
    nchgcoefs = 0;
@@ -2487,7 +2535,7 @@ SCIP_DECL_CONSPROP(consPropOptcumulative)
 
       if( mustpropagate )
       {
-         SCIP_CALL( propagateCons(scip, cons, conshdlrdata->conflict, &nchgbds, &cutoff) );
+         SCIP_CALL( propagateCons(scip, cons, conshdlrdata->conflict, &nfixedvars, &nchgbds, &ndelconss, &cutoff) );
       }
 
       /* update the age of the constraint w.r.t. success of the propagation rule */
@@ -2506,7 +2554,7 @@ SCIP_DECL_CONSPROP(consPropOptcumulative)
       SCIPdebugMessage("propagation detected a cutoff\n");
       *result = SCIP_CUTOFF;
    }
-   else if( nchgbds > 0 || nupgdconss > 0 )
+   else if( nfixedvars > 0 || nchgbds > 0 || nupgdconss > 0 )
    {
       SCIPdebugMessage("propagation detected %d bound changes\n", nchgbds);
       *result = SCIP_REDUCEDDOM;
@@ -2528,6 +2576,7 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
    int oldnchgbds;
    int oldndelconss;
    int oldnupgdconss;
+   int oldnfixedvars;
    int c;
 
    assert(scip != NULL);
@@ -2537,6 +2586,7 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
    oldnchgbds = *nchgbds;
    oldndelconss = *ndelconss;
    oldnupgdconss = *nupgdconss;
+   oldnfixedvars = *nfixedvars;
    cutoff = FALSE;
 
    SCIPdebugMessage("presolve %d optcumulative constraints\n", nconss);
@@ -2569,12 +2619,16 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
          nvars = consdata->nvars;
          assert(nvars > 1);
 
-         /* divide demands and capacity by their greatest common divisor */
-         SCIP_CALL( SCIPnormalizeCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
-               consdata->demands, &consdata->capacity, nchgcoefs, nchgsides) );
+         if( !consdata->normalized )
+         {
+            /* divide demands and capacity by their greatest common divisor */
+            SCIP_CALL( SCIPnormalizeCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
+                  consdata->demands, &consdata->capacity, nchgcoefs, nchgsides) );
+            consdata->normalized = TRUE;
+         }
 
          /* propagate the constaint */
-         SCIP_CALL( propagateCons(scip, cons,  FALSE, nchgbds, &cutoff) );
+         SCIP_CALL( propagateCons(scip, cons,  FALSE, nfixedvars, nchgbds, ndelconss, &cutoff) );
 
          /* if a cutoff was detected we are done */
          if( cutoff )
@@ -2670,7 +2724,7 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
       SCIPdebugMessage("presolving detected a cutoff\n");
       *result = SCIP_CUTOFF;
    }
-   else if( oldnchgbds < *nchgbds || oldnupgdconss < *nupgdconss || oldndelconss < *ndelconss )
+   else if( oldnfixedvars < *nfixedvars || oldnchgbds < *nchgbds || oldnupgdconss < *nupgdconss || oldndelconss < *ndelconss )
    {
       SCIPdebugMessage("presolving detected %d bound changes\n", *nchgbds - oldnchgbds);
       *result = SCIP_SUCCESS;

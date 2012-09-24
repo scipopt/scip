@@ -32,6 +32,7 @@
 #include "reader_sch.h"
 #include "reader_sm.h"
 #include "reader_rcp.h"
+#include "cpoptimizer.h"
 
 /** runs the shell */
 static
@@ -65,6 +66,10 @@ SCIP_RETCODE runShell(
 
    /* include cumulative constraint handler with optional activities */
    SCIP_CALL( SCIPincludeConshdlrOptcumulative(scip) );
+
+#ifdef WITH_CPOPTIMIZER
+   SCIP_CALL( SCIPsetSolveCumulative(scip, cpoptimizer) );
+#endif
 
    /**********************************
     * Process command line arguments *
