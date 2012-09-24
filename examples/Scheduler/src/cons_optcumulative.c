@@ -984,6 +984,7 @@ SCIP_RETCODE solveSubproblem(
    )
 {
    SCIP_Bool unbounded;
+   SCIP_Bool error;
    SCIP_Real* lbs;
    SCIP_Real* ubs;
 
@@ -1003,9 +1004,10 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
 
    /* solve the cumulative condition separately */
-   SCIP_CALL( SCIPsolveCumulativeCondition(scip, nvars, vars, durations, demands,
-         consdata->capacity, consdata->hmin, consdata->hmax, lbs, ubs, 1000LL, cutoff, &unbounded) );
+   SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, durations, demands,
+         consdata->capacity, consdata->hmin, consdata->hmax, lbs, ubs, 1000LL, cutoff, &unbounded, &error) );
    assert(!unbounded);
+   assert(!error);
 
    if( *cutoff )
    {

@@ -278,6 +278,7 @@ SCIP_RETCODE applyOptcumulative(
 
       for( m = 0; m < heurdata->nmachines && !infeasible; ++m )
       {
+         SCIP_Bool error;
          int nvars;
 
          nvars = 0;
@@ -307,9 +308,10 @@ SCIP_RETCODE applyOptcumulative(
             continue;
 
          /* solve the cumulative condition separately */
-         SCIP_CALL( SCIPsolveCumulativeCondition(scip, nvars, vars, durations, demands,
-               heurdata->capacities[m], 0, INT_MAX, lbs, ubs, heurdata->maxnodes, &infeasible, &unbounded) );
+         SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, durations, demands,
+               heurdata->capacities[m], 0, INT_MAX, lbs, ubs, heurdata->maxnodes, &infeasible, &unbounded, &error) );
          assert(!unbounded);
+         assert(!error);
 
          if( infeasible )
          {
