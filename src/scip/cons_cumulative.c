@@ -2900,9 +2900,6 @@ SCIP_RETCODE solveIndependentCons(
 
       for( v = 0; v < nvars; ++v )
       {
-         SCIP_CALL( SCIPtightenVarLb(scip, vars[v], lbs[v], TRUE, &infeasible, &tightened) );
-         assert(!infeasible);
-
          /* check if variable is fixed */
          if( lbs[v] + 0.5 > ubs[v] )
          {
@@ -2910,7 +2907,10 @@ SCIP_RETCODE solveIndependentCons(
             assert(!infeasible);
 
             if( tightened )
+            {
                (*nfixedvars)++;
+               consdata->triedsolving = FALSE;
+            }
          }
          else
          {
@@ -2918,13 +2918,19 @@ SCIP_RETCODE solveIndependentCons(
             assert(!infeasible);
 
             if( tightened )
+            {
                (*nchgbds)++;
+               consdata->triedsolving = FALSE;
+            }
 
             SCIP_CALL( SCIPtightenVarUb(scip, vars[v], ubs[v], TRUE, &infeasible, &tightened) );
             assert(!infeasible);
 
             if( tightened )
+            {
                (*nchgbds)++;
+               consdata->triedsolving = FALSE;
+            }
 
             allfixed = FALSE;
          }
