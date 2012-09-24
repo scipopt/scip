@@ -4078,9 +4078,6 @@ void initConshdlrData(
    conshdlrdata->roundingrounds = 1;
    conshdlrdata->roundingoffset = 0.1;
    conshdlrdata->addedcouplingcons = FALSE;
-   conshdlrdata->addlincons = NULL;
-   conshdlrdata->naddlincons = 0;
-   conshdlrdata->maxaddlincons = 0;
    conshdlrdata->ninitconss = 0;
    conshdlrdata->nbinvarszero = 0;
    conshdlrdata->performedrestart = FALSE;
@@ -4172,7 +4169,15 @@ SCIP_DECL_CONSFREE(consFreeIndicator)
    assert( conshdlrdata->lbhash == NULL );
    assert( conshdlrdata->ubhash == NULL );
    assert( conshdlrdata->slackhash == NULL );
+
+   if( conshdlrdata->maxaddlincons > 0 )
+   {
+      /* if problem was not yet transformed the array may need to be freed, because we did not call the EXIT callback */
+      SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->addlincons, conshdlrdata->maxaddlincons);
+   }
    assert(conshdlrdata->addlincons == NULL);
+   conshdlrdata->naddlincons = 0;
+   conshdlrdata->maxaddlincons = 0;
 
    SCIPfreeMemory(scip, &conshdlrdata);
 
@@ -5868,6 +5873,14 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
    /* initialize constraint handler data */
    initConshdlrData(conshdlrdata);
+
+   /* the following three variables cannot be initialized in the above method, because initConshdlrData() is also called
+    * in the CONSINIT callback, but these variables might be used even before the is ccallback is called, so we would
+    * lose the data added before calling this callback
+    */
+   conshdlrdata->addlincons = NULL;
+   conshdlrdata->naddlincons = 0;
+   conshdlrdata->maxaddlincons = 0;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
