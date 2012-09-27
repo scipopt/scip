@@ -61,6 +61,11 @@
 #include "scip/scipdefplugins.h"
 
 
+/**@name Constraint handler properties
+ *
+ * @{
+ */
+
 /* constraint handler properties */
 #define CONSHDLR_NAME          "optcumulative"
 #define CONSHDLR_DESC          "constraint handler for cumulative constraints with optional activities"
@@ -79,12 +84,28 @@
 
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
+/**@} */
+
+/**@name Event handler properties
+ *
+ * @{
+ */
+
 #define EVENTHDLR_NAME         "optcumulative"
 #define EVENTHDLR_DESC         "bound change event handler for optcumulative constraints"
+
+/**@} */
+
+/**@name Default parameter values
+ *
+ * @{
+ */
 
 #define DEFAULT_ROWRELAX          FALSE /**< add linear relaxation as LP row (otherwise a knapsack constraint is created)? */
 #define DEFAULT_CONFLICT           TRUE /**< participate in conflict analysis?" */
 #define DEFAULT_INTERVALRELAX      TRUE /**< create a relaxation for each start and end time point interval */
+
+/**@} */
 
 
 /*
@@ -127,8 +148,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             intervalrelax;      /**< create a relaxation for each start and end time point interval */
 };
 
-/*
- * Local methods
+/**@name Debug Methods
+ *
  */
 
 #ifndef NDEBUG
@@ -161,6 +182,13 @@ void checkCounters(
 #define checkCounters(x) /* */
 #endif
 
+/**@} */
+
+/**@name Miscellaneous Methods
+ *
+ * @{
+ */
+
 #ifndef NDEBUG
 /** converts the given double bound which is integral to an int; in optimized mode the function gets inlined for
  *  performance; in debug mode we check some additional conditions
@@ -179,6 +207,13 @@ int convertBoundToInt(
 #else
 #define convertBoundToInt(x, y) ((int)((y) + 0.5))
 #endif
+
+/**@} */
+
+/**@name Constraint data methods
+ *
+ * @{
+ */
 
 /** creates constraint data of optcumulative constraint */
 static
@@ -347,6 +382,16 @@ SCIP_RETCODE consdataPrint(
    return SCIP_OKAY;
 }
 
+/**@} */
+
+/**@name Constraint handler data
+ *
+ * Method used to create and free the constraint handler data when including and removing the cumulative constraint
+ * handler.
+ *
+ * @{
+ */
+
 /** creates constaint handler data for set partitioning / packing / covering constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
@@ -380,6 +425,8 @@ SCIP_RETCODE conshdlrdataFree(
 
    return SCIP_OKAY;
 }
+
+/**@} */
 
 /** removes rounding locks for the given variable in the given optcumulative constraint */
 static

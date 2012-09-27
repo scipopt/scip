@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cmain.c
- * @brief  Main file for C compilation
+/**@file   main.cpp
+ * @brief  Main file for C++ compilation
  * @author Stefan Heinz
  */
 
