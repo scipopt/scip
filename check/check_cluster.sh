@@ -52,7 +52,7 @@ PERMUTE=${18}
 # check if all variables defined (by checking the last one)
 if test -z $PERMUTE
 then
-    echo Skipping test since not all variables are define
+    echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
     echo "BINNAME       = $BINNAME"
     echo "SETNAME       = $SETNAME"
@@ -124,9 +124,6 @@ else
 fi
 
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
-# NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
-#       jobs get automatically assigned in the "exrpess" queue; this queue has only 4 CPUs
-#       available
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 
 # we add 10% to the hard memory limit and additional 100MB to the hard memory limit
@@ -192,7 +189,6 @@ else
     fi
 fi
 
-
 #define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
 CLUSTERQUEUE=$QUEUE
 
@@ -214,7 +210,6 @@ then
     CLUSTERQUEUE="opt"
     NICE="--nice=10000"
 fi
-
 
 # counter to define file names for a test set uniquely
 COUNT=0
@@ -239,7 +234,7 @@ do
 	    break
 	fi
 
-        # increase the index for the inctance tried to solve, even if the filename does not exist
+        # increase the index for the instance tried to solve, even if the filename does not exist
 	COUNT=`expr $COUNT + 1`
 
         # check if problem instance exists
@@ -249,7 +244,7 @@ do
             # the cluster queue has an upper bound of 2000 jobs; if this limit is
             # reached the submitted jobs are dumped; to avoid that we check the total
             # load of the cluster and wait until it is save (total load not more than
-            # 1900 jobs) to submit the next job.
+            # 1600 jobs) to submit the next job.
 	    if test "$NOWAITCLUSTER" != "1"
 	    then
 		if test  "$QUEUETYPE" != "qsub"
@@ -267,12 +262,12 @@ do
 	    # if number of permutations is positive, add postfix
 	    if test $PERMUTE -gt 0
 	    then
-		PROBNAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME#"p"$p
+		FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME#"p"$p
 	    else
-		PROBNAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME
+		FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME
 	    fi
 
-	    BASENAME=$SCIPPATH/results/$PROBNAME
+	    BASENAME=$SCIPPATH/results/$FILENAME
 
 	    TMPFILE=$BASENAME.tmp
 	    SETFILE=$BASENAME.set
@@ -282,9 +277,9 @@ do
             # in case we want to continue we check if the job was already performed
 	    if test "$CONTINUE" != "false"
 	    then
-		if test -e results/$PROBNAME.out
+		if test -e results/$FILENAME.out
 		then
-		    echo skipping file $i due to existing output file $PROBNAME.out
+		    echo skipping file $i due to existing output file $FILENAME.out
 		    continue
 		fi
 	    fi
@@ -331,13 +326,13 @@ do
                 # additional environment variables needed by runcluster.sh
 		export SOLVERPATH=$SCIPPATH
 		export EXECNAME=$SCIPPATH/../$BINNAME
-		export BASENAME=$PROBNAME
+		export BASENAME=$FILENAME
 		export FILENAME=$i
 		export CLIENTTMPDIR=$CLIENTTMPDIR
 		sbatch --job-name=SCIP$SHORTPROBNAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
 	    else
                 # -V to copy all environment variables
-		qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTPROBNAME -v SOLVERPATH=$SCIPPATH,EXECNAME=$SCIPPATH/../$BINNAME,BASENAME=$PROBNAME,FILENAME=$i,CLIENTTMPDIR=$CLIENTTMPDIR -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null runcluster.sh
+		qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTPROBNAME -v SOLVERPATH=$SCIPPATH,EXECNAME=$SCIPPATH/../$BINNAME,BASENAME=$FILENAME,FILENAME=$i,CLIENTTMPDIR=$CLIENTTMPDIR -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null runcluster.sh
 	    fi
 	else
 	    echo "input file "$SCIPPATH/$i" not found!"
