@@ -84,7 +84,7 @@
 
 #define DEFAULT_ROWRELAX          FALSE /**< add linear relaxation as LP row (otherwise a knapsack constraint is created)? */
 #define DEFAULT_CONFLICT           TRUE /**< participate in conflict analysis?" */
-#define DEFAULT_INTERVALRELAX     FALSE /**< create a relaxation for each start and end time point interval */
+#define DEFAULT_INTERVALRELAX      TRUE /**< create a relaxation for each start and end time point interval */
 
 
 /*
@@ -582,6 +582,41 @@ void createSortedEventpoints(
    SCIPsortIntInt(endtimes, endindices, nvars);
 }
 
+/** computes the maximum energy for all variables which correspond to jobs which start between the given start time and
+ *  end time
+ *
+ *  @return Maximum energy for the given time window
+ */
+static
+SCIP_Longint computeMaxEnergy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< optcumulative constraint data */
+   int                   starttime,          /**< start time */
+   int                   endtime             /**< end time */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Longint maxenergy;
+   int v;
+
+   assert(starttime < endtime);
+   maxenergy = 0LL;
+
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      var = consdata->vars[v];
+
+      /* collect jobs which run between the start and end time */
+      if( convertBoundToInt(scip, SCIPvarGetUbGlobal(var)) + consdata->durations[v] <= endtime
+         && convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) >= starttime)
+      {
+         maxenergy += (SCIP_Longint)(consdata->durations[v] * consdata->demands[v]);
+      }
+   }
+
+   return maxenergy;
+}
+
 /** collects all variables which correspond to jobs which start between the given start time and end time */
 static
 SCIP_RETCODE collectVars(
@@ -590,7 +625,6 @@ SCIP_RETCODE collectVars(
    SCIP_VAR**            vars,               /**< array to store the variables */
    SCIP_Longint*         weights,            /**< array to store the weights */
    int*                  nvars,              /**< pointer to store the number of collected variables */
-   SCIP_Longint*         totalcapacity,      /**< pointer to store the total capacity */
    int                   starttime,          /**< start time */
    int                   endtime             /**< end time */
    )
@@ -600,19 +634,17 @@ SCIP_RETCODE collectVars(
 
    assert(starttime < endtime);
    (*nvars) = 0;
-   (*totalcapacity) = 0LL;
 
    for( v = 0; v < consdata->nvars; ++v )
    {
       var = consdata->vars[v];
 
       /* collect jobs which run between the start and end time */
-      if( convertBoundToInt(scip, SCIPvarGetUbGlobal(var)) + consdata->durations[v] < endtime
+      if( convertBoundToInt(scip, SCIPvarGetUbGlobal(var)) + consdata->durations[v] <= endtime
          && convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) >= starttime)
       {
          vars[*nvars] = consdata->binvars[v];
          weights[*nvars] = (SCIP_Longint)(consdata->durations[v] * consdata->demands[v]);
-         (*totalcapacity) += weights[*nvars];
          (*nvars)++;
       }
    }
@@ -620,36 +652,37 @@ SCIP_RETCODE collectVars(
    return SCIP_OKAY;
 }
 
-/** creates and adds knapsack constraint as linearization for the optcumulative constraint */
+/** remove row which have a tightness which is smaller or equal to the given one
+ *
+ *  @return The number of remaining rows
+ */
 static
-SCIP_RETCODE createKnapsack(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,               /**< name of knapsack constraint */
-   SCIP_VAR**            binvars,            /**< array of variable representing if the job has to be processed on this machine */
-   SCIP_Longint*         weights,            /**< weight for each job */
-   int                   nvars,              /**< number of variables */
-   SCIP_Longint          capacity,           /**< available capacity */
-   SCIP_Bool             local               /**< create local row */
+int removeRedundantRows(
+   SCIP_Longint*         rowtightness,       /**< array containing the tightness for the previously selected rows */
+   int*                  startidxs,          /**< array containing for each row the index for the start event */
+   int                   nrows,              /**< current number of rows */
+   SCIP_Longint          tightness           /**< tightness to use to detect redundant rows */
    )
 {
-   SCIP_CONS* cons;
+   int keptrows;
+   int j;
 
-   assert(scip != NULL);
+   keptrows = 0;
 
-   /* create knapsack constraint */
-   SCIP_CALL( SCIPcreateConsKnapsack(scip, &cons, name, nvars, binvars, weights, capacity,
-         FALSE, TRUE, TRUE, FALSE, TRUE, local, FALSE, FALSE, FALSE, FALSE) );
+   for( j = 0; j < nrows; ++j )
+   {
+      rowtightness[keptrows] = rowtightness[j];
+      startidxs[keptrows] = startidxs[j];
 
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      /* only keep this row if the tightness is better as the (current) given one */
+      if( rowtightness[j] > tightness )
+         keptrows++;
+   }
 
-   /* add and releasse knapsack constraint */
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   return SCIP_OKAY;
+   return keptrows;
 }
 
-/** creates and adds an LP row in a optcumulative constraint data */
+/** depending on the parameters setting a row or an knapsack constraint is created */
 static
 SCIP_RETCODE createRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -659,33 +692,57 @@ SCIP_RETCODE createRow(
    SCIP_Longint*         weights,            /**< start time variables of the activities which are assigned */
    int                   nvars,              /**< number of variables */
    SCIP_Longint          capacity,           /**< available cumulative capacity */
-   SCIP_Bool             local               /**< create local row */
+   SCIP_Bool             local,              /**< create local row */
+   SCIP_Bool*            rowadded,           /**< pointer to store if a row was added */
+   SCIP_Bool*            consadded           /**< pointer to store if a constraint was added */
    )
 {
-   SCIP_ROW* row;
-   int v;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
-   assert(scip != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
-   /* create empty row */
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)capacity, local, FALSE, TRUE) );
-
-   /* w.r.t. performance we cache the row extension and flush them in the end */
-   SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-
-   for( v = 0; v < nvars; ++v )
+   if( conshdlrdata->rowrelax )
    {
-      SCIP_CALL( SCIPaddVarToRow(scip, row, vars[v], (SCIP_Real)weights[v]) );
+      SCIP_ROW* row;
+      int v;
+
+      /* create empty row */
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)capacity, local, FALSE, TRUE) );
+
+      /* w.r.t. performance we cache the row extension and flush them in the end */
+      SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
+      for( v = 0; v < nvars; ++v )
+      {
+         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[v], (SCIP_Real)weights[v]) );
+      }
+
+      /* w.r.t. performance we flush the row extension in the end */
+      SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+
+      assert(!SCIProwIsInLP(row));
+
+      SCIPdebug( SCIPprintRow(scip, row, NULL) );
+      SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      (*rowadded) = TRUE;
    }
+   else
+   {
+      SCIP_CONS* cons;
 
-   /* w.r.t. performance we flush the row extension in the end */
-   SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+      /* create knapsack constraint */
+      SCIP_CALL( SCIPcreateConsKnapsack(scip, &cons, name, nvars, vars, weights, capacity,
+            FALSE, TRUE, TRUE, FALSE, TRUE, local, FALSE, FALSE, FALSE, FALSE) );
 
-   assert(!SCIProwIsInLP(row));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
-   SCIPdebug( SCIPprintRow(scip, row, NULL) );
-   SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
-   SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      /* add and releasse knapsack constraint */
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      (*consadded) = TRUE;
+   }
 
    return SCIP_OKAY;
 }
@@ -716,8 +773,9 @@ SCIP_RETCODE addRelaxation(
 
    if( conshdlrdata->intervalrelax )
    {
-      SCIP_VAR** vars;
-      SCIP_Longint* weights;
+      SCIP_Longint** rowtightness;
+      int** startidxs;
+      int* nrows;
       int* starttimes;
       int* endtimes;
       int* startindices;
@@ -732,8 +790,16 @@ SCIP_RETCODE addRelaxation(
       SCIP_CALL( SCIPallocBufferArray(scip, &startindices, consdata->nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &endtimes, consdata->nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &endindices, consdata->nvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &weights, consdata->nvars) );
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &nrows, consdata->nvars) );
+      BMSclearMemoryArray(nrows, consdata->nvars);
+      SCIP_CALL( SCIPallocBufferArray(scip, &rowtightness, consdata->nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &startidxs, consdata->nvars) );
+      for( j = 0; j < consdata->nvars; ++j )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &rowtightness[j], consdata->nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &startidxs[j], consdata->nvars) );
+      }
 
       createSortedEventpoints(scip, consdata, starttimes, endtimes, startindices, endindices, FALSE);
 
@@ -742,61 +808,97 @@ SCIP_RETCODE addRelaxation(
       /* check each startpoint of a job whether the capacity is kept or not */
       for( j = 0; j < consdata->nvars; ++j )
       {
+         SCIP_Longint besttightness;
+
          assert(starttime <= starttimes[j]);
 
+         /* if we hit the same start time again we skip the loop */
          if( starttime == starttimes[j])
             continue;
 
          starttime = starttimes[j];
          endtime = -INT_MAX;
+         besttightness = 0LL;
 
          for( i = 0; i < consdata->nvars; ++i )
          {
-            SCIP_Longint capacity;
-            SCIP_Longint totalcapacity;
+            SCIP_Longint energy;
+            SCIP_Longint maxenergy;
+            SCIP_Longint tightness;
 
             assert(endtime <= endtimes[i]);
 
+            /* if we hit the same end time again we skip the loop */
             if( endtime == endtimes[i] )
                continue;
 
             endtime = endtimes[i];
 
+            /* skip all end times which are smaller than the start time */
             if( endtime <= starttime )
                continue;
 
-            capacity = (endtime - starttime) * consdata->capacity;
+            maxenergy = computeMaxEnergy(scip, consdata, starttime, endtime);
 
-            SCIP_CALL( collectVars(scip, consdata, vars, weights, &nvars, &totalcapacity, starttime, endtime) );
+            energy = (endtime - starttime) * consdata->capacity;
+            tightness = maxenergy - energy;
 
             /* check if the linear constraint is not trivially redundant */
-            if( totalcapacity > capacity )
+            if( tightness > besttightness )
             {
-               char name[SCIP_MAXSTRLEN];
+               besttightness = tightness;
 
-               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s[%d,%d]", SCIPconsGetName(cons), starttime, endtime);
+               nrows[i] = removeRedundantRows(rowtightness[i], startidxs[i], nrows[i], tightness);
 
-               SCIPdebugMessage("create linear relaxation for <%s> time interval [%d,%d] <= %"SCIP_LONGINT_FORMAT"\n",  SCIPconsGetName(cons), starttime, endtime, capacity);
-
-               if( conshdlrdata->rowrelax )
-               {
-                  /* creates and adds an LP row in a optcumulative constraint data */
-                  SCIP_CALL( createRow(scip, conshdlr, name, vars, weights, nvars, capacity, SCIPconsIsLocal(cons)) );
-                  (*rowadded) = TRUE;
-               }
-               else
-               {
-                  /* creates and add knapsack constraint */
-                  SCIP_CALL( createKnapsack(scip, name, vars, weights, nvars, capacity, SCIPconsIsLocal(cons)) );
-                  (*consadded) = TRUE;
-               }
+               /* add row information */
+               rowtightness[i][nrows[i]] = tightness;
+               startidxs[i][nrows[i]] = j;
+               nrows[i]++;
             }
          }
       }
 
+      for( j = consdata->nvars-1; j >= 0; --j )
+      {
+         for( i = 0; i < nrows[j]; ++i )
+         {
+            SCIP_VAR** vars;
+            SCIP_Longint* weights;
+            SCIP_Longint energy;
+            char name[SCIP_MAXSTRLEN];
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &weights, consdata->nvars) );
+
+            starttime = starttimes[startidxs[j][i]];
+            endtime = endtimes[j];
+
+            energy = (endtime - starttime) * consdata->capacity;
+
+            SCIP_CALL( collectVars(scip, consdata, vars, weights, &nvars, starttime, endtime) );
+
+            SCIPdebugMessage("create linear relaxation for <%s> time interval [%d,%d] <= %"SCIP_LONGINT_FORMAT"\n",
+               SCIPconsGetName(cons), starttime, endtime, energy);
+
+            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s[%d,%d]", SCIPconsGetName(cons), starttime, endtime);
+            SCIP_CALL( createRow(scip, conshdlr, name, vars, weights, nvars, energy, SCIPconsIsLocal(cons), rowadded, consadded) );
+
+            SCIPfreeBufferArray(scip, &weights);
+            SCIPfreeBufferArray(scip, &vars);
+         }
+      }
+
+
       /* free buffers */
-      SCIPfreeBufferArray(scip, &weights);
-      SCIPfreeBufferArray(scip, &vars);
+      for( j = consdata->nvars-1; j >= 0; --j )
+      {
+         SCIPfreeBufferArray(scip, &startidxs[j]);
+         SCIPfreeBufferArray(scip, &rowtightness[j]);
+      }
+      SCIPfreeBufferArray(scip, &startidxs);
+      SCIPfreeBufferArray(scip, &rowtightness);
+      SCIPfreeBufferArray(scip, &nrows);
+
       SCIPfreeBufferArray(scip, &endindices);
       SCIPfreeBufferArray(scip, &endtimes);
       SCIPfreeBufferArray(scip, &startindices);
@@ -806,8 +908,8 @@ SCIP_RETCODE addRelaxation(
    {
       SCIP_VAR** vars;
       SCIP_Longint* weights;
-      SCIP_Longint totalcapacity;
-      SCIP_Longint capacity;
+      SCIP_Longint maxenergy;
+      SCIP_Longint energy;
       int* durations;
       int* demands;
       int est;
@@ -819,7 +921,7 @@ SCIP_RETCODE addRelaxation(
       vars = consdata->vars;
       durations = consdata->durations;
       demands = consdata->demands;
-      totalcapacity = 0LL;
+      maxenergy = 0LL;
 
       SCIP_CALL( SCIPallocBufferArray(scip, &weights, nvars) );
 
@@ -829,7 +931,7 @@ SCIP_RETCODE addRelaxation(
       for( v = 0; v < nvars; ++v )
       {
          weights[v] = (SCIP_Longint)(durations[v] * demands[v]);
-         totalcapacity += weights[v];
+         maxenergy += weights[v];
 
          /* adjust earlier start time */
          est = MIN(est, convertBoundToInt(scip, SCIPvarGetLbGlobal(vars[v])));
@@ -838,28 +940,18 @@ SCIP_RETCODE addRelaxation(
          lct = MAX(lct, convertBoundToInt(scip, SCIPvarGetUbGlobal(vars[v]) + durations[v]));
       }
 
-      capacity = (lct - est) * consdata->capacity;
+      energy = (lct - est) * consdata->capacity;
 
-      if( totalcapacity > capacity )
+      if( maxenergy > energy )
       {
          char name[SCIP_MAXSTRLEN];
 
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s[%d,%d]", SCIPconsGetName(cons), est, lct);
 
-         SCIPdebugMessage("create linear relaxation for <%s> (nvars %d) time interval [%d,%d] <= %"SCIP_LONGINT_FORMAT"\n", SCIPconsGetName(cons), nvars, est, lct, capacity);
+         SCIPdebugMessage("create linear relaxation for <%s> (nvars %d) time interval [%d,%d] <= %"SCIP_LONGINT_FORMAT"\n",
+            SCIPconsGetName(cons), nvars, est, lct, energy);
 
-         if( conshdlrdata->rowrelax )
-         {
-            /* creates and adds an LP row in a optcumulative constraint data */
-            SCIP_CALL( createRow(scip, conshdlr, name, consdata->binvars, weights, nvars, capacity, SCIPconsIsLocal(cons)) );
-            (*rowadded) = TRUE;
-         }
-         else
-         {
-            /* creates and add knapsack constraint */
-            SCIP_CALL( createKnapsack(scip, name, consdata->binvars, weights, nvars, capacity, SCIPconsIsLocal(cons)) );
-            (*consadded) = TRUE;
-         }
+         SCIP_CALL( createRow(scip, conshdlr, name, consdata->binvars, weights, nvars, energy, SCIPconsIsLocal(cons), rowadded, consadded) );
       }
 
       /* free buffer */
