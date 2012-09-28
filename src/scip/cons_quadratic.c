@@ -4816,7 +4816,6 @@ void generateCutFactorableDo(
    int i;
 
    assert(cutcoef != NULL);
-   assert(SCIPisFeasLE(scip, rightminactivity, rightmaxactivity));
    assert(rightminactivity * multright > 0.0);
    assert(rightmaxactivity * multright > 0.0);
    assert(multright == 1.0 || multright == -1.0);
@@ -4843,6 +4842,8 @@ void generateCutFactorableDo(
          *success = FALSE;
          return;
       }
+
+      assert(SCIPisFeasLE(scip, rightminactivity, rightmaxactivity));
 
       constant = multleft * multright * coefleft[consdata->nquadvars];
       constant -= rhs * multright * (1.0 / rightminactivity + 1.0 / rightmaxactivity);
@@ -7624,7 +7625,7 @@ SCIP_RETCODE propagateBoundsTightenVarLb(
    assert(nchgbds != NULL);
 
    /* new bound is no improvement */
-   if( SCIPisLE(scip, bnd, SCIPvarGetLbLocal(var)) )
+   if( SCIPisHugeValue(scip, -bnd) || SCIPisLE(scip, bnd, SCIPvarGetLbLocal(var)) )
       return SCIP_OKAY;
 
    if( SCIPisInfinity(scip, bnd) )
