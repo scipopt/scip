@@ -23,6 +23,7 @@
 #-----------------------------------------------------------------------------
 
 SCIPDIR         =       ../..
+CPOPT		=	false
 
 #-----------------------------------------------------------------------------
 # include default project Makefile from SCIP
@@ -34,8 +35,7 @@ include $(SCIPDIR)/make/make.project
 #-----------------------------------------------------------------------------
 
 MAINNAME	=	scip
-MAINOBJ		=	cmain.o \
-			cons_optcumulative.o \
+MAINOBJ		=	cons_optcumulative.o \
 			heur_listscheduling.o \
 			heur_optcumulative.o \
 			reader_cmin.o \
@@ -43,14 +43,29 @@ MAINOBJ		=	cmain.o \
 			reader_sm.o \
 			reader_rcp.o
 
+MAINCXXOBJ	= 	main.o \
+			cpoptimizer.o
+
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
-MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
+MAINSRC		+=	$(addprefix $(SRCDIR)/,$(MAINCXXOBJ:.o=.cpp))
+MAINDEP		=	$(SRCDIR)/depend.main.$(OPT)
 
 MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINFILE	=	$(BINDIR)/$(MAIN)
 MAINSHORTLINK	=	$(BINDIR)/$(MAINNAME)
 MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
+MAINOBJFILES	+=	$(addprefix $(OBJDIR)/,$(MAINCXXOBJ))
 
+ifeq ($(CPOPT),true)
+FLAGS		+=	-DWITH_CPOPTIMIZER -DIL_STD -I$(LIBDIR)/cpinc -I$(LIBDIR)/cpxinc
+FLAGS		+=	-I$(LIBDIR)/ilconcertinc
+LDFLAGS         +=       $(LIBDIR)/libcp.a $(LIBDIR)/libconcert.a  $(LIBDIR)/libcplex.a -lpthread
+endif
+
+LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
+
+CPOPTDEP	:=	$(SRCDIR)/depend.cpoptimizer
+CPOPTSRC	:=	$(shell cat $(CPOPTDEP))
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -90,6 +105,7 @@ $(MAINSHORTLINK):	$(MAINFILE)
 		cd $(dir $@) && $(LN_s) $(notdir $(MAINFILE)) $(notdir $@)
 
 $(OBJDIR):
+		@-rm -f $(LASTSETTINGS)
 		@-mkdir -p $(OBJDIR)
 
 $(BINDIR):
@@ -105,7 +121,7 @@ test:		$(CHECKDIR)
 		@-(cd check && $(LN_s) ../$(SCIPDIR)/check/check.awk);
 		@-(cd check && $(LN_s) ../$(SCIPDIR)/check/getlastproblem.awk);
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND);
 
 # include local targets
 -include $(SCIPDIR)/make/local/make.targets
@@ -128,10 +144,23 @@ depend:		$(SCIPDIR)
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z\_]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(MAINDEP)'
+		@echo `grep -l "WITH_CPOPTIMIZER" $(MAINSRC)` >$(CPOPTDEP)
+
+
+-include $(LASTSETTINGS)
+
+.PHONY: touchexternal
+touchexternal:	$(CPOPTDEP)
+ifneq ($(CPOPT),$(LAST_CPOPT))
+		@-touch $(CPOPTSRC)
+endif
+		@-rm -f $(LASTSETTINGS)
+		@echo "LAST_CPOPT=$(CPOPT)" >> $(LASTSETTINGS)
+
 
 -include	$(MAINDEP)
 
-$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
+$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) touchexternal $(MAINOBJFILES)
 		@echo "-> linking $@"
 		$(LINKCXX) $(MAINOBJFILES) \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \

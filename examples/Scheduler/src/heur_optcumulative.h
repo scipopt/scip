@@ -40,9 +40,14 @@ SCIP_RETCODE SCIPincludeHeurOptcumulative(
 extern
 SCIP_RETCODE SCIPinitHeurOptcumulative(
    SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP_VAR***           vars,               /**< job machine matrix */
-   int                   njobs,              /**< number of jobs */
-   int                   nmachines           /**< number of machines */
+   int                   nmachines,          /**< number of machines */
+   int                   njobs,              /**< number of njobs */
+   int*                  machines,           /**< number of jobs for each machines */
+   SCIP_VAR***           binvars,            /**< machnine job matrix (choice variables) */
+   SCIP_VAR***           vars,               /**< machnine job matrix (start time variables) */
+   int**                 durations,          /**< machnine job duration matrix */
+   int**                 demands,            /**< machnine job demands matrix */
+   int*                  capacities          /**< machine capacities */
    );
 
 #ifdef __cplusplus

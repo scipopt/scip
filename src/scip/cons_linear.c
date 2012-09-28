@@ -4691,8 +4691,8 @@ SCIP_RETCODE tightenVarBoundsEasy(
          SCIP_Real slack;
          SCIP_Real alpha;
 
-         slack = rhs - consdata->minactivity;
-         if( SCIPisNegative(scip, slack) )
+         /* if the minactivity is larger than the right hand side by feasibility epsilon, the constraint is infeasible */
+         if( SCIPisFeasLT(scip, rhs, consdata->minactivity) )
          {
             SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, minactivity=%.15g > rhs=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), consdata->minactivity, rhs);
@@ -4700,6 +4700,14 @@ SCIP_RETCODE tightenVarBoundsEasy(
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
+
+         slack = rhs - consdata->minactivity;
+
+         /* if the slack is zero in tolerances (or negative, but not enough to make the constraint infeasible), we set
+          * it to zero
+          */
+         if( !SCIPisPositive(scip, slack) )
+            slack = 0.0;
 
          alpha = val * (ub - lb);
          assert(!SCIPisNegative(scip, alpha));
@@ -4732,8 +4740,8 @@ SCIP_RETCODE tightenVarBoundsEasy(
          SCIP_Real slack;
          SCIP_Real alpha;
 
-         slack = consdata->maxactivity - lhs;
-         if( SCIPisNegative(scip, slack) )
+         /* if the maxactivity is smaller than the left hand side by feasibility epsilon, the constraint is infeasible */
+         if( SCIPisFeasLT(scip, consdata->maxactivity, lhs) )
          {
             SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, maxactivity=%.15g < lhs=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), consdata->maxactivity, lhs);
@@ -4741,6 +4749,14 @@ SCIP_RETCODE tightenVarBoundsEasy(
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
+
+         slack = consdata->maxactivity - lhs;
+
+         /* if the slack is zero in tolerances (or negative, but not enough to make the constraint infeasible), we set
+          * it to zero
+          */
+         if( !SCIPisPositive(scip, slack) )
+            slack = 0.0;
 
          alpha = val * (ub - lb);
          assert(!SCIPisNegative(scip, alpha));
@@ -4772,8 +4788,8 @@ SCIP_RETCODE tightenVarBoundsEasy(
          SCIP_Real slack;
          SCIP_Real alpha;
 
-         slack = rhs - consdata->minactivity;
-         if( SCIPisNegative(scip, slack) )
+         /* if the minactivity is larger than the right hand side by feasibility epsilon, the constraint is infeasible */
+         if( SCIPisFeasLT(scip, rhs, consdata->minactivity) )
          {
             SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, minactivity=%.15g > rhs=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), consdata->minactivity, rhs);
@@ -4781,6 +4797,14 @@ SCIP_RETCODE tightenVarBoundsEasy(
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
+
+         slack = rhs - consdata->minactivity;
+
+         /* if the slack is zero in tolerances (or negative, but not enough to make the constraint infeasible), we set
+          * it to zero
+          */
+         if( !SCIPisPositive(scip, slack) )
+            slack = 0.0;
 
          alpha = val * (lb - ub);
          assert(!SCIPisNegative(scip, alpha));
@@ -4812,8 +4836,8 @@ SCIP_RETCODE tightenVarBoundsEasy(
          SCIP_Real slack;
          SCIP_Real alpha;
 
-         slack = consdata->maxactivity - lhs;
-         if( SCIPisNegative(scip, slack) )
+         /* if the maxactivity is smaller than the left hand side by feasibility epsilon, the constraint is infeasible */
+         if( SCIPisFeasLT(scip, consdata->maxactivity, lhs) )
          {
             SCIPdebugMessage("linear constraint <%s>: cutoff  <%s>, maxactivity=%.15g < lhs=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), consdata->maxactivity, lhs);
@@ -4821,6 +4845,14 @@ SCIP_RETCODE tightenVarBoundsEasy(
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
+
+         slack = consdata->maxactivity - lhs;
+
+         /* if the slack is zero in tolerances (or negative, but not enough to make the constraint infeasible), we set
+          * it to zero
+          */
+         if( !SCIPisPositive(scip, slack) )
+            slack = 0.0;
 
          alpha = val * (lb - ub);
          assert(!SCIPisNegative(scip, alpha));

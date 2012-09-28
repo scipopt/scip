@@ -630,12 +630,10 @@ SCIP_RETCODE createCipFormulation(
    SCIP_CONS** conss;
    SCIP_CONS* cons;
    SCIP_Bool dynamicconss;
-   SCIP_VAR** vars;
+   SCIP_VAR*** vars;
    SCIP_VAR*** binvars;
    SCIP_VAR* var;
-
-   int* localdemands;
-   int* localdurations;
+   int* machines;
    int branchpriority;
 
    char name[SCIP_MAXSTRLEN];
@@ -658,17 +656,15 @@ SCIP_RETCODE createCipFormulation(
       /* construct constraint name */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d", j);
 
-      SCIP_CALL( SCIPcreateConsSetpart(scip, &cons, name, 0, NULL,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateConsBasicSetpart(scip, &cons, name, 0, NULL) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       conss[j] = cons;
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, njobs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvars, nmachines) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &localdemands, njobs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &localdurations, njobs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nmachines) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &machines, nmachines) );
 
    for( i = 0; i < nmachines; ++i )
    {
@@ -677,8 +673,10 @@ SCIP_RETCODE createCipFormulation(
       nvars = 0;
 
       SCIP_CALL( SCIPallocBufferArray(scip, &binvars[i], njobs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], njobs) );
 
       BMSclearMemoryArray(binvars[i], njobs);
+      BMSclearMemoryArray(vars[i], njobs);
 
       for( j = 0; j < njobs; ++j )
       {
@@ -689,8 +687,7 @@ SCIP_RETCODE createCipFormulation(
          /* construct variable name */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d_choose%d", j, i);
 
-         SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, (SCIP_Real)costs[i][j], SCIP_VARTYPE_BINARY,
-               TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, 1.0, (SCIP_Real)costs[i][j], SCIP_VARTYPE_BINARY) );
          SCIP_CALL( SCIPaddVar(scip, var) );
          SCIP_CALL( SCIPchgVarBranchPriority(scip, var, branchpriority) );
          binvars[i][nvars] = var;
@@ -699,29 +696,27 @@ SCIP_RETCODE createCipFormulation(
          /* construct variable name */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d_starts%d", j, i);
 
-         SCIP_CALL( SCIPcreateVar(scip, &var, name, (SCIP_Real)releasedates[j], (SCIP_Real)(deadlinedates[j] - durations[i][j]), 0.0, SCIP_VARTYPE_INTEGER,
-               TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-
+         SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, (SCIP_Real)releasedates[j], (SCIP_Real)(deadlinedates[j] - durations[i][j]), 0.0, SCIP_VARTYPE_INTEGER) );
          SCIP_CALL( SCIPaddVar(scip, var) );
-         vars[nvars] = var;
+         vars[i][nvars] = var;
+         SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
          if( !dualreduction )
          {
             SCIP_CALL( SCIPaddVarLocks(scip, binvars[i][nvars], 1, 1) );
-            SCIP_CALL( SCIPaddVarLocks(scip, vars[nvars], 1, 1) );
+            SCIP_CALL( SCIPaddVarLocks(scip, vars[i][nvars], 1, 1) );
          }
-
-         SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
          /* add choice variable to set partitioning constraint */
          SCIP_CALL( SCIPaddCoefSetppc(scip, conss[j], binvars[i][nvars]) );
 
-         localdemands[nvars] = demands[i][j];
-         localdurations[nvars] = durations[i][j];
+         demands[i][nvars] = demands[i][j];
+         durations[i][nvars] = durations[i][j];
 
          nvars++;
       }
 
+      machines[i] = nvars;
 
       if( nvars > 0 )
       {
@@ -729,14 +724,14 @@ SCIP_RETCODE createCipFormulation(
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "machine%d", i);
 
          /* create machine choice constraint */
-         SCIP_CALL( SCIPcreateConsOptcumulative(scip, &cons, name, nvars, vars, binvars[i], localdurations, localdemands, capacities[i],
+         SCIP_CALL( SCIPcreateConsOptcumulative(scip, &cons, name, nvars, vars[i], binvars[i], durations[i], demands[i], capacities[i],
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
    }
 
-   SCIP_CALL( SCIPinitHeurOptcumulative(scip, binvars, njobs, nmachines) );
+   SCIP_CALL( SCIPinitHeurOptcumulative(scip, nmachines, njobs, machines, binvars, vars, durations, demands, capacities) );
 
    /* check for a given total leftover */
    SCIP_CALL( findBestObjectiveValue(scip, &objval) );
@@ -744,14 +739,14 @@ SCIP_RETCODE createCipFormulation(
    SCIP_CALL( SCIPsetObjlimit(scip, objval) );
 
    /* free all buffers */
-   SCIPfreeBufferArray(scip, &localdurations);
-   SCIPfreeBufferArray(scip, &localdemands);
    for( i = 0; i < nmachines; ++i )
    {
+      SCIPfreeBufferArray(scip, &vars[i]);
       SCIPfreeBufferArray(scip, &binvars[i]);
    }
-   SCIPfreeBufferArray(scip, &binvars);
+   SCIPfreeBufferArray(scip, &machines );
    SCIPfreeBufferArray(scip, &vars );
+   SCIPfreeBufferArray(scip, &binvars);
    SCIPfreeBufferArray(scip, &conss );
 
    return SCIP_OKAY;
@@ -907,7 +902,7 @@ SCIP_RETCODE readFile(
       SCIPsplitFilename(str, NULL, &probname, NULL, NULL);
 
       /* initialize problem data */
-      SCIP_CALL( SCIPcreateProb(scip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
 
       SCIPfreeBufferArray(scip, &str);
 

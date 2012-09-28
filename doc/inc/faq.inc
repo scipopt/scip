@@ -99,7 +99,7 @@
         <ol>
 	  <li>CIP - file format (own constraint based file format)</li>
 	  <li><a href="http://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html>CNF - file format</a></li>
-	  <li><a href="http://www.g12.cs.mu.oz.au/minizinc/downloads/doc-1.5/flatzinc-spec.pdf">FZN - file format</a></li>
+	  <li><a href="http://www.g12.cs.mu.oz.au/minizinc/">FZN - file format</a></li>
           <li><a href="http://publib.boulder.ibm.com/infocenter/cosinfoc/v12r3/topic/ilog.odms.cplex.help/Content/Optimization/Documentation/Optimization_Studio/_pubskel/ps_reffileformatscplex2159.html">(R)LP - file formats</a></li>
           <li><a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS - file format</a></li>
           <li><a href="http://www.cril.univ-artois.fr/PB12/format.pdf">OPB/WBO - file formats</a></li>
@@ -134,10 +134,10 @@
       <a name="Q1.4">How do I get started?</a>
     </p>
     <p class="a">
-      An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="SHELL.html">here</a> for a tutorial. 
+      An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="SHELL.shtml">here</a> for a tutorial.
       For that, you just have to download one of the precompiled binaries from the 
       <a href="http://scip.zib.de/download.shtml">download section</a>, or the zipped source code and compile it 
-      with your favorite settings. This is described in detail in the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP main directory.
+      with your favorite settings. This is described in detail in the <a href="INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP main directory.
     </p>
     <p class="a">
       Another way is to use SCIP as a solver integrated into your own program source code.
@@ -147,8 +147,8 @@
     <p class="a">
       A third way is to implement your own plugins into SCIP. 
       This is explained in the HowTos for all plugin types, which you can find in the 
-      <a href="index.html">doxygen documentation</a>.
-      See also <a href="START.html">How to start a new project</a>.
+      <a href="index.shtml">doxygen documentation</a>.
+      See also <a href="START.shtml">How to start a new project</a>.
     </p>
     <p class="q">
       <a name="Q1.5">Do I need any extra software?</a>
@@ -156,7 +156,7 @@
     <p class="a">
       Unless you want to use SCIP as a pure CP-Solver (see <a href="#Q1.11">here</a>),
       you need an underlying LP-Solver installed and linked to the libraries
-      (see the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP root directory). 
+      (see the <a href="INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP root directory).
       LP-solvers currently supported by SCIP are: 
     </p>
     <ul>
@@ -182,7 +182,7 @@
        <a name="Q1.6">I have installation problems. What can I do?</a>
     </p>
     <p class="a">
-      Read the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
+      Read the <a href="INSTALL.shtml"><tt>INSTALL</tt></a> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
       the binaries available on the <a href="http://scip.zib.de">SCIP page</a>.
     </p>
     <p class="a">
@@ -205,7 +205,7 @@
     </p>
     <p class="a">
       If you have any problems while using an LP-solver different from SoPlex,
-      please read the SCIP <a href="INSTALL.html"><tt>INSTALL</tt></a> file first.                                                     
+      please read the SCIP <a href="INSTALL.shtml"><tt>INSTALL</tt></a> file first.
     </p>
     <p class="q">
       <a name="Q1.7">I changed to a new version of SCIP and now compiling breaks with some error messages which I don't understand.
@@ -215,11 +215,11 @@
       Maybe the parameters of a function in SCIP changed. Relevant changes between version are listed below.
     </p>
     <ul>
-        <li> <a href="CHG1.html">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
-        <li> <a href="CHG2.html">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
-        <li> <a href="CHG3.html">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
-        <li> <a href="CHG4.html">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
-        <li> <a href="CHG5.html">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
+        <li> <a href="CHG1.shtml">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
+        <li> <a href="CHG2.shtml">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
+        <li> <a href="CHG3.shtml">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
+        <li> <a href="CHG4.shtml">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
+        <li> <a href="CHG5.shtml">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
     </ul>
     <p class="q">
       <a name="Q1.8">How can I debug in SCIP?</a>
@@ -228,7 +228,7 @@
       Compile SCIP in debug mode: <code>make OPT=dbg</code>. Put the binary into a debugger, e.g., <a href="http://www.gnu.org/s/gdb/">gdb</a> 
       and let it run again. If you get an impression which component is causing the trouble, set <code>#define SCIP_DEBUG</code> as the first 
       line of the corresponding *.c file, recompile, let it run again. This will print debug messages from that piece of code. 
-      Find a short debugging tutorial <a href="DEBUG.html">here</a>.
+      Find a short debugging tutorial <a href="DEBUG.shtml">here</a>.
     </p>
     <p class="q">
       <a name="Q1.9">SCIP prints error messages, aborts, produces segmentation faults, or just behaves strangely. What should I do?</a>
@@ -245,10 +245,10 @@
     </p>
     <p class="a">
       For an explanation of the naming see the 
-      <a href="CODE.html">coding style guidelines</a>. <br>
+      <a href="CODE.shtml">coding style guidelines</a>. <br>
       The methods you might want to use should normally be found in scip.h or in pub_*.h,
-      see also <a href="DOC.html">here</a>.
-      In the doxygen documentation of <a href="scip_8h.html">scip.h</a>,
+      see also <a href="DOC.shtml">here</a>.
+      In the doxygen documentation of <a href="scip_8h.shtml">scip.h</a>,
       the methods are ordered by topics.
     </p>
     <p class="q">
@@ -297,7 +297,7 @@
        <a name="Q1.14">How can I use the SCIP makefiles?</a>
     </p>
     <p class="a">
-      See <a href="MAKE.html">Makefiles</a>.
+      See <a href="MAKE.shtml">Makefiles</a>.
     </p>
     <p class="q">
        <a name="Q1.15">What is this business with .a and .so libraries in the directory <tt>lib/</tt>?</a>
@@ -327,7 +327,7 @@
     <!--
        If you have a different system or compiler (which supports shared libraries) you might try to
        copy the file <code>make.linux.x86.gnu.opt-shared</code> and modify it according to your
-       needs (see also <a href="MAKE.html">Makefiles</a>).
+       needs (see also <a href="MAKE.shtml">Makefiles</a>).
      -->
        If you are using your own building system: The "magic" changes are the <code>-FPIC</code> 
        compiler/linker option and the <code>-Wl,-rpath</code> option.
@@ -442,7 +442,7 @@
     <p class="a">
       Mixed-integer nonlinear constrained programs can be input via the reader for OSiL and ZIMPL files and the AMPL interface.
       An interface to the modeling language GAMS is available in the <a href="https://projects.coin-or.org/GAMSlinks">COIN-OR/GAMSlinks</a> project.<br>
-      Further, mixed-integer <b>polynomially</b> constrained programs can be input via the readers for PIP files.<br>
+      Furthermore, mixed-integer <b>polynomially</b> constrained programs can be input via the readers for PIP files.<br>
       Finally, the readers for *.mps and *.lp files support the CPLEX extensions for <b>quadratic</b> constraints and objective.
     </p>
 
@@ -463,7 +463,7 @@
 
       Make sure to also call <code>SCIPreleaseVar()</code> if you do not need the variable pointer anymore.  For an
       explanation of creating and releasing objects, please see the <a
-      href="OBJ.html">doxygen documentation.</a>.
+      href="OBJ.shtml">doxygen documentation.</a>.
     </p>
     <p class="q">
       <a name="Q3.2">I already know a solution in advance, which I want to pass to SCIP.
@@ -568,13 +568,13 @@
       <a name="Q4.1">How do I start a project?</a>
     </p>
     <p class="a">
-      See <a href="START.html">How to start a new project</a>.
+      See <a href="START.shtml">How to start a new project</a>.
     </p>
     <p class="q">
       <a name="Q4.2">What types of plugins can I add and how do I do this?</a>
     </p>
     <p class="a">
-      See the <a href="index.html">doxygen documentation</a> for a list of
+      See the <a href="index.shtml">doxygen documentation</a> for a list of
       plugin types. There is a HowTo for each of them.
     </p>
     <p class="q">
@@ -652,7 +652,7 @@
       Setting the status of a display column to 0 turns it off. E.g., type "set display memused status 0" in the
       interactive shell to disable the memory information column, or include the line <code>SCIPsetIntParam(scip,
       &quot;display/memused/status&quot;, 0)</code> into your source code.  Adding your own display column can be done
-      by calling the <code>SCIPincludeDisp()</code> method, see the <a href="DISP.html">doxygen
+      by calling the <code>SCIPincludeDisp()</code> method, see the <a href="DISP.shtml">doxygen
       documentation</a>.<br> The statistic display, which is shown by "display statistics" and
       <code>SCIPprintStatistics()</code>, respectively, cannot be changed.
     </p>
@@ -762,7 +762,7 @@
        in probing mode.<br/><br/>
 
        If you need to solve a separate LP, creating a sub-SCIP is not recommended because of the overhead involved
-       and because dual information is not accessible (compare <a href="Q45">here</a>). Instead you can use SCIP's LP
+       and because dual information is not accessible (compare <a href="#Q1.12">here</a>). Instead you can use SCIP's LP
        interface. For this you should include <code>scip/lpi.h</code> and call the methods provided therein.
        Note that the LPi can be used independently from SCIP.
     </p>
@@ -881,7 +881,7 @@
       happen, since your pricer uses the same dual values as the variable pricer. To avoid this behavior, set
       PRICER_DELAY to TRUE, so that the LP is reoptimized after the variable pricer added variables to the LP. You can
       find some more information about the PRICER_DELAY property at <a
-      href="PRICER.html#PRICER_PROPERTIES">How to add variable pricers </a>.
+      href="PRICER.shtml#PRICER_PROPERTIES">How to add variable pricers </a>.
     </p>
 
     <p class="q">

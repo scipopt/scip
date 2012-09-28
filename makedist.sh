@@ -95,6 +95,7 @@ $NAME/examples/Scheduler/check/testset/short.test $NAME/examples/Scheduler/check
 $NAME/examples/Scheduler/src/depend.* \
 $NAME/examples/Scheduler/src/*.c $NAME/examples/Scheduler/src/*.h \
 $NAME/examples/Scheduler/data/*.sm \
+$NAME/examples/Scheduler/data/*.cmin \
 $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
 $NAME/examples/TSP/sciptsp.set \

@@ -1221,6 +1221,17 @@ void SCIPsortPtrPtrReal(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortPtrPtrIntInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   int*                  intarray1,          /**< first int array to be permuted in the same way */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortPtrRealIntInt(
@@ -1662,6 +1673,17 @@ void SCIPsortDownPtrPtrReal(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortDownPtrPtrIntInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   int*                  intarray1,          /**< first int array to be permuted in the same way */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    int                   len                 /**< length of arrays */
    );
@@ -2125,6 +2147,22 @@ void SCIPsortedvecInsertPtrPtrReal(
    void*                 keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
+/** insert a new element into four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecInsertPtrPtrIntInt(
+   void**                ptrarray1,          /**< first pointer array where an element is to be inserted */
+   void**                ptrarray2,          /**< second pointer array where an element is to be inserted */
+   int*                  intarray1,          /**< first int array where an element is to be inserted */
+   int*                  intarray2,          /**< second int array where an element is to be inserted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void*                 keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   int                   field2val,          /**< additional value of new element */
+   int                   field3val,          /**< additional value of new element */
    int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
@@ -2754,6 +2792,22 @@ void SCIPsortedvecInsertDownPtrPtrReal(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
+/** insert a new element into four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortedvecInsertDownPtrPtrIntInt(
+   void**                ptrarray1,          /**< first pointer array where an element is to be inserted */
+   void**                ptrarray2,          /**< second pointer array where an element is to be inserted */
+   int*                  intarray1,          /**< first int array where an element is to be inserted */
+   int*                  intarray2,          /**< second int array where an element is to be inserted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void*                 keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   int                   field2val,          /**< additional value of new element */
+   int                   field3val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
 /** insert a new element into four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortedvecInsertDownPtrRealIntInt(
@@ -3342,6 +3396,18 @@ void SCIPsortedvecDelPosPtrPtrReal(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecDelPosPtrPtrIntInt(
+   void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
+   void**                ptrarray2,          /**< second pointer array where an element is to be deleted */
+   int*                  intarray1,          /**< first int array where an element is to be deleted */
+   int*                  intarray2,          /**< second array where an element is to be deleted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortedvecDelPosPtrRealIntInt(
@@ -3820,6 +3886,18 @@ void SCIPsortedvecDelPosDownPtrPtrReal(
    void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
    void**                ptrarray2,          /**< second pointer array where an element is to be deleted */
    SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be deleted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortedvecDelPosDownPtrPtrIntInt(
+   void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
+   void**                ptrarray2,          /**< second pointer array where an element is to be deleted */
+   int*                  intarray1,          /**< first int array where an element is to be deleted */
+   int*                  intarray2,          /**< second int array where an element is to be deleted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */

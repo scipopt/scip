@@ -3,44 +3,31 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License.             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cmin.h,v 1.1.1.1 2010/10/08 10:29:59 bzfheinz Exp $"
 
-/**@file   reader_cmin.h
- * @brief  cmin file reader
- * @author 
+/**@file   cpoptimizer.h
+ * @brief  contains method to solve a single cumulative condition via IBM ILOG CP Optimiter
+ * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_READER_CMIN_H__
-#define __SCIP_READER_CMIN_H__
+#ifndef __SCIP_CPOPTIMIZER_H__
+#define __SCIP_CPOPTIMIZER_H__
 
+#include "scip/cons_cumulative.h"
 
-#include "scip/scip.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** includes the cmin file reader into SCIP */
+/** solve single cumulative condition using CP Optimizer */
 extern
-SCIP_RETCODE SCIPincludeReaderCmin(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+SCIP_DECL_SOLVECUMULATIVE(cpoptimizer);
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif
-
-
