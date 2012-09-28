@@ -829,7 +829,6 @@ SCIP_RETCODE addRelaxation(
       int* endindices;
       int starttime;
       int endtime;
-      int nvars;
       int i;
       int j;
 
@@ -913,6 +912,7 @@ SCIP_RETCODE addRelaxation(
             SCIP_Longint* weights;
             SCIP_Longint energy;
             char name[SCIP_MAXSTRLEN];
+            int nvars;
 
             SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
             SCIP_CALL( SCIPallocBufferArray(scip, &weights, consdata->nvars) );
@@ -924,8 +924,8 @@ SCIP_RETCODE addRelaxation(
 
             SCIP_CALL( collectVars(scip, consdata, vars, weights, &nvars, starttime, endtime) );
 
-            SCIPdebugMessage("create linear relaxation for <%s> time interval [%d,%d] <= %"SCIP_LONGINT_FORMAT"\n",
-               SCIPconsGetName(cons), starttime, endtime, energy);
+            SCIPdebugMessage("create linear relaxation for <%s> time interval [%d,%d] <= %"SCIP_LONGINT_FORMAT" (tightness %"SCIP_LONGINT_FORMAT")\n",
+               SCIPconsGetName(cons), starttime, endtime, energy, rowtightness[j][i]);
 
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s[%d,%d]", SCIPconsGetName(cons), starttime, endtime);
             SCIP_CALL( createRow(scip, conshdlr, name, vars, weights, nvars, energy, SCIPconsIsLocal(cons), rowadded, consadded) );
@@ -934,7 +934,6 @@ SCIP_RETCODE addRelaxation(
             SCIPfreeBufferArray(scip, &vars);
          }
       }
-
 
       /* free buffers */
       for( j = consdata->nvars-1; j >= 0; --j )
