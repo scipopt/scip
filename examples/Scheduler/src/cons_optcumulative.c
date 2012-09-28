@@ -1375,7 +1375,6 @@ SCIP_RETCODE upgradeCons(
    if( nvars == 0 )
    {
       SCIPdebugMessage("delete optcumulative constraint <%s> since it contains no jobs\n", SCIPconsGetName(cons));
-      //SCIP_CALL( SCIPdisableCons(scip, cons) );
       SCIP_CALL( SCIPdelCons(scip, cons) );
       (*ndelconss)++;
       (*mustpropagate) = FALSE;
@@ -1414,8 +1413,6 @@ SCIP_RETCODE upgradeCons(
       SCIP_CALL( SCIPsetHmaxCumulative(scip, cumulativecons, consdata->hmax) );
       SCIP_CALL( SCIPaddCons(scip, cumulativecons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cumulativecons) );
-
-      //SCIP_CALL( SCIPdisableCons(scip, cons) );
 
       assert(!SCIPconsIsDeleted(cons));
       SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -2535,7 +2532,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpOptcumulative)
    for( c = 0; c < nconss && !violated; ++c )
    {
       SCIP_CALL( enfoCons(scip, conss[c], &violated, &rowadded) );
-      //      SCIP_CALL( checkCons(scip, conss[c], NULL, &violated, FALSE) );
    }
 
    if( rowadded )
@@ -2569,7 +2565,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsOptcumulative)
 
    for( c = 0; c < nconss && !violated; ++c )
    {
-      //SCIP_CALL( enfoCons(scip, conss[c], &violated, &consadded) );
       SCIP_CALL( checkCons(scip, conss[c], NULL, &violated, FALSE) );
    }
 
