@@ -14907,7 +14907,7 @@ SCIP_RETCODE SCIPstartStrongbranch(
       SCIPlpStartStrongbranchProbing(scip->lp);
 
       /* we want to collect variable statistics during strong branching */
-      SCIPstatEnableVarHistory(scip->stat);
+      //SCIPstatEnableVarHistory(scip->stat);
    }
    else
    {
@@ -15204,17 +15204,21 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
                                               *   infeasible downwards branch, or NULL */
    SCIP_Bool*            upconflict,         /**< pointer to store whether a conflict constraint was created for an
                                               *   infeasible upwards branch, or NULL */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred or the
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred or the
                                               *   solving process should be stopped (e.g., due to a time limit) */
+   SCIP_Real*            newlbs,
+   SCIP_Real*            newubs
    )
 {
    SCIP_COL* col;
+   SCIP_VAR** vars;
    SCIP_Real newub;
    SCIP_Real newlb;
    SCIP_Bool propagate;
    SCIP_Bool cutoff;
    int oldnconflicts;
    int oldniters;
+   int nvars;
 
    assert(scip != NULL);
    assert(var != NULL);
@@ -15222,6 +15226,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    assert(down != NULL);
    assert(up != NULL);
    assert(lperror != NULL);
+   assert(newlbs != NULL);
+   assert(newubs != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchWithPropagationFrac", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -15248,6 +15254,9 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    *lperror = FALSE;
 
    cutoff = FALSE;
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
 
    /* check if the solving process should be aborted */
    if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) )
@@ -15377,6 +15386,17 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
       }  /*lint !e788*/
    }
 
+   if( !cutoff )
+   {
+      int v;
+
+      for( v = 0; v < nvars; ++v )
+      {
+         newlbs[v] = SCIPvarGetLbLocal(vars[v]);
+         newubs[v] = SCIPvarGetUbLocal(vars[v]);
+      }
+   }
+
    /* revert all changes at the probing node */
    SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
 
@@ -15457,6 +15477,17 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
          SCIPerrorMessage("invalid LP solution status <%d>\n", SCIPgetLPSolstat(scip));
          return SCIP_INVALIDDATA;
       }  /*lint !e788*/
+   }
+
+   if( !cutoff )
+   {
+      int v;
+
+      for( v = 0; v < nvars; ++v )
+      {
+         newlbs[v] = MIN(newlbs[v], SCIPvarGetLbLocal(vars[v]));
+         newubs[v] = MAX(newubs[v], SCIPvarGetUbLocal(vars[v]));
+      }
    }
 
    /* revert all changes at the probing node */

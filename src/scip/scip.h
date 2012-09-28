@@ -6810,8 +6810,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
                                               *   infeasible downwards branch, or NULL */
    SCIP_Bool*            upconflict,         /**< pointer to store whether a conflict constraint was created for an
                                               *   infeasible upwards branch, or NULL */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred or the
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred or the
                                               *   solving process should be stopped (e.g., due to a time limit) */
+   SCIP_Real*            newlbs,
+   SCIP_Real*            newubs
    );
 
 /** gets strong branching information on column variable x with integral LP solution value (val); that is, the down branch

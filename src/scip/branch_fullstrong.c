@@ -162,6 +162,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
    provedbound = lpobjval;
    if( nlpcands > 1 )
    {
+      SCIP_VAR** vars;
+      SCIP_Real* newlbs;
+      SCIP_Real* newubs;
       SCIP_Longint nodenum;
       SCIP_Real down;
       SCIP_Real up;
@@ -177,8 +180,15 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
       SCIP_Bool upconflict;
       SCIP_Bool propagate;
       int nsbcalls;
+      int nvars;
       int i;
       int c;
+
+      vars = SCIPgetVars(scip);
+      nvars = SCIPgetNVars(scip);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &newlbs, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &newubs, nvars) );
 
       /* check whether propagation should be performed */
       propagate = (branchruledata->maxproprounds != 0);
@@ -230,7 +240,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                /* apply strong branching */
                SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, lpcands[c], lpcandssol[c], lpobjval, INT_MAX,
                      branchruledata->maxproprounds, &down, &up, &downvalid, &upvalid, &downinf, &upinf,
-                     &downconflict, &upconflict, &lperror) );
+                     &downconflict, &upconflict, &lperror, newlbs, newubs) );
             }
             else
             {
@@ -326,10 +336,42 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
             else if( allcolsinlp && !exactsolve && downvalid && upvalid )
             {
                SCIP_Real minbound;
+               int nboundchgs;
+               int v;
 
                /* the minimal lower bound of both children is a proved lower bound of the current subtree */
                minbound = MIN(down, up);
                provedbound = MAX(provedbound, minbound);
+
+               nboundchgs = 0;
+
+               for( v = 0; v < nvars; ++v )
+               {
+                  if( SCIPisGT(scip, newlbs[v], SCIPvarGetLbLocal(vars[v])) )
+                  {
+                     printf("better lower bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
+                        SCIPvarGetName(vars[v]), SCIPvarGetLbLocal(vars[v]), newlbs[v], SCIPvarGetName(lpcands[c]));
+
+                     SCIPchgVarLb(scip, vars[v], newlbs[v]);
+                     ++nboundchgs;
+                  }
+                  if( SCIPisLT(scip, newubs[v], SCIPvarGetUbLocal(vars[v])) )
+                  {
+                     printf("better upper bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
+                        SCIPvarGetName(vars[v]), SCIPvarGetUbLocal(vars[v]), newubs[v], SCIPvarGetName(lpcands[c]));
+
+                     SCIPchgVarUb(scip, vars[v], newubs[v]);
+                     ++nboundchgs;
+                  }
+               }
+
+               if( nboundchgs > 0 )
+               {
+                  *result = SCIP_REDUCEDDOM;
+                  SCIPdebugMessage(" -> strong branching with propagation on variable <%s> led to %d bound changes\n", SCIPvarGetName(lpcands[c]), nboundchgs);
+                  break; /* terminate initialization loop, because LP was changed */
+               }
+
             }
 
             /* update pseudo cost values */
@@ -366,6 +408,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
       /* remember last evaluated candidate */
       branchruledata->lastcand = c;
+
+      SCIPfreeBufferArray(scip, &newlbs);
+      SCIPfreeBufferArray(scip, &newubs);
+
    }
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
