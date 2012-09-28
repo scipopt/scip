@@ -1923,13 +1923,20 @@ SCIP_RETCODE checkCumulativeCondition(
    /* assign variables, start and endpoints to arrays */
    for ( j = 0; j < nvars; ++j )
    {
+      int solvalue;
+
       /* the constraint of the cumulative constraint handler should be called after the integrality check */
       assert(SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[j])));
 
-      startsolvalues[j] = convertBoundToInt(scip, SCIPgetSolVal(scip, sol, vars[j]));
+      solvalue = convertBoundToInt(scip, SCIPgetSolVal(scip, sol, vars[j]));
+
+      /* we need to ensure that we check at least one time point during the effective horizon; therefore we project all
+       * jobs which start before hmin to hmin
+       */
+      startsolvalues[j] = MAX(solvalue, hmin);
       startindices[j] = j;
 
-      endsolvalues[j] = startsolvalues[j] + durations[j];
+      endsolvalues[j] = MAX(solvalue + durations[j], hmin);
       endindices[j] = j;
    }
 
