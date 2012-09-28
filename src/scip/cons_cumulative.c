@@ -9784,6 +9784,17 @@ SCIP_Real SCIPsolveCumulative(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nvars) );
+
+   for( v = 0; v < nvars; ++v )
+   {
+      assert(vars[v] != NULL);
+
+      ests[v] = SCIPvarGetLbLocal(vars[v]);
+      lsts[v] = SCIPvarGetUbLocal(vars[v]);
+      objvals[v] = SCIPvarGetObj(vars[v]);
+   }
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -9801,22 +9812,11 @@ SCIP_Real SCIPsolveCumulative(
    }
 
    /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nvars) );
-
-   for( v = 0; v < nvars; ++v )
+   if( timelimit > 0.0 && memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
-      assert(vars[v] != NULL);
-
-      ests[v] = SCIPvarGetLbLocal(vars[v]);
-      lsts[v] = SCIPvarGetUbLocal(vars[v]);
-      objvals[v] = SCIPvarGetObj(vars[v]);
+      SCIP_CALL( conshdlrdata->solveCumulative(nvars, ests, lsts, objvals, durations, demands, capacity,
+            hmin, hmax, timelimit, memorylimit, maxnodes, infeasible, unbounded, error) );
    }
-
-   SCIP_CALL( conshdlrdata->solveCumulative(nvars, ests, lsts, objvals, durations, demands, capacity,
-         hmin, hmax, timelimit, memorylimit, maxnodes, infeasible, unbounded, error) );
 
    SCIPfreeBufferArray(scip, &objvals);
 
