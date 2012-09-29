@@ -3811,8 +3811,9 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
    assert(col->lppos < lp->ncols);
    assert(lp->cols[col->lppos] == col);
    assert(itlim >= 1);
-   assert(down != NULL);
-   assert(up != NULL);
+   /*   assert(down != NULL);
+    *  assert(up != NULL); temporary hack for cloud branching
+    */
    assert(lperror != NULL);
 
    *lperror = FALSE;
@@ -3853,12 +3854,17 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
          col->nsbcalls++;
 
          if( integral )
-            retcode = SCIPlpiStrongbranchInt(lp->lpi, col->lpipos, col->primsol, itlim, &sbdown, &sbup, &sbdownvalid, &sbupvalid, &iter);
+            retcode = SCIPlpiStrongbranchInt(lp->lpi, col->lpipos, col->primsol, itlim, down  == NULL ? NULL : &sbdown, up  == NULL ? NULL : &sbup, &sbdownvalid, &sbupvalid, &iter);
          else
          {
             assert( ! SCIPsetIsIntegral(set, col->primsol) );
-            retcode = SCIPlpiStrongbranchFrac(lp->lpi, col->lpipos, col->primsol, itlim, &sbdown, &sbup, &sbdownvalid, &sbupvalid, &iter);
+            retcode = SCIPlpiStrongbranchFrac(lp->lpi, col->lpipos, col->primsol, itlim, down == NULL ? NULL : &sbdown, up == NULL ? NULL :  &sbup, &sbdownvalid, &sbupvalid, &iter);
          }
+
+	 if( down == NULL )
+	    sbdown = 0.0;
+	 if( up == NULL )
+	    sbup = 0.0;
 
          /* check return code for errors */
          if( retcode == SCIP_LPERROR )
@@ -3914,8 +3920,10 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
    assert(*lperror || col->sbdown < SCIP_INVALID);
    assert(*lperror || col->sbup < SCIP_INVALID);
 
-   *down = col->sbdown;
-   *up = col->sbup;
+   if( down != NULL)
+      *down = col->sbdown;
+   if( up != NULL )
+      *up = col->sbup;
    if( downvalid != NULL )
       *downvalid = col->sbdownvalid;
    if( upvalid != NULL )

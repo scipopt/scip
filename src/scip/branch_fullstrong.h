@@ -68,6 +68,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_VAR**            lpcands,            /**< branching candidates                                */
    SCIP_Real*            lpcandssol,         /**< solution values of the branching candidates         */
    SCIP_Real*            lpcandsfrac,        /**< fractional values of the branching candidates       */
+   SCIP_Bool*            skipdown,           /**< should down branchings be skipped? */
+   SCIP_Bool*            skipup,             /**< should up branchings be skipped? */
    int                   nlpcands,           /**< number of branching candidates                      */
    int                   npriolpcands,       /**< number of priority branching candidates             */
    int*                  start,              /**< starting index in lpcands                           */

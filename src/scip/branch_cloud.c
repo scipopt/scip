@@ -54,6 +54,8 @@ struct SCIP_BranchruleData
    int                   maxpoints;          /**< maximum number of points for the cloud (-1 means no limit) */
    SCIP_Real             minsuccessrate;     /**< minimum success rate for the cloud */
    SCIP_CLOCK*           cloudclock;         /**< clock for cloud diving */
+   SCIP_Bool*            skipdown;
+   SCIP_Bool*            skipup;
    int                   ntried;             /**< number of times the cloud was tried */
    int                   nuseful;            /**< number of times the cloud was useful */
 };
@@ -101,6 +103,10 @@ SCIP_DECL_BRANCHFREE(branchFreeCloud)
       SCIPstatisticMessage("success rate of cloud branching: %g\n", (SCIP_Real)branchruledata->nuseful / branchruledata->ntried);
       SCIP_CALL( SCIPfreeClock(scip, &(branchruledata->cloudclock)) );
    }
+
+   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipdown);
+   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipup);
+
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
@@ -220,10 +226,22 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
+   if( branchruledata->skipdown == NULL )
+   {
+      assert(branchruledata->skipup == NULL);
+
+      SCIPallocMemoryArray(scip, &branchruledata->skipdown, SCIPgetNVars(scip));
+      SCIPallocMemoryArray(scip, &branchruledata->skipup, SCIPgetNVars(scip));
+   }
+
    /* get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, &npriolpcands) );
    nlpcands = SCIPgetNLPBranchCands(scip);
    assert(nlpcands > 0);
+
+   /* reset skipping arrays to zero */
+   BMSclearMemoryArray(branchruledata->skipdown, nlpcands);
+   BMSclearMemoryArray(branchruledata->skipup, nlpcands);
 
    /* get problem variables and LP row data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -388,7 +406,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       branchruledata->usecloud = FALSE;
    }
 
-   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, counter, counter, /* replace second counter ??????????? */
+   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, branchruledata->skipdown, branchruledata->skipup, counter, counter, /* replace second counter ??????????? */
       &branchruledata->lastcand, allowaddcons,
       &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
@@ -489,6 +507,8 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
    /* create cloud branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
+   branchruledata->skipup = NULL;
+   branchruledata->skipdown = NULL;
 
    /* include branching rule */
    branchrule = NULL;

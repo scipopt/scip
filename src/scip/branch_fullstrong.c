@@ -42,6 +42,8 @@ struct SCIP_BranchruleData
    SCIP_Longint          reevalage;          /**< number of intermediate LPs solved to trigger reevaluation of strong branching
                                               *   value for a variable that was already evaluated at the current node */
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
+   SCIP_Bool*            skipdown;
+   SCIP_Bool*            skipup;
 };
 
 
@@ -59,7 +61,7 @@ SCIP_DECL_BRANCHCOPY(branchCopyFullstrong)
 
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -71,6 +73,9 @@ SCIP_DECL_BRANCHFREE(branchFreeFullstrong)
 
    /* free branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
+   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipdown);
+   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipup);
+
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
@@ -104,6 +109,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_VAR**            lpcands,            /**< branching candidates                                */
    SCIP_Real*            lpcandssol,         /**< solution values of the branching candidates         */
    SCIP_Real*            lpcandsfrac,        /**< fractional values of the branching candidates       */
+   SCIP_Bool*            skipdown,           /**< should down branchings be skipped? */
+   SCIP_Bool*            skipup,             /**< should up branchings be skipped? */
    int                   nlpcands,           /**< number of branching candidates                      */
    int                   npriolpcands,       /**< number of priority branching candidates             */
    int*                  start,              /**< starting index in lpcands                           */
@@ -149,6 +156,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    assert(lpcandssol != NULL);
    assert(lpcandsfrac != NULL);
    assert(bestcand != NULL);
+   assert(skipdown != NULL);
+   assert(skipup != NULL);
    assert(bestdown != NULL);
    assert(bestup != NULL);
    assert(bestscore != NULL);
@@ -156,7 +165,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    assert(bestupvalid != NULL);
    assert(provedbound != NULL);
    assert(result != NULL);
-   
+
    /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
     * for cutting off sub problems and improving lower bounds of children
     */
@@ -235,10 +244,10 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
             SCIPvarGetName(lpcands[c]), lpcandssol[c]);
 
          /* apply strong branching */
-         SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, lpcands[c], INT_MAX, 
-               &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+         SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, lpcands[c], INT_MAX,
+					       skipdown[i] ? NULL : &down, skipup[i] ? NULL : &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
          nsbcalls++;
-         
+
          /* display node information line */
          if( SCIPgetDepth(scip) == 0 && nsbcalls % 100 == 0 )
          {
@@ -249,7 +258,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          if( lperror )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n", 
+               "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n",
                SCIPgetNNodes(scip), SCIPvarGetName(lpcands[c]), lpcandssol[c]);
             break;
          }
@@ -269,7 +278,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          {
             assert(allcolsinlp);
             assert(!exactsolve);
-         
+
             /* if for both infeasibilities, a conflict constraint was created, we don't need to fix the variable by
              * hand, but better wait for the next propagation round to fix them as an inference, and potentially
              * produce a cutoff that can be analyzed
@@ -307,7 +316,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          else if( allcolsinlp && !exactsolve && downvalid && upvalid )
          {
             SCIP_Real minbound;
-         
+
             /* the minimal lower bound of both children is a proved lower bound of the current subtree */
             minbound = MIN(down, up);
             *provedbound = MAX(*provedbound, minbound);
@@ -386,9 +395,22 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
    assert(nlpcands > 0);
    assert(npriolpcands > 0);
 
-   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcands, lpcandssol, lpcandsfrac, nlpcands, npriolpcands,
+   if( branchruledata->skipdown == NULL )
+   {
+      int nvars;
+      nvars = SCIPgetNVars(scip);
+
+      assert(branchruledata->skipup == NULL);
+
+      SCIPallocMemoryArray(scip, &branchruledata->skipdown, nvars);
+      SCIPallocMemoryArray(scip, &branchruledata->skipup, nvars);
+      BMSclearMemoryArray(branchruledata->skipdown, nvars);
+      BMSclearMemoryArray(branchruledata->skipup, nvars);
+   }
+
+   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcands, lpcandssol, lpcandsfrac, branchruledata->skipdown, branchruledata->skipup, nlpcands, npriolpcands,
       &branchruledata->lastcand, allowaddcons,
-      &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) ); 
+      &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
@@ -450,6 +472,8 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    /* create fullstrong branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
+   branchruledata->skipup = NULL;
+   branchruledata->skipdown = NULL;
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
@@ -465,7 +489,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
 
    /* fullstrong branching rule parameters */
    SCIP_CALL( SCIPaddLongintParam(scip,
-         "branching/fullstrong/reevalage", 
+         "branching/fullstrong/reevalage",
          "number of intermediate LPs solved to trigger reevaluation of strong branching value for a variable that was already evaluated at the current node",
          &branchruledata->reevalage, TRUE, DEFAULT_REEVALAGE, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
