@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define SCIP_STATISTIC
-/* #define SCIP_DEBUG */
+#define SCIP_DEBUG
 
 /**@file   branch_cloud.c
  * @brief  cloud branching rule
@@ -211,6 +211,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    int nlprows;
    int i;
    int counter;
+   int ncomplete;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -374,6 +375,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    SCIP_CALL( SCIPendDive(scip) );
 
    SCIP_CALL(  SCIPstopClock(scip, branchruledata->cloudclock) );
+   ncomplete = nlpcands;
 
    if( counter > 0 )
    {
@@ -390,9 +392,33 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
             counter++;
          }
       }
-      SCIPdebugMessage("skipped %d/%d strong branching candidates\n", nlpcands - counter, nlpcands);
+
+      /* ???? should this stay here or go beneath the next loop????? */
       if( nlpcands - counter > 0 )
          branchruledata->nuseful++;
+      ncomplete = counter;
+
+      for( i = 0; i < nlpcands; ++i)
+      {
+         if( SCIPisFeasIntegral(scip, lpcandsmin[i]) != SCIPisFeasIntegral(scip, lpcandsmax[i]) )
+         {
+            assert(counter < nlpcands);
+            lpcandscopy[counter] = lpcandscopy[i];
+            lpcandssolcopy[counter] = lpcandssolcopy[i];
+            lpcandsfraccopy[counter] = lpcandsfraccopy[i];
+
+            if( SCIPisFeasIntegral(scip, lpcandsmin[i]) )
+               branchruledata->skipdown[counter] = TRUE;
+            if( SCIPisFeasIntegral(scip, lpcandsmax[i]) )
+               branchruledata->skipup[counter] = TRUE;
+            assert(branchruledata->skipdown[counter] != branchruledata->skipup[counter]);
+
+            counter++;
+         }
+      }
+
+      SCIPdebugMessage("can fully skip %d/%d strong branching candidates\n", nlpcands - counter, nlpcands);
+      SCIPdebugMessage("can half  skip %d/%d strong branching candidates\n", counter - ncomplete, nlpcands);
    }
    else
       counter = nlpcands;
@@ -407,8 +433,17 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    }
 
    SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, branchruledata->skipdown, branchruledata->skipup, counter, counter, /* replace second counter ??????????? */
-      &branchruledata->lastcand, allowaddcons,
-      &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
+         ncomplete, &branchruledata->lastcand, allowaddcons,
+         &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
+
+   if( branchruledata->lastcand <= ncomplete )
+   {
+      SCIPdebugMessage("saved %d of %d LPs\n", 2*(nlpcands - ncomplete), 2*nlpcands);
+   }
+   else
+   {
+      SCIPdebugMessage("saved %d of %d LPs\n", 2*(nlpcands - counter)+counter - ncomplete, 2*nlpcands);
+   }
 
    /* perform the branching */
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED && counter > 0 ) /* ??????? */

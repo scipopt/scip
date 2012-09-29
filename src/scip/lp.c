@@ -3862,9 +3862,9 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
          }
 
 	 if( down == NULL )
-	    sbdown = 0.0;
+	    sbdown = lp->lpobjval;
 	 if( up == NULL )
-	    sbup = 0.0;
+	    sbup = lp->lpobjval;
 
          /* check return code for errors */
          if( retcode == SCIP_LPERROR )
@@ -3889,6 +3889,7 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
             looseobjval = getFiniteLooseObjval(lp, set, prob);
             col->sbdown = MIN(sbdown + looseobjval, lp->cutoffbound);
             col->sbup = MIN(sbup + looseobjval, lp->cutoffbound);
+
             col->sbdownvalid = sbdownvalid;
             col->sbupvalid = sbupvalid;
 

@@ -72,6 +72,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_Bool*            skipup,             /**< should up branchings be skipped? */
    int                   nlpcands,           /**< number of branching candidates                      */
    int                   npriolpcands,       /**< number of priority branching candidates             */
+   int                   ncomplete,          /**< number of branching candidates without skip         */
    int*                  start,              /**< starting index in lpcands                           */
    SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
    int*                  bestcand,           /**< best candidate for branching                        */

@@ -113,6 +113,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_Bool*            skipup,             /**< should up branchings be skipped? */
    int                   nlpcands,           /**< number of branching candidates                      */
    int                   npriolpcands,       /**< number of priority branching candidates             */
+   int                   ncomplete,          /**< number of branching candidates without skip         */
    int*                  start,              /**< starting index in lpcands                           */
    SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
    int*                  bestcand,           /**< best candidate for branching                        */
@@ -146,6 +147,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_Bool upinf;
    SCIP_Bool downconflict;
    SCIP_Bool upconflict;
+   SCIP_Bool bothgains;
+
    int nsbcalls;
    int nodenum;
    int i;
@@ -211,7 +214,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
     * cycle through the candidates, starting with the position evaluated in the last run
     */
    nsbcalls = 0;
-   for( i = 0, c = *start; i < nlpcands; ++i, ++c )
+   bothgains = TRUE;
+   for( i = 0, c = *start; i < nlpcands && (!bothgains || i < ncomplete); ++i, ++c )
    {
       c = c % nlpcands;
       assert(lpcands[c] != NULL);
@@ -242,10 +246,11 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
       {
          SCIPdebugMessage("applying strong branching on variable <%s> with solution %g\n",
             SCIPvarGetName(lpcands[c]), lpcandssol[c]);
+         assert(i >= ncomplete || (!skipdown[i]&&!skipup[i]));
 
          /* apply strong branching */
          SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, lpcands[c], INT_MAX,
-					       skipdown[i] ? NULL : &down, skipup[i] ? NULL : &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+               skipdown[i] ? NULL : &down, skipup[i] ? NULL : &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
          nsbcalls++;
 
          /* display node information line */
@@ -268,6 +273,9 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          up = MAX(up, lpobjval);
          downgain = down - lpobjval;
          upgain = up - lpobjval;
+         if( !SCIPisFeasZero(scip,downgain) && !SCIPisFeasZero(scip,upgain) )
+            bothgains = TRUE;
+
          assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, cutoffbound));
          assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, cutoffbound));
          assert(downinf || !downconflict);
@@ -408,7 +416,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
       BMSclearMemoryArray(branchruledata->skipup, nvars);
    }
 
-   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcands, lpcandssol, lpcandsfrac, branchruledata->skipdown, branchruledata->skipup, nlpcands, npriolpcands,
+   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcands, lpcandssol, lpcandsfrac, branchruledata->skipdown, branchruledata->skipup, nlpcands, npriolpcands, nlpcands,
       &branchruledata->lastcand, allowaddcons,
       &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
