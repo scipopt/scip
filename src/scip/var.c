@@ -1568,7 +1568,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             impltype = impltypes[i];
             assert(implvar != var);
             assert(SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY);
-            
+
             /* remove for all implications z == 0 / 1  ==>  x <= 0 / x >= 1 (x binary)
              * the following implication from x's implications 
              *   x == 1  ==>  z <= 0            , for z == 1  ==>  x <= 0
@@ -1597,7 +1597,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             impltype = impltypes[i];
             assert(implvar != var);
             assert(SCIPvarGetType(implvar) != SCIP_VARTYPE_BINARY);
-            
+
             /* remove for all implications z == 0 / 1  ==>  x <= p / x >= p (x not binary)
              * the following variable bound from x's variable bounds 
              *   x <= b*z+d (z in vubs of x)            , for z == 0 / 1  ==>  x <= p
@@ -1659,9 +1659,14 @@ SCIP_RETCODE varRemoveImplicsVbs(
       newnvbds = 0;
       for( i = 0; i < nvbds; i++ )
       {
+         SCIP_VAR* implvar;
          SCIP_Real coef;
 
          assert(newnvbds <= i);
+
+         implvar = vars[i];
+         assert(implvar != NULL);
+
          coef = coefs[i];
          assert(!SCIPsetIsZero(set, coef));
 
@@ -1670,7 +1675,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
          {
             SCIP_Real vbound;
 
-            vbound = MAX(coef * SCIPvarGetUbGlobal(vars[i]), coef * SCIPvarGetLbGlobal(vars[i])) + constants[i];  /*lint !e666*/
+            vbound = MAX(coef * SCIPvarGetUbGlobal(implvar), coef * SCIPvarGetLbGlobal(implvar)) + constants[i];  /*lint !e666*/
             if( SCIPsetIsFeasGT(set, vbound, lb) )
             {
                /* the variable bound is not redundant: keep it */
@@ -1678,7 +1683,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
                {
                   if( newnvbds < i )
                   {
-                     vars[newnvbds] = vars[i];
+                     vars[newnvbds] = implvar;
                      coefs[newnvbds] = coef;
                      constants[newnvbds] = constants[i];
                   }
@@ -1689,11 +1694,25 @@ SCIP_RETCODE varRemoveImplicsVbs(
          }
 
          /* remove the corresponding implication */
-         if( vars[i]->implics != NULL ) /* variable may have been aggregated in the mean time */
+         if( implvar->implics != NULL ) /* variable may have been aggregated in the mean time */
          {
-            SCIPdebugMessage("deleting implication: <%s> == %d  ==>  <%s> >= %g\n", 
-               SCIPvarGetName(vars[i]), (coef > 0.0), SCIPvarGetName(var), MAX(coef, 0.0) + constants[i]);
-            SCIP_CALL( SCIPimplicsDel(&vars[i]->implics, blkmem, set, (coef > 0.0), var, SCIP_BOUNDTYPE_LOWER) );
+            SCIPdebugMessage("deleting implication: <%s> == %d  ==>  <%s> >= %g\n",
+               SCIPvarGetName(implvar), (coef > 0.0), SCIPvarGetName(var), MAX(coef, 0.0) + constants[i]);
+            SCIP_CALL( SCIPimplicsDel(&implvar->implics, blkmem, set, (coef > 0.0), var, SCIP_BOUNDTYPE_LOWER) );
+         }
+         if( coef > 0.0 && implvar->vubs != NULL ) /* implvar may have been aggregated in the mean time */
+         {
+            SCIPdebugMessage("deleting variable upper bound from <%s> involving variable %s\n",
+               SCIPvarGetName(implvar), SCIPvarGetName(var));
+            SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, FALSE) );
+            var->closestvblpcount = -1;
+         }
+         else if( coef < 0.0 && implvar->vlbs != NULL ) /* implvar may have been aggregated in the mean time */
+         {
+            SCIPdebugMessage("deleting variable lower bound from <%s> involving variable %s\n",
+               SCIPvarGetName(implvar), SCIPvarGetName(var));
+            SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, TRUE) );
+            var->closestvblpcount = -1;
          }
       }
 
@@ -1732,9 +1751,14 @@ SCIP_RETCODE varRemoveImplicsVbs(
       newnvbds = 0;
       for( i = 0; i < nvbds; i++ )
       {
+         SCIP_VAR* implvar;
          SCIP_Real coef;
 
          assert(newnvbds <= i);
+
+         implvar = vars[i];
+         assert(implvar != NULL);
+
          coef = coefs[i];
          assert(!SCIPsetIsZero(set, coef));
 
@@ -1743,7 +1767,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
          {
             SCIP_Real vbound;
 
-            vbound = MIN(coef * SCIPvarGetUbGlobal(vars[i]), coef * SCIPvarGetLbGlobal(vars[i])) + constants[i];  /*lint !e666*/
+            vbound = MIN(coef * SCIPvarGetUbGlobal(implvar), coef * SCIPvarGetLbGlobal(implvar)) + constants[i];  /*lint !e666*/
             if( SCIPsetIsFeasLT(set, vbound, ub) )
             {
                /* the variable bound is not redundant: keep it */
@@ -1751,7 +1775,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
                {
                   if( newnvbds < i )
                   {
-                     vars[newnvbds] = vars[i];
+                     vars[newnvbds] = implvar;
                      coefs[newnvbds] = coefs[i];
                      constants[newnvbds] = constants[i];
                   }
@@ -1762,11 +1786,25 @@ SCIP_RETCODE varRemoveImplicsVbs(
          }
 
          /* remove the corresponding implication */
-         if( vars[i]->implics != NULL ) /* variable may have been aggregated in the mean time */
+         if( implvar->implics != NULL ) /* variable may have been aggregated in the mean time */
          {
-            SCIPdebugMessage("deleting implication: <%s> == %d  ==>  <%s> <= %g\n", 
-               SCIPvarGetName(vars[i]), (coef < 0.0), SCIPvarGetName(var), MIN(coef, 0.0) + constants[i]);
-            SCIP_CALL( SCIPimplicsDel(&vars[i]->implics, blkmem, set, (coef < 0.0), var, SCIP_BOUNDTYPE_UPPER) );
+            SCIPdebugMessage("deleting implication: <%s> == %d  ==>  <%s> <= %g\n",
+               SCIPvarGetName(implvar), (coef < 0.0), SCIPvarGetName(var), MIN(coef, 0.0) + constants[i]);
+            SCIP_CALL( SCIPimplicsDel(&implvar->implics, blkmem, set, (coef < 0.0), var, SCIP_BOUNDTYPE_UPPER) );
+         }
+         if( coef < 0.0 && implvar->vubs != NULL ) /* implvar may have been aggregated in the mean time */
+         {
+            SCIPdebugMessage("deleting variable upper bound from <%s> involving variable %s\n",
+               SCIPvarGetName(implvar), SCIPvarGetName(var));
+            SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, TRUE) );
+            var->closestvblpcount = -1;
+         }
+         else if( coef > 0.0 && implvar->vlbs != NULL ) /* implvar may have been aggregated in the mean time */
+         {
+            SCIPdebugMessage("deleting variable lower bound from <%s> involving variable %s\n",
+               SCIPvarGetName(implvar), SCIPvarGetName(var));
+            SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, FALSE) );
+            var->closestvblpcount = -1;
          }
       }
 
