@@ -699,7 +699,7 @@ BEGIN {
          abstol = 1e-4;
 
 	 # objsense = 1 -> minimize; objsense = -1 -> maximize
-         if( ( objsense == 1 && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( objsense == -1 && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
+         if( ( objsense == 1 && ((db > -infty && db-sol[prob] > reltol) || sol[prob]-pb > reltol) ) || ( objsense == -1 && ((db > -infty && sol[prob]-db > reltol) || pb-sol[prob] > reltol) ) ) {
             status = "fail";
             failtime += tottime;
             fail++;
@@ -722,7 +722,7 @@ BEGIN {
                timeouts++;
             }
             else {
-               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol ) {
+               if( db == -infty || ((abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol) ) {
                   status = "ok";
                   pass++;
                }

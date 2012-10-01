@@ -62,6 +62,9 @@ then
     mkdir locks
 fi
 
+# set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
+SETCUTOFF=1
+
 LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.lock
 RUNFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.run.$BINID
 DONEFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.done
@@ -72,6 +75,18 @@ RESFILE=results/check.$TSTNAME.$BINID.$SETNAME.res
 TEXFILE=results/check.$TSTNAME.$BINID.$SETNAME.tex
 TMPFILE=results/check.$TSTNAME.$BINID.$SETNAME.tmp
 SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
+
+# if cutoff should be passed, check for solu file
+if test $SETCUTOFF = 1 ; then
+  if test -e testset/$TSTNAME.solu ; then
+    SOLUFILE=testset/$TSTNAME.solu
+  elif test -e testset/all.solu ; then
+    SOLUFILE=testset/all.solu
+  else
+    echo "Warning: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"
+    SETCUTOFF=0
+  fi
+fi
 
 SETTINGS=$SETDIR/$SETNAME.set
 
@@ -165,6 +180,25 @@ do
         LASTPROB=""
         if test -f $i
         then
+	    SHORTFILENAME=`basename $i .gz`
+	    SHORTFILENAME=`basename $SHORTFILENAME .mps`
+	    SHORTFILENAME=`basename $SHORTFILENAME .lp`
+	    SHORTFILENAME=`basename $SHORTFILENAME .opb`
+	    SHORTFILENAME=`basename $SHORTFILENAME .gms`
+	    SHORTFILENAME=`basename $SHORTFILENAME .pip`
+	    SHORTFILENAME=`basename $SHORTFILENAME .zpl`
+	    SHORTFILENAME=`basename $SHORTFILENAME .cip`
+	    SHORTFILENAME=`basename $SHORTFILENAME .fzn`
+	    SHORTFILENAME=`basename $SHORTFILENAME .osil`
+	    SHORTFILENAME=`basename $SHORTFILENAME .wbo`
+	    SHORTFILENAME=`basename $SHORTFILENAME .cnf`
+
+	    if test $SETCUTOFF = 1
+	    then
+		export CUTOFF=`grep "$SHORTFILENAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
+	    fi
+	    echo CUTOFF:  $CUTOFF
+
             echo @01 $i ===========
             echo @01 $i ===========                >> $ERRFILE
             echo > $TMPFILE
@@ -189,6 +223,15 @@ do
             fi
             echo set save $SETFILE                 >> $TMPFILE
             echo read $i                           >> $TMPFILE
+	    if test $SETCUTOFF = 1
+	    then
+		if test $CUTOFF != ""
+		then
+		    echo set limits objective $CUTOFF      >> $TMPFILE
+		fi
+		echo set heur emph off                 >> $TMPFILE
+		echo set sepa emph off                 >> $TMPFILE
+	    fi
 #            echo write genproblem cipreadparsetest.cip >> $TMPFILE
 #            echo read cipreadparsetest.cip         >> $TMPFILE
             echo optimize                          >> $TMPFILE

@@ -74,6 +74,8 @@ then
     exit 1;
 fi
 
+# set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
+SETCUTOFF=1
 # get current SCIP path
 SCIPPATH=`pwd`
 
@@ -121,6 +123,18 @@ then
     EXCLUSIVE=" --exclusive"
 else
     EXCLUSIVE=""
+fi
+
+# if cutoff should be passed, check for solu file
+if test $SETCUTOFF = 1 ; then
+  if test -e testset/$TSTNAME.solu ; then
+    SOLUFILE=testset/$TSTNAME.solu
+  elif test -e testset/all.solu ; then
+    SOLUFILE=testset/all.solu
+  else
+    echo "Warning: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"
+    SETCUTOFF=0
+  fi
 fi
 
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
@@ -258,6 +272,19 @@ do
 	    SHORTPROBNAME=`basename $SHORTPROBNAME .mps`
 	    SHORTPROBNAME=`basename $SHORTPROBNAME .lp`
 	    SHORTPROBNAME=`basename $SHORTPROBNAME .opb`
+	    SHORTPROBNAME=`basename $SHORTPROBNAME .gms`
+	    SHORTPROBNAME=`basename $SHORTPROBNAME .pip`
+	    SHORTPROBNAME=`basename $SHORTPROBNAME .zpl`
+	    SHORTPROBNAME=`basename $SHORTPROBNAME .cip`
+	    SHORTPROBNAME=`basename $SHORTPROBNAME .fzn`
+	    SHORTPROBNAME=`basename $SHORTPROBNAME .osil`
+	    SHORTPROBNAME=`basename $SHORTPROBNAME .wbo`
+	    SHORTPROBNAME=`basename $SHORTPROBNAME .cnf`
+
+	    if test $SETCUTOFF = 1
+	    then
+		CUTOFF=`grep "$SHORTPROBNAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
+	    fi
 
 	    # if number of permutations is positive, add postfix
 	    if test $PERMUTE -gt 0
@@ -313,6 +340,15 @@ do
 	    fi
 	    echo set save $SETFILE                 >> $TMPFILE
 	    echo read $SCIPPATH/$i                 >> $TMPFILE
+	    if test $SETCUTOFF = 1
+	    then
+		if test ""$CUTOFF != ""
+		then
+		    echo set limits objective $CUTOFF      >> $TMPFILE
+		fi
+		echo set heur emph off                 >> $TMPFILE
+		echo set sepa emph off                 >> $TMPFILE
+	    fi
 #           echo presolve                          >> $TMPFILE
 	    echo optimize                          >> $TMPFILE
 	    echo display statistics                >> $TMPFILE
