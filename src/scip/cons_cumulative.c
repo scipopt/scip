@@ -162,11 +162,6 @@ struct SCIP_ConsData
 
 #ifdef SCIP_STATISTIC
    int                   maxpeak;
-   int                   nirrelevantjobs;
-   int                   nalwaysruns;
-   int                   ndualfixs;
-   int                   nremovedlocks;
-   int                   ndecomps;
 #endif
 };
 
@@ -1569,14 +1564,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->covercuts = FALSE;
    (*consdata)->propagated = FALSE;
    (*consdata)->triedsolving = FALSE;
-
-#ifdef SCIP_STATISTIC
-   (*consdata)->nirrelevantjobs = 0;
-   (*consdata)->nalwaysruns = 0;
-   (*consdata)->ndualfixs = 0;
-   (*consdata)->nremovedlocks = 0;
-   (*consdata)->ndecomps = 0;
-#endif
 
    if( nvars > 0 )
    {
@@ -5379,6 +5366,11 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
             assert(fixed);
 
             (*nfixedvars)++;
+
+            /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
+             * constraints
+             */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nallconsdualfixs++ );
          }
       }
 
@@ -5391,6 +5383,11 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
             assert(fixed);
 
             (*nfixedvars)++;
+
+            /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
+             * constraints
+             */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nallconsdualfixs++ );
          }
       }
    }
@@ -5440,15 +5437,11 @@ SCIP_RETCODE propagateAllConss(
       alternativeubs[v] = INT_MIN;
    }
 
-   SCIPstatistic( conshdlrdata->nallconsdualfixs -= *nfixedvars );
-
    /* compute alternative bounds */
    SCIP_CALL( computeAlternativeBounds(scip, conss, nconss, local, alternativelbs, alternativeubs, downlocks, uplocks) );
 
    /* apply fixing which result of the alternative bounds directly */
    SCIP_CALL( applyAlternativeBoundsFixing(scip, vars, nvars, alternativelbs, alternativeubs, downlocks, uplocks, nfixedvars) );
-
-   SCIPstatistic( conshdlrdata->nallconsdualfixs += *nfixedvars );
 
    if( oldnfixedvars == *nfixedvars && branched != NULL )
    {
@@ -7149,7 +7142,8 @@ SCIP_RETCODE computeEffectiveHorizon(
 
       assert(consdata->hmin < consdata->hmax);
 
-      SCIPstatistic( consdata->ndecomps++ );
+      /* for the statistic we count the number of time we decompose a cumulative constraint */
+      SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->ndecomps++ );
       (*naddconss)++;
    }
 
@@ -7223,7 +7217,8 @@ SCIP_RETCODE presolveConsEst(
          /* mark variable to be irrelevant */
          irrelevants[v] = TRUE;
 
-         SCIPstatistic( consdata->nirrelevantjobs++ );
+         /* for the statistic we count the number of jobs which are irrelevant */
+         SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nirrelevantjobs++ );
 
          continue;
       }
@@ -7254,8 +7249,8 @@ SCIP_RETCODE presolveConsEst(
             /* mark variable to be irrelevant */
             irrelevants[v] = TRUE;
 
-            /* adjust nvars after deleting the variable */
-            SCIPstatistic( consdata->ndualfixs++ );
+            /* for the statistic we count the number of jobs which are dual fixed */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->ndualfixs++ );
 
             continue;
          }
@@ -7284,7 +7279,8 @@ SCIP_RETCODE presolveConsEst(
             /* mark variable to be irrelevant */
             irrelevants[v] = TRUE;
 
-            SCIPstatistic( consdata->nalwaysruns++ );
+            /* for the statistic we count the number of jobs which always run during the effective horizon */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nalwaysruns++ );
          }
 
          if( downlocks[v] )
@@ -7296,7 +7292,8 @@ SCIP_RETCODE presolveConsEst(
             downlocks[v] = FALSE;
             (*nchgsides)++;
 
-            SCIPstatistic( consdata->nremovedlocks++ );
+            /* for the statistic we count the number of removed locks */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nremovedlocks++ );
          }
       }
    }
@@ -7371,7 +7368,8 @@ SCIP_RETCODE presolveConsLct(
          /* mark variable to be irrelevant */
          irrelevants[v] = TRUE;
 
-         SCIPstatistic( consdata->nirrelevantjobs++ );
+         /* for the statistic we count the number of jobs which are irrelevant */
+         SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nirrelevantjobs++ );
 
          continue;
       }
@@ -7402,7 +7400,8 @@ SCIP_RETCODE presolveConsLct(
             /* mark variable to be irrelevant */
             irrelevants[v] = TRUE;
 
-            SCIPstatistic( consdata->ndualfixs++ );
+            /* for the statistic we count the number of jobs which are dual fixed */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->ndualfixs++ );
 
             continue;
          }
@@ -7428,7 +7427,8 @@ SCIP_RETCODE presolveConsLct(
             /* mark variable to be irrelevant */
             irrelevants[v] = TRUE;
 
-            SCIPstatistic( consdata->nalwaysruns++ );
+            /* for the statistic we count the number of jobs which always run during the effective horizon */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nalwaysruns++ );
          }
 
          if( uplocks[v] )
@@ -7440,7 +7440,8 @@ SCIP_RETCODE presolveConsLct(
             uplocks[v] = FALSE;
             (*nchgsides)++;
 
-            SCIPstatistic( consdata->nremovedlocks++ );
+            /* for the statistic we count the number of removed locks */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nremovedlocks++ );
          }
       }
    }
@@ -8010,19 +8011,11 @@ SCIP_RETCODE presolveCons(
    SCIP_Bool*            unbounded           /**< pointer to store if the problem is unbounded */
    )
 {
-#ifdef SCIP_STATISTIC
-   SCIP_CONSDATA* consdata;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-#endif
    assert(!SCIPconsIsDeleted(cons));
 
    /* only perform dual reductions on model constraints */
    if( conshdlrdata->dualpresolve && SCIPconsIsChecked(cons) )
    {
-      SCIPstatistic( conshdlrdata->ndecomps -= consdata->ndecomps );
-
       /* in case the cumulative constraint is independent of every else, solve the cumulative problem and apply the
        * fixings (dual reductions)
        */
@@ -8034,22 +8027,10 @@ SCIP_RETCODE presolveCons(
       /* computes the effective horizon and checks if the constraint can be decomposed */
       SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
 
-      SCIPstatistic( conshdlrdata->ndecomps += consdata->ndecomps );
-
       if( SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
 
-      SCIPstatistic( conshdlrdata->nirrelevantjobs -= consdata->nirrelevantjobs );
-      SCIPstatistic( conshdlrdata->nremovedlocks -= consdata->nremovedlocks );
-      SCIPstatistic( conshdlrdata->ndualfixs -= consdata->ndualfixs );
-      SCIPstatistic( conshdlrdata->nalwaysruns -= consdata->nalwaysruns );
-
       SCIP_CALL( presolveConsEffectiveHorizon(scip, cons, nfixedvars, nchgcoefs, nchgsides, cutoff) );
-
-      SCIPstatistic( conshdlrdata->nirrelevantjobs += consdata->nirrelevantjobs );
-      SCIPstatistic( conshdlrdata->nremovedlocks += consdata->nremovedlocks );
-      SCIPstatistic( conshdlrdata->ndualfixs += consdata->ndualfixs );
-      SCIPstatistic( conshdlrdata->nalwaysruns += consdata->nalwaysruns );
 
       if( *cutoff || SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
