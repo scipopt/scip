@@ -66,6 +66,7 @@
                                                  *   bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
+#define SCIP_DEFAULT_BRANCH_STRONGPROPHIST FALSE/**< should variable history be collected when doing strong branching with propagation? */
 
 
 /* Conflict Analysis */
@@ -781,6 +782,11 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/delaypscostupdate",
          "should updating pseudo costs for continuous variables be delayed to the time after separation?",
          &(*set)->branch_delaypscost, FALSE, SCIP_DEFAULT_BRANCH_DELAYPSCOST,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/strongprophist",
+         "should variable history be collected when doing strong branching with propagation?",
+         &(*set)->branch_strongprophist, FALSE, SCIP_DEFAULT_BRANCH_STRONGPROPHIST,
          NULL, NULL) );
 
    /* conflict analysis parameters */

@@ -14907,7 +14907,8 @@ SCIP_RETCODE SCIPstartStrongbranch(
       SCIPlpStartStrongbranchProbing(scip->lp);
 
       /* we want to collect variable statistics during strong branching */
-      //SCIPstatEnableVarHistory(scip->stat);
+      if( scip->set->branch_strongprophist )
+         SCIPstatEnableVarHistory(scip->stat);
    }
    else
    {
