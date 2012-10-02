@@ -5370,7 +5370,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
             /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
              * constraints
              */
-            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nallconsdualfixs++ );
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
          }
       }
 
@@ -5387,7 +5387,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
             /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
              * constraints
              */
-            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nallconsdualfixs++ );
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
          }
       }
    }
@@ -7143,7 +7143,7 @@ SCIP_RETCODE computeEffectiveHorizon(
       assert(consdata->hmin < consdata->hmax);
 
       /* for the statistic we count the number of time we decompose a cumulative constraint */
-      SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->ndecomps++ );
+      SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndecomps++ );
       (*naddconss)++;
    }
 
@@ -7218,7 +7218,7 @@ SCIP_RETCODE presolveConsEst(
          irrelevants[v] = TRUE;
 
          /* for the statistic we count the number of jobs which are irrelevant */
-         SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nirrelevantjobs++ );
+         SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nirrelevantjobs++ );
 
          continue;
       }
@@ -7250,7 +7250,7 @@ SCIP_RETCODE presolveConsEst(
             irrelevants[v] = TRUE;
 
             /* for the statistic we count the number of jobs which are dual fixed */
-            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->ndualfixs++ );
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndualfixs++ );
 
             continue;
          }
@@ -7280,7 +7280,7 @@ SCIP_RETCODE presolveConsEst(
             irrelevants[v] = TRUE;
 
             /* for the statistic we count the number of jobs which always run during the effective horizon */
-            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nalwaysruns++ );
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nalwaysruns++ );
          }
 
          if( downlocks[v] )
@@ -7293,7 +7293,7 @@ SCIP_RETCODE presolveConsEst(
             (*nchgsides)++;
 
             /* for the statistic we count the number of removed locks */
-            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nremovedlocks++ );
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nremovedlocks++ );
          }
       }
    }
@@ -7369,7 +7369,7 @@ SCIP_RETCODE presolveConsLct(
          irrelevants[v] = TRUE;
 
          /* for the statistic we count the number of jobs which are irrelevant */
-         SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nirrelevantjobs++ );
+         SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nirrelevantjobs++ );
 
          continue;
       }
@@ -7401,7 +7401,7 @@ SCIP_RETCODE presolveConsLct(
             irrelevants[v] = TRUE;
 
             /* for the statistic we count the number of jobs which are dual fixed */
-            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->ndualfixs++ );
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndualfixs++ );
 
             continue;
          }
@@ -7428,7 +7428,7 @@ SCIP_RETCODE presolveConsLct(
             irrelevants[v] = TRUE;
 
             /* for the statistic we count the number of jobs which always run during the effective horizon */
-            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nalwaysruns++ );
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nalwaysruns++ );
          }
 
          if( uplocks[v] )
@@ -7441,7 +7441,7 @@ SCIP_RETCODE presolveConsLct(
             (*nchgsides)++;
 
             /* for the statistic we count the number of removed locks */
-            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, "CONSHDLR_NAME"))->nremovedlocks++ );
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nremovedlocks++ );
          }
       }
    }
