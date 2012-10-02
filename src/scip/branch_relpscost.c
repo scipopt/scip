@@ -346,7 +346,7 @@ SCIP_RETCODE execRelpscost(
       propagate = FALSE;
 
       /* get maximal number of candidates to initialize with strong branching; if the current solutions is not basic,
-       * we cannot apply the simplex algorithm and therefore don't initialize any candidates
+       * we cannot warmstart the simplex algorithm and therefore don't initialize any candidates
        */
       maxninitcands = MIN(nbranchcands, branchruledata->initcand);
       if( !SCIPisLPSolBasic(scip) )

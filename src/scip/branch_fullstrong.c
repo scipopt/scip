@@ -336,8 +336,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
             else if( allcolsinlp && !exactsolve && downvalid && upvalid )
             {
                SCIP_Real minbound;
-               int nboundchgs;
-               int v;
 
                /* the minimal lower bound of both children is a proved lower bound of the current subtree */
                minbound = MIN(down, up);
@@ -345,6 +343,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
                if( propagate )
                {
+                  int nboundchgs;
+                  int v;
+
                   nboundchgs = 0;
 
                   for( v = 0; v < nvars; ++v )
