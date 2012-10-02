@@ -343,35 +343,37 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                minbound = MIN(down, up);
                provedbound = MAX(provedbound, minbound);
 
-               nboundchgs = 0;
-
-               for( v = 0; v < nvars; ++v )
+               if( propagate )
                {
-                  if( SCIPisGT(scip, newlbs[v], SCIPvarGetLbLocal(vars[v])) )
-                  {
-                     printf("better lower bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
-                        SCIPvarGetName(vars[v]), SCIPvarGetLbLocal(vars[v]), newlbs[v], SCIPvarGetName(lpcands[c]));
+                  nboundchgs = 0;
 
-                     SCIPchgVarLb(scip, vars[v], newlbs[v]);
-                     ++nboundchgs;
+                  for( v = 0; v < nvars; ++v )
+                  {
+                     if( SCIPisGT(scip, newlbs[v], SCIPvarGetLbLocal(vars[v])) )
+                     {
+                        printf("better lower bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
+                           SCIPvarGetName(vars[v]), SCIPvarGetLbLocal(vars[v]), newlbs[v], SCIPvarGetName(lpcands[c]));
+
+                        SCIPchgVarLb(scip, vars[v], newlbs[v]);
+                        ++nboundchgs;
+                     }
+                     if( SCIPisLT(scip, newubs[v], SCIPvarGetUbLocal(vars[v])) )
+                     {
+                        printf("better upper bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
+                           SCIPvarGetName(vars[v]), SCIPvarGetUbLocal(vars[v]), newubs[v], SCIPvarGetName(lpcands[c]));
+
+                        SCIPchgVarUb(scip, vars[v], newubs[v]);
+                        ++nboundchgs;
+                     }
                   }
-                  if( SCIPisLT(scip, newubs[v], SCIPvarGetUbLocal(vars[v])) )
-                  {
-                     printf("better upper bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
-                        SCIPvarGetName(vars[v]), SCIPvarGetUbLocal(vars[v]), newubs[v], SCIPvarGetName(lpcands[c]));
 
-                     SCIPchgVarUb(scip, vars[v], newubs[v]);
-                     ++nboundchgs;
+                  if( nboundchgs > 0 )
+                  {
+                     *result = SCIP_REDUCEDDOM;
+                     SCIPdebugMessage(" -> strong branching with propagation on variable <%s> led to %d bound changes\n", SCIPvarGetName(lpcands[c]), nboundchgs);
+                     break; /* terminate initialization loop, because LP was changed */
                   }
                }
-
-               if( nboundchgs > 0 )
-               {
-                  *result = SCIP_REDUCEDDOM;
-                  SCIPdebugMessage(" -> strong branching with propagation on variable <%s> led to %d bound changes\n", SCIPvarGetName(lpcands[c]), nboundchgs);
-                  break; /* terminate initialization loop, because LP was changed */
-               }
-
             }
 
             /* update pseudo cost values */
