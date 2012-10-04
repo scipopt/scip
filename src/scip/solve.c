@@ -3609,7 +3609,7 @@ SCIP_RETCODE solveNode(
             SCIP_CALL( SCIPbranchExecLP(blkmem, set, stat, transprob, tree, lp, sepastore, branchcand, eventqueue,
                   primal->cutoffbound, FALSE, &result) );
             assert(SCIPbufferGetNUsed(set->buffer) == 0);
-            assert(result != SCIP_DIDNOTRUN);
+            assert(result != SCIP_DIDNOTRUN && result != SCIP_DIDNOTFIND);
          }
          else 
          {
@@ -3623,7 +3623,7 @@ SCIP_RETCODE solveNode(
                assert(SCIPbufferGetNUsed(set->buffer) == 0);
             }
 
-            if( result == SCIP_DIDNOTRUN )
+            if( result == SCIP_DIDNOTRUN || result == SCIP_DIDNOTFIND )
             {
                /* branch on pseudo solution */
                SCIPdebugMessage("infeasibility in depth %d was not resolved: branch on pseudo solution with %d unfixed integers\n",
@@ -3672,6 +3672,7 @@ SCIP_RETCODE solveNode(
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             branched = TRUE;
             break;
+         case SCIP_DIDNOTFIND: /*lint -fallthrough*/
          case SCIP_DIDNOTRUN:
             /* all integer variables in the infeasible solution are fixed,
              * - if no continuous variables exist and all variables are known, the infeasible pseudo solution is completely
@@ -4131,7 +4132,7 @@ SCIP_RETCODE SCIPsolveCIP(
                {
                   SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, tree, lp, branchcand, eventqueue,
                         primal->cutoffbound, FALSE, &result) );
-                  assert(result != SCIP_DIDNOTRUN);
+                  assert(result != SCIP_DIDNOTRUN && result != SCIP_DIDNOTFIND);
                }
             }
             while( result == SCIP_REDUCEDDOM );

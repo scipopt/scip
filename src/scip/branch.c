@@ -18,6 +18,9 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
+ * @author Stefan Heinz
+ * @author Michael Winkler
+ * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1410,6 +1413,7 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
             && *result != SCIP_REDUCEDDOM
             && *result != SCIP_SEPARATED
             && *result != SCIP_BRANCHED
+            && *result != SCIP_DIDNOTFIND
             && *result != SCIP_DIDNOTRUN )
          {
             SCIPerrorMessage("branching rule <%s> returned invalid result code <%d> from LP solution branching\n",
@@ -1505,6 +1509,7 @@ SCIP_RETCODE SCIPbranchruleExecExternSol(
             && *result != SCIP_REDUCEDDOM
             && *result != SCIP_SEPARATED
             && *result != SCIP_BRANCHED
+            && *result != SCIP_DIDNOTFIND
             && *result != SCIP_DIDNOTRUN )
          {
             SCIPerrorMessage("branching rule <%s> returned invalid result code <%d> from external solution branching\n",
@@ -1594,6 +1599,7 @@ SCIP_RETCODE SCIPbranchruleExecPseudoSol(
             && *result != SCIP_CONSADDED
             && *result != SCIP_REDUCEDDOM
             && *result != SCIP_BRANCHED
+            && *result != SCIP_DIDNOTFIND
             && *result != SCIP_DIDNOTRUN )
          {
             SCIPerrorMessage("branching rule <%s> returned invalid result code <%d> from pseudo solution branching\n",
@@ -2297,7 +2303,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    {
       SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, cutoffbound,
             allowaddcons, result) );
-      assert(*result != SCIP_DIDNOTRUN);
+      assert(*result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND);
       return SCIP_OKAY;
    }
 
@@ -2305,13 +2311,12 @@ SCIP_RETCODE SCIPbranchExecLP(
    SCIPsetSortBranchrules(set);
 
    /* try all branching rules until one succeeded to branch */
-   for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
+   for( i = 0; i < set->nbranchrules && (*result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND); ++i )
    {
-      SCIP_CALL( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons,
-            result) );
+      SCIP_CALL( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons, result) );
    }
 
-   if( *result == SCIP_DIDNOTRUN )
+   if( *result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND )
    {
       SCIP_VAR* var;
       SCIP_Real factor;
@@ -2394,7 +2399,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
        */
       SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, cutoffbound,
             allowaddcons, result) );
-      assert(*result != SCIP_DIDNOTRUN);
+      assert(*result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND);
       return SCIP_OKAY;
    }
 
@@ -2402,13 +2407,12 @@ SCIP_RETCODE SCIPbranchExecExtern(
    SCIPsetSortBranchrules(set);
 
    /* try all branching rules until one succeeded to branch */
-   for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
+   for( i = 0; i < set->nbranchrules && (*result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND); ++i )
    {
-      SCIP_CALL( SCIPbranchruleExecExternSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons,
-            result) );
+      SCIP_CALL( SCIPbranchruleExecExternSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons, result) );
    }
 
-   if( *result == SCIP_DIDNOTRUN )
+   if( *result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND )
    {
       SCIP_VAR* var;
       SCIP_Real val;
@@ -2505,12 +2509,12 @@ SCIP_RETCODE SCIPbranchExecPseudo(
    SCIPsetSortBranchrules(set);
 
    /* try all branching rules until one succeeded to branch */
-   for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
+   for( i = 0; i < set->nbranchrules && (*result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND); ++i )
    {
       SCIP_CALL( SCIPbranchruleExecPseudoSol(set->branchrules[i], set, stat, tree, cutoffbound, allowaddcons, result) );
    }
 
-   if( *result == SCIP_DIDNOTRUN )
+   if( *result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND )
    {
       SCIP_VAR* var;
       SCIP_Real factor;
