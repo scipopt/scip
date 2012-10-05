@@ -15373,9 +15373,24 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
          break;
       case SCIP_LPSOLSTAT_ITERLIMIT:
       case SCIP_LPSOLSTAT_TIMELIMIT:
-         /* @todo if the solution is dual feasible, use LP value as dual bound */
-         *down = -SCIPinfinity(scip);
+      {
+         /* use LP value as estimate */
+         SCIP_LPI* lpi;
+         SCIP_Real objval;
+         SCIP_Real looseobjval;
+
+         SCIP_CALL( SCIPgetLPI(scip, &lpi) );
+         SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+         looseobjval = SCIPlpGetLooseObjval(scip->lp, scip->set, scip->transprob);
+
+         if( SCIPisInfinity(scip, objval) )
+            *down = objval;
+         else if( SCIPisInfinity(scip, -looseobjval) )
+            *down = -SCIPinfinity(scip);
+         else
+            *down = objval + looseobjval;
          break;
+      }
       case SCIP_LPSOLSTAT_ERROR:
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
       case SCIP_LPSOLSTAT_NOTSOLVED:
@@ -15466,9 +15481,24 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
          break;
       case SCIP_LPSOLSTAT_ITERLIMIT:
       case SCIP_LPSOLSTAT_TIMELIMIT:
-         /* @todo if the solution is dual feasible, use LP value as dual bound */
-         *up = -SCIPinfinity(scip);
+      {
+         /* use LP value as estimate */
+         SCIP_LPI* lpi;
+         SCIP_Real objval;
+         SCIP_Real looseobjval;
+
+         SCIP_CALL( SCIPgetLPI(scip, &lpi) );
+         SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+         looseobjval = SCIPlpGetLooseObjval(scip->lp, scip->set, scip->transprob);
+
+         if( SCIPisInfinity(scip, objval) )
+            *up = objval;
+         else if( SCIPisInfinity(scip, -looseobjval) )
+            *up = -SCIPinfinity(scip);
+         else
+            *up = objval + looseobjval;
          break;
+      }
       case SCIP_LPSOLSTAT_ERROR:
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
       case SCIP_LPSOLSTAT_NOTSOLVED:
