@@ -417,22 +417,10 @@ SCIP_RETCODE SCIPprobExitSolve(
  * problem information
  */
 
-/** gets problem name */
-extern
-const char* SCIPprobGetName(
-   SCIP_PROB*            prob                /**< problem data */
-   );
-
 /** sets problem name */
 SCIP_RETCODE SCIPprobSetName(
    SCIP_PROB*            prob,               /**< problem data */
    const char*           name                /**< name to be set */
-   );
-
-/** gets user problem data */
-extern
-SCIP_PROBDATA* SCIPprobGetData(
-   SCIP_PROB*            prob                /**< problem */
    );
 
 /** returns the number of variables with non-zero objective coefficient */
@@ -474,19 +462,6 @@ SCIP_Real SCIPprobInternObjval(
    SCIP_Real             objval              /**< external objective value */
    );
 
-/** gets limit on objective function in external space */
-extern
-SCIP_Real SCIPprobGetObjlim(
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   );
-
-/** returns whether the objective value is known to be integral in every feasible solution */
-extern
-SCIP_Bool SCIPprobIsObjIntegral(
-   SCIP_PROB*            prob                /**< problem data */
-   );
-
 /** returns variable of the problem with given name */
 extern
 SCIP_VAR* SCIPprobFindVar(
@@ -499,16 +474,6 @@ extern
 SCIP_CONS* SCIPprobFindCons(
    SCIP_PROB*            prob,               /**< problem data */
    const char*           name                /**< name of variable to find */
-   );
-
-/** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present
- *  in the LP, and FALSE, if there are additional already existing columns, that may be added to the LP in pricing
- */
-extern
-SCIP_Bool SCIPprobAllColsInLP(
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** displays current pseudo solution */
@@ -526,6 +491,71 @@ void SCIPprobPrintStatistics(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
+
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** is the problem data transformed */
+extern
+SCIP_Bool SCIPprobIsTransformed(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** returns whether the objective value is known to be integral in every feasible solution */
+extern
+SCIP_Bool SCIPprobIsObjIntegral(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present
+ *  in the LP, and FALSE, if there are additional already existing columns, that may be added to the LP in pricing
+ */
+extern
+SCIP_Bool SCIPprobAllColsInLP(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** gets limit on objective function in external space */
+extern
+SCIP_Real SCIPprobGetObjlim(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** gets user problem data */
+extern
+SCIP_PROBDATA* SCIPprobGetData(
+   SCIP_PROB*            prob                /**< problem */
+   );
+
+/** gets problem name */
+extern
+const char* SCIPprobGetName(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPprobIsTransformed(prob)     ((prob)->transformed)
+#define SCIPprobIsObjIntegral(prob)     ((prob)->objisintegral)
+#define SCIPprobAllColsInLP(prob,set,lp) (SCIPlpGetNCols(lp) == (prob)->ncolvars && (set)->nactivepricers == 0)
+#define SCIPprobGetObjlim(prob,set)     \
+   ((prob)->objlim >= SCIP_INVALID ? (SCIP_Real)((prob)->objsense) * SCIPsetInfinity(set) : (prob)->objlim)
+#define SCIPprobGetData(prob)           ((prob)->probdata)
+#define SCIPprobGetName(prob)           ((prob)->name)
+
+#endif
+
 
 #ifdef __cplusplus
 }
