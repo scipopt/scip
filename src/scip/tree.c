@@ -5946,7 +5946,7 @@ SCIP_RETCODE treeBacktrackProbing(
       /* undo LP extensions */
       SCIP_CALL( SCIPlpShrinkCols(lp, set, ncols) );
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, nrows) );
-      tree->probingloadlpistate = FALSE; /* LP state must be reloaded if the next LP is solved */
+      tree->probingloadlpistate = TRUE; /* LP state must be reloaded if the next LP is solved */
 
       /* reset the LP's marked size to the initial size of the LP at the node stored in the path */
       assert(lp->nrows >= tree->pathnlprows[tree->pathlen-1] || !tree->focuslpconstructed);
