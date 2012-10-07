@@ -14987,12 +14987,12 @@ SCIP_RETCODE SCIPendStrongbranch(
          if( boundtypes[i] == SCIP_BOUNDTYPE_LOWER )
          {
             SCIPdebugMessage("apply probing lower bound change <%s> >= %.9g\n", SCIPvarGetName(boundchgvars[i]), bounds[i]);
-            SCIP_CALL( SCIPchgVarLb(scip, boundchgvars[i], bounds[i]) );
+            //SCIP_CALL( SCIPchgVarLb(scip, boundchgvars[i], bounds[i]) );
          }
          else
          {
             SCIPdebugMessage("apply probing upper bound change <%s> <= %.9g\n", SCIPvarGetName(boundchgvars[i]), bounds[i]);
-            SCIP_CALL( SCIPchgVarUb(scip, boundchgvars[i], bounds[i]) );
+            //SCIP_CALL( SCIPchgVarUb(scip, boundchgvars[i], bounds[i]) );
          }
       }
 
@@ -15217,6 +15217,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    SCIP_Real newlb;
    SCIP_Bool propagate;
    SCIP_Bool cutoff;
+   SCIP_Longint ndomreds;
    int oldnconflicts;
    int oldniters;
    int nvars;
@@ -15343,7 +15344,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    /* propagate domains at the probing node */
    if( propagate )
    {
-      SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, NULL) );
+      ndomreds = 0;
+      SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, &ndomreds) );
+
+      //printf("down branch propagation: found %lld domain reductions\n", ndomreds);
       if( cutoff )
          SCIPdebugMessage("down branch of var <%s> detected infeasible during propagation\n", SCIPvarGetName(var));
    }
@@ -15451,7 +15455,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    /* propagate domains at the probing node */
    if( propagate )
    {
-      SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, NULL) );
+      ndomreds = 0;
+      SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, &ndomreds) );
+
+      //printf("up branch propagation: found %lld domain reductions\n", ndomreds);
       if( cutoff )
          SCIPdebugMessage("up branch of var <%s> detected infeasible during propagation\n", SCIPvarGetName(var));
    }

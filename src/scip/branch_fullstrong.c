@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+//#define SCIP_DEBUG
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
  * @author Tobias Achterberg
@@ -238,15 +238,77 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
             if( propagate )
             {
                /* apply strong branching */
-               SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, lpcands[c], lpcandssol[c], lpobjval, INT_MAX,
+               SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, lpcands[c], lpcandssol[c], lpobjval, 3,
                      branchruledata->maxproprounds, &down, &up, &downvalid, &upvalid, &downinf, &upinf,
                      &downconflict, &upconflict, &lperror, newlbs, newubs) );
+
+               SCIPdebugMessage("-> down=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d), up=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d)\n",
+                  down, down - lpobjval, downvalid, downinf, downconflict, up, up - lpobjval, upvalid, upinf, upconflict);
             }
             else
             {
+               SCIP_Real propdown;
+               SCIP_Real propup;
+               SCIP_Bool propdownvalid;
+               SCIP_Bool propdowninf;
+               SCIP_Bool propdownconflict;
+               SCIP_Bool propupvalid;
+               SCIP_Bool propupinf;
+               SCIP_Bool propupconflict;
+               SCIP_Bool proplperror;
+
+               SCIP_Longint oldsbiters;
+               SCIP_Longint normalsbiters;
+               SCIP_Longint propsbiters;
+
+               oldsbiters = SCIPgetNStrongbranchLPIterations(scip);
+
                /* apply strong branching */
                SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, lpcands[c], INT_MAX,
                      &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+
+               SCIPdebugMessage("->           normal strong branching: down=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d), up=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d), %lld LP iterations\n",
+                  down, down - lpobjval, downvalid, downinf, downconflict, up, up - lpobjval, upvalid, upinf, upconflict,
+                  SCIPgetNStrongbranchLPIterations(scip) - oldsbiters);
+
+               normalsbiters = SCIPgetNStrongbranchLPIterations(scip) - oldsbiters;
+
+               /* end strong branching */
+               SCIP_CALL( SCIPendStrongbranch(scip) );
+
+               /* end strong branching */
+               SCIP_CALL( SCIPstartStrongbranch(scip, TRUE) );
+
+               oldsbiters = SCIPgetNStrongbranchLPIterations(scip);
+
+               /* apply strong branching */
+               SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, lpcands[c], lpcandssol[c], lpobjval, INT_MAX,
+                     -2, &propdown, &propup, &propdownvalid, &propupvalid, &propdowninf, &propupinf,
+                     &propdownconflict, &propupconflict, &proplperror, newlbs, newubs) );
+
+               SCIPdebugMessage("-> strong branching with propagation: down=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d), up=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d), %lld LP iterations\n",
+                  propdown, propdown - lpobjval, propdownvalid, propdowninf, propdownconflict, propup, propup - lpobjval, propupvalid, propupinf, propupconflict,
+                  SCIPgetNStrongbranchLPIterations(scip) - oldsbiters);
+
+               propsbiters = SCIPgetNStrongbranchLPIterations(scip) - oldsbiters;
+
+               if( propdowninf )
+                  propup = up;
+
+               printf("sb: lpobj=%16.9g downgain=%13.7g/%13.7g(%+7.2f%%), upgain=%13.7g/%13.7g(%+7.2f%%), iters=%4lld/%4lld(%+7.2f%%)\n",
+                  lpobjval, down - lpobjval, propdown - lpobjval, (SCIPisZero(scip, propdown - down) ? 0.0 : (propdown - down)/MAX(propdown - lpobjval, down - lpobjval) * 100.0),
+                  up - lpobjval, propup - lpobjval, (SCIPisZero(scip, propup - up) ? 0.0 : (propup - up)/MAX(propup - lpobjval, up - lpobjval) * 100.0),
+                  normalsbiters, propsbiters, (propsbiters == normalsbiters ? 0.0 : (1.0 * (propsbiters - normalsbiters))/(1.0 * MAX(propsbiters, normalsbiters)) * 100.0));
+
+               // assert(propdowninf || SCIPisFeasEQ(scip, down, propdown));
+               // assert(propdowninf || !downinf);
+               // assert(propdowninf || propupinf || SCIPisFeasEQ(scip, up, propup));
+               // assert(propdowninf || propupinf || !upinf);
+
+               /* end strong branching */
+               SCIP_CALL( SCIPendStrongbranch(scip) );
+
+               SCIP_CALL( SCIPstartStrongbranch(scip, FALSE) );
             }
             nsbcalls++;
 
@@ -308,7 +370,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                   assert(!infeasible);
 
                   /* if we did propagation, the bound change might already have been added */
-                  assert(tightened || propagate);
+                  //assert(tightened || propagate);
 
                   *result = SCIP_REDUCEDDOM;
                   SCIPdebugMessage(" -> variable <%s> is infeasible in downward branch\n", SCIPvarGetName(lpcands[c]));
@@ -326,7 +388,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                   assert(!infeasible);
 
                   /* if we did propagation, the bound change might already have been added */
-                  assert(tightened || propagate);
+                  //assert(tightened || propagate);
 
                   *result = SCIP_REDUCEDDOM;
                   SCIPdebugMessage(" -> variable <%s> is infeasible in upward branch\n", SCIPvarGetName(lpcands[c]));
