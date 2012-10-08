@@ -39,20 +39,23 @@
 #include <string.h>
 
 #include "scip/def.h"
+#include "scip/prop.h"
+#include "scip/relax.h"
+#include "scip/var.h"
+#include "scip/cons.h"
+#include "scip/event.h"
+#include "scip/history.h"
+#include "scip/implics.h"
+#include "scip/lp.h"
+#include "scip/primal.h"
+#include "scip/prob.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/stat.h"
-#include "scip/history.h"
-#include "scip/event.h"
-#include "scip/lp.h"
-#include "scip/relax.h"
-#include "scip/var.h"
-#include "scip/implics.h"
-#include "scip/prob.h"
-#include "scip/primal.h"
-#include "scip/cons.h"
-#include "scip/prop.h"
+#include "scip/tree.h"
+
 #include "scip/debug.h"
+
 #include "scip/pub_message.h"
 
 #define MAXIMPLSCLOSURE 100  /**< maximal number of descendants of implied variable for building closure
@@ -4321,7 +4324,7 @@ SCIP_RETCODE SCIPvarAggregate(
             infeasible, aggregated) );
       return SCIP_OKAY;
    }
-   
+
    /* don't perform the aggregation if the aggregation variable is multi-aggregated itself */
    if( SCIPvarGetStatus(aggvar) == SCIP_VARSTATUS_MULTAGGR )
       return SCIP_OKAY;
@@ -4429,7 +4432,7 @@ SCIP_RETCODE SCIPvarAggregate(
       constants = SCIPvboundsGetConstants(var->vlbs);
       for( i = 0; i < nvbds && !(*infeasible); ++i )
       {
-         SCIP_CALL( SCIPvarAddVlb(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+         SCIP_CALL( SCIPvarAddVlb(var, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
                vars[i], coefs[i], constants[i], FALSE, infeasible, NULL) );
       }
    }
@@ -4441,7 +4444,7 @@ SCIP_RETCODE SCIPvarAggregate(
       constants = SCIPvboundsGetConstants(var->vubs);
       for( i = 0; i < nvbds && !(*infeasible); ++i )
       {
-         SCIP_CALL( SCIPvarAddVub(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+         SCIP_CALL( SCIPvarAddVub(var, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
                vars[i], coefs[i], constants[i], FALSE, infeasible, NULL) );
       }
    }
@@ -4472,7 +4475,7 @@ SCIP_RETCODE SCIPvarAggregate(
             /* @todo can't we omit transitive closure, because it should already have been done when adding the
              *       implication to the aggregated variable?
              */
-            SCIP_CALL( SCIPvarAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+            SCIP_CALL( SCIPvarAddImplic(var, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
                   (SCIP_Bool)i, implvars[j], impltypes[j], implbounds[j], FALSE, infeasible, NULL) );
             assert(nimpls == SCIPimplicsGetNImpls(var->implics, (SCIP_Bool)i));
          }
@@ -4494,12 +4497,12 @@ SCIP_RETCODE SCIPvarAggregate(
          {
             SCIP_CLIQUE** cliques;
             int ncliques;
-            
+
             ncliques = SCIPcliquelistGetNCliques(var->cliquelist, (SCIP_Bool)i);
             cliques = SCIPcliquelistGetCliques(var->cliquelist, (SCIP_Bool)i);
             for( j = 0; j < ncliques && !(*infeasible); ++j )
             {
-               SCIP_CALL( SCIPvarAddClique(var, blkmem, set, stat, lp, branchcand, eventqueue,
+               SCIP_CALL( SCIPvarAddClique(var, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                      (SCIP_Bool)i, cliques[j], infeasible, NULL) );
                assert(ncliques == SCIPcliquelistGetNCliques(var->cliquelist, (SCIP_Bool)i));
             }
@@ -8698,6 +8701,8 @@ SCIP_RETCODE applyImplic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -8710,9 +8715,9 @@ SCIP_RETCODE applyImplic(
 {
    SCIP_Real implub;
    SCIP_Real impllb;
-      
+
    assert(infeasible != NULL);
-   
+
    *infeasible = FALSE;
 
    implub = SCIPvarGetUbGlobal(implvar);
@@ -8726,7 +8731,23 @@ SCIP_RETCODE applyImplic(
       }
       else if( SCIPsetIsFeasGT(set, implbound, impllb) )
       {
-         SCIP_CALL( SCIPvarChgLbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, implbound) );
+         /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+          * with the local bound, in this case we need to store the bound change as pending bound change
+          */
+         if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+         {
+            assert(tree != NULL);
+            assert(prob != NULL);
+            assert(SCIPprobIsTransformed(prob));
+
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                  tree, lp, branchcand, eventqueue, implvar, implbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPvarChgLbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, implbound) );
+         }
+
          if( nbdchgs != NULL )
             (*nbdchgs)++;
       }
@@ -8740,7 +8761,23 @@ SCIP_RETCODE applyImplic(
       }
       else if( SCIPsetIsFeasLT(set, implbound, implub) )
       {
-         SCIP_CALL( SCIPvarChgUbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, implbound) );
+         /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+          * with the local bound, in this case we need to store the bound change as pending bound change
+          */
+         if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+         {
+            assert(tree != NULL);
+            assert(prob != NULL);
+            assert(SCIPprobIsTransformed(prob));
+
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                  tree, lp, branchcand, eventqueue, implvar, implbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPvarChgUbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, implbound) );
+         }
+
          if( nbdchgs != NULL )
             (*nbdchgs)++;
       }
@@ -8761,6 +8798,8 @@ SCIP_RETCODE varAddImplic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -8787,7 +8826,7 @@ SCIP_RETCODE varAddImplic(
 
    /* check implication on debugging solution */
    SCIP_CALL( SCIPdebugCheckImplic(set, var, varfixing, implvar, impltype, implbound) ); /*lint !e506 !e774*/
-   
+
    *infeasible = FALSE;
    *added = FALSE;
 
@@ -8814,7 +8853,7 @@ SCIP_RETCODE varAddImplic(
       /* if the variable is fixed to the given value, perform the implication; otherwise, ignore the implication */
       if( varfixing == (SCIPvarGetLbGlobal(var) > 0.5) )
       {
-         SCIP_CALL( applyImplic(blkmem, set, stat, lp, branchcand, eventqueue, 
+         SCIP_CALL( applyImplic(blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                implvar, impltype, implbound, infeasible, nbdchgs) );
       }
       return SCIP_OKAY;
@@ -8841,13 +8880,36 @@ SCIP_RETCODE varAddImplic(
    {
       SCIPdebugMessage(" -> implication yields a conflict: fix <%s> == %d\n", SCIPvarGetName(var), !varfixing);
 
-      if( varfixing )
+      /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+       * with the local bound, in this case we need to store the bound change as pending bound change
+       */
+      if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
       {
-         SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
+         assert(tree != NULL);
+         assert(prob != NULL);
+         assert(SCIPprobIsTransformed(prob));
+
+         if( varfixing )
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                  tree, lp, branchcand, eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, FALSE) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                  tree, lp, branchcand, eventqueue, var, 1.0, SCIP_BOUNDTYPE_LOWER, FALSE) );
+         }
       }
       else
       {
-         SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, 1.0) );
+         if( varfixing )
+         {
+            SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, 1.0) );
+         }
       }
       if( nbdchgs != NULL )
          (*nbdchgs)++;
@@ -8900,15 +8962,40 @@ SCIP_RETCODE varAddImplic(
             implbound);
          SCIP_CALL( SCIPimplicsDel(&var->implics, blkmem, set, varfixing, implvar, impltype) );
 
-         /* fix implvar */
-         if( impltype == SCIP_BOUNDTYPE_UPPER )
+         /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+          * with the local bound, in this case we need to store the bound change as pending bound change
+          */
+         if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
          {
-            SCIP_CALL( SCIPvarChgUbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
+            assert(tree != NULL);
+            assert(prob != NULL);
+            assert(SCIPprobIsTransformed(prob));
+
+            /* fix implvar */
+            if( impltype == SCIP_BOUNDTYPE_UPPER )
+            {
+               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                     tree, lp, branchcand, eventqueue, implvar, 0.0, SCIP_BOUNDTYPE_UPPER, FALSE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                     tree, lp, branchcand, eventqueue, implvar, 1.0, SCIP_BOUNDTYPE_LOWER, FALSE) );
+            }
          }
          else
          {
-            SCIP_CALL( SCIPvarChgLbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, 1.0) );
+            /* fix implvar */
+            if( impltype == SCIP_BOUNDTYPE_UPPER )
+            {
+               SCIP_CALL( SCIPvarChgUbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvarChgLbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, 1.0) );
+            }
          }
+
          if( nbdchgs != NULL )
             (*nbdchgs)++;
       }
@@ -8960,6 +9047,8 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -9006,7 +9095,7 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
        */
       if( SCIPvarIsActive(implvars[i]) )
       {
-         SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
+         SCIP_CALL( varAddImplic(var, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                varfixing, implvars[i], impltypes[i], implbounds[i], TRUE, infeasible, nbdchgs, &added) );
          assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) <= nimpls);
          nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
@@ -9030,6 +9119,8 @@ SCIP_RETCODE varAddTransitiveImplic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -9052,7 +9143,7 @@ SCIP_RETCODE varAddTransitiveImplic(
    assert(infeasible != NULL);
 
    /* add implication x == varfixing -> y <= b / y >= b to the implications list of x */
-   SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
+   SCIP_CALL( varAddImplic(var, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
          varfixing, implvar, impltype, implbound, FALSE, infeasible, nbdchgs, &added) );
    if( *infeasible || var == implvar || !transitive || !added )
       return SCIP_OKAY;
@@ -9067,13 +9158,13 @@ SCIP_RETCODE varAddTransitiveImplic(
       implvarfixing = (impltype == SCIP_BOUNDTYPE_LOWER);
 
       /* binary variable: implications of implvar */
-      SCIP_CALL( varAddTransitiveBinaryClosureImplic(var, blkmem, set, stat, lp, branchcand, eventqueue,
+      SCIP_CALL( varAddTransitiveBinaryClosureImplic(var, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
             varfixing, implvar, implvarfixing, infeasible, nbdchgs) );
 
       /* inverse implication */
       if( !(*infeasible) )
       {
-         SCIP_CALL( varAddTransitiveBinaryClosureImplic(implvar, blkmem, set, stat, lp, branchcand, eventqueue,
+         SCIP_CALL( varAddTransitiveBinaryClosureImplic(implvar, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                !implvarfixing, var, !varfixing, infeasible, nbdchgs) );
       }
    }
@@ -9131,13 +9222,13 @@ SCIP_RETCODE varAddTransitiveImplic(
                if( vlbcoefs[i] >= 0.0 )
                {
                   vbimplbound = adjustedUb(set, SCIPvarGetType(vlbvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                         varfixing, vlbvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, TRUE, infeasible, nbdchgs, &added) );
                }
                else
                {
                   vbimplbound = adjustedLb(set, SCIPvarGetType(vlbvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                         varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, TRUE, infeasible, nbdchgs, &added) );
                }
                nvlbvars = SCIPvboundsGetNVbds(implvar->vlbs);
@@ -9199,13 +9290,13 @@ SCIP_RETCODE varAddTransitiveImplic(
                if( vubcoefs[i] >= 0.0 )
                {
                   vbimplbound = adjustedLb(set, SCIPvarGetType(vubvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                         varfixing, vubvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, TRUE, infeasible, nbdchgs, &added) );
                }
                else
                {
                   vbimplbound = adjustedUb(set, SCIPvarGetType(vubvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                         varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, TRUE, infeasible, nbdchgs, &added) );
                }
                nvubvars = SCIPvboundsGetNVbds(implvar->vubs);
@@ -9228,6 +9319,8 @@ SCIP_RETCODE SCIPvarAddVlb(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -9257,10 +9350,10 @@ SCIP_RETCODE SCIPvarAddVlb(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
-      SCIP_CALL( SCIPvarAddVlb(var->data.original.transvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-            vlbvar, vlbcoef, vlbconstant, transitive, infeasible, nbdchgs) );
+      SCIP_CALL( SCIPvarAddVlb(var->data.original.transvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand,
+            eventqueue, vlbvar, vlbcoef, vlbconstant, transitive, infeasible, nbdchgs) );
       break;
-         
+
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
@@ -9276,7 +9369,23 @@ SCIP_RETCODE SCIPvarAddVlb(
             *infeasible = TRUE;
          else if( SCIPsetIsFeasGT(set, vlbconstant, SCIPvarGetLbGlobal(var)) )
          {
-            SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, vlbconstant) );
+            /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+             * with the local bound, in this case we need to store the bound change as pending bound change
+             */
+            if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+            {
+               assert(tree != NULL);
+               assert(prob != NULL);
+               assert(SCIPprobIsTransformed(prob));
+
+               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                     tree, lp, branchcand, eventqueue, var, vlbconstant, SCIP_BOUNDTYPE_LOWER, FALSE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, vlbconstant) );
+            }
+
             if( nbdchgs != NULL )
                (*nbdchgs)++;
          }
@@ -9305,7 +9414,7 @@ SCIP_RETCODE SCIPvarAddVlb(
          if( vlbcoef >= 0.0 )
          {
             SCIP_Real newzub;
-            
+
             if( !SCIPsetIsInfinity(set, xub) )
             {
                /* x >= b*z + d  ->  z <= (x-d)/b */
@@ -9317,8 +9426,27 @@ SCIP_RETCODE SCIPvarAddVlb(
                }
                if( SCIPsetIsFeasLT(set, newzub, zub) )
                {
-                  SCIP_CALL( SCIPvarChgUbGlobal(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue, newzub) );
-                  zub = SCIPvarGetUbGlobal(vlbvar); /* bound might have been adjusted due to integrality condition */
+                  /* bound might be adjusted due to integrality condition */
+                  newzub = adjustedUb(set, SCIPvarGetType(vlbvar), newzub);
+
+                  /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+                   * with the local bound, in this case we need to store the bound change as pending bound change
+                   */
+                  if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+                  {
+                     assert(tree != NULL);
+                     assert(prob != NULL);
+                     assert(SCIPprobIsTransformed(prob));
+
+                     SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                           tree, lp, branchcand, eventqueue, vlbvar, newzub, SCIP_BOUNDTYPE_UPPER, FALSE) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPvarChgUbGlobal(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue, newzub) );
+                  }
+                  zub = newzub;
+
                   if( nbdchgs != NULL )
                      (*nbdchgs)++;
                }
@@ -9349,8 +9477,27 @@ SCIP_RETCODE SCIPvarAddVlb(
                }
                if( SCIPsetIsFeasGT(set, newzlb, zlb) )
                {
-                  SCIP_CALL( SCIPvarChgLbGlobal(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue, newzlb) );
-                  zlb = SCIPvarGetLbGlobal(vlbvar); /* bound might have been adjusted due to integrality condition */
+                  /* bound might be adjusted due to integrality condition */
+                  newzlb = adjustedLb(set, SCIPvarGetType(vlbvar), newzlb);
+
+                  /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+                   * with the local bound, in this case we need to store the bound change as pending bound change
+                   */
+                  if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+                  {
+                     assert(tree != NULL);
+                     assert(prob != NULL);
+                     assert(SCIPprobIsTransformed(prob));
+
+                     SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                           tree, lp, branchcand, eventqueue, vlbvar, newzlb, SCIP_BOUNDTYPE_LOWER, FALSE) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPvarChgLbGlobal(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue, newzlb) );
+                  }
+                  zlb = newzlb;
+
                   if( nbdchgs != NULL )
                      (*nbdchgs)++;
                }
@@ -9381,8 +9528,27 @@ SCIP_RETCODE SCIPvarAddVlb(
          }
          if( SCIPsetIsFeasGT(set, minvlb, xlb) )
          {
-            SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, minvlb) );
-            xlb = SCIPvarGetLbGlobal(var); /* bound might have been adjusted due to integrality condition */
+            /* bound might be adjusted due to integrality condition */
+            minvlb = adjustedLb(set, SCIPvarGetType(var), minvlb);
+
+            /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+             * with the local bound, in this case we need to store the bound change as pending bound change
+             */
+            if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+            {
+               assert(tree != NULL);
+               assert(prob != NULL);
+               assert(SCIPprobIsTransformed(prob));
+
+               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                     tree, lp, branchcand, eventqueue, var, minvlb, SCIP_BOUNDTYPE_LOWER, FALSE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, minvlb) );
+            }
+            xlb = minvlb;
+
             if( nbdchgs != NULL )
                (*nbdchgs)++;
          }
@@ -9394,7 +9560,7 @@ SCIP_RETCODE SCIPvarAddVlb(
             /* b > 0: x >= (maxvlb - minvlb) * z + minvlb
              * b < 0: x >= (minvlb - maxvlb) * z + maxvlb
              */
-           
+
             assert(!SCIPsetIsInfinity(set, -maxvlb) && !SCIPsetIsInfinity(set, -minvlb));
 
             if( vlbcoef >= 0.0 )
@@ -9424,7 +9590,7 @@ SCIP_RETCODE SCIPvarAddVlb(
                 *   b > 0, x >= b*z + d  <->  z == 1 -> x >= b+d
                 *   b < 0, x >= b*z + d  <->  z == 0 -> x >= d
                 */
-               SCIP_CALL( varAddTransitiveImplic(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue,
+               SCIP_CALL( varAddTransitiveImplic(vlbvar, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                      (vlbcoef >= 0.0), var, SCIP_BOUNDTYPE_LOWER, maxvlb, transitive, infeasible, nbdchgs) );
             }
             else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
@@ -9433,7 +9599,7 @@ SCIP_RETCODE SCIPvarAddVlb(
                 *   b > 0, x >= b*z + d  <->  x == 0 -> z <= -d/b
                 *   b < 0, x >= b*z + d  <->  x == 0 -> z >= -d/b
                 */
-               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, lp, branchcand, eventqueue,
+               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                      FALSE, vlbvar, (vlbcoef >= 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER), -vlbconstant/vlbcoef,
                      transitive, infeasible, nbdchgs) );
             }
@@ -9444,7 +9610,7 @@ SCIP_RETCODE SCIPvarAddVlb(
          }
       }
       break;
-      
+
    case SCIP_VARSTATUS_AGGREGATED:
       /* x = a*y + c:  x >= b*z + d  <=>  a*y + c >= b*z + d  <=>  y >= b/a * z + (d-c)/a, if a > 0
        *                                                           y <= b/a * z + (d-c)/a, if a < 0
@@ -9453,15 +9619,15 @@ SCIP_RETCODE SCIPvarAddVlb(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> add variable lower bound */
-         SCIP_CALL( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-               vlbvar, vlbcoef/var->data.aggregate.scalar,
+         SCIP_CALL( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand,
+               eventqueue, vlbvar, vlbcoef/var->data.aggregate.scalar,
                (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> add variable upper bound */
-         SCIP_CALL( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-               vlbvar, vlbcoef/var->data.aggregate.scalar,
+         SCIP_CALL( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand,
+               eventqueue, vlbvar, vlbcoef/var->data.aggregate.scalar,
                (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else
@@ -9470,20 +9636,20 @@ SCIP_RETCODE SCIPvarAddVlb(
          return SCIP_INVALIDDATA;
       }
       break;
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
       /* nothing to do here */
       break;
-      
+
    case SCIP_VARSTATUS_NEGATED:
       /* x = offset - x':  x >= b*z + d  <=>  offset - x' >= b*z + d  <=>  x' <= -b*z + (offset-d) */
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      SCIP_CALL( SCIPvarAddVub(var->negatedvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-            vlbvar, -vlbcoef, var->data.negate.constant - vlbconstant, transitive, infeasible, nbdchgs) );
+      SCIP_CALL( SCIPvarAddVub(var->negatedvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand,
+            eventqueue, vlbvar, -vlbcoef, var->data.negate.constant - vlbconstant, transitive, infeasible, nbdchgs) );
       break;
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
@@ -9501,6 +9667,8 @@ SCIP_RETCODE SCIPvarAddVub(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -9530,10 +9698,10 @@ SCIP_RETCODE SCIPvarAddVub(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
-      SCIP_CALL( SCIPvarAddVub(var->data.original.transvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+      SCIP_CALL( SCIPvarAddVub(var->data.original.transvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
             vubvar, vubcoef, vubconstant, transitive, infeasible, nbdchgs) );
       break;
-         
+
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
@@ -9549,7 +9717,23 @@ SCIP_RETCODE SCIPvarAddVub(
             *infeasible = TRUE;
          else if( SCIPsetIsFeasLT(set, vubconstant, SCIPvarGetUbGlobal(var)) )
          {
-            SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, vubconstant) );
+            /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+             * with the local bound, in this case we need to store the bound change as pending bound change
+             */
+            if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+            {
+               assert(tree != NULL);
+               assert(prob != NULL);
+               assert(SCIPprobIsTransformed(prob));
+
+               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                     tree, lp, branchcand, eventqueue, var, vubconstant, SCIP_BOUNDTYPE_UPPER, FALSE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, vubconstant) );
+            }
+
             if( nbdchgs != NULL )
                (*nbdchgs)++;
          }
@@ -9590,8 +9774,29 @@ SCIP_RETCODE SCIPvarAddVub(
                }
                if( SCIPsetIsFeasGT(set, newzlb, zlb) )
                {
-                  SCIP_CALL( SCIPvarChgLbGlobal(vubvar, blkmem, set, stat, lp, branchcand, eventqueue, newzlb) );
-                  zlb = SCIPvarGetLbGlobal(vubvar); /* bound might have been adjusted due to integrality condition */
+                  /* bound might be adjusted due to integrality condition */
+                  newzlb = adjustedLb(set, SCIPvarGetType(vubvar), newzlb);
+
+                  /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+                   * with the local bound, in this case we need to store the bound change as pending bound change
+                   */
+                  if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+                  {
+                     assert(tree != NULL);
+                     assert(prob != NULL);
+                     assert(SCIPprobIsTransformed(prob));
+
+                     SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                           tree, lp, branchcand, eventqueue, vubvar, newzlb, SCIP_BOUNDTYPE_LOWER, FALSE) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPvarChgLbGlobal(vubvar, blkmem, set, stat, lp, branchcand, eventqueue, newzlb) );
+                  }
+                  zlb = newzlb;
+
+                  if( nbdchgs != NULL )
+                     (*nbdchgs)++;
                }
                minvub = vubcoef * zlb + vubconstant;
                if( !SCIPsetIsInfinity(set, zub) )
@@ -9620,8 +9825,29 @@ SCIP_RETCODE SCIPvarAddVub(
                }
                if( SCIPsetIsFeasLT(set, newzub, zub) )
                {
-                  SCIP_CALL( SCIPvarChgUbGlobal(vubvar, blkmem, set, stat, lp, branchcand, eventqueue, newzub) );
-                  zub = SCIPvarGetUbGlobal(vubvar); /* bound might have been adjusted due to integrality condition */
+                  /* bound might be adjusted due to integrality condition */
+                  newzub = adjustedUb(set, SCIPvarGetType(vubvar), newzub);
+
+                  /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+                   * with the local bound, in this case we need to store the bound change as pending bound change
+                   */
+                  if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+                  {
+                     assert(tree != NULL);
+                     assert(prob != NULL);
+                     assert(SCIPprobIsTransformed(prob));
+
+                     SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                           tree, lp, branchcand, eventqueue, vubvar, newzub, SCIP_BOUNDTYPE_UPPER, FALSE) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPvarChgUbGlobal(vubvar, blkmem, set, stat, lp, branchcand, eventqueue, newzub) );
+                  }
+                  zub = newzub;
+
+                  if( nbdchgs != NULL )
+                     (*nbdchgs)++;
                }
                minvub = vubcoef * zub + vubconstant;
                if( !SCIPsetIsInfinity(set, -zlb) )
@@ -9651,8 +9877,29 @@ SCIP_RETCODE SCIPvarAddVub(
          }
          if( SCIPsetIsFeasLT(set, maxvub, xub) )
          {
-            SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, maxvub) );
-            xub = SCIPvarGetUbGlobal(var); /* bound might have been adjusted due to integrality condition */
+            /* bound might be adjusted due to integrality condition */
+            maxvub = adjustedUb(set, SCIPvarGetType(var), maxvub);
+
+            /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+             * with the local bound, in this case we need to store the bound change as pending bound change
+             */
+            if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+            {
+               assert(tree != NULL);
+               assert(prob != NULL);
+               assert(SCIPprobIsTransformed(prob));
+
+               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                     tree, lp, branchcand, eventqueue, var, maxvub, SCIP_BOUNDTYPE_UPPER, FALSE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, maxvub) );
+            }
+            xub = maxvub;
+
+            if( nbdchgs != NULL )
+               (*nbdchgs)++;
          }
          maxvub = xub;
 
@@ -9662,7 +9909,7 @@ SCIP_RETCODE SCIPvarAddVub(
             /* b > 0: x <= (maxvub - minvub) * z + minvub
              * b < 0: x <= (minvub - maxvub) * z + maxvub
              */
-            
+
             assert(!SCIPsetIsInfinity(set, maxvub) && !SCIPsetIsInfinity(set, minvub));
 
             if( vubcoef >= 0.0 )
@@ -9692,7 +9939,7 @@ SCIP_RETCODE SCIPvarAddVub(
                 *   b > 0, x <= b*z + d  <->  z == 0 -> x <= d
                 *   b < 0, x <= b*z + d  <->  z == 1 -> x <= b+d
                 */
-               SCIP_CALL( varAddTransitiveImplic(vubvar, blkmem, set, stat, lp, branchcand, eventqueue,
+               SCIP_CALL( varAddTransitiveImplic(vubvar, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                      (vubcoef < 0.0), var, SCIP_BOUNDTYPE_UPPER, minvub, transitive, infeasible, nbdchgs) );
             }
             else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
@@ -9701,7 +9948,7 @@ SCIP_RETCODE SCIPvarAddVub(
                 *   b > 0, x <= b*z + d  <->  x == 1 -> z >= (1-d)/b
                 *   b < 0, x <= b*z + d  <->  x == 1 -> z <= (1-d)/b
                 */
-               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, lp, branchcand, eventqueue,
+               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                      TRUE, vubvar, (vubcoef >= 0.0 ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER),
                      (1.0-vubconstant)/vubcoef, transitive, infeasible, nbdchgs) );
             }
@@ -9712,7 +9959,7 @@ SCIP_RETCODE SCIPvarAddVub(
          }
       }
       break;
-      
+
    case SCIP_VARSTATUS_AGGREGATED:
       /* x = a*y + c:  x <= b*z + d  <=>  a*y + c <= b*z + d  <=>  y <= b/a * z + (d-c)/a, if a > 0
        *                                                           y >= b/a * z + (d-c)/a, if a < 0
@@ -9721,15 +9968,15 @@ SCIP_RETCODE SCIPvarAddVub(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> add variable upper bound */
-         SCIP_CALL( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-               vubvar, vubcoef/var->data.aggregate.scalar,
+         SCIP_CALL( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand,
+               eventqueue, vubvar, vubcoef/var->data.aggregate.scalar,
                (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> add variable lower bound */
-         SCIP_CALL( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-               vubvar, vubcoef/var->data.aggregate.scalar,
+         SCIP_CALL( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand,
+               eventqueue, vubvar, vubcoef/var->data.aggregate.scalar,
                (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else
@@ -9738,20 +9985,20 @@ SCIP_RETCODE SCIPvarAddVub(
          return SCIP_INVALIDDATA;
       }
       break;
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
       /* nothing to do here */
       break;
-      
+
    case SCIP_VARSTATUS_NEGATED:
       /* x = offset - x':  x <= b*z + d  <=>  offset - x' <= b*z + d  <=>  x' >= -b*z + (offset-d) */
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      SCIP_CALL( SCIPvarAddVlb(var->negatedvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-            vubvar, -vubcoef, var->data.negate.constant - vubconstant, transitive, infeasible, nbdchgs) );
+      SCIP_CALL( SCIPvarAddVlb(var->negatedvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand,
+            eventqueue, vubvar, -vubcoef, var->data.negate.constant - vubconstant, transitive, infeasible, nbdchgs) );
       break;
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
@@ -9771,6 +10018,8 @@ SCIP_RETCODE SCIPvarAddImplic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -9787,7 +10036,7 @@ SCIP_RETCODE SCIPvarAddImplic(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY); 
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    assert(infeasible != NULL);
 
    *infeasible = FALSE;
@@ -9798,10 +10047,10 @@ SCIP_RETCODE SCIPvarAddImplic(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
-      SCIP_CALL( SCIPvarAddImplic(var->data.original.transvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+      SCIP_CALL( SCIPvarAddImplic(var->data.original.transvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
             varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
       break;
-         
+
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
       /* if the variable is fixed (although it has no FIXED status), and varfixing corresponds to the fixed value of
@@ -9812,7 +10061,7 @@ SCIP_RETCODE SCIPvarAddImplic(
       {
          if( varfixing == (SCIPvarGetLbGlobal(var) > 0.5) )
          {
-            SCIP_CALL( applyImplic(blkmem, set, stat, lp, branchcand, eventqueue,
+            SCIP_CALL( applyImplic(blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                   implvar, impltype, implbound, infeasible, nbdchgs) );
          }
       }
@@ -9822,21 +10071,21 @@ SCIP_RETCODE SCIPvarAddImplic(
          SCIPvarAdjustBd(implvar, set, impltype, &implbound);
          if( SCIPvarIsActive(implvar) || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_FIXED )
          {
-            SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, lp, branchcand, eventqueue,
+            SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                   varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
          }
       }
       break;
-      
+
    case SCIP_VARSTATUS_FIXED:
       /* if varfixing corresponds to the fixed value of the variable, the implication can be applied directly */
       if( varfixing == (SCIPvarGetLbGlobal(var) > 0.5) )
       {
-         SCIP_CALL( applyImplic(blkmem, set, stat, lp, branchcand, eventqueue,
+         SCIP_CALL( applyImplic(blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                implvar, impltype, implbound, infeasible, nbdchgs) );
       }
       break;
-      
+
    case SCIP_VARSTATUS_AGGREGATED:
       /* implication added for x == 1:
        *   x == 1 && x =  1*z + 0  ==>  y <= b or y >= b    <==>    z >= 1  ==>  y <= b or y >= b 
@@ -9849,27 +10098,27 @@ SCIP_RETCODE SCIPvarAddImplic(
        */
       assert(var->data.aggregate.var != NULL);
       if( SCIPvarIsBinary(var->data.aggregate.var) )
-      {   
+      {
          assert( (SCIPsetIsEQ(set, var->data.aggregate.scalar, 1.0) && SCIPsetIsZero(set, var->data.aggregate.constant))
             || (SCIPsetIsEQ(set, var->data.aggregate.scalar, -1.0) && SCIPsetIsEQ(set, var->data.aggregate.constant, 1.0)) );
-       
+
          if( var->data.aggregate.scalar > 0 )
          {
-            SCIP_CALL( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, stat, lp, cliquetable, branchcand, 
+            SCIP_CALL( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand,
                   eventqueue, varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
          }
          else
          {
-            SCIP_CALL( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, stat, lp, cliquetable, branchcand, 
+            SCIP_CALL( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand,
                   eventqueue, !varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
          }
       }
       break;
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
       /* nothing to do here */
       break;
-      
+
    case SCIP_VARSTATUS_NEGATED:
       /* implication added for x == 1:
        *   x == 1 && x = -1*z + 1  ==>  y <= b or y >= b    <==>    z <= 0  ==>  y <= b or y >= b
@@ -9881,10 +10130,10 @@ SCIP_RETCODE SCIPvarAddImplic(
       assert(var->negatedvar->negatedvar == var);
       assert(SCIPvarIsBinary(var->negatedvar));
 
-      SCIP_CALL( SCIPvarAddImplic(var->negatedvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+      SCIP_CALL( SCIPvarAddImplic(var->negatedvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
             !varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
       break;
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
@@ -9936,6 +10185,8 @@ SCIP_RETCODE varFixBinary(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -9957,7 +10208,23 @@ SCIP_RETCODE varFixBinary(
          *infeasible = TRUE;
       else if( var->glbdom.ub > 0.5 )
       {
-         SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
+         /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+          * with the local bound, in this case we need to store the bound change as pending bound change
+          */
+         if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+         {
+            assert(tree != NULL);
+            assert(prob != NULL);
+            assert(SCIPprobIsTransformed(prob));
+
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                  tree, lp, branchcand, eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, FALSE) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
+         }
+
          if( nbdchgs != NULL )
             (*nbdchgs)++;
       }
@@ -9968,12 +10235,28 @@ SCIP_RETCODE varFixBinary(
          *infeasible = TRUE;
       else if( var->glbdom.lb < 0.5 )
       {
-         SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, 1.0) );
+         /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+          * with the local bound, in this case we need to store the bound change as pending bound change
+          */
+         if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+         {
+            assert(tree != NULL);
+            assert(prob != NULL);
+            assert(SCIPprobIsTransformed(prob));
+
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob,
+                  tree, lp, branchcand, eventqueue, var, 1.0, SCIP_BOUNDTYPE_LOWER, FALSE) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, 1.0) );
+         }
+
          if( nbdchgs != NULL )
             (*nbdchgs)++;
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -9987,6 +10270,8 @@ SCIP_RETCODE SCIPvarAddClique(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -10030,7 +10315,7 @@ SCIP_RETCODE SCIPvarAddClique(
       /* if the variable now appears twice with the same value in the clique, it can be fixed to the opposite value */
       if( doubleentry )
       {
-         SCIP_CALL( varFixBinary(var, blkmem, set, stat, lp, branchcand, eventqueue, !value, infeasible, nbdchgs) );
+         SCIP_CALL( varFixBinary(var, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, !value, infeasible, nbdchgs) );
       }
 
       /* if the variable appears with both values in the clique, all other variables of the clique can be fixed
@@ -10051,7 +10336,7 @@ SCIP_RETCODE SCIPvarAddClique(
             if( vars[i] == var )
                continue;
 
-            SCIP_CALL( varFixBinary(vars[i], blkmem, set, stat, lp, branchcand, eventqueue, !values[i], 
+            SCIP_CALL( varFixBinary(vars[i], blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, !values[i],
                   infeasible, nbdchgs) );
          }
       }

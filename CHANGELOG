@@ -1,6 +1,10 @@
 SCIP version NEXT
 ==================
 
+fixed bugs:
+- fixed bug when adding (global) clique, implications or variable bound information in solving stage, that lead to
+  global bound changes which contradict local bounds and therefore need to be stored as pending bound changes
+
 data structures
 - new data structure for (circluar) queues (SCIP_QUEUE)
 

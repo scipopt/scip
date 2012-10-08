@@ -11183,7 +11183,7 @@ SCIP_RETCODE exitPresolve(
    {
       SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, scip->branchcand) );
 
-      SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+      SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
             scip->branchcand, scip->eventqueue, infeasible) );
 
       if( *infeasible )
@@ -11488,7 +11488,7 @@ SCIP_RETCODE presolveRound(
    {
       SCIP_Bool infeas;
 
-      SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+      SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
             scip->branchcand, scip->eventqueue, &infeas) );
       if( infeas )
       {
@@ -17462,8 +17462,9 @@ SCIP_RETCODE SCIPaddVarVlb(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddVarVlb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPvarAddVlb(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-         scip->branchcand, scip->eventqueue, vlbvar, vlbcoef, vlbconstant, TRUE, infeasible, nbdchgs) );
+   SCIP_CALL( SCIPvarAddVlb(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
+         scip->cliquetable, scip->branchcand, scip->eventqueue, vlbvar, vlbcoef, vlbconstant, TRUE, infeasible,
+         nbdchgs) );
 
    /* if x is not continuous we add a variable bound for z; do not add it if cofficient would be too small or we already
     * detected infeasibility
@@ -17473,14 +17474,16 @@ SCIP_RETCODE SCIPaddVarVlb(
       if( vlbcoef > 0.0 )
       {
          /* if b > 0, we have a variable upper bound: x >= b*z + d  =>  z <= (x-d)/b */
-         SCIP_CALL( SCIPvarAddVub(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-               scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef, TRUE, infeasible, nbdchgs) );
+         SCIP_CALL( SCIPvarAddVub(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+               scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef,
+               TRUE, infeasible, nbdchgs) );
       }
       else
       {
          /* if b < 0, we have a variable lower bound: x >= b*z + d  =>  z >= (x-d)/b */
-         SCIP_CALL( SCIPvarAddVlb(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-               scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef, TRUE, infeasible, nbdchgs) );
+         SCIP_CALL( SCIPvarAddVlb(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+               scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef,
+               TRUE, infeasible, nbdchgs) );
       }
    }
 
@@ -17513,8 +17516,9 @@ SCIP_RETCODE SCIPaddVarVub(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddVarVub", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPvarAddVub(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-         scip->branchcand, scip->eventqueue, vubvar, vubcoef, vubconstant, TRUE, infeasible, nbdchgs) );
+   SCIP_CALL( SCIPvarAddVub(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
+         scip->cliquetable, scip->branchcand, scip->eventqueue, vubvar, vubcoef, vubconstant, TRUE, infeasible,
+         nbdchgs) );
 
    /* if x is not continuous we add a variable bound for z; do not add it if cofficient would be too small or we already
     * detected infeasibility
@@ -17524,14 +17528,16 @@ SCIP_RETCODE SCIPaddVarVub(
       if( vubcoef > 0.0 )
       {
          /* if b < 0, we have a variable lower bound: x >= b*z + d  =>  z >= (x-d)/b */
-         SCIP_CALL( SCIPvarAddVlb(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-               scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef, TRUE, infeasible, nbdchgs) );
+         SCIP_CALL( SCIPvarAddVlb(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+               scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef,
+               TRUE, infeasible, nbdchgs) );
       }
       else
       {
          /* if b > 0, we have a variable upper bound: x >= b*z + d  =>  z <= (x-d)/b */
-         SCIP_CALL( SCIPvarAddVub(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-               scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef, TRUE, infeasible, nbdchgs) );
+         SCIP_CALL( SCIPvarAddVub(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+               scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef,
+               TRUE, infeasible, nbdchgs) );
       }
    }
 
@@ -17572,8 +17578,9 @@ SCIP_RETCODE SCIPaddVarImplication(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPvarAddImplic(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-         scip->branchcand, scip->eventqueue, varfixing, implvar, impltype, implbound, TRUE, infeasible, nbdchgs) );
+   SCIP_CALL( SCIPvarAddImplic(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+         scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, varfixing, implvar, impltype, implbound, TRUE,
+         infeasible, nbdchgs) );
 
    return SCIP_OKAY;
 }
@@ -17620,23 +17627,23 @@ SCIP_RETCODE SCIPaddClique(
          val0 = values[0];
          val1 = values[1];
       }
-      
+
       /* add the implications instead of the clique */
       if( SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY )
       {
          /* this function call adds the implication form vars[0] to vars[1] as well as the implication from vars[1] to
           * vars[0] if vars[1] in of binary type
           */
-         SCIP_CALL( SCIPvarAddImplic(vars[0], scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-               scip->branchcand, scip->eventqueue, val0, vars[1], val1 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
-               val1 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
+         SCIP_CALL( SCIPvarAddImplic(vars[0], scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+               scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, val0, vars[1],
+               val1 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER, val1 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
       }
       else if( SCIPvarGetType(vars[1]) == SCIP_VARTYPE_BINARY )
       {
          /* this function call adds the implication form vars[1] to vars[0] */
-         SCIP_CALL( SCIPvarAddImplic(vars[1], scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-               scip->branchcand, scip->eventqueue, val1, vars[0], val0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
-               val0 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
+         SCIP_CALL( SCIPvarAddImplic(vars[1], scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+               scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, val1, vars[0],
+               val0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER, val0 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
       }
       /** in case one both variables are not of binary type we have to add the implication as variable bounds */
       else
@@ -17650,33 +17657,37 @@ SCIP_RETCODE SCIPaddClique(
          /* add variable upper or rather variable lower bound on vars[0] */
          if( val0 )
          {
-            SCIP_CALL( SCIPvarAddVub(vars[0], scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-                  scip->branchcand, scip->eventqueue, vars[1], val1 ? -1.0 : 1.0, val1 ? 1.0 : 0.0, TRUE, infeasible, nbdchgs) );
+            SCIP_CALL( SCIPvarAddVub(vars[0], scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+                  scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, vars[1], val1 ? -1.0 : 1.0,
+                  val1 ? 1.0 : 0.0, TRUE, infeasible, nbdchgs) );
          }
          else
          {
-            SCIP_CALL( SCIPvarAddVlb(vars[0], scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-                  scip->branchcand, scip->eventqueue, vars[1], val1 ? 1.0 : -1.0, val1 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
+            SCIP_CALL( SCIPvarAddVlb(vars[0], scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+                  scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, vars[1], val1 ? 1.0 : -1.0,
+                  val1 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
          }
-         
+
          /* add variable upper or rather variable lower bound on vars[1] */
          if( val1 )
          {
-            SCIP_CALL( SCIPvarAddVub(vars[1], scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-                  scip->branchcand, scip->eventqueue, vars[0], val0 ? -1.0 : 1.0, val0 ? 1.0 : 0.0, TRUE, infeasible, nbdchgs) );
+            SCIP_CALL( SCIPvarAddVub(vars[1], scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+                  scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, vars[0], val0 ? -1.0 : 1.0,
+                  val0 ? 1.0 : 0.0, TRUE, infeasible, nbdchgs) );
          }
          else
          {
-            SCIP_CALL( SCIPvarAddVlb(vars[1], scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-                  scip->branchcand, scip->eventqueue, vars[0], val0 ? 1.0 : -1.0, val0 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
+            SCIP_CALL( SCIPvarAddVlb(vars[1], scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+                  scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, vars[0], val0 ? 1.0 : -1.0,
+                  val0 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
          }
       }
    }
    else if( nvars >= 3 )
    {
       /* add the clique to the clique table */
-      SCIP_CALL( SCIPcliquetableAdd(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->lp,
-            scip->branchcand, scip->eventqueue, vars, values, nvars, infeasible, nbdchgs) );
+      SCIP_CALL( SCIPcliquetableAdd(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, vars, values, nvars, infeasible, nbdchgs) );
    }
 
    return SCIP_OKAY;

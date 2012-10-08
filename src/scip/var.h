@@ -922,6 +922,8 @@ SCIP_RETCODE SCIPvarAddVlb(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -944,6 +946,8 @@ SCIP_RETCODE SCIPvarAddVub(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -968,6 +972,8 @@ SCIP_RETCODE SCIPvarAddImplic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -992,6 +998,8 @@ SCIP_RETCODE SCIPvarAddClique(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
