@@ -15,6 +15,10 @@ features:
 - added SCIPwriteCliqueGraph() to scip.{c,h} to write the clique graph in GML format into a given file
 - added upgrade from bounddisjunction constraints to set-packing/logicor constraints
 
+performance improvements:
+- conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
+  constraint and the corresponding clique information is globally added
+
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
   the rank of a cut can be changed (default rank is 0)
