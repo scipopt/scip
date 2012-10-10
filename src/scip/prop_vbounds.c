@@ -1442,7 +1442,10 @@ SCIP_RETCODE propagateVbounds(
 
    /* return if no bound changes are in the priority queue (no changed bounds to handle since last propagation) */
    if( SCIPpqueueNElems(propdata->propqueue) == 0 )
+   {
+      (*result) = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
+   }
 
    nchgbds = 0;
 

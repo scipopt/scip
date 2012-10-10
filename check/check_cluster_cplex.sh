@@ -242,7 +242,6 @@ do
       echo set mip limits treememory $MEMLIMIT >> $TMPFILE
       echo set threads $THREADS               >> $TMPFILE
       echo set parallel 1                     >> $TMPFILE
-      echo set mip strategy kappastats 2      >> $TMPFILE
       echo write $SETFILE                     >> $TMPFILE
       echo read $SCIPPATH/$i                  >> $TMPFILE
       echo display problem stats              >> $TMPFILE
