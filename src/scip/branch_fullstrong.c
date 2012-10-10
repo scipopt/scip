@@ -295,7 +295,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                if( propdowninf )
                   propup = up;
 
-               printf("sb: lpobj=%16.9g downgain=%13.7g/%13.7g(%+7.2f%%), upgain=%13.7g/%13.7g(%+7.2f%%), iters=%4lld/%4lld(%+7.2f%%) pb: %.2f\n",
+               assert(propsbiters > 0 || propdowninf || propupinf);
+
+               printf("sb: lpobj=%16.9g downgain=%13.7g/%13.7g(%+7.2f%%), upgain=%13.7g/%13.7g(%+7.2f%%), iters=%4lld/%4lld(%+7.2f%%) pb= %.2f\n",
                   lpobjval, down - lpobjval, propdown - lpobjval, (SCIPisZero(scip, propdown - down) ? 0.0 : (propdown - down)/MAX(propdown - lpobjval, down - lpobjval) * 100.0),
                   up - lpobjval, propup - lpobjval, (SCIPisZero(scip, propup - up) ? 0.0 : (propup - up)/MAX(propup - lpobjval, up - lpobjval) * 100.0),
                   normalsbiters, propsbiters, (propsbiters == normalsbiters ? 0.0 : (1.0 * (propsbiters - normalsbiters))/(1.0 * MAX(propsbiters, normalsbiters)) * 100.0),
