@@ -5802,6 +5802,67 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
    return SCIP_OKAY;
 }
 
+/** computes for each variable if it is contained in a NLP row */
+SCIP_RETCODE SCIPnlpGetVarsNonlinearRows(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_Bool*            nlarray             /**< an array of length at least SCIPnlpGetNVars() to store if variables
+                                              *   are contained in NLP rows */
+   )
+{
+   SCIP_NLROW* nlrow;
+   int varidx;
+   int i;
+   int c;
+
+   assert(nlp != NULL);
+   assert(nlcount != NULL || nlp->nvars == 0);
+
+   BMSclearMemoryArray(nlarray, nlp->nvars);
+
+   for( c = 0; c < nlp->nnlrows; ++c )
+   {
+      nlrow = nlp->nlrows[c];
+      assert(nlrow != NULL);
+
+      /* variables in linear terms */
+      for( i = 0; i < nlrow->nlinvars; ++i )
+      {
+         assert(SCIPhashmapExists(nlp->varhash, (void*)nlrow->linvars[i]));
+         varidx = (int)(size_t) SCIPhashmapGetImage(nlp->varhash, (void*)nlrow->linvars[i]);
+         assert(varidx < nlp->nvars);
+         nlarray[varidx] = TRUE;
+      }
+
+      /* variables in quadratic terms */
+      for( i = 0; i < nlrow->nquadvars; ++i )
+      {
+         assert(SCIPhashmapExists(nlp->varhash, (void*)nlrow->quadvars[i]));
+         varidx = (int)(size_t) SCIPhashmapGetImage(nlp->varhash, (void*)nlrow->quadvars[i]);
+         assert(varidx < nlp->nvars);
+         nlarray[varidx] = TRUE;
+      }
+
+      /* variables in expression tree */
+      if( nlrow->exprtree != NULL )
+      {
+         SCIP_VAR** exprtreevars;
+         int nexprtreevars;
+
+         exprtreevars = SCIPexprtreeGetVars(nlrow->exprtree);
+         nexprtreevars = SCIPexprtreeGetNVars(nlrow->exprtree);
+         assert(exprtreevars != NULL || nexprtreevars == 0);
+         for( i = 0; i < nexprtreevars; ++i )
+         {
+            assert(SCIPhashmapExists(nlp->varhash, (void*)exprtreevars[i]));  /*lint !e613 */
+            varidx = (int)(size_t) SCIPhashmapGetImage(nlp->varhash, (void*)exprtreevars[i]);  /*lint !e613 */
+            assert(varidx < nlp->nvars);
+            nlarray[varidx] = TRUE;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** indicates whether there exists a row that contains a continuous variable in a nonlinear term
  *

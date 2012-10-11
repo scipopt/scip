@@ -698,6 +698,14 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
    int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
    );
 
+/** computes for each variable if it is contained in a NLP row */
+extern
+SCIP_RETCODE SCIPnlpGetVarsNonlinearRows(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_Bool*            nlarray             /**< an array of length at least SCIPnlpGetNVars() to store if variables
+                                              *   are contained in NLP rows */
+   );
+
 /** indicates whether there exists a row that contains a continuous variable in a nonlinear term
  *
  * @note The method may have to touch every row and nonlinear term to compute its result.

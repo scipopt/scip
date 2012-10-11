@@ -23489,6 +23489,31 @@ SCIP_RETCODE SCIPgetNLPVarsNonlinearity(
    return SCIP_OKAY;
 }
 
+/** computes for each variables the number of NLP rows in which the variable appears in a nonlinear var
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPgetNLPVarsNonlinearRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            nlarray             /**< an array of length at least SCIPnlpGetNVars() to store if variables
+                                              *   are contained in NLP rows */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetNLPVarsNonlinearRows", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( scip->nlp == NULL )
+   {
+      SCIPerrorMessage("NLP has not been constructed.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPnlpGetVarsNonlinearRows(scip->nlp, nlarray) );
+
+   return SCIP_OKAY;
+}
+
 /** returns dual solution values associated with lower bounds of NLP variables
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
