@@ -46,6 +46,7 @@
 #define DEFAULT_RANDSEED      3141598   /**< the default random seed for random number generation */
 #define DEFAULT_SORTKEY            'u'  /**< the default key for variable sorting */
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
+#define DEFAULT_COLLECTSTATS     TRUE   /**< should variable statistics be collected during probing? */
 #define SORTKEYS                 "nrtuv"/**< options sorting key: (n)orms down, norms (u)p, (v)iolated rows decreasing,
                                         viola(t)ed rows increasing, or (r)andom */
 
@@ -73,6 +74,7 @@ struct SCIP_HeurData
    unsigned int          randseed;           /**< seed for random number generation */
    char                  sortkey;            /**< the key by which variables are sorted */
    SCIP_Bool             sortvars;           /**< should variables be processed in sorted order? */
+   SCIP_Bool             collectstats;       /**< should variable statistics be collected during probing? */
 
    SCIPstatistic(
       SCIP_LPSOLSTAT     lpsolstat;          /**< the probing status after probing */
@@ -1467,7 +1469,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIP_CALL( SCIPstartProbing(scip) );
 
    /* enables collection of variable statistics during probing */
-   SCIPenableVarHistory(scip);
+   if( heurdata->collectstats )
+      SCIPenableVarHistory(scip);
+   else
+      SCIPdisableVarHistory(scip);
 
    SCIP_CALL( SCIPnewProbingNode(scip) );
    ncutoffs = 0;
@@ -2124,5 +2129,7 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          &heurdata->sortkey, TRUE, DEFAULT_SORTKEY, SORTKEYS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/sortvars", "Should variables be sorted for the heuristic?",
          &heurdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL));
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME, "should variable statistics be collected during probing?",
+         &heurdata->collectstats, TRUE, DEFAULT_COLLECTSTATS, NULL, NULL) );
    return SCIP_OKAY;
 }
