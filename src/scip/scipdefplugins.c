@@ -136,6 +136,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropPseudoobj(scip) );
    SCIP_CALL( SCIPincludePropRedcost(scip) );   
    SCIP_CALL( SCIPincludePropRootredcost(scip) );
+   SCIP_CALL( SCIPincludePropSimpleObbt(scip) );
    SCIP_CALL( SCIPincludePropVbounds(scip) );
    SCIP_CALL( SCIPincludeSepaCGMIP(scip) );
    SCIP_CALL( SCIPincludeSepaClique(scip) );
