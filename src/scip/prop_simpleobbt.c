@@ -24,7 +24,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/prop_obbt.h"
+#include "scip/prop_simpleobbt.h"
 #include "scip/prop_genvbounds.h"
 
 #define PROP_NAME                       "simpleobbt"
