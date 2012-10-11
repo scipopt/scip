@@ -62,6 +62,8 @@
 #define DEFAULT_ITLIMITRESOLVE             20      /**< iteration limit used for (re-)solving the root LP */
 #define DEFAULT_MAXLOOKAHEAD                3      /**< maximal number of bounds evaluated without success per group
                                                     *   (-1: no limit) */
+#define DEFAULT_RELAXBOUNDS             FALSE      /**< should bounds be relaxed before solving the corresponding OBBT
+                                                    *   LPs in order to gain more genbvounds? */
 #define OBBT_SCOREBASE                      5      /**< base that is used to calculate a bounds score value */
 
 #define GENVBOUND_PROP_NAME             "genvbounds"
@@ -110,6 +112,8 @@ struct SCIP_PropData
    SCIP_Bool             normalize;          /**< should coefficients in filtering be normalized w.r.t. the domains
                                               *   sizes? */
    SCIP_Bool             needsolvedlp;       /**< apply obbt only if the root LP is solved to optimality? */
+   SCIP_Bool             relaxbounds;        /**< should bounds be relaxed before solving the corresponding OBBT LPs in
+                                              *   order to gain more genbvounds? */
    char                  filtermethod;       /**< method for filtering rounds ('g'reedy, 'n'earest bound, 'f'arthest
                                               *   bound) */
    int                   maxlookahead;       /**< maximal number of bounds evaluated without success per group
@@ -992,8 +996,11 @@ SCIP_RETCODE findNewBounds(
             BOUND* bound;
             SCIP_VAR* var;
 
+            SCIP_Real oldbound;
             SCIP_Bool error;
             SCIP_Bool optimal;                     /* was the LP solved to optimalilty? */
+
+            oldbound = 0.0;
 
             bound = propdata->bounds[bdgroup->firstbdindex + propdata->nextindices[i]];
             var = bound->var;
@@ -1016,6 +1023,24 @@ SCIP_RETCODE findNewBounds(
 
             /* set objective coefficient to +/- 1 (note that we minimize) */
             SCIP_CALL( SCIPchgVarObjDive(scip, var, (bound->boundtype == SCIP_BOUNDTYPE_LOWER) ? 1.0 : -1.0 ) );
+
+            /* relax bound */
+            SCIPdebugMessage("relaxbounds: %d\n", propdata->relaxbounds);
+            if( propdata->relaxbounds )
+            {
+               if( bound->boundtype == SCIP_BOUNDTYPE_LOWER )
+               {
+                  oldbound = SCIPgetVarLbDive(scip, var);
+                  SCIP_CALL( SCIPchgVarLbDive(scip, var, oldbound - MAX(0.1 * oldbound, 0.1)) );
+                  SCIPdebugMessage("relaxed lower bound from %f to %f\n", oldbound, SCIPgetVarLbDive(scip, var));
+               }
+               else
+               {
+                  oldbound = SCIPgetVarUbDive(scip, var);
+                  SCIP_CALL( SCIPchgVarUbDive(scip, var, oldbound + MAX(0.1 * oldbound, 0.1)) );
+                  SCIPdebugMessage("relaxed upper bound from %f to %f\n", oldbound, SCIPgetVarUbDive(scip, var));
+               }
+            }
 
             /* solve LP */
             SCIP_CALL( solveLP(scip, nleftiterations, &error, &optimal) );
@@ -1064,6 +1089,19 @@ SCIP_RETCODE findNewBounds(
                if( SCIPgetDepth(scip) == 0 && propdata->genvboundprop != NULL )
                {
                   SCIP_CALL( createGenVBound(scip, propdata, bound) );
+               }
+
+               /* restore bound */
+               if( propdata->relaxbounds )
+               {
+                  if( bound->boundtype == SCIP_BOUNDTYPE_LOWER )
+                  {
+                     SCIP_CALL( SCIPchgVarLbDive(scip, var, oldbound) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPchgVarUbDive(scip, var, oldbound) );
+                  }
                }
 
                /* try to tighten bound in dive mode */
@@ -1732,6 +1770,10 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/applyfilterrounds",
          "try to filter bounds in so-called filter rounds by solving auxiliary LPs?",
          &propdata->applyfilterrounds, TRUE, DEFAULT_APPLY_FILTERROUNDS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/relaxbounds",
+         "should bounds be relaxed before solving the corresponding OBBT LPs in order to gain more genbvounds?",
+         &propdata->relaxbounds, TRUE, DEFAULT_RELAXBOUNDS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/minfilter",
          "minimal number of filtered bounds to apply another filter round",
