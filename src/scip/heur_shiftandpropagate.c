@@ -46,7 +46,8 @@
 #define DEFAULT_RANDSEED      3141598   /**< the default random seed for random number generation */
 #define DEFAULT_SORTKEY            'u'  /**< the default key for variable sorting */
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
-#define SORTKEYS                 "nru"  /**< options sorting key: (n)orms down, norms (u)p or (r)andom */
+#define SORTKEYS                 "nrtuv"/**< options sorting key: (n)orms down, norms (u)p, (v)iolated rows decreasing,
+                                        viola(t)ed rows increasing, or (r)andom */
 
 #define EVENTHDLR_NAME         "eventhdlrshiftandpropagate"
 #define EVENTHDLR_DESC         "event handler to catch bound changes"
@@ -708,7 +709,8 @@ void checkViolations(
    int*                  violatedrows,       /**< violated rows */
    int*                  violatedrowpos,     /**< row positions of violated rows */
    int*                  nviolatedrows,      /**< pointer to store the number of violated rows */
-   int*                  nredundantrows      /**< pointer to store the number of redundant rows */
+   int*                  nredundantrows,     /**< pointer to store the number of redundant rows */
+   int*                  violatedvarrows     /**< reference to number of violated rows for every variable, or NULL */
    )
 {
    SCIP_Real* rhs;
@@ -735,11 +737,30 @@ void checkViolations(
    for( i = 0; i < nrows; ++i )
    {
       /* check, if zero solution violates this row */
-      if( SCIPisFeasLT(scip, rhs[i], 0.0) || SCIPisFeasLT(scip, -lhs[i], 0.0) )
+      if( SCIPisFeasLT(scip, rhs[i], 0.0) || SCIPisFeasGT(scip, lhs[i], 0.0) )
       {
          violatedrows[*nviolatedrows] = i;
         (violatedrowpos)[i] = *nviolatedrows;
          ++(*nviolatedrows);
+
+         /* if needed, increase the counter for violated rows for every variable column of this row */
+         if( violatedvarrows != NULL )
+         {
+            int* rowcols;
+            int nrowcols;
+            int j;
+
+            rowcols = NULL;
+            nrowcols = 0;
+            getRowData(matrix, i, NULL, NULL, NULL, &rowcols, &nrowcols);
+            assert(nrowcols == 0 || rowcols != NULL);
+
+            for( j = 0; j < nrowcols; ++j )
+            {
+               assert(0 <= rowcols[j] && rowcols[j] < matrix->ndiscvars);
+               ++violatedvarrows[rowcols[j]];
+            }
+         }
       }
       else
          violatedrowpos[i] = -1;
@@ -1073,7 +1094,7 @@ void updateTransformation(
           * @todo : change this and only update violations of rows in which this variable
           *        appears
           */
-         checkViolations(scip, matrix, violatedrows, violatedrowpos, nviolatedrows, NULL);
+         checkViolations(scip, matrix, violatedrows, violatedrowpos, nviolatedrows, NULL, NULL);
 
          assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || TRANSFORMSTATUS_NEG);
          assert(SCIPisFeasLE(scip, ABS(lb), ABS(ub)) || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
@@ -1324,6 +1345,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    int* violatedrowpos;           /* the array position of a violated row, or -1 */
    int* permutation;              /* reflects the position of the variables after sorting */
    int* rowweights;               /* weighting of rows for best shift calculation */
+   int* violatedvarrows;          /* number of violated rows for each variable */
    int nlpcols;                   /* number of lp columns */
    int nviolatedrows;             /* number of violated rows */
    int ndiscvars;                 /* number of non-continuous variables of the problem */
@@ -1417,7 +1439,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIPsortPtr((void**)heurdata->lpcols, heurSortColsShiftandpropagate, nlpcols);
 
    /* we have to collect the number of different variable types before we start probing since during probing variable
-    * can be created(e.g., cons_xor.c)
+    * can be created (e.g., cons_xor.c)
     */
    ndiscvars = 0;
    nbinvars = 0;
@@ -1519,51 +1541,89 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    assert(nintvars >= 0);
    assert(nimplvars >= 0);
 
-   /* sort variables w.r.t. the sorting key parameter. Sorting is indirect, all matrix column data
-    * stays in place, but permutation array gives access to the sorted order of variables
-    */
-   if( heurdata->sortvars && heurdata->sortkey == 'n' )
+   /* allocate memory for violatedvarrows array only if variable ordering relies on it */
+   if( heurdata->sortvars && (heurdata->sortkey == 't' || heurdata->sortkey == 'v') )
    {
-      if( nbinvars > 0 )
-         SCIPsortDownRealInt(colnorms, permutation, nbinvars);
-      if( nintvars > 0 )
-         SCIPsortDownRealInt(&colnorms[nbinvars], &permutation[nbinvars], nintvars);
-      if( nimplvars > 0 )
-         SCIPsortDownRealInt(&colnorms[nbinvars + nintvars], &permutation[nbinvars + nintvars], nimplvars);
-      SCIPdebugMessage("Variables sorted down w.r.t their normalized columns!\n");
-   }
-   else if( heurdata->sortvars && heurdata->sortkey == 'u')
-   {
-      if( nbinvars > 0 )
-         SCIPsortRealInt(colnorms, permutation, nbinvars);
-      if( nintvars > 0 )
-         SCIPsortRealInt(&colnorms[nbinvars], &permutation[nbinvars], nintvars);
-      if( nimplvars > 0 )
-         SCIPsortRealInt(&colnorms[nbinvars + nintvars], &permutation[nbinvars + nintvars], nimplvars);
-      SCIPdebugMessage("Variables sorted w.r.t their normalized columns!\n");
-   }
-   else if( heurdata->sortvars && heurdata->sortkey == 'r')
-   {
-      if( nbinvars > 0)
-         SCIPpermuteIntArray(permutation, 0, nbinvars - 1, &heurdata->randseed);
-      if( nintvars > 0)
-         SCIPpermuteIntArray(&permutation[nbinvars], 0, nintvars, &heurdata->randseed);
-      if( nimplvars > 0)
-         SCIPpermuteIntArray(&permutation[nbinvars + nintvars], 0, nimplvars, &heurdata->randseed);
-      SCIPdebugMessage("Variables permuted randomly!\n");
+      SCIP_CALL( SCIPallocBufferArray(scip, &violatedvarrows, ndiscvars) );
+      BMSclearMemoryArray(violatedvarrows, ndiscvars);
    }
    else
-   {
-      SCIPdebugMessage("No variable permutation applied\n");
-   }
+      violatedvarrows = NULL;
 
    /* check rows for infeasibility */
    nredundantrows = 0;
-   checkViolations(scip, matrix, violatedrows, violatedrowpos, &nviolatedrows, &nredundantrows);
+   checkViolations(scip, matrix, violatedrows, violatedrowpos, &nviolatedrows, &nredundantrows, violatedvarrows);
 
+
+   /* sort variables w.r.t. the sorting key parameter. Sorting is indirect, all matrix column data
+    * stays in place, but permutation array gives access to the sorted order of variables
+    */
+   if( heurdata->sortvars )
+   {
+      switch (heurdata->sortkey)
+      {
+         case 'n':
+            /* variable ordering w.r.t. column norms nonincreasing */
+            if( nbinvars > 0 )
+               SCIPsortDownRealInt(colnorms, permutation, nbinvars);
+            if( nintvars > 0 )
+               SCIPsortDownRealInt(&colnorms[nbinvars], &permutation[nbinvars], nintvars);
+            if( nimplvars > 0 )
+               SCIPsortDownRealInt(&colnorms[nbinvars + nintvars], &permutation[nbinvars + nintvars], nimplvars);
+            SCIPdebugMessage("Variables sorted down w.r.t their normalized columns!\n");
+            break;
+         case 'u':
+            /* variable ordering w.r.t. column norms nondecreasing */
+            if( nbinvars > 0 )
+               SCIPsortRealInt(colnorms, permutation, nbinvars);
+            if( nintvars > 0 )
+               SCIPsortRealInt(&colnorms[nbinvars], &permutation[nbinvars], nintvars);
+            if( nimplvars > 0 )
+               SCIPsortRealInt(&colnorms[nbinvars + nintvars], &permutation[nbinvars + nintvars], nimplvars);
+            SCIPdebugMessage("Variables sorted w.r.t their normalized columns!\n");
+            break;
+         case 'v':
+            /* variable ordering w.r.t. nonincreasing number of violated rows */
+            assert(violatedvarrows != NULL);
+            if( nbinvars > 0 )
+               SCIPsortDownIntInt(violatedvarrows, permutation, nbinvars);
+            if( nintvars > 0 )
+               SCIPsortDownIntInt(&violatedvarrows[nbinvars], &permutation[nbinvars], nintvars);
+            if( nimplvars > 0 )
+               SCIPsortDownIntInt(&violatedvarrows[nbinvars + nintvars], &permutation[nbinvars + nintvars], nimplvars);
+            SCIPdebugMessage("Variables sorted down w.r.t their number of currently infeasible rows!\n");
+            break;
+         case 't':
+            /* variable ordering w.r.t. nondecreasing number of violated rows */
+            assert(violatedvarrows != NULL);
+            if( nbinvars > 0 )
+               SCIPsortIntInt(violatedvarrows, permutation, nbinvars);
+            if( nintvars > 0 )
+               SCIPsortIntInt(&violatedvarrows[nbinvars], &permutation[nbinvars], nintvars);
+            if( nimplvars > 0 )
+               SCIPsortIntInt(&violatedvarrows[nbinvars + nintvars], &permutation[nbinvars + nintvars], nimplvars);
+            SCIPdebugMessage("Variables sorted (upwards) w.r.t their number of currently infeasible rows!\n");
+            break;
+         case 'r':
+            /* random sorting */
+            if( nbinvars > 0)
+               SCIPpermuteIntArray(permutation, 0, nbinvars - 1, &heurdata->randseed);
+            if( nintvars > 0)
+               SCIPpermuteIntArray(&permutation[nbinvars], 0, nintvars, &heurdata->randseed);
+            if( nimplvars > 0)
+               SCIPpermuteIntArray(&permutation[nbinvars + nintvars], 0, nimplvars, &heurdata->randseed);
+            SCIPdebugMessage("Variables permuted randomly!\n");
+            break;
+         default:
+            SCIPdebugMessage("No variable permutation applied\n");
+            break;
+
+      }
+   }
    SCIP_CALL( SCIPallocBufferArray(scip, &eventdatas, matrix->ndiscvars) );
    BMSclearMemoryArray(eventdatas, matrix->ndiscvars);
 
+   /* initialize variable events to catch bound changes during propagation */
    for( c = 0; c < matrix->ndiscvars; ++c )
    {
       SCIP_VAR* var;
@@ -1914,6 +1974,26 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       );
 
  TERMINATE2:
+  /* free allocated memory in reverse order of allocation */
+  for( c = matrix->ndiscvars - 1; c >= 0; --c )
+  {
+     SCIP_VAR* var;
+
+     var = SCIPcolGetVar(heurdata->lpcols[c]);
+     assert(var != NULL);
+     assert(eventdatas[c] != NULL);
+
+
+     SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, eventdatas[c], -1);
+     SCIPfreeBuffer(scip, &(eventdatas[c]));
+   }
+   SCIPfreeBufferArray(scip, &eventdatas);
+
+   if( violatedvarrows != NULL )
+   {
+      assert(heurdata->sortkey == 'v' || heurdata->sortkey == 't');
+      SCIPfreeBufferArray(scip, &violatedvarrows);
+   }
    /* free all allocated memory */
    SCIPfreeBufferArray(scip, &violatedrowpos);
    SCIPfreeBufferArray(scip, &violatedrows);
@@ -1926,20 +2006,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    eventhdlrdata->nviolatedrows = NULL;
    eventhdlrdata->violatedrowpos = NULL;
    eventhdlrdata->violatedrows = NULL;
-
-   for( c = matrix->ndiscvars - 1; c >= 0; --c )
-   {
-      SCIP_VAR* var;
-
-      var = SCIPcolGetVar(heurdata->lpcols[c]);
-      assert(var != NULL);
-      assert(eventdatas[c] != NULL);
-
-
-      SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, eventdatas[c], -1) );
-      SCIPfreeBuffer(scip, &(eventdatas[c]));
-   }
-   SCIPfreeBufferArray(scip, &eventdatas);
 
  TERMINATE:
    /* terminate probing mode and free the remaining memory */
@@ -2054,7 +2120,7 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          &heurdata->onlywithoutsol, TRUE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/cutoffbreaker", "The number of cutoffs before heuristic stops",
          &heurdata->cutoffbreaker, TRUE, DEFAULT_CUTOFFBREAKER, -1, 1000000, NULL, NULL) );
-   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/sortkey", "the key for variable sorting: (n)orms or (r)andom",
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/sortkey", "the key for variable sorting: (n)orms down, norms (up), (v)iolations down, viola(t)ions up, or (r)andom",
          &heurdata->sortkey, TRUE, DEFAULT_SORTKEY, SORTKEYS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/sortvars", "Should variables be sorted for the heuristic?",
          &heurdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL));
