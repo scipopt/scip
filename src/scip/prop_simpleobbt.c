@@ -651,12 +651,12 @@ static
 SCIP_Bool varIsInteresting(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to check */
-   int                   nlcount             /**< number of nonlinear constraints containing the variable */
+   SCIP_Bool             nlrows              /**< is the variable contained in a nonlinear row? */
    )
 {
    assert(SCIPgetDepth(scip) == 0);
 
-   return !SCIPvarIsBinary(var) && !varIsFixedLocal(scip, var) && nlcount > 0;
+   return !SCIPvarIsBinary(var) && !varIsFixedLocal(scip, var) && nlrows;
 }
 
 /** initializes interesting bounds */
@@ -667,8 +667,8 @@ SCIP_RETCODE initBounds(
    )
 {
    SCIP_VAR** vars;                          /* array of the problems variables */
-   int* nlcount;                             /* array that stores in how many nonlinear constraints each variable
-                                              * appears */
+   SCIP_Bool* nlarray;                       /* array that stores for each variable wether it is contained in a
+                                              * nonlinear constraint appears */
 
    int bdidx;                                /* bound index inside propdata->bounds */
    int nvars;                                /* number of the problems variables */
@@ -681,15 +681,15 @@ SCIP_RETCODE initBounds(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* count nonlinearities */
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlcount, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlarray, nvars) );
    if( SCIPisNLPConstructed(scip) )
    {
       assert(SCIPgetNNLPVars(scip) == nvars);
-      SCIP_CALL( SCIPgetNLPVarsNonlinearity(scip, nlcount) );
+      SCIP_CALL( SCIPgetNLPVarsNonlinearRows(scip, nlarray) );
    }
    else
    {
-      BMSclearMemoryArray(nlcount, nvars);
+      BMSclearMemoryArray(nlarray, nvars);
    }
 
    /* allocate interesting bounds array */
@@ -699,7 +699,7 @@ SCIP_RETCODE initBounds(
    bdidx = 0;
    for( i = 0; i < nvars; i++ )
    {
-      if( varIsInteresting(scip, vars[i], nlcount[i]) )
+      if( varIsInteresting(scip, vars[i], nlarray[i]) )
       {
          BOUND** bdaddress;
 
@@ -724,8 +724,8 @@ SCIP_RETCODE initBounds(
    }
 
    /* free memory for buffering nonlinearities */
-   assert(nlcount != NULL);
-   SCIPfreeBufferArray(scip, &nlcount);
+   assert(nlarray != NULL);
+   SCIPfreeBufferArray(scip, &nlarray);
 
    /* set number of interesting bounds */
    propdata->nbounds = bdidx;
