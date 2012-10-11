@@ -23,6 +23,8 @@ fixed bugs:
 - fixed bug of wrong result code in propagation in prop_genvbound.c
 - fixed several issue in cumulative constraint handler
 - fixed issue in cumulative constraint and separation
+- fixed feasibility decision bug when replacing inactive variables by their active counterparts, which might change the
+  redundancy status of a bounddisjunction constraint due to numerics
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round

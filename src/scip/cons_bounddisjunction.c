@@ -659,8 +659,15 @@ SCIP_RETCODE removeFixedVariables(
    v = 0;
    while( v < consdata->nvars )
    {
+#ifndef NDEBUG
+      SCIP_VAR* oldvar;
+#endif
       var = consdata->vars[v];
       assert(var != NULL);
+
+#ifndef NDEBUG
+      oldvar = var;
+#endif
 
       if( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
       {
@@ -672,23 +679,22 @@ SCIP_RETCODE removeFixedVariables(
       bound = consdata->bounds[v];
       boundtype = consdata->boundtypes[v];
       SCIP_CALL( SCIPvarGetProbvarBound(&var, &bound, &boundtype) );
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || oldvar != var);
 
       SCIPdebugMessage("in <%s>, replace <%s>[%g,%g] %c= %g by <%s>[%g,%g] %c= %g\n", SCIPconsGetName(cons),
          SCIPvarGetName(consdata->vars[v]), SCIPvarGetLbGlobal(consdata->vars[v]), SCIPvarGetUbGlobal(consdata->vars[v]), (consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? '>' : '<'), consdata->bounds[v],
          SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? '>' : '<'), bound);
 
-      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+      /* if literal is satisfied, then constraint is redundant and we can stop */
+      if( (boundtype == SCIP_BOUNDTYPE_LOWER && isFeasLE(scip, var, bound, SCIPvarGetLbGlobal(var))) || /*lint !e666*/
+         (boundtype == SCIP_BOUNDTYPE_UPPER && isFeasGE(scip, var, bound, SCIPvarGetUbGlobal(var))) ) /*lint !e666*/
       {
-         /* if literal is satisfied, then constraint is redundant and we can stop */
-         if( (boundtype == SCIP_BOUNDTYPE_LOWER && isFeasLE(scip, var, bound, SCIPvarGetLbGlobal(var))) || /*lint !e666*/
-            (boundtype == SCIP_BOUNDTYPE_UPPER && isFeasGE(scip, var, bound, SCIPvarGetUbGlobal(var))) ) /*lint !e666*/
-         {
-            *redundant = TRUE;
-            break;
-         }
-         /* if literal is not satisfied, then it just be removed */
+          *redundant = TRUE;
+          break;
       }
-      else
+
+      /* if literal is not fixed, replace it */
+      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
       {
          /* add new literal */
          SCIP_CALL( addCoef(scip, cons, eventhdlr, var, boundtype, bound) );
