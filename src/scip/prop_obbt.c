@@ -43,7 +43,7 @@
 #define PROP_DESC                       "optimization-based bound tightening propagator"
 #define PROP_TIMING                     SCIP_PROPTIMING_AFTERLPLOOP
 #define PROP_PRIORITY                -1000000      /**< propagator priority */
-#define PROP_FREQ                           0      /**< propagator frequency */
+#define PROP_FREQ                          -1      /**< propagator frequency */
 #define PROP_DELAY                       TRUE      /**< should propagation method be delayed, if other propagators
                                                     *   found reductions? */
 #define DEFAULT_CREATE_GENVBOUNDS        TRUE      /**< should obbt try to provide genvbounds if possible? */
