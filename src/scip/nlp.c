@@ -5815,7 +5815,7 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearRows(
    int c;
 
    assert(nlp != NULL);
-   assert(nlcount != NULL || nlp->nvars == 0);
+   assert(nlarray != NULL || nlp->nvars == 0);
 
    BMSclearMemoryArray(nlarray, nlp->nvars);
 
