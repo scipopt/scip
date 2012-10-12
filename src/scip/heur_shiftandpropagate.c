@@ -2129,7 +2129,7 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          &heurdata->sortkey, TRUE, DEFAULT_SORTKEY, SORTKEYS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/sortvars", "Should variables be sorted for the heuristic?",
          &heurdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL));
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME, "should variable statistics be collected during probing?",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/collectstats", "should variable statistics be collected during probing?",
          &heurdata->collectstats, TRUE, DEFAULT_COLLECTSTATS, NULL, NULL) );
    return SCIP_OKAY;
 }
