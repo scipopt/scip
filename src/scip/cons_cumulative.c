@@ -1253,6 +1253,8 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScip)
    char name[SCIP_MAXSTRLEN];
    int v;
 
+   assert(njobs > 0);
+
    (*infeasible) = FALSE;
    (*unbounded) = FALSE;
    (*error) = FALSE;
@@ -9759,6 +9761,9 @@ SCIP_RETCODE SCIPsolveCumulative(
    (*infeasible) = FALSE;
    (*unbounded) = FALSE;
    (*error) = FALSE;
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
 
    /* find the cumulative constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
