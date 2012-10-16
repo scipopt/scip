@@ -30,6 +30,7 @@
 #include "scip/type_retcode.h"
 #include "scip/type_set.h"
 #include "scip/type_history.h"
+#include "scip/pub_history.h"
 
 #ifdef NDEBUG
 #include "scip/struct_history.h"
@@ -170,13 +171,6 @@ void SCIPhistoryScaleVSIDS(
    SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
    );
 
-/** gets the conflict score of the history entry */
-extern
-SCIP_Real SCIPhistoryGetVSIDS(
-   SCIP_HISTORY*         history,            /**< branching and inference history */
-   SCIP_BRANCHDIR        dir                 /**< branching direction */
-   );
-
 /** increases the number of active conflicts by one and the overall length of the history entry by the given weight */
 extern
 void SCIPhistoryIncNActiveConflicts(
@@ -245,13 +239,6 @@ SCIP_Real SCIPhistoryGetAvgInferences(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
-/** get number of cutoffs counter */
-extern
-SCIP_Real SCIPhistoryGetCutoffSum(
-   SCIP_HISTORY*         history,            /**< branching and inference history */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
-   );
-
 /** returns the average number of cutoffs per branching */
 extern
 SCIP_Real SCIPhistoryGetAvgCutoffs(
@@ -285,7 +272,6 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
 #define SCIPhistoryIncVSIDS(history,dir,weight) (history)->vsids[dir] += (weight)
 #define SCIPhistoryScaleVSIDS(history,scalar)  { (history)->vsids[0] *= (scalar); \
       (history)->vsids[1] *= (scalar);  }
-#define SCIPhistoryGetVSIDS(history,dir)   ((history)->vsids[dir])
 #define SCIPhistoryIncNActiveConflicts(history,dir,length) { (history)->nactiveconflicts[dir]++; \
       (history)->conflengthsum[dir] += length; }
 #define SCIPhistoryGetNActiveConflicts(history,dir) ((history)->nactiveconflicts[dir])

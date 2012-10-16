@@ -292,6 +292,51 @@ void SCIPvaluehistoryScaleVSIDS(
    }
 }
 
+
+/*
+ * simple functions implemented as defines
+ */
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPvaluehistoryGetNValues
+#undef SCIPvaluehistoryGetHistories
+#undef SCIPvaluehistoryGetValues
+
+/** return the number of (domain) values for which a history exists */
+int SCIPvaluehistoryGetNValues(
+   SCIP_VALUEHISTORY*    valuehistory        /**< value based history */
+   )
+{
+   assert(valuehistory != NULL);
+
+   return valuehistory->nvalues;
+}
+
+/** return the array containing the histories for the individual (domain) values */
+SCIP_HISTORY** SCIPvaluehistoryGetHistories(
+   SCIP_VALUEHISTORY*    valuehistory        /**< value based history */
+   )
+{
+   assert(valuehistory != NULL);
+
+   return valuehistory->histories;
+}
+
+/** return the array containing the (domain) values for which a history exists */
+SCIP_Real* SCIPvaluehistoryGetValues(
+   SCIP_VALUEHISTORY*    valuehistory        /**< value based history */
+   )
+{
+   assert(valuehistory != NULL);
+
+   return valuehistory->values;
+}
+
 /**@} */
 
 /*

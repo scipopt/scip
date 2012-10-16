@@ -15316,6 +15316,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetNBdchgInfosLb
 #undef SCIPvarGetBdchgInfoUb
 #undef SCIPvarGetNBdchgInfosUb
+#undef SCIPvarGetValuehistory
 #undef SCIPvarGetPseudoSol
 #undef SCIPvarCatchEvent
 #undef SCIPvarDropEvent
@@ -16475,8 +16476,20 @@ int SCIPvarGetNBdchgInfosUb(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
+   assert(var != NULL);
+
    return var->nubchginfos;
 } 
+
+/** returns the value based history for the variable */
+SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->valuehistory;
+}
 
 /** gets pseudo solution value of variable */
 SCIP_Real SCIPvarGetPseudoSol(

@@ -845,6 +845,12 @@ int SCIPvarGetNBdchgInfosUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** returns the value based history for the variable */
+EXTERN
+SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -940,6 +946,7 @@ int SCIPvarGetNBdchgInfosUb(
 #define SCIPvarGetNBdchgInfosLb(var)      ((var)->nlbchginfos)
 #define SCIPvarGetBdchgInfoUb(var, pos)   (&((var)->ubchginfos[pos]))
 #define SCIPvarGetNBdchgInfosUb(var)      ((var)->nubchginfos)
+#define SCIPvarGetValuehistory(var)       (var)->valuehistory
 #endif
 
 /** gets primal LP solution value of variable */
