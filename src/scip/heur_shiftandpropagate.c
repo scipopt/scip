@@ -1710,33 +1710,35 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          continue;
       }
 
-      /* compute optimal shift value for variable */
-      SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, 1, rowweights, steps, violationchange,
-            &optimalshiftvalue, &nviolations) );
-      assert(SCIPisFeasGE(scip, optimalshiftvalue, 0.0));
-
-      /* Variables with FREE transform have to be dealt with twice */
-      if( matrix->transformstatus[permutedvarindex] == TRANSFORMSTATUS_FREE )
+      /* only apply the computationally expensive best shift selection, if there is a violated row left */
+      if( nviolatedrows > 0 )
       {
-         SCIP_Real downshiftvalue;
-         int ndownviolations;
+         /* compute optimal shift value for variable */
+         SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, 1, rowweights, steps, violationchange,
+               &optimalshiftvalue, &nviolations) );
+         assert(SCIPisFeasGE(scip, optimalshiftvalue, 0.0));
 
-         downshiftvalue = 0.0;
-         ndownviolations = 0;
-         SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, -1, rowweights, steps, violationchange,
-               &downshiftvalue, &ndownviolations) );
-
-         assert(SCIPisLE(scip, downshiftvalue, 0.0));
-
-         /* compare to positive direction and select the direction which makes more rows feasible */
-         if( ndownviolations < nviolations )
+         /* Variables with FREE transform have to be dealt with twice */
+         if( matrix->transformstatus[permutedvarindex] == TRANSFORMSTATUS_FREE )
          {
-            optimalshiftvalue = downshiftvalue;
+            SCIP_Real downshiftvalue;
+            int ndownviolations;
+
+            downshiftvalue = 0.0;
+            ndownviolations = 0;
+            SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, -1, rowweights, steps, violationchange,
+                  &downshiftvalue, &ndownviolations) );
+
+            assert(SCIPisLE(scip, downshiftvalue, 0.0));
+
+            /* compare to positive direction and select the direction which makes more rows feasible */
+            if( ndownviolations < nviolations )
+            {
+               optimalshiftvalue = downshiftvalue;
+            }
          }
       }
-
-      /* in case the problem is already feasible, do not shift in the direction which deteriorates current objective */
-      if( nviolatedrows == 0 && SCIPisFeasGT(scip, obj * optimalshiftvalue, 0.0) )
+      else
          optimalshiftvalue = 0.0;
 
       /* retransform the solution value from the heuristic transformation space */
