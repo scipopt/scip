@@ -3468,6 +3468,15 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       /* shrink the minimal maximum value for the conflict length */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/minmaxvars", 10, quiet) );
 
+      /* do not use reconversion conflicts */
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/reconvlevels", 0, quiet) );
+
+      /* after 1000 conflict we force a restart since then the variable statistics are reasonable initialized */
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/restartnum", 1000, quiet) );
+
+      /* avoid a second restart due to conflicts */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "conflict/restartfac", SCIP_REAL_MAX / 100000.0, quiet) );
+
       /* do not check pseudo solution (for performance reasons) */
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/disableenfops", TRUE, quiet) );
 
