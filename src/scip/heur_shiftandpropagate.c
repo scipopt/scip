@@ -752,6 +752,14 @@ SCIP_Real retransformVariable(
    assert(status != TRANSFORMSTATUS_NONE);
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
+   if( SCIPvarIsBinary(var) )
+   {
+      if( SCIPvarGetNLocksUp(var) == 0 )
+         return SCIPvarGetUbLocal(var);
+      if( SCIPvarGetNLocksDown(var) == 0 )
+         return SCIPvarGetLbLocal(var);
+   }
+
    /* check if original variable has different bounds and transform solution value correspondingly */
    if( status == TRANSFORMSTATUS_LB )
    {
