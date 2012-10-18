@@ -1434,6 +1434,7 @@ SCIP_RETCODE detectParallelCols(
    }
 
    /* init */
+   oldval = 0;
    pclass[0] = 0;
    scale[0] = 0.0;
    classsize[0] = matrix->ncols;
