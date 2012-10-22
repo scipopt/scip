@@ -68,6 +68,7 @@ struct SCIP_PresolData
    SCIP_Bool             onlyparallel;       /**< should only parallel columns be processed */
 };
 
+
 /********************************************************************/
 /************** matrix data structure and functions *****************/
 
@@ -1403,6 +1404,7 @@ SCIP_RETCODE detectParallelCols(
    int classidx;
    SCIP_Real aij;
    int mincolsperrow;
+   int maxcolsperrow;
 
    assert(scip != NULL);
    assert(matrix != NULL);
@@ -1420,15 +1422,25 @@ SCIP_RETCODE detectParallelCols(
    SCIP_CALL( SCIPallocBufferArray(scip, &classsetfill, matrix->ncols) );
 
    mincolsperrow = INT_MAX;
+   maxcolsperrow = 0;
    for( i = 0; i < matrix->nrows; i++ )
    {
       if(matrix->rowmatcnt[i] < mincolsperrow)
          mincolsperrow = matrix->rowmatcnt[i];
+      if(matrix->rowmatcnt[i] > maxcolsperrow)
+         maxcolsperrow = matrix->rowmatcnt[i];
    }
-   for( i = 0; i < matrix->ncols; ++i )
+   if( mincolsperrow < 32 )
+      mincolsperrow = 32;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(classsetidx[0]), maxcolsperrow) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(classsetval[0]), maxcolsperrow) );
+   classsetsize[0] = maxcolsperrow;
+   classsetfill[0] = 0;
+   for( i = 1; i < matrix->ncols; ++i )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &(classsetidx[i]), mincolsperrow) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &(classsetval[i]), mincolsperrow) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(classsetidx[i]), mincolsperrow) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(classsetval[i]), mincolsperrow) );
       classsetsize[i] = mincolsperrow;
       classsetfill[i] = 0;
    }
@@ -1484,8 +1496,8 @@ SCIP_RETCODE detectParallelCols(
                /* TODO: use a better index picking strategy by processing
                 *       the rows in sparsity order to avoid memory reallocation
                 */
-               SCIP_CALL( SCIPreallocBufferArray(scip, &(classsetidx[pclass[j]]), classsetsize[pclass[j]]*2) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, &(classsetval[pclass[j]]), classsetsize[pclass[j]]*2) );
+               SCIP_CALL( SCIPreallocMemoryArray(scip, &(classsetidx[pclass[j]]), classsetsize[pclass[j]]*2) );
+               SCIP_CALL( SCIPreallocMemoryArray(scip, &(classsetval[pclass[j]]), classsetsize[pclass[j]]*2) );
                classsetsize[pclass[j]] *= 2;
             }
             classsetidx[pclass[j]][classsetfill[pclass[j]]] = j;
@@ -1541,8 +1553,8 @@ SCIP_RETCODE detectParallelCols(
 
    for( i = matrix->ncols-1; i >= 0; --i )
    {
-      SCIPfreeBufferArray(scip, &(classsetval[i]));
-      SCIPfreeBufferArray(scip, &(classsetidx[i]));
+      SCIPfreeMemoryArray(scip, &(classsetval[i]));
+      SCIPfreeMemoryArray(scip, &(classsetidx[i]));
    }
 
    SCIPfreeBufferArray(scip, &classsetfill);
@@ -1601,7 +1613,6 @@ void findFixings(
       }
    }
 
-
    if( SCIPisPositive(scip, SCIPvarGetObj(dominatingvar)) )
    {
       assert(SCIPisPositive(scip, SCIPvarGetObj(dominatedvar)));
@@ -1623,7 +1634,6 @@ void findFixings(
             printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
                dominatedvar,dominatedidx,dominatingub,dominatingwclb);
 #endif
-            return;
          }
       }
       else
@@ -1654,7 +1664,6 @@ void findFixings(
             printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
                dominatedvar,dominatedidx,dominatingub,dominatingwclb);
 #endif
-            return;
          }
       }
       else
@@ -1678,7 +1687,6 @@ void findFixings(
          {
             varstofix[dominatedidx] = FIXATLB;
             (*npossiblefixings)++;
-            return;
          }
       }
       else if( SCIPvarsHaveCommonClique(dominatingvar, FALSE, dominatedvar, FALSE, TRUE) &&
@@ -1693,7 +1701,6 @@ void findFixings(
          {
             varstofix[dominatingidx] = FIXATUB;
             (*npossiblefixings)++;
-            return;
          }
       }
       else
@@ -1702,7 +1709,6 @@ void findFixings(
       }
    }
 }
-
 
 /** find dominance relation between variable pairs */
 static
@@ -2448,7 +2454,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 }
 
 
-
 /*
  * presolver specific interface methods
  */
@@ -2478,4 +2483,3 @@ SCIP_RETCODE SCIPincludePresolDomcol(
 
    return SCIP_OKAY;
 }
-
