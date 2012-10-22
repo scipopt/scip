@@ -334,7 +334,7 @@ SCIP_RETCODE SCIPsetSolveCumulative(
  *        solver was interrupted.
  */
 EXTERN
-SCIP_Real SCIPsolveCumulative(
+SCIP_RETCODE SCIPsolveCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< start time variables */

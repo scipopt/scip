@@ -8129,8 +8129,6 @@ SCIP_DECL_CONSINITPRE(consInitpreCumulative)
        * hmax)
        */
       SCIP_CALL( removeIrrelevantJobs(scip, conss[c]) );
-
-      
    }
 
    return SCIP_OKAY;
@@ -9480,7 +9478,6 @@ SCIP_RETCODE SCIPnormalizeCumulativeCondition(
 }
 
 /** searches for a time point within the cumulative condition were the cumulative condition can be split */
-EXTERN
 SCIP_RETCODE SCIPsplitCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables (jobs) */
@@ -9735,7 +9732,7 @@ SCIP_RETCODE SCIPsetSolveCumulative(
  *        solution values; If the problem was not solved these two arrays contain the global bounds at the time the sub
  *        solver was interrupted.
  */
-SCIP_Real SCIPsolveCumulative(
+SCIP_RETCODE SCIPsolveCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< start time variables */
