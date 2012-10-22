@@ -37,11 +37,12 @@
                                               *   strong branching phase, which however seems to mostly increase strong
                                               *   branching time and iterations */
 
+#define WITH_BOUNDFLIPPING                   /**< enable bound flipping ratio test */
+
 /* in this case the SoPlex results are double checked using CPLEX */
 #ifdef WITH_LPSCHECK
 #include <cplex.h>
 
-#define WITH_BOUNDFLIPPING
 
 #define CHECK_SPXSOLVE                  true /**< shall the SoPlex results in spxSolve() be double checked using CPLEX? */
 #define CHECK_SPXSTRONGBRANCH           true /**< shall the SoPlex results in SCIPlpStrongbranch() be double checked using CPLEX? */
