@@ -36,6 +36,7 @@ TIME     	=  	3600
 NODES           =       2100000000
 MEM		=	6144
 THREADS         =       1
+PERMUTE         =       0
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	short
@@ -154,6 +155,7 @@ include make/make.$(BASE)
 -include make/local/make.$(HOSTNAME)
 -include make/local/make.$(HOSTNAME).$(COMP)
 -include make/local/make.$(HOSTNAME).$(COMP).$(OPT)
+-include make/local/make.local
 #-----------------------------------------------------------------------------
 
 FLAGS		+=	$(USRFLAGS)
@@ -573,11 +575,11 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_components.o \
 			scip/presol_convertinttobin.o \
 			scip/presol_domcol.o\
-			scip/presol_dualfix.o \
 			scip/presol_gateextraction.o \
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
 			scip/presol_trivial.o \
+			scip/presol_dualfix.o \
 			scip/prop_genvbounds.o \
 			scip/prop_obbt.o \
 			scip/prop_probing.o \
