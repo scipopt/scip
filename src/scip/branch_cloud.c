@@ -13,7 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define SCIP_STATISTIC
-#define SCIP_DEBUG
 
 /**@file   branch_cloud.c
  * @brief  cloud branching rule
@@ -57,7 +56,9 @@ struct SCIP_BranchruleData
    SCIP_Bool*            skipdown;
    SCIP_Bool*            skipup;
    int                   ntried;             /**< number of times the cloud was tried */
-   int                   nuseful;            /**< number of times the cloud was useful */
+   int                   nuseful;            /**< number of times the cloud was useful (at least one LP skipped) */
+   int                   ncloudpoints;       /**< sum of cloud points taken over all nodes with at least two poitns in cloud */
+   int                   nsavedlps;          /**< sum of saved LPs taken over all nodes with at least two points in cloud */
 };
 
 /*
@@ -99,8 +100,16 @@ SCIP_DECL_BRANCHFREE(branchFreeCloud)
 
    if( branchruledata->cloudclock != NULL)
    {
+      int ntried = branchruledata->ntried;
+      int nuseful = branchruledata->nuseful;
+      int ncloudpoints = branchruledata->ncloudpoints;
+      int nsavedlps = branchruledata->nsavedlps;
+
       SCIPstatisticMessage("time spent diving in cloud branching: %g\n", SCIPgetClockTime(scip, branchruledata->cloudclock));
-      SCIPstatisticMessage("success rate of cloud branching: %g\n", (SCIP_Real)branchruledata->nuseful / branchruledata->ntried);
+      SCIPstatisticMessage("cloud branching tried: %6d      found cloud: %6d \n", ntried, nuseful);
+      SCIPstatisticMessage("cloud used points: %6d      saved LPs: %6d \n", ncloudpoints, nsavedlps);
+      SCIPstatisticMessage("cloud success rates useful/tried: %g points/useful: %g  saved/useful: %g \n",
+         ntried == 0 ? -1 : (SCIP_Real)nuseful / ntried,  nuseful == 0 ? -1 : (SCIP_Real)ncloudpoints / nuseful, nuseful == 0 ? -1 :  (SCIP_Real)nsavedlps / nuseful);
       SCIP_CALL( SCIPfreeClock(scip, &(branchruledata->cloudclock)) );
    }
 
@@ -125,6 +134,9 @@ SCIP_DECL_BRANCHINIT(branchInitCloud)
    branchruledata->lastcand = 0;
    branchruledata->nuseful = 0;
    branchruledata->ntried = 0;
+   branchruledata->ncloudpoints = 0;
+   branchruledata->nsavedlps = 0;
+
    SCIP_CALL( SCIPcreateClock(scip, &(branchruledata->cloudclock)) );
 
    return SCIP_OKAY;
@@ -379,6 +391,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
    if( counter > 0 )
    {
+      branchruledata->ncloudpoints += (counter+1);
+      branchruledata->nuseful++;
+
       counter = 0;
 
       for( i = 0; i < nlpcands; ++i)
@@ -393,9 +408,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          }
       }
 
-      /* ???? should this stay here or go beneath the next loop????? */
-      if( nlpcands - counter > 0 )
-         branchruledata->nuseful++;
+      /* should only be in that if condition when at least one bound could be made integral */
+      assert(nlpcands - counter > 0);
+
       ncomplete = counter;
 
       for( i = 0; i < nlpcands; ++i)
@@ -439,10 +454,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    if( branchruledata->lastcand <= ncomplete )
    {
       SCIPdebugMessage("saved %d of %d LPs\n", 2*(nlpcands - ncomplete), 2*nlpcands);
+      branchruledata->nsavedlps += 2*(nlpcands - ncomplete);
    }
    else
    {
       SCIPdebugMessage("saved %d of %d LPs\n", 2*(nlpcands - counter)+counter - ncomplete, 2*nlpcands);
+      branchruledata->nsavedlps += 2*(nlpcands - counter)+counter - ncomplete;
    }
 
    /* perform the branching */
