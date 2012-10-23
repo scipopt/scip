@@ -3351,6 +3351,7 @@ SCIP_RETCODE conflictAnalyze(
    int nresolutions;
    int lastconsnresolutions;
    int lastconsresoldepth;
+   int i;
 
    assert(conflict != NULL);
    assert(conflict->conflictset != NULL);
@@ -3567,7 +3568,6 @@ SCIP_RETCODE conflictAnalyze(
    if( set->conf_reconvlevels != 0 && validdepth <= maxvaliddepth )
    {
       int reconvlevels;
-      int i;
 
       reconvlevels = (set->conf_reconvlevels == -1 ? INT_MAX : set->conf_reconvlevels);
       for( i = 0; i < nfirstuips; ++i )
@@ -3586,6 +3586,13 @@ SCIP_RETCODE conflictAnalyze(
 
    /* clear the conflict candidate queue and the conflict set */
    conflictClear(conflict);
+
+   /* free the conflict storage */
+   for( i = 0; i < conflict->nconflictsets; ++i )
+   {
+      conflictsetFree(&conflict->conflictsets[i], blkmem);
+   }
+   conflict->nconflictsets = 0;
 
    return SCIP_OKAY;
 }
