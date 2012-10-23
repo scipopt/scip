@@ -22,6 +22,8 @@ features:
 - added new clique extraction algorithm for linear constraints
 - added missing debugging solution check for cliques
 - the slack variables of indicator constraints can now be scaled
+- added redundancy check of sides of ranged row varbound constraint
+- added coefficient tightening for ranged row varbound constraint
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
