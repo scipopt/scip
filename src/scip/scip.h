@@ -6813,7 +6813,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred or the
                                               *   solving process should be stopped (e.g., due to a time limit) */
    SCIP_Real*            newlbs,
-   SCIP_Real*            newubs
+   SCIP_Real*            newubs,
+   int*                  nchgbdsdown,
+   int*                  nchgbdsup,
+   int*                  info
    );
 
 /** gets strong branching information on column variable x with integral LP solution value (val); that is, the down branch

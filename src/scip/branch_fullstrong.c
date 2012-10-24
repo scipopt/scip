@@ -240,7 +240,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                /* apply strong branching */
                SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, lpcands[c], lpcandssol[c], lpobjval, 3,
                      branchruledata->maxproprounds, &down, &up, &downvalid, &upvalid, &downinf, &upinf,
-                     &downconflict, &upconflict, &lperror, newlbs, newubs) );
+                     &downconflict, &upconflict, &lperror, newlbs, newubs, NULL, NULL, NULL) );
 
                SCIPdebugMessage("-> down=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d), up=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d)\n",
                   down, down - lpobjval, downvalid, downinf, downconflict, up, up - lpobjval, upvalid, upinf, upconflict);
@@ -258,8 +258,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                SCIP_Bool proplperror;
 
                SCIP_Longint oldsbiters;
+               SCIP_Longint olddiveiters;
+               SCIP_Longint oldlpiters;
                SCIP_Longint normalsbiters;
                SCIP_Longint propsbiters;
+               int nchgbdsdown;
+               int nchgbdsup;
+               int info;
 
                oldsbiters = SCIPgetNStrongbranchLPIterations(scip);
 
@@ -279,29 +284,29 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                /* end strong branching */
                SCIP_CALL( SCIPstartStrongbranch(scip, TRUE) );
 
-               oldsbiters = SCIPgetNStrongbranchLPIterations(scip);
+               olddiveiters = SCIPgetNDivingLPIterations(scip);
+               oldlpiters = SCIPgetNLPIterations(scip);
 
                /* apply strong branching */
                SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, lpcands[c], lpcandssol[c], lpobjval, INT_MAX,
                      -2, &propdown, &propup, &propdownvalid, &propupvalid, &propdowninf, &propupinf,
-                     &propdownconflict, &propupconflict, &proplperror, newlbs, newubs) );
+                     &propdownconflict, &propupconflict, &proplperror, newlbs, newubs, &nchgbdsdown, &nchgbdsup, &info) );
+
+               propsbiters = SCIPgetNDivingLPIterations(scip) - olddiveiters;
+               assert(propsbiters == SCIPgetNLPIterations(scip) - oldlpiters);
 
                SCIPdebugMessage("-> strong branching with propagation: down=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d), up=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d), %lld LP iterations\n",
                   propdown, propdown - lpobjval, propdownvalid, propdowninf, propdownconflict, propup, propup - lpobjval, propupvalid, propupinf, propupconflict,
-                  SCIPgetNStrongbranchLPIterations(scip) - oldsbiters);
-
-               propsbiters = SCIPgetNStrongbranchLPIterations(scip) - oldsbiters;
-
+                  propsbiters);
+#if 0
                if( propdowninf )
                   propup = up;
+#endif
+               printf("sb: lpobj=%16.9g pb=%16.9f cutoffbound=%16.9f down=%13.7g/%13.7g up=%13.7g/%13.7g downvalid=%d/%d upvalid=%d/%d downinf=%d/%d upinf=%d/%d iters=%4lld/%4lld domchgs=%d/%d error=%d/%d info=%d\n",
+                  lpobjval, SCIPgetUpperbound(scip), SCIPgetCutoffbound(scip), down, propdown, up, propup, downvalid, propdownvalid, upvalid, propupvalid,
+                  downinf, propdowninf, upinf, propupinf, normalsbiters, propsbiters, nchgbdsdown, nchgbdsup, lperror, proplperror, info);
 
-               assert(propsbiters > 0 || propdowninf || propupinf);
-
-               printf("sb: lpobj=%16.9g downgain=%13.7g/%13.7g(%+7.2f%%), upgain=%13.7g/%13.7g(%+7.2f%%), iters=%4lld/%4lld(%+7.2f%%) pb= %.2f\n",
-                  lpobjval, down - lpobjval, propdown - lpobjval, (SCIPisZero(scip, propdown - down) ? 0.0 : (propdown - down)/MAX(propdown - lpobjval, down - lpobjval) * 100.0),
-                  up - lpobjval, propup - lpobjval, (SCIPisZero(scip, propup - up) ? 0.0 : (propup - up)/MAX(propup - lpobjval, up - lpobjval) * 100.0),
-                  normalsbiters, propsbiters, (propsbiters == normalsbiters ? 0.0 : (1.0 * (propsbiters - normalsbiters))/(1.0 * MAX(propsbiters, normalsbiters)) * 100.0),
-                  SCIPgetUpperbound(scip));
+               //assert(propsbiters > 0 || propdowninf || propupinf); 0 iterations in LP solve is also valid
 
                // assert(propdowninf || SCIPisFeasEQ(scip, down, propdown));
                // assert(propdowninf || !downinf);
