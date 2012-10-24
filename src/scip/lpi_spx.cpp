@@ -116,6 +116,8 @@
 #undef ___DEBUG
 #endif
 
+#define SOPLEX_VERBLEVEL                5    /**< verbosity level for LPINFO */
+
 #include "scip/pub_message.h"
 
 /********************************************************************/
@@ -661,7 +663,7 @@ public:
 
       /* store and set verbosity */
       verbosity = Param::verbose();
-      Param::setVerbose(getLpInfo() ? 5 : 0);
+      Param::setVerbose(getLpInfo() ? SOPLEX_VERBLEVEL : 0);
 
       assert(checkConsistentBounds());
       assert(checkConsistentSides());
@@ -872,7 +874,7 @@ public:
 
          /* store and set verbosity */
          verbosity = Param::verbose();
-         Param::setVerbose(getLpInfo() ? 5 : 0);
+         Param::setVerbose(getLpInfo() ? SOPLEX_VERBLEVEL : 0);
          SCIPdebugMessage("simplifying LP\n");
 #if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
          result = simplifier->simplify(*this, epsilon(), feastol(), opttol());

@@ -29,6 +29,28 @@ VERSION=${13}
 LPS=${14}
 VALGRIND=${15}
 
+# check if all variables defined (by checking the last one)
+if test -z $VALGRIND
+then
+    echo Skipping test since not all variables are define
+    echo "TSTNAME       = $TSTNAME"
+    echo "BINNAME       = $BINNAME"
+    echo "SETNAME       = $SETNAME"
+    echo "BINID         = $BINID"
+    echo "TIMELIMIT     = $TIMELIMIT"
+    echo "NODELIMIT     = $NODELIMIT"
+    echo "MEMLIMIT      = $MEMLIMIT"
+    echo "THREADS       = $THREADS"
+    echo "FEASTOL       = $FEASTOL"
+    echo "DISPFREQ      = $DISPFREQ"
+    echo "CONTINUE      = $CONTINUE"
+    echo "LOCK          = $LOCK"
+    echo "VERSION       = $VERSION"
+    echo "LPS           = $LPS"
+    echo "VALGRIND      = $VALGRIND"
+    exit 1;
+fi
+
 SETDIR=../settings
 
 if test ! -e results
@@ -122,10 +144,12 @@ HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
-VALGRINDCMD=
+# check if the test run should be processed in the valgrind environment
 if test "$VALGRIND" = "true"
 then
-   VALGRINDCMD="valgrind --log-fd=1 --leak-check=full"
+    VALGRINDCMD="valgrind --log-fd=1 --leak-check=full"
+else
+    VALGRINDCMD=""
 fi
 
 for i in `cat testset/$TSTNAME.test` DONE

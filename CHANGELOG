@@ -22,6 +22,7 @@ fixed bugs:
   interactive shell
 - fixed bug of wrong result code in propagation in prop_genvbound.c
 - fixed several issue in cumulative constraint handler
+- fixed issue in cumulative constraint and separation
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
