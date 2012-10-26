@@ -34,7 +34,7 @@
 
 #define PROP_NAME                            "genvbounds"
 #define PROP_DESC                            "generalized variable bounds propagator"
-#define PROP_TIMING   SCIP_PROPTIMING_AFTERLPLOOP
+#define PROP_TIMING   SCIP_PROPTIMING_ALWAYS
 #define PROP_PRIORITY                3000000 /**< propagator priority */
 #define PROP_FREQ                          1 /**< propagator frequency */
 #define PROP_DELAY                     FALSE /**< should propagation method be delayed, if other propagators
@@ -1841,6 +1841,7 @@ SCIP_RETCODE execGenVBounds(
       SCIP_CALL( setUpEvents(scip, propdata) );
    }
 
+#ifndef SCIP_STATISTIC
    /* always apply global propagation if primal bound has improved */
    if( SCIPisFeasLT(scip, SCIPgetCutoffbound(scip), propdata->lastcutoff) )
    {
@@ -1851,6 +1852,7 @@ SCIP_RETCODE execGenVBounds(
       }
       propdata->lastcutoff = SCIPgetCutoffbound(scip);
    }
+#endif
 
    /* apply local propagation if bound change events were caught */
    if( local && *result != SCIP_CUTOFF && SCIPgetCurrentNode(scip) == propdata->lastnodecaught && propdata->nindices > 0 )
@@ -2074,9 +2076,11 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
 
    *result = SCIP_DIDNOTRUN;
 
-   /* for statistic runs: do not run in presolving, repropagation, probing mode */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip) || SCIPinProbing(scip) )
+#ifdef SCIP_STATISTIC
+   /* for statistic runs: do not run in presolving, repropagation, probing mode, and only after lp */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip) || SCIPinProbing(scip) || proptiming != SCIP_PROPTIMING_AFTERLPNODE )
       return SCIP_OKAY;
+#endif
 
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
