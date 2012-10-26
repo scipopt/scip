@@ -25,6 +25,7 @@ fixed bugs:
 - fixed issue in cumulative constraint and separation
 - fixed feasibility decision bug when replacing inactive variables by their active counterparts, which might change the
   redundancy status of a bounddisjunction constraint due to numerics
+- fixed numerical bug adding a relaxed bound for conflict analysis in cons_varbound
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
