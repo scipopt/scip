@@ -34,7 +34,7 @@
 
 #define PROP_NAME                            "genvbounds"
 #define PROP_DESC                            "generalized variable bounds propagator"
-#define PROP_TIMING   SCIP_PROPTIMING_ALWAYS
+#define PROP_TIMING   SCIP_PROPTIMING_AFTERLPLOOP
 #define PROP_PRIORITY                3000000 /**< propagator priority */
 #define PROP_FREQ                          1 /**< propagator frequency */
 #define PROP_DELAY                     FALSE /**< should propagation method be delayed, if other propagators
@@ -2100,8 +2100,8 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
       return SCIP_OKAY;
    }
 
-   /* propagate locally only in SCIP_PROPTIMING_BEFORELP, but globally always if the cutoff bound has improved */
-   SCIP_CALL( execGenVBounds(scip, propdata, result, (proptiming == SCIP_PROPTIMING_BEFORELP)) );
+   /* propagate locally and globally */
+   SCIP_CALL( execGenVBounds(scip, propdata, result, TRUE) );
 
    return SCIP_OKAY;
 }
