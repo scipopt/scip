@@ -122,6 +122,197 @@ struct SCIP_PropData
  * Local methods
  */
 
+/** solves the LP and handles errors */
+static
+SCIP_RETCODE solveLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   itlimit,            /**< maximal number of LP iterations to perform, or -1 for no limit */
+   SCIP_Bool*            error,              /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            optimal             /**< was the LP solved to optimalilty? */
+   )
+{
+   SCIP_LPSOLSTAT lpsolstat;
+   SCIP_RETCODE retcode;
+
+   assert(scip != NULL);
+   assert(itlimit == -1 || itlimit >= 0);
+   assert(error != NULL);
+   assert(optimal != NULL);
+
+   *optimal = FALSE;
+   *error = FALSE;
+
+   SCIPdebugMessage("solve dive lp\n");
+   retcode = SCIPsolveDiveLP(scip, itlimit, error);
+   lpsolstat = SCIPgetLPSolstat(scip);
+
+   /* an error should not kill the overall solving process */
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPwarningMessage(scip, "   error while solving LP in obbt propagator; LP solve terminated with code <%d>\n", retcode);
+      SCIPwarningMessage(scip, "   this does not affect the remaining solution procedure --> continue\n");
+
+      *error = TRUE;
+
+      return SCIP_OKAY;
+   }
+
+   if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      assert(!*error);
+      *optimal = TRUE;
+   }
+#ifdef SCIP_DEBUG
+   else
+   {
+      switch( lpsolstat )
+      {
+      case SCIP_LPSOLSTAT_ITERLIMIT:
+         SCIPdebugMessage("   reached lp iteration limit\n");
+         break;
+      case SCIP_LPSOLSTAT_TIMELIMIT:
+         SCIPdebugMessage("   reached time limit while solving lp\n");
+         break;
+      case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
+         SCIPdebugMessage("   lp was unbounded\n");
+         break;
+      case SCIP_LPSOLSTAT_NOTSOLVED:
+         SCIPdebugMessage("   lp was not solved\n");
+         break;
+      case SCIP_LPSOLSTAT_ERROR:
+         SCIPdebugMessage("   an error occured during solving lp\n");
+         break;
+      case SCIP_LPSOLSTAT_INFEASIBLE:
+      case SCIP_LPSOLSTAT_OBJLIMIT:
+      case SCIP_LPSOLSTAT_OPTIMAL: /* should not appear because it is handled earlier */
+      default:
+         SCIPdebugMessage("   received an unexpected solstat during solving lp: %d\n", lpsolstat);
+      }
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
+/** adds the objective cutoff to the LP; must be in diving mode */
+static
+SCIP_RETCODE addObjCutoff(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_ROW* row;
+   SCIP_VAR** vars;
+   char rowname[SCIP_MAXSTRLEN];
+
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(SCIPinDive(scip));
+
+   if( SCIPisInfinity(scip, SCIPgetCutoffbound(scip)) )
+   {
+      SCIPdebugMessage("no objective cutoff since there is no cutoff bound\n");
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMessage("create objective cutoff and add it to the LP...\n");
+
+   /* get variables data */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   /* create objective cutoff row; set local flag to FALSE since primal cutoff is globally valid */
+   (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "obbt_objcutoff");
+   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, rowname, -SCIPinfinity(scip), SCIPgetCutoffbound(scip), FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i], SCIPvarGetObj(vars[i])) );
+   }
+   SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+
+   /* add row to the LP */
+   SCIPdebugMessage("add row\n");
+   SCIP_CALL( SCIPaddRowDive(scip, row) );
+
+   /* release row */
+   SCIPdebugMessage("release row\n");
+   SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE simulateObbt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< bounds variable */
+   SCIP_BOUNDTYPE        boundtype,          /**< bounds type */
+   SCIP_Real*            value,              /**< pointer to store obbt's LP value */
+   SCIP_Bool*            optimal             /**< pointer to store if the LP was solved to optimality */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real olddualfeastol;
+   int i;
+   int nvars;
+   SCIP_Bool error;
+
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(value != NULL);
+   assert(optimal != NULL);
+
+   *optimal = FALSE;
+   error = FALSE;
+
+   SCIPdebugMessage("simulate obbt\n");
+
+   /* store original dual feastol */
+   olddualfeastol = SCIPdualfeastol(scip);
+
+   /* start diving */
+   SCIPdebugMessage("start diving\n");
+   SCIP_CALL( SCIPstartDive(scip) );
+
+   /* set dual feastol */
+   SCIP_CALL( SCIPchgDualfeastol(scip, 1e-9) );
+
+   /* add objective cutoff */
+   SCIP_CALL( addObjCutoff(scip) );
+
+   /* get variable data */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   /* set objective coefficients to zero */
+   SCIPdebugMessage("change objective to zero\n");
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_CALL( SCIPchgVarObjDive(scip, vars[i], 0.0) );
+   }
+
+   /* set objective coefficient to +/- 1 (note that we minimize) */
+   SCIPdebugMessage("set objective\n");
+   SCIP_CALL( SCIPchgVarObjDive(scip, var, (boundtype == SCIP_BOUNDTYPE_LOWER) ? 1.0 : -1.0 ) );
+
+   /* solve LP */
+   SCIP_CALL( solveLP(scip, -1, &error, optimal) );
+
+   if( optimal )
+   {
+      *value = SCIPvarGetLPSol(var);
+   }
+
+   /* reset dual feastol */
+   SCIP_CALL( SCIPchgDualfeastol(scip, olddualfeastol) );
+
+   /* end diving */
+   SCIPdebugMessage("end diving\n");
+   SCIP_CALL( SCIPendDive(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** returns corresponding genvbound in genvboundstore if there is one, NULL otherwise */
 static
 GENVBOUND* getGenVBound(
@@ -841,6 +1032,24 @@ SCIP_RETCODE applyGenVBound(
 
    /* get bound value provided by genvbound */
    boundval = getGenVBoundsBound(scip, genvbound, global);
+#ifdef SCIP_STATISTIC
+   if( !global )
+   {
+      SCIP_Real obbtvalue;
+      SCIP_Real oldbound;
+      SCIP_Bool optimal;
+
+      obbtvalue = 0.0;
+      optimal = FALSE;
+
+      oldbound = genvbound->boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocal(genvbound->var) :
+         SCIPvarGetUbLocal(genvbound->var);
+      SCIP_CALL( simulateObbt(scip, genvbound->var, genvbound->boundtype, &obbtvalue, &optimal) );
+
+      SCIPstatisticMessage("compare obtained %s bound in depth %d - old: %g, lvb: %g, obbt: %g\n", genvbound->boundtype == SCIP_BOUNDTYPE_LOWER ?
+         "lower" : "upper", SCIPgetDepth(scip), oldbound, boundval, obbtvalue);
+   }
+#endif
 
 #ifdef SCIP_DEBUG
    {
@@ -1442,6 +1651,18 @@ SCIP_RETCODE applyGenVBounds(
    if( *result == SCIP_DIDNOTRUN )
       *result = SCIP_DIDNOTFIND;
 
+   /* for statistic run: make sure that LP is constructed */
+   if( !SCIPisLPConstructed(scip) )
+   {
+      SCIP_Bool cutoff;
+      cutoff = FALSE;
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+      if( cutoff ) {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+   }
+
    /* if the genvbounds are not sorted, i.e. if root node processing has not been finished, yet, we just propagate in
     * the order in which they have been added to genvboundstore
     */
@@ -1848,6 +2069,10 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
 
    *result = SCIP_DIDNOTRUN;
+
+   /* for statistic runs: do not run in presolving, repropagation, probing mode */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip) || SCIPinProbing(scip) )
+      return SCIP_OKAY;
 
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
