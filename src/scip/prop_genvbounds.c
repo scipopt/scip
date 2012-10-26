@@ -122,6 +122,7 @@ struct SCIP_PropData
  * Local methods
  */
 
+#ifdef SCIP_STATISTIC
 /** solves the LP and handles errors */
 static
 SCIP_RETCODE solveLP(
@@ -312,6 +313,7 @@ SCIP_RETCODE simulateObbt(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** returns corresponding genvbound in genvboundstore if there is one, NULL otherwise */
 static
@@ -1651,6 +1653,7 @@ SCIP_RETCODE applyGenVBounds(
    if( *result == SCIP_DIDNOTRUN )
       *result = SCIP_DIDNOTFIND;
 
+#ifdef SCIP_STATISTIC
    /* for statistic run: make sure that LP is constructed */
    if( !SCIPisLPConstructed(scip) )
    {
@@ -1662,6 +1665,7 @@ SCIP_RETCODE applyGenVBounds(
          return SCIP_OKAY;
       }
    }
+#endif
 
    /* if the genvbounds are not sorted, i.e. if root node processing has not been finished, yet, we just propagate in
     * the order in which they have been added to genvboundstore
