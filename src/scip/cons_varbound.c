@@ -687,7 +687,26 @@ SCIP_RETCODE analyzeConflict(
          if( SCIPvarIsIntegral(infervar) )
             relaxedub = inferbd - 1.0;
          else
-            relaxedub = inferbd - 2*SCIPfeastol(scip);
+         {
+            SCIP_CONSDATA* consdata;
+            SCIP_Real abscoef;
+
+            consdata = SCIPconsGetData(cons);
+            assert(consdata != NULL);
+
+            /* vbdvar can never be of non-integral type */
+            assert(infervar == consdata->var);
+
+            abscoef = REALABS(consdata->vbdcoef);
+
+            /* due to resolving a the propagation and dividing by the vbdcoef we need to make sure the the relaxed bound
+             * is big enough, therefore we multiply here with the vbdcoef
+             *
+             * @note it does not matter if we deceed the current local upper bound, because SCIPaddConflictRelaxedUb()
+             *       is correcting the bound afterwards
+             */
+            relaxedub = inferbd - 2*SCIPfeastol(scip) * MAX(1, abscoef);
+         }
 
          /* try to relax inference variable upper bound such that the infeasibility is still given */
          SCIP_CALL( SCIPaddConflictRelaxedUb(scip, infervar, NULL, relaxedub) );
@@ -699,7 +718,23 @@ SCIP_RETCODE analyzeConflict(
          if( SCIPvarIsIntegral(infervar) )
             inferbd = inferbd + 1.0;
          else
-            inferbd = inferbd + 2*SCIPfeastol(scip);
+         {
+            SCIP_CONSDATA* consdata;
+            SCIP_Real abscoef;
+
+            consdata = SCIPconsGetData(cons);
+            assert(consdata != NULL);
+
+            /* vbdvar can never be of non-integral type */
+            assert(infervar == consdata->var);
+
+            abscoef = REALABS(consdata->vbdcoef);
+
+            /* due to resolving a the propagation and dividing by the vbdcoef we need to make sure the the relaxed bound
+             * is big enough, therefore we multiply here with the vbdcoef
+             */
+            inferbd = inferbd + 2*SCIPfeastol(scip) * MAX(1, abscoef);
+         }
       }
       else
       {
@@ -717,11 +752,30 @@ SCIP_RETCODE analyzeConflict(
          /* adjust upper bound */
          inferbd = SCIPadjustedVarUb(scip, infervar, inferbd);
 
-         /* compute a relaxed upper bound which would be sufficient to be still infeasible */
+         /* compute a relaxed lower bound which would be sufficient to be still infeasible */
          if( SCIPvarIsIntegral(infervar) )
             relaxedlb = inferbd + 1.0;
          else
-            relaxedlb = inferbd + 2*SCIPfeastol(scip);
+         {
+            SCIP_CONSDATA* consdata;
+            SCIP_Real abscoef;
+
+            consdata = SCIPconsGetData(cons);
+            assert(consdata != NULL);
+
+            /* vbdvar can never be of non-integral type */
+            assert(infervar == consdata->var);
+
+            abscoef = REALABS(consdata->vbdcoef);
+
+            /* due to resolving a the propagation and dividing by the vbdcoef we need to make sure the the relaxed bound
+             * is big enough, therefore we multiply here with the vbdcoef
+             *
+             * @note it does not matter if we exceed the current local lower bound, because SCIPaddConflictRelaxedLb()
+             *       is correcting the bound afterwards
+             */
+            relaxedlb = inferbd + 2*SCIPfeastol(scip) * MAX(1, abscoef);
+         }
 
          /* try to relax inference variable upper bound such that the infeasibility is still given */
          SCIP_CALL( SCIPaddConflictRelaxedLb(scip, infervar, NULL, relaxedlb) );
@@ -733,7 +787,23 @@ SCIP_RETCODE analyzeConflict(
          if( SCIPvarIsIntegral(infervar) )
             inferbd = inferbd - 1.0;
          else
-            inferbd = inferbd - 2*SCIPfeastol(scip);
+         {
+            SCIP_CONSDATA* consdata;
+            SCIP_Real abscoef;
+
+            consdata = SCIPconsGetData(cons);
+            assert(consdata != NULL);
+
+            /* vbdvar can never be of non-integral type */
+            assert(infervar == consdata->var);
+
+            abscoef = REALABS(consdata->vbdcoef);
+
+            /* due to resolving a the propagation and dividing by the vbdcoef we need to make sure the the relaxed bound
+             * is big enough, therefore we multiply here with the vbdcoef
+             */
+            inferbd = inferbd - 2*SCIPfeastol(scip) * MAX(1, abscoef);
+         }
       }
       else
       {
