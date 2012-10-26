@@ -50,7 +50,7 @@ fixed bugs:
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()
-- sort genvbounds only when root node is finished
+- sort genvbounds only when root node is finished; apply more often
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
