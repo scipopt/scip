@@ -4290,13 +4290,17 @@ SCIP_RETCODE analyzeConflictOverload(
    if( !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
+   SCIPdebugMessage("est=%d, lct=%d, propest %d, reportedenergy %d, shift %d\n", est, lct, propest, reportedenergy, shift);
+
    /* compute energy of initial time window */
    energy = (lct - est) * capacity;
 
    /* sort the start time variables which were added to search tree w.r.t. earliest start time */
    SCIPsortDownPtr((void**)leaves, compNodeEst, nleaves);
 
-   /* collect the energy of the responsible leaves until the cumulative energy is large enough an overload */
+   /* collect the energy of the responsible leaves until the cumulative energy is large enough to detect an overload;
+    * thereby, compute the time window of interest
+    */
    for( j = 0; j < nleaves && reportedenergy <= energy; ++j )
    {
       SCIP_NODEDATA* nodedata;
@@ -4309,14 +4313,34 @@ SCIP_RETCODE analyzeConflictOverload(
       /* adjust energy if the earliest start time decrease */
       if( nodedata->est < est )
       {
-         energy = (lct - est) * capacity;
          est = nodedata->est;
+         energy = (lct - est) * capacity;
       }
    }
    assert(reportedenergy > energy);
 
+   SCIPdebugMessage("time window [%d,%d) available energy %d, required energy %d\n", est, lct, energy, reportedenergy);
+
    /* initialize conflict analysis */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+   /* flip earliest start time and latest completion time */
+   if( !propest )
+   {
+      SCIPswapInts(&est, &lct);
+
+      /* shift earliest start time and latest completion time */
+      lct = shift - lct;
+      est = shift - est;
+   }
+   else
+   {
+      /* shift earliest start time and latest completion time */
+      lct = lct + shift;
+      est = est + shift;
+   }
+
+   nleaves = j;
 
    /* report the variables and relax their bounds to final time interval [est,lct) which was been detected to be
     * overloaded
@@ -4332,16 +4356,8 @@ SCIP_RETCODE analyzeConflictOverload(
       /* check if bound widening should be used */
       if( usebdwidening )
       {
-         if( propest )
-         {
-            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, nodedata->var, NULL, (SCIP_Real)(shift + est  - nodedata->leftadjust)) );
-            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, nodedata->var, NULL, (SCIP_Real)(shift + lct  - nodedata->duration + nodedata->rightadjust)) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, nodedata->var, NULL, (SCIP_Real)(shift - est - nodedata->leftadjust)) );
-            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, nodedata->var, NULL, (SCIP_Real)(shift - lct - nodedata->duration + nodedata->rightadjust)) );
-         }
+         SCIP_CALL( SCIPaddConflictRelaxedUb(scip, nodedata->var, NULL, (SCIP_Real)(est - nodedata->leftadjust)) );
+         SCIP_CALL( SCIPaddConflictRelaxedLb(scip, nodedata->var, NULL, (SCIP_Real)(lct - nodedata->duration + nodedata->rightadjust)) );
       }
       else
       {
