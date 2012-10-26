@@ -1002,7 +1002,7 @@ SCIP_RETCODE delCoefPos(
 }
 
 /** in case a part (more than one variable) in the setppc constraint is independent of every else (is locked only by
- * this constraint), we can perform dual reductions;
+ *  this constraint), we can perform dual reductions;
  *
  *  (1) set covering
  *
@@ -1290,28 +1290,36 @@ SCIP_RETCODE dualPresolving(
       }
    }
 
-   /* if all variable but the domination variable is fixed and the constraint is not modifiables or the constraint is a
+   /* if all variables but the domination variable is fixed and the constraint is not modifiables or the constraint is a
     * covering constraint and the bestobjval is less than or equal to zero, we can fix the domination variable (with best
     * objective coefficient) and the constraint gets redundant
     */
    if( ((*nfixedvars - noldfixed == nvars - 1) && !SCIPconsIsModifiable(cons)) || (setppctype == SCIP_SETPPCTYPE_COVERING && bestobjval <= 0.0) )
    {
-      /* in case of a set packing constraint with position objective values, all variables can be fixed to zero; in all
+      /* in case of a set packing constraint with positive objective values, all variables can be fixed to zero; in all
        * other cases the variable with the smallest objective values is fixed to one
        */
-      if( setppctype == SCIP_SETPPCTYPE_PACKING && bestobjval > 0.0 )
-         fixval = 0.0;
-      else
-         fixval = 1.0;
+      if( (setppctype == SCIP_SETPPCTYPE_PACKING && bestobjval > 0.0 && SCIPvarGetNLocksDown(vars[idx]) == 0) || setppctype != SCIP_SETPPCTYPE_PACKING || bestobjval <= 0.0 )
+      {
+         if( setppctype == SCIP_SETPPCTYPE_PACKING && bestobjval > 0.0 )
+            fixval = 0.0;
+         else
+            fixval = 1.0;
 
-      SCIP_CALL( SCIPfixVar(scip, vars[idx], fixval, &infeasible, &fixed) );
-      assert(!infeasible);
-      assert(fixed);
+         SCIP_CALL( SCIPfixVar(scip, vars[idx], fixval, &infeasible, &fixed) );
+         assert(!infeasible);
+         assert(fixed);
 
-      SCIPdebugMessage(" -> dual-fixed best variable <%s> == %g\n", SCIPvarGetName(vars[idx]), fixval);
-      ++(*nfixedvars);
+         SCIPdebugMessage(" -> dual-fixed best variable <%s> == %g\n", SCIPvarGetName(vars[idx]), fixval);
+         ++(*nfixedvars);
+      }
 
-      /* remove constraint since i*/
+      /* check that we really have a non-violated constraint in hand before deleting */
+      assert((setppctype == SCIP_SETPPCTYPE_PACKING && consdata->nfixedones <= 1) ||
+         (setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata->nfixedones == 1) ||
+         (setppctype == SCIP_SETPPCTYPE_COVERING && consdata->nfixedones >= 1));
+
+      /* remove constraint since it is redundant */
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
    }
@@ -1657,6 +1665,7 @@ SCIP_RETCODE processFixings(
             SCIP_Bool tightened;
             int nvars;
             int v;
+            int oneidx = -1;
 
             SCIPdebugMessage(" -> fixing all other variables to zero in set packing/partitioning constraint <%s>\n",
                SCIPconsGetName(cons));
@@ -1677,15 +1686,18 @@ SCIP_RETCODE processFixings(
                assert(SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), 1.0));
                if( SCIPvarGetLbLocal(var) < 0.5 )
                {
-                  SCIP_CALL( SCIPinferBinvarCons(scip, var, FALSE, cons, 0, &infeasible, &tightened) );
+                  SCIP_CALL( SCIPinferBinvarCons(scip, var, FALSE, cons, oneidx, &infeasible, &tightened) );
                   assert(!infeasible);
                   fixed = fixed || tightened;
                   SCIPdebugMessage("   -> fixed <%s> to zero (tightened=%u)\n", SCIPvarGetName(var), tightened);
                }
-#ifndef NDEBUG
                else
+               {
+#ifndef NDEBUG
                   fixedonefound = TRUE;
 #endif
+                  oneidx = v;
+               }
             }
             /* the fixed to one variable must have been found, and at least one variable must have been fixed */
             assert(consdata->nfixedones >= 2 || (fixedonefound && fixed));
@@ -6762,15 +6774,24 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
        * the reason for the deduction is the assignment of 1.0 to a single variable
        */
       assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
-      for( v = 0; v < consdata->nvars; ++v )
+
+      if( inferinfo >= 0 )
       {
-         if( SCIPvarGetLbAtIndex(consdata->vars[v], bdchgidx, FALSE) > 0.5 )
-         {
-            SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
-            break;
-         }
+         assert(SCIPvarGetLbAtIndex(consdata->vars[inferinfo], bdchgidx, FALSE) > 0.5);
+         SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[inferinfo]) );
       }
-      assert(v < consdata->nvars);
+      else
+      {
+         for( v = 0; v < consdata->nvars; ++v )
+         {
+            if( SCIPvarGetLbAtIndex(consdata->vars[v], bdchgidx, FALSE) > 0.5 )
+            {
+               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
+               break;
+            }
+         }
+         assert(v < consdata->nvars);
+      }
    }
 
    *result = SCIP_SUCCESS;
