@@ -46,6 +46,31 @@ struct SCIP_BranchruleData
    int                   maxproprounds;      /**< maximum number of propagation rounds to be performed during strong branching
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
+   int nsbs;
+   int niters;
+   int npropiters;
+   int nnoncutoffiters;
+   int npropnoncutoffiters;
+   int neqiters;
+   int npropeqiters;
+   int nbetteriters;
+   int npropbetteriters;
+   int ncutoffs;
+   int npropcutoffs;
+   int nbetterprop;
+   int nworseprop;
+   SCIP_Real betterpropgap;
+   SCIP_Real avgsbgap;
+   SCIP_Real avgpropsbgap;
+   int nbetterpropcutoffs;
+   int ndomchgs;
+   int nupdomchgs;
+   int ndowndomchgs;
+   int nbetterdomchgs;
+   int ninvalid;
+   int npropinvalid;
+   int nlperrors;
+   int nproplperrors;
 };
 
 
@@ -92,10 +117,53 @@ SCIP_DECL_BRANCHINIT(branchInitFullstrong)
    branchruledata = SCIPbranchruleGetData(branchrule);
    branchruledata->lastcand = 0;
 
+   branchruledata->nsbs = 0;
+   branchruledata->niters = 0;
+   branchruledata->npropiters = 0;
+   branchruledata->nnoncutoffiters = 0;
+   branchruledata->npropnoncutoffiters = 0;
+   branchruledata->neqiters = 0;
+   branchruledata->npropeqiters = 0;
+   branchruledata->nbetteriters = 0;
+   branchruledata->npropbetteriters = 0;
+   branchruledata->ncutoffs = 0;
+   branchruledata->npropcutoffs = 0;
+   branchruledata->nbetterprop = 0;
+   branchruledata->nworseprop = 0;
+   branchruledata->betterpropgap = 0.0;
+   branchruledata->avgsbgap = 0.0;
+   branchruledata->avgpropsbgap = 0.0;
+   branchruledata->nbetterpropcutoffs = 0;
+   branchruledata->ndomchgs = 0;
+   branchruledata->nupdomchgs = 0;
+   branchruledata->ndowndomchgs = 0;
+   branchruledata->nbetterdomchgs = 0;
+   branchruledata->ninvalid = 0;
+   branchruledata->npropinvalid = 0;
+   branchruledata->nlperrors = 0;
+   branchruledata->nproplperrors = 0;
+
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_BRANCHEXIT(branchExitFullstrong)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
 
+   /* initialize branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+
+   printf("###%-12s nsbs: %d iters: %d %d noncutoffiters: %d %d eqiters: %d %d cutoffs: %d %d avginc: %f %f betterprop: %d %f %d betteriters: %d %d domchgs: %d %d %d %d invalid: %d/%d lperrors: %d/%d\n",
+      SCIPgetProbName(scip), branchruledata->nsbs, branchruledata->niters, branchruledata->npropiters,
+      branchruledata->nnoncutoffiters, branchruledata->npropnoncutoffiters, branchruledata->neqiters, branchruledata->npropeqiters,
+      branchruledata->ncutoffs, branchruledata->npropcutoffs, branchruledata->avgsbgap, branchruledata->avgpropsbgap,
+      branchruledata->nbetterprop, branchruledata->betterpropgap, branchruledata->nworseprop, branchruledata->nbetteriters, branchruledata->npropbetteriters,
+      branchruledata->ndowndomchgs, branchruledata->nupdomchgs, branchruledata->ndomchgs, branchruledata->nbetterdomchgs,
+      branchruledata->ninvalid, branchruledata->npropinvalid, branchruledata->nlperrors, branchruledata->nproplperrors);
+
+   return SCIP_OKAY;
+}
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
@@ -247,6 +315,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
             }
             else
             {
+               SCIP_Real solval;
                SCIP_Real propdown;
                SCIP_Real propup;
                SCIP_Bool propdownvalid;
@@ -268,6 +337,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
                oldsbiters = SCIPgetNStrongbranchLPIterations(scip);
 
+               solval = SCIPgetSolVal(scip, NULL, lpcands[c]);
+
+               if( SCIPisFeasIntegral(scip, solval) )
+                  continue;
+
                /* apply strong branching */
                SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, lpcands[c], INT_MAX,
                      &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
@@ -281,6 +355,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                /* end strong branching */
                SCIP_CALL( SCIPendStrongbranch(scip) );
 
+               assert(solval == SCIPgetSolVal(scip, NULL, lpcands[c]));
+
                /* end strong branching */
                SCIP_CALL( SCIPstartStrongbranch(scip, TRUE) );
 
@@ -288,7 +364,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                oldlpiters = SCIPgetNLPIterations(scip);
 
                /* apply strong branching */
-               SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, lpcands[c], lpcandssol[c], lpobjval, INT_MAX,
+               SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, lpcands[c], solval, lpobjval, INT_MAX,
                      -2, &propdown, &propup, &propdownvalid, &propupvalid, &propdowninf, &propupinf,
                      &propdownconflict, &propupconflict, &proplperror, newlbs, newubs, &nchgbdsdown, &nchgbdsup, &info) );
 
@@ -302,9 +378,129 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                if( propdowninf )
                   propup = up;
 #endif
+
+#if 1
                printf("sb: lpobj=%16.9g pb=%16.9f cutoffbound=%16.9f down=%13.7g/%13.7g up=%13.7g/%13.7g downvalid=%d/%d upvalid=%d/%d downinf=%d/%d upinf=%d/%d iters=%4lld/%4lld domchgs=%d/%d error=%d/%d info=%d\n",
                   lpobjval, SCIPgetUpperbound(scip), SCIPgetCutoffbound(scip), down, propdown, up, propup, downvalid, propdownvalid, upvalid, propupvalid,
                   downinf, propdowninf, upinf, propupinf, normalsbiters, propsbiters, nchgbdsdown, nchgbdsup, lperror, proplperror, info);
+#endif
+
+               if( lperror || proplperror )
+               {
+                  if( !SCIPisStopped(scip) )
+                  {
+                     if( lperror )
+                        branchruledata->nlperrors++;
+                     if( proplperror )
+                        branchruledata->nproplperrors++;
+                  }
+               }
+               else
+               {
+                  if( !downvalid || !upvalid || !propdownvalid || !propupvalid )
+                  {
+                     if( !SCIPisStopped(scip) )
+                     {
+                        if( !downvalid || !upvalid )
+                           branchruledata->ninvalid++;
+                        if( !propdownvalid || !propupvalid )
+                           branchruledata->npropinvalid++;
+                     }
+                  }
+                  else
+                  {
+                     branchruledata->nsbs+=2;
+                     branchruledata->niters += normalsbiters;
+                     branchruledata->npropiters += propsbiters;
+                     branchruledata->ndomchgs += (nchgbdsdown + nchgbdsup);
+                     branchruledata->ndowndomchgs += nchgbdsdown;
+                     branchruledata->nupdomchgs += nchgbdsup;
+
+                     if( downinf )
+                        branchruledata->ncutoffs++;
+                     if( upinf )
+                        branchruledata->ncutoffs++;
+                     if( propdowninf)
+                        branchruledata->npropcutoffs++;
+                     if( propupinf )
+                        branchruledata->npropcutoffs++;
+
+                     if( !downinf && !upinf && !propdowninf && !propupinf )
+                     {
+                        SCIP_Bool better = FALSE;
+                        SCIP_Bool worse = FALSE;
+
+                        branchruledata->nnoncutoffiters += normalsbiters;
+                        branchruledata->npropnoncutoffiters += propsbiters;
+
+                        if( SCIPgetCutoffbound(scip) < 1e+18 )
+                        {
+                           branchruledata->avgsbgap += (100.0 * (down - lpobjval)/(SCIPgetCutoffbound(scip) - lpobjval));
+                           branchruledata->avgpropsbgap += (100.0 * (propdown - lpobjval)/(SCIPgetCutoffbound(scip) - lpobjval));
+                           branchruledata->avgsbgap += (100.0 * (up - lpobjval)/(SCIPgetCutoffbound(scip) - lpobjval));
+                           branchruledata->avgpropsbgap += (100.0 * (propup - lpobjval)/(SCIPgetCutoffbound(scip) - lpobjval));
+                        }
+                        else
+                        {
+                           branchruledata->avgsbgap += (100.0 * (down - lpobjval)/(lpobjval));
+                           branchruledata->avgpropsbgap += (100.0 * (propdown - lpobjval)/(lpobjval));
+                           branchruledata->avgsbgap += (100.0 * (up - lpobjval)/(lpobjval));
+                           branchruledata->avgpropsbgap += (100.0 * (propup - lpobjval)/(lpobjval));
+                        }
+
+                        if( SCIPisFeasGT(scip, propdown, down) )
+                        {
+                           branchruledata->nbetterprop++;
+                           branchruledata->nbetterdomchgs += nchgbdsdown;
+                           better = TRUE;
+                           if( SCIPgetCutoffbound(scip) < 1e+18 )
+                           {
+                              branchruledata->betterpropgap += (100.0 * (propdown - down)/(SCIPgetCutoffbound(scip) - down));
+                           }
+                           else
+                           {
+                              branchruledata->betterpropgap += (100.0 * (propdown - down)/down);
+                           }
+                        }
+                        else if( SCIPisFeasLT(scip, propdown, down) )
+                        {
+                           branchruledata->nworseprop++;
+                           worse = TRUE;
+                        }
+
+                        if( SCIPisFeasGT(scip, propup, up) )
+                        {
+                           branchruledata->nbetterprop++;
+                           branchruledata->nbetterdomchgs += nchgbdsup;
+                           better = TRUE;
+                           if( SCIPgetCutoffbound(scip) < 1e+18 )
+                           {
+                              branchruledata->betterpropgap += (100.0 * (propup - up)/(SCIPgetCutoffbound(scip) - up));
+                           }
+                           else
+                           {
+                              branchruledata->betterpropgap += (100.0 * (propup - up)/up);
+                           }
+                        }
+                        else if( SCIPisFeasLT(scip, propup, up) )
+                        {
+                           branchruledata->nworseprop++;
+                           worse = TRUE;
+                        }
+
+                        if( better )
+                        {
+                           branchruledata->nbetteriters += normalsbiters;
+                           branchruledata->npropbetteriters += propsbiters;
+                        }
+                        else if( !worse )
+                        {
+                           branchruledata->neqiters += normalsbiters;
+                           branchruledata->npropeqiters += propsbiters;
+                        }
+                     }
+                  }
+               }
 
                //assert(propsbiters > 0 || propdowninf || propupinf); 0 iterations in LP solve is also valid
 
@@ -548,6 +744,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyFullstrong) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeFullstrong) );
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitFullstrong) );
+   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitFullstrong) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpFullstrong) );
 
    /* fullstrong branching rule parameters */
