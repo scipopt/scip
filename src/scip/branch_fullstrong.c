@@ -475,7 +475,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
                         if( SCIPisFeasGT(scip, propdown, down) )
                         {
-                           SCIP_Real bettergap;
+                           SCIP_Real bettergap = 0.0;
 
                            branchruledata->nbetterprop++;
                            branchruledata->nbetterdomchgs += nchgbdsdown;
@@ -483,12 +483,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
                            if( SCIPgetCutoffbound(scip) < 1e+18 )
                            {
-                              bettergap += (100.0 * (propdown - down)/(SCIPgetCutoffbound(scip) - down));
+                              bettergap = (100.0 * (propdown - down)/(SCIPgetCutoffbound(scip) - down));
                               bettergap = MIN(bettergap, 100.0);
                            }
                            else
                            {
-                              bettergap += (100.0 * (propdown - down)/down);
+                              bettergap = (100.0 * (propdown - down)/down);
                            }
                            branchruledata->betterpropgap += bettergap;
                            branchruledata->betterpropgapwithcutoff += bettergap;
@@ -515,19 +515,19 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
                         if( SCIPisFeasGT(scip, propup, up) )
                         {
-                           SCIP_Real bettergap;
+                           SCIP_Real bettergap = 0.0;
 
                            branchruledata->nbetterprop++;
                            branchruledata->nbetterdomchgs += nchgbdsup;
                            better = TRUE;
                            if( SCIPgetCutoffbound(scip) < 1e+18 )
                            {
-                              bettergap += (100.0 * (propup - up)/(SCIPgetCutoffbound(scip) - up));
+                              bettergap = (100.0 * (propup - up)/(SCIPgetCutoffbound(scip) - up));
                               bettergap = MIN(bettergap, 100.0);
                            }
                            else
                            {
-                              bettergap += (100.0 * (propup - up)/up);
+                              bettergap = (100.0 * (propup - up)/up);
                            }
                            branchruledata->betterpropgap += bettergap;
                            branchruledata->betterpropgapwithcutoff += bettergap;
