@@ -6070,6 +6070,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
                "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %"SCIP_LONGINT_FORMAT" after probing\n",
                stat->nnodes, stat->nlps);
             lp->resolvelperror = TRUE;
+            tree->focusnodehaslp = FALSE;
          }
          else if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL 
             && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE
@@ -6079,6 +6080,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "LP was not resolved to a sufficient status after probing\n");
             lp->resolvelperror = TRUE;
+            tree->focusnodehaslp = FALSE;
          }
          else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) )
          {
