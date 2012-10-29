@@ -6816,7 +6816,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    SCIP_Real*            newubs,
    int*                  nchgbdsdown,
    int*                  nchgbdsup,
-   int*                  info
+   int*                  info,
+   SCIP_CLOCK*           strongpropclock
    );
 
 /** gets strong branching information on column variable x with integral LP solution value (val); that is, the down branch

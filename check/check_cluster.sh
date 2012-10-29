@@ -349,6 +349,8 @@ do
 		echo set heur emph off                 >> $TMPFILE
 		echo set sepa emph off                 >> $TMPFILE
 		echo set presol components maxro 0     >> $TMPFILE
+		echo set conflict enable F             >> $TMPFILE
+		echo set presol maxrestarts 0          >> $TMPFILE
 	    fi
 #           echo presolve                          >> $TMPFILE
 	    echo optimize                          >> $TMPFILE
