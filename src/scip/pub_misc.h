@@ -167,6 +167,22 @@ SCIP_Longint* SCIPsparseSolGetUbs(
    SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
    );
 
+/** constructs the first solution of sparse solution (all variables are set to their lower bound value */
+EXTERN
+void SCIPsparseSolGetFirstSol(
+   SCIP_SPARSESOL*       sparsesol,          /**< sparse solutions */
+   SCIP_Longint*         sol,                /**< array to store the first solution */
+   int                   nvars               /**< number of variables */
+   );
+
+/** constructs the next solution of the sparse solution and return whether there was one more or not */
+EXTERN
+SCIP_Bool SCIPsparseSolGetNextSol(
+   SCIP_SPARSESOL*       sparsesol,          /**< sparse solutions */
+   SCIP_Longint*         sol,                /**< current solution array which get changed to the next solution */
+   int                   nvars               /**< number of variables */
+   );
+
 /**@} */
 
 

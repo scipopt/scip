@@ -14,6 +14,7 @@ features:
 - added upgrade from varbound constraints to set-packing constraints
 - added SCIPwriteCliqueGraph() to scip.{c,h} to write the clique graph in GML format into a given file
 - added upgrade from bounddisjunction constraints to set-packing/logicor constraints
+- added two methods to iterate over a sparse solution (SCIP_SPARSESOLUTION), see pub_misc.h
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
