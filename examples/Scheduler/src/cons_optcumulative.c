@@ -137,6 +137,7 @@ struct SCIP_ConsData
    unsigned int          relaxadded:1;       /**< was relaxation added? */
    unsigned int          triedsolving:1;     /**< bool to store if it was tried to solve the cumulative sub-problem */
    unsigned int          normalized:1;       /**< is the constraint normalized */
+   unsigned int          triedredundant:1;   /**< bool to store if the redundancy check was applied */
 };
 
 /** constraint handler data */
@@ -255,6 +256,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->relaxadded = FALSE;
    (*consdata)->triedsolving = FALSE;
    (*consdata)->normalized = FALSE;
+   (*consdata)->triedredundant = FALSE;
 
    if( nvars > 0 )
    {
@@ -1029,8 +1031,8 @@ void collectActivities(
    int*                  nfixedones,         /**< pointer to store number of activities assigned to that machine */
    int*                  nfixedzeros,        /**< pointer to store number of binary variables fixed to zeor */
    SCIP_Bool*            auxiliary           /**< pointer to store if the integer start time variables of the assigned
-                                              *   activities are auxiliary variables; that is the case if the machine
-                                              *   choice constraints is the only one haveing locks on these variables */
+                                              *   activities are auxiliary variables; that is the case if the optcumulative
+                                              *   choice constraints is the only one having locks on these variables */
    )
 {
    int v;
@@ -1056,9 +1058,10 @@ void collectActivities(
 
          /* check the locks on the integer start time variable to determine if its a auxiliary variable */
          if( SCIPvarGetNLocksDown(consdata->vars[v]) > (int)consdata->downlocks[v]
-            || SCIPvarGetNLocksUp(consdata->vars[v]) > (int)consdata->uplocks[v]
-            )
+            || SCIPvarGetNLocksUp(consdata->vars[v]) > (int)consdata->uplocks[v] )
+         {
             (*auxiliary) = FALSE;
+         }
       }
       else if( SCIPvarGetUbLocal(consdata->binvars[v]) < 0.5 )
          (*nfixedzeros)++;
@@ -1107,6 +1110,86 @@ void collectSolActivities(
    }
 }
 
+/** check of the given constraint is redundant */
+static
+SCIP_RETCODE checkRedundancy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< optcumulative constraint which collapsed to a cumulative constraint locally */
+   int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
+   SCIP_Bool*            redundant           /**< pointer to store if the constraint is redundant */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_Bool solved;
+   SCIP_Bool infeasible;
+   SCIP_Bool unbounded;
+   SCIP_Bool error;
+   SCIP_Real* lbs;
+   SCIP_Real* ubs;
+   int nvars;
+
+   assert(scip != NULL);
+   assert(!SCIPinProbing(scip));
+
+   (*redundant) = FALSE;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->nglbfixedzeros == 0);
+
+   if( consdata->triedredundant )
+      return SCIP_OKAY;
+
+   consdata->triedredundant = TRUE;
+
+   printf("check redundant <%s>\n", SCIPconsGetName(cons));
+
+   vars = consdata->vars;
+   nvars = consdata->nvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
+
+   /* solve the cumulative condition separately */
+   SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, consdata->durations, consdata->demands,
+         consdata->capacity, consdata->hmin, consdata->hmax, FALSE,
+         lbs, ubs, 1000LL, &solved, &infeasible, &unbounded, &error) );
+   assert(!unbounded);
+
+   if( !error )
+   {
+      if( infeasible )
+      {
+         /* one of the jobs cannot be processed on that resource */
+         printf("we can do something\n");
+      }
+      else if( solved )
+      {
+         SCIP_Bool tightened;
+         int v;
+
+         for( v = 0; v < nvars; ++v )
+         {
+            /* check if variable is fixed */
+            assert(lbs[v] + 0.5 > ubs[v]);
+
+            SCIP_CALL( SCIPfixVar(scip, vars[v], lbs[v], &infeasible, &tightened) );
+            assert(!infeasible);
+         }
+
+         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+         (*redundant) = TRUE;
+         printf("huhuhu <%s>\n", SCIPconsGetName(cons));
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &ubs);
+   SCIPfreeBufferArray(scip, &lbs);
+
+   return SCIP_OKAY;
+}
+
 /** solve the cumulative sub problem */
 static
 SCIP_RETCODE solveSubproblem(
@@ -1127,6 +1210,7 @@ SCIP_RETCODE solveSubproblem(
    )
 {
    SCIP_Bool unbounded;
+   SCIP_Bool solved;
    SCIP_Bool error;
    SCIP_Real* lbs;
    SCIP_Real* ubs;
@@ -1147,8 +1231,8 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
 
    /* solve the cumulative condition separately */
-   SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, durations, demands,
-         consdata->capacity, consdata->hmin, consdata->hmax, lbs, ubs, 1000LL, cutoff, &unbounded, &error) );
+   SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, durations, demands, consdata->capacity, consdata->hmin, consdata->hmax, TRUE,
+         lbs, ubs, 2000LL, &solved, cutoff, &unbounded, &error) );
    assert(!unbounded);
 
    if( !error )
@@ -1156,6 +1240,8 @@ SCIP_RETCODE solveSubproblem(
       if( *cutoff && conflictanalysis )
       {
          int v;
+
+         /**@todo try to shrink the initial explanation */
 
          SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
@@ -1580,7 +1666,7 @@ SCIP_RETCODE applyZeroFixings(
       assert(consdata->binvars[v] != NULL);
       if( SCIPvarGetUbGlobal(consdata->binvars[v]) < 0.5 )
       {
-         SCIPdebugMessage("variable <%s> is fixed to zero\n", SCIPvarGetName(consdata->binvars[v]));
+         SCIPdebugMessage("variable <%s> is globally fixed to zero\n", SCIPvarGetName(consdata->binvars[v]));
 
          /* fix integer start time variable if possible */
          if( SCIPconsIsChecked(cons) )
@@ -1591,6 +1677,9 @@ SCIP_RETCODE applyZeroFixings(
          /* remove the job */
          SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
          (*nchgcoefs)++;
+
+         /* mark constraint to be checked for redundancy */
+         consdata->triedredundant = TRUE;
       }
    }
 
@@ -2144,7 +2233,7 @@ SCIP_RETCODE propagateCons(
    assert(consdata->nvars > 1);
 
    /* if we are still feasible we can try to perform dual reductions; Note that we have to avoid dual reductions during
-    * probing since these dual reductions can lead to wrong implications the same hold in case of repropagating
+    * probing since these dual reductions can lead to wrong implications; the same hold in case of repropagating
     */
    if( !(*cutoff) && !SCIPinProbing(scip) && !SCIPinRepropagation(scip) )
    {
@@ -2661,8 +2750,15 @@ SCIP_DECL_CONSPROP(consPropOptcumulative)
        */
       if( !SCIPinProbing(scip) )
       {
+         SCIP_Bool redundant;
+
          /* remove all jobs for which the binary variable is globally fixed to zero */
          SCIP_CALL( applyZeroFixings(scip, cons, &nchgcoefs, &nchgbds) );
+
+         SCIP_CALL( checkRedundancy(scip, cons, &ndelconss, &redundant) );
+
+         if( redundant )
+            continue;
 
          SCIP_CALL( upgradeCons(scip, cons, &ndelconss, &nupgdconss, &mustpropagate) );
       }

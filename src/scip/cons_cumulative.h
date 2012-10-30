@@ -73,6 +73,7 @@ extern "C" {
  *  @param[in] memorylimit         memory limit for solving in mega bytes (MB)
  *  @param[in] maxnodes            maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit)
  *
+ *  @param[out] solved             pointer to store if the problem is solved (to optimality)
  *  @param[out] infeasible         pointer to store if the problem is infeasible
  *  @param[out] unbounded          pointer to store if the problem is unbounded
  *  @param[out] error              pointer to store if an error occurred
@@ -81,7 +82,7 @@ extern "C" {
 #define SCIP_DECL_SOLVECUMULATIVE(x) SCIP_RETCODE x (int njobs, SCIP_Real* ests, SCIP_Real* lsts, SCIP_Real* objvals, \
       int* durations, int* demands, int capacity, int hmin, int hmax, \
       SCIP_Real timelimit, SCIP_Real memorylimit, SCIP_Longint maxnodes, \
-      SCIP_Bool* infeasible, SCIP_Bool* unbounded, SCIP_Bool* error)
+      SCIP_Bool* solved, SCIP_Bool* infeasible, SCIP_Bool* unbounded, SCIP_Bool* error)
 
 /** creates the constraint handler for cumulative constraints and includes it in SCIP */
 EXTERN
@@ -343,9 +344,11 @@ SCIP_RETCODE SCIPsolveCumulative(
    int                   capacity,           /**< cumulative capacity */
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool             local,              /**< use local bounds, otherwise global */
    SCIP_Real*            ests,               /**< array to store the earlier start time for each job */
    SCIP_Real*            lsts,               /**< array to store the latest start time for each job */
    SCIP_Longint          maxnodes,           /**< maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit) */
+   SCIP_Bool*            solved,             /**< pointer to store if the problem is solved (to optimality) */
    SCIP_Bool*            infeasible,         /**< pointer to store if the problem is infeasible */
    SCIP_Bool*            unbounded,          /**< pointer to store if the problem is unbounded */
    SCIP_Bool*            error               /**< pointer to store if an error occurred */

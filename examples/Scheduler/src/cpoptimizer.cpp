@@ -30,6 +30,7 @@ SCIP_DECL_SOLVECUMULATIVE(cpoptimizer)
 {
    IloEnv env;
 
+   (*solved) = FALSE;
    (*infeasible) = FALSE;
    (*unbounded) = FALSE;
    (*error) = FALSE;

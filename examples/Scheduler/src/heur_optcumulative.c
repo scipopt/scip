@@ -450,14 +450,15 @@ SCIP_RETCODE applyOptcumulative(
          }
          else
          {
+            SCIP_Bool solved;
             SCIP_Bool error;
             int v;
 
             SCIPdebugMessage("check machine %d (variables %d)\n", m, nvars);
 
             /* solve the cumulative condition separately */
-            SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, durations, demands,
-                  heurdata->capacities[m], 0, INT_MAX, lbs, ubs, heurdata->maxnodes, &infeasible, &unbounded, &error) );
+            SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, durations, demands, heurdata->capacities[m], 0, INT_MAX, TRUE,
+                  lbs, ubs, heurdata->maxnodes, &solved, &infeasible, &unbounded, &error) );
             assert(!unbounded);
             assert(!error);
 

@@ -1255,6 +1255,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScip)
 
    assert(njobs > 0);
 
+   (*solved) = FALSE;
    (*infeasible) = FALSE;
    (*unbounded) = FALSE;
    (*error) = FALSE;
@@ -1330,9 +1331,11 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScip)
       case SCIP_STATUS_INFORUNBD:
       case SCIP_STATUS_INFEASIBLE:
          (*infeasible) = TRUE;
+         (*solved) = TRUE;
          break;
       case SCIP_STATUS_UNBOUNDED:
          (*unbounded) = TRUE;
+         (*solved) = TRUE;
          break;
       case SCIP_STATUS_OPTIMAL:
       {
@@ -1348,6 +1351,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScip)
             ests[v] = solval;
             lsts[v] = solval;
          }
+         (*solved) = TRUE;
          break;
       }
       case SCIP_STATUS_NODELIMIT:
@@ -1361,6 +1365,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScip)
             ests[v] = SCIPvarGetLbGlobal(subvars[v]);
             lsts[v] = SCIPvarGetUbGlobal(subvars[v]);
          }
+         (*solved) = FALSE;
          break;
 
       case SCIP_STATUS_UNKNOWN:
@@ -2830,6 +2835,7 @@ SCIP_RETCODE solveIndependentCons(
    SCIP_VAR** vars;
    SCIP_Real* lbs;
    SCIP_Real* ubs;
+   SCIP_Bool solved;
    SCIP_Bool error;
    int nvars;
    int v;
@@ -2844,8 +2850,8 @@ SCIP_RETCODE solveIndependentCons(
    if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
-   /* if the cumulative constraint is the only constraint do nothing */
-   if( SCIPgetNConss(scip) == 1 )
+   /* if the cumulative constraint is the only constraint of the original problem or the presolved problem do nothing */
+   if( SCIPgetNOrigConss(scip) == 1 || SCIPgetNConss(scip) == 1 )
       return SCIP_OKAY;
 
    /* constraints for which the check flag is set to FALSE, did not contribute to the lock numbers; therefore, we cannot
@@ -2884,7 +2890,7 @@ SCIP_RETCODE solveIndependentCons(
 
    /* solve the cumulative condition separately */
    SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, consdata->durations, consdata->demands, consdata->capacity,
-         consdata->hmin, consdata->hmax, lbs, ubs, maxnodes, cutoff, unbounded, &error) );
+         consdata->hmin, consdata->hmax, TRUE, lbs, ubs, maxnodes, &solved, cutoff, unbounded, &error) );
 
    if( !(*cutoff) && !(*unbounded) && !error )
    {
@@ -9759,9 +9765,11 @@ SCIP_RETCODE SCIPsolveCumulative(
    int                   capacity,           /**< cumulative capacity */
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool             local,              /**< use local bounds, otherwise global */
    SCIP_Real*            ests,               /**< array to store the earlier start time for each job */
    SCIP_Real*            lsts,               /**< array to store the latest start time for each job */
    SCIP_Longint          maxnodes,           /**< maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit) */
+   SCIP_Bool*            solved,             /**< pointer to store if the problem is solved (to optimality) */
    SCIP_Bool*            infeasible,         /**< pointer to store if the problem is infeasible */
    SCIP_Bool*            unbounded,          /**< pointer to store if the problem is unbounded */
    SCIP_Bool*            error               /**< pointer to store if an error occurred */
@@ -9774,6 +9782,7 @@ SCIP_RETCODE SCIPsolveCumulative(
    SCIP_Real memorylimit;
    int v;
 
+   (*solved) = FALSE;
    (*infeasible) = FALSE;
    (*unbounded) = FALSE;
    (*error) = FALSE;
@@ -9796,8 +9805,17 @@ SCIP_RETCODE SCIPsolveCumulative(
    {
       assert(vars[v] != NULL);
 
-      ests[v] = SCIPvarGetLbLocal(vars[v]);
-      lsts[v] = SCIPvarGetUbLocal(vars[v]);
+      if( local )
+      {
+         ests[v] = SCIPvarGetLbLocal(vars[v]);
+         lsts[v] = SCIPvarGetUbLocal(vars[v]);
+      }
+      else
+      {
+         ests[v] = SCIPvarGetLbGlobal(vars[v]);
+         lsts[v] = SCIPvarGetUbGlobal(vars[v]);
+      }
+
       objvals[v] = SCIPvarGetObj(vars[v]);
    }
 
@@ -9821,7 +9839,7 @@ SCIP_RETCODE SCIPsolveCumulative(
    if( timelimit > 0.0 && memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       SCIP_CALL( conshdlrdata->solveCumulative(nvars, ests, lsts, objvals, durations, demands, capacity,
-            hmin, hmax, timelimit, memorylimit, maxnodes, infeasible, unbounded, error) );
+            hmin, hmax, timelimit, memorylimit, maxnodes, solved, infeasible, unbounded, error) );
    }
 
    SCIPfreeBufferArray(scip, &objvals);
