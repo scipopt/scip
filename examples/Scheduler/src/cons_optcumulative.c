@@ -1128,6 +1128,7 @@ SCIP_RETCODE checkRedundancy(
    SCIP_Real* lbs;
    SCIP_Real* ubs;
    int nvars;
+   int v;
 
    assert(scip != NULL);
    assert(!SCIPinProbing(scip));
@@ -1143,10 +1144,17 @@ SCIP_RETCODE checkRedundancy(
 
    consdata->triedredundant = TRUE;
 
-   printf("check redundant <%s>\n", SCIPconsGetName(cons));
-
    vars = consdata->vars;
    nvars = consdata->nvars;
+
+   /* check the locks on the integer start time variable to determine if its a auxiliary variable */
+   for( v = 0; v < nvars; ++v )
+   {
+      if( SCIPvarGetNLocksDown(consdata->vars[v]) > (int)consdata->downlocks[v]
+         || SCIPvarGetNLocksUp(consdata->vars[v]) > (int)consdata->uplocks[v]
+         )
+         return SCIP_OKAY;
+   }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
@@ -1167,7 +1175,6 @@ SCIP_RETCODE checkRedundancy(
       else if( solved )
       {
          SCIP_Bool tightened;
-         int v;
 
          for( v = 0; v < nvars; ++v )
          {
@@ -1179,8 +1186,8 @@ SCIP_RETCODE checkRedundancy(
          }
 
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+         (*ndelconss)++;
          (*redundant) = TRUE;
-         printf("huhuhu <%s>\n", SCIPconsGetName(cons));
       }
    }
 
