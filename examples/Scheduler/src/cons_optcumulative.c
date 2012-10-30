@@ -102,7 +102,7 @@
  */
 
 #define DEFAULT_ROWRELAX          FALSE /**< add linear relaxation as LP row (otherwise a knapsack constraint is created)? */
-#define DEFAULT_CONFLICT           TRUE /**< participate in conflict analysis?" */
+#define DEFAULT_CONFLICTANALYSIS   TRUE /**< participate in conflict analysis?" */
 #define DEFAULT_INTERVALRELAX      TRUE /**< create a relaxation for each start and end time point interval */
 
 /**@} */
@@ -144,7 +144,7 @@ struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    SCIP_Bool             rowrelax;           /**< add linear relaxation as LP row (otherwise a knapsack constraint is created)? */
-   SCIP_Bool             conflict;           /**< participate in conflict analysis? */
+   SCIP_Bool             conflictanalysis;   /**< participate in conflict analysis? */
    SCIP_Bool             intervalrelax;      /**< create a relaxation for each start and end time point interval */
 };
 
@@ -1112,6 +1112,7 @@ static
 SCIP_RETCODE solveSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< optcumulative constraint which collapsed to a cumulative constraint locally */
+   SCIP_Bool             conflictanalysis,   /**< should conflict analysis be called for infeasible subproblems */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_VAR**            binvars,            /**< array of variable representing if the job has to be processed on this machine */
    SCIP_VAR**            vars,               /**< start time variables of the activities which are assigned */
@@ -1152,7 +1153,7 @@ SCIP_RETCODE solveSubproblem(
 
    if( !error )
    {
-      if( *cutoff )
+      if( *cutoff && conflictanalysis )
       {
          int v;
 
@@ -2071,7 +2072,7 @@ static
 SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be checked */
-   SCIP_Bool             conflict,           /**< should conflict analysis be called for infeasible subproblems */
+   SCIP_Bool             conflictanalysis,   /**< should conflict analysis be called for infeasible subproblems */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
    int*                  nchgbds,            /**< pointer to store the number changed variable bounds */
    int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
@@ -2122,7 +2123,7 @@ SCIP_RETCODE propagateCons(
             durations, demands, consdata->capacity, consdata->hmin, consdata->hmax, cons, nchgbds, &initialized, explanation, cutoff) );
 
       /* in case of a conflict we have to extend the initial reason before the conflict analysis starts */
-      if( initialized  && conflict )
+      if( initialized  && conflictanalysis )
       {
          assert(*cutoff == TRUE);
 
@@ -2151,7 +2152,7 @@ SCIP_RETCODE propagateCons(
       {
          if( auxiliary )
          {
-            SCIP_CALL( solveSubproblem(scip, cons, consdata, binvars, vars, durations, demands,
+            SCIP_CALL( solveSubproblem(scip, cons, conflictanalysis, consdata, binvars, vars, durations, demands,
                   consdata->capacity, nfixedones, nfixedvars, nchgbds, ndelconss, cutoff) );
          }
       }
@@ -2668,7 +2669,7 @@ SCIP_DECL_CONSPROP(consPropOptcumulative)
 
       if( mustpropagate )
       {
-         SCIP_CALL( propagateCons(scip, cons, conshdlrdata->conflict, &nfixedvars, &nchgbds, &ndelconss, &cutoff) );
+         SCIP_CALL( propagateCons(scip, cons, conshdlrdata->conflictanalysis, &nfixedvars, &nchgbds, &ndelconss, &cutoff) );
       }
 
       /* update the age of the constraint w.r.t. success of the propagation rule */
@@ -2887,7 +2888,7 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
    assert(conshdlrdata != NULL);
 
    /* check if the constraint handler wants to participate in the conflict analysis */
-   if( !conshdlrdata->conflict )
+   if( !conshdlrdata->conflictanalysis )
    {
       *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
@@ -2951,12 +2952,18 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
       SCIP_CALL( SCIPrespropCumulativeCondition(scip, nvars, vars, durations, demands, consdata->capacity, consdata->hmin, consdata->hmax,
             infervar, inferinfo, boundtype, bdchgidx, explanation, result) );
 
-      for( v = 0; v < nvars; ++v )
+      /* if the cumulative constraint handler successfully create an explanation for the propagate we extend this
+       * explanation with the required choice variables
+       */
+      if( *result == SCIP_SUCCESS )
       {
-         if( explanation[v] )
+         for( v = 0; v < nvars; ++v )
          {
-            /* add the lower bounds of the choice variables as part of the initial reason */
-            SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[v]) );
+            if( explanation[v] )
+            {
+               /* add the lower bounds of the choice variables as part of the initial reason */
+               SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[v]) );
+            }
          }
       }
 
@@ -3196,9 +3203,9 @@ SCIP_RETCODE SCIPincludeConshdlrOptcumulative(
          &conshdlrdata->rowrelax, FALSE, DEFAULT_ROWRELAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/conflict",
+         "constraints/"CONSHDLR_NAME"/conflictanalysis",
          "participate in conflict analysis?",
-         &conshdlrdata->conflict, FALSE, DEFAULT_CONFLICT, NULL, NULL) );
+         &conshdlrdata->conflictanalysis, FALSE, DEFAULT_CONFLICTANALYSIS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/intervalrelax",
