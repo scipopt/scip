@@ -1220,10 +1220,100 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
    return scip->set->disp_verblevel;
 }
 
+
 /*
  * SCIP copy methods
  */
 
+/** copy active and tight cuts from one SCIP instance to linear constraints of another SCIP instance */
+static
+SCIP_RETCODE copyCuts(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_CUT**            cuts,               /**< cuts to copy */
+   int                   ncuts,              /**< number of cuts to copy */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   int*                  ncutsadded          /**< pointer to store number of copied cuts */
+   )
+{
+   int c;
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(cuts != NULL || ncuts == 0);
+   assert(ncutsadded != NULL);
+
+   *ncutsadded = 0;
+
+   for( c = 0; c < ncuts; ++c )
+   {
+      SCIP_ROW* row;
+
+      row = SCIPcutGetRow(cuts[c]);
+      assert(!SCIProwIsLocal(row));
+      assert(!SCIProwIsModifiable(row));
+
+      /* create a linear constraint out of the cut */
+      if( SCIPcutGetAge(cuts[c]) == 0 && SCIProwIsInLP(row) )
+      {
+         char name[SCIP_MAXSTRLEN];
+         SCIP_CONS* cons;
+         SCIP_COL** cols;
+         SCIP_VAR** vars;
+         int ncols;
+         int i;
+
+         cols = SCIProwGetCols(row);
+         ncols = SCIProwGetNNonz(row);
+
+         /* get all variables of the row */
+         SCIP_CALL( SCIPallocBufferArray(targetscip, &vars, ncols) );
+         for( i = 0; i < ncols; ++i )
+            vars[i] = SCIPcolGetVar(cols[i]);
+
+         /* get corresponding variables in targetscip if necessary */
+         if( sourcescip != targetscip )
+         {
+            SCIP_Bool success;
+
+            for( i = 0; i < ncols; ++i )
+            {
+               SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, vars[i], &vars[i], varmap, consmap, global, &success) );
+
+               if( !success )
+               {
+                  SCIPdebugMessage("Converting cuts to constraints failed.\n");
+
+                  /* free temporary memory */
+                  SCIPfreeBufferArray(targetscip, &vars);
+                  return SCIP_OKAY;
+               }
+            }
+         }
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d", SCIProwGetName(row), SCIPgetNRuns(sourcescip));
+         SCIP_CALL( SCIPcreateConsLinear(targetscip, &cons, name, ncols, vars, SCIProwGetVals(row),
+               SCIProwGetLhs(row) - SCIProwGetConstant(row), SCIProwGetRhs(row) - SCIProwGetConstant(row),
+               TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+         SCIP_CALL( SCIPaddCons(targetscip, cons) );
+
+         SCIPdebugMessage("Converted cut <%s> to constraint <%s>.\n", SCIProwGetName(row), SCIPconsGetName(cons));
+         SCIPdebugPrintCons(targetscip, cons, NULL);
+         SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );
+
+         /* free temporary memory */
+         SCIPfreeBufferArray(targetscip, &vars);
+
+         ++(*ncutsadded);
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 #define HASHTABLESIZE_FACTOR 5
 
@@ -2253,8 +2343,6 @@ SCIP_RETCODE SCIPcopyCuts(
    SCIP_CUT** cuts;
    int ncuts;
    int nlocalcutsadded;
-   int c;
-
 
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
@@ -2279,78 +2367,28 @@ SCIP_RETCODE SCIPcopyCuts(
    cuts = SCIPgetPoolCuts(sourcescip);
    ncuts = SCIPgetNPoolCuts(sourcescip);
 
-   for( c = 0; c < ncuts; ++c )
-   {
-      SCIP_ROW* row;
-
-      row = SCIPcutGetRow(cuts[c]);
-      assert(!SCIProwIsLocal(row));
-      assert(!SCIProwIsModifiable(row));
-
-      /* create a linear constraint out of the cut */
-      if( SCIPcutGetAge(cuts[c]) == 0 && SCIProwIsInLP(row) )
-      {
-         char name[SCIP_MAXSTRLEN];
-         SCIP_CONS* cons;
-         SCIP_COL** cols;
-         SCIP_VAR** vars;
-         int ncols;
-         int i;
-
-         cols = SCIProwGetCols(row);
-         ncols = SCIProwGetNNonz(row);
-
-         /* get all variables of the row */
-         SCIP_CALL( SCIPallocBufferArray(targetscip, &vars, ncols) );
-         for( i = 0; i < ncols; ++i )
-            vars[i] = SCIPcolGetVar(cols[i]);
-
-         /* get corresponding variables in targetscip if necessary */
-         if( sourcescip != targetscip )
-         {
-            SCIP_Bool success;
-
-            for( i = 0; i < ncols; ++i )
-            {
-               SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, vars[i], &vars[i], varmap, consmap, global, &success) );
-
-               if( !success )
-               {
-                  SCIPdebugMessage("Converting cuts to constraints failed.\n");
-
-                  /* free temporary memory */
-                  SCIPfreeBufferArray(targetscip, &vars);
-                  return SCIP_OKAY;
-               }
-            }
-         }
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d", SCIProwGetName(row), SCIPgetNRuns(sourcescip));
-         SCIP_CALL( SCIPcreateConsLinear(targetscip, &cons, name, ncols, vars, SCIProwGetVals(row),
-               SCIProwGetLhs(row) - SCIProwGetConstant(row), SCIProwGetRhs(row) - SCIProwGetConstant(row),
-               TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
-         SCIP_CALL( SCIPaddCons(targetscip, cons) );
-
-         SCIPdebugMessage("Converted cut <%s> to constraint <%s>.\n", SCIProwGetName(row), SCIPconsGetName(cons));
-         SCIPdebugPrintCons(targetscip, cons, NULL);
-         SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );
-
-         /* free temporary memory */
-         SCIPfreeBufferArray(targetscip, &vars);
-
-         ++nlocalcutsadded;
-      }
-   }
-
-   SCIPdebugMessage("Converted %d active cuts to constraints.\n", nlocalcutsadded);
+   SCIP_CALL( copyCuts(sourcescip, targetscip, cuts, ncuts, varmap, consmap, global, &nlocalcutsadded) );
 
    if( ncutsadded != NULL )
       *ncutsadded = nlocalcutsadded;
 
+   SCIPdebugMessage("Converted %d active cuts to constraints.\n", nlocalcutsadded);
+
+   /* convert delayed cuts from global delayed cut pool */
+   cuts = SCIPgetDelayedPoolCuts(sourcescip);
+   ncuts = SCIPgetNDelayedPoolCuts(sourcescip);
+
+   SCIP_CALL( copyCuts(sourcescip, targetscip, cuts, ncuts, varmap, consmap, global, &nlocalcutsadded) );
+
+   if( ncutsadded != NULL )
+      *ncutsadded += nlocalcutsadded;
+
+   SCIPdebugMessage("Converted %d active cuts to constraints.\n", nlocalcutsadded);
+
    return SCIP_OKAY;
 }
 
-/** copies parameter settings from sourcescip to targetscip 
+/** copies parameter settings from sourcescip to targetscip
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process

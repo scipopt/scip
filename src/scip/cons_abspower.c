@@ -1121,11 +1121,9 @@ SCIP_RETCODE presolveDual(
    if( SCIPvarGetType(consdata->z) <= SCIP_VARTYPE_INTEGER )
       return SCIP_OKAY;
 
-   /* we assume that domain propagation has been run and fixed variables were removed */
+   /* we assume that domain propagation has been run and fixed variables were removed if possible */
    assert(consdata->isxpropagated);
    assert(consdata->iszpropagated);
-   assert(SCIPvarIsActive(consdata->x));
-   assert(SCIPvarIsActive(consdata->z));
    assert(consdata->zcoef != 0.0);
 
    lhsexists = !SCIPisInfinity(scip, -consdata->lhs);
@@ -1642,6 +1640,7 @@ SCIP_RETCODE checkFixedVariables(
    SCIP_CONSDATA* consdata;
    SCIP_Real scalar;
    SCIP_Real constant;
+   SCIP_Real factor;
    SCIP_VAR* var;
 
    assert(scip != NULL);
@@ -1732,65 +1731,76 @@ SCIP_RETCODE checkFixedVariables(
 
       SCIPdebugMessage("in cons <%s>: x = <%s> replaced by %g*<%s> + %g\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->x), scalar, SCIPvarGetName(var), constant);
 
-      /* we drop here the events for both variables, because if x is replaced by a multiaggregated variable here, then we do not need to catch bound tightenings on z anymore */
-      SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
-      SCIP_CALL( SCIPunlockVarCons(scip, consdata->x, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
-
-      consdata->x = var;
-      if( SCIPvarIsActive(consdata->x) )
-      {
-         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->x) );
-      }
-
-      /* add constant to offset */
-      consdata->xoffset += constant;
-
-      /* divide constraint by scalar*pow(|scalar|,exponent-1), if not 1.0 */
-      if( scalar == 1.0 ) ;
+      /* constraint will be divided by scalar*pow(|scalar|,exponent-1), if scalar is not 1.0 */
+      if( scalar == 1.0 )
+         factor = 1.0;
       else if( scalar > 0.0 )
-      {
-         SCIP_Real factor;
+         factor =  consdata->pow( scalar, consdata->exponent);
+      else
+         factor = -consdata->pow(-scalar, consdata->exponent);
 
-         factor = consdata->pow(scalar, consdata->exponent);
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
-            consdata->lhs /= factor;
-         if( !SCIPisInfinity(scip,  consdata->rhs) )
-            consdata->rhs /= factor;
-         consdata->zcoef /= factor;
-         consdata->xoffset /= scalar;
+      /* aggregate only if this would not lead to a vanishing or infinite coefficient for z */
+      if( !SCIPisZero(scip, consdata->zcoef / factor) && !SCIPisInfinity(scip, REALABS(consdata->zcoef / factor)) )
+      {
+         /* we drop here the events for both variables, because if x is replaced by a multiaggregated variable here, then we do not need to catch bound tightenings on z anymore */
+         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->x, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
+
+         consdata->x = var;
+         if( SCIPvarIsActive(consdata->x) )
+         {
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->x) );
+         }
+
+         /* add constant to offset */
+         consdata->xoffset += constant;
+
+         /* divide constraint by factor */
+         if( scalar == 1.0 ) ;
+         else if( scalar > 0.0 )
+         {
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
+               consdata->lhs /= factor;
+            if( !SCIPisInfinity(scip,  consdata->rhs) )
+               consdata->rhs /= factor;
+            consdata->zcoef /= factor;
+            consdata->xoffset /= scalar;
+         }
+         else
+         {
+            SCIP_Real oldlhs;
+
+            assert(scalar < 0.0);
+            assert(factor < 0.0);
+
+            oldlhs = consdata->lhs;
+
+            if( !SCIPisInfinity(scip,  consdata->rhs) )
+               consdata->lhs = consdata->rhs / factor;
+            else
+               consdata->lhs = -SCIPinfinity(scip);
+            if( !SCIPisInfinity(scip, -oldlhs) )
+               consdata->rhs = oldlhs / factor;
+            else
+               consdata->rhs = SCIPinfinity(scip);
+            consdata->zcoef /= factor;
+            consdata->xoffset /= scalar;
+            /* since we flip both constraint sides and the sign of zcoef, the events catched for z remain the same, so update necessary there */
+         }
+
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->x, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
+         SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+
+         SCIPdebugPrintCons(scip, cons, NULL);
+
+         /* rerun constraint comparison */
+         conshdlrdata->comparedpairwise = FALSE;
       }
       else
       {
-         SCIP_Real factor;
-         SCIP_Real oldlhs;
-
-         assert(scalar < 0.0);
-
-         factor = -consdata->pow(-scalar, consdata->exponent);
-         assert(factor < 0.0);
-
-         oldlhs = consdata->lhs;
-
-         if( !SCIPisInfinity(scip,  consdata->rhs) )
-            consdata->lhs = consdata->rhs / factor;
-         else
-            consdata->lhs = -SCIPinfinity(scip);
-         if( !SCIPisInfinity(scip, -oldlhs) )
-            consdata->rhs = oldlhs / factor;
-         else
-            consdata->rhs = SCIPinfinity(scip);
-         consdata->zcoef /= factor;
-         consdata->xoffset /= scalar;
-         /* since we flip both constraint sides and the sign of zcoef, the events catched for z remain the same, so update necessary there */
+         SCIPwarningMessage(scip, "Skip resolving aggregation of variable <%s> in abspower constraint <%s> to avoid zcoef = %g\n",
+            SCIPvarGetName(consdata->x), SCIPconsGetName(cons), consdata->zcoef / factor);
       }
-
-      SCIP_CALL( SCIPlockVarCons(scip, consdata->x, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
-      SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
-
-      SCIPdebugPrintCons(scip, cons, NULL);
-
-      /* rerun constraint comparison */
-      conshdlrdata->comparedpairwise = FALSE;
    }
 
    if( !SCIPvarIsActive(consdata->z) && SCIPvarGetStatus(consdata->z) != SCIP_VARSTATUS_MULTAGGR )
@@ -1901,9 +1911,7 @@ SCIP_RETCODE checkFixedVariables(
       conshdlrdata->comparedpairwise = FALSE;
    }
 
-   assert(
-      (SCIPvarIsActive(consdata->x) || SCIPvarGetStatus(consdata->x) == SCIP_VARSTATUS_MULTAGGR) &&
-      (SCIPvarIsActive(consdata->z) || SCIPvarGetStatus(consdata->z) == SCIP_VARSTATUS_MULTAGGR));
+   assert(SCIPvarIsActive(consdata->z) || SCIPvarGetStatus(consdata->z) == SCIP_VARSTATUS_MULTAGGR);
 
    return SCIP_OKAY;
 }
