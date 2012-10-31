@@ -29,6 +29,9 @@ fixed bugs:
 - fixed bug in cumulative constraint handler concerning conflict analysis
 - fixed bug in CppAD when using signpower functions with expression pointers that do not fit into an unsigned int
 
+performance improvements:
+- also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()
+
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
 
