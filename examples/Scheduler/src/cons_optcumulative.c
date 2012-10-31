@@ -757,7 +757,7 @@ SCIP_RETCODE createRow(
       int v;
 
       /* create empty row */
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)capacity, local, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)capacity, local, FALSE, FALSE) );
 
       /* w.r.t. performance we cache the row extension and flush them in the end */
       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -783,7 +783,7 @@ SCIP_RETCODE createRow(
 
       /* create knapsack constraint */
       SCIP_CALL( SCIPcreateConsKnapsack(scip, &cons, name, nvars, vars, weights, capacity,
-            FALSE, TRUE, TRUE, FALSE, TRUE, local, FALSE, FALSE, FALSE, FALSE) );
+            FALSE, TRUE, TRUE, FALSE, TRUE, local, FALSE, FALSE, TRUE, FALSE) );
 
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
@@ -1169,20 +1169,44 @@ SCIP_RETCODE checkRedundancy(
    {
       if( infeasible )
       {
+#if 0
+         SCIP_CONS* logicor;
+         SCIP_VAR* negatedvar;
+
          /* one of the jobs cannot be processed on that resource */
-         printf("we can do something\n");
+         SCIP_CALL( SCIPcreateConsLogicor(scip, &logicor, SCIPconsGetName(cons), 0, NULL,
+               TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+         for( v = 0; v < nvars; ++v )
+         {
+            if( SCIPvarGetLbGlobal(consdata->binvars[v]) > 0.5 )
+               continue;
+
+            SCIP_CALL( SCIPgetNegatedVar(scip, consdata->binvars[v], &negatedvar) );
+
+            SCIP_CALL( SCIPaddCoefLogicor(scip, logicor, negatedvar) );
+         }
+
+         SCIP_CALL( SCIPaddCons(scip, logicor) );
+         SCIP_CALL( SCIPreleaseCons(scip, &logicor) );
+#endif
       }
       else if( solved )
       {
-         SCIP_Bool tightened;
-
          for( v = 0; v < nvars; ++v )
          {
             /* check if variable is fixed */
             assert(lbs[v] + 0.5 > ubs[v]);
 
-            SCIP_CALL( SCIPfixVar(scip, vars[v], lbs[v], &infeasible, &tightened) );
-            assert(!infeasible);
+            if( SCIPvarGetLbGlobal(vars[v]) + 0.5 < lbs[v] )
+            {
+               SCIP_CALL( SCIPchgVarLbGlobal(scip, vars[v], lbs[v]) );
+            }
+
+            if( SCIPvarGetUbGlobal(vars[v]) - 0.5 > lbs[v] )
+            {
+               SCIP_CALL( SCIPchgVarUbGlobal(scip, vars[v], lbs[v]) );
+            }
          }
 
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );
@@ -1247,7 +1271,19 @@ SCIP_RETCODE solveSubproblem(
       if( *cutoff && conflictanalysis )
       {
          int v;
+#if 0
+         SCIP_Bool infeasible;
 
+         while( nvars > 1 )
+         {
+            SCIP_CALL( SCIPsolveCumulative(scip, nvars-1, vars, durations, demands, consdata->capacity, consdata->hmin, consdata->hmax, TRUE,
+                  lbs, ubs, 2000LL, &solved, &infeasible, &unbounded, &error) );
+
+            if( !infeasible )
+               break;
+            nvars--;
+         }
+#endif
          /**@todo try to shrink the initial explanation */
 
          SCIP_CALL( SCIPinitConflictAnalysis(scip) );

@@ -32,7 +32,7 @@
 #define HEUR_DESC             "problem specific heuristic of cumulative scheduling problems with optional jobs"
 #define HEUR_DISPCHAR         'q'
 #define HEUR_PRIORITY         -1106000
-#define HEUR_FREQ             10
+#define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
@@ -244,7 +244,9 @@ SCIP_RETCODE applyOptcumulative(
    SCIP_Real upperbound;
    SCIP_Real pseudoobj;
    SCIP_Bool infeasible;
+#if 0
    int depth;
+#endif
 
    assert(heur != NULL);
    assert(heurdata != NULL);
@@ -253,7 +255,9 @@ SCIP_RETCODE applyOptcumulative(
    infeasible = FALSE;
 
    *result = SCIP_DIDNOTFIND;
+#if 0
    depth = SCIPgetDepth(scip);
+#endif
 
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -500,8 +504,10 @@ SCIP_RETCODE applyOptcumulative(
          if( stored )
             *result = SCIP_FOUNDSOL;
       }
+#if 0
       else
       {
+         /* check that code */
          int v;
 
          SCIP_CALL( SCIPinitConflictAnalysis(scip) );
@@ -515,9 +521,10 @@ SCIP_RETCODE applyOptcumulative(
 
          /* analyze the conflict */
          SCIP_CALL( SCIPanalyzeConflict(scip, depth, NULL) );
-
+         SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
          SCIP_CALL( SCIPfreeSol(scip, &sol) );
       }
+#endif
    }
 
    /* exit probing mode */
