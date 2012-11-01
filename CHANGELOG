@@ -61,6 +61,8 @@ fixed bugs:
 - fixed numerical bug adding a relaxed bound for conflict analysis in cons_varbound
 - fixed bug in cumulative constraint handler concerning conflict analysis
 - fixed bug in CppAD when using signpower functions with expression pointers that do not fit into an unsigned int
+- fixed issue in cumulative constraint w.r.t. separation
+- fixed issue in cumulative constraint w.r.t. conflict analysis
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()

@@ -4871,7 +4871,12 @@ SCIP_RETCODE checkOverload(
             duration -= (glblct - lct);
 
          if( duration > 0 )
-            glbenery +=   nodedata->demand * duration;
+         {
+            glbenery += nodedata->demand * duration;
+
+            if( explanation != NULL )
+               explanation[nodedata->idx] = TRUE;
+         }
       }
 
       /* analyze the overload */
