@@ -27,6 +27,7 @@
 
 #include "scip/branch_cloud.h"
 #include "scip/branch_fullstrong.h"
+#include "scip/branch_allfullstrong.h"
 
 
 #define BRANCHRULE_NAME            "cloud"
@@ -36,6 +37,7 @@
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
 #define DEFAULT_USECLOUD           TRUE      /**< should a cloud of points be used? */
+#define DEFAULT_USEUNION           FALSE     /**< should the union of candidates be used? */
 #define DEFAULT_MAXPOINTS          -1        /**< maximum number of points for the cloud (-1 means no limit) */
 #define DEFAULT_MINSUCCESSRATE     0.0       /**< minimum success rate for the cloud */
 
@@ -50,6 +52,7 @@ struct SCIP_BranchruleData
 {
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
    SCIP_Bool             usecloud;           /**< should a cloud of points be used? */
+   SCIP_Bool             useunion;           /**< should the union of candidates be used? */
    int                   maxpoints;          /**< maximum number of points for the cloud (-1 means no limit) */
    SCIP_Real             minsuccessrate;     /**< minimum success rate for the cloud */
    SCIP_CLOCK*           cloudclock;         /**< clock for cloud diving */
@@ -67,6 +70,28 @@ struct SCIP_BranchruleData
 
 /* put your local methods here, and declare them static */
 
+
+/** hash key retrieval function for variables */
+static
+SCIP_DECL_HASHGETKEY(hashGetKeyVar)
+{  /*lint --e{715}*/
+   return elem;
+}
+
+/** returns TRUE iff the indices of both variables are equal */
+static
+SCIP_DECL_HASHKEYEQ(hashKeyEqVar)
+{  /*lint --e{715}*/
+   return (key1 == key2);
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(hashKeyValVar)
+{  /*lint --e{715}*/
+   assert(SCIPvarGetIndex((SCIP_VAR*) key) >= 0);
+   return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
+}
 
 /*
  * Callback methods of branching rule
@@ -108,7 +133,7 @@ SCIP_DECL_BRANCHFREE(branchFreeCloud)
       SCIPstatisticMessage("time spent diving in cloud branching: %g\n", SCIPgetClockTime(scip, branchruledata->cloudclock));
       SCIPstatisticMessage("cloud branching tried: %6d      found cloud: %6d \n", ntried, nuseful);
       SCIPstatisticMessage("cloud used points: %6d      saved LPs: %6d \n", ncloudpoints, nsavedlps);
-      SCIPstatisticMessage("cloud success rates useful/tried: %g points/useful: %g  saved/useful: %g \n",
+      SCIPstatisticMessage("cloud success rates useful/tried: %8.6g points/useful: %8.6g  saved/useful: %8.6g \n",
          ntried == 0 ? -1 : (SCIP_Real)nuseful / ntried,  nuseful == 0 ? -1 : (SCIP_Real)ncloudpoints / nuseful, nuseful == 0 ? -1 :  (SCIP_Real)nsavedlps / nuseful);
       SCIP_CALL( SCIPfreeClock(scip, &(branchruledata->cloudclock)) );
    }
@@ -193,9 +218,11 @@ static
 SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_HASHTABLE* candtable;
 
    SCIP_VAR** lpcands;
    SCIP_VAR** lpcandscopy;
+   SCIP_VAR** newlpcands;
 
    SCIP_VAR** vars;                          /* SCIP variables                */
    SCIP_ROW** lprows;
@@ -205,6 +232,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    SCIP_Real* lpcandssolcopy;
    SCIP_Real* lpcandsmin;
    SCIP_Real* lpcandsmax;
+   SCIP_Real* newlpcandsmin;
+   SCIP_Real* newlpcandsmax;
 
    SCIP_Real bestdown;
    SCIP_Real bestup;
@@ -224,6 +253,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    int i;
    int counter;
    int ncomplete;
+
+   int newlpcandssize;
+   int nnewlpcands;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -261,11 +293,22 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    nlprows = SCIPgetNLPRows(scip);
    lprows = SCIPgetLPRows(scip);
 
+   newlpcandssize = MAX(3*nlpcands, 100);
+   nnewlpcands = 0;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandsmin, nlpcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandsmax, nlpcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandscopy, nlpcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandsfraccopy, nlpcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandssolcopy, nlpcands) );
+   if( branchruledata->useunion )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &newlpcandsmin, newlpcandssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &newlpcandsmax, newlpcandssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &newlpcands, newlpcandssize) );
+      SCIP_CALL( SCIPhashtableCreate(&candtable, SCIPblkmem(scip), SCIPcalcHashtableSize(newlpcandssize+nlpcands),
+            hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   }
    BMScopyMemoryArray(lpcandsmin, lpcandssol, nlpcands);
    BMScopyMemoryArray(lpcandsmax, lpcandssol, nlpcands);
    BMScopyMemoryArray(lpcandssolcopy, lpcandssol, nlpcands);
@@ -320,6 +363,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       }
    }
 
+   /* store varibles from original fractional solution in hashtable; those are the only ones with a negative image */
+   for( i = 0; i < nlpcands && branchruledata->useunion; ++i)
+   {
+      SCIP_CALL( SCIPhashtableInsert(candtable, lpcands[i]) );
+   }
+
    newpoint = TRUE;
    counter = 0;
 
@@ -329,6 +378,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 #ifdef NDEBUG
       SCIP_RETCODE retcode;
 #endif
+
+      SCIP_VAR** currbranchcands;
 
       /* apply feasibility pump objective function to fractional variables */
       for( i = 0; i < nlpcands; ++i)
@@ -362,6 +413,34 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );
 #endif
 
+      if( lperror || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+         break;
+
+      /* check if a solution has been found */
+      if( SCIPgetNLPBranchCands(scip) == 0 )
+      {
+         SCIP_Bool success;
+         SCIP_SOL* sol;
+
+         /* create solution from diving LP */
+         SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+         SCIP_CALL( SCIPlinkLPSol(scip, sol) );
+         printf("cloud branching found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, sol));
+
+         /* try to add solution to SCIP */
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, &success) );
+
+         /* check, if solution was feasible and good enough */
+         if( success )
+         {
+            printf(" -> solution was feasible and good enough\n");
+            SCIP_CALL( SCIPendDive(scip) );
+            *result = SCIP_CUTOFF;
+            goto TERMINATE;
+         }
+      }
+
+      /* update cloud intervals for candidates that have been fractional in original LP */
       newpoint = FALSE;
       for( i = 0; i < nlpcands; ++i)
       {
@@ -375,16 +454,72 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          lpcandsmax[i] = MAX(lpcandsmax[i], solval);
       }
 
+      if( branchruledata->useunion )
+      {
+         /* update cloud intervals for candidates that have been integral in original LP, but have been fractional in previous cloud points */
+         for( i = 0; i < nnewlpcands; ++i)
+         {
+            SCIP_Real solval;
+            solval = SCIPgetSolVal(scip, NULL, newlpcands[i]);
+            newlpcandsmin[i] = MIN(newlpcandsmin[i], solval);
+            newlpcandsmax[i] = MAX(newlpcandsmax[i], solval);
+         }
+
+         /* update cloud intervals for candidates that have been integral so far, but are fractional in current LP */
+         SCIP_CALL( SCIPgetLPBranchCands(scip, &currbranchcands, NULL, NULL, NULL, NULL) );
+         for( i = 0; i < SCIPgetNLPBranchCands(scip); ++i)
+         {
+            /* insert new variable in hashtable and newlpcands array */
+            if( !SCIPhashtableExists(candtable, currbranchcands[i]) )
+            {
+               SCIP_Real solval;
+               solval = SCIPgetSolVal(scip, NULL, currbranchcands[i]);
+               assert(!SCIPisFeasIntegral(scip,solval));
+
+               /* realloc array for new LP candidates, if necessary */
+               if( nnewlpcands == newlpcandssize)
+               {
+                  newlpcandssize *= 3;
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &newlpcands, newlpcandssize) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &newlpcandsmin, newlpcandssize) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &newlpcandsmax, newlpcandssize) );
+               }
+
+               SCIP_CALL( SCIPhashtableInsert(candtable, currbranchcands[i]) );
+               newlpcands[nnewlpcands] = currbranchcands[i];
+
+               /* initialize the cloud interval; incorporation of the integral value in original LP solution will be done later */
+               newlpcandsmin[nnewlpcands] = solval;
+               newlpcandsmax[nnewlpcands] = solval;
+               nnewlpcands++;
+            }
+         }
+      }
+
       if( newpoint )
          counter++;
 
       if( branchruledata->maxpoints != -1 && counter >= branchruledata->maxpoints )
          break;
    }
+
    SCIPdebugMessage("considered %d additional points in the cloud\n",counter);
+
+   if( nnewlpcands > 0 )
+      SCIPdebugMessage("  --> found %d new LP cands\n",nnewlpcands);
 
    /* terminate the diving */
    SCIP_CALL( SCIPendDive(scip) );
+
+   /* update cloud intervals for candidates that have been fractional in previous cloud points with their integral bound from original LP */
+   for( i = 0; i < nnewlpcands && branchruledata->useunion; ++i)
+   {
+      SCIP_Real solval;
+      solval = SCIPgetSolVal(scip, NULL, newlpcands[i]);
+      assert(SCIPisFeasIntegral(scip, solval));
+      newlpcandsmin[i] = MIN(newlpcandsmin[i], solval);
+      newlpcandsmax[i] = MAX(newlpcandsmax[i], solval);
+   }
 
    SCIP_CALL(  SCIPstopClock(scip, branchruledata->cloudclock) );
    ncomplete = nlpcands;
@@ -396,6 +531,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
       counter = 0;
 
+      /* sort all variables for which both bounds are fractional to the front */
       for( i = 0; i < nlpcands; ++i)
       {
          if( !SCIPisFeasIntegral(scip, lpcandsmin[i]) && !SCIPisFeasIntegral(scip, lpcandsmax[i]) )
@@ -413,6 +549,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
       ncomplete = counter;
 
+      /* filter all variables for which exactly one interval bound is fractional */
       for( i = 0; i < nlpcands; ++i)
       {
          if( SCIPisFeasIntegral(scip, lpcandsmin[i]) != SCIPisFeasIntegral(scip, lpcandsmax[i]) )
@@ -470,16 +607,88 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       SCIP_VAR* var;
       SCIP_Bool allcolsinlp;
       SCIP_Bool exactsolve;
+      SCIP_Bool newselected;
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nlpcands);
       assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
 
       var = lpcandscopy[bestcand];
+      newselected = FALSE;
+
+      /* if there are new candidates variables, also try them */
+      if( branchruledata->useunion && branchruledata->lastcand > ncomplete && nnewlpcands > 0 )
+      {
+         counter = 0;
+         /* reset skipping arrays to zero */
+         BMSclearMemoryArray(branchruledata->skipdown, nnewlpcands);
+         BMSclearMemoryArray(branchruledata->skipup, nnewlpcands);
+
+         /* get new LP candidates with one fractional bound */
+         for( i = 0; i < nnewlpcands; ++i)
+         {
+            if( SCIPisFeasIntegral(scip, newlpcandsmin[i]) != SCIPisFeasIntegral(scip, newlpcandsmax[i]) )
+            {
+               newlpcands[counter] = newlpcands[i];
+
+               if( SCIPisFeasIntegral(scip, newlpcandsmin[i]) )
+                  branchruledata->skipdown[counter] = TRUE;
+               if( SCIPisFeasIntegral(scip, newlpcandsmax[i]) )
+                  branchruledata->skipup[counter] = TRUE;
+               assert(branchruledata->skipdown[counter] != branchruledata->skipup[counter]);
+
+               counter++;
+            }
+         }
+
+         /* when there are new candidates, also try these */
+         if( counter > 0 )
+         {
+            SCIP_Real newdown;
+            SCIP_Real newup;
+            SCIP_Real newscore;
+            int newcand;
+            SCIP_Bool newdownvalid;
+            SCIP_Bool newupvalid;
+            SCIP_Real newbound;
+            int lastcand;
+
+            lastcand = 0;
+            newscore = -SCIPinfinity(scip);
+            SCIP_CALL( SCIPselectVarPseudoStrongBranching(scip, newlpcands, branchruledata->skipdown, branchruledata->skipup, counter, counter, /* replace second counter ??????????? */
+                  &lastcand, allowaddcons,
+                  &newcand, &newdown, &newup, &newscore, &newdownvalid, &newupvalid, &newbound, result) );
+
+            if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM || *result == SCIP_CONSADDED  ) /* ??????? */
+               goto TERMINATE;
+
+            if( newscore > bestscore )
+            {
+               bestcand = newcand;
+               var = newlpcands[newcand];
+               bestdown = newdown;
+               bestup = newup;
+               bestdownvalid = newdownvalid;
+               bestupvalid = newupvalid;
+               bestscore = newscore;
+               newselected = TRUE;
+               printf("ZZZ\n");
+            }
+         }
+      }
 
       /* perform the branching */
-      SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
-         counter, bestcand, SCIPvarGetName(var), lpcandssolcopy[bestcand], bestdown, bestup, bestscore);
+      if( !newselected )
+      {
+         SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
+            counter, bestcand, SCIPvarGetName(var), lpcandssolcopy[bestcand], bestdown, bestup, bestscore);
+      }
+      else
+      {
+         SCIPdebugMessage(" -> selected from %d new candidates,  candidate %d: variable <%s> (down=%g, up=%g, score=%g)\n",
+            counter, bestcand, SCIPvarGetName(var), bestdown, bestup, bestscore);
+      }
+
       SCIP_CALL( SCIPbranchVar(scip, var, &downchild, NULL, &upchild) );
       assert(downchild != NULL);
       assert(upchild != NULL);
@@ -504,6 +713,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       *result = SCIP_BRANCHED;
    }
 
+ TERMINATE:
+   if( branchruledata->useunion )
+   {
+      SCIPhashtableFree(&candtable);
+      SCIPfreeBufferArray(scip, &newlpcands);
+      SCIPfreeBufferArray(scip, &newlpcandsmax);
+      SCIPfreeBufferArray(scip, &newlpcandsmin);
+   }
    SCIPfreeBufferArray(scip, &lpcandscopy);
    SCIPfreeBufferArray(scip, &lpcandssolcopy);
    SCIPfreeBufferArray(scip, &lpcandsfraccopy);
@@ -586,6 +803,10 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
          "branching/"BRANCHRULE_NAME"/usecloud",
          "should a cloud of points be used? ",
          &branchruledata->usecloud, FALSE, DEFAULT_USECLOUD, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/"BRANCHRULE_NAME"/useunion",
+         "should the union of candidates be used?",
+         &branchruledata->useunion, FALSE, DEFAULT_USEUNION, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/"BRANCHRULE_NAME"/maxpoints",
          "maximum number of points for the cloud (-1 means no limit)",
