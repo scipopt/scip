@@ -249,6 +249,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          assert(i >= ncomplete || (!skipdown[i]&&!skipup[i]));
 
          /* apply strong branching */
+         up = -SCIPinfinity(scip);
+         down = -SCIPinfinity(scip);
          SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, lpcands[c], INT_MAX,
                skipdown[i] ? NULL : &down, skipup[i] ? NULL : &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
          nsbcalls++;
