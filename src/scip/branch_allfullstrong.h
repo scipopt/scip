@@ -48,6 +48,26 @@
 extern "C" {
 #endif
 
+EXTERN
+SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
+   SCIP*                 scip,               /**< original SCIP data structure                        */
+   SCIP_VAR**            pseudocands,        /**< branching candidates                                */
+   SCIP_Bool*            skipdown,           /**< should down branchings be skipped? */
+   SCIP_Bool*            skipup,             /**< should up branchings be skipped? */
+   int                   npseudocands,       /**< number of branching candidates                      */
+   int                   npriopseudocands,   /**< number of priority branching candidates             */
+   int*                  start,              /**< starting index in lpcands                           */
+   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
+   int*                  bestpseudocand,     /**< best candidate for branching                        */
+   SCIP_Real*            bestdown,           /**< objective value of the down branch for bestcand     */
+   SCIP_Real*            bestup,             /**< objective value of the up branch for bestcand       */
+   SCIP_Real*            bestscore,          /**< score for bestcand                                  */
+   SCIP_Bool*            bestdownvalid,      /**< is bestdown a valid dual bound for the down branch? */
+   SCIP_Bool*            bestupvalid,        /**< is bestup a valid dual bound for the up branch?     */
+   SCIP_Real*            provedbound,        /**< proved dual bound for current subtree               */
+   SCIP_RESULT*          result              /**< result pointer                                      */
+   );
+
 /** creates the all variables full strong LP branching rule and includes it in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleAllfullstrong(
