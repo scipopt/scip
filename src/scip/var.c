@@ -1237,6 +1237,7 @@ SCIP_RETCODE SCIPdomchgApply(
    *cutoff = FALSE;
 
    SCIPdebugMessage("applying domain changes at %p in depth %d\n", (void*)domchg, depth);
+
    if( domchg == NULL )
       return SCIP_OKAY;
 
@@ -1248,7 +1249,7 @@ SCIP_RETCODE SCIPdomchgApply(
       if( *cutoff )
          break;
    }
-   SCIPdebugMessage(" -> %u bound changes\n", domchg->domchgbound.nboundchgs);
+   SCIPdebugMessage(" -> %u bound changes (cutoff %u)\n", domchg->domchgbound.nboundchgs, *cutoff);
 
    /* mark all bound changes after a cutoff redundant */
    for( ; i < (int)domchg->domchgbound.nboundchgs; ++i )
