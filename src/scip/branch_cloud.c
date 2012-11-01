@@ -425,7 +425,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          /* create solution from diving LP */
          SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
          SCIP_CALL( SCIPlinkLPSol(scip, sol) );
-         printf("cloud branching found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, sol));
+         SCIPdebugMessage("cloud branching found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, sol));
 
          /* try to add solution to SCIP */
          SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, &success) );
@@ -433,7 +433,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          /* check, if solution was feasible and good enough */
          if( success )
          {
-            printf(" -> solution was feasible and good enough\n");
+            SCIPdebugMessage(" -> solution was feasible and good enough\n");
             SCIP_CALL( SCIPendDive(scip) );
             *result = SCIP_CUTOFF;
             goto TERMINATE;
@@ -672,7 +672,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
                bestupvalid = newupvalid;
                bestscore = newscore;
                newselected = TRUE;
-               printf("ZZZ\n");
             }
          }
       }
