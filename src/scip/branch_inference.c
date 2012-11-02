@@ -326,9 +326,9 @@ SCIP_RETCODE performBranching(
 
    SCIPdebugMessage(" -> %d candidates, selected variable <%s>[%g,%g] (prio=%d, solval=%.12f, score=%g, conflict=%g cutoff=%g, inference=%g)\n",
       ncands, SCIPvarGetName(bestcand), SCIPvarGetLbLocal (bestcand), SCIPvarGetUbLocal(bestcand), SCIPvarGetBranchPriority(bestcand),
-      bestval == SCIP_UNKNOWN ? SCIPgetVarSol(scip, bestcand) : bestval, bestscore,
+      bestval == SCIP_UNKNOWN ? SCIPgetVarSol(scip, bestcand) : bestval, bestscore, /*lint !e777*/
       SCIPgetVarConflictScore(scip, bestcand),  SCIPgetVarAvgInferenceCutoffScore(scip, bestcand, cutoffweight),
-      SCIPgetVarAvgInferenceScore(scip, bestcand)); /*lint !e777*/
+      SCIPgetVarAvgInferenceScore(scip, bestcand));
 
    /* perform the branching */
    if( candsols != NULL )
@@ -343,7 +343,7 @@ SCIP_RETCODE performBranching(
       /* find branching via value based statistics if these are available */
       findBranchpoint(scip, bestcand, conflictweight, cutoffweight, &branchpoint, &branchdir);
 
-      if( branchpoint == SCIP_UNKNOWN )
+      if( branchpoint == SCIP_UNKNOWN ) /*lint !e777*/
       {
          SCIP_CALL( SCIPbranchVar(scip, bestcand, NULL, NULL, NULL) );
       }

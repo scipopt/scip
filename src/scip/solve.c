@@ -1186,7 +1186,7 @@ SCIP_RETCODE solveNodeInitialLP(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
 {
-   SCIP_Real starttime = 0.0;
+   SCIP_Real starttime;
 
    assert(stat != NULL);
    assert(tree != NULL);

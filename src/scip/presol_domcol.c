@@ -917,18 +917,23 @@ SCIP_RETCODE printDomRelInfo(
    case SCIP_VARTYPE_BINARY:
       type='B';
       break;
-   default:
+   case SCIP_VARTYPE_INTEGER:
+   case SCIP_VARTYPE_IMPLINT:
       type='I';
       break;
+   default:
+      SCIPerrorMessage("unknown variable type\n");
+      SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
    SCIPdebugPrintf("\n\n### [%c], obj:%g->%g,\t%s[idx:%d](nrows:%d)->%s[idx:%d](nrows:%d)\twclb=%g, ub'=%g, ub=%g",
-      type,SCIPvarGetObj(dominatingvar),SCIPvarGetObj(dominatedvar),
-      SCIPvarGetName(dominatingvar),dominatingidx,matrix->colmatcnt[dominatingidx],
-      SCIPvarGetName(dominatedvar),dominatedidx,matrix->colmatcnt[dominatedidx],
-      dominatingwclb,dominatingub,SCIPvarGetUbGlobal(dominatingvar));
+      type, SCIPvarGetObj(dominatingvar), SCIPvarGetObj(dominatedvar),
+      SCIPvarGetName(dominatingvar), dominatingidx, matrix->colmatcnt[dominatingidx],
+      SCIPvarGetName(dominatedvar), dominatedidx, matrix->colmatcnt[dominatedidx],
+      dominatingwclb, dominatingub, SCIPvarGetUbGlobal(dominatingvar));
 
-   printRowsOfCol(scip,matrix,dominatingidx);
+   SCIP_CALL( printRowsOfCol(scip, matrix, dominatingidx) );
 
    return SCIP_OKAY;
 }
@@ -1439,8 +1444,8 @@ void findFixings(
                varstofix[dominatedidx] = FIXATLB;
                (*npossiblefixings)++;
 #ifdef SCIP_DEBUG
-               printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
-                  dominatedvar,dominatedidx,dominatingub,dominatingwclb);
+               SCIP_CALL_ABORT( printDomRelInfo(scip, matrix, dominatingvar, dominatingidx,
+                     dominatedvar, dominatedidx, dominatingub, dominatingwclb) );
 #endif
                return;
             }
@@ -1465,8 +1470,8 @@ void findFixings(
                varstofix[dominatedidx] = FIXATLB;
                (*npossiblefixings)++;
 #ifdef SCIP_DEBUG
-               printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
-                  dominatedvar,dominatedidx,dominatingub,dominatingwclb);
+               SCIP_CALL_ABORT( printDomRelInfo(scip, matrix, dominatingvar, dominatingidx,
+                     dominatedvar, dominatedidx, dominatingub, dominatingwclb) );
 #endif
             }
          }
@@ -1495,8 +1500,8 @@ void findFixings(
                varstofix[dominatedidx] = FIXATLB;
                (*npossiblefixings)++;
 #ifdef SCIP_DEBUG
-               printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
-                  dominatedvar,dominatedidx,dominatingub,dominatingwclb);
+               SCIP_CALL_ABORT( printDomRelInfo(scip, matrix, dominatingvar, dominatingidx,
+                     dominatedvar, dominatedidx, dominatingub, dominatingwclb) );
 #endif
             }
          }

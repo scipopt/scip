@@ -866,9 +866,12 @@ SCIP_RETCODE createSubscip(
    mipdata->nrows = (unsigned int) nrows;
    mipdata->ncols = (unsigned int) ncols;
    mipdata->ntotalrows = mipdata->nrows;
+
    if ( sepadata->useobjub || sepadata->useobjlb )
       mipdata->ntotalrows = mipdata->nrows + 1;
-   ntotalrows = mipdata->ntotalrows;
+
+   assert(mipdata->ntotalrows <= INT_MAX);
+   ntotalrows = (int)mipdata->ntotalrows;
 
    /* copy value */
    mipdata->conshdlrusenorm = sepadata->conshdlrusenorm;
@@ -3368,7 +3371,8 @@ SCIP_RETCODE createCGCuts(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* allocate temporary memory */
-   ntotalrows = mipdata->ntotalrows;
+   assert(mipdata->ntotalrows <= INT_MAX);
+   ntotalrows = (int)mipdata->ntotalrows;
    assert( ntotalrows >= SCIPgetNLPRows(scip) && ntotalrows <= SCIPgetNLPRows(scip) + 1 );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varsolvals, nvars) );
@@ -3634,8 +3638,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    if ( ( sepadata->useobjub || sepadata->useobjlb ) && ( sepadata->usecmir || sepadata->usestrongcg ) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Using objective function bounds and CMIR or Strong-CG functions is useless. Turning off usage of objective function bounds.\n");
-      SCIPsetBoolParam(scip, "separating/cgmip/useobjub", FALSE);
-      SCIPsetBoolParam(scip, "separating/cgmip/useobjlb", FALSE);
+      SCIP_CALL( SCIPsetBoolParam(scip, "separating/cgmip/useobjub", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "separating/cgmip/useobjlb", FALSE) );
    }
 
    /* get LP data */

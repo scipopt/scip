@@ -483,7 +483,7 @@ SCIP_RETCODE createWorstCaseProfile(
    int*                  demands,            /**< array containing corresponding demands */
    int                   capacity            /**< available cumulative capacity */
    )
-{
+{  /*lint --e{715}*/
    SCIP_VAR* var;
    SCIP_HASHMAP* addedvars;
    int* copydemands;
@@ -4296,7 +4296,7 @@ SCIP_RETCODE analyzeConflictOverload(
    if( !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("est=%d, lct=%d, propest %d, reportedenergy %d, shift %d\n", est, lct, propest, reportedenergy, shift);
+   SCIPdebugMessage("est=%d, lct=%d, propest %u, reportedenergy %d, shift %d\n", est, lct, propest, reportedenergy, shift);
 
    /* compute energy of initial time window */
    energy = (lct - est) * capacity;
@@ -6917,7 +6917,7 @@ SCIP_RETCODE normalizeCumulativeCondition(
    int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
    int*                  nchgsides           /**< pointer to count number of side changes */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Longint gcd;
    int mindemand1;
    int mindemand2;

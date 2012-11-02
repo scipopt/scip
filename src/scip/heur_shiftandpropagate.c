@@ -1573,11 +1573,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       assert(SCIPvarIsIntegral(var));
       assert(eventdatas[c] == NULL);
 
-      SCIP_CALL( SCIPallocBuffer(scip, &eventdatas[c]) );
+      SCIP_CALL( SCIPallocBuffer(scip, &(eventdatas[c])) ); /*lint !e866*/
 
       eventdatas[c]->colpos = c;
 
-      SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, eventdatas[c], NULL);
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, eventdatas[c], NULL) );
    }
 
    cutoff = FALSE;
@@ -1936,7 +1936,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       assert(eventdatas[c] != NULL);
 
 
-      SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, eventdatas[c], -1);
+      SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, eventdatas[c], -1) );
       SCIPfreeBuffer(scip, &(eventdatas[c]));
    }
    SCIPfreeBufferArray(scip, &eventdatas);
@@ -1961,7 +1961,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
  *  events in which a lower or upper bound were tightened */
 static
 SCIP_DECL_EVENTEXEC(eventExecShiftandpropagate)
-{
+{  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_VAR* var;
    SCIP_COL* col;

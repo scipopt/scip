@@ -4134,7 +4134,7 @@ SCIP_DECL_CONSINIT(consInitIndicator)
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 static
 SCIP_DECL_CONSEXIT(consExitIndicator)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(scip != NULL);

@@ -1107,14 +1107,25 @@ SCIP_RETCODE SCIPconsResetAge(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** adds an active constraint to the propagation queue(if not already marked for propagation) of corresponding
+ *  constraint handler and marks the constraint to be propagated in the next propagation round
+ *
+ *  @note if constraint is added to the queue it will be captured
+ */
 SCIP_RETCODE SCIPconsPushProp(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** returns first constraint from propagation queue(if not empty) of given constraint handler */
 SCIP_CONS* SCIPconshdlrFrontProp(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** removes constraint from propagation queue(if not empty) of given constraint handler and unmarks constraint to be
+ *  propagated in the next propagation round
+ *
+ *  @note if constraint is removed from the queue it will be released
+ */
 SCIP_RETCODE SCIPconshdlrPopProp(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */

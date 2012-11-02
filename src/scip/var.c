@@ -725,12 +725,12 @@ SCIP_RETCODE SCIPboundchgApply(
    if( !boundchg->applied && !boundchg->redundant )
    {
       assert(var == boundchg->var);
-      
+
       if( (SCIP_BOUNDCHGTYPE)boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
       {
          SCIP_CALL( SCIPvarIncNBranchings(var, blkmem, set, stat,
                (SCIP_BOUNDTYPE)boundchg->boundtype == SCIP_BOUNDTYPE_LOWER
-               ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS, (SCIP_BOUNDCHGTYPE)boundchg->newbound, depth) );
+               ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS, boundchg->newbound, depth) );
       }
       else if( stat->lastbranchvar != NULL )
       {
@@ -13260,7 +13260,7 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
 {
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
-   
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -13268,26 +13268,26 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
          return 0.0;
       else
          return SCIPvarGetPseudocostCountCurrentRun(var->data.original.transvar, dir);
-      
+
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       return SCIPhistoryGetPseudocostCount(var->historycrun, dir);
-      
+
    case SCIP_VARSTATUS_FIXED:
       return 0.0;
-      
+
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
          return SCIPvarGetPseudocostCountCurrentRun(var->data.aggregate.var, dir);
       else
          return SCIPvarGetPseudocostCountCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetPseudocostCountCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
@@ -13295,24 +13295,47 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
    }
 }
 
-/** check if value based history should be used; if so find the corresponding history entry */
+/** find the corresponding history entry if already existing, otherwise create new entry */
 static
-SCIP_Bool useValuehistiory(
+SCIP_RETCODE findValuehistoryEntry(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             value,              /**< domain value, or SCIP_UNKNOWN */
    BMS_BLKMEM*           blkmem,             /**< block memory, or NULL if the domain value is SCIP_UNKNOWN */
    SCIP_SET*             set,                /**< global SCIP settings, or NULL if the domain value is SCIP_UNKNOWN */
-   SCIP_Real             value,              /**< domain value, or SCIP_UNKNOWN */
    SCIP_HISTORY**        history             /**< pointer to store the value based history, or NULL */
    )
 {
+   assert(var != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(history != NULL);
+
    (*history) = NULL;
 
+   if( var->valuehistory == NULL )
+   {
+      SCIP_CALL( SCIPvaluehistoryCreate(&var->valuehistory, blkmem) );
+   }
+
+   SCIP_CALL( SCIPvaluehistoryFind(var->valuehistory, blkmem, set, value, history) );
+
+   return SCIP_OKAY;
+}
+
+/** check if value based history should be used */
+static
+SCIP_Bool useValuehistory(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             value,              /**< domain value, or SCIP_UNKNOWN */
+   SCIP_SET*             set                 /**< global SCIP settings, or NULL if the domain value is SCIP_UNKNOWN */
+   )
+{
    /* check if value based history should be collected */
    if( !set->history_valuebased )
       return FALSE;
 
    /* check if the domain value is unknown (not specific) */
-   if( value == SCIP_UNKNOWN )
+   if( value == SCIP_UNKNOWN ) /*lint !e777*/
       return FALSE;
 
    /* value based history is not collected for binary variable since the standard history already contains all information */
@@ -13322,16 +13345,6 @@ SCIP_Bool useValuehistiory(
    /* value based history is not collected for continuous variables */
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       return FALSE;
-
-   assert(blkmem != NULL);
-   assert(set != NULL);
-
-   if( var->valuehistory == NULL )
-   {
-      SCIP_CALL( SCIPvaluehistoryCreate(&var->valuehistory, blkmem) );
-   }
-
-   SCIP_CALL( SCIPvaluehistoryFind(var->valuehistory, blkmem, set, value, history) );
 
    return TRUE;
 }
@@ -13368,13 +13381,14 @@ SCIP_RETCODE SCIPvarIncVSIDS(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
    {
-      SCIP_HISTORY* history;
-
       SCIPhistoryIncVSIDS(var->history, dir, weight);
       SCIPhistoryIncVSIDS(var->historycrun, dir, weight);
 
-      if( useValuehistiory(var, blkmem, set, value, &history) )
+      if( useValuehistory(var, value, set) )
       {
+         SCIP_HISTORY* history;
+
+         SCIP_CALL( findValuehistoryEntry(var, value, blkmem, set, &history) );
          assert(history != NULL);
 
          SCIPhistoryIncVSIDS(history, dir, weight);
@@ -13498,13 +13512,14 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
    {
-      SCIP_HISTORY* history;
-
       SCIPhistoryIncNActiveConflicts(var->history, dir, length);
       SCIPhistoryIncNActiveConflicts(var->historycrun, dir, length);
 
-      if( useValuehistiory(var, blkmem, set, value, &history) )
+      if( useValuehistory(var, value, set) )
       {
+         SCIP_HISTORY* history;
+
+         SCIP_CALL( findValuehistoryEntry(var, value, blkmem, set, &history) );
          assert(history != NULL);
 
          SCIPhistoryIncNActiveConflicts(history, dir, length);
@@ -13758,15 +13773,16 @@ SCIP_RETCODE SCIPvarIncNBranchings(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
    {
-      SCIP_HISTORY* history;
-
       SCIPhistoryIncNBranchings(var->history, dir, depth);
       SCIPhistoryIncNBranchings(var->historycrun, dir, depth);
       SCIPhistoryIncNBranchings(stat->glbhistory, dir, depth);
       SCIPhistoryIncNBranchings(stat->glbhistorycrun, dir, depth);
 
-      if( useValuehistiory(var, blkmem, set, value, &history) )
+      if( useValuehistory(var, value, set) )
       {
+         SCIP_HISTORY* history;
+
+         SCIP_CALL( findValuehistoryEntry(var, value, blkmem, set, &history) );
          assert(history != NULL);
 
          SCIPhistoryIncNBranchings(history, dir, depth);
@@ -13841,15 +13857,16 @@ SCIP_RETCODE SCIPvarIncInferenceSum(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
    {
-      SCIP_HISTORY* history;
-
       SCIPhistoryIncInferenceSum(var->history, dir, weight);
       SCIPhistoryIncInferenceSum(var->historycrun, dir, weight);
       SCIPhistoryIncInferenceSum(stat->glbhistory, dir, weight);
       SCIPhistoryIncInferenceSum(stat->glbhistorycrun, dir, weight);
 
-      if( useValuehistiory(var, blkmem, set, value, &history) )
+      if( useValuehistory(var, value, set) )
       {
+         SCIP_HISTORY* history;
+
+         SCIP_CALL( findValuehistoryEntry(var, value, blkmem, set, &history) );
          assert(history != NULL);
 
          SCIPhistoryIncInferenceSum(history, dir, weight);
@@ -13924,15 +13941,16 @@ SCIP_RETCODE SCIPvarIncCutoffSum(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
    {
-      SCIP_HISTORY* history;
-
       SCIPhistoryIncCutoffSum(var->history, dir, weight);
       SCIPhistoryIncCutoffSum(var->historycrun, dir, weight);
       SCIPhistoryIncCutoffSum(stat->glbhistory, dir, weight);
       SCIPhistoryIncCutoffSum(stat->glbhistorycrun, dir, weight);
 
-      if( useValuehistiory(var, blkmem, set, value, &history) )
+      if( useValuehistory(var, value, set) )
       {
+         SCIP_HISTORY* history;
+
+         SCIP_CALL( findValuehistoryEntry(var, value, blkmem, set, &history) );
          assert(history != NULL);
 
          SCIPhistoryIncCutoffSum(history, dir, weight);
