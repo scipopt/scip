@@ -32,7 +32,7 @@
 #define HEUR_DESC             "problem specific heuristic of cumulative scheduling problems with optional jobs"
 #define HEUR_DISPCHAR         'q'
 #define HEUR_PRIORITY         -1106000
-#define HEUR_FREQ             1
+#define HEUR_FREQ             10
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
@@ -520,7 +520,7 @@ SCIP_RETCODE applyOptcumulative(
          }
 
          /* analyze the conflict */
-         SCIP_CALL( SCIPanalyzeConflict(scip, depth, NULL) );
+         //SCIP_CALL( SCIPanalyzeConflict(scip, depth, NULL) );
          SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
          SCIP_CALL( SCIPfreeSol(scip, &sol) );
       }

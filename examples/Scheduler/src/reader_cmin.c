@@ -44,7 +44,7 @@
 #define DEFAULT_FILENAME           "-"  /**< name of the file including best known solutions */
 #define DEFAULT_DYNAMICCONSS     FALSE  /**< should model constraints be subject to aging? */
 #define DEFAULT_DUALREDUCTION     TRUE  /**< add locks to avoid dual reductions */
-#define DEFAULT_BRANCHPRIORITY       0  /**< branching priority for the binary choice variables */
+#define DEFAULT_BRANCHPRIORITY       1  /**< branching priority for the binary choice variables */
 #define DEFAULT_MIP              FALSE  /**< create a MIP formulation */
 #define DEFAULT_INITIAL           TRUE  /**< should model constraints be in initial LP? */
 #define DEFAULT_CIP               TRUE  /**< create a CIP formulation */

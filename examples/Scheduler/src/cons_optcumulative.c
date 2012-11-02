@@ -144,6 +144,7 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
+   SCIP_HEUR*            heurtrysol;         /**< trysol heuristic */
    SCIP_Bool             rowrelax;           /**< add linear relaxation as LP row (otherwise a knapsack constraint is created)? */
    SCIP_Bool             conflictanalysis;   /**< participate in conflict analysis? */
    SCIP_Bool             intervalrelax;      /**< create a relaxation for each start and end time point interval */
@@ -409,6 +410,7 @@ SCIP_RETCODE conshdlrdataCreate(
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
    (*conshdlrdata)->eventhdlr = eventhdlr;
+   (*conshdlrdata)->heurtrysol = NULL;
 
    return SCIP_OKAY;
 }
@@ -1415,6 +1417,138 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE createConflictCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to store the created conflict constraint */
+   const char*           name,
+   SCIP_VAR**            binvars,            /**< array of binary variables */
+   int                   nvars               /**< number of variables */
+   )
+{
+   SCIP_VAR* negatedvar;
+   int v;
+
+   /* one of the jobs cannot be processed on that resource */
+   SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, 0, NULL,
+         TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   for( v = 0; v < nvars; ++v )
+   {
+      if( SCIPvarGetLbGlobal(binvars[v]) > 0.5 )
+         continue;
+
+      SCIP_CALL( SCIPgetNegatedVar(scip, binvars[v], &negatedvar) );
+
+      SCIP_CALL( SCIPaddCoefLogicor(scip, *cons, negatedvar) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** check if the given constrait is valid; checks each starting point of a job whether the remaining capacity is at
+ *  least zero or not. If not (*violated) is set to TRUE
+ */
+static
+SCIP_RETCODE enfopsCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to be checked */
+   SCIP_SOL*             trysol,             /**< primal solution to construct, or NULL */
+   SCIP_Bool*            violated,           /**< pointer to store if the constraint is violated/infeasible */
+   SCIP_Bool*            consadded,          /**< pointer to store if a constraint was added */
+   SCIP_Bool*            solfeasible         /**< pointer to store if the constraint solution is potentially feasible */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** binvars;
+   SCIP_VAR** vars;
+   SCIP_Bool auxiliary;
+   int* demands;
+   int* durations;
+   int nvars;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(violated != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIPdebugMessage("enforce optcumulative constraints <%s>\n", SCIPconsGetName(cons));
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &binvars, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &durations, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &demands, consdata->nvars) );
+
+   /* collect information of all activities which are assigned to that machine in the given solution */
+   collectSolActivities(scip, consdata, NULL, binvars, vars, durations, demands, &nvars, &auxiliary);
+
+   if( nvars > 0 )
+   {
+      /* check the cumulative condition */
+      SCIP_CALL( SCIPcheckCumulativeCondition(scip, NULL, nvars, vars,
+            durations, demands, consdata->capacity, consdata->hmin, consdata->hmax, violated, cons, FALSE) );
+
+      if( *violated && auxiliary )
+      {
+         SCIP_Real* lbs;
+         SCIP_Real* ubs;
+         SCIP_Bool infeasible;
+         SCIP_Bool unbounded;
+         SCIP_Bool error;
+         SCIP_Bool solved;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
+
+         /* solve the cumulative condition separately */
+         SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, durations, demands,
+               consdata->capacity, consdata->hmin, consdata->hmax, FALSE,
+               lbs, ubs, 1000LL, &solved, &infeasible, &unbounded, &error) );
+         assert(!unbounded);
+
+         if( !error )
+         {
+            if( infeasible )
+            {
+               SCIP_CONS* logicor;
+
+               SCIP_CALL( createConflictCons(scip, &logicor, SCIPconsGetName(cons), binvars,  nvars) );
+
+               SCIP_CALL( SCIPaddCons(scip, logicor) );
+               SCIP_CALL( SCIPreleaseCons(scip, &logicor) );
+
+               (*solfeasible) = FALSE;
+               (*consadded) = TRUE;
+            }
+            else if( solved && solfeasible && trysol != NULL )
+            {
+               int v;
+
+               for(v = 0; v < nvars; ++v )
+               {
+                  SCIP_CALL( SCIPsetSolVal(scip, trysol, vars[v], lbs[v]) );
+               }
+            }
+            else
+               (*solfeasible) = FALSE;
+         }
+
+         SCIPfreeBufferArray(scip, &ubs);
+         SCIPfreeBufferArray(scip, &lbs);
+      }
+   }
+
+   /* free all buffers */
+   SCIPfreeBufferArray(scip, &demands);
+   SCIPfreeBufferArray(scip, &durations);
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &binvars);
+
+   return SCIP_OKAY;
+}
+
 /** enforce the LP or pseudo solution */
 static
 SCIP_RETCODE enfoCons(
@@ -2339,9 +2473,8 @@ SCIP_RETCODE propagateCons(
 
                   /* propagation detected infeasibility, therefore, job cannot be processed by that machine */
                   SCIPdebugMessage("  probing detect infeasibility\n");
-
                   SCIPdebugMessage("  fix variable <%s> to 0.0\n", SCIPvarGetName(binvar));
-                  // SCIP_CALL( SCIPinferBinvarCons(scip, binvar, FALSE, cons, 0, &infeasible, &tightened) );
+                  //SCIP_CALL( SCIPinferBinvarCons(scip, binvar, FALSE, cons, 0, &infeasible, &tightened) );
                   SCIP_CALL( SCIPtightenVarUb(scip, binvar, 0.0, FALSE, &infeasible, &tightened) );
                   if( infeasible )
                      (*cutoff) = TRUE;
@@ -2464,7 +2597,15 @@ SCIP_DECL_CONSFREE(consFreeOptcumulative)
 static
 SCIP_DECL_CONSINITPRE(consInitpreOptcumulative)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    for( c = 0; c < nconss; ++c )
    {
@@ -2472,6 +2613,12 @@ SCIP_DECL_CONSINITPRE(consInitpreOptcumulative)
        * hmax)
        */
       SCIP_CALL( removeIrrelevantJobs(scip, conss[c]) );
+   }
+
+   /* find trysol heuristic */
+   if( conshdlrdata->heurtrysol == NULL )
+   {
+      conshdlrdata->heurtrysol = SCIPfindHeur(scip, "trysol");
    }
 
    return SCIP_OKAY;
@@ -2648,27 +2795,61 @@ SCIP_DECL_CONSSEPALP(consSepalpOptcumulative)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpOptcumulative)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_SOL* trysol;
    SCIP_Bool violated;
-   SCIP_Bool rowadded;
+   SCIP_Bool consviolated;
+   SCIP_Bool consadded;
+   SCIP_Bool solfeasible;
    int c;
 
-   SCIPdebugMessage("method: enforce LP solution (%d constraints)\n", nconss);
+   SCIPdebugMessage("method: enforce LP solution (nconss %d)\n", nconss);
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   violated = FALSE;
-   rowadded = FALSE;
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
-   for( c = 0; c < nconss && !violated; ++c )
+   violated = FALSE;
+   consviolated = FALSE;
+   consadded = FALSE;
+   solfeasible = TRUE;
+   trysol = NULL;
+
+   /* create pseudo solution */
+   if( conshdlrdata->heurtrysol != NULL )
    {
-      SCIP_CALL( enfoCons(scip, conss[c], &violated, &rowadded) );
+      SCIP_CALL( SCIPcreateCurrentSol(scip, &trysol, NULL) );
    }
 
-   if( rowadded )
-      *result = SCIP_SEPARATED;
+   for( c = 0; c < nconss && (!violated || solfeasible); ++c )
+   {
+      SCIP_CALL( enfopsCons(scip, conss[c], trysol, &consviolated, &consadded, &solfeasible) );
+      violated = violated || consviolated;
+   }
+
+   /* add a potentially feasible solution was constructed we pass it to the heuristic try sol */
+   if( solfeasible && violated && trysol != NULL )
+   {
+      FILE* file;
+      file = fopen("build.sol", "w");
+
+      if( file != NULL )
+      {
+         SCIP_CALL( SCIPprintSol(scip, trysol, file, FALSE) );
+         fclose(file);
+      }
+
+      SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->heurtrysol, trysol) );
+   }
+
+   SCIP_CALL( SCIPfreeSol(scip, &trysol) );
+
+   if( consadded )
+      *result = SCIP_CONSADDED;
    else if( violated )
       *result = SCIP_INFEASIBLE;
    else
@@ -2682,8 +2863,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpOptcumulative)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsOptcumulative)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_SOL* trysol;
    SCIP_Bool violated;
    SCIP_Bool consadded;
+   SCIP_Bool solfeasible;
    int c;
 
    SCIPdebugMessage("method: enforce pseudo solution\n");
@@ -2693,17 +2877,36 @@ SCIP_DECL_CONSENFOPS(consEnfopsOptcumulative)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    violated = FALSE;
    consadded = FALSE;
+   solfeasible = TRUE;
+   trysol = NULL;
+
+   /* create pseudo solution */
+   if( conshdlrdata->heurtrysol != NULL )
+   {
+      SCIP_CALL( SCIPcreateCurrentSol(scip, &trysol, NULL) );
+   }
 
    for( c = 0; c < nconss && !violated; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, &violated, FALSE) );
+      SCIP_CALL( enfopsCons(scip, conss[c], trysol, &violated, &consadded, &solfeasible) );
    }
+
+   /* add a potentially feasible solution was constructed we pass it to the heuristic try sol */
+   if( solfeasible && violated && trysol != NULL )
+   {
+      SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->heurtrysol, trysol) );
+   }
+
+   SCIP_CALL( SCIPfreeSol(scip, &trysol) );
 
    if( consadded )
       *result = SCIP_CONSADDED;
-   if( violated )
+   else if( violated )
       *result = SCIP_INFEASIBLE;
    else
       *result = SCIP_FEASIBLE;
@@ -3043,12 +3246,10 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
    SCIP_CALL( SCIPallocBufferArray(scip, &durations, consdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &demands, consdata->nvars) );
 
-   /* collect all activities which are were locally assigned to that machine before the bound change was made and add
-    * there lower bounds to the reason
-    */
    nvars = 0;
    choicevar = FALSE;
 
+   /* collect all activities which are were locally assigned to that machine before the bound change was made */
    for( v = 0; v < consdata->nvars; ++v )
    {
       if( SCIPvarGetLbAtIndex(consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
@@ -3072,10 +3273,15 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
          if( SCIPvarGetLbAtIndex(consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
          {
             SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[v]) );
-         }
 
-         SCIP_CALL( SCIPaddConflictLb(scip, consdata->vars[v], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictUb(scip, consdata->vars[v], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, consdata->vars[v], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictUb(scip, consdata->vars[v], bdchgidx) );
+         }
+         else if( consdata->binvars[v] == infervar )
+         {
+            SCIP_CALL( SCIPaddConflictLb(scip, consdata->vars[v], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictUb(scip, consdata->vars[v], bdchgidx) );
+         }
       }
 
       *result = SCIP_SUCCESS;
