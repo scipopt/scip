@@ -1169,7 +1169,7 @@ SCIP_RETCODE checkRedundancy(
    {
       if( infeasible )
       {
-#if 0
+#if 1
          SCIP_CONS* logicor;
          SCIP_VAR* negatedvar;
 
@@ -1271,7 +1271,7 @@ SCIP_RETCODE solveSubproblem(
       if( *cutoff && conflictanalysis )
       {
          int v;
-#if 0
+#if 1
          SCIP_Bool infeasible;
 
          while( nvars > 1 )
