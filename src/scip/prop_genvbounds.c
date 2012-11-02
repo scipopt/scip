@@ -1490,7 +1490,7 @@ SCIP_RETCODE applyGenVBounds(
    {
       int j;
 
-      assert(SCIPinProbing(scip) || SCIPgetDepth(scip) == 0);
+      assert(!propdata->sort || SCIPinProbing(scip) || SCIPgetDepth(scip) == 0);
 
       for( j = 0; j < propdata->ngenvbounds && *result != SCIP_CUTOFF; j++ )
       {
