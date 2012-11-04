@@ -69,6 +69,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_lp.h"
 
 
 #define SEPA_NAME              "cgmip"
@@ -801,6 +802,7 @@ SCIP_RETCODE transformColumn(
 static
 SCIP_RETCODE createSubscip(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    CGMIP_MIPDATA*        mipdata             /**< data for sub-MIP */
    )
@@ -915,8 +917,7 @@ SCIP_RETCODE createSubscip(
       /* check whether we want to skip cut produced by the CGMIP separator */
       if ( sepadata->onlyrankone )
       {
-         /* check for name "cgcut..." */
-         if ( strncmp(SCIProwGetName(row), "cgcut", 5) == 0 )
+         if ( SCIProwGetOriginSepa(row) == sepa )
             continue;
       }
 
@@ -1149,8 +1150,7 @@ SCIP_RETCODE createSubscip(
       /* check whether we want to skip cut produced by the CGMIP separator */
       if ( sepadata->onlyrankone )
       {
-         /* check for name "cgcut..." */
-         if ( strncmp(SCIProwGetName(row), "cgcut", 5) == 0 )
+         if ( SCIProwGetOriginSepa(row) == sepa )
             continue;
       }
 
@@ -1947,10 +1947,10 @@ SCIP_RETCODE solveSubscip(
  *  hence yield a value that is larger than the tolerance.
  *
  *  Because of the transformations we have the following:
- * 
+ *
  *  If variable \f$x_j\f$ was complemented, we have \f$x'_j = u_j - x_j\f$. If in the transformed
  *  system the lower bound is used, its corresponding multiplier is \f$y^T A'_j - \lfloor y^T A'_j
- *  \rfloor\f$, which corresponds to 
+ *  \rfloor\f$, which corresponds to
  *  \f[
  *      y^T A'_j - \lfloor y^T A'_j \rfloor = - y^T A_j - \lfloor - y^T A_j \rfloor = - y^T A_j + \lceil y^T A_j \rceil
  *  \f]
@@ -1970,6 +1970,7 @@ SCIP_RETCODE solveSubscip(
 static
 SCIP_RETCODE computeCut(
    SCIP*                 scip,               /**< original scip */
+   SCIP_SEPA*            sepa,               /**< separator */
    CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_SOL*             sol,                /**< current solution for sub-MIP */
@@ -2021,9 +2022,6 @@ SCIP_RETCODE computeCut(
    maxabsweight = 0.0;
    for (i = 0; i < nrows; ++i)
    {
-#ifndef NDEBUG
-      const char* rowname;
-#endif
       SCIP_ROW* row;
       SCIP_Real weight;
 
@@ -2037,10 +2035,6 @@ SCIP_RETCODE computeCut(
          continue;
       }
 
-#ifndef NDEBUG
-      rowname = SCIProwGetName(row);
-#endif
-
       /* get weight from solution */
       weight = 0.0;
       if ( mipdata->ylhs[i] != NULL )
@@ -2053,8 +2047,7 @@ SCIP_RETCODE computeCut(
          if ( SCIPisFeasPositive(scip, val) )
             weight = -val;
 
-         assert( ! sepadata->onlyrankone || strlen(rowname) <= 5 || 
-            rowname[0] != 'c' || rowname[1] != 'g' || rowname[2] != 'c' || rowname[3] != 'u' || rowname[4] != 't' );
+         assert( ! sepadata->onlyrankone || SCIProwGetOriginSepa(row) != sepa );
       }
       if ( mipdata->yrhs[i] != NULL )
       {
@@ -2067,8 +2060,7 @@ SCIP_RETCODE computeCut(
          if ( SCIPisFeasGT(scip, val, ABS(weight)) )
             weight = val;
 
-         assert( ! sepadata->onlyrankone || strlen(rowname) <= 5 || 
-            rowname[0] != 'c' || rowname[1] != 'g' || rowname[2] != 'c' || rowname[3] != 'u' || rowname[4] != 't' );
+         assert( ! sepadata->onlyrankone || SCIProwGetOriginSepa(row) != sepa );
       }
 
       weight = REALABS(weight);
@@ -2416,7 +2408,7 @@ SCIP_RETCODE createCGCutDirect(
    success = TRUE;
 
    /* compute coefficients */
-   SCIP_CALL( computeCut(scip, mipdata, sepadata, sol, cutcoefs, &cutrhs, &localrowsused, &localboundsused, &success) );
+   SCIP_CALL( computeCut(scip, sepa, mipdata, sepadata, sol, cutcoefs, &cutrhs, &localrowsused, &localboundsused, &success) );
    cutislocal = localrowsused || localboundsused;
 
    /* take next solution if cut was not valid */
@@ -3422,7 +3414,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    mipdata->z = NULL;
 
    /* create subscip */
-   SCIP_CALL( createSubscip(scip, sepadata, mipdata) );
+   SCIP_CALL( createSubscip(scip, sepa, sepadata, mipdata) );
 
    /* set parameters */
    SCIP_CALL( subscipSetParams(sepadata, mipdata, &success) );
