@@ -2023,7 +2023,7 @@ SCIP_RETCODE computeCut(
    for (i = 0; i < nrows; ++i)
    {
       SCIP_ROW* row;
-      SCIP_Real weight;
+      SCIP_Real absweight = 0.0;
 
       row = rows[i];
       assert( row != NULL );
@@ -2036,7 +2036,6 @@ SCIP_RETCODE computeCut(
       }
 
       /* get weight from solution */
-      weight = 0.0;
       if ( mipdata->ylhs[i] != NULL )
       {
          val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
@@ -2045,7 +2044,7 @@ SCIP_RETCODE computeCut(
          val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          if ( SCIPisFeasPositive(scip, val) )
-            weight = -val;
+            absweight = val;
 
          assert( ! sepadata->onlyrankone || SCIProwGetOriginSepa(row) != sepa );
       }
@@ -2057,15 +2056,15 @@ SCIP_RETCODE computeCut(
          val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
-         if ( SCIPisFeasGT(scip, val, ABS(weight)) )
-            weight = val;
+         if ( SCIPisFeasGT(scip, val, absweight) )
+            absweight = val;
 
          assert( ! sepadata->onlyrankone || SCIProwGetOriginSepa(row) != sepa );
       }
+      assert( ! SCIPisNegative(scip, absweight) );
 
-      weight = REALABS(weight);
-      if ( weight > maxabsweight )
-         maxabsweight = weight;
+      if ( absweight > maxabsweight )
+         maxabsweight = absweight;
    }
 
    /* calculate the row summation */
