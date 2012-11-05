@@ -4018,7 +4018,10 @@ $(LIBOBJDIR)/scip/event.o: src/scip/event.c src/scip/def.h src/scip/type_retcode
  src/scip/pub_var.h src/scip/type_implics.h src/scip/pub_misc.h \
  src/scip/struct_var.h src/scip/primal.h src/scip/struct_primal.h \
  src/scip/branch.h src/scip/type_sepastore.h src/scip/pub_branch.h
-$(LIBOBJDIR)/scip/fileio.o: src/scip/fileio.c src/scip/pub_fileio.h
+$(LIBOBJDIR)/scip/fileio.o: src/scip/fileio.c src/scip/pub_fileio.h src/scip/pub_misc.h \
+ src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
+ src/scip/type_message.h src/blockmemshell/memory.h src/scip/type_misc.h \
+ src/scip/type_var.h
 $(LIBOBJDIR)/scip/heur.o: src/scip/heur.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/set.h \
  src/blockmemshell/memory.h src/scip/buffer.h src/scip/type_set.h \
