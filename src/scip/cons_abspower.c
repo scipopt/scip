@@ -1751,7 +1751,7 @@ SCIP_RETCODE checkFixedVariables(
       {
          SCIP_Real factor;
 
-         factor = consdata->pow(scalar, consdata->exponent);
+         factor = consdata->power(scalar, consdata->exponent);
          if( !SCIPisInfinity(scip, -consdata->lhs) )
             consdata->lhs /= factor;
          if( !SCIPisInfinity(scip,  consdata->rhs) )
@@ -1766,7 +1766,7 @@ SCIP_RETCODE checkFixedVariables(
 
          assert(scalar < 0.0);
 
-         factor = -consdata->pow(-scalar, consdata->exponent);
+         factor = -consdata->power(-scalar, consdata->exponent);
          assert(factor < 0.0);
 
          oldlhs = consdata->lhs;
