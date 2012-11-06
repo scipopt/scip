@@ -262,6 +262,9 @@ public:
       setSolver(&m_slu);
       setTester(&m_ratio);
       setPricer(&m_price_steep);
+#if ((SOPLEX_VERSION == 170 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 170)
+      SPxSolver::setMaxUpdates(500);
+#endif
       /* no starter */
 
       if ( probname != NULL )
