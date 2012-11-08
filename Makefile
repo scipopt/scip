@@ -363,7 +363,7 @@ NLPILIBCOBJ	= nlpi/nlpi.o \
 		  nlpi/nlpioracle.o \
 		  nlpi/expr.o
 
-NLPILIBCXXOBJ	= nlpi/intervalarith.o
+NLPILIBCXXOBJ	= nlpi/intervalarithext.o
 
 NLPILIBSCIPOBJ	= blockmemshell/memory.o \
 		  scip/misc.o \

@@ -1574,7 +1574,10 @@ SCIP_RETCODE SCIPlpiCreate(
 
    /* create SoPlex object */
    SCIP_ALLOC( BMSallocMemory(lpi) );
-   SOPLEX_TRY( messagehdlr, (*lpi)->spx = new SPxSCIP(messagehdlr, name) );
+
+   /* we use this construction to allocate the memory for the SoPlex class also via the blockmemshell */
+   (*lpi)->spx = static_cast<SPxSCIP*>(BMSallocMemoryCPP(sizeof(SPxSCIP)));
+   SOPLEX_TRY( messagehdlr, (*lpi)->spx = new ((*lpi)->spx) SPxSCIP(messagehdlr, name) );
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
    (*lpi)->cstatsize = 0;
@@ -1604,8 +1607,9 @@ SCIP_RETCODE SCIPlpiFree(
    assert(*lpi != NULL);
    assert((*lpi)->spx != NULL);
 
-   /* free LP */
-   delete (*lpi)->spx;
+   /* free LP using destructor and free memory via blockmemshell */
+   (*lpi)->spx->~SPxSCIP();
+   BMSfreeMemory(&((*lpi)->spx));
 
    /* free memory */
    BMSfreeMemoryArrayNull(&(*lpi)->cstat);

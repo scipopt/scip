@@ -13,15 +13,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   nlpi/intervalarith.h
+/**@file   intervalarithext.h
  * @brief  C++ extensions to interval arithmetics for provable bounds
  * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_INTERVALARITH_HPP__
-#define __SCIP_INTERVALARITH_HPP__
+#ifndef __SCIP_INTERVALARITHEXT_HPP__
+#define __SCIP_INTERVALARITHEXT_HPP__
 
 #include "scip/intervalarith.h"
 #include "scip/pub_message.h"

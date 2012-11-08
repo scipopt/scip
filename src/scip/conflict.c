@@ -4234,7 +4234,11 @@ SCIP_RETCODE undoBdchgsProof(
       assert(proofactdeltas[i] > 0.0);
       assert((lbchginfoposs[SCIPvarGetProbindex(cands[i])] >= 0) != (ubchginfoposs[SCIPvarGetProbindex(cands[i])] >= 0));
 
-      if( SCIPsetIsGT(set, prooflhs, proofact + proofactdeltas[i]) )
+      /* when relaxing a constraint we still need to stay infeasible; therefore we need to do the comparison in
+       * feasibility tolerance because if 'prooflhs' is (feas-))equal to 'proofact + proofactdeltas[i]' it would mean
+       * that there is no violation
+       */
+      if( SCIPsetIsFeasGT(set, prooflhs, proofact + proofactdeltas[i]) )
       {
          v = SCIPvarGetProbindex(cands[i]);
          assert(0 <= v && v < nvars);
