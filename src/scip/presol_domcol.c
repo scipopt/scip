@@ -47,7 +47,6 @@
 #define PRESOL_PRIORITY         20000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY                TRUE     /**< should presolver be delayed, if other presolvers found reductions? */
-#define DEFAULT_ONLYPARALLEL       FALSE     /**< should only parallel columns be processed */
 
 /*
  * Data structures
@@ -61,12 +60,6 @@ enum Fixingdirection
    FIXATUB =  1          /**< fix variable at upper bound */
 };
 typedef enum Fixingdirection FIXINGDIRECTION;
-
-/** control parameters */
-struct SCIP_PresolData
-{
-   SCIP_Bool             onlyparallel;       /**< should only parallel columns be processed */
-};
 
 
 /********************************************************************/
@@ -1381,8 +1374,7 @@ SCIP_RETCODE detectParallelCols(
    SCIP*                 scip,               /**< SCIP main data structure */
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix structure */
    int*                  pclass,             /**< class of parallel columns */
-   SCIP_Bool*            varineq,            /**< array indicating if variable is present within an equality or ranged row */
-   SCIP_PRESOLDATA*      presoldata          /**< scip presolver data */
+   SCIP_Bool*            varineq             /**< array indicating if variable is present within an equality or ranged row */
   )
 {
    int* classsize;
@@ -1405,12 +1397,12 @@ SCIP_RETCODE detectParallelCols(
    SCIP_Real aij;
    int mincolsperrow;
    int maxcolsperrow;
+   SCIP_Bool isequality;
 
    assert(scip != NULL);
    assert(matrix != NULL);
    assert(pclass != NULL);
    assert(varineq != NULL);
-   assert(presoldata != NULL);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &classsize, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &scale, matrix->ncols) );
@@ -1432,6 +1424,17 @@ SCIP_RETCODE detectParallelCols(
    }
    if( mincolsperrow < 32 )
       mincolsperrow = 32;
+   else
+   {
+      /* use next power of two which is smaller */
+      unsigned int n;
+      i = 0;
+      assert(mincolsperrow >= 0);
+      n = (unsigned int)mincolsperrow;
+      for(; n; ++i, n>>=1);
+      mincolsperrow = 1 << i;
+      assert(mincolsperrow >= 32);
+   }
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(classsetidx[0]), maxcolsperrow) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(classsetval[0]), maxcolsperrow) );
@@ -1462,9 +1465,10 @@ SCIP_RETCODE detectParallelCols(
    /* loop over all rows */
    for( i = 0; i < matrix->nrows; ++i )
    {
-      /* we consider only equations or ranged rows if we do not use only parallel mode */
-      if( presoldata->onlyparallel ||
-         (!SCIPisInfinity(scip, -matrix->lhs[i]) && !SCIPisInfinity(scip, matrix->rhs[i])) )
+      isequality = !SCIPisInfinity(scip, -matrix->lhs[i]) && !SCIPisInfinity(scip, matrix->rhs[i]);
+
+      /* we consider only equations or ranged rows */
+      if( isequality )
       {
          rowpnt = matrix->rowmatind + matrix->rowmatbeg[i];
          rowend = rowpnt + matrix->rowmatcnt[i];
@@ -1479,7 +1483,7 @@ SCIP_RETCODE detectParallelCols(
             j   = *rowpnt;
 
             /* remember variable was within an equation or ranged row present */
-            varineq[j] = TRUE;
+            varineq[j] = isequality;
 
 #ifdef SCIP_DEBUG
             if( SCIPisEQ(scip, aij, 0.0) )
@@ -1493,8 +1497,7 @@ SCIP_RETCODE detectParallelCols(
 
             if( classsetfill[pclass[j]] == classsetsize[pclass[j]] )
             {
-               /* TODO: use a better index picking strategy by processing
-                *       the rows in sparsity order to avoid memory reallocation
+               /* TODO: use a better index picking strategy to avoid memory reallocation
                 */
                SCIP_CALL( SCIPreallocMemoryArray(scip, &(classsetidx[pclass[j]]), classsetsize[pclass[j]]*2) );
                SCIP_CALL( SCIPreallocMemoryArray(scip, &(classsetval[pclass[j]]), classsetsize[pclass[j]]*2) );
@@ -1582,11 +1585,14 @@ void findFixings(
    int                   dominatedidx,       /**< column index of the dominated variable */
    FIXINGDIRECTION*      varstofix,          /**< array holding fixing information */
    SCIP_Bool             onlybinvars,        /**< flag indicating only binary variables are present */
-   int*                  npossiblefixings,   /**< counter for possible fixings */
-   int*                  ncliquepreventions, /**< counter for clique preventions */
-   int*                  nboundpreventions   /**< counter for bound preventions */
+   int*                  npossiblefixings    /**< counter for possible fixings */
    )
 {
+   /* we compare only variables from the same type */
+   assert(SCIPvarGetType(dominatingvar) == SCIPvarGetType(dominatedvar) ||
+      (SCIPvarGetType(dominatingvar) == SCIP_VARTYPE_INTEGER && SCIPvarGetType(dominatedvar) == SCIP_VARTYPE_IMPLINT) ||
+      (SCIPvarGetType(dominatedvar) == SCIP_VARTYPE_INTEGER && SCIPvarGetType(dominatingvar) == SCIP_VARTYPE_IMPLINT));
+
    if( matrix->colmatcnt[dominatingidx] == 1 && matrix->colmatcnt[dominatedidx] == 1 )
    {
       /* we have a x->y dominance relation and only one equality constraint
@@ -1613,9 +1619,20 @@ void findFixings(
       }
    }
 
+   if( SCIPvarGetType(dominatingvar) != SCIP_VARTYPE_CONTINUOUS )
+   {
+      /* if we don't have a continuous variable we have to
+       * round up the predicted bounds
+       */
+      if( -SCIPinfinity(scip) < dominatingwclb && dominatingwclb < SCIPinfinity(scip) )
+         dominatingwclb = SCIPceil(scip,dominatingwclb);
+
+      if( -SCIPinfinity(scip) < dominatingub && dominatingub < SCIPinfinity(scip) )
+         dominatingub = SCIPceil(scip,dominatingub);
+   }
+
    if( SCIPisPositive(scip, SCIPvarGetObj(dominatingvar)) )
    {
-      assert(SCIPisPositive(scip, SCIPvarGetObj(dominatedvar)));
       if( !SCIPisInfinity(scip, -dominatingwclb) &&
          SCIPisLE(scip, dominatingwclb, SCIPvarGetUbGlobal(dominatingvar)) )
       {
@@ -1636,47 +1653,35 @@ void findFixings(
 #endif
          }
       }
-      else
-      {
-         (*nboundpreventions)++;
-      }
-   }
-   else
-   {
-      if( !SCIPisInfinity(scip, dominatingub) &&
-         SCIPisLE(scip, dominatingub, SCIPvarGetUbGlobal(dominatingvar)) )
-      {
-         /* we have a x->y dominance relation with a negative or zero obj coefficient
-          * of the dominating variable x. in all cases we have to look
-          * if the predicted upper bound of the dominating variable is great enough.
-          * by testing, that the predicted upper bound is not infinity we avoid problems
-          * with x->y e.g.
-          *    min  -x -y
-          *    s.t. -x -y <= -1
-          *    0<=x<=1, 0<=y<= 1
-          * where y is not at their lower bound.
-          */
-         if( varstofix[dominatedidx] == NOFIX )
-         {
-            varstofix[dominatedidx] = FIXATLB;
-            (*npossiblefixings)++;
-#ifdef SCIP_DEBUG
-            printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
-               dominatedvar,dominatedidx,dominatingub,dominatingwclb);
-#endif
-         }
-      }
-      else
-      {
-         (*nboundpreventions)++;
-      }
    }
 
+   if( !SCIPisInfinity(scip, dominatingub) &&
+      SCIPisLE(scip, dominatingub, SCIPvarGetUbGlobal(dominatingvar)) )
+   {
+      /* we have a x->y dominance relation with an arbitrary obj coefficient
+       * of the dominating variable x. in all cases we have to look
+       * if the predicted upper bound of the dominating variable is great enough.
+       * by testing, that the predicted upper bound is not infinity we avoid problems
+       * with x->y e.g.
+       *    min  -x -y
+       *    s.t. -x -y <= -1
+       *    0<=x<=1, 0<=y<=1
+       * where y is not at their lower bound.
+       */
+      if( varstofix[dominatedidx] == NOFIX )
+      {
+         varstofix[dominatedidx] = FIXATLB;
+         (*npossiblefixings)++;
+#ifdef SCIP_DEBUG
+         printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
+            dominatedvar,dominatedidx,dominatingub,dominatingwclb);
+#endif
+      }
+   }
 
    if( onlybinvars )
    {
-      if( SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, TRUE, TRUE) &&
-         !SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, FALSE, TRUE) )
+      if( SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, TRUE, TRUE) )
       {
          /* We have a (1->1)-clique with dominance relation (x->y) (x dominates y).
           * From this dominance relation, we know (1->0) is possible and not worse than (0->1)
@@ -1689,8 +1694,8 @@ void findFixings(
             (*npossiblefixings)++;
          }
       }
-      else if( SCIPvarsHaveCommonClique(dominatingvar, FALSE, dominatedvar, FALSE, TRUE) &&
-         !SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, FALSE, TRUE) )
+
+      if( SCIPvarsHaveCommonClique(dominatingvar, FALSE, dominatedvar, FALSE, TRUE) )
       {
          /* We have a (0->0)-clique with dominance relation x->y (x dominates y).
           * From this dominance relation, we know (1->0) is possible and not worse than (0->1)
@@ -1702,10 +1707,6 @@ void findFixings(
             varstofix[dominatingidx] = FIXATUB;
             (*npossiblefixings)++;
          }
-      }
-      else
-      {
-         (*ncliquepreventions)++;
       }
    }
 }
@@ -1720,9 +1721,7 @@ SCIP_RETCODE findDominancePairs(
    SCIP_Bool             onlybinvars,        /**< flag indicating searchcols has only binary variable indexes */
    FIXINGDIRECTION*      varstofix,          /**< array holding information for later upper/lower bound fixing */
    int*                  npossiblefixings,   /**< found number of possible fixings */
-   int*                  ndomrelations,      /**< found number of dominance relations */
-   int*                  ncliquepreventions, /**< number of clique preventions for doing a variable fixing */
-   int*                  nboundpreventions   /**< number of bound preventions for doing a variable fixing */
+   int*                  ndomrelations       /**< found number of dominance relations */
    )
 {
    SCIP_Real* vals1;
@@ -1750,8 +1749,6 @@ SCIP_RETCODE findDominancePairs(
    assert(varstofix != NULL);
    assert(npossiblefixings != NULL);
    assert(ndomrelations != NULL);
-   assert(ncliquepreventions != NULL);
-   assert(nboundpreventions != NULL);
 
    /* pair comparisons */
    for( cnt1 = 0; cnt1 < searchsize; cnt1++ )
@@ -2003,13 +2000,13 @@ SCIP_RETCODE findDominancePairs(
          {
             findFixings(scip, matrix, matrix->vars[col1], col1,
                tmpupperboundcol1, tmpwclowerboundcol1, matrix->vars[col2],
-               col2, varstofix, onlybinvars, npossiblefixings, ncliquepreventions, nboundpreventions);
+               col2, varstofix, onlybinvars, npossiblefixings);
          }
          else if( col2domcol1 )
          {
             findFixings(scip, matrix, matrix->vars[col2], col2,
                tmpupperboundcol2, tmpwclowerboundcol2, matrix->vars[col1],
-               col1, varstofix, onlybinvars, npossiblefixings, ncliquepreventions, nboundpreventions);
+               col1, varstofix, onlybinvars, npossiblefixings);
          }
       }
    }
@@ -2022,21 +2019,6 @@ SCIP_RETCODE findDominancePairs(
  * Callback methods of presolver
  */
 
-/** destructor of presolver to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_PRESOLFREE(presolFreeDomcol)
-{  /*lint --e{715}*/
-   SCIP_PRESOLDATA* presoldata;
-
-   /* free presolver data */
-   presoldata = SCIPpresolGetData(presol);
-   assert(presoldata != NULL);
-
-   SCIPfreeMemory(scip, &presoldata);
-   SCIPpresolSetData(presol, NULL);
-
-   return SCIP_OKAY;
-}
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
@@ -2056,7 +2038,6 @@ SCIP_DECL_PRESOLCOPY(presolCopyDomcol)
 static
 SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 {  /*lint --e{715}*/
-   SCIP_PRESOLDATA* presoldata;
    CONSTRAINTMATRIX* matrix;
    SCIP_Bool initialized;
 
@@ -2071,9 +2052,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 
    *result = SCIP_DIDNOTFIND;
 
-   presoldata = SCIPpresolGetData(presol);
-   assert(presoldata != NULL);
-
    /* initialize constraint matrix */
    matrix = NULL;
    initialized = FALSE;
@@ -2082,13 +2060,11 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
    if( initialized )
    {
       int npossiblefixings;
-      int ncliquepreventions;
-      int nboundpreventions;
       int ndomrelations;
       int v;
       int r;
       FIXINGDIRECTION* varstofix;
-      int* varsprocessed;
+      SCIP_Bool* varsprocessed;
       int nconvarsfixed;
       int nintvarsfixed;
       int nbinvarsfixed;
@@ -2112,8 +2088,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       assert(SCIPgetNVars(scip) == matrix->ncols);
 
       npossiblefixings = 0;
-      ncliquepreventions = 0;
-      nboundpreventions = 0;
       ndomrelations = 0;
       nconvarsfixed = 0;
       nintvarsfixed = 0;
@@ -2147,17 +2121,22 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          varineq[v] = FALSE;
       }
 
+
       /* 1.stage: we search for dominance relations by parallel columns
        *          concerning equalities and ranged rows
        */
 
-      SCIP_CALL( detectParallelCols(scip, matrix, pclass, varineq, presoldata) );
+      SCIP_CALL( detectParallelCols(scip, matrix, pclass, varineq) );
       SCIPsortIntInt(pclass, colidx, nvars);
 
       varcount = 0;
+
       pc = 0;
       while( pc < nvars )
       {
+         int varidx;
+
+         varidx = 0;
          nconfill = 0;
          nintfill = 0;
          nbinfill = 0;
@@ -2165,14 +2144,12 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          pclassstart = pclass[pc];
          while( pc < nvars && pclassstart==pclass[pc] )
          {
-            int varidx;
             varidx = colidx[pc];
 
             /* we observe only variables which are not processed and present within
-             * equalities or ranged rows if we do not use only parallel mode
+             * equalities or ranged rows
              */
-            if( varsprocessed[varidx] == FALSE &&
-               (presoldata->onlyparallel || varineq[varidx] == TRUE) )
+            if( varsprocessed[varidx] == FALSE && varineq[varidx] == TRUE )
             {
                /* we search only for dominance relations between the same variable type */
                if( SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_CONTINUOUS )
@@ -2196,37 +2173,61 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          if( nconfill > 1 )
          {
             SCIP_CALL( findDominancePairs(scip, matrix, consearchcols, nconfill, FALSE,
-                  varstofix, &npossiblefixings, &ndomrelations, &ncliquepreventions, &nboundpreventions) );
+                  varstofix, &npossiblefixings, &ndomrelations) );
+
+            for( v = 0; v < nconfill; ++v )
+            {
+               varsprocessed[consearchcols[v]] = TRUE;
+            }
+            varcount += nconfill;
          }
-         for( v = 0; v < nconfill; ++v )
+         else if( nconfill == 1 )
          {
-            varsprocessed[consearchcols[v]] = TRUE;
+            if( varineq[varidx] == TRUE )
+            {
+               varsprocessed[consearchcols[0]] = TRUE;
+            }
          }
-         varcount += nconfill;
 
          /* search for dominance relations between integer and impl-integer variables */
          if( nintfill > 1 )
          {
             SCIP_CALL( findDominancePairs(scip, matrix, intsearchcols, nintfill, FALSE,
-                  varstofix, &npossiblefixings, &ndomrelations, &ncliquepreventions, &nboundpreventions) );
+                  varstofix, &npossiblefixings, &ndomrelations) );
+
+            for( v = 0; v < nintfill; ++v )
+            {
+               varsprocessed[intsearchcols[v]] = TRUE;
+            }
+            varcount += nintfill;
          }
-         for( v = 0; v < nintfill; ++v )
+         else if( nintfill == 1 )
          {
-            varsprocessed[intsearchcols[v]] = TRUE;
+            if( varineq[varidx] == TRUE )
+            {
+               varsprocessed[intsearchcols[0]] = TRUE;
+            }
          }
-         varcount += nintfill;
 
          /* search for dominance relations between binary variables */
          if( nbinfill > 1 )
          {
             SCIP_CALL( findDominancePairs(scip, matrix, binsearchcols, nbinfill, TRUE,
-                  varstofix, &npossiblefixings, &ndomrelations, &ncliquepreventions, &nboundpreventions) );
+                  varstofix, &npossiblefixings, &ndomrelations) );
+
+            for( v = 0; v < nbinfill; ++v )
+            {
+               varsprocessed[binsearchcols[v]] = TRUE;
+            }
+            varcount += nbinfill;
          }
-         for( v = 0; v < nbinfill; ++v )
+         else if( nbinfill == 1 )
          {
-            varsprocessed[binsearchcols[v]] = TRUE;
+            if( varineq[varidx] == TRUE )
+            {
+               varsprocessed[binsearchcols[0]] = TRUE;
+            }
          }
-         varcount += nbinfill;
 
          /* break if no vars are left */
          if( varcount >= nvars )
@@ -2236,108 +2237,106 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       }
 
 
-      if( !presoldata->onlyparallel )
+      /* 2.stage: we search for dominance relations of the left columns
+       *          by row-sparsity order
+       */
+
+      /* sort rows per sparsity monotonically increasing */
+      SCIPsortIntInt(rowsparsity, rowidxsorted, nrows);
+
+      for( r = 0; r < nrows; ++r )
       {
-         /* 2.stage: we search for dominance relations of non parallel columns
-          *          by row-sparsity order
+         int rowidx;
+         int* rowpnt;
+         int* rowend;
+
+         /* break if the time limit was reached; since the check is expensive,
+          * we only check all 1000 constraints
           */
+         if( (r % 1000 == 0) && SCIPisStopped(scip) )
+            break;
 
-         /* sort rows per sparsity monotonically increasing */
-         SCIPsortIntInt(rowsparsity, rowidxsorted, nrows);
+         rowidx = rowidxsorted[r];
+         rowpnt = matrix->rowmatind + matrix->rowmatbeg[rowidx];
+         rowend = rowpnt + matrix->rowmatcnt[rowidx];
 
-         for( r = 0; r < nrows; ++r )
+         if( matrix->rowmatcnt[rowidx] == 1 )
+            continue;
+
+         nconfill = 0;
+         nintfill = 0;
+         nbinfill = 0;
+
+         for( ; rowpnt < rowend; rowpnt++ )
          {
-            int rowidx;
-            int* rowpnt;
-            int* rowend;
-
-            /* break if the time limit was reached; since the check is expensive,
-             * we only check all 1000 constraints
-             */
-            if( (r % 1000 == 0) && SCIPisStopped(scip) )
-               break;
-
-            rowidx = rowidxsorted[r];
-            rowpnt = matrix->rowmatind + matrix->rowmatbeg[rowidx];
-            rowend = rowpnt + matrix->rowmatcnt[rowidx];
-
-            if( matrix->rowmatcnt[rowidx] == 1 )
-               continue;
-
-            nconfill = 0;
-            nintfill = 0;
-            nbinfill = 0;
-
-            for( ; rowpnt < rowend; rowpnt++ )
+            if( varsprocessed[*rowpnt] == FALSE )
             {
-               if( varsprocessed[*rowpnt] == FALSE )
-               {
-                  int varidx;
-                  varidx = *rowpnt;
+               int varidx;
+               varidx = *rowpnt;
 
-                  /* we search only for dominance relations between the same variable type.
-                   * additionally we secure with this approach, that we only compare
-                   * variables which occur minimum in one row together.
-                   */
-                  if( SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_CONTINUOUS )
-                  {
-                     consearchcols[nconfill++] = varidx;
-                  }
-                  else if( SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_INTEGER ||
-                     SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_IMPLINT )
-                  {
-                     intsearchcols[nintfill++] = varidx;
-                  }
-                  else if( SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_BINARY )
-                  {
-                     binsearchcols[nbinfill++] = varidx;
-                  }
+               /* we search only for dominance relations between the same variable type */
+               if( SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_CONTINUOUS )
+               {
+                  consearchcols[nconfill++] = varidx;
+               }
+               else if( SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_INTEGER ||
+                  SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_IMPLINT )
+               {
+                  intsearchcols[nintfill++] = varidx;
+               }
+               else if( SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_BINARY )
+               {
+                  binsearchcols[nbinfill++] = varidx;
                }
             }
+         }
 
-            /* search for dominance relations between continuous variables */
-            if( nconfill > 1 )
-            {
-               SCIP_CALL( findDominancePairs(scip, matrix, consearchcols, nconfill, FALSE,
-                     varstofix, &npossiblefixings, &ndomrelations, &ncliquepreventions, &nboundpreventions) );
-            }
+         /* search for dominance relations between continuous variables */
+         if( nconfill > 1 )
+         {
+            SCIP_CALL( findDominancePairs(scip, matrix, consearchcols, nconfill, FALSE,
+                  varstofix, &npossiblefixings, &ndomrelations) );
+
             for( v = 0; v < nconfill; ++v )
             {
                varsprocessed[consearchcols[v]] = TRUE;
             }
             varcount += nconfill;
+         }
 
-            /* search for dominance relations between integer and impl-integer variables */
-            if( nintfill > 1 )
-            {
-               SCIP_CALL( findDominancePairs(scip, matrix, intsearchcols, nintfill, FALSE,
-                     varstofix, &npossiblefixings, &ndomrelations, &ncliquepreventions, &nboundpreventions) );
-            }
+         /* search for dominance relations between integer and impl-integer variables */
+         if( nintfill > 1 )
+         {
+            SCIP_CALL( findDominancePairs(scip, matrix, intsearchcols, nintfill, FALSE,
+                  varstofix, &npossiblefixings, &ndomrelations) );
+
             for( v = 0; v < nintfill; ++v )
             {
                varsprocessed[intsearchcols[v]] = TRUE;
             }
             varcount += nintfill;
+         }
 
-            /* search for dominance relations between binary variables */
-            if( nbinfill > 1 )
-            {
-               SCIP_CALL( findDominancePairs(scip, matrix, binsearchcols, nbinfill, TRUE,
-                     varstofix, &npossiblefixings, &ndomrelations, &ncliquepreventions, &nboundpreventions) );
-            }
+         /* search for dominance relations between binary variables */
+         if( nbinfill > 1 )
+         {
+            SCIP_CALL( findDominancePairs(scip, matrix, binsearchcols, nbinfill, TRUE,
+                  varstofix, &npossiblefixings, &ndomrelations) );
+
             for( v = 0; v < nbinfill; ++v )
             {
                varsprocessed[binsearchcols[v]] = TRUE;
             }
             varcount += nbinfill;
+         }
 
-            /* break if no vars are left */
-            if( varcount >= nvars )
-            {
-               break;
-            }
+         /* break if no vars are left */
+         if( varcount >= nvars )
+         {
+            break;
          }
       }
+
 
       if( npossiblefixings > 0 )
       {
@@ -2438,13 +2437,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 
       if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 )
       {
-         SCIPdebugMessage("### %d vars [%d dom] (%d clqprev, %d bndprev) ===>>> fixed [cont: %d, int: %d, bin: %d]\n",
-            matrix->ncols, ndomrelations, ncliquepreventions, nboundpreventions, nconvarsfixed, nintvarsfixed, nbinvarsfixed);
+         SCIPdebugMessage("### %d vars [%d dom] ===>>> fixed [cont: %d, int: %d, bin: %d]\n",
+            matrix->ncols, ndomrelations, nconvarsfixed, nintvarsfixed, nbinvarsfixed);
       }
       else
       {
-          SCIPdebugMessage("### %d vars [%d dom] (%d clqprev, %d bndprev) - no fixings found.\n",
-            matrix->ncols, ndomrelations, ncliquepreventions, nboundpreventions);
+         SCIPdebugMessage("### %d vars [%d dom] - no fixings found.\n",
+            matrix->ncols, ndomrelations);
       }
    }
 
@@ -2463,23 +2462,12 @@ SCIP_RETCODE SCIPincludePresolDomcol(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
-
-   /* create components presolver data */
-   SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
-         PRESOL_DELAY, presolExecDomcol, presoldata) );
+         PRESOL_DELAY, presolExecDomcol, NULL) );
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyDomcol) );
-   SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeDomcol) );
-
-   /* add presolver parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/domcol/onlyparallel",
-         "should only parallel columns be processed",
-         &presoldata->onlyparallel, FALSE, DEFAULT_ONLYPARALLEL, NULL, NULL) );
 
    return SCIP_OKAY;
 }
