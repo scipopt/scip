@@ -49,6 +49,7 @@ TEST		=	short
 SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
+VALGRIND	=	false
 
 VERBOSE		=	false
 OPT		=	opt

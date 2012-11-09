@@ -43,9 +43,9 @@ using std::vector;
 #define SIGN(x) ((x) >= 0.0 ? 1.0 : -1.0)
 
 /* in order to use intervals as operands in CppAD,
- * we need to include the intervalarith.hpp very early and require the interval operations to be in the CppAD namespace */
+ * we need to include the intervalarithext.h very early and require the interval operations to be in the CppAD namespace */
 #define SCIPInterval_NAMESPACE CppAD
-#include "nlpi/intervalarith.h"
+#include "nlpi/intervalarithext.h"
 
 SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
 using CppAD::SCIPInterval;

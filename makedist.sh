@@ -31,6 +31,19 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*cvs*" \
 --exclude="*~" \
 --exclude=".*" \
+--exclude="*xyz*" \
+--exclude="nlpioracle.c" \
+--exclude="nlpioracle.h" \
+--exclude="exprinterpret_cppad.cpp " \
+--exclude="nlpi_ipopt.cpp" \
+--exclude="lpi_c*" \
+--exclude="lpi_grb.c" \
+--exclude="lpi_msk.c" \
+--exclude="lpi_none.c" \
+--exclude="lpi_qso.c" \
+--exclude="lpi_spx121.cpp" \
+--exclude="lpi_spx132.cpp" \
+--exclude="lpi_xprs.c" \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
 $NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/inc/faq.inc \
 $NAME/doc/inc/faqcss.inc $NAME/doc/inc/authors.inc $NAME/doc/inc/parameters.set \
@@ -60,7 +73,7 @@ $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
-$NAME/src/cppad/* $NAME/src/cppad/local/* \
+# $NAME/src/cppad/* $NAME/src/cppad/local/* \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
 $NAME/examples/Binpacking/doc/* $NAME/examples/Binpacking/doc/pics/binpacking.png \
 $NAME/examples/Binpacking/check/testset/short.test $NAME/examples/Binpacking/check/testset/short.solu \

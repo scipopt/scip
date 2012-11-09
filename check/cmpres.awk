@@ -1292,7 +1292,7 @@ END {
       for( o = 0; o < nsolver; ++o )
       {
          s = printorder[o];
-         printf("& %8s & %8.1f", texint(nodetotal[s,0]/nevalprobs[s,0]), timetotal[s,0]/nevalprobs[s,0]) > texcmpfile;
+         printf("& %8s & %8.1f", texint(nodetotal[s,0]/max(1,nevalprobs[s,0])), timetotal[s,0]/max(1,nevalprobs[s,0])) > texcmpfile;
       }
       printf("\\\\\n") > texcmpfile;
       
@@ -1317,7 +1317,7 @@ END {
       for( o = 0; o < nsolver; ++o )
       {
          s = printorder[o];
-         printf("& %8s & %8.1f", texint(nodetotal[s,-1]/nevalprobs[s,-1]), timetotal[s,-1]/nevalprobs[s,-1]) > texcmpfile;
+         printf("& %8s & %8.1f", texint(nodetotal[s,-1]/max(1,nevalprobs[s,-1])), timetotal[s,-1]/max(1,nevalprobs[s,-1])) > texcmpfile;
       }
       printf("\\\\\n") > texcmpfile;
       printf("\\bottomrule\n") > texcmpfile;

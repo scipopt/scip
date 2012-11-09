@@ -56,9 +56,12 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrSuperindicator(scip) );
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
+#ifndef __SAP_NO_READERS__
    SCIP_CALL( SCIPincludeReaderBnd(scip) );
    SCIP_CALL( SCIPincludeReaderCcg(scip) );
+#endif
    SCIP_CALL( SCIPincludeReaderCip(scip) );
+#ifndef __SAP_NO_READERS__
    SCIP_CALL( SCIPincludeReaderCnf(scip) );
    SCIP_CALL( SCIPincludeReaderFix(scip) );
    SCIP_CALL( SCIPincludeReaderFzn(scip) );
@@ -73,6 +76,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderSol(scip) );
    SCIP_CALL( SCIPincludeReaderWbo(scip) );
    SCIP_CALL( SCIPincludeReaderZpl(scip) );
+#endif
    SCIP_CALL( SCIPincludePresolBoundshift(scip) );
    SCIP_CALL( SCIPincludePresolComponents(scip) );
    SCIP_CALL( SCIPincludePresolConvertinttobin(scip) );

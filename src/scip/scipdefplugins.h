@@ -121,9 +121,12 @@
 #include "scip/prop_redcost.h"
 #include "scip/prop_rootredcost.h"
 #include "scip/prop_vbounds.h"
+#ifndef __SAP_NO_READERS__
 #include "scip/reader_bnd.h"
 #include "scip/reader_ccg.h"
+#endif
 #include "scip/reader_cip.h"
+#ifndef __SAP_NO_READERS__
 #include "scip/reader_cnf.h"
 #include "scip/reader_fix.h"
 #include "scip/reader_fzn.h"
@@ -138,6 +141,7 @@
 #include "scip/reader_sol.h"
 #include "scip/reader_wbo.h"
 #include "scip/reader_zpl.h"
+#endif
 #include "scip/sepa_cgmip.h"
 #include "scip/sepa_clique.h"
 #include "scip/sepa_closecuts.h"

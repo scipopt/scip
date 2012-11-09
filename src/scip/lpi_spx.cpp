@@ -116,6 +116,8 @@
 #undef ___DEBUG
 #endif
 
+#define SOPLEX_VERBLEVEL                5    /**< verbosity level for LPINFO */
+
 #include "scip/pub_message.h"
 
 /********************************************************************/
@@ -260,6 +262,9 @@ public:
       setSolver(&m_slu);
       setTester(&m_ratio);
       setPricer(&m_price_steep);
+#if ((SOPLEX_VERSION == 170 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 170)
+      SPxSolver::setMaxUpdates(500);
+#endif
       /* no starter */
 
       if ( probname != NULL )
@@ -661,7 +666,7 @@ public:
 
       /* store and set verbosity */
       verbosity = Param::verbose();
-      Param::setVerbose(getLpInfo() ? 5 : 0);
+      Param::setVerbose(getLpInfo() ? SOPLEX_VERBLEVEL : 0);
 
       assert(checkConsistentBounds());
       assert(checkConsistentSides());
@@ -872,7 +877,7 @@ public:
 
          /* store and set verbosity */
          verbosity = Param::verbose();
-         Param::setVerbose(getLpInfo() ? 5 : 0);
+         Param::setVerbose(getLpInfo() ? SOPLEX_VERBLEVEL : 0);
          SCIPdebugMessage("simplifying LP\n");
 #if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
          result = simplifier->simplify(*this, epsilon(), feastol(), opttol());
@@ -1570,7 +1575,10 @@ SCIP_RETCODE SCIPlpiCreate(
 
    /* create SoPlex object */
    SCIP_ALLOC( BMSallocMemory(lpi) );
-   SOPLEX_TRY( messagehdlr, (*lpi)->spx = new SPxSCIP(messagehdlr, name) );
+
+   /* we use this construction to allocate the memory for the SoPlex class also via the blockmemshell */
+   (*lpi)->spx = static_cast<SPxSCIP*>(BMSallocMemoryCPP(sizeof(SPxSCIP)));
+   SOPLEX_TRY( messagehdlr, (*lpi)->spx = new ((*lpi)->spx) SPxSCIP(messagehdlr, name) );
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
    (*lpi)->cstatsize = 0;
@@ -1600,8 +1608,9 @@ SCIP_RETCODE SCIPlpiFree(
    assert(*lpi != NULL);
    assert((*lpi)->spx != NULL);
 
-   /* free LP */
-   delete (*lpi)->spx;
+   /* free LP using destructor and free memory via blockmemshell */
+   (*lpi)->spx->~SPxSCIP();
+   BMSfreeMemory(&((*lpi)->spx));
 
    /* free memory */
    BMSfreeMemoryArrayNull(&(*lpi)->cstat);
