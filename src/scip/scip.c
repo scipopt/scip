@@ -11008,7 +11008,6 @@ SCIP_RETCODE SCIPtransformProb(
    for( s = scip->origprimal->nsols - 1; s >= 0; --s )
    {
       SCIP_Bool feasible;
-      SCIP_Bool stored;
       SCIP_SOL* sol ;
 
       sol =  scip->origprimal->sols[s];
@@ -11024,12 +11023,18 @@ SCIP_RETCODE SCIPtransformProb(
       {
          SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
 
-         /* add primal solution to solution storage by copying it */
-         SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
-               scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, sol, &stored) );
+         /* we do not want to add solutions with objective value +infinity */
+         if( !SCIPisInfinity(scip, SCIPsolGetObj(sol, scip->set, scip->transprob)) )
+         {
+            SCIP_Bool stored;
 
-         if( stored )
-            nfeassols++;
+            /* add primal solution to solution storage by copying it */
+            SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
+                  scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, sol, &stored) );
+
+            if( stored )
+               nfeassols++;
+         }
       }
 
       SCIP_CALL( SCIPsolFree(&sol, scip->mem->probmem, scip->origprimal) );
@@ -11643,7 +11648,7 @@ SCIP_RETCODE presolve(
    stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    *infeasible = FALSE;
-   *unbounded = FALSE;
+   *unbounded = SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
 
    /* perform presolving rounds */
    while( !finished && !stopped )
