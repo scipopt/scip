@@ -1571,6 +1571,7 @@ SCIP_RETCODE detectParallelCols(
    return SCIP_OKAY;
 }
 
+int uglyglob =0;
 
 /** try to find possible variable fixings */
 static
@@ -1621,9 +1622,7 @@ void findFixings(
 
    if( SCIPvarGetType(dominatingvar) != SCIP_VARTYPE_CONTINUOUS )
    {
-      /* if we don't have a continuous variable we have to
-       * round up the predicted bounds
-       */
+      /* no continuous variable pair, have to round up the predicted bounds */
       if( -SCIPinfinity(scip) < dominatingwclb && dominatingwclb < SCIPinfinity(scip) )
          dominatingwclb = SCIPceil(scip,dominatingwclb);
 
@@ -1631,7 +1630,7 @@ void findFixings(
          dominatingub = SCIPceil(scip,dominatingub);
    }
 
-   if( SCIPisPositive(scip, SCIPvarGetObj(dominatingvar)) )
+   if( SCIPisPositive(scip, SCIPvarGetObj(dominatedvar)) )
    {
       if( !SCIPisInfinity(scip, -dominatingwclb) &&
          SCIPisLE(scip, dominatingwclb, SCIPvarGetUbGlobal(dominatingvar)) )
@@ -1676,6 +1675,20 @@ void findFixings(
          printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
             dominatedvar,dominatedidx,dominatingub,dominatingwclb);
 #endif
+      }
+   }
+
+   if( !SCIPisInfinity(scip, dominatingub) &&
+      SCIPisEQ(scip, SCIPvarGetLbGlobal(dominatingvar), dominatingub) )
+   {
+      /* because the predicted upper bound is a real upper bound, we can
+       * fix the dominating variable to the lower bound if the lower bound
+       * is equal the predicted upper bound
+       */
+      if( varstofix[dominatingidx] == NOFIX )
+      {
+         varstofix[dominatingidx] = FIXATLB;
+         (*npossiblefixings)++;
       }
    }
 
