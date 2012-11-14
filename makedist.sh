@@ -58,7 +58,7 @@ $NAME/src/xml/*.c $NAME/src/xml/*.h \
 $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.h \
-$NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
+$NAME/src/objscip/*.cpp $NAME/src/objscip/*.h
 rm -f $NAME
 echo ""
 echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and makedist.sh ($VERSION):"
