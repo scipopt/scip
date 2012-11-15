@@ -18,25 +18,25 @@ $(LIBOBJDIR)/nlpi/expr.o: src/nlpi/expr.c src/nlpi/pub_expr.h src/scip/def.h \
  src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
  src/scip/type_misc.h src/nlpi/exprinterpret.h src/scip/pub_misc.h \
  src/scip/type_var.h src/scip/struct_misc.h
-$(LIBOBJDIR)/nlpi/intervalarith.o: src/nlpi/intervalarith.cpp src/scip/def.h \
+$(LIBOBJDIR)/nlpi/intervalarithext.o: src/nlpi/intervalarithext.cpp src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
- src/scip/struct_message.h src/nlpi/intervalarith.h \
+ src/scip/struct_message.h src/nlpi/intervalarithext.h \
  src/scip/intervalarith.h
 $(LIBOBJDIR)/nlpi/exprinterpret_cppad.o: src/nlpi/exprinterpret_cppad.cpp src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/scip/struct_message.h src/blockmemshell/memory.h src/nlpi/pub_expr.h \
  src/scip/intervalarith.h src/nlpi/type_expr.h \
  src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
- src/scip/type_misc.h src/nlpi/exprinterpret.h src/nlpi/intervalarith.h \
- src/cppad/cppad.hpp src/cppad/base_require.hpp \
- src/cppad/error_handler.hpp src/cppad/configure.hpp \
- src/cppad/local/cppad_assert.hpp src/cppad/local/define.hpp \
- src/cppad/local/base_cond_exp.hpp src/cppad/local/base_std_math.hpp \
- src/cppad/local/epsilon.hpp src/cppad/local/base_float.hpp \
- src/cppad/local/base_double.hpp src/cppad/local/base_complex.hpp \
- src/cppad/thread_alloc.hpp src/cppad/check_numeric_type.hpp \
- src/cppad/check_simple_vector.hpp src/cppad/lu_solve.hpp \
- src/cppad/lu_factor.hpp src/cppad/lu_invert.hpp \
+ src/scip/type_misc.h src/nlpi/exprinterpret.h \
+ src/nlpi/intervalarithext.h src/cppad/cppad.hpp \
+ src/cppad/base_require.hpp src/cppad/error_handler.hpp \
+ src/cppad/configure.hpp src/cppad/local/cppad_assert.hpp \
+ src/cppad/local/define.hpp src/cppad/local/base_cond_exp.hpp \
+ src/cppad/local/base_std_math.hpp src/cppad/local/epsilon.hpp \
+ src/cppad/local/base_float.hpp src/cppad/local/base_double.hpp \
+ src/cppad/local/base_complex.hpp src/cppad/thread_alloc.hpp \
+ src/cppad/check_numeric_type.hpp src/cppad/check_simple_vector.hpp \
+ src/cppad/lu_solve.hpp src/cppad/lu_factor.hpp src/cppad/lu_invert.hpp \
  src/cppad/memory_leak.hpp src/cppad/omp_alloc.hpp \
  src/cppad/track_new_del.hpp src/cppad/near_equal.hpp \
  src/cppad/ode_err_control.hpp src/cppad/nan.hpp src/cppad/ode_gear.hpp \
