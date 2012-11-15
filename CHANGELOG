@@ -15,6 +15,7 @@ features:
 - added SCIPwriteCliqueGraph() to scip.{c,h} to write the clique graph in GML format into a given file
 - added upgrade from bounddisjunction constraints to set-packing/logicor constraints
 - added two methods to iterate over a sparse solution (SCIP_SPARSESOLUTION), see pub_misc.h
+- added possibility to not set a cutoff bound in the LP solver (can be enabled by setting <lp/disablecutoff> to TRUE)
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -29,6 +30,8 @@ interface
   SCIPqueueClear(), SCIPqueueInsert(), SCIPqueueRemove(), SCIPqueueFirst(), SCIPqueueIsEmpty(), SCIPqueueNElems()
 - added number of constraints which are marked for propagation to callback method consprop
 
+parameters:
+- new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
 
 
 SCIP version 3.0.1

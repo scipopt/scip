@@ -2476,8 +2476,10 @@ SCIP_RETCODE lpSetUobjlim(
    assert(lp != NULL);
    assert(set != NULL);
 
-   /* if we want so solve exactly, we cannot rely on the LP solver's objective limit handling */
-   if( set->misc_exactsolve )
+   /* we disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
+    * solver's objective limit handling, so we return here and do not apply the objective limit
+    */
+   if( set->lp_disablecutoff || set->misc_exactsolve )
       return SCIP_OKAY;
 
    /* convert SCIP infinity value to lp-solver infinity value if necessary */
@@ -11314,9 +11316,7 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
       return SCIP_OKAY;
    }
 
-   /* if the cutoff bound is increased, and the LP was proved to exceed the old cutoff, it is no longer solved;
-    * if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit
-    */
+   /* if the cutoff bound is increased, and the LP was proved to exceed the old cutoff, it is no longer solved */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && cutoffbound > lp->cutoffbound )
    {
       /* mark the current solution invalid */
@@ -11324,7 +11324,11 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
-   else if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetObjval(lp, set, prob) >= cutoffbound )
+   /* if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit;
+    * if the objective limit in the LP solver was disabled, the solution status of the LP is not changed
+    */
+   else if( !set->lp_disablecutoff && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+      && SCIPlpGetObjval(lp, set, prob) >= cutoffbound )
    {
       assert(lp->flushed);
       assert(lp->solved);
@@ -12907,9 +12911,15 @@ SCIP_RETCODE lpSolve(
          lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
          lp->lpobjval = SCIPsetInfinity(set);
       }
+      /* if we did not disable the cutoff bound in the LP solver, the LP solution status should be objective limit
+       * reached if the LP objective value is greater than the cutoff bound
+       */
+      assert(set->lp_disablecutoff || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsInfinity(set, lp->cutoffbound)
+         || SCIPsetIsLE(set, lp->lpobjval + getFiniteLooseObjval(lp, set, prob), lp->cutoffbound));
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
+      assert(!set->lp_disablecutoff);
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
       lp->lpobjval = SCIPsetInfinity(set);
    }
@@ -13454,6 +13464,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
+         assert(!set->lp_disablecutoff);
          /* if we do branch-and-price, make sure that a dual feasible solution exists, that exceeds the objective limit;
           * With FASTMIP setting, CPLEX does not apply the final pivot to reach the dual solution exceeding the objective
           * limit. Therefore, we have to either turn off FASTMIP and resolve the problem or continue solving it without

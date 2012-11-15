@@ -342,6 +342,10 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL || SCIPgetNSols(scip) <= 0  )
       return SCIP_OKAY;
 
+   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
+   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+      return SCIP_OKAY;
+
    /* only call heuristic, if the best solution comes from transformed problem */
    assert( SCIPgetBestSol(scip) != NULL );
    if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )

@@ -213,6 +213,10 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
+   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
+   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+      return SCIP_OKAY;
+
    /* only call heuristic, if the LP solution is basic (which allows fast resolve in diving) */
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
@@ -465,7 +469,8 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
 
             /* get LP solution status, objective value, and fractional variables, that should be integral */
             lpsolstat = SCIPgetLPSolstat(scip);
-            cutoff = (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
+            cutoff = (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE ||
+               (lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip))));
          }
 
          /* perform backtracking if a cutoff was detected */
