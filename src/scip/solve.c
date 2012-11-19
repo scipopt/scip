@@ -1881,6 +1881,7 @@ SCIP_RETCODE cutpoolSeparate(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_Bool             cutpoolisdelayed,   /**< is the cutpool delayed (count cuts found)? */
    SCIP_Bool             root,               /**< are we at the root node? */
    int                   actdepth,           /**< the depth of the focus node */
    SCIP_Bool*            enoughcuts,         /**< pointer to store if enough cuts were found in current separation round */
@@ -1898,7 +1899,7 @@ SCIP_RETCODE cutpoolSeparate(
        */
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
-      SCIP_CALL( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, &result) );
+      SCIP_CALL( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, cutpoolisdelayed, root, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
    }
@@ -2161,7 +2162,7 @@ SCIP_RETCODE priceAndCutLoop(
          /* global cut pool separation */
          if( !enoughcuts && !delayedsepa )
          {
-            SCIP_CALL( cutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, actdepth, &enoughcuts, cutoff) );
+            SCIP_CALL( cutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, FALSE, root, actdepth, &enoughcuts, cutoff) );
 
             if( *cutoff )
             {
@@ -2199,7 +2200,7 @@ SCIP_RETCODE priceAndCutLoop(
          {
             assert( !(*lperror) );
 
-            SCIP_CALL( cutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, actdepth, &enoughcuts, cutoff) );
+            SCIP_CALL( cutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, TRUE, root, actdepth, &enoughcuts, cutoff) );
 
             if( *cutoff )
             {
