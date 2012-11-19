@@ -554,6 +554,12 @@ void SCIPconshdlrIncNAppliedCuts(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** increase count of found cuts */
+extern
+void SCIPconshdlrIncNCutsFound(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 
 
 /*

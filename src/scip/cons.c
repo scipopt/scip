@@ -4359,6 +4359,16 @@ void SCIPconshdlrIncNAppliedCuts(
    ++conshdlr->ncutsapplied;
 }
 
+/** increase count of found cuts */
+void SCIPconshdlrIncNCutsFound(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   ++conshdlr->ncutsfound;
+}
+
 /** gets total number of additional constraints added by this constraint handler */
 SCIP_Longint SCIPconshdlrGetNConssFound(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */

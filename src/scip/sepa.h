@@ -188,6 +188,18 @@ void SCIPsepaIncNAppliedCuts(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
+/** increase count of found cuts */
+extern
+void SCIPsepaIncNCutsFound(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** increase count of found cuts at node */
+extern
+void SCIPsepaIncNCutsFoundAtNode(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
 #ifdef __cplusplus
 }
 #endif
