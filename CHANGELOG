@@ -32,6 +32,7 @@ fixed bugs:
 - fixed issue in cumulative constraint w.r.t. conflict analysis
 - fixed numerical bug in conflict.c relaxing bounds while keeping an infeasibility proof
 - fixed wrong solving status (OPTIMAL) in case an unbounded solution was provided or found by heuristic before presolve
+- fixed wrong basis rstat values in CPLEX LPI
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()
