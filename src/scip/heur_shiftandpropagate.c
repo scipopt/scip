@@ -44,7 +44,7 @@
 #define DEFAULT_PROPBREAKER     65000   /**< fixed maximum number of propagations */
 #define DEFAULT_CUTOFFBREAKER      15   /**< fixed maximum number of allowed cutoffs before the heuristic stops */
 #define DEFAULT_RANDSEED      3141598   /**< the default random seed for random number generation */
-#define DEFAULT_SORTKEY            'u'  /**< the default key for variable sorting */
+#define DEFAULT_SORTKEY            'v'  /**< the default key for variable sorting */
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
 #define DEFAULT_COLLECTSTATS     TRUE   /**< should variable statistics be collected during probing? */
 #define SORTKEYS                 "nrtuv"/**< options sorting key: (n)orms down, norms (u)p, (v)iolated rows decreasing,
@@ -1354,7 +1354,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    int lastindexofsusp;           /* last variable which has been swapped due to a cutoff */
    int nbinvars;                  /* number of binary variables */
    int nintvars;                  /* number of integer variables */
-   int nimplvars;                 /* number of implicit variables */
    int i;
    int r;
    int v;
@@ -1541,10 +1540,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    }
    colnorms = matrix->colnorms;
 
-   nimplvars = ndiscvars - (nbinvars + nintvars);
    assert(nbinvars >= 0);
    assert(nintvars >= 0);
-   assert(nimplvars >= 0);
 
    /* allocate memory for violatedvarrows array only if variable ordering relies on it */
    if( heurdata->sortvars && (heurdata->sortkey == 't' || heurdata->sortkey == 'v') )
@@ -1569,62 +1566,39 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       {
          case 'n':
             /* variable ordering w.r.t. column norms nonincreasing */
-            if( nbinvars > 0 )
-               SCIPsortDownRealInt(colnorms, permutation, nbinvars);
-            if( nintvars > 0 )
-               SCIPsortDownRealInt(&colnorms[nbinvars], &permutation[nbinvars], nintvars);
-            if( nimplvars > 0 )
-               SCIPsortDownRealInt(&colnorms[nbinvars + nintvars], &permutation[nbinvars + nintvars], nimplvars);
+            SCIPsortDownRealInt(colnorms, permutation, ndiscvars);
             SCIPdebugMessage("Variables sorted down w.r.t their normalized columns!\n");
             break;
          case 'u':
             /* variable ordering w.r.t. column norms nondecreasing */
-            if( nbinvars > 0 )
-               SCIPsortRealInt(colnorms, permutation, nbinvars);
-            if( nintvars > 0 )
-               SCIPsortRealInt(&colnorms[nbinvars], &permutation[nbinvars], nintvars);
-            if( nimplvars > 0 )
-               SCIPsortRealInt(&colnorms[nbinvars + nintvars], &permutation[nbinvars + nintvars], nimplvars);
+            SCIPsortRealInt(colnorms, permutation, ndiscvars);
             SCIPdebugMessage("Variables sorted w.r.t their normalized columns!\n");
             break;
          case 'v':
             /* variable ordering w.r.t. nonincreasing number of violated rows */
             assert(violatedvarrows != NULL);
-            if( nbinvars > 0 )
-               SCIPsortDownIntInt(violatedvarrows, permutation, nbinvars);
-            if( nintvars > 0 )
-               SCIPsortDownIntInt(&violatedvarrows[nbinvars], &permutation[nbinvars], nintvars);
-            if( nimplvars > 0 )
-               SCIPsortDownIntInt(&violatedvarrows[nbinvars + nintvars], &permutation[nbinvars + nintvars], nimplvars);
+            SCIPsortDownIntInt(violatedvarrows, permutation, ndiscvars);
+
             SCIPdebugMessage("Variables sorted down w.r.t their number of currently infeasible rows!\n");
             break;
          case 't':
             /* variable ordering w.r.t. nondecreasing number of violated rows */
             assert(violatedvarrows != NULL);
-            if( nbinvars > 0 )
-               SCIPsortIntInt(violatedvarrows, permutation, nbinvars);
-            if( nintvars > 0 )
-               SCIPsortIntInt(&violatedvarrows[nbinvars], &permutation[nbinvars], nintvars);
-            if( nimplvars > 0 )
-               SCIPsortIntInt(&violatedvarrows[nbinvars + nintvars], &permutation[nbinvars + nintvars], nimplvars);
+            SCIPsortIntInt(violatedvarrows, permutation, ndiscvars);
+
             SCIPdebugMessage("Variables sorted (upwards) w.r.t their number of currently infeasible rows!\n");
             break;
          case 'r':
             /* random sorting */
-            if( nbinvars > 0)
-               SCIPpermuteIntArray(permutation, 0, nbinvars - 1, &heurdata->randseed);
-            if( nintvars > 0)
-               SCIPpermuteIntArray(&permutation[nbinvars], 0, nintvars, &heurdata->randseed);
-            if( nimplvars > 0)
-               SCIPpermuteIntArray(&permutation[nbinvars + nintvars], 0, nimplvars, &heurdata->randseed);
+            SCIPpermuteIntArray(permutation, 0, ndiscvars - 1, &heurdata->randseed);
             SCIPdebugMessage("Variables permuted randomly!\n");
             break;
          default:
             SCIPdebugMessage("No variable permutation applied\n");
             break;
-
       }
    }
+
    SCIP_CALL( SCIPallocBufferArray(scip, &eventdatas, matrix->ndiscvars) );
    BMSclearMemoryArray(eventdatas, matrix->ndiscvars);
 
