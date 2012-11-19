@@ -18,6 +18,7 @@
  * @author Tobias Achterberg
  * @author Stefan Heinz
  * @author Domenico Salvagnin
+ * @author Marc Pfetsch
  */
 
 /**@todo try k-Gomory-cuts (s. Cornuejols: K-Cuts: A Variation of Gomory Mixed Integer Cuts from the LP Tableau)
@@ -73,6 +74,7 @@
 #define DEFAULT_FORCECUTS          TRUE /**< if conversion to integral coefficients failed still consider the cut */
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack */
 #define DEFAULT_DELAYEDCUTS        TRUE /**< should cuts be added to the delayed cut pool? */
+#define DEFAULT_SIDETYPEBASIS     FALSE /**< choose side types of row (lhs/rhs) based on basis information? */
 
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
 #define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
@@ -100,6 +102,7 @@ struct SCIP_SepaData
    SCIP_Bool             forcecuts;          /**< if conversion to integral coefficients failed still consider the cut */
    SCIP_Bool             separaterows;       /**< separate rows with integral slack */
    SCIP_Bool             delayedcuts;        /**< should cuts be added to the delayed cut pool? */
+   SCIP_Bool             sidetypebasis;      /**< choose side types of row (lhs/rhs) based on basis information? */
 };
 
 
@@ -201,6 +204,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_Real maxfrac;
    SCIP_Longint maxdnom;
    SCIP_Bool cutoff;
+   int* sidetypes = NULL;
    int* basisind;
    int naddedcuts;
    int nvars;
@@ -307,6 +311,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
+   if ( sepadata->sidetypebasis )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &sidetypes, nrows) );
+   }
 
    /* get basis indices */
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
@@ -380,13 +388,50 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          /* get the row of B^-1 for this basic integer variable with fractional solution value */
          SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
 
+         if ( sepadata->sidetypebasis )
+         {
+            int k;
+
+            assert( sidetypes != NULL );
+            for (k = 0; k < nrows; ++k)
+            {
+               SCIP_BASESTAT stat;
+               SCIP_ROW* row;
+
+               row = rows[k];
+               assert( row != NULL );
+
+               /* for equations take automatic choice */
+               if ( SCIPisEQ(scip, SCIProwGetLhs(row), SCIProwGetRhs(row)) )
+                  sidetypes[k] = 0;
+               else
+               {
+                  /* for ranged rows use basis status */
+                  assert(  SCIPisLPSolBasic(scip) );
+                  stat = SCIProwGetBasisStatus(row);
+                  if ( stat == SCIP_BASESTAT_LOWER )
+                  {
+                     assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
+                     sidetypes[k] = -1;
+                  }
+                  else if ( stat == SCIP_BASESTAT_UPPER )
+                  {
+                     assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
+                     sidetypes[k] = 1;
+                  }
+                  else
+                     sidetypes[k] = 0;
+               }
+            }
+         }
+
          cutact = 0.0;
          cutrhs = SCIPinfinity(scip);
 
          /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL,
                (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, minfrac, maxfrac,
-               binvrow, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
+               binvrow, sidetypes, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
          assert(ALLOWLOCAL || !cutislocal);
 
          /* @todo Currently we are using the SCIPcalcMIR() function to compute the coefficients of the Gomory
@@ -502,6 +547,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    }
 
    /* free temporary memory */
+   if ( sepadata->sidetypebasis )
+   {
+      SCIPfreeBufferArray(scip, &sidetypes);
+   }
    SCIPfreeBufferArray(scip, &binvrow);
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutcoefs);
@@ -603,6 +652,10 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          "separating/gomory/delayedcuts",
          "should cuts be added to the delayed cut pool?",
          &sepadata->delayedcuts, TRUE, DEFAULT_DELAYEDCUTS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/gomory/sidetypebasis",
+         "choose side types of row (lhs/rhs) based on basis information?",
+         &sepadata->sidetypebasis, TRUE, DEFAULT_SIDETYPEBASIS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

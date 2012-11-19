@@ -22479,6 +22479,7 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
+   int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
    SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
@@ -22493,8 +22494,8 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_CALL( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob, sol,
-         boundswitch, usevbds, allowlocal, fixintegralrhs, boundsfortrans, boundtypesfortrans, maxmksetcoefs, 
-         maxweightrange, minfrac, maxfrac, weights, scale, mksetcoefs, mksetcoefsvalid, mircoef, mirrhs, cutactivity, 
+         boundswitch, usevbds, allowlocal, fixintegralrhs, boundsfortrans, boundtypesfortrans, maxmksetcoefs,
+         maxweightrange, minfrac, maxfrac, weights, sidetypes, scale, mksetcoefs, mksetcoefsvalid, mircoef, mirrhs, cutactivity,
          success, cutislocal, cutrank) );
 
    return SCIP_OKAY;
@@ -26157,7 +26158,7 @@ SCIP_RETCODE SCIPseparateCutpool(
    }
 
    SCIP_CALL( SCIPcutpoolSeparate(cutpool, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter,
-         scip->lp, scip->sepastore, (SCIPtreeGetCurrentDepth(scip->tree) == 0), result) );
+         scip->lp, scip->sepastore, FALSE, (SCIPtreeGetCurrentDepth(scip->tree) == 0), result) );
    return SCIP_OKAY;
 }
 

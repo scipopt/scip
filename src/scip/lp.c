@@ -8695,6 +8695,7 @@ void sumMIRRow(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
    int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
@@ -8787,13 +8788,41 @@ void sumMIRRow(
       {
          SCIP_Bool uselhs;
 
-         /* Decide, if we want to use the left or the right hand side of the row in the summation.
-          * If possible, use the side that leads to a positive slack value in the summation.
-          */
-         if( SCIPsetIsInfinity(set, row->rhs) || (!SCIPsetIsInfinity(set, -row->lhs) && weight < 0.0) )
-            uselhs = TRUE;
+         /* choose sides for lhs/rhs of row */
+         if ( sidetypes != NULL )
+         {
+            assert( sidetypes[r] == -1 || sidetypes[r] == 0 || sidetypes[r] == 1 );
+            if ( sidetypes[r] == -1 )
+            {
+               assert( ! SCIPsetIsInfinity(set, -row->lhs) );
+               uselhs = TRUE;
+            }
+            else if ( sidetypes[r] == 1 )
+            {
+               assert( ! SCIPsetIsInfinity(set, row->rhs) );
+               uselhs = FALSE;
+            }
+            else
+            {
+               /* Automatically decide, whether we want to use the left or the right hand side of the row in the summation.
+                * If possible, use the side that leads to a positive slack value in the summation.
+                */
+               if( SCIPsetIsInfinity(set, row->rhs) || (!SCIPsetIsInfinity(set, -row->lhs) && weight < 0.0) )
+                  uselhs = TRUE;
+               else
+                  uselhs = FALSE;
+            }
+         }
          else
-            uselhs = FALSE;
+         {
+            /* Automatically decide, whether we want to use the left or the right hand side of the row in the summation.
+             * If possible, use the side that leads to a positive slack value in the summation.
+             */
+            if( SCIPsetIsInfinity(set, row->rhs) || (!SCIPsetIsInfinity(set, -row->lhs) && weight < 0.0) )
+               uselhs = TRUE;
+            else
+               uselhs = FALSE;
+         }
 
          /* add the row to the aggregation */
          addRowToAggregation(set, mircoef, mirrhs, slacksign, varused, varinds, nvarinds, row, weight, uselhs);
@@ -9997,6 +10026,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
    SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
@@ -10053,7 +10083,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, lp->nrows) );
 
    /* calculate the row summation */
-   sumMIRRow(set, prob, lp, weights, scale, allowlocal, 
+   sumMIRRow(set, prob, lp, weights, sidetypes, scale, allowlocal,
       maxmksetcoefs, maxweightrange, mircoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
       &emptyrow, &localrowsused, &rowtoolong, cutrank);
    assert(allowlocal || !localrowsused);

@@ -89,7 +89,7 @@
 #define DEFAULT_MAXNODELIMIT     5000LL /**< maximum number of nodes considered for sub-MIP (-1: unlimited) */
 #define DEFAULT_ONLYACTIVEROWS    FALSE /**< Use only active rows to generate cuts? */
 #define DEFAULT_MAXROWAGE            -1 /**< maximal age of rows to consider if onlyactiverows is false */
-#define DEFAULT_ONLYRANKONE       FALSE /**< Separate rank 1 inequalities? */
+#define DEFAULT_ONLYRANKONE       FALSE /**< Separate rank 1 inequalities w.r.t. CG-MIP separator? */
 #define DEFAULT_ONLYINTVARS       FALSE /**< Generate cuts for problems with only integer variables? */
 #define DEFAULT_ALLOWLOCAL        FALSE /**< Allow to generate local cuts? */
 #define DEFAULT_CONTCONVERT       FALSE /**< Convert some integral variables to be continuous to reduce the size of the sub-MIP? */
@@ -152,7 +152,7 @@ struct SCIP_SepaData
    SCIP_Real             cutcoefbnd;         /**< bounds on the values of the coefficients in the CG-cut */
    SCIP_Bool             onlyactiverows;     /**< Use only active rows to generate cuts? */
    int                   maxrowage;          /**< maximal age of rows to consider if onlyactiverows is false */
-   SCIP_Bool             onlyrankone;        /**< Separate only rank 1 inequalities? */
+   SCIP_Bool             onlyrankone;        /**< Separate only rank 1 inequalities w.r.t. CG-MIP separator? */
    SCIP_Bool             onlyintvars;        /**< Generate cuts for problems with only integer variables? */
    SCIP_Bool             allowlocal;         /**< Allow local cuts? */
    SCIP_Bool             contconvert;        /**< Convert some integral variables to be continuous to reduce the size of the sub-MIP? */
@@ -2974,7 +2974,7 @@ SCIP_RETCODE createCGCutCMIR(
    cutrhs = -1.0;
    SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, boundsfortrans, boundtypesfortrans,
          (int) MAXAGGRLEN(nvars), MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-         weights, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
+         weights, NULL, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
    assert( sepadata->allowlocal || !cutislocal );
    SCIPdebugMessage("CMIR: success = %u, cut is%sviolated (cutact: %g, cutrhs: %g)\n", success, 
       SCIPisFeasGT(scip, cutact, cutrhs) ? " " : " not ", cutact, cutrhs);
@@ -3818,7 +3818,7 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          &sepadata->maxrowage, FALSE, DEFAULT_MAXROWAGE, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/onlyrankone",
-         "Separate only rank 1 inequalities?",
+         "Separate only rank 1 inequalities w.r.t. CG-MIP separator?",
          &sepadata->onlyrankone, FALSE, DEFAULT_ONLYRANKONE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/onlyintvars",
