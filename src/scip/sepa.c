@@ -804,7 +804,7 @@ void SCIPsepaIncNCutsFound(
    ++sepa->ncutsfound;
 }
 
-/** increase count of found cuts at root */
+/** increase count of found cuts at current node */
 void SCIPsepaIncNCutsFoundAtNode(
    SCIP_SEPA*            sepa                /**< separator */
    )
