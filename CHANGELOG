@@ -33,6 +33,7 @@ fixed bugs:
 - fixed numerical bug in conflict.c relaxing bounds while keeping an infeasibility proof
 - fixed wrong solving status (OPTIMAL) in case an unbounded solution was provided or found by heuristic before presolve
 - fixed wrong basis rstat values in CPLEX LPI
+- fixed bug leading to removing a ranged row parallel to the objective function, although one of the sides was still needed
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()
