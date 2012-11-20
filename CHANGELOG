@@ -16,6 +16,7 @@ features:
 - added upgrade from bounddisjunction constraints to set-packing/logicor constraints
 - added two methods to iterate over a sparse solution (SCIP_SPARSESOLUTION), see pub_misc.h
 - added possibility to not set a cutoff bound in the LP solver (can be enabled by setting <lp/disablecutoff> to TRUE)
+- added passing MEM option of testgams(cluster) target as workspace option to GAMS jobs
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor

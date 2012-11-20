@@ -33,7 +33,7 @@ testclustercbc:
 testgamscluster:
 		cd check; \
 		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) \
-		$(OSTYPE).$(ARCH) $(TIME) $(NODES) "$(GAP)" $(THREADS) $(CONTINUE) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) \
 		"$(CONVERTSCIP)" $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
 
