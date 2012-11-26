@@ -823,7 +823,7 @@ void SCIPlpSetSizeMark(
 extern
 SCIP_RETCODE SCIPlpGetBasisInd(
    SCIP_LP*              lp,                 /**< LP data */
-   int*                  basisind            /**< pointer to store the basis indices */
+   int*                  basisind            /**< pointer to store basis indices ready to keep number of rows entries */
    );
 
 /** gets current basis status for columns and rows; arrays must be large enough to store the basis status */

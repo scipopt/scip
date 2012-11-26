@@ -8372,7 +8372,7 @@ void SCIPlpSetSizeMark(
 /** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
 SCIP_RETCODE SCIPlpGetBasisInd(
    SCIP_LP*              lp,                 /**< LP data */
-   int*                  basisind            /**< pointer to store the basis indices */
+   int*                  basisind            /**< pointer to store basis indices ready to keep number of rows entries */
    )
 {
    assert(lp != NULL);

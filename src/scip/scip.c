@@ -22284,7 +22284,7 @@ SCIP_Bool SCIPisLPSolBasic(
  */
 SCIP_RETCODE SCIPgetLPBasisInd(
    SCIP*                 scip,               /**< SCIP data structure */
-   int*                  basisind            /**< pointer to store the basis indices */
+   int*                  basisind            /**< pointer to store basis indices ready to keep number of rows entries */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetLPBasisInd", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -22296,7 +22296,7 @@ SCIP_RETCODE SCIPgetLPBasisInd(
    }
 
    SCIP_CALL( SCIPlpGetBasisInd(scip->lp, basisind) );
-   
+
    return SCIP_OKAY;
 }
 

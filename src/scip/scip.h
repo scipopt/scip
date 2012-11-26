@@ -10672,7 +10672,7 @@ SCIP_Bool SCIPisLPSolBasic(
 EXTERN
 SCIP_RETCODE SCIPgetLPBasisInd(
    SCIP*                 scip,               /**< SCIP data structure */
-   int*                  basisind            /**< pointer to store the basis indices */
+   int*                  basisind            /**< pointer to store basis indices ready to keep number of rows entries */
    );
 
 /** gets a row from the inverse basis matrix B^-1
