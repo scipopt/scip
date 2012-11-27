@@ -24,6 +24,7 @@ features:
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
   constraint and the corresponding clique information is globally added
+- improved methods SCIPlpiGetBInv{Row,Col,ACol} for row representation in SoPlex LP interface
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
