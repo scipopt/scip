@@ -13330,12 +13330,14 @@ SCIP_Bool useValuehistory(
    SCIP_SET*             set                 /**< global SCIP settings, or NULL if the domain value is SCIP_UNKNOWN */
    )
 {
-   /* check if value based history should be collected */
-   if( !set->history_valuebased )
-      return FALSE;
-
    /* check if the domain value is unknown (not specific) */
    if( value == SCIP_UNKNOWN ) /*lint !e777*/
+      return FALSE;
+
+   assert(set != NULL);
+
+   /* check if value based history should be collected */
+   if( !set->history_valuebased )
       return FALSE;
 
    /* value based history is not collected for binary variable since the standard history already contains all information */
