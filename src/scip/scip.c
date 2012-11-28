@@ -14906,9 +14906,11 @@ SCIP_RETCODE SCIPstartStrongbranch(
       /* inform the LP that the current probing mode is used for strong branching */
       SCIPlpStartStrongbranchProbing(scip->lp);
 
-      /* we want to collect variable statistics during strong branching */
-      if( scip->set->branch_strongprophist )
-         SCIPstatEnableVarHistory(scip->stat);
+      /* we want to collect variable statistics during strong branching;
+       * we cannot disable this, because the pseudo costs would not be updated, otherwise,
+       * and reliability branching would end up doing strong branching all the time
+       */
+      SCIPstatEnableVarHistory(scip->stat);
    }
    else
    {
@@ -15207,12 +15209,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
                                               *   infeasible upwards branch, or NULL */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred or the
                                               *   solving process should be stopped (e.g., due to a time limit) */
-   SCIP_Real*            newlbs,
-   SCIP_Real*            newubs,
-   int*                  nchgbdsdown,
-   int*                  nchgbdsup,
-   int*                  info,
-   SCIP_CLOCK*           strongpropclock
+   SCIP_Real*            newlbs,             /**< array to store valid lower bounds for the variables */
+   SCIP_Real*            newubs              /**< array to store valid upper bounds for the variables */
    )
 {
    SCIP_COL* col;
@@ -15264,11 +15262,6 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
 
-   *nchgbdsdown = 0;
-   *nchgbdsup = 0;
-
-   *info = 0;
-
    /* check if the solving process should be aborted */
    if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) )
    {
@@ -15305,6 +15298,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    if( newlb > SCIPvarGetUbLocal(var) + 0.5 )
    {
       *up = SCIPinfinity(scip);
+      *down = lpobjval;
 
       if( upinf != NULL )
          *upinf = TRUE;
@@ -15316,7 +15310,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
       if( upconflict != NULL )
          *upconflict = TRUE;
 
-      *info += 1;
+      SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
+         *down, *up, *downvalid, *upvalid, scip->stat->ndivinglpiterations - oldniters, itlim);
 
       /* we do not regard the down branch; its valid pointer stays set to FALSE */
       return SCIP_OKAY;
@@ -15329,6 +15324,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    if( newub < SCIPvarGetLbLocal(var) - 0.5 )
    {
       *down = SCIPinfinity(scip);
+      *up = lpobjval;
 
       if( downinf != NULL )
          *downinf = TRUE;
@@ -15340,7 +15336,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
       if( downconflict != NULL )
          *downconflict = TRUE;
 
-      *info += 10;
+      SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
+         *down, *up, *downvalid, *upvalid, scip->stat->ndivinglpiterations - oldniters, itlim);
 
       /* we do not regard the up branch; its valid pointer stays set to FALSE */
       return SCIP_OKAY;
@@ -15360,20 +15357,19 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    /* propagate domains at the probing node */
    if( propagate )
    {
-      /* start timing */
-      SCIPclockStart(strongpropclock, scip->set);
+      /* start time measuring */
+      SCIPclockStart(scip->stat->strongpropclock, scip->set);
 
       ndomreds = 0;
       SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, &ndomreds) );
-      *nchgbdsup = ndomreds;
+      scip->stat->nsbupdomchgs += ndomreds;
 
-      /* start timing */
-      SCIPclockStop(strongpropclock, scip->set);
+      /* stop time measuring */
+      SCIPclockStop(scip->stat->strongpropclock, scip->set);
 
       if( cutoff )
       {
          SCIPdebugMessage("up branch of var <%s> detected infeasible during propagation\n", SCIPvarGetName(var));
-         *info += 10000;
       }
    }
 
@@ -15398,7 +15394,6 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
          {
             SCIPdebugMessage("up branch of var <%s> detected infeasible in LP solving: status=%d\n", SCIPvarGetName(var), SCIPgetLPSolstat(scip));
             cutoff = TRUE;
-            *info += 100000;
          }
          break;
       case SCIP_LPSOLSTAT_ITERLIMIT:
@@ -15463,6 +15458,9 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
       /* stop timing */
       SCIPclockStop(scip->stat->strongbranchtime, scip->set);
 
+      SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
+         *down, *up, *downvalid, *upvalid, scip->stat->ndivinglpiterations - oldniters, itlim);
+
       /* we do not regard the down branch; its valid pointer stays set to FALSE */
       return SCIP_OKAY;
 #endif
@@ -15483,20 +15481,19 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    /* propagate domains at the probing node */
    if( propagate )
    {
-      /* start timing */
-      SCIPclockStart(strongpropclock, scip->set);
+      /* start time measuring */
+      SCIPclockStart(scip->stat->strongpropclock, scip->set);
 
       ndomreds = 0;
       SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, &ndomreds) );
-      *nchgbdsdown = ndomreds;
+      scip->stat->nsbdowndomchgs += ndomreds;
 
-      /* start timing */
-      SCIPclockStop(strongpropclock, scip->set);
+      /* stop time measuring */
+      SCIPclockStop(scip->stat->strongpropclock, scip->set);
 
       if( cutoff )
       {
          SCIPdebugMessage("down branch of var <%s> detected infeasible during propagation\n", SCIPvarGetName(var));
-         *info += 100;
       }
    }
 
@@ -15521,7 +15518,6 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
          {
             SCIPdebugMessage("down branch of var <%s> detected infeasible in LP solving: status=%d\n", SCIPvarGetName(var), SCIPgetLPSolstat(scip));
             cutoff = TRUE;
-            *info += 1000;
          }
          break;
       case SCIP_LPSOLSTAT_ITERLIMIT:
@@ -15585,6 +15581,9 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
 #if 1
       /* stop timing */
       SCIPclockStop(scip->stat->strongbranchtime, scip->set);
+
+      SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
+         *down, *up, *downvalid, *upvalid, scip->stat->ndivinglpiterations - oldniters, itlim);
 
       /* we do not regard the up branch; its valid pointer stays set to FALSE */
       return SCIP_OKAY;

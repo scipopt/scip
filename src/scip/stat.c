@@ -65,6 +65,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nlpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->copyclock, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->strongpropclock, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
@@ -108,6 +109,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->nodeactivationtime);
    SCIPclockFree(&(*stat)->nlpsoltime);
    SCIPclockFree(&(*stat)->copyclock);
+   SCIPclockFree(&(*stat)->strongpropclock);
 
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
@@ -174,6 +176,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->nodeactivationtime);
    SCIPclockReset(stat->nlpsoltime);
    SCIPclockReset(stat->copyclock);
+   SCIPclockReset(stat->strongpropclock);
 
    SCIPhistoryReset(stat->glbhistory);
 

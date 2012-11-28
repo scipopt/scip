@@ -217,6 +217,34 @@ SCIP_RETCODE SCIPlpEndStrongbranch(
    SCIP_LP*              lp                  /**< LP data */
    );
 
+/** sets strong branching information for a column variable */
+extern
+void SCIPcolSetStrongbranchData(
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Real             lpobjval,           /**< objective value of the current LP */
+   SCIP_Real             primsol,            /**< primal solution value of the column in the current LP */
+   SCIP_Real             sbdown,             /**< dual bound after branching column down */
+   SCIP_Real             sbup,               /**< dual bound after branching column up */
+   SCIP_Bool             sbdownvalid,        /**< is the returned down value is a valid dual bound? */
+   SCIP_Bool             sbupvalid,          /**< is the returned up value is a valid dual bound? */
+   int                   iter,               /**< total number of strong branching iterations */
+   int                   itlim               /**< iteration limit applied to the strong branching call */
+   );
+
+/** invalidates strong branching information for a column variable */
+extern
+void SCIPcolInvalidateStrongbranchData(
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_LP*              lp                  /**< LP data */
+   );
+
 /** gets strong branching information on a column variable */
 SCIP_RETCODE SCIPcolGetStrongbranch(
    SCIP_COL*             col,                /**< LP column */

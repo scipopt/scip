@@ -80,6 +80,8 @@ struct SCIP_Stat
    SCIP_Longint          nholechgs;          /**< total number of hole changes generated in the tree */
    SCIP_Longint          nprobboundchgs;     /**< total number of bound changes generated in the tree during probing */
    SCIP_Longint          nprobholechgs;      /**< total number of hole changes generated in the tree  during probing */
+   SCIP_Longint          nsbdowndomchgs;     /**< total number of domain changes generated at down children during strong branching */
+   SCIP_Longint          nsbupdomchgs;       /**< total number of domain changes generated at up children during strong branching */
    SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */   
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
    SCIP_Real             vsidsweight;        /**< current weight to use for updating VSIDS in history */
@@ -105,6 +107,7 @@ struct SCIP_Stat
    SCIP_CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
    SCIP_CLOCK*           nlpsoltime;         /**< time needed for solving NLPs */
    SCIP_CLOCK*           copyclock;          /**< time needed for copying problems */
+   SCIP_CLOCK*           strongpropclock;    /**< time needed for propagation during strong branching */
    SCIP_HISTORY*         glbhistory;         /**< global history information over all variables */
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */

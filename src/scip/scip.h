@@ -6812,12 +6812,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
                                               *   infeasible upwards branch, or NULL */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred or the
                                               *   solving process should be stopped (e.g., due to a time limit) */
-   SCIP_Real*            newlbs,
-   SCIP_Real*            newubs,
-   int*                  nchgbdsdown,
-   int*                  nchgbdsup,
-   int*                  info,
-   SCIP_CLOCK*           strongpropclock
+   SCIP_Real*            newlbs,             /**< array to store valid lower bounds for the variables */
+   SCIP_Real*            newubs              /**< array to store valid upper bounds for the variables */
    );
 
 /** gets strong branching information on column variable x with integral LP solution value (val); that is, the down branch

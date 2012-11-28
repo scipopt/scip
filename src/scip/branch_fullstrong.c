@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include "scip/branch_fullstrong.h"
-#include "scip/clock.h"
 
 
 #define BRANCHRULE_NAME          "fullstrong"
@@ -47,7 +46,6 @@ struct SCIP_BranchruleData
    int                   maxproprounds;      /**< maximum number of propagation rounds to be performed during strong branching
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
-   SCIP_CLOCK*           strongpropclock;
 };
 
 
@@ -94,25 +92,9 @@ SCIP_DECL_BRANCHINIT(branchInitFullstrong)
    branchruledata = SCIPbranchruleGetData(branchrule);
    branchruledata->lastcand = 0;
 
-   SCIP_CALL( SCIPclockCreate(&branchruledata->strongpropclock, SCIP_CLOCKTYPE_DEFAULT) );
-
    return SCIP_OKAY;
 }
 
-static
-SCIP_DECL_BRANCHEXIT(branchExitFullstrong)
-{  /*lint --e{715}*/
-   SCIP_BRANCHRULEDATA* branchruledata;
-
-   /* initialize branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
-
-   printf("### %10.2f\n", SCIPclockGetTime(branchruledata->strongpropclock));
-
-   SCIPclockFree(&branchruledata->strongpropclock);
-
-   return SCIP_OKAY;
-}
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
@@ -254,14 +236,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
             if( propagate )
             {
-               int nchgbdsdown;
-               int nchgbdsup;
-               int info;
-
                /* apply strong branching */
                SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, lpcands[c], lpcandssol[c], lpobjval, INT_MAX,
                      branchruledata->maxproprounds, &down, &up, &downvalid, &upvalid, &downinf, &upinf,
-                     &downconflict, &upconflict, &lperror, newlbs, newubs, &nchgbdsdown, &nchgbdsup, &info, branchruledata->strongpropclock) );
+                     &downconflict, &upconflict, &lperror, newlbs, newubs) );
 
                SCIPdebugMessage("-> down=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d), up=%.9g (gain=%.9g, valid=%d, inf=%d, conflict=%d)\n",
                   down, down - lpobjval, downvalid, downinf, downconflict, up, up - lpobjval, upvalid, upinf, upconflict);
@@ -502,7 +480,6 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyFullstrong) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeFullstrong) );
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitFullstrong) );
-   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitFullstrong) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpFullstrong) );
 
    /* fullstrong branching rule parameters */

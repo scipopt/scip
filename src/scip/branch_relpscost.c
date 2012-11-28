@@ -437,7 +437,7 @@ SCIP_RETCODE execRelpscost(
          /* don't use strong branching on variables that have already been initialized at the current node;
           * instead replace the pseudo cost score with the already calculated one
           */
-         if( SCIPgetVarStrongbranchNode(scip, branchcands[c]) == nodenum )
+         if( FALSE && SCIPgetVarStrongbranchNode(scip, branchcands[c]) == nodenum )
          {
             SCIP_Real down;
             SCIP_Real up;
@@ -602,7 +602,7 @@ SCIP_RETCODE execRelpscost(
             /* apply strong branching */
             SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, branchcands[c], branchcandssol[c], lpobjval, inititer,
                   branchruledata->maxproprounds, &down, &up, &downvalid, &upvalid, &downinf, &upinf,
-                  &downconflict, &upconflict, &lperror, newlbs, newubs, NULL, NULL, NULL, NULL) );
+                  &downconflict, &upconflict, &lperror, newlbs, newubs) );
          }
          else
          {
@@ -633,6 +633,13 @@ SCIP_RETCODE execRelpscost(
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
+         if( !downinf && !upinf )
+         {
+            /* update pseudo cost values */
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 0.0-branchcandsfrac[c], downgain, 1.0) );
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 1.0-branchcandsfrac[c], upgain, 1.0) );
+         }
+
          /* the minimal lower bound of both children is a proved lower bound of the current subtree */
          if( allcolsinlp && !exactsolve && downvalid && upvalid )
          {
@@ -649,17 +656,19 @@ SCIP_RETCODE execRelpscost(
                {
                   if( SCIPisGT(scip, newlbs[v], SCIPvarGetLbLocal(vars[v])) )
                   {
-                     printf("better lower bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
+                     SCIPdebugMessage("better lower bound for variable <%s>: %.9g -> %.9g (by strongbranching on <%s>)\n",
                         SCIPvarGetName(vars[v]), SCIPvarGetLbLocal(vars[v]), newlbs[v], SCIPvarGetName(branchcands[c]));
 
-                     SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, v, SCIP_BOUNDTYPE_LOWER, newlbs[v]) );
+                     SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, v,
+                           SCIP_BOUNDTYPE_LOWER, newlbs[v]) );
                   }
                   if( SCIPisLT(scip, newubs[v], SCIPvarGetUbLocal(vars[v])) )
                   {
-                     printf("better upper bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
+                     SCIPdebugMessage("better upper bound for variable <%s>: %.9g -> %.9g (by strongbranching on <%s>)\n",
                         SCIPvarGetName(vars[v]), SCIPvarGetUbLocal(vars[v]), newubs[v], SCIPvarGetName(branchcands[c]));
 
-                     SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, v, SCIP_BOUNDTYPE_UPPER, newubs[v]) );
+                     SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, v,
+                           SCIP_BOUNDTYPE_UPPER, newubs[v]) );
                   }
                }
 
@@ -753,10 +762,6 @@ SCIP_RETCODE execRelpscost(
             }
             else
                lookahead += 1.0;
-         
-            /* update pseudo cost values */
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 0.0-branchcandsfrac[c], downgain, 1.0) );
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 1.0-branchcandsfrac[c], upgain, 1.0) );
 
             SCIPdebugMessage(" -> variable <%s> (solval=%g, down=%g (%+g), up=%g (%+g), score=%g/ %g/%g %g/%g -> %g)\n",
                SCIPvarGetName(branchcands[c]), branchcandssol[c], down, downgain, up, upgain, 

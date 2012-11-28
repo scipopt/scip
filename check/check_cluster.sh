@@ -75,7 +75,7 @@ then
 fi
 
 # set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
-SETCUTOFF=1
+SETCUTOFF=0
 # get current SCIP path
 SCIPPATH=`pwd`
 
