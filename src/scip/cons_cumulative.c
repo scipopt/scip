@@ -1760,7 +1760,8 @@ void consdataPrint(
       assert(consdata->vars[v] != NULL);
       if( v > 0 )
          SCIPinfoMessage(scip, file, ", ");
-      SCIPinfoMessage(scip, file, "<%s>(%d)[%d]", SCIPvarGetName(consdata->vars[v]),
+      SCIPinfoMessage(scip, file, "<%s>[%g,%g](%d)[%d]", SCIPvarGetName(consdata->vars[v]),
+         SCIPvarGetLbGlobal(consdata->vars[v]), SCIPvarGetUbGlobal(consdata->vars[v]),
          consdata->durations[v], consdata->demands[v]);
    }
    SCIPinfoMessage(scip, file, ")[%d,%d) <= %d", consdata->hmin, consdata->hmax, consdata->capacity);
@@ -7144,6 +7145,8 @@ SCIP_RETCODE createConsCumulative(
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
+   printf("**** addede\n");
+
    return SCIP_OKAY;
 }
 
@@ -7262,6 +7265,7 @@ SCIP_RETCODE presolveConsEst(
 
    assert(scip != NULL);
    assert(nvars > 1);
+   assert(cons != NULL);
 
    SCIPdebugMessage("check for irrelevant variable for cumulative condition (hmin %d) w.r.t. earlier start time\n", hmin);
 
@@ -7310,7 +7314,7 @@ SCIP_RETCODE presolveConsEst(
          /* job can be removed from the constraint only if the integer start time variable can be fixed to its lower
           * bound;
           */
-         if( downlocks != NULL )
+         if( downlocks != NULL && SCIPconsIsChecked(cons) )
          {
             /* fix integer start time variable if possible to it lower bound */
             SCIP_CALL( fixIntegerVariableLb(scip, var, downlocks[v], nfixedvars) );
@@ -7337,7 +7341,7 @@ SCIP_RETCODE presolveConsEst(
       /* check if the jobs overlaps with the time point hmin if it overlaps at all with the effective horizon; if so the
        * down lock can be omitted
        */
-      if( lst <= hmin && cons != NULL )
+      if( lst <= hmin && SCIPconsIsChecked(cons) )
       {
          assert(downlocks != NULL);
          assert(uplocks != NULL);
@@ -7413,6 +7417,7 @@ SCIP_RETCODE presolveConsLct(
 
    assert(scip != NULL);
    assert(nvars > 1);
+   assert(cons != NULL);
 
    SCIPdebugMessage("check for irrelevant variable for cumulative condition (hmax %d) w.r.t. latest completion time\n", hmax);
 
@@ -7461,7 +7466,7 @@ SCIP_RETCODE presolveConsLct(
          /* job can be removed from the constraint only if the integer start time variable can be fixed to its upper
           * bound
           */
-         if( uplocks != NULL )
+         if( uplocks != NULL && SCIPconsIsChecked(cons) )
          {
             /* fix integer start time variable if possible to its upper bound */
             SCIP_CALL( fixIntegerVariableUb(scip, var, uplocks[v], nfixedvars) );
@@ -7488,7 +7493,7 @@ SCIP_RETCODE presolveConsLct(
       /* check if the jobs overlaps with the time point hmax if it overlaps at all with the effective horizon; if so the
        * up lock can be omitted
        */
-      if( ect >= hmax && cons != NULL )
+      if( ect >= hmax && SCIPconsIsChecked(cons) )
       {
          assert(downlocks != NULL);
          assert(uplocks != NULL);
@@ -8181,7 +8186,7 @@ SCIP_RETCODE presolveCons(
    assert(!SCIPconsIsDeleted(cons));
 
    /* only perform dual reductions on model constraints */
-   if( conshdlrdata->dualpresolve && SCIPconsIsChecked(cons) )
+   if( conshdlrdata->dualpresolve )
    {
       /* in case the cumulative constraint is independent of every else, solve the cumulative problem and apply the
        * fixings (dual reductions)
@@ -8826,7 +8831,7 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("presolve cumulative constraints\n");
+   SCIPdebugMessage("presolve %d cumulative constraints\n", nconss);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
