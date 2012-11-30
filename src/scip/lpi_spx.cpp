@@ -295,6 +295,17 @@ public:
 
       freePreStrongbranchingBasis();
 
+      if( m_rownames != NULL )
+      {
+         m_rownames->~NameSet();
+         spx_free(m_rownames);
+      }
+      if( m_colnames != NULL )
+      {
+         m_colnames->~NameSet();
+         spx_free(m_colnames);
+      }
+
 #ifdef WITH_LPSCHECK
       (void) CPXfreeprob(m_cpxenv, &m_cpxlp);
       (void) CPXcloseCPLEX(&m_cpxenv);
@@ -824,7 +835,7 @@ public:
       assert(m_sense == sense());
 
       SPxEquiliSC* scaler = NULL;
-      SPxSimplifier* simplifier = NULL;
+      SPxMainSM* simplifier = NULL;
       SPxLP origlp;
       SPxSimplifier::Result result = SPxSimplifier::OKAY;
 
@@ -849,13 +860,15 @@ public:
       /* use scaler and simplifier if no basis is loaded, i.e., if solving for the first time or from scratch */
       if( SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && getScaling() && nCols() > 0 && nRows() > 0 )
       {
-         scaler = new SPxEquiliSC();
+         spx_alloc(scaler, 1);
+         scaler = new (scaler) SPxEquiliSC();
          assert(scaler != NULL);
       }
 
       if( SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && getPresolving() && nCols() > 0 && nRows() > 0 )
       {
-         simplifier = new SPxMainSM();
+         spx_alloc(simplifier, 1);
+         simplifier = new (simplifier) SPxMainSM();
          assert(simplifier != NULL);
       }
 
@@ -891,8 +904,8 @@ public:
          {
             SCIPdebugMessage("simplifier detected primal or dual infeasibility - reloading and solving unsimplified LP\n");
 
-            delete simplifier;
-            simplifier = NULL;
+            simplifier->~SPxSimplifier();
+            spx_free(simplifier);
 
             SPxSolver::loadLP(origlp);
             m_sense = sense();
@@ -935,8 +948,8 @@ public:
       {
          SCIPdebugMessage("presolved LP not optimal - reloading and solving original LP\n");
 
-         delete simplifier;
-         simplifier = NULL;
+         simplifier->~SPxSimplifier();
+         spx_free(simplifier);
 
          SPxSolver::loadLP(origlp);
          m_sense = sense();
@@ -954,8 +967,8 @@ public:
          if( (simplifier == NULL || result != SPxSimplifier::VANISHED) && SPxSolver::getBasisStatus() >= SPxBasis::REGULAR )
          {
             SCIPdebugMessage("get basis of presolved LP\n");
-            rstat = new SPxSolver::VarStatus[nRows()];
-            cstat = new SPxSolver::VarStatus[nCols()];
+            spx_alloc(rstat, nRows());
+            spx_alloc(cstat, nCols());
             SPxSolver::getBasis(rstat, cstat);
          }
 
@@ -996,21 +1009,17 @@ public:
             }
 
             if( cstat != NULL )
-            {
-               delete[] cstat;
-               cstat = NULL;
-            }
+               spx_free(cstat);
             if( rstat != NULL )
-            {
-               delete[] rstat;
-               rstat = NULL;
-            }
+               spx_free(rstat);
 
             if( simplifier->isUnsimplified() )
             {
                /* get basis for original lp */
-               rstat = new SPxSolver::VarStatus[origlp.nRows()];
-               cstat = new SPxSolver::VarStatus[origlp.nCols()];
+               rstat = NULL;
+               cstat = NULL;
+               spx_alloc(rstat, origlp.nRows());
+               spx_alloc(cstat, origlp.nCols());
                simplifier->getBasis(rstat, cstat);
             }
          }
@@ -1036,13 +1045,19 @@ public:
 
          /* free allocated memory */
          if( cstat != NULL )
-            delete[] cstat;
+            spx_free(cstat);
          if( rstat != NULL )
-            delete[] rstat;
+            spx_free(rstat);
          if( scaler != NULL )
-            delete scaler;
+         {
+            scaler->~SPxEquiliSC();
+            spx_free(scaler);
+         }
          if( simplifier != NULL )
-            delete simplifier;
+         {
+            simplifier->~SPxSimplifier();
+            spx_free(simplifier);
+         }
       }
 
       if( m_stat == OPTIMAL )
@@ -1062,8 +1077,8 @@ public:
       assert(m_rowstat == NULL);
       assert(m_colstat == NULL);
 
-      m_rowstat = new SPxSolver::VarStatus[nRows()];
-      m_colstat = new SPxSolver::VarStatus[nCols()];
+      spx_alloc(m_rowstat, nRows());
+      spx_alloc(m_colstat, nCols());
 
       try
       {
@@ -1113,16 +1128,10 @@ public:
    /** if basis is in store, delete it without restoring it */
    void freePreStrongbranchingBasis()
    {
-      if ( m_rowstat != NULL )
-      {
-         delete [] m_rowstat;
-         m_rowstat = NULL;
-      }
-      if ( m_colstat != NULL ) 
-      {
-         delete [] m_colstat;
-         m_colstat = NULL;
-      }
+      if( m_rowstat != NULL )
+         spx_free(m_rowstat);
+      if( m_colstat != NULL )
+         spx_free(m_colstat);
    }
 
    /** is pre-strong-branching basis freed? */
@@ -1165,11 +1174,17 @@ public:
       clear();
 
       if ( m_rownames != 0 )
-         delete m_rownames;
+         m_rownames->~NameSet();
+      else
+         spx_alloc(m_colnames, 1);
+
       if ( m_colnames != 0 )
-         delete m_colnames;
-      m_rownames = new NameSet;
-      m_colnames = new NameSet;
+         m_colnames->~NameSet();
+      else
+         spx_alloc(m_rownames, 1);
+
+      m_rownames = new (m_rownames) NameSet();
+      m_colnames = new (m_colnames) NameSet();
 
       if( SPxSolver::readFile(fname, m_rownames, m_colnames) )
       {
@@ -3815,8 +3830,10 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    invalidateSolution(lpi);
 
-   SPxSolver::VarStatus* spxcstat = new SPxSolver::VarStatus[lpi->spx->nCols()];
-   SPxSolver::VarStatus* spxrstat = new SPxSolver::VarStatus[lpi->spx->nRows()];
+   SPxSolver::VarStatus* spxcstat = NULL;
+   SPxSolver::VarStatus* spxrstat = NULL;
+   SCIP_ALLOC( BMSallocMemoryArray(&spxcstat, lpi->spx->nCols()) );
+   SCIP_ALLOC( BMSallocMemoryArray(&spxrstat, lpi->spx->nRows()) );
 
    for( i = 0; i < lpi->spx->nRows(); ++i )
    {
@@ -3833,8 +3850,8 @@ SCIP_RETCODE SCIPlpiSetBase(
          break;
       case SCIP_BASESTAT_ZERO:
          SCIPerrorMessage("slack variable has basis status ZERO (should not occur)\n");
-         delete[] spxcstat;
-         delete[] spxrstat;
+         BMSfreeMemoryArrayNull(&spxcstat);
+         BMSfreeMemoryArrayNull(&spxrstat);
          return SCIP_LPERROR; /*lint !e429*/
       default:
          SCIPerrorMessage("invalid basis status\n");
@@ -3869,8 +3886,8 @@ SCIP_RETCODE SCIPlpiSetBase(
    SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );
    lpi->spx->updateStatus();
 
-   delete[] spxcstat;
-   delete[] spxrstat;
+   BMSfreeMemoryArrayNull(&spxcstat);
+   BMSfreeMemoryArrayNull(&spxrstat);
 
    return SCIP_OKAY;
 }
