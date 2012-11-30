@@ -100,6 +100,7 @@
 #define DEFAULT_DUALPRESOLVE            TRUE /**< should dual presolving be applied? */
 #define DEFAULT_COEFTIGHTENING         FALSE /**< should coeffisient tightening be applied? */
 #define DEFAULT_NORMALIZE               TRUE /**< should demands and capacity be normalized? */
+#define DEFAULT_DISJUNCTIVE             TRUE /**< extract disjunctive constraints? */
 #define DEFAULT_MAXNODES             10000LL /**< number of branch-and-bound nodes to solve an independent cumulative constraint  (-1: no limit) */
 
 /* enforcement */
@@ -186,6 +187,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             dualpresolve;       /**< should dual presolving be applied? */
    SCIP_Bool             coeftightening;     /**< should coeffisient tightening be applied? */
    SCIP_Bool             normalize;          /**< should demands and capacity be normalized? */
+   SCIP_Bool             disjunctive;        /**< extract disjunctive constraints? */
    SCIP_Bool             usebdwidening;      /**< should bound widening be used during conflict analysis? */
 
    SCIP_Longint          maxnodes;           /**< number of branch-and-bound nodes to solve an independent cumulative constraint  (-1: no limit) */
@@ -7091,6 +7093,60 @@ SCIP_RETCODE computeEffectiveHorizonCumulativeCondition(
    return SCIP_OKAY;
 }
 
+/** creates and adds a cumulative constraint */
+static
+SCIP_RETCODE createConsCumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< available cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are seperated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node?
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   )
+{
+   SCIP_CONS* cons;
+
+   /* creates cumulative constraint and adds it to problem */
+   SCIP_CALL( SCIPcreateConsCumulative(scip, &cons, name, nvars, vars, durations, demands, capacity,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+   /* adjust the effective time horizon of the new constraint */
+   SCIP_CALL( SCIPsetHminCumulative(scip, cons, hmin) );
+   SCIP_CALL( SCIPsetHmaxCumulative(scip, cons, hmax) );
+
+   /* add and release new cumulative constraint */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   return SCIP_OKAY;
+}
+
 /** computes the effective horizon and checks if the constraint can be decompsed */
 static
 SCIP_RETCODE computeEffectiveHorizon(
@@ -7143,7 +7199,6 @@ SCIP_RETCODE computeEffectiveHorizon(
    }
    else if( consdata->hmin < split && split < consdata->hmax )
    {
-      SCIP_CONS* splitcons;
       char name[SCIP_MAXSTRLEN];
 
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "(%s)'", SCIPconsGetName(cons));
@@ -7151,20 +7206,14 @@ SCIP_RETCODE computeEffectiveHorizon(
       SCIPdebugMessage("split cumulative constraint <%s>[%d,%d) with %d jobs at time point %d\n",
          SCIPconsGetName(cons), consdata->hmin, consdata->hmax, consdata->nvars, split);
 
-      SCIP_CALL( SCIPcreateConsCumulative(scip, &splitcons, name, consdata->nvars, consdata->vars,
-            consdata->durations, consdata->demands, consdata->capacity,
+      assert(split < consdata->hmax);
+
+      /* creates cumulative constraint and adds it to problem */
+      SCIP_CALL( createConsCumulative(scip, name, consdata->nvars, consdata->vars,
+            consdata->durations, consdata->demands, consdata->capacity, split, consdata->hmax,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-      /* adjust the effective time horizon of the new constraint */
-      SCIP_CALL( SCIPsetHminCumulative(scip, splitcons, split) );
-      SCIP_CALL( SCIPsetHmaxCumulative(scip, splitcons, consdata->hmax) );
-
-      assert(split < consdata->hmax);
-
-      /* add and release new cumulative constraint */
-      SCIP_CALL( SCIPaddCons(scip, splitcons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &splitcons) );
 
       /* adjust the effective time horizon of the constraint */
       consdata->hmax = split;
@@ -8024,6 +8073,95 @@ SCIP_RETCODE reformulateCons(
 }
 #endif
 
+/** creare a disjunctive constraint which contains all jobs which cannot run in parallel */
+static
+SCIP_RETCODE createDisjuctiveCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< cumulative constraint */
+   int*                  naddconss           /**< pointer to store the number of added constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   int* durations;
+   int* demands;
+   int capacity;
+   int halfcapacity;
+   int mindemand;
+   int nvars;
+   int v;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   capacity = consdata->capacity;
+
+   if( capacity == 1 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &durations, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &demands, consdata->nvars) );
+
+   halfcapacity = capacity / 2;
+   mindemand = consdata->capacity;
+   nvars = 0;
+
+   /* collect all jobs with demand larger than half of the capacity */
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      if( consdata->demands[v] > halfcapacity )
+      {
+         vars[nvars] = consdata->vars[v];
+         demands[nvars] = 1.0;
+         durations[nvars] = consdata->durations[v];
+         nvars++;
+
+         mindemand = MIN(mindemand, consdata->demands[v]);
+      }
+   }
+
+   if( nvars > 0 )
+   {
+      SCIP_Bool added;
+
+      added = FALSE;
+
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         if( consdata->demands[v] > halfcapacity )
+            continue;
+
+         if( mindemand + consdata->demands[v] > capacity )
+         {
+            demands[nvars] = 1.0;
+            durations[nvars] = consdata->durations[v];
+            vars[nvars] = consdata->vars[v];
+
+            /* creates cumulative constraint and adds it to problem */
+            SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars+1, vars, durations, demands, 1.0, consdata->hmin, consdata->hmax,
+                  FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            (*naddconss)++;
+            added = TRUE;
+         }
+      }
+
+      if( !added && nvars > 1 )
+      {
+         /* creates cumulative constraint and adds it to problem */
+         SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars, vars, durations, demands, 1.0, consdata->hmin, consdata->hmax,
+               FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         (*naddconss)++;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &demands);
+   SCIPfreeBufferArray(scip, &durations);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /** presolve given constraint */
 static
 SCIP_RETCODE presolveCons(
@@ -8718,6 +8856,12 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
       if( SCIPconsIsDeleted(cons) )
          continue;
 
+      /* in the first round we create a disjunctive constraint containing those jobs which cannot run in parallel */
+      if( nrounds == 1 && SCIPgetNRuns(scip) == 1 && conshdlrdata->disjunctive )
+      {
+         SCIP_CALL( createDisjuctiveCons(scip, cons, naddconss) );
+      }
+
       /* propagate cumulative constraint */
       SCIP_CALL( propagateCons(scip, cons, conshdlrdata, nchgbds, ndelconss, &cutoff) );
       assert(checkDemands(scip, cons) || cutoff);
@@ -9160,6 +9304,10 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/normalize", "should demands and capacity be normalized?",
          &conshdlrdata->normalize, FALSE, DEFAULT_NORMALIZE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/disjunctive", "extract disjunctive constraints?",
+         &conshdlrdata->disjunctive, FALSE, DEFAULT_DISJUNCTIVE, NULL, NULL) );
+
    SCIP_CALL( SCIPaddLongintParam(scip,
          "constraints/"CONSHDLR_NAME"/maxnodes",
          "number of branch-and-bound nodes to solve an independent cumulative constraint (-1: no limit)?",
