@@ -6926,9 +6926,6 @@ SCIP_RETCODE updateCutoffbound(
 {
    SCIP_Real cutoffbound;
 
-   SCIPdebugMessage("constraint <%s> is parallel to objective function and provids a cutoff bound <%g>\n",
-      SCIPconsGetName(cons), primalbound);
-
    /* increase the cutoff bound value by an epsilon to ensue that solution with the value of the cutoff bound are still
     * accepted
     */
@@ -6942,11 +6939,22 @@ SCIP_RETCODE updateCutoffbound(
    }
    else
    {
-      /* in case the cutoff bound is worse then currently known one we avoid additionaly enforcement and
-       * propagation
+      SCIP_CONSDATA* consdata;
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      /* we cannot disable the enforcement and propagation on ranged rows, because the cutoffbound could only have
+       * resulted from one side
        */
-      SCIP_CALL( SCIPsetConsEnforced(scip, cons, FALSE) );
-      SCIP_CALL( SCIPsetConsPropagated(scip, cons, FALSE) );
+      if( SCIPisInfinity(scip, -consdata->lhs) || SCIPisInfinity(scip, consdata->rhs) )
+      {
+         /* in case the cutoff bound is worse then the currently known one, we additionally avoid enforcement and
+          * propagation
+          */
+         SCIP_CALL( SCIPsetConsEnforced(scip, cons, FALSE) );
+         SCIP_CALL( SCIPsetConsPropagated(scip, cons, FALSE) );
+      }
    }
 
    return SCIP_OKAY;

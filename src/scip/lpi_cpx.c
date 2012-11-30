@@ -3244,6 +3244,10 @@ SCIP_RETCODE SCIPlpiGetBase(
    int*                  rstat               /**< array to store row basis status, or NULL */
    )
 {
+   int i;
+   int nrows;
+   char sense;
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
@@ -3251,6 +3255,18 @@ SCIP_RETCODE SCIPlpiGetBase(
    SCIPdebugMessage("saving CPLEX basis into %p/%p\n", (void *) cstat, (void *) rstat);
 
    CHECK_ZERO( lpi->messagehdlr, CPXgetbase(lpi->cpxenv, lpi->cpxlp, cstat, rstat) );
+
+   /* correct rstat values for "<=" constraints: Here CPX_AT_LOWER bound means that the slack is 0, i.e., the upper bound is tight */
+   nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+   for (i = 0; i < nrows; ++i)
+   {
+      if ( rstat[i] == CPX_AT_LOWER )
+      {
+         CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &sense, i, i) );
+         if ( sense == 'L' )
+            rstat[i] = SCIP_BASESTAT_UPPER;
+      }
+   }
 
    /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
    assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
@@ -3268,6 +3284,10 @@ SCIP_RETCODE SCIPlpiSetBase(
    int*                  rstat               /**< array with row basis status */
    )
 {
+   int i;
+   int nrows;
+   char sense;
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
@@ -3283,6 +3303,18 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC);
    assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
    assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
+
+   /* correct rstat values for ">=" constraints: Here CPX_AT_LOWER bound means that the slack is 0, i.e., the upper bound is tight */
+   nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+   for (i = 0; i < nrows; ++i)
+   {
+      if ( rstat[i] == SCIP_BASESTAT_UPPER )
+      {
+         CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &sense, i, i) );
+         if ( sense == 'L' )
+            rstat[i] = CPX_AT_LOWER;
+      }
+   }
 
    CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, cstat, rstat) );
 

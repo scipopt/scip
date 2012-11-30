@@ -1163,8 +1163,13 @@ SCIP_RETCODE presolveDual(
             /* even simpler case where objective is linear in x */
             if( SCIPisZero(scip, SCIPvarGetObj(consdata->x)) )
             {
-               /* simplest case where objective is zero: fix x to close to 0 */
-               xfix = MAX(xlb, MIN(xub, 0.0));
+               /* simplest case where objective is zero:
+                * if zero is within bounds, fix to zero, otherwise
+                * fix x to middle of bounds for numerical stability. */
+                if(SCIPisLT(scip, xlb, 0.0) && SCIPisGT(scip, xub, 0.0))
+                    xfix = 0.0;
+                else
+                    xfix = 0.5 * (xlb + xub);
             }
             else
             {
