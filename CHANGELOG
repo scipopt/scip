@@ -32,12 +32,15 @@ interface
 - new methods for the SCIP_QUEUE data structure in pub_misc.h, misc.c SCIPqueueCreate(), SCIPqueueFree(),
   SCIPqueueClear(), SCIPqueueInsert(), SCIPqueueRemove(), SCIPqueueFirst(), SCIPqueueIsEmpty(), SCIPqueueNElems()
 - added number of constraints which are marked for propagation to callback method consprop
-- SCIPcalcMIR() takes an additional parameter sidetypes to determine which side of the rows to use (relevant for ranged rows)
-- New methods SCIPconshdlrIncNCutsFound(), SCIPsepaIncNCutsFound(), and SCIPsepaIncNCutsFoundAtNode() to increase the number of found cuts
+- SCIPcalcMIR() takes an additional parameter sidetypes to determine which side of the rows to use
+  (relevant for ranged rows)
+- New methods SCIPconshdlrIncNCutsFound(), SCIPsepaIncNCutsFound(), and SCIPsepaIncNCutsFoundAtNode() to increase the
+  number of found cuts
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
-- new parameter <separating/gomory/sidetypebasis> to decide whether the sides of ranged rows should be determined from the basis status
+- new parameter <separating/gomory/sidetypebasis> to decide whether the sides of ranged rows should be determined from
+  the basis status
 - new parameter <write/allconss> to enable that all constraints are written
 
 
