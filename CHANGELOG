@@ -36,6 +36,7 @@ interface
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
 - new parameter <separating/gomory/sidetypebasis> to decide whether the sides of ranged rows should be determined from the basis status
+- new parameter <write/allconss> to enable that all constraints are written
 
 
 SCIP version 3.0.1

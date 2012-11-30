@@ -310,6 +310,9 @@
                                                  *   in VBC output? */
 #define SCIP_DEFAULT_VBC_DISPSOLS         FALSE /**< should the node where solutions are found be visualized? */
 
+/* Writing */
+#define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
+
 
 
 
@@ -1601,6 +1604,13 @@ SCIP_RETCODE SCIPsetCreate(
          "vbc/dispsols",
          "should the node where solutions are found be visualized?",
          &(*set)->vbc_dispsols, FALSE, SCIP_DEFAULT_VBC_DISPSOLS,
+         NULL, NULL) );
+
+   /* Writing parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "write/allconss",
+         "should all constraints be written (including the redundant constraints)?",
+         &(*set)->write_allconss, FALSE, SCIP_DEFAULT_WRITE_ALLCONSS,
          NULL, NULL) );
 
    return SCIP_OKAY;

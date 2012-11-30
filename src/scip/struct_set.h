@@ -374,6 +374,9 @@ struct SCIP_Set
    char*                 vbc_filename;       /**< name of the VBC Tool output file, or - if no output should be created */
    SCIP_Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in VBC output? */
    SCIP_Bool             vbc_dispsols;       /**< should the node where solutions are found be visualized? */
+
+   /* Writing */
+   SCIP_Bool             write_allconss;     /**< should all constraints be written (including the redundant constraints)? */
 };
 
 #ifdef __cplusplus

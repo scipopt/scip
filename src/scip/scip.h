@@ -4082,6 +4082,9 @@ SCIP_RETCODE SCIPwriteOrigProblem(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note If you want the write all constraints (including the once which are redundant for example), you need to set
+ *        the parameter <write/allconss> to TRUE
  */
 EXTERN
 SCIP_RETCODE SCIPwriteTransProblem(
