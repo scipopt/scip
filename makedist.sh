@@ -34,7 +34,7 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*xyz*" \
 --exclude="nlpioracle.c" \
 --exclude="nlpioracle.h" \
---exclude="exprinterpret_cppad.cpp " \
+--exclude="exprinterpret_cppad.cpp" \
 --exclude="nlpi_ipopt.cpp" \
 --exclude="lpi_c*" \
 --exclude="lpi_grb.c" \
