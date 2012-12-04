@@ -3937,6 +3937,9 @@ SCIP_RETCODE mergeMultiples(
          else
          {
             SCIP_CALL( chgCoefPos(scip, cons, v, valsum) );
+
+            /* reset maximal activity delta, so that it will be recalculated on the next real propagation */
+            consdata->maxactdelta = SCIP_INVALID;
          }
       }
       --v;
@@ -11501,6 +11504,9 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       /* we want to remove the fixed variable */
       consdata->presolved = FALSE;
       consdata->removedfixings = FALSE;
+
+      /* reset maximal activity delta, so that it will be recalculated on the next real propagation */
+      consdata->maxactdelta = SCIP_INVALID;
    }
 
    else if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != 0 )
