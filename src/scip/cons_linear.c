@@ -191,7 +191,9 @@ struct SCIP_ConsData
    int                   glbmaxactivityposhuge;/**< number of coefficients contrib. with huge pos. value to glbmaxactivity */
    int                   varssize;           /**< size of the vars- and vals-arrays */
    int                   nvars;              /**< number of nonzeros in constraint */
-   int                   nbinvars;           /**< the number of binary variables in the constraint */
+   int                   nbinvars;           /**< the number of binary variables in the constraint, only valid after
+                                              *   sorting in stage >= SCIP_STAGE_INITSOLVE
+                                              */
    unsigned int          validmaxabsval:1;   /**< is the maximum absolute value valid? */
    unsigned int          validactivities:1;  /**< are the pseudo activity and activity bounds (local and global) valid? */
    unsigned int          validpseudoact:1;   /**< is the pseudo activity valid? */
@@ -3323,11 +3325,13 @@ SCIP_RETCODE addCoef(
    consdata->cliquesadded = FALSE;
    if( consdata->nvars == 1 )
    {
+      consdata->binvarssorted = TRUE;
       consdata->sorted = TRUE;
       consdata->merged = TRUE;
    }
    else
    {
+      consdata->binvarssorted = consdata->binvarssorted && !SCIPvarIsBinary(var);
       consdata->sorted = consdata->sorted
          && (SCIPvarCompare(consdata->vars[consdata->nvars-2], consdata->vars[consdata->nvars-1]) == -1);
       consdata->merged = FALSE;
@@ -3391,6 +3395,8 @@ SCIP_RETCODE delCoefPos(
    /* move the last variable to the free slot */
    if( pos != consdata->nvars-1 )
    {
+      consdata->binvarssorted = consdata->binvarssorted && !SCIPvarIsBinary(consdata->vars[pos]);
+
       consdata->vars[pos] = consdata->vars[consdata->nvars-1];
       consdata->vals[pos] = consdata->vals[consdata->nvars-1];
 
@@ -3478,6 +3484,8 @@ SCIP_RETCODE chgCoefPos(
 
    /* change the value */
    consdata->vals[pos] = newval;
+
+   consdata->binvarssorted = consdata->binvarssorted && !SCIPvarIsBinary(var);
 
    /* update minimum and maximum activities */
    if( SCIPconsIsTransformed(cons) )
