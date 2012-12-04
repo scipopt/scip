@@ -19,6 +19,7 @@ features:
 - added passing MEM option of testgams(cluster) target as workspace option to GAMS jobs
 - cumulative constraint handler adds disjunctive constraints (cumulative with capacity 1) for all jobs which cannot
   be processed in parallel
+- added new clique extraction algorithm for linear constraints
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
