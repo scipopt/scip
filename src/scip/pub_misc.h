@@ -4489,7 +4489,9 @@ SCIP_Bool SCIPrealToRational(
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    );
 
-/** tries to find a value, such that all given values, if scaled with this value become integral */
+/** tries to find a value, such that all given values, if scaled with this value become integral in relative allowed
+ *  difference in between mindelta and maxdelta
+ */
 EXTERN
 SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Real*            vals,               /**< values to scale */

@@ -6322,7 +6322,9 @@ SCIP_Bool isIntegralScalar(
 static const SCIP_Real scalars[] = {3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0};
 static const int nscalars = 9;
 
-/** tries to find a value, such that all given values, if scaled with this value become integral */
+/** tries to find a value, such that all given values, if scaled with this value become integral in relative allowed
+ *  difference in between mindelta and maxdelta
+ */
 SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Real*            vals,               /**< values to scale */
    int                   nvals,              /**< number of values to scale */
