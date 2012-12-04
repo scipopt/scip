@@ -2428,7 +2428,7 @@ SCIP_RETCODE applyFixings(
          if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
          {
             SCIP_Bool tightened;
-            
+
             SCIP_CALL( SCIPtightenVarLb(scip, var, (consdata->lhs - constant)/scalar, TRUE, cutoff, &tightened) );
             if( tightened )
             {
@@ -2440,7 +2440,7 @@ SCIP_RETCODE applyFixings(
          if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
          {
             SCIP_Bool tightened;
-            
+
             SCIP_CALL( SCIPtightenVarUb(scip, var, (consdata->rhs - constant)/scalar, TRUE, cutoff, &tightened) );
             if( tightened )
             {
@@ -2455,7 +2455,7 @@ SCIP_RETCODE applyFixings(
          if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
          {
             SCIP_Bool tightened;
-            
+
             SCIP_CALL( SCIPtightenVarUb(scip, var, (consdata->lhs - constant)/scalar, TRUE, cutoff, &tightened) );
             if( tightened )
             {
@@ -2467,7 +2467,7 @@ SCIP_RETCODE applyFixings(
          if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
          {
             SCIP_Bool tightened;
-            
+
             SCIP_CALL( SCIPtightenVarLb(scip, var, (consdata->rhs - constant)/scalar, TRUE, cutoff, &tightened) );
             if( tightened )
             {
@@ -2578,7 +2578,7 @@ SCIP_RETCODE applyFixings(
          else
          {
             SCIP_Real lhs;
-            
+
             assert(varscalar != 0.0);
 
             /* lhs := (rhs - varconstant) / varscalar
@@ -3901,11 +3901,21 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
+   assert(event != NULL);
    consdata = (SCIP_CONSDATA*)eventdata;
    assert(consdata != NULL);
 
-   consdata->propagated = FALSE;
-   consdata->presolved = FALSE;
+   if( SCIPeventGetType(event) == SCIP_EVENTTYPE_VARFIXED )
+   {
+      consdata->presolved = FALSE;
+   }
+   else
+   {
+      assert((SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDCHANGED) != 0);
+
+      consdata->propagated = FALSE;
+      consdata->presolved = FALSE;
+   }
 
    return SCIP_OKAY;
 }

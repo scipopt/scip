@@ -35,6 +35,7 @@ fixed bugs:
 - fixed wrong basis rstat values in CPLEX LPI
 - fixed bug leading to removing a ranged row parallel to the objective function, although one of the sides was still needed
 - fixed a bug correcting the binvarssorted flag in cons_linear.c
+- fixed bug in cons_varbound.c not resolving multi-aggregated variables
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()
