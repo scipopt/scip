@@ -4532,6 +4532,7 @@ SCIP_RETCODE tightenVarUb(
    assert(var != NULL);
 
    lb = SCIPvarGetLbLocal(var);
+   newub = SCIPadjustedVarUb(scip, var, newub);
 
    if( force || SCIPisUbBetter(scip, newub, lb, oldub) )
    {
@@ -4592,6 +4593,7 @@ SCIP_RETCODE tightenVarLb(
    assert(var != NULL);
 
    ub = SCIPvarGetUbLocal(var);
+   newlb = SCIPadjustedVarLb(scip, var, newlb);
 
    if( force || SCIPisLbBetter(scip, newlb, oldlb, ub) )
    {
