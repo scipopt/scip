@@ -634,21 +634,39 @@ SCIP_RETCODE tightenBoundDive(
    lb = SCIPgetVarLbDive(scip, bound->var);
    ub = SCIPgetVarUbDive(scip, bound->var);
 
-   /* round bounds new value if variable is integral */
-   if( SCIPvarIsIntegral(bound->var) )
+   if( bound->boundtype == SCIP_BOUNDTYPE_LOWER )
    {
-      newval = bound->boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPceil(scip, newval) : SCIPfloor(scip, newval);
-   }
+      /* round bounds new value if variable is integral */
+      if( SCIPvarIsIntegral(bound->var) )
+         newval = SCIPceil(scip, newval);
 
-   if( bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisLbBetter(scip, newval, lb, ub) )
-   {
-      SCIP_CALL( SCIPchgVarLbDive(scip, bound->var, newval) );
-      *tightened = TRUE;
+      /* ensure that we give consistent bounds to the LP solver */
+      if( newval > ub )
+         newval = ub;
+
+      /* tighten if really better */
+      if( SCIPisLbBetter(scip, newval, lb, ub) )
+      {
+         SCIP_CALL( SCIPchgVarLbDive(scip, bound->var, newval) );
+         *tightened = TRUE;
+      }
    }
-   else if( bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisUbBetter(scip, newval, lb, ub) )
+   else
    {
-      SCIP_CALL( SCIPchgVarUbDive(scip, bound->var, newval) );
-      *tightened = TRUE;
+      /* round bounds new value if variable is integral */
+      if( SCIPvarIsIntegral(bound->var) )
+         newval = SCIPfloor(scip, newval);
+
+      /* ensure that we give consistent bounds to the LP solver */
+      if( newval < lb )
+         newval = lb;
+
+      /* tighten if really better */
+      if( SCIPisUbBetter(scip, newval, lb, ub) )
+      {
+         SCIP_CALL( SCIPchgVarUbDive(scip, bound->var, newval) );
+         *tightened = TRUE;
+      }
    }
 
    return SCIP_OKAY;

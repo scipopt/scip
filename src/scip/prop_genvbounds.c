@@ -747,7 +747,7 @@ SCIP_RETCODE analyzeGenVBoundConflict(
       SCIP_Real infeasthreshold;
       SCIP_Real bound;
 
-      /* get minimal right-hand side bound that leads to infeasibility */
+      /* get minimal right-hand side bound that leads to infeasibility; first try with a factor of 2 for robustness */
       bound = REALABS(SCIPvarGetUbLocal(genvbound->var));
       infeasthreshold = MAX(bound, 1.0) * 2 * SCIPfeastol(scip);
       bound = SCIPvarGetUbLocal(genvbound->var) + infeasthreshold;
@@ -756,7 +756,25 @@ SCIP_RETCODE analyzeGenVBoundConflict(
        * to conflict set
        */
       SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &bound, &success) );
-      assert(SCIPisFeasGT(scip, bound, SCIPvarGetUbLocal(genvbound->var)));
+      assert(!success || SCIPisFeasGT(scip, bound, SCIPvarGetUbLocal(genvbound->var)));
+
+      /* if infeasibility cannot be proven with the tighter bound, try with actual bound */
+      if( !success )
+      {
+         bound = REALABS(SCIPvarGetUbLocal(genvbound->var));
+         infeasthreshold = MAX(bound, 1.0) * SCIPfeastol(scip);
+         bound = SCIPvarGetUbLocal(genvbound->var) + infeasthreshold;
+
+         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &bound, &success) );
+         success = success && SCIPisFeasGT(scip, bound, SCIPvarGetUbLocal(genvbound->var));
+      }
+
+      /* initial reason could not be constructed, maybe due to numerics; do not apply conflict analysis */
+      if( !success )
+      {
+         SCIPdebugMessage("strange: could not create initial reason to start conflict analysis\n");
+         return SCIP_OKAY;
+      }
 
       /* compute upper bound on left-hand side variable that leads to infeasibility */
       bound -= infeasthreshold;
@@ -781,7 +799,7 @@ SCIP_RETCODE analyzeGenVBoundConflict(
       SCIP_Real infeasthreshold;
       SCIP_Real bound;
 
-      /* get minimal right-hand side bound that leads to infeasibility */
+      /* get minimal right-hand side bound that leads to infeasibility; try with a factor of 2 first for robustness */
       bound = REALABS(SCIPvarGetLbLocal(genvbound->var));
       infeasthreshold = MAX(bound, 1.0) * 2 * SCIPfeastol(scip);
       bound = -SCIPvarGetLbLocal(genvbound->var) + infeasthreshold;
@@ -790,7 +808,25 @@ SCIP_RETCODE analyzeGenVBoundConflict(
        * to conflict set
        */
       SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &bound, &success) );
-      assert(SCIPisFeasLT(scip, -bound, SCIPvarGetLbLocal(genvbound->var)));
+      assert(!success || SCIPisFeasLT(scip, -bound, SCIPvarGetLbLocal(genvbound->var)));
+
+      /* if infeasibility cannot be proven with the tighter bound, try with actual bound */
+      if( !success )
+      {
+         bound = REALABS(SCIPvarGetLbLocal(genvbound->var));
+         infeasthreshold = MAX(bound, 1.0) * SCIPfeastol(scip);
+         bound = -SCIPvarGetLbLocal(genvbound->var) + infeasthreshold;
+
+         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &bound, &success) );
+         success = success && SCIPisFeasLT(scip, -bound, SCIPvarGetLbLocal(genvbound->var));
+      }
+
+      /* initial reason could not be constructed, maybe due to numerics; do not apply conflict analysis */
+      if( !success )
+      {
+         SCIPdebugMessage("strange: could not create initial reason to start conflict analysis\n");
+         return SCIP_OKAY;
+      }
 
       /* compute lower bound on left-hand side variable that leads to infeasibility */
       bound = -bound + infeasthreshold;
