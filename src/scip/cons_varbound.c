@@ -225,8 +225,8 @@ SCIP_RETCODE catchEvents(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) );
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) );
 
    return SCIP_OKAY;
 }
@@ -245,8 +245,8 @@ SCIP_RETCODE dropEvents(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)cons, -1) );
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)cons, -1) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, (SCIP_EVENTDATA*)cons, -1) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, (SCIP_EVENTDATA*)cons, -1) );
 
    return SCIP_OKAY;
 }
@@ -2564,7 +2564,7 @@ SCIP_RETCODE applyFixings(
          if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
          {
             SCIP_Bool tightened;
-            
+
             SCIP_CALL( SCIPtightenVarLb(scip, var, (consdata->lhs - constant)/scalar, TRUE, cutoff, &tightened) );
             if( tightened )
             {
@@ -2576,7 +2576,7 @@ SCIP_RETCODE applyFixings(
          if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
          {
             SCIP_Bool tightened;
-            
+
             SCIP_CALL( SCIPtightenVarUb(scip, var, (consdata->rhs - constant)/scalar, TRUE, cutoff, &tightened) );
             if( tightened )
             {
@@ -2591,7 +2591,7 @@ SCIP_RETCODE applyFixings(
          if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
          {
             SCIP_Bool tightened;
-            
+
             SCIP_CALL( SCIPtightenVarUb(scip, var, (consdata->lhs - constant)/scalar, TRUE, cutoff, &tightened) );
             if( tightened )
             {
@@ -2603,7 +2603,7 @@ SCIP_RETCODE applyFixings(
          if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
          {
             SCIP_Bool tightened;
-            
+
             SCIP_CALL( SCIPtightenVarLb(scip, var, (consdata->rhs - constant)/scalar, TRUE, cutoff, &tightened) );
             if( tightened )
             {
@@ -2714,7 +2714,7 @@ SCIP_RETCODE applyFixings(
          else
          {
             SCIP_Real lhs;
-            
+
             assert(varscalar != 0.0);
 
             /* lhs := (rhs - varconstant) / varscalar
@@ -4061,14 +4061,24 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
 
+   assert(event != NULL);
    cons = (SCIP_CONS*)eventdata;
    assert(cons != NULL);
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   consdata->propagated = FALSE;
-   consdata->presolved = FALSE;
-   consdata->tightened = FALSE;
+   if( SCIPeventGetType(event) == SCIP_EVENTTYPE_VARFIXED )
+   {
+      consdata->presolved = FALSE;
+   }
+   else
+   {
+      assert((SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0);
+
+      consdata->propagated = FALSE;
+      consdata->presolved = FALSE;
+      consdata->tightened = FALSE;
+   }
 
    SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
