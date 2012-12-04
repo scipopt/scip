@@ -298,7 +298,7 @@ SCIP_RETCODE eventdataFree(
 }
 
 /** sorts items in knapsack with nonincreasing weights */
-static 
+static
 void sortItems(
    SCIP_CONSDATA*        consdata            /**< constraint data */
    )
@@ -315,42 +315,37 @@ void sortItems(
       int lastcliquenum;
       int v;
 
-      /* sort of five joint arrays of Long/pointer/pointer/ints/ints, 
+      /* sort of five joint arrays of Long/pointer/pointer/ints/ints,
        * sorted by first array in non-increasing order via sort template */
       SCIPsortDownLongPtrPtrIntInt(
-         consdata->weights, 
-         (void**)consdata->vars, 
-         (void**)consdata->eventdatas, 
+         consdata->weights,
+         (void**)consdata->vars,
+         (void**)consdata->eventdatas,
          consdata->cliquepartition,
          consdata->negcliquepartition,
          consdata->nvars);
-      
-      /* sort all items with same weight according to their variable index, used for hash value for fast pairwise comparison of all constraints */
-      for(v = consdata->nvars - 2; v >= 0; --v )
-      {
-         SCIP_VAR* tmpvar;
-         SCIP_EVENTDATA* tmpeventdata;
-         int tmpclique;
-         int tmpnegclique;
 
-         if( consdata->weights[v] == consdata->weights[v+1]
-            && SCIPvarGetIndex(consdata->vars[v]) > SCIPvarGetIndex(consdata->vars[v + 1]) )
+      v = consdata->nvars - 1;
+      /* sort all items with same weight according to their variable index, used for hash value for fast pairwise comparison of all constraints */
+      while( v >= 0 )
+      {
+         int w = v - 1;
+
+         while( w >= 0 && consdata->weights[v] == consdata->weights[w] )
+            --w;
+
+         if( v - w > 1 )
          {
-            tmpvar = consdata->vars[v];
-            tmpeventdata = consdata->eventdatas[v];
-            tmpclique = consdata->cliquepartition[v];
-            tmpnegclique = consdata->negcliquepartition[v];
-            
-            consdata->vars[v] = consdata->vars[v + 1];
-            consdata->eventdatas[v] = consdata->eventdatas[v + 1];
-            consdata->cliquepartition[v] = consdata->cliquepartition[v + 1];
-            consdata->negcliquepartition[v] = consdata->negcliquepartition[v + 1];
-            
-            consdata->vars[v + 1] = tmpvar;
-            consdata->eventdatas[v + 1] = tmpeventdata;
-            consdata->cliquepartition[v + 1] = tmpclique;
-            consdata->negcliquepartition[v + 1] = tmpnegclique;
+            /* sort all corresponding parts of arrays for which the weights are equal by using the variable index */
+            SCIPsortPtrPtrIntInt(
+               (void**)(&(consdata->vars[w+1])),
+               (void**)(&(consdata->eventdatas[w+1])),
+               &(consdata->cliquepartition[w+1]),
+               &(consdata->negcliquepartition[w+1]),
+               SCIPvarComp,
+               v - w);
          }
+         v = w;
       }
 
       /* we need to make sure that our clique numbers of our normal clique will be in increasing order without gaps */
