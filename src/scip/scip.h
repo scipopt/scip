@@ -16870,6 +16870,26 @@ SCIP_Longint SCIPgetNSolsFound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets number of feasible primal solutions respecting the objective limit found so far
+ *
+ *  @return the number of feasible primal solutions respecting the objective limit found so far
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+SCIP_Longint SCIPgetNLimSolsFound(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets number of feasible primal solutions found so far, that improved the primal bound at the time they were found
  *
  *  @return the number of feasible primal solutions found so far, that improved the primal bound at the time they were found

@@ -12144,8 +12144,16 @@ SCIP_RETCODE displayRelevantStats(
       else
          SCIPmessagePrintInfo(scip->messagehdlr, "Solving Nodes      : %"SCIP_LONGINT_FORMAT"\n", scip->stat->nnodes);
       if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_EXITSOLVE )
-         SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (%"SCIP_LONGINT_FORMAT" solutions)\n",
-            getPrimalbound(scip), scip->primal->nsolsfound);
+      {
+         char limsolstring[SCIP_MAXSTRLEN];
+         if( scip->primal->nsolsfound !=  scip->primal->nlimsolsfound )
+            (void) SCIPsnprintf(limsolstring, SCIP_MAXSTRLEN, ", %"SCIP_LONGINT_FORMAT" respecting the objective limit", scip->primal->nlimsolsfound);
+         else
+            (void) SCIPsnprintf(limsolstring, SCIP_MAXSTRLEN,"");
+
+         SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (%"SCIP_LONGINT_FORMAT" solutions%s)\n",
+            getPrimalbound(scip), scip->primal->nsolsfound, limsolstring);
+      }
       if( scip->set->stage >= SCIP_STAGE_SOLVING && scip->set->stage <= SCIP_STAGE_SOLVED )
       {
          SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", getDualbound(scip));
@@ -31975,6 +31983,30 @@ SCIP_Longint SCIPgetNSolsFound(
    return scip->primal->nsolsfound;
 }
 
+/** gets number of feasible primal solutions respecting the objective limit found so far
+ *
+ *  @return the number of feasible primal solutions respecting the objective limit found so far
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_Longint SCIPgetNLimSolsFound(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLimSolsFound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->primal->nlimsolsfound;
+}
+
 /** gets number of feasible primal solutions found so far, that improved the primal bound at the time they were found
  *
  *  @return the number of feasible primal solutions found so far, that improved the primal bound at the time they were found
@@ -33198,6 +33230,7 @@ void printSolutionStatistics(
    SCIP_Real bestsol;
    SCIP_Real gap;
    SCIP_Real firstprimalbound;
+   char limsolstring[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(scip->stat != NULL);
@@ -33208,9 +33241,14 @@ void printSolutionStatistics(
    dualboundroot = SCIPgetDualboundRoot(scip);
    gap = SCIPgetGap(scip);
 
+   if( scip->primal->nsolsfound !=  scip->primal->nlimsolsfound )
+      (void) SCIPsnprintf(limsolstring, SCIP_MAXSTRLEN, ", %"SCIP_LONGINT_FORMAT" respecting the objective limit", scip->primal->nlimsolsfound);
+   else
+      (void) SCIPsnprintf(limsolstring, SCIP_MAXSTRLEN,"");
+
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Solution           :\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Solutions found  : %10"SCIP_LONGINT_FORMAT" (%d improvements)\n",
-      scip->primal->nsolsfound, scip->primal->nbestsolsfound);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Solutions found  : %10"SCIP_LONGINT_FORMAT" (%d improvements%s)\n",
+      scip->primal->nsolsfound, scip->primal->nbestsolsfound, limsolstring);
 
    if( SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
    {
