@@ -7145,8 +7145,6 @@ SCIP_RETCODE createConsCumulative(
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   printf("**** addede\n");
-
    return SCIP_OKAY;
 }
 
@@ -7203,7 +7201,6 @@ SCIP_RETCODE computeEffectiveHorizon(
    else if( consdata->hmin < split && split < consdata->hmax )
    {
       char name[SCIP_MAXSTRLEN];
-
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "(%s)'", SCIPconsGetName(cons));
 
       SCIPdebugMessage("split cumulative constraint <%s>[%d,%d) with %d jobs at time point %d\n",
