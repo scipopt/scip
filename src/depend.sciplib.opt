@@ -5064,9 +5064,11 @@ $(LIBOBJDIR)/scip/cutpool.o: src/scip/cutpool.c src/scip/def.h src/scip/type_ret
  src/scip/type_mem.h src/scip/struct_stat.h src/scip/type_vbc.h \
  src/scip/type_history.h src/scip/clock.h src/scip/lp.h \
  src/scip/type_lp.h src/scip/type_prob.h src/scip/pub_lp.h \
- src/scip/type_lpi.h src/scip/struct_lp.h src/scip/sepastore.h \
- src/scip/type_sepastore.h src/scip/cutpool.h src/scip/type_cutpool.h \
- src/scip/pub_cutpool.h src/scip/struct_cutpool.h
+ src/scip/type_lpi.h src/scip/struct_lp.h src/scip/cons.h \
+ src/scip/type_sepastore.h src/scip/pub_cons.h src/scip/struct_cons.h \
+ src/scip/sepa.h src/scip/pub_sepa.h src/scip/sepastore.h \
+ src/scip/cutpool.h src/scip/type_cutpool.h src/scip/pub_cutpool.h \
+ src/scip/struct_cutpool.h
 $(LIBOBJDIR)/scip/debug.o: src/scip/debug.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/blockmemshell/memory.h src/scip/set.h src/scip/buffer.h \
@@ -5269,7 +5271,7 @@ $(LIBOBJDIR)/scip/implics.o: src/scip/implics.c src/scip/def.h src/scip/type_ret
  src/scip/var.h src/scip/type_prob.h src/scip/pub_var.h \
  src/scip/type_implics.h src/scip/struct_var.h src/scip/implics.h \
  src/scip/pub_implics.h src/scip/struct_implics.h src/scip/history.h \
- src/scip/pub_history.h src/scip/struct_history.h
+ src/scip/pub_history.h src/scip/struct_history.h src/scip/debug.h
 $(LIBOBJDIR)/scip/interrupt.o: src/scip/interrupt.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/blockmemshell/memory.h src/scip/interrupt.h \

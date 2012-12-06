@@ -809,7 +809,7 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    SCIP_CALL( getSolutionValue(set, var, &solval) );
    if( solval == SCIP_UNKNOWN ) /*lint !e777*/
       return SCIP_OKAY;
-   assert(SCIPsetIsFeasEQ(set, solval, 0.0) || SCIPsetIsFeasEQ(set, solval, 1.0));
+   assert(SCIPsetIsFeasZero(set, solval) || SCIPsetIsFeasEQ(set, solval, 1.0));
 
    /* check, whether the implication applies for the debugging solution */
    if( (solval > 0.5) != varfixing )
@@ -837,6 +837,75 @@ SCIP_RETCODE SCIPdebugCheckImplic(
             SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), implbound, solval);
          SCIPABORT();
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** check whether given clique is valid for the debugging solution */
+SCIP_RETCODE SCIPdebugCheckClique(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< binary variables in the clique: at most one can be set to the given value */
+   SCIP_Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
+   int                   nvars               /**< number of variables in the clique */
+   )
+{
+   SCIP_Real solval;
+   int pos1;
+   int pos2;
+   int v;
+
+   assert(set != NULL);
+   assert(vars != NULL);
+
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isSolutionInMip(set) )
+      return SCIP_OKAY;
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(set) )
+      return SCIP_OKAY;
+
+   pos1 = -1;
+   pos2 = -1;
+
+   for( v = 0; v < nvars; ++v )
+   {
+      assert(vars[v] != NULL);
+      assert(SCIPvarIsBinary(vars[v]));
+
+      /* get solution value of variable */
+      SCIP_CALL( getSolutionValue(set, vars[v], &solval) );
+
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+         continue;
+
+      assert(SCIPsetIsFeasZero(set, solval) || SCIPsetIsFeasEQ(set, solval, 1.0));
+
+      /* negated solution value if negated variable is in clique */
+      if( values != NULL && values[v] == 0 )
+         solval = 1.0 - solval;
+
+      if( SCIPsetIsFeasEQ(set, solval, 1.0) )
+      {
+         if( pos1 == -1 )
+            pos1 = v;
+         else
+         {
+            assert(pos2 == -1);
+            pos2 = v;
+            break;
+         }
+      }
+   }
+
+   /* print debug message if the clique violates the debugging solution */
+   if( pos2 != -1 )
+   {
+      assert(pos1 != -1);
+      SCIPerrorMessage("clique violates debugging solution, (at least) variable <%s%s> and variable <%s%s> are both one in the debugging solution\n",
+         (values == NULL || values[pos1]) ? "" : "~", SCIPvarGetName(vars[pos1]), (values == NULL || values[pos2]) ? "" : "~", SCIPvarGetName(vars[pos2]));
+      SCIPABORT();
    }
 
    return SCIP_OKAY;
