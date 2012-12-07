@@ -10062,7 +10062,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
-   /*debugMessage("Enfolp method of linear constraints\n");*/
+   /*SCIPdebugMessage("Enfolp method of linear constraints\n");*/
 
    /* check for violated constraints
     * LP is processed at current node -> we can add violated linear constraints to the SCIP_LP
