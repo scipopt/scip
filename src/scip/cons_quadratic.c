@@ -7684,7 +7684,7 @@ SCIP_RETCODE propagateBoundsTightenVarUb(
    assert(nchgbds != NULL);
 
    /* new bound is no improvement */
-   if( SCIPisGE(scip, bnd, SCIPvarGetUbLocal(var)) )
+   if( SCIPisHugeValue(scip, bnd) || SCIPisGE(scip, bnd, SCIPvarGetUbLocal(var)) )
       return SCIP_OKAY;
 
    if( SCIPisInfinity(scip, -bnd) )
