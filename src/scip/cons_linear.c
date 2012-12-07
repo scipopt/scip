@@ -9765,13 +9765,16 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
    {
       SCIP_CONSDATA* consdata;
 
+      if( SCIPconsIsDeleted(conss[c]) )
+         continue;
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
       if( consdata->upgraded )
       {
          /* this is no problem reduction, because the upgraded constraint was added to the problem before, and the
-          * (redundant) linear constraint was only kept in order to support presolving the the linear constriant handler
+          * (redundant) linear constraint was only kept in order to support presolving the the linear constraint handler
           */
          SCIP_CALL( SCIPdelCons(scip, conss[c]) );
       }
