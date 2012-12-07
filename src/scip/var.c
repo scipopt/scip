@@ -6572,18 +6572,25 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   /* check that the bound is feasible */
+   /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
+    * of the domain within feastol
+    */
    assert(!SCIPsetIsFeasGT(set, newbound, var->glbdom.ub));
+
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
-   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+
+   /* check that the adjusted bound is feasible */
+   assert(!SCIPsetIsFeasGT(set, newbound, var->glbdom.ub));
 
    /* we do not want to exceed the upperbound, which could have happened due to numerics */
    newbound = MIN(newbound, var->glbdom.ub);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
-   /* the new global bound has to be tighter except we are in the original problem */
-   assert(lp == NULL || SCIPsetIsLE(set, var->glbdom.lb, newbound));
+   /* the new global bound has to be tighter except we are in the original problem; this must be w.r.t. feastol because
+    * SCIPvarFix() allows fixings that are outside of the domain within feastol
+    */
+   assert(lp == NULL || SCIPsetIsFeasLE(set, var->glbdom.lb, newbound));
 
    SCIPdebugMessage("changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
 
@@ -6701,18 +6708,25 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   /* check that the bound is feasible */
+   /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
+    * of the domain within feastol
+    */
    assert(!SCIPsetIsFeasLT(set, newbound, var->glbdom.lb));
+
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
-   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+
+   /* check that the adjusted bound is feasible */
+   assert(!SCIPsetIsFeasLT(set, newbound, var->glbdom.lb));
 
    /* we do not want to undercut the lowerbound, which could have happened due to numerics */
    newbound = MAX(newbound, var->glbdom.lb);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
-   /* the new global bound has to be tighter except we are in the original problem */
-   assert(lp == NULL || SCIPsetIsGE(set, var->glbdom.ub, newbound));
+   /* the new global bound has to be tighter except we are in the original problem; this must be w.r.t. feastol because
+    * SCIPvarFix() allows fixings that are outside of the domain within feastol
+    */
+   assert(lp == NULL || SCIPsetIsFeasGE(set, var->glbdom.ub, newbound));
 
    SCIPdebugMessage("changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
 
@@ -7300,11 +7314,16 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   /* check that the bound is feasible */
+   /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
+    * of the domain within feastol
+    */
    assert(!SCIPsetIsFeasGT(set, newbound, var->locdom.ub));
+
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
-   assert(SCIPsetIsLE(set, newbound, var->locdom.ub));
+
+   /* check that the adjusted bound is feasible */
+   assert(!SCIPsetIsFeasGT(set, newbound, var->locdom.ub));
 
    /* we do not want to exceed the upperbound, which could have happened due to numerics */
    newbound = MIN(newbound, var->locdom.ub);
@@ -7418,11 +7437,16 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   /* check that the bound is feasible */
+   /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
+    * of the domain within feastol
+    */
    assert(!SCIPsetIsFeasLT(set, newbound, var->locdom.lb));
+
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
-   assert(SCIPsetIsGE(set, newbound, var->locdom.lb));
+
+   /* check that the adjusted bound is feasible */
+   assert(!SCIPsetIsFeasLT(set, newbound, var->locdom.lb));
 
    /* we do not want to undercut the lowerbound, which could have happened due to numerics */
    newbound = MAX(newbound, var->locdom.lb);

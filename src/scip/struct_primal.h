@@ -36,7 +36,11 @@ extern "C" {
 struct SCIP_Primal
 {
    SCIP_Longint          nsolsfound;         /**< number of primal CIP solutions found up to now */
+   SCIP_Longint          nlimsolsfound;      /**< number of primal CIP solutions respecting the objective limit found
+                                              *   up to now */
    SCIP_Longint          nbestsolsfound;     /**< number of new best primal CIP solutions found up to now */
+   SCIP_Longint          nlimbestsolsfound;  /**< number of new best primal CIP solutions respecting the objective limit
+                                              *   found up to now */
    SCIP_Real             upperbound;         /**< upper (primal) bound of CIP: objective value of best solution or user bound */
    SCIP_Real             cutoffbound;        /**< upper bound for better primal solutions (if objective value is always
                                               *   integral, cutoffbound is equal to ceil(upperbound) - 1.0 (+eps) */

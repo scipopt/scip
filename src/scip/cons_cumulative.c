@@ -3117,7 +3117,6 @@ SCIP_RETCODE coretimesUpdateLb(
 
          *infeasible = TRUE;
 
-
          break;
       }
 
@@ -3134,8 +3133,14 @@ SCIP_RETCODE coretimesUpdateLb(
       SCIPdebugMessage("variable <%s> new lower bound <%d> -> <%d>\n", SCIPvarGetName(var), est, newlb);
       (*nchgbds)++;
 
-      /* adjust the earliest start time */
-      est = newlb;
+      /* adjust the earliest start time
+       *
+       * @note We are taking the lower of the start time variable on purpose instead of newlb. This is due the fact that
+       *       the proposed lower bound might be even strength by be the core which can be the case if aggregations are
+       *       involved.
+       */
+      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+      assert(est >= newlb);
 
       /* adjust the search position for the resource profile for the next step */
       if( est == SCIPprofileGetTime(profile, peak+1) )
@@ -3259,8 +3264,14 @@ SCIP_RETCODE coretimesUpdateUb(
       SCIPdebugMessage("variable <%s>: new upper bound <%d> -> <%d>\n", SCIPvarGetName(var), lst, newub);
       (*nchgbds)++;
 
-      /* adjust the latest start and completion time */
-      lst = newub;
+      /* adjust the latest start and completion time
+       *
+       * @note We are taking the upper of the start time variable on purpose instead of newub. This is due the fact that
+       *       the proposed upper bound might be even strength by be the core which can be the case if aggregations are
+       *       involved.
+       */
+      lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+      assert(lst <= newub);
       lct = lst + duration;
 
       /* adjust the search position for the resource profile for the next step */

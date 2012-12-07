@@ -529,6 +529,7 @@ SCIP_RETCODE resolveGenVBoundPropagation(
    SCIP_VAR* lhsvar;
    SCIP_VAR** vars;
    SCIP_Real minactivity;
+   SCIP_Real tmpboundval;
    SCIP_Real slack;
    int nvars;
    int i;
@@ -572,10 +573,11 @@ SCIP_RETCODE resolveGenVBoundPropagation(
       genvbound->boundtype == SCIP_BOUNDTYPE_LOWER ? "+" : "-", SCIPvarGetName(lhsvar), *boundval);
 
    /* subtract constant terms from bound value */
-   *boundval -= genvbound->cutoffcoef * SCIPgetCutoffbound(scip);
-   *boundval -= genvbound->constant;
+   tmpboundval = *boundval;
+   tmpboundval -= genvbound->cutoffcoef * SCIPgetCutoffbound(scip);
+   tmpboundval -= genvbound->constant;
 
-   SCIPdebugMessage("subtracting constant terms gives boundval=%.15g\n", *boundval);
+   SCIPdebugMessage("subtracting constant terms gives boundval=%.15g\n", tmpboundval);
 
    /* compute minimal activity; if bdchgidx is NULL, we create the initial conflict and use local bounds */
    minactivity = getGenVBoundsMinActivityConflict(scip, genvbound->vars, genvbound->coefs, genvbound->ncoefs, bdchgidx);
@@ -586,16 +588,16 @@ SCIP_RETCODE resolveGenVBoundPropagation(
     * genvbound can explain the propagation at the given bound change index; note that by now, with smaller cutoff
     * bound, we might even perform a stronger propagation
     */
-   if( SCIPisLT(scip, minactivity, *boundval) )
+   if( SCIPisLT(scip, minactivity, tmpboundval) )
    {
       SCIPdebugMessage("minactivity is too small to explain propagation; was genvbound replaced?\n");
       return SCIP_OKAY;
    }
 
    /* if bdchgidx is NULL, i.e., we create the initial conflict, we should be able to explain the bound change */
-   assert(SCIPisGE(scip, minactivity, *boundval));
+   assert(SCIPisGE(scip, minactivity, tmpboundval));
 
-   slack = MAX(minactivity - *boundval, 0.0);
+   slack = MAX(minactivity - tmpboundval, 0.0);
 
    SCIPdebugMessage("slack=%.15g\n", slack);
 
@@ -711,12 +713,23 @@ SCIP_RETCODE resolveGenVBoundPropagation(
 
    /* if slack is positive, return increased boundval */
    if( SCIPisPositive(scip, slack) )
-      *boundval += slack;
+      tmpboundval += slack;
 
    /* add constant terms again */
-   *boundval += genvbound->cutoffcoef * SCIPgetCutoffbound(scip);
-   *boundval += genvbound->constant;
+   tmpboundval += genvbound->cutoffcoef * SCIPgetCutoffbound(scip);
+   tmpboundval += genvbound->constant;
 
+   /* boundval should not have been decreased; if this happened nevertheless, maybe due to numerical errors, we quit
+    * without success
+    */
+   if( SCIPisLT(scip, tmpboundval, *boundval) )
+   {
+      SCIPdebugMessage("boundval was reduced from %.15g to %.15g; propagation not resolved\n", *boundval, tmpboundval);
+      return SCIP_OKAY;
+   }
+
+   /* return widened boundval */
+   *boundval = tmpboundval;
    *success = TRUE;
 
    return SCIP_OKAY;
@@ -769,16 +782,16 @@ SCIP_RETCODE analyzeGenVBoundConflict(
          success = success && SCIPisFeasGT(scip, bound, SCIPvarGetUbLocal(genvbound->var));
       }
 
+      /* compute upper bound on left-hand side variable that leads to infeasibility */
+      bound -= infeasthreshold;
+      success = success && SCIPisGE(scip, bound, SCIPvarGetUbLocal(genvbound->var));
+
       /* initial reason could not be constructed, maybe due to numerics; do not apply conflict analysis */
       if( !success )
       {
          SCIPdebugMessage("strange: could not create initial reason to start conflict analysis\n");
          return SCIP_OKAY;
       }
-
-      /* compute upper bound on left-hand side variable that leads to infeasibility */
-      bound -= infeasthreshold;
-      assert(SCIPisGE(scip, bound, SCIPvarGetUbLocal(genvbound->var)));
 
       /* if bound is already enforced by conflict set we do not have to add it */
       if( SCIPisGE(scip, bound, SCIPgetConflictVarUb(scip, genvbound->var)) )
@@ -821,16 +834,16 @@ SCIP_RETCODE analyzeGenVBoundConflict(
          success = success && SCIPisFeasLT(scip, -bound, SCIPvarGetLbLocal(genvbound->var));
       }
 
+      /* compute lower bound on left-hand side variable that leads to infeasibility */
+      bound = -bound + infeasthreshold;
+      success = success && SCIPisLE(scip, bound, SCIPvarGetLbLocal(genvbound->var));
+
       /* initial reason could not be constructed, maybe due to numerics; do not apply conflict analysis */
       if( !success )
       {
          SCIPdebugMessage("strange: could not create initial reason to start conflict analysis\n");
          return SCIP_OKAY;
       }
-
-      /* compute lower bound on left-hand side variable that leads to infeasibility */
-      bound = -bound + infeasthreshold;
-      assert(SCIPisLE(scip, bound, SCIPvarGetLbLocal(genvbound->var)));
 
       /* if bound is already enforced by conflict set we do not have to add it */
       if( SCIPisLE(scip, bound, SCIPgetConflictVarLb(scip, genvbound->var)) )

@@ -100,7 +100,7 @@ SCIP_Bool SCIPsolveIsStopped(
       && SCIPsetIsLT(set, SCIPgetUpperbound(set->scip) - SCIPgetLowerbound(set->scip), set->limit_absgap) )
       stat->status = SCIP_STATUS_GAPLIMIT;
    else if( set->limit_solutions >= 0 && set->stage >= SCIP_STAGE_PRESOLVED
-      && SCIPgetNSolsFound(set->scip) >= set->limit_solutions )
+      && SCIPgetNLimSolsFound(set->scip) >= set->limit_solutions )
       stat->status = SCIP_STATUS_SOLLIMIT;
    else if( set->limit_bestsol >= 0 && set->stage >= SCIP_STAGE_PRESOLVED
       && SCIPgetNBestSolsFound(set->scip) >= set->limit_bestsol )

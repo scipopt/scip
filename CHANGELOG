@@ -39,6 +39,7 @@ interface
   (relevant for ranged rows)
 - New methods SCIPconshdlrIncNCutsFound(), SCIPsepaIncNCutsFound(), and SCIPsepaIncNCutsFoundAtNode() to increase the
   number of found cuts
+- added function SCIPgetFirstLPTime to return the time needed to solve the first LP of the root node
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
@@ -88,6 +89,10 @@ fixed bugs:
 - fixed bug when sorting knapsack constraints with the same weights
 - ensure consistency of LP bounds during OBBT diving, i.e., that lower <= upper holds exactly
 - fixed numerical bug in conflict analysis of genvbounds propagator
+- relaxed assert in SCIPvarCh{Lb,Ub}{Global,Local} that new bound must be tighter to feastol
+- fixed bug in heur_subnlp running with tightened tolerances: sumepsilon must be tightened like feastol and epsilon
+- fixed contra-intuitive behavior when using SCIP with objective limits and solution limit at the same time;
+  SCIP now only stops when sufficiently many solutions better than the objective limit have been found
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()
@@ -96,9 +101,11 @@ features:
 - added delayed cutpool which only gets separated if the sepastore is empty after a separation round
 - sepa_cgmip can now take the objective row into account
 
-interface
+interface:
 - fixed spelling in the method name SCIPgmlWriteClosing()
-- added function SCIPgetFirstLPTime to return the time needed to solve the first LP of the root node
+- new method SCIPgetNLimSolsFound() to get number of solutions that respect the objective limit
+- when using an objective limit, heuristic characters are not displayed any longer for worse solutions
+- statistics now include output on number of solutions that respect objective limit
 
 
 SCIP version 3.0.0

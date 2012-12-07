@@ -346,7 +346,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
       SCIPdispSetData(disp, NULL);
 
    dispdata = SCIPdispGetData(disp);
-   if( sol != (SCIP_SOL*)dispdata )
+   if( sol != (SCIP_SOL*)dispdata && SCIPisFeasLE(scip, SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip)) )
    {
       SCIP_HEUR* heur;
       char c;
