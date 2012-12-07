@@ -43,6 +43,7 @@ fixed bugs:
 - fixed bug in heur_subnlp running with tightened tolerances: sumepsilon must be tightened like feastol and epsilon
 - fixed contra-intuitive behavior when using SCIP with objective limits and solution limit at the same time;
   SCIP now only stops when sufficiently many solutions better than the objective limit have been found
+- fixed bug when adding binary implications with non-vartype binary variables
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()

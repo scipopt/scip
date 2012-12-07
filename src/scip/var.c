@@ -9905,8 +9905,63 @@ SCIP_RETCODE SCIPvarAddImplic(
       assert(var->negatedvar->negatedvar == var);
       assert(SCIPvarIsBinary(var->negatedvar));
 
-      SCIP_CALL( SCIPvarAddImplic(var->negatedvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
-            !varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
+      if( SCIPvarGetType(var->negatedvar) == SCIP_VARTYPE_BINARY )
+      {
+         SCIP_CALL( SCIPvarAddImplic(var->negatedvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+               !varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
+      }
+      /** in case one both variables are not of binary type we have to add the implication as variable bounds */
+      else
+      {
+         /* if the implied variable is of binary type exchange the variables */
+         if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
+         {
+            SCIP_CALL( SCIPvarAddImplic(implvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                  (impltype == SCIP_BOUNDTYPE_UPPER) ? TRUE : FALSE, var->negatedvar, varfixing ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER, varfixing ? 1.0 : 0.0, transitive, infeasible, nbdchgs) );
+         }
+         else
+         {
+            /* both variables are not of binary type but are implicit binary; in that case we can only add this
+             * implication as variable bounds
+             */
+
+            /* add variable lower bound on the negation of var */
+            if( varfixing )
+            {
+               /* (x = 1 => i) z = 0 ii) z = 1) <=> ( i) z = 1 ii) z = 0 => ~x = 1), this is done by adding ~x >= b*z + d
+                * as variable lower bound
+                */
+               SCIP_CALL( SCIPvarAddVlb(var->negatedvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                     implvar, (impltype == SCIP_BOUNDTYPE_UPPER) ? 1.0 : -1.0, (impltype == SCIP_BOUNDTYPE_UPPER) ? 0.0 : 1.0, transitive, infeasible, nbdchgs) );
+            }
+            else
+            {
+               /* (x = 0 => i) z = 0 ii) z = 1) <=> ( i) z = 1 ii) z = 0 => ~x = 0), this is done by adding ~x <= b*z + d
+                * as variable upper bound
+                */
+               SCIP_CALL( SCIPvarAddVub(var->negatedvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                     implvar, (impltype == SCIP_BOUNDTYPE_UPPER) ? -1.0 : 1.0, (impltype == SCIP_BOUNDTYPE_UPPER) ? 1.0 : 0.0, transitive, infeasible, nbdchgs) );
+            }
+
+            /* add variable bound on implvar */
+            if( impltype == SCIP_BOUNDTYPE_UPPER )
+            {
+               /* (z = 1 => i) x = 0 ii) x = 1) <=> ( i) ~x = 0 ii) ~x = 1 => z = 0), this is done by adding z <= b*~x + d
+                * as variable upper bound
+                */
+               SCIP_CALL( SCIPvarAddVub(implvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                     var->negatedvar, (varfixing) ? 1.0 : -1.0, (varfixing) ? 0.0 : 1.0, transitive, infeasible, nbdchgs) );
+            }
+            else
+            {
+               /* (z = 0 => i) x = 0 ii) x = 1) <=> ( i) ~x = 0 ii) ~x = 1 => z = 1), this is done by adding z >= b*~x + d
+                * as variable upper bound
+                */
+               SCIP_CALL( SCIPvarAddVlb(implvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                     var->negatedvar, (varfixing) ? -1.0 : 1.0, (varfixing) ? 1.0 : 0.0, transitive, infeasible, nbdchgs) );
+            }
+         }
+      }
       break;
       
    default:
