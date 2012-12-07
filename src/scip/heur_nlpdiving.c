@@ -120,6 +120,81 @@ struct SCIP_HeurData
  * local methods
  */
 
+/** gets fractional variables of last NLP solution along with solution values and fractionalities
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+static
+SCIP_RETCODE getNLPFracVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   SCIP_VAR***           nlpcands,           /**< pointer to store the array of NLP fractional variables, or NULL */
+   SCIP_Real**           nlpcandssol,        /**< pointer to store the array of NLP fractional variables solution values, or NULL */
+   SCIP_Real**           nlpcandsfrac,       /**< pointer to store the array of NLP fractional variables fractionalities, or NULL */
+   int*                  nnlpcands           /**< pointer to store the number of NLP fractional variables , or NULL */
+   )
+{
+   int c;
+
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+   assert(nlpcands != NULL);
+   assert(nlpcandssol != NULL);
+   assert(nlpcandsfrac != NULL);
+   assert(nnlpcands != NULL);
+
+   /* get fractional variables that should be integral */
+   SCIP_CALL( SCIPgetNLPFracVars(scip, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, NULL) );
+
+   /* values may be outside the domain in exact arithmetic, but inside the domain within relative tolerance, and still
+    * slightly fractional, because SCIPisFeasIntegral() uses absolute tolerance; project value onto domain to avoid this
+    * (example: primsol=29.99999853455704, lower bound = 30)
+    */
+   for( c = 0; c < *nnlpcands; ++c )
+   {
+      assert(!SCIPisFeasIntegral(scip, (*nlpcandssol)[c]));
+
+      if( (*nlpcandssol)[c] < SCIPvarGetLbLocal((*nlpcands)[c]) || (*nlpcandssol)[c] > SCIPvarGetUbLocal((*nlpcands)[c]) )
+      {
+         SCIP_Real newval;
+
+         newval = ((*nlpcandssol)[c] < SCIPvarGetLbLocal((*nlpcands)[c]))
+            ? SCIPvarGetLbLocal((*nlpcands)[c]) - 0.5*SCIPfeastol(scip)
+            : SCIPvarGetUbLocal((*nlpcands)[c]) + 0.5*SCIPfeastol(scip);
+
+         assert(SCIPisFeasIntegral(scip, newval));
+
+         SCIP_CALL( SCIPsetSolVal(scip, heurdata->sol, (*nlpcands)[c], newval) );
+
+         (*nnlpcands)--;
+
+         if( c < *nnlpcands )
+         {
+            (*nlpcands)[c] = (*nlpcands)[*nnlpcands];
+            (*nlpcandssol)[c] = (*nlpcandssol)[*nnlpcands];
+            (*nlpcandsfrac)[c] = (*nlpcandsfrac)[*nnlpcands];
+         }
+      }
+   }
+
+   /* prefer decisions on variables which are also fractional in LP solution */
+   if( heurdata->preferlpfracs && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      for( c = 0; c < *nnlpcands; ++c )
+      {
+         if( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, (*nlpcands)[c])) )
+            (*nlpcandsfrac)[c] *= 100.0;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** finds best candidate variable w.r.t. fractionality:
  * - prefer variables that may not be rounded without destroying NLP feasibility:
  *   - of these variables, round least fractional variable in corresponding direction
@@ -1619,35 +1694,24 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       }
    }
 
-   /* get fractional variables that should be integral */
-   SCIP_CALL( SCIPgetNLPFracVars(scip, &nlpcands, &nlpcandssol, &nlpcandsfrac, &nnlpcands, NULL) );
-   assert(nnlpcands <= npseudocands);
-
+   /* get NLP solution */
    SCIP_CALL( SCIPlinkNLPSol(scip, heurdata->sol) );
 
+   /* get fractional variables that should be integral */
+   SCIP_CALL( getNLPFracVars(scip, heurdata, &nlpcands, &nlpcandssol, &nlpcandsfrac, &nnlpcands) );
+   assert(nnlpcands <= npseudocands);
+
+   /* get LP candidates if LP solution is optimal */
    lpsolstat = SCIPgetLPSolstat(scip);
    if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       nlpbranchcands = SCIPgetNLPBranchCands(scip);
    else
       nlpbranchcands = 0;
 
-   /* prefer decisions on variables which are also fractional in LP solution */
-   if( heurdata->preferlpfracs && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
-   {
-      for( c = 0; c < nnlpcands; ++c )
-      {
-         if( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, nlpcands[c])) )
-            nlpcandsfrac[c] *= 100.0;
-      }
-   }
-
    /* don't try to dive, if there are no fractional variables */
    if( nnlpcands == 0 )
    {
       SCIP_Bool success;
-
-      /* but check whether NLP solution if feasible */
-      SCIP_CALL( SCIPlinkNLPSol(scip, heurdata->sol) );
 
       /* check, if solution was feasible and good enough */
 #ifdef SCIP_DEBUG
@@ -2340,17 +2404,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       if( !nlperror && !cutoff && nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE )
       {
          /* get new fractional variables */
-         SCIP_CALL( SCIPgetNLPFracVars(scip, &nlpcands, &nlpcandssol, &nlpcandsfrac, &nnlpcands, NULL) );
-
-         if( heurdata->preferlpfracs && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
-            for( c = 0; c < nnlpcands; ++c )
-            {
-               var = nlpcands[c];
-               /* prefer decisions on variables which are also fractional in LP solution */
-               if( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, var)) )
-                  nlpcandsfrac[c] *= 100.0;
-            }
-
+         SCIP_CALL( getNLPFracVars(scip, heurdata, &nlpcands, &nlpcandssol, &nlpcandsfrac, &nnlpcands) );
       }
       SCIPdebugMessage("   -> nlpsolstat=%d, objval=%g/%g, nfrac nlp=%d lp=%d\n", nlpsolstat, objval, searchbound, nnlpcands, nlpbranchcands);
    }
