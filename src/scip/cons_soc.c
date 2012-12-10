@@ -68,12 +68,13 @@
  */
 
 /** Eventdata for variable bound change events. */
-struct SCIP_EventData
+struct VarEventData
 {
    SCIP_CONSDATA*        consdata;           /**< the constraint data */
    int                   varidx;             /**< the index of a variable on the left hand side which bound change is caught, or -1 for variable on right hand side */
    int                   filterpos;          /**< position of corresponding event in event filter */
 };
+typedef struct VarEventData VAREVENTDATA;
 
 /** constraint data for soc constraints */
 struct SCIP_ConsData
@@ -93,8 +94,8 @@ struct SCIP_ConsData
    SCIP_Real             lhsval;             /**< value of left hand side in current point */
    SCIP_Real             violation;          /**< violation of constraint in current point */
 
-   SCIP_EVENTDATA*       lhsbndchgeventdatas;/**< eventdata for bound change events on left  hand side variables */
-   SCIP_EVENTDATA        rhsbndchgeventdata; /**< eventdata for bound change event  on right hand side variable  */
+   VAREVENTDATA*         lhsbndchgeventdatas;/**< eventdata for bound change events on left  hand side variables */
+   VAREVENTDATA          rhsbndchgeventdata; /**< eventdata for bound change event  on right hand side variable  */
    SCIP_Bool             ispropagated;       /**< does the domains need to be propagated? */
    SCIP_Bool             isapproxadded;      /**< has a linear outer approximation be added? */
 };
@@ -152,7 +153,7 @@ SCIP_RETCODE catchLhsVarEvents(
 
    consdata->lhsbndchgeventdatas[varidx].consdata = consdata;
    consdata->lhsbndchgeventdatas[varidx].varidx   = varidx;
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, &consdata->lhsbndchgeventdatas[varidx], &consdata->lhsbndchgeventdatas[varidx].filterpos) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->lhsbndchgeventdatas[varidx], &consdata->lhsbndchgeventdatas[varidx].filterpos) );
 
    consdata->ispropagated = FALSE;
 
@@ -178,7 +179,7 @@ SCIP_RETCODE catchRhsVarEvents(
 
    consdata->rhsbndchgeventdata.consdata = consdata;
    consdata->rhsbndchgeventdata.varidx   = -1;
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->rhsvar, SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr, &consdata->rhsbndchgeventdata, &consdata->rhsbndchgeventdata.filterpos) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->rhsvar, SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->rhsbndchgeventdata, &consdata->rhsbndchgeventdata.filterpos) );
 
    consdata->ispropagated = FALSE;
 
@@ -244,7 +245,7 @@ SCIP_RETCODE dropLhsVarEvents(
    assert(consdata->lhsbndchgeventdatas != NULL);
    assert(consdata->lhsbndchgeventdatas[varidx].varidx == varidx);
 
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, &consdata->lhsbndchgeventdatas[varidx], consdata->lhsbndchgeventdatas[varidx].filterpos) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->lhsbndchgeventdatas[varidx], consdata->lhsbndchgeventdatas[varidx].filterpos) );
 
    return SCIP_OKAY;
 }
@@ -267,7 +268,7 @@ SCIP_RETCODE dropRhsVarEvents(
    assert(consdata  != NULL);
    assert(consdata->rhsbndchgeventdata.varidx == -1);
 
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->rhsvar, SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr, &consdata->rhsbndchgeventdata, consdata->rhsbndchgeventdata.filterpos) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->rhsvar, SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->rhsbndchgeventdata, consdata->rhsbndchgeventdata.filterpos) );
 
    return SCIP_OKAY;
 }
@@ -319,7 +320,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    assert(eventdata != NULL);
    assert(eventhdlr != NULL);
 
-   consdata = eventdata->consdata;
+   consdata = ((VAREVENTDATA*)eventdata)->consdata;
    assert(consdata  != NULL);
 
    consdata->ispropagated = FALSE;
