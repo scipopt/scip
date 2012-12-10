@@ -1908,15 +1908,8 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    /* do not run if no genvbounds were added yet */
    if( propdata->ngenvbounds < 1 )
    {
+      /**@todo is it really no performance issue to be called each time when there are no genvbounds, e.g., for MIPs? */
       SCIPdebugMessage("no bounds were added yet\n");
-
-      /* if this situation appears in a node != root, this means that probably no genvbounds will be added anymore */
-      if( !SCIPinProbing(scip) && SCIPgetDepth(scip) > 0 )
-      {
-         SCIPdebugMessage("disabling prop genvbounds\n");
-         SCIPpropSetFreq(prop, -1);
-      }
-
       return SCIP_OKAY;
    }
 

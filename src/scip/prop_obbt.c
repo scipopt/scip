@@ -1421,18 +1421,16 @@ SCIP_DECL_PROPEXEC(propExecObbt)
       else
       {
          assert(!SCIPinProbing(scip));
-         SCIPpropSetFreq(prop, -1);
          return SCIP_OKAY;
       }
    }
    assert(propdata->nbounds >= 0);
 
-   /* disable obbt if there are no interesting bounds */
-   if( propdata->nbounds == 0 )
+   /* do not run if there are no interesting bounds */
+   /**@todo disable */
+   if( propdata->nbounds <= 0 )
    {
-      SCIPdebugMessage("there are no interesting bounds, disabling obbt\n");
-      SCIPpropSetFreq(prop, -1);
-
+      SCIPdebugMessage("there are no interesting bounds\n");
       return SCIP_OKAY;
    }
 
