@@ -3137,7 +3137,7 @@ SCIP_RETCODE presolveTryAddAND(
          continue;
 
       /* create auxiliary variable */ 
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s", SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s_%s", SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]), SCIPconsGetName(cons));
       SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, 
             TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, auxvar) );
@@ -3443,7 +3443,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
          {
             /* product of two binary variables, replace by auxvar and AND constraint */
             /* add auxiliary variable z */
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
+            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s_%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT,
                   TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
@@ -3460,7 +3460,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
             /* add constraint z = x and y */
             xvars[1] = y;
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
+            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s_%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateConsAnd(scip, &auxcons, name, auxvar, 2, xvars,
                   SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -3526,9 +3526,9 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
             /* add auxiliary variable z */
             if( nxvars == 1 )
-               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s_%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             else
-               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s*more", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s*more_%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, MIN(0., SCIPintervalGetInf(xbndsone)), MAX(0., SCIPintervalGetSup(xbndsone)),
                   0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
