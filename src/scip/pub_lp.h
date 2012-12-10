@@ -58,12 +58,6 @@ void SCIPcolSort(
    SCIP_COL*             col                 /**< column to be sorted */
    );
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** gets objective value of column */
 EXTERN
 SCIP_Real SCIPcolGetObj(
@@ -203,9 +197,9 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
    SCIP_BOUNDTYPE        boundtype           /**< type of bound (lower or upper) */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
@@ -296,12 +290,6 @@ EXTERN
 void SCIProwSort(
    SCIP_ROW*             row                 /**< row to be sorted */
    );
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
 
 /** get number of nonzero entries in row vector */
 EXTERN
@@ -464,9 +452,9 @@ SCIP_Bool SCIProwIsInLP(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

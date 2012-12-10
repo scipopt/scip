@@ -1372,13 +1372,6 @@ SCIP_RETCODE SCIPvarPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** includes event handler with given data in variable's event filter */
 extern
 SCIP_RETCODE SCIPvarCatchEvent(
@@ -1417,9 +1410,9 @@ int SCIPbdchgidxGetPos(
    SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

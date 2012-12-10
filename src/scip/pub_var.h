@@ -307,12 +307,6 @@ SCIP_RETCODE SCIPvarSetRemovable(
    SCIP_Bool             removable           /**< removable flag */
    );
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** get name of variable */
 EXTERN
 const char* SCIPvarGetName(
@@ -841,9 +835,9 @@ int SCIPvarGetNBdchgInfosUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
@@ -1110,12 +1104,6 @@ SCIP_Bool SCIPvarWasFixedEarlier(
    SCIP_VAR*             var2                /**< second binary variable */
    );
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** returns whether first bound change index belongs to an earlier applied bound change than second one;
  *  if a bound change index is NULL, the bound change index represents the current time, i.e. the time after the
  *  last bound change was applied to the current node
@@ -1293,9 +1281,9 @@ SCIP_HOLELIST* SCIPholelistGetNext(
    SCIP_HOLELIST*        holelist            /**< hole list pointer to hole of interest */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

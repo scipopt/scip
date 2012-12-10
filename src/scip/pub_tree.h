@@ -112,12 +112,6 @@ SCIP_NODE* SCIPnodesGetCommonAncestor(
    );
 
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** gets the type of the node */
 EXTERN
 SCIP_NODETYPE SCIPnodeGetType(
@@ -175,10 +169,9 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
    );
 
 
+#ifdef NDEBUG
 
-#else
-
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

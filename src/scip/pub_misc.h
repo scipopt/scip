@@ -803,8 +803,6 @@ void SCIPbtnodeFree(
    SCIP_BTNODE**         node                /**< node to be freed */
    );
 
-#ifndef NDEBUG
-
 /** returns the user data pointer stored in that node */
 EXTERN
 void* SCIPbtnodeGetData(
@@ -859,7 +857,11 @@ SCIP_Bool SCIPbtnodeIsRightchild(
    SCIP_BTNODE*          node                /**< node */
    );
 
-#else
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
 
 #define SCIPbtnodeGetData(node)               ((node)->dataptr)
 #define SCIPbtnodeGetParent(node)             ((node)->parent)
@@ -937,8 +939,6 @@ void SCIPbtPrintGml(
    FILE*                 file                /**< file to write to */
    );
 
-#ifndef NDEBUG
-
 /** returns whether the binary tree is empty (has no nodes) */
 EXTERN
 SCIP_Bool SCIPbtIsEmpty(
@@ -951,7 +951,11 @@ SCIP_BTNODE* SCIPbtGetRoot(
    SCIP_BT*              tree                /**< tree to be evaluated */
    );
 
-#else
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
 
 #define SCIPbtIsEmpty(tree) (tree->root == NULL)
 #define SCIPbtGetRoot(tree) (tree->root)
@@ -4379,8 +4383,6 @@ SCIP_Real SCIPselectSimpleValue(
    SCIP_Longint          maxdnom             /**< maximal denominator allowed for resulting rational number */
    );
 
-#ifndef NDEBUG
-
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
@@ -4392,9 +4394,9 @@ SCIP_Real SCIPrelDiff(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

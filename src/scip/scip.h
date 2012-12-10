@@ -7584,8 +7584,6 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
-#ifndef NDEBUG
-
 /** for a multi-aggregated variable, returns the global lower bound computed by adding the global bounds from all aggregation variables
  * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
  * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbGlobal
@@ -7634,7 +7632,11 @@ SCIP_Real SCIPcomputeVarUbLocal(
    SCIP_VAR*             var                 /**< variable to compute the bound for */
    );
 
-#else
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
 
 #define SCIPcomputeVarLbGlobal(scip, var)  (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbGlobal(var, (scip)->set) : SCIPvarGetLbGlobal(var))
 #define SCIPcomputeVarUbGlobal(scip, var)  (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbGlobal(var, (scip)->set) : SCIPvarGetUbGlobal(var))
@@ -17683,14 +17685,6 @@ void SCIPmarkLimitChanged(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- * In optimized mode, the methods are implemented as defines to improve performance.
- * However, we want to have them in the library anyways, so we have to undef the defines.
- */
-
 /** returns value treated as infinity */
 EXTERN
 SCIP_Real SCIPinfinity(
@@ -18107,9 +18101,9 @@ SCIP_Real SCIPgetHugeValue(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
@@ -18378,12 +18372,6 @@ void SCIPprintMemoryDiagnostic(
 
 /**@name Dynamic Arrays */
 /**@{ */
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
 
 /** creates a dynamic array of real values
  *
@@ -18764,9 +18752,9 @@ int SCIPgetPtrarrayMaxIdx(
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

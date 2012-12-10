@@ -613,12 +613,6 @@ SCIP_RETCODE SCIPtreeEndProbing(
    );
 
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** gets number of children of the focus node  */
 extern
 int SCIPtreeGetNChildren(
@@ -734,9 +728,9 @@ SCIP_NODE* SCIPtreeGetRootNode(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

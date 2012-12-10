@@ -343,12 +343,6 @@ void SCIPmessageSetErrorPrintingDefault(
    );
 
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** returns the user data of the message handler */
 EXTERN
 SCIP_MESSAGEHDLRDATA* SCIPmessagehdlrGetData(
@@ -367,9 +361,9 @@ SCIP_Bool SCIPmessagehdlrIsQuiet(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
