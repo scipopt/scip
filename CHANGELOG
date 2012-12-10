@@ -21,6 +21,7 @@ features:
   be processed in parallel
 - added new clique extraction algorithm for linear constraints
 - added missing debugging solution check for cliques
+- the slack variables of indicator constraints can now be scaled
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -46,6 +47,7 @@ parameters:
 - new parameter <separating/gomory/sidetypebasis> to decide whether the sides of ranged rows should be determined from
   the basis status
 - new parameter <write/allconss> to enable that all constraints are written
+- new parameter <constraints/indicator/scaleslackvar> for scaling of the slack variable in indicator constraints
 
 
 SCIP version 3.0.1
