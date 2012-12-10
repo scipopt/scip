@@ -52,6 +52,8 @@
                                                     *   domains sizes? */
 #define DEFAULT_APPLY_FILTERROUNDS      FALSE      /**< try to filter bounds in so-called filter rounds by solving
                                                     *   auxiliary LPs? */
+#define DEFAULT_DUALFEASTOL              1e-9      /**< feasibility tolerance for reduced costs used in obbt; this value
+                                                    *   is used if SCIP's dual feastol is greater */
 #define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
                                                     *   round */
 #define DEFAULT_ITLIMITFACTOR             5.0      /**< multiple of root node LP iterations used as total LP iteration
@@ -95,6 +97,8 @@ struct SCIP_PropData
    SCIP_ROW*             cutoffrow;          /**< pointer to current objective cutoff row */
    SCIP_PROP*            genvboundprop;      /**< pointer to genvbound propagator */
    SCIP_Longint          lastnode;           /**< number of last node where obbt was performed */
+   SCIP_Real             dualfeastol;        /**< feasibility tolerance for reduced costs used in obbt; this value is
+                                              *   used if SCIP's dual feastol is greater */
    SCIP_Real             itlimitfactor;      /**< LP iteration limit for obbt will be this factor times total LP
                                               *   iterations in root node */
    SCIP_Bool             applyfilterrounds;  /**< apply filter rounds? */
@@ -994,6 +998,7 @@ SCIP_RETCODE applyObbt(
    )
 {
    SCIP_Longint nolditerations;
+   SCIP_Real olddualfeastol;
    int nfiltered;
    int i;
 
@@ -1003,6 +1008,7 @@ SCIP_RETCODE applyObbt(
 
    *result = SCIP_DIDNOTFIND;
    nolditerations = SCIPgetNLPIterations(scip);
+   olddualfeastol = SCIPdualfeastol(scip);
    nfiltered = 0;
 
    /* reset bound data structure flags; fixed variables are marked as filtered */
@@ -1018,6 +1024,12 @@ SCIP_RETCODE applyObbt(
 
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
+
+   /* set dual feastol */
+   if( propdata->dualfeastol < olddualfeastol )
+   {
+      SCIP_CALL( SCIPchgDualfeastol(scip, propdata->dualfeastol) );
+   }
 
    /* add objective cutoff */
    SCIP_CALL( addObjCutoff(scip, propdata) );
@@ -1038,6 +1050,9 @@ SCIP_RETCODE applyObbt(
 
    /* try to find new bounds and store them in the bound data structure */
    SCIP_CALL( findNewBounds(scip, propdata, itlimit) );
+
+   /* reset dual feastol */
+   SCIP_CALL( SCIPchgDualfeastol(scip, olddualfeastol) );
 
    /* end diving */
    SCIP_CALL( SCIPendDive(scip) );
@@ -1563,6 +1578,10 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/itlimitfactor",
          "multiple of root node LP iterations used as total LP iteration limit for obbt (<= 0: no limit )",
          &propdata->itlimitfactor, FALSE, DEFAULT_ITLIMITFACTOR, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/dualfeastol",
+         "feasibility tolerance for reduced costs used in obbt; this value is used if SCIP's dual feastol is greater",
+         &propdata->dualfeastol, FALSE, DEFAULT_DUALFEASTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
