@@ -13475,7 +13475,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_CALL( SCIPsetSetCharParam(set, messagehdlr, "lp/pricing", 's') );
 
                /* resolve LP with an iteration limit of 1 */
-               SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, 1, -1,
+               SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, 1, 1,
                      FALSE, FALSE, TRUE, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
 
                /* reinstall old cutoff bound and lp pricing strategy */
@@ -13549,8 +13549,11 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      dualfeasible = TRUE;
                   }
 
-                  /* in debug mode, check that lazy bounds (if present) are not violated */
-                  checkLazyBounds(lp, set);
+                  /* in debug mode, check that lazy bounds (if present) are not violated by an optimal LP solution */
+                  if( solstat == SCIP_LPSOLSTAT_OPTIMAL )
+                  {
+                     checkLazyBounds(lp, set);
+                  }
 
                   /* if objective value is larger than the cutoff bound, set solution status to objective
                    * limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
