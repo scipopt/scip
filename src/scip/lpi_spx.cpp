@@ -3206,18 +3206,14 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
    )
 {
-   SPxBasis::SPxStatus basestatus;
-
    SCIPdebugMessage("calling SCIPlpiGetSolFeasibility()\n");
 
    assert(lpi != NULL);
-   assert(lpi->spx != NULL);
    assert(primalfeasible != NULL);
    assert(dualfeasible != NULL);
 
-   basestatus = lpi->spx->basis().status();
-   *primalfeasible = (basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::OPTIMAL);
-   *dualfeasible = (basestatus == SPxBasis::DUAL || basestatus == SPxBasis::OPTIMAL);
+   *primalfeasible = SCIPlpiIsPrimalFeasible(lpi);
+   *dualfeasible = SCIPlpiIsDualFeasible(lpi);
 
    return SCIP_OKAY;
 }
