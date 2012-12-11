@@ -463,8 +463,8 @@ SCIP_RETCODE propagateDomains(
    if( maxproprounds == -1 )
       maxproprounds = INT_MAX;
 
-   SCIPdebugMessage("domain propagation of node %p in depth %d (using depth %d, maxrounds %d)\n",
-      (void*)node, SCIPnodeGetDepth(node), depth, maxproprounds);
+   SCIPdebugMessage("domain propagation of node %p in depth %d (using depth %d, maxrounds %d, proptiming %u)\n",
+      (void*)node, SCIPnodeGetDepth(node), depth, maxproprounds, timingmask);
 
    /* propagate as long new bound changes were found and the maximal number of propagation rounds is not exceeded */
    *cutoff = FALSE;
@@ -492,6 +492,11 @@ SCIP_RETCODE propagateDomains(
 
    /* mark the node to be completely propagated in the current repropagation subtree level */
    SCIPnodeMarkPropagated(node, tree);
+
+   if( *cutoff )
+   {
+      SCIPdebugMessage(" --> domain propagation of node %p finished: cutoff!\n", (void*)node);
+   }
 
    return SCIP_OKAY;
 }
@@ -2231,6 +2236,8 @@ SCIP_RETCODE priceAndCutLoop(
                /* if a new bound change (e.g. a cut with only one column) was found, propagate domains again */
                if( stat->domchgcount != olddomchgcount )
                {
+                  SCIPdebugMessage(" -> separation changed bound: call propagators that are applicable before LP is solved\n");
+
                   /* propagate domains */
                   SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, SCIP_PROPTIMING_BEFORELP, cutoff) );
                   assert(SCIPbufferGetNUsed(set->buffer) == 0);
@@ -3434,6 +3441,7 @@ SCIP_RETCODE solveNode(
       SCIP_CALL( applyBounding(blkmem, set, stat, transprob, primal, tree, lp,  branchcand, eventqueue, conflict, cutoff) );
 
       /* propagate domains before lp solving and solve relaxation and lp */
+      SCIPdebugMessage(" -> node solving loop: call propagators that are applicable before LP is solved\n");
       SCIP_CALL( propAndSolve(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp, relaxation, pricestore, sepastore,
             branchcand, cutpool, delayedcutpool, conflict, eventfilter, eventqueue, focusnode, actdepth, SCIP_PROPTIMING_BEFORELP,
             propagate, solvelp, solverelax, forcedlpsolve, &nlperrors, &fullpropagation, &propagateagain,
@@ -3449,6 +3457,7 @@ SCIP_RETCODE solveNode(
          forcedenforcement = FALSE;
 
          /* propagate domains after lp solving and resolve relaxation and lp */
+         SCIPdebugMessage(" -> node solving loop: call propagators that are applicable after LP has been solved\n");
          SCIP_CALL( propAndSolve(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp, relaxation, pricestore, sepastore,
                branchcand, cutpool, delayedcutpool, conflict, eventfilter, eventqueue, focusnode, actdepth, SCIP_PROPTIMING_AFTERLPLOOP,
                propagate, solvelp, solverelax, forcedlpsolve, &nlperrors, &fullpropagation, &propagateagain,

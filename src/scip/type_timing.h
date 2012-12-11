@@ -35,7 +35,7 @@ extern "C" {
 
 
 /** propagation execution timing flags */
-#define SCIP_PROPTIMING_BEFORELP          0x001     /**< call propagator before the processing of the node starts */
+#define SCIP_PROPTIMING_BEFORELP          0x001     /**< call propagator before LP is solved */
 #define SCIP_PROPTIMING_DURINGLPLOOP      0x002     /**< call propagator after each LP solving during cut-and-price loop */
 #define SCIP_PROPTIMING_AFTERLPLOOP       0x004     /**< call propagator after the cut-and-price loop was finished */
 #define SCIP_PROPTIMING_AFTERLPNODE       0x008     /**< call propagator after the processing of a node with solved LP was
