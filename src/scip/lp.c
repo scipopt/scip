@@ -3311,16 +3311,29 @@ SCIP_RETCODE SCIPcolChgLb(
    
    SCIPdebugMessage("changing lower bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->lb, newlb);
 
-   if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->lb, newlb) )
+   /* only add actual changes */
+   if( !SCIPsetIsEQ(set, col->lb, newlb) )
    {
-      /* insert column in the chgcols list (if not already there) */
-      SCIP_CALL( insertColChgcols(col, set, lp) );
+      /* only variables with a real position in the LPI can be inserted */
+      if( col->lpipos >= 0 )
+      {
+         /* insert column in the chgcols list (if not already there) */
+         SCIP_CALL( insertColChgcols(col, set, lp) );
       
-      /* mark bound change in the column */
-      col->lbchanged = TRUE;
+         /* mark bound change in the column */
+         col->lbchanged = TRUE;
       
-      assert(lp->nchgcols > 0);
-   }  
+         assert(lp->nchgcols > 0);
+      }
+      /* in any case, when the best bound is zero and gets changed, the variable has to enter the LP and the LP has to be
+       * flushed
+       */
+      else if( col->obj >= 0.0 && SCIPsetIsZero(set, col->lb) )
+      {
+         /* mark the LP unflushed */
+         lp->flushed = FALSE;
+      }
+   }
 
    col->lb = newlb;
 
@@ -3343,16 +3356,29 @@ SCIP_RETCODE SCIPcolChgUb(
    
    SCIPdebugMessage("changing upper bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->ub, newub);
 
-   if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->ub, newub) )
+   /* only add actual changes */
+   if( !SCIPsetIsEQ(set, col->ub, newub) )
    {
-      /* insert column in the chgcols list (if not already there) */
-      SCIP_CALL( insertColChgcols(col, set, lp) );
+      /* only variables with a real position in the LPI can be inserted */
+      if( col->lpipos >= 0 )
+      {
+         /* insert column in the chgcols list (if not already there) */
+         SCIP_CALL( insertColChgcols(col, set, lp) );
 
-      /* mark bound change in the column */
-      col->ubchanged = TRUE;
+         /* mark bound change in the column */
+         col->ubchanged = TRUE;
 
-      assert(lp->nchgcols > 0);
-   }  
+         assert(lp->nchgcols > 0);
+      }
+      /* in any case, when the best bound is zero and gets changed, the variable has to enter the LP and the LP has to be
+       * flushed
+       */
+      else if( col->obj < 0.0 && SCIPsetIsZero(set, col->ub) )
+      {
+         /* mark the LP unflushed */
+         lp->flushed = FALSE;
+      }
+   }
 
    col->ub = newub;
 
@@ -7187,6 +7213,9 @@ SCIP_RETCODE lpFlushChgCols(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+#ifndef NDEBUG
+   SCIP_Bool lpinone = (strcmp( SCIPlpiGetSolverName(), "NONE") == 0);
+#endif
    SCIP_COL* col;
    int* objind;
    int* bdind;
@@ -7228,7 +7257,7 @@ SCIP_RETCODE lpFlushChgCols(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         if( !lpinone )
          {
             SCIP_Real lpiobj;
             SCIP_Real lpilb;
@@ -7257,6 +7286,7 @@ SCIP_RETCODE lpFlushChgCols(
             }
             col->objchanged = FALSE;
          }
+
          if( col->lbchanged || col->ubchanged )
          {
             SCIP_Real newlb;
@@ -7279,6 +7309,7 @@ SCIP_RETCODE lpFlushChgCols(
             col->ubchanged = FALSE;
          }
       }
+      /* maybe lb/ub/objchanged should all be set to false when lpipos is -1 */
    }
 
    /* change objective values in LP */
@@ -7326,6 +7357,9 @@ SCIP_RETCODE lpFlushChgRows(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+#ifndef NDEBUG
+   SCIP_Bool lpinone = (strcmp( SCIPlpiGetSolverName(), "NONE") == 0);
+#endif
    SCIP_ROW* row;
    int* ind;
    SCIP_Real* lhs;
@@ -7360,7 +7394,7 @@ SCIP_RETCODE lpFlushChgRows(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         if( !lpinone )
          {
             SCIP_Real lpilhs;
             SCIP_Real lpirhs;
@@ -7477,6 +7511,9 @@ SCIP_RETCODE SCIPlpMarkFlushed(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+#ifndef NDEBUG
+   SCIP_Bool lpinone = (strcmp( SCIPlpiGetSolverName(), "NONE") == 0);
+#endif
    int i;
 
    assert(lp != NULL);
@@ -7526,7 +7563,7 @@ SCIP_RETCODE SCIPlpMarkFlushed(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         if( !lpinone )
          {
             SCIP_Real lpiobj;
             SCIP_Real lpilb;
@@ -7546,6 +7583,7 @@ SCIP_RETCODE SCIPlpMarkFlushed(
          col->lbchanged = FALSE;
          col->ubchanged = FALSE;
       }
+      /* maybe lb/ub/objchanged should  be set to false also when lpipos is -1 */
    }
    lp->nchgcols = 0;
 
@@ -7561,7 +7599,7 @@ SCIP_RETCODE SCIPlpMarkFlushed(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         if( !lpinone )
          {
             SCIP_Real lpilhs;
             SCIP_Real lpirhs;
