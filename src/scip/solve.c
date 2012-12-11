@@ -251,8 +251,17 @@ SCIP_RETCODE SCIPprimalHeuristics(
       if( lp != NULL && lp->resolvelperror) 
          break;
 
-      SCIPdebugMessage(" -> executing heuristic <%s> with priority %d\n",
-         SCIPheurGetName(set->heurs[h]), SCIPheurGetPriority(set->heurs[h]));
+#ifdef SCIP_DEBUG
+      {
+         SCIP_Bool delayed;
+         if( SCIPheurShouldBeExecuted(set->heurs[h], depth, lpstateforkdepth, heurtiming, &delayed) )
+         {
+            SCIPdebugMessage(" -> executing heuristic <%s> with priority %d\n",
+               SCIPheurGetName(set->heurs[h]), SCIPheurGetPriority(set->heurs[h]));
+         }
+      }
+#endif
+
       SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, &ndelayedheurs, &result) );
 
       /* if the new solution cuts off the current node due to a new primal solution (via the cutoff bound) interrupt
