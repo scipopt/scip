@@ -42,14 +42,14 @@ extern "C" {
 /**@name Expression curvature methods */
 /**@{ */
 
-#ifndef NDEBUG
 /** gives curvature for a sum of two functions with given curvature */
 EXTERN
 SCIP_EXPRCURV SCIPexprcurvAdd(
    SCIP_EXPRCURV         curv1,              /**< curvature of first summand */
    SCIP_EXPRCURV         curv2               /**< curvature of second summand */
    );
-#else
+
+#ifdef NDEBUG
 #define SCIPexprcurvAdd(curv1, curv2)  ((SCIP_EXPRCURV) ((curv1) & (curv2)))
 #endif
 
@@ -113,8 +113,6 @@ int SCIPexpropGetNChildren(
 
 /**@name Expression methods */
 /**@{ */
-
-#ifndef NDEBUG
 
 /** gives operator of expression */
 EXTERN
@@ -249,9 +247,9 @@ SCIP_Real* SCIPexprGetMonomialExponents(
    SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
@@ -642,8 +640,6 @@ void SCIPexprPrint(
 /**@name Expression tree methods */
 /**@{ */
 
-#ifndef NDEBUG
-
 /** returns root expression of an expression tree */
 EXTERN
 SCIP_EXPR* SCIPexprtreeGetRoot(
@@ -740,9 +736,9 @@ void SCIPexprtreePrint(
    const char**          paramnames          /**< names of parameters, or NULL for default names */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
@@ -890,8 +886,6 @@ void SCIPquadelemSqueeze(
 
 /**@name Expression graph node methods */
 /**@{ */
-
-#ifndef NDEBUG
 
 /** captures node, i.e., increases number of uses */
 EXTERN
@@ -1056,9 +1050,9 @@ SCIP_EXPRCURV SCIPexprgraphGetNodeCurvature(
    SCIP_EXPRGRAPHNODE*   node                /**< expression graph node */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
@@ -1265,8 +1259,6 @@ SCIP_RETCODE SCIPexprgraphUpdateNodeBoundsCurvature(
 /**@name Expression graph methods */
 /**@{ */
 
-#ifndef NDEBUG
-
 /** get current maximal depth of expression graph */
 EXTERN
 int SCIPexprgraphGetDepth(
@@ -1355,9 +1347,9 @@ SCIP_INTERVAL* SCIPexprgraphGetVarsBounds(
    SCIP_EXPRGRAPH*       exprgraph           /**< expression graph */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

@@ -96,9 +96,15 @@ fixed bugs:
 - fixed contra-intuitive behavior when using SCIP with objective limits and solution limit at the same time;
   SCIP now only stops when sufficiently many solutions better than the objective limit have been found
 - fixed bug when adding binary implications with non-vartype binary variables
+- fixed bug resulting in trying to delete an upgraded linear constraint a second time in exitpre callback
+- fixed bug in nlp diving heuristic for fractional variables with values slightly outside of their domain
+- set lpsolstat to SCIP_LPSOLSTAT_NOTSOLVED in SCIPchg{Lp,Dual}feastol
+- use tighter dual feasibility tolerance for LPs solved during optimization-based bound tightening
+- fixed bug with LP not being flushed after bound changes on columns that are not in the LPI
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()
+- sort genvbounds only when root node is finished; apply more often
 
 features:
 - added delayed cutpool which only gets separated if the sepastore is empty after a separation round

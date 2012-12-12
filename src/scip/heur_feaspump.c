@@ -999,7 +999,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             }
          }
 
-         assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(var), solval) && SCIPisFeasLE(scip, solval, SCIPvarGetUbLocal(var)));
          assert(SCIPisIntegral(scip,solval));
          SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
 

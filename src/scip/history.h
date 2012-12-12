@@ -121,12 +121,6 @@ void SCIPvaluehistoryScaleVSIDS(
 
 /**@} */
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** returns the opposite direction of the given branching direction */
 extern
 SCIP_BRANCHDIR SCIPbranchdirOpposite(
@@ -253,9 +247,9 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

@@ -10676,7 +10676,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
       if( consdata->upgraded )
       {
          /* this is no problem reduction, because the upgraded constraint was added to the problem before, and the
-          * (redundant) linear constraint was only kept in order to support presolving the the linear constriant handler
+          * (redundant) linear constraint was only kept in order to support presolving the the linear constraint handler
           */
          SCIP_CALL( SCIPdelCons(scip, conss[c]) );
       }
@@ -10979,7 +10979,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
-   /*debugMessage("Enfolp method of linear constraints\n");*/
+   /*SCIPdebugMessage("Enfolp method of linear constraints\n");*/
 
    /* check for violated constraints
     * LP is processed at current node -> we can add violated linear constraints to the SCIP_LP

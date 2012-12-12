@@ -1025,12 +1025,6 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
    );
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** returns value treated as infinity */
 extern
 SCIP_Real SCIPsetInfinity(
@@ -1528,9 +1522,9 @@ SCIP_Real SCIPsetGetHugeValue(
    );
 
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
