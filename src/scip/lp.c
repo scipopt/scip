@@ -13421,7 +13421,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
 
-         SCIPdebugMessage(" -> LP has unbounded primal ray\n");
+         SCIPdebugMessage(" -> LP has unbounded primal ray (primalfeas=%u, rayfeas=%u)\n",
+            primalfeasible, rayfeasible);
 
          if( !primalfeasible || !rayfeasible )
          {
