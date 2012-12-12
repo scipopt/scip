@@ -1411,8 +1411,9 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->bcoverrowssize = 0;
    (*consdata)->nvars = nvars;
    (*consdata)->varssize = nvars;
-   (*consdata)->covercuts = FALSE;
    (*consdata)->normalized = FALSE;
+   (*consdata)->covercuts = FALSE;
+   (*consdata)->propagated = FALSE;
 
 #ifdef SCIP_STATISTIC
    (*consdata)->nirrelevantjobs = 0;
