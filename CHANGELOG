@@ -24,6 +24,8 @@ features:
 - the slack variables of indicator constraints can now be scaled
 - added redundancy check of sides of ranged row varbound constraint
 - added coefficient tightening for ranged row varbound constraint
+- added SCIPsortLongPtrRealBool(), SCIPsortLongPtrRealRealBool(), SCIPsortLongPtrRealRealIntBool() and corresponding
+  methods for sorting, insertion and deletion
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
