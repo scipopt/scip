@@ -418,9 +418,24 @@ SCIP_RETCODE SCIPprobExitSolve(
  */
 
 /** sets problem name */
+extern
 SCIP_RETCODE SCIPprobSetName(
    SCIP_PROB*            prob,               /**< problem data */
    const char*           name                /**< name to be set */
+   );
+
+/** returns the number of implicit binary variables, meaning variable of vartype != SCIP_VARTYPE_BINARY and !=
+ *  SCIP_VARTYPE_CONTINUOUS but with global bounds [0,1]
+ *
+ *  @note this number needs to be computed, because it cannot be update like the othe counters for binary and interger
+ *        variables, each time the variable type changes(, we would need to update this counter each time a global bound
+ *        changes), even at the end of presolving this cannot be computed, because some variable can change to an
+ *        implicit binary status
+ */
+extern
+int SCIPprobGetNImplBinVars(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns the number of variables with non-zero objective coefficient */
@@ -540,6 +555,42 @@ const char* SCIPprobGetName(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** gets number of problem variables */
+extern
+int SCIPprobGetNVars(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets number of binary problem variables */
+extern
+int SCIPprobGetNBinVars(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets number of integer problem variables */
+extern
+int SCIPprobGetNIntVars(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets number of implicit integer problem variables */
+extern
+int SCIPprobGetNImplVars(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets number of continuous problem variables */
+extern
+int SCIPprobGetNContVars(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets problem variables */
+extern
+SCIP_VAR** SCIPprobGetVars(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -553,6 +604,13 @@ const char* SCIPprobGetName(
    ((prob)->objlim >= SCIP_INVALID ? (SCIP_Real)((prob)->objsense) * SCIPsetInfinity(set) : (prob)->objlim)
 #define SCIPprobGetData(prob)           ((prob)->probdata)
 #define SCIPprobGetName(prob)           ((prob)->name)
+#define SCIPprobGetName(prob)           ((prob)->name)
+#define SCIPprobGetNVars(prob)          ((prob)->nvars)
+#define SCIPprobGetNBinVars(prob)       ((prob)->nbinvars)
+#define SCIPprobGetNIntVars(prob)       ((prob)->nintvars)
+#define SCIPprobGetNImplVars(prob)      ((prob)->nimplvars)
+#define SCIPprobGetNContVars(prob)      ((prob)->ncontvars)
+#define SCIPprobGetVars(prob)           ((prob)->vars)
 
 #endif
 
