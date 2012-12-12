@@ -356,6 +356,12 @@ SCIP_Longint SCIPconflictGetNAppliedLocalLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets time in seconds used for preprocessing global conflict constraint before appliance */
+extern
+SCIP_Real SCIPconflictGetGlobalApplTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** gets time in seconds used for analyzing propagation conflicts */
 extern
 SCIP_Real SCIPconflictGetPropTime(

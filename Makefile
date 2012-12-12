@@ -640,6 +640,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/nodesel.o \
 			scip/paramset.o \
 			scip/presol.o \
+			scip/presolve.o \
 			scip/pricestore.o \
 			scip/pricer.o \
 			scip/primal.o \

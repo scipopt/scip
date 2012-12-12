@@ -32,6 +32,7 @@ performance improvements:
   constraint and the corresponding clique information is globally added
 - improved methods SCIPlpiGetBInv{Row,Col,ACol} for row representation in SoPlex LP interface
 - fasten repropagation for set-packing and -partitioning constraints
+- shorten conflicts and deriving global boundchanges from conflicts
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
@@ -46,6 +47,9 @@ interface
 - New methods SCIPconshdlrIncNCutsFound(), SCIPsepaIncNCutsFound(), and SCIPsepaIncNCutsFoundAtNode() to increase the
   number of found cuts
 - added function SCIPgetFirstLPTime to return the time needed to solve the first LP of the root node
+- added SCIPshrinkDisjunctiveVarSet(), which takes an set of variables with corresponding bounds and boundtypes, and
+  tries to derive global boundchanges and also to shorten this set of variables by using cliqe, implication and variable
+  bound information
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
@@ -53,6 +57,15 @@ parameters:
   the basis status
 - new parameter <write/allconss> to enable that all constraints are written
 - new parameter <constraints/indicator/scaleslackvar> for scaling of the slack variable in indicator constraints
+- added <conflict/maxvarsdetectimpliedbounds> parameter to decide whether the a valid conflict of what maximal length
+  will be used to derive global bound changes
+- added <conflict/fullshortenconflict> parameter to decide whether we want to stop shortening a conflict set, when no
+  global bound changes can be found anymore
+
+core:
+- added presolve.{c,h} which should be used, for all preprocessing mechanismsexecuted from within SCIP, corresponding to
+  solve.{c,h}, and also for presprocessing methods which can be called from different plugins or from the core to avoid
+  code doubling
 
 
 SCIP version 3.0.1

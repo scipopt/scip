@@ -180,6 +180,13 @@ struct SCIP_Set
                                               *   (0: disable conflict restarts) */
    SCIP_Real             conf_restartfac;    /**< factor to increase restartnum with after each restart */
    SCIP_Bool             conf_ignorerelaxedbd;/**< should relaxed bounds be ignored? */
+   int                   conf_maxvarsdetectimpliedbounds;/**< maximal number of variables to try to detect global bound
+                                                          *   implications and shorten the whole conflict set (0:
+                                                          *   disabled )
+                                                          */
+   SCIP_Bool             conf_fullshortenconflict;/**< try to shorten the whole conflict set or terminate early
+                                                   *   (depending on the 'maxvarsdetectimpliedbounds' parameter)
+                                                   */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted

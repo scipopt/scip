@@ -107,6 +107,8 @@
                                                  *   (0: disable conflict restarts) */
 #define SCIP_DEFAULT_CONF_RESTARTFAC        1.5 /**< factor to increase restartnum with after each restart */
 #define SCIP_DEFAULT_CONF_IGNORERELAXEDBD FALSE /**< should relaxed bounds be ignored? */
+#define SCIP_DEFAULT_CONF_MAXVARSDETECTIMPLIEDBOUNDS 250 /**< maximal number of variables to try to detect global bound implications and shorten the whole conflict set (0: disabled) */
+#define SCIP_DEFAULT_CONF_FULLSHORTENCONFLICT TRUE /**< try to shorten the whole conflict set or terminate early (depending on the 'maxvarsdetectimpliedbounds' parameter) */
 
 
 /* Constraints */
@@ -926,6 +928,16 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/ignorerelaxedbd",
          "should relaxed bounds be ignored?",
          &(*set)->conf_ignorerelaxedbd, TRUE, SCIP_DEFAULT_CONF_IGNORERELAXEDBD,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "conflict/maxvarsdetectimpliedbounds",
+         "maximal number of variables to try to detect global bound implications and shorten the whole conflict set (0: disabled)",
+         &(*set)->conf_maxvarsdetectimpliedbounds, TRUE, SCIP_DEFAULT_CONF_MAXVARSDETECTIMPLIEDBOUNDS, 0, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/fullshortenconflict",
+         "try to shorten the whole conflict set or terminate early (depending on the 'maxvarsdetectimpliedbounds' parameter)",
+         &(*set)->conf_fullshortenconflict, TRUE, SCIP_DEFAULT_CONF_FULLSHORTENCONFLICT,
          NULL, NULL) );
 
    /* constraint parameters */
