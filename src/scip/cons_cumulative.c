@@ -3779,6 +3779,10 @@ SCIP_RETCODE checkOverloadViaTTEF(
 
             (*initialized) = TRUE;
             (*cutoff) = TRUE;
+
+            /* for the statistic we count the number of times a cutoff was detected due the time-time-edge-finding */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ncutoffoverloadTTEF++ );
+
             break;
          }
 
