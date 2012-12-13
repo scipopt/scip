@@ -1593,6 +1593,9 @@ void SCIPsolRecomputeObj(
          sol->obj += SCIPvarGetObj(vars[v]) * solval;
       }
    }
+
+   if( SCIPsetIsInfinity(set, -sol->obj) )
+      sol->obj = -SCIPsetInfinity(set);
 }
 
 /** returns whether the given solutions are equal */

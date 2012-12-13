@@ -52,7 +52,7 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* execute counting */
+/** execute counting */
 EXTERN
 SCIP_RETCODE SCIPcount(
    SCIP*                 scip                /**< SCIP data structure */

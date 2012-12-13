@@ -246,6 +246,7 @@
 #define DEFAULT_MAXSEPACUTSROOT      2000    /**< maximal number of cuts separated per separation round in the root node */
 #define DEFAULT_REMOVEINDICATORS    FALSE    /**< Remove indicator constraint if corresponding variable bound constraint has been added? */
 #define DEFAULT_GENERATEBILINEAR    FALSE    /**< Do not generate indicator constraint, but a bilinear constraint instead? */
+#define DEFAULT_SCALESLACKVAR       FALSE    /**< Scale slack variable coefficient at construction time? */
 #define DEFAULT_NOLINCONSCONT       FALSE    /**< decompose problem - do not generate linear constraint if all variables are continuous */
 #define DEFAULT_TRYSOLUTIONS         TRUE    /**< Try to make solutions feasible by setting indicator variables? */
 #define DEFAULT_ENFORCECUTS         FALSE    /**< In enforcing try to generate cuts (only if sepaalternativelp is true)? */
@@ -310,6 +311,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             dualreductions;     /**< should dual reduction steps be performed? */
    SCIP_Bool             addopposite;        /**< Add opposite inequality in nodes in which the binary variable has been fixed to 0? */
    SCIP_Bool             generatebilinear;   /**< do not generate indicator constraint, but a bilinear constraint instead */
+   SCIP_Bool             scaleslackvar;      /**< Scale slack variable coefficient at construction time? */
    SCIP_Bool             conflictsupgrade;   /**< Try to upgrade bounddisjunction conflicts by replacing slack variables? */
    SCIP_Bool             performedrestart;   /**< whether a restart has been performed already */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
@@ -4078,9 +4080,6 @@ void initConshdlrData(
    conshdlrdata->roundingrounds = 1;
    conshdlrdata->roundingoffset = 0.1;
    conshdlrdata->addedcouplingcons = FALSE;
-   conshdlrdata->addlincons = NULL;
-   conshdlrdata->naddlincons = 0;
-   conshdlrdata->maxaddlincons = 0;
    conshdlrdata->ninitconss = 0;
    conshdlrdata->nbinvarszero = 0;
    conshdlrdata->performedrestart = FALSE;
@@ -4137,7 +4136,7 @@ SCIP_DECL_CONSINIT(consInitIndicator)
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 static
 SCIP_DECL_CONSEXIT(consExitIndicator)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(scip != NULL);
@@ -4172,7 +4171,15 @@ SCIP_DECL_CONSFREE(consFreeIndicator)
    assert( conshdlrdata->lbhash == NULL );
    assert( conshdlrdata->ubhash == NULL );
    assert( conshdlrdata->slackhash == NULL );
+
+   if( conshdlrdata->maxaddlincons > 0 )
+   {
+      /* if problem was not yet transformed the array may need to be freed, because we did not call the EXIT callback */
+      SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->addlincons, conshdlrdata->maxaddlincons);
+   }
    assert(conshdlrdata->addlincons == NULL);
+   conshdlrdata->naddlincons = 0;
+   conshdlrdata->maxaddlincons = 0;
 
    SCIPfreeMemory(scip, &conshdlrdata);
 
@@ -5869,6 +5876,14 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    /* initialize constraint handler data */
    initConshdlrData(conshdlrdata);
 
+   /* the following three variables cannot be initialized in the above method, because initConshdlrData() is also called
+    * in the CONSINIT callback, but these variables might be used even before the is ccallback is called, so we would
+    * lose the data added before calling this callback
+    */
+   conshdlrdata->addlincons = NULL;
+   conshdlrdata->naddlincons = 0;
+   conshdlrdata->maxaddlincons = 0;
+
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
@@ -5985,6 +6000,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          &conshdlrdata->generatebilinear, TRUE, DEFAULT_GENERATEBILINEAR, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/scaleslackvar",
+         "Scale slack variable coefficient at construction time?",
+         &conshdlrdata->scaleslackvar, TRUE, DEFAULT_SCALESLACKVAR, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/trysolutions",
          "Try to make solutions feasible by setting indicator variables?",
          &conshdlrdata->trysolutions, TRUE, DEFAULT_TRYSOLUTIONS, NULL, NULL) );
@@ -6079,6 +6099,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP_Bool modifiable;
    SCIP_Bool linconsactive;
    SCIP_VARTYPE slackvartype;
+   SCIP_Real absvalsum = 0.0;
    char s[SCIP_MAXSTRLEN];
    int j;
 
@@ -6117,10 +6138,13 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    slackvartype = SCIP_VARTYPE_IMPLINT;
    for (j = 0; j < nvars; ++j)
    {
+      if ( conshdlrdata->scaleslackvar )
+         absvalsum += REALABS(vals[j]);
       if ( ! SCIPvarIsIntegral(vars[j]) || ! SCIPisIntegral(scip, vals[j]) )
       {
          slackvartype = SCIP_VARTYPE_CONTINUOUS;
-         break;
+         if ( ! conshdlrdata->scaleslackvar )
+            break;
       }
    }
 
@@ -6180,7 +6204,19 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP_CALL( SCIPmarkDoNotUpgradeConsLinear(scip, lincons) );
 
    /* add slack variable */
-   SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, -1.0) );
+   if ( conshdlrdata->scaleslackvar )
+   {
+      absvalsum = absvalsum/((SCIP_Real) nvars);
+      if ( slackvartype == SCIP_VARTYPE_IMPLINT )
+         absvalsum = SCIPceil(scip, absvalsum);
+      if ( SCIPisZero(scip, absvalsum) )
+         absvalsum = 1.0;
+      SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, -absvalsum) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, -1.0) );
+   }
    SCIP_CALL( SCIPaddCons(scip, lincons) );
 
    /* check whether we should generate a bilinear constraint instead of an indicator constraint */
@@ -6379,7 +6415,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
 /** creates and captures an indicator constraint with given linear constraint and slack variable
  *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
  *  method SCIPcreateConsIndicator(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
-
+ *
  *  @note @a binvar is checked to be binary only later. This enables a change of the type in
  *  procedures reading an instance.
  *
@@ -6773,7 +6809,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< indicator constraint */
    SCIP_SOL*             sol,                /**< solution */
-   SCIP_Bool*            changed             /**< whether the solution has been changed */
+   SCIP_Bool*            changed             /**< pointer to store whether the solution has been changed */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -6938,7 +6974,7 @@ SCIP_RETCODE SCIPmakeIndicatorsFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
    SCIP_SOL*             sol,                /**< solution */
-   SCIP_Bool*            changed             /**< whether the solution has been changed */
+   SCIP_Bool*            changed             /**< pointer to store whether the solution has been changed */
    )
 {
    SCIP_CONS** conss;

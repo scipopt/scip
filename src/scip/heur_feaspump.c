@@ -47,8 +47,9 @@
 #define DEFAULT_MINFLIPS           10   /**< minimum number of random variables to flip, if a 1-cycle is encountered */
 #define DEFAULT_CYCLELENGTH         3   /**< maximum length of cycles to be checked explicitly in each round */
 #define DEFAULT_PERTURBFREQ       100   /**< number of iterations until a random perturbation is forced */
-#define DEFAULT_OBJFACTOR         1.0   /**< factor by which the regard of the objective is decreased in each round,
+#define DEFAULT_OBJFACTOR         0.1   /**< factor by which the regard of the objective is decreased in each round,
                                          *   1.0 for dynamic, depending on solutions already found */
+#define DEFAULT_ALPHA             1.0   /**< initial weight of the objective function in the convex combination */
 #define DEFAULT_ALPHADIFF         1.0   /**< threshold difference for the convex parameter to perform perturbation */
 #define DEFAULT_BEFORECUTS       TRUE   /**< should the feasibility pump be called at root node before cut separation? */
 #define DEFAULT_USEFP20         FALSE   /**< should an iterative round-and-propagate scheme be used to find the integral points? */
@@ -71,6 +72,7 @@ struct SCIP_HeurData
    SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
    SCIP_Real             objfactor;          /**< factor by which the regard of the objective is decreased in each round,
                                               *   1.0 for dynamic, depending on solutions already found */
+   SCIP_Real             alpha;              /**< initial weight of the objective function in the convex combination */
    SCIP_Real             alphadiff;          /**< threshold difference for the convex parameter to perform perturbation */
 
    int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
@@ -118,6 +120,133 @@ SCIP_RETCODE setupProbingSCIP(
    {
       /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
       SCIP_CALL( SCIPcopyCuts(scip, *probingscip, *varmapfw, NULL, FALSE, NULL) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** set appropriate parameters for probing SCIP in FP2 */
+static
+SCIP_RETCODE setupSCIPparamsFP2(
+   SCIP*                 scip,               /**< SCIP data structure  */
+   SCIP*                 probingscip         /**< sub-SCIP data structure  */
+   )
+{
+   if( SCIPisParamFixed(probingscip, "heuristics/"HEUR_NAME"/freq") )
+   {
+      SCIPwarningMessage(scip, "unfixing parameter heuristics/"HEUR_NAME"/freq in probingscip of "HEUR_NAME" heuristic to avoid recursive calls\n");
+      SCIP_CALL( SCIPunfixParam(probingscip, "heuristics/"HEUR_NAME"/freq") );
+   }
+   SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/"HEUR_NAME"/freq", -1) );
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
+
+#ifndef SCIP_DEBUG
+   /* disable output to console */
+   SCIP_CALL( SCIPsetIntParam(probingscip, "display/verblevel", 0) );
+#endif
+
+   /* disable expensive and useless stuff */
+   SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1LL) );
+   if( SCIPisParamFixed(probingscip, "lp/solvefreq") )
+   {
+      SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in probingscip of "HEUR_NAME" heuristic to speed up propagation\n");
+      SCIP_CALL( SCIPunfixParam(probingscip, "lp/solvefreq") );
+   }
+   SCIP_CALL( SCIPsetIntParam(probingscip, "lp/solvefreq", -1) );
+   SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/enable", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(probingscip, "constraints/disableenfops", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(probingscip, "constraints/knapsack/negatedclique", FALSE) );
+   SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
+   SCIP_CALL( SCIPsetHeuristics(probingscip, SCIP_PARAMSETTING_OFF, TRUE) );
+   return SCIP_OKAY;
+}
+
+/** set appropriate parameters for probing SCIP in Stage 3 */
+static
+SCIP_RETCODE setupSCIPparamsStage3(
+   SCIP*                 scip,               /**< SCIP data structure  */
+   SCIP*                 probingscip,        /**< sub-SCIP data structure  */
+   SCIP_Real             timelimit,          /**< time limit for Stage3 */
+   SCIP_Real             memorylimit         /**< memory limit for Stage3 */
+   )
+{
+   SCIP_CALL( SCIPcopyParamSettings(scip, probingscip) );
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
+
+#ifndef SCIP_DEBUG
+   /* disable output to console */
+   SCIP_CALL( SCIPsetIntParam(probingscip, "display/verblevel", 0) );
+#endif
+   /* set limits for the subproblem */
+   SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1000LL) );
+   SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/stallnodes", 100LL) );
+   SCIP_CALL( SCIPsetRealParam(probingscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(probingscip, "limits/memory", memorylimit) );
+
+   /* forbid recursive call of heuristics and separators solving sub-SCIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(probingscip, TRUE) );
+   if( SCIPisParamFixed(probingscip, "heuristics/"HEUR_NAME"/freq") )
+   {
+      SCIPwarningMessage(scip,"unfixing parameter heuristics/"HEUR_NAME"/freq in probingscip of "HEUR_NAME" heuristic to avoid recursive calls\n");
+      SCIP_CALL( SCIPunfixParam(probingscip, "heuristics/"HEUR_NAME"/freq") );
+   }
+   SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/feaspump/freq", -1) );
+
+   /* disable heuristics which aim to feasibility instead of optimality */
+   if( !SCIPisParamFixed(probingscip, "heuristics/octane/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/octane/freq", -1) );
+   }
+   if( !SCIPisParamFixed(probingscip, "heuristics/objpscostdiving/freq") )
+   {
+         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/objpscostdiving/freq", -1) );
+   }
+   if( !SCIPisParamFixed(probingscip, "heuristics/rootsoldiving/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/rootsoldiving/freq", -1) );
+   }
+
+   /* disable cutting plane separation */
+   SCIP_CALL( SCIPsetSeparating(probingscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+   /* disable expensive presolving */
+   SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+   /* use best estimate node selection */
+   if( SCIPfindNodesel(probingscip, "estimate") != NULL && !SCIPisParamFixed(probingscip, "nodeselection/estimate/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(probingscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
+   }
+
+   /* use inference branching */
+   if( SCIPfindBranchrule(probingscip, "inference") != NULL && !SCIPisParamFixed(probingscip, "branching/inference/priority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(probingscip, "branching/inference/priority", INT_MAX/4) );
+   }
+
+   /* disable conflict analysis */
+   if( !SCIPisParamFixed(probingscip, "conflict/useprop") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useprop", FALSE) );
+   }
+   if( !SCIPisParamFixed(probingscip, "conflict/useinflp") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useinflp", FALSE) );
+   }
+   if( !SCIPisParamFixed(probingscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useboundlp", FALSE) );
+   }
+   if( !SCIPisParamFixed(probingscip, "conflict/usesb") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usesb", FALSE) );
+   }
+   if( !SCIPisParamFixed(probingscip, "conflict/usepseudo") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usepseudo", FALSE) );
    }
 
    return SCIP_OKAY;
@@ -497,7 +626,6 @@ SCIP_DECL_HEUREXITSOL(heurExitsolFeaspump)
    return SCIP_OKAY;
 }
 
-
 /** calculates an adjusted maximal number of LP iterations */
 static
 SCIP_Longint adjustedMaxNLPIterations(
@@ -591,6 +719,10 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
+   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
+   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+      return SCIP_OKAY;
+
    /* only call heuristic, if the LP solution is basic (which allows fast resolve in diving) */
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
@@ -664,32 +796,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
       if( success )
       {
-         if( SCIPisParamFixed(probingscip, "heuristics/"HEUR_NAME"/freq") )
-         {
-            SCIPwarningMessage(scip, "unfixing parameter heuristics/"HEUR_NAME"/freq in probingscip of "HEUR_NAME" heuristic to avoid recursive calls\n");
-            SCIP_CALL( SCIPunfixParam(probingscip, "heuristics/"HEUR_NAME"/freq") );
-         }
-         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/"HEUR_NAME"/freq", -1) );
+         SCIP_CALL( setupSCIPparamsFP2(scip, probingscip) );
 
-         /* do not abort subproblem on CTRL-C */
-         SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
-
-#ifndef SCIP_DEBUG
-         /* disable output to console */
-         SCIP_CALL( SCIPsetIntParam(probingscip, "display/verblevel", 0) );
-#endif
-
-         /* do presolve and initialize solving */
-         SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1LL) );
-         if( SCIPisParamFixed(probingscip, "lp/solvefreq") )
-         {
-            SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in probingscip of "HEUR_NAME" heuristic to avoid recursive calls\n");
-            SCIP_CALL( SCIPunfixParam(probingscip, "lp/solvefreq") );
-         }
-         SCIP_CALL( SCIPsetIntParam(probingscip, "lp/solvefreq", -1) );
-
-         /* disable expensive presolving */
-         SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
          retcode = SCIPsolve(probingscip);
 
          /* errors in solving the subproblem should not kill the overall solving process;
@@ -772,7 +880,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    scalingfactor = SQRT((SCIP_Real)(nbinvars + nintvars)) / objnorm;
 
    /* data initialization */
-   alpha = 1.0;
+   alpha = heurdata->alpha;
    nloops = 0;
    nstallloops = 0;
    nbestsolsfound = SCIPgetNBestSolsFound(scip);
@@ -804,12 +912,13 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
 
       /* if the rounded solution is feasible and better, add it to SCIP */
-      if( success )
+      /*if( success )
       {
+         SCIPdebugMessage("feasibility pump trying rounded solution\n");
          SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
          if( success )
             *result = SCIP_FOUNDSOL;
-      }
+      }*/
 
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->roundedsol) );
 
@@ -871,18 +980,17 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             if( !SCIPisFeasEQ(probingscip, lb, ub) )
             {
                assert(SCIPisFeasLE(probingscip, lb, ub));
-               SCIP_CALL( SCIPnewProbingNode(probingscip) );
-
-               SCIP_CALL( SCIPfixVarProbing(probingscip, probingvar, solval) );
+               /* SCIP_CALL( SCIPnewProbingNode(probingscip) ); */
                SCIPdebugMessage("try to fix variable <%s> (domain [%f,%f] to %f\n",SCIPvarGetName(probingvar), lb, ub,
                   solval);
-               SCIP_CALL( SCIPpropagateProbing(probingscip, 3, &infeasible, &ndomreds) );
+               SCIP_CALL( SCIPfixVarProbing(probingscip, probingvar, solval) );
+               SCIP_CALL( SCIPpropagateProbing(probingscip, -1, &infeasible, &ndomreds) );
                SCIPdebugMessage("  -> reduced %"SCIP_LONGINT_FORMAT" domains\n", ndomreds);
 
                if( infeasible )
                {
                   SCIPdebugMessage("  -> infeasible!\n");
-                  SCIP_CALL( SCIPbacktrackProbing(probingscip, SCIPgetProbingDepth(probingscip)-1) );
+                  SCIP_CALL( SCIPbacktrackProbing(probingscip, 0/*SCIPgetProbingDepth(probingscip)-1*/) );
                }
             }
             else
@@ -929,7 +1037,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       
       if( heurdata->usefp20 )
       {
-         SCIP_CALL( SCIPbacktrackProbing(probingscip, 1) );
+         SCIP_CALL( SCIPbacktrackProbing(probingscip, 0) );
       }
 
       /* change objective coefficients for continuous variables */
@@ -1092,6 +1200,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       success = FALSE;
 
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
+      SCIPdebugMessage("feasibility pump found solution (%d fractional variables)\n", nfracs);
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;
@@ -1105,6 +1214,11 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    {
       SCIP_CALL( SCIPendProbing(probingscip) );
    }
+
+   /*if( heurdata->usefp20 )
+   {
+         SCIP_CALL( SCIPprintStatistics(probingscip, NULL) );
+   }*/
 
    /* only do stage 3 if we have not found a solution yet */
    /* only do stage 3 if the distance of the closest infeasible solution to the polyhedron is below a certain threshold */
@@ -1145,81 +1259,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
       if( timelimit > 0.0 && memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       {
-         /* do not abort subproblem on CTRL-C */
-         SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
-
-#ifndef SCIP_DEBUG
-         /* disable output to console */
-         SCIP_CALL( SCIPsetIntParam(probingscip, "display/verblevel", 0) );
-#endif
-         /* set limits for the subproblem */
-         SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1000LL) );
-         SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/stallnodes", 100LL) );
-         SCIP_CALL( SCIPsetRealParam(probingscip, "limits/time", timelimit) );
-         SCIP_CALL( SCIPsetRealParam(probingscip, "limits/memory", memorylimit) );
-
-         /* forbid recursive call of heuristics and separators solving sub-SCIPs */
-         SCIP_CALL( SCIPsetSubscipsOff(probingscip, TRUE) );
-         if( SCIPisParamFixed(probingscip, "heuristics/"HEUR_NAME"/freq") )
-         {
-            SCIPwarningMessage(scip,"unfixing parameter heuristics/"HEUR_NAME"/freq in probingscip of "HEUR_NAME" heuristic to avoid recursive calls\n");
-            SCIP_CALL( SCIPunfixParam(probingscip, "heuristics/"HEUR_NAME"/freq") );
-         }
-         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/feaspump/freq", -1) );
-
-         /* disable heuristics which aim to feasibility instead of optimality */
-         if( !SCIPisParamFixed(probingscip, "heuristics/octane/freq") )
-         {
-            SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/octane/freq", -1) );
-         }
-         if( !SCIPisParamFixed(probingscip, "heuristics/objpscostdiving/freq") )
-         {
-               SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/objpscostdiving/freq", -1) );
-         }
-         if( !SCIPisParamFixed(probingscip, "heuristics/rootsoldiving/freq") )
-         {
-            SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/rootsoldiving/freq", -1) );
-         }
-
-         /* disable cutting plane separation */
-         SCIP_CALL( SCIPsetSeparating(probingscip, SCIP_PARAMSETTING_OFF, TRUE) );
-
-         /* disable expensive presolving */
-         SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
-
-         /* use best estimate node selection */
-         if( SCIPfindNodesel(probingscip, "estimate") != NULL && !SCIPisParamFixed(probingscip, "nodeselection/estimate/stdpriority") )
-         {
-            SCIP_CALL( SCIPsetIntParam(probingscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
-         }
-
-         /* use inference branching */
-         if( SCIPfindBranchrule(probingscip, "inference") != NULL && !SCIPisParamFixed(probingscip, "branching/inference/priority") )
-         {
-            SCIP_CALL( SCIPsetIntParam(probingscip, "branching/inference/priority", INT_MAX/4) );
-         }
-
-         /* disable conflict analysis */
-         if( !SCIPisParamFixed(probingscip, "conflict/useprop") )
-         {
-            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useprop", FALSE) );
-         }
-         if( !SCIPisParamFixed(probingscip, "conflict/useinflp") )
-         {
-            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useinflp", FALSE) );
-         }
-         if( !SCIPisParamFixed(probingscip, "conflict/useboundlp") )
-         {
-            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useboundlp", FALSE) );
-         }
-         if( !SCIPisParamFixed(probingscip, "conflict/usesb") )
-         {
-            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usesb", FALSE) );
-         }
-         if( !SCIPisParamFixed(probingscip, "conflict/usepseudo") )
-         {
-            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usepseudo", FALSE) );
-         }
+         SCIP_CALL( setupSCIPparamsStage3(scip, probingscip, timelimit, memorylimit) );
 
          /* the neighborhood size is double the distance plus another ten percent */
          mindistance = SCIPceil(scip, 2.2*mindistance);
@@ -1281,6 +1321,25 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
    SCIPdebugMessage("feasibility pump finished [%d iterations done].\n", nloops);
 
+#ifdef SCIP_STATISTIC
+   if( nfracs == 0 )
+   {
+      double objval;
+      double primalBound;
+
+      objval = SCIPgetSolOrigObj(scip, heurdata->sol);
+      primalBound = SCIPgetPrimalbound(scip);
+      SCIPstatisticMessage("feasibility pump found: 1, objval: %f, iterations: %d, primal bound: %f\n", objval, nloops, primalBound);
+   }
+   else
+   {
+      double primalBound;
+
+      primalBound = SCIPgetPrimalbound(scip);
+      SCIPstatisticMessage("feasibility pump found: 0, objval: +inf, iterations: %d, primal bound: %f\n", nloops, primalBound);
+   }
+   
+#endif /* SCIP_STATISTIC */
    return SCIP_OKAY;
 }
 
@@ -1324,6 +1383,10 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
          "heuristics/"HEUR_NAME"/objfactor",
          "factor by which the regard of the objective is decreased in each round, 1.0 for dynamic",
          &heurdata->objfactor, FALSE, DEFAULT_OBJFACTOR, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "heuristics/"HEUR_NAME"/alpha",
+         "initial weight of the objective function in the convex combination",
+         &heurdata->alpha, FALSE, DEFAULT_ALPHA, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/"HEUR_NAME"/alphadiff",
          "threshold difference for the convex parameter to perform perturbation",

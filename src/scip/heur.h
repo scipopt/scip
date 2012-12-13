@@ -105,6 +105,16 @@ SCIP_RETCODE SCIPheurExitsol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** should the heuristic be executed at the given depth, frequency, timing, ... */
+extern
+SCIP_Bool SCIPheurShouldBeExecuted(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   int                   depth,              /**< depth of current node */
+   int                   lpstateforkdepth,   /**< depth of the last node with solved LP */
+   SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
+   SCIP_Bool*            delayed             /**< pointer to store whether the heuristic should be delayed */
+   );
+
 /** calls execution method of primal heuristic */
 extern
 SCIP_RETCODE SCIPheurExec(

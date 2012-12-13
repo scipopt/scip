@@ -29,7 +29,8 @@ ARCH		:=	$(shell uname -m | \
 			-e 's/IP../mips/' \
 			-e 's/9000..../hppa/' \
 			-e 's/Power\ Macintosh/ppc/' \
-			-e 's/00........../pwr4/')
+			-e 's/00........../pwr4/'\
+			-e 's/arm.*/arm/')
 OSTYPE		:=	$(shell uname -s | tr '[:upper:]' '[:lower:]' | \
 			sed \
 			-e 's/cygwin.*/cygwin/' \

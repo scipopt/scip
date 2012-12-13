@@ -180,6 +180,13 @@ struct SCIP_Set
                                               *   (0: disable conflict restarts) */
    SCIP_Real             conf_restartfac;    /**< factor to increase restartnum with after each restart */
    SCIP_Bool             conf_ignorerelaxedbd;/**< should relaxed bounds be ignored? */
+   int                   conf_maxvarsdetectimpliedbounds;/**< maximal number of variables to try to detect global bound
+                                                          *   implications and shorten the whole conflict set (0:
+                                                          *   disabled )
+                                                          */
+   SCIP_Bool             conf_fullshortenconflict;/**< try to shorten the whole conflict set or terminate early
+                                                   *   (depending on the 'maxvarsdetectimpliedbounds' parameter)
+                                                   */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
@@ -194,6 +201,9 @@ struct SCIP_Set
    int                   disp_freq;          /**< frequency for displaying node information lines */
    int                   disp_headerfreq;    /**< frequency for displaying header lines (every n'th node information line) */
    SCIP_Bool             disp_lpinfo;        /**< should the LP solver display status messages? */
+
+   /* history settings */
+   SCIP_Bool             history_valuebased; /**< should statistics be collected for variable domain value pairs? */
 
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
@@ -247,6 +257,7 @@ struct SCIP_Set
    int                   lp_lexdualmaxrounds;/**< maximum number of rounds in the lexicographic dual algorithm */
    SCIP_Bool             lp_lexdualbasic;    /**< choose fractional basic variables in lexicographic dual algorithm */
    SCIP_Bool             lp_lexdualstalling; /**< turn on the lex dual algorithm only when stalling? */
+   SCIP_Bool             lp_disablecutoff;   /**< disables the cutoff bound in the LP solver */
    SCIP_Real             lp_rowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
    int                   lp_threads;         /**< number of threads used for solving the LP (0: automatic) */
@@ -370,6 +381,9 @@ struct SCIP_Set
    char*                 vbc_filename;       /**< name of the VBC Tool output file, or - if no output should be created */
    SCIP_Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in VBC output? */
    SCIP_Bool             vbc_dispsols;       /**< should the node where solutions are found be visualized? */
+
+   /* Writing */
+   SCIP_Bool             write_allconss;     /**< should all constraints be written (including the redundant constraints)? */
 };
 
 #ifdef __cplusplus

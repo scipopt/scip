@@ -1851,15 +1851,6 @@ SCIP_RETCODE SCIPprobExitSolve(
  * problem information
  */
 
-/** gets problem name */
-const char* SCIPprobGetName(
-   SCIP_PROB*            prob                /**< problem data */
-   )
-{
-   assert(prob != NULL);
-   return prob->name;
-}
-
 /** sets problem name */
 SCIP_RETCODE SCIPprobSetName(
    SCIP_PROB*            prob,               /**< problem data */
@@ -1874,14 +1865,29 @@ SCIP_RETCODE SCIPprobSetName(
    return SCIP_OKAY;
 }
 
-/** gets user problem data */
-SCIP_PROBDATA* SCIPprobGetData(
-   SCIP_PROB*            prob                /**< problem */
+/** returns the number of implicit binary variables, meaning variable of vartype != SCIP_VARTYPE_BINARY and !=
+ *  SCIP_VARTYPE_CONTINUOUS but with global bounds [0,1]
+ *
+ *  @note this number needs to be computed, because it cannot be update like the othe counters for binary and interger
+ *        variables, each time the variable type changes(, we would need to update this counter each time a global bound
+ *        changes), even at the end of presolving this cannot be computed, because some variable can change to an
+ *        implicit binary status
+ */
+int SCIPprobGetNImplBinVars(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   assert(prob != NULL);
+   int v;
+   int nimplbinvars = 0;
 
-   return prob->probdata;
+   for( v = prob->nbinvars + prob->nintvars + prob->nimplvars - 1; v >= prob->nbinvars; --v )
+   {
+      if( SCIPvarIsBinary(prob->vars[v]) )
+         ++nimplbinvars;
+   }
+
+   return nimplbinvars;
 }
 
 /** returns the number of variables with non-zero objective coefficient */
@@ -1890,18 +1896,40 @@ int SCIPprobGetNObjVars(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   int nobjvars;
-   int v;
-
-   nobjvars = 0;
-
-   for( v = 0; v < prob->nvars; ++v )
+   if( prob->transformed )
    {
-      if( !SCIPsetIsZero(set, SCIPvarGetObj(prob->vars[v])) )
-         nobjvars++;
-   }
+      /* this is much too expensive, to check it in each debug run */
+#ifdef SCIP_MORE_DEBUG
+      int nobjvars;
+      int v;
 
-   return nobjvars;
+      nobjvars = 0;
+
+      for( v = prob->nvars - 1; v >= 0; --v )
+      {
+         if( !SCIPsetIsZero(set, SCIPvarGetObj(prob->vars[v])) )
+            nobjvars++;
+      }
+
+      /* check that the internal count is correct */
+      assert(prob->nobjvars == nobjvars);
+#endif
+      return prob->nobjvars;
+   }
+   else
+   {
+      int nobjvars;
+      int v;
+
+      nobjvars = 0;
+
+      for( v = prob->nvars - 1; v >= 0; --v )
+      {
+         if( !SCIPsetIsZero(set, SCIPvarGetObj(prob->vars[v])) )
+            nobjvars++;
+      }
+      return nobjvars;
+   }
 }
 
 /** returns the external value of the given internal objective value */
@@ -1948,28 +1976,6 @@ SCIP_Real SCIPprobInternObjval(
       return (SCIP_Real)transprob->objsense * (objval - origprob->objoffset)/transprob->objscale - transprob->objoffset;
 }
 
-/** gets limit on objective function in external space */
-SCIP_Real SCIPprobGetObjlim(
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(prob != NULL);
-   assert(set != NULL);
-
-   return prob->objlim >= SCIP_INVALID ? (SCIP_Real)(prob->objsense) * SCIPsetInfinity(set) : prob->objlim;
-}
-
-/** returns whether the objective value is known to be integral in every feasible solution */
-SCIP_Bool SCIPprobIsObjIntegral(
-   SCIP_PROB*            prob                /**< problem data */
-   )
-{
-   assert(prob != NULL);
-
-   return prob->objisintegral;
-}
-
 /** returns variable of the problem with given name */
 SCIP_VAR* SCIPprobFindVar(
    SCIP_PROB*            prob,               /**< problem data */
@@ -2006,20 +2012,6 @@ SCIP_CONS* SCIPprobFindCons(
    }
 
    return (SCIP_CONS*)(SCIPhashtableRetrieve(prob->consnames, (char*)name));
-}
-
-/** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present
- *  in the LP, and FALSE, if there are additional already existing columns, that may be added to the LP in pricing
- */
-SCIP_Bool SCIPprobAllColsInLP(
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current LP data */
-   )
-{
-   assert(SCIPlpGetNCols(lp) <= prob->ncolvars && prob->ncolvars <= prob->nvars);
-
-   return (SCIPlpGetNCols(lp) == prob->ncolvars && set->nactivepricers == 0);
 }
 
 /** displays current pseudo solution */
@@ -2059,4 +2051,143 @@ void SCIPprobPrintStatistics(
    SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
    if( ! prob->transformed )
       SCIPmessageFPrintInfo(messagehdlr, file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
+}
+
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPprobIsTransformed
+#undef SCIPprobIsObjIntegral
+#undef SCIPprobAllColsInLP
+#undef SCIPprobGetObjlim
+#undef SCIPprobGetData
+#undef SCIPprobGetName
+#undef SCIPprobGetNVars
+#undef SCIPprobGetNBinVars
+#undef SCIPprobGetNIntVars
+#undef SCIPprobGetNImplVars
+#undef SCIPprobGetNContVars
+#undef SCIPprobGetVars
+
+/** is the problem data transformed */
+SCIP_Bool SCIPprobIsTransformed(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   return prob->transformed;
+}
+
+/** returns whether the objective value is known to be integral in every feasible solution */
+SCIP_Bool SCIPprobIsObjIntegral(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   return prob->objisintegral;
+}
+
+/** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present
+ *  in the LP, and FALSE, if there are additional already existing columns, that may be added to the LP in pricing
+ */
+SCIP_Bool SCIPprobAllColsInLP(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(SCIPlpGetNCols(lp) <= prob->ncolvars && prob->ncolvars <= prob->nvars);
+
+   return (SCIPlpGetNCols(lp) == prob->ncolvars && set->nactivepricers == 0);
+}
+
+/** gets limit on objective function in external space */
+SCIP_Real SCIPprobGetObjlim(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(prob != NULL);
+   assert(set != NULL);
+
+   return prob->objlim >= SCIP_INVALID ? (SCIP_Real)(prob->objsense) * SCIPsetInfinity(set) : prob->objlim;
+}
+
+/** gets user problem data */
+SCIP_PROBDATA* SCIPprobGetData(
+   SCIP_PROB*            prob                /**< problem */
+   )
+{
+   assert(prob != NULL);
+
+   return prob->probdata;
+}
+
+/** gets problem name */
+const char* SCIPprobGetName(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->name;
+}
+
+/** gets number of problem variables */
+int SCIPprobGetNVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nvars;
+}
+
+/** gets number of binary problem variables */
+int SCIPprobGetNBinVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nbinvars;
+}
+
+/** gets number of integer problem variables */
+int SCIPprobGetNIntVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nintvars;
+}
+
+/** gets number of implicit integer problem variables */
+int SCIPprobGetNImplVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nimplvars;
+}
+
+/** gets number of continuous problem variables */
+int SCIPprobGetNContVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->ncontvars;
+}
+
+/** gets problem variables */
+SCIP_VAR** SCIPprobGetVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->vars;
 }

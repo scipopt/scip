@@ -84,8 +84,8 @@
  * Data structures
  */
 
-/** Eventdata for variable bound change events. */
-struct SCIP_EventData
+/** eventdata for variable bound change events in quadratic constraints */
+struct SCIP_QuadVarEventData
 {
    SCIP_CONSDATA*        consdata;           /**< the constraint data */
    int                   varidx;             /**< the index of the variable which bound change is caught, positive for linear variables, negative for quadratic variables */
@@ -102,7 +102,7 @@ struct SCIP_ConsData
    int                   linvarssize;        /**< length of linear variable arrays */
    SCIP_VAR**            linvars;            /**< linear variables */
    SCIP_Real*            lincoefs;           /**< coefficients of linear variables */
-   SCIP_EVENTDATA**      lineventdata;       /**< eventdata for bound change of linear variable */
+   SCIP_QUADVAREVENTDATA** lineventdata;       /**< eventdata for bound change of linear variable */
 
    int                   nquadvars;          /**< number of variables in quadratic terms */
    int                   quadvarssize;       /**< length of quadratic variable terms arrays */
@@ -246,7 +246,7 @@ SCIP_RETCODE catchLinearVarEvents(
    )
 {
    SCIP_CONSDATA*  consdata;
-   SCIP_EVENTDATA* eventdata;
+   SCIP_QUADVAREVENTDATA* eventdata;
    SCIP_EVENTTYPE  eventtype;
 
    assert(scip != NULL);
@@ -285,7 +285,7 @@ SCIP_RETCODE catchLinearVarEvents(
          eventtype |= SCIP_EVENTTYPE_LBCHANGED;
    }
 
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->linvars[linvarpos], eventtype, eventhdlr, eventdata, &eventdata->filterpos) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->linvars[linvarpos], eventtype, eventhdlr, (SCIP_EVENTDATA*)eventdata, &eventdata->filterpos) );
 
    consdata->lineventdata[linvarpos] = eventdata;
 
@@ -339,7 +339,7 @@ SCIP_RETCODE dropLinearVarEvents(
          eventtype |= SCIP_EVENTTYPE_LBCHANGED;
    }
 
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->linvars[linvarpos], eventtype, eventhdlr, consdata->lineventdata[linvarpos], consdata->lineventdata[linvarpos]->filterpos) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->linvars[linvarpos], eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata->lineventdata[linvarpos], consdata->lineventdata[linvarpos]->filterpos) );
 
    SCIPfreeBlockMemory(scip, &consdata->lineventdata[linvarpos]);  /*lint !e866 */
 
@@ -356,7 +356,7 @@ SCIP_RETCODE catchQuadVarEvents(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_EVENTDATA* eventdata;
+   SCIP_QUADVAREVENTDATA* eventdata;
    SCIP_EVENTTYPE eventtype;
 
    assert(scip != NULL);
@@ -378,7 +378,7 @@ SCIP_RETCODE catchQuadVarEvents(
 #endif
    eventdata->consdata = consdata;
    eventdata->varidx   = -quadvarpos-1;
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->quadvarterms[quadvarpos].var, eventtype, eventhdlr, eventdata, &eventdata->filterpos) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->quadvarterms[quadvarpos].var, eventtype, eventhdlr, (SCIP_EVENTDATA*)eventdata, &eventdata->filterpos) );
 
    consdata->quadvarterms[quadvarpos].eventdata = eventdata;
 
@@ -416,7 +416,7 @@ SCIP_RETCODE dropQuadVarEvents(
    eventtype |= SCIP_EVENTTYPE_IMPLADDED;
 #endif
 
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->quadvarterms[quadvarpos].var, eventtype, eventhdlr, consdata->quadvarterms[quadvarpos].eventdata, consdata->quadvarterms[quadvarpos].eventdata->filterpos) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->quadvarterms[quadvarpos].var, eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata->quadvarterms[quadvarpos].eventdata, consdata->quadvarterms[quadvarpos].eventdata->filterpos) );
 
    SCIPfreeBlockMemory(scip, &consdata->quadvarterms[quadvarpos].eventdata);
 
@@ -926,22 +926,25 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 {
    SCIP_CONSDATA* consdata;
    SCIP_EVENTTYPE eventtype;
+   int varidx;
 
    assert(scip != NULL);
    assert(event != NULL);
    assert(eventdata != NULL);
    assert(eventhdlr != NULL);
 
-   consdata = eventdata->consdata;
+   consdata = ((SCIP_QUADVAREVENTDATA*)eventdata)->consdata;
    assert(consdata != NULL);
-   assert(eventdata->varidx <  0 ||  eventdata->varidx   < consdata->nlinvars);
-   assert(eventdata->varidx >= 0 || -eventdata->varidx-1 < consdata->nquadvars);
+
+   varidx = ((SCIP_QUADVAREVENTDATA*)eventdata)->varidx;
+   assert(varidx <  0 ||  varidx   < consdata->nlinvars);
+   assert(varidx >= 0 || -varidx-1 < consdata->nquadvars);
 
    eventtype = SCIPeventGetType(event);
 
    if( eventtype & SCIP_EVENTTYPE_BOUNDCHANGED )
    {
-      if( eventdata->varidx < 0 )
+      if( varidx < 0 )
       {
          /* mark activity bounds for quad term as not up to date anymore */
          SCIPintervalSetEmpty(&consdata->quadactivitybounds);
@@ -950,9 +953,9 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       {
          /* update activity bounds for linear terms */
          if( eventtype & SCIP_EVENTTYPE_LBCHANGED )
-            consdataUpdateLinearActivityLbChange(scip, consdata, consdata->lincoefs[eventdata->varidx], SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
+            consdataUpdateLinearActivityLbChange(scip, consdata, consdata->lincoefs[varidx], SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
          else
-            consdataUpdateLinearActivityUbChange(scip, consdata, consdata->lincoefs[eventdata->varidx], SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
+            consdataUpdateLinearActivityUbChange(scip, consdata, consdata->lincoefs[varidx], SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
       }
 
       if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
@@ -967,9 +970,9 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 #ifdef CHECKIMPLINBILINEAR
    if( eventtype & SCIP_EVENTTYPE_IMPLADDED )
    {
-      assert(eventdata->varidx < 0); /* we catch impladded events only for quadratic variables */
+      assert(varidx < 0); /* we catch impladded events only for quadratic variables */
       /* if variable is binary (quite likely if an implication has been added) and occurs in a bilinear term, then mark that we should check implications */
-      if( SCIPvarIsBinary(SCIPeventGetVar(event)) && consdata->quadvarterms[-eventdata->varidx-1].nadjbilin > 0 )
+      if( SCIPvarIsBinary(SCIPeventGetVar(event)) && consdata->quadvarterms[-varidx-1].nadjbilin > 0 )
          consdata->isimpladded = TRUE;
    }
 #endif
@@ -3137,7 +3140,7 @@ SCIP_RETCODE presolveTryAddAND(
          continue;
 
       /* create auxiliary variable */ 
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s", SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s_%s", SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]), SCIPconsGetName(cons));
       SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, 
             TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, auxvar) );
@@ -3443,7 +3446,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
          {
             /* product of two binary variables, replace by auxvar and AND constraint */
             /* add auxiliary variable z */
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
+            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s_%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT,
                   TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
@@ -3460,7 +3463,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
             /* add constraint z = x and y */
             xvars[1] = y;
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
+            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s_%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateConsAnd(scip, &auxcons, name, auxvar, 2, xvars,
                   SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -3526,9 +3529,9 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
             /* add auxiliary variable z */
             if( nxvars == 1 )
-               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s_%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             else
-               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s*more", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "prod%s*%s*more_%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, MIN(0., SCIPintervalGetInf(xbndsone)), MAX(0., SCIPintervalGetSup(xbndsone)),
                   0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
@@ -4816,7 +4819,6 @@ void generateCutFactorableDo(
    int i;
 
    assert(cutcoef != NULL);
-   assert(SCIPisFeasLE(scip, rightminactivity, rightmaxactivity));
    assert(rightminactivity * multright > 0.0);
    assert(rightmaxactivity * multright > 0.0);
    assert(multright == 1.0 || multright == -1.0);
@@ -4843,6 +4845,8 @@ void generateCutFactorableDo(
          *success = FALSE;
          return;
       }
+
+      assert(SCIPisFeasLE(scip, rightminactivity, rightmaxactivity));
 
       constant = multleft * multright * coefleft[consdata->nquadvars];
       constant -= rhs * multright * (1.0 / rightminactivity + 1.0 / rightmaxactivity);
@@ -7624,7 +7628,7 @@ SCIP_RETCODE propagateBoundsTightenVarLb(
    assert(nchgbds != NULL);
 
    /* new bound is no improvement */
-   if( SCIPisLE(scip, bnd, SCIPvarGetLbLocal(var)) )
+   if( SCIPisHugeValue(scip, -bnd) || SCIPisLE(scip, bnd, SCIPvarGetLbLocal(var)) )
       return SCIP_OKAY;
 
    if( SCIPisInfinity(scip, bnd) )
@@ -7683,7 +7687,7 @@ SCIP_RETCODE propagateBoundsTightenVarUb(
    assert(nchgbds != NULL);
 
    /* new bound is no improvement */
-   if( SCIPisGE(scip, bnd, SCIPvarGetUbLocal(var)) )
+   if( SCIPisHugeValue(scip, bnd) || SCIPisGE(scip, bnd, SCIPvarGetUbLocal(var)) )
       return SCIP_OKAY;
 
    if( SCIPisInfinity(scip, -bnd) )

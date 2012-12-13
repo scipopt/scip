@@ -246,8 +246,8 @@ SCIP_DECL_PROPEXEC(propExecDualfix)
 
    *result = SCIP_DIDNOTRUN;
 
-   /* don't run in probing */
-   if( SCIPinProbing(scip) )
+   /** @warning Don't run in probing or in repropagation since this can lead to wrong conclusion */
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
    cutoff = FALSE;

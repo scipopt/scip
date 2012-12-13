@@ -45,10 +45,11 @@
 extern "C" {
 #endif
 
-/*
- * Column methods
- */
 
+/**@defgroup ColumnMethods Column methods
+ *
+ * @{
+ */
 
 /** sorts column entries such that LP rows precede non-LP rows and inside both parts lower row indices precede higher ones
  */
@@ -56,12 +57,6 @@ EXTERN
 void SCIPcolSort(
    SCIP_COL*             col                 /**< column to be sorted */
    );
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
 
 /** gets objective value of column */
 EXTERN
@@ -202,9 +197,9 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
    SCIP_BOUNDTYPE        boundtype           /**< type of bound (lower or upper) */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
@@ -234,11 +229,13 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 
 #endif
 
+/**@} */
 
 
 
-/*
- * Row methods
+/**@defgroup RowMethods Row methods
+ *
+ * @{
  */
 
 /** comparison method for sorting rows by non-decreasing index */
@@ -293,12 +290,6 @@ EXTERN
 void SCIProwSort(
    SCIP_ROW*             row                 /**< row to be sorted */
    );
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
 
 /** get number of nonzero entries in row vector */
 EXTERN
@@ -396,7 +387,7 @@ int SCIProwGetAge(
    );
 
 /** gets rank of row */
-extern
+EXTERN
 int SCIProwGetRank(
    SCIP_ROW*             row                 /**< LP row */
    );
@@ -468,15 +459,15 @@ SCIP_Bool SCIProwIsInLP(
    );
 
 /** changes the rank of LP row */
-extern
+EXTERN
 void SCIProwChgRank(
    SCIP_ROW*             row,                /**< LP row */
    int                   rank                /**< new value for rank */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
@@ -510,6 +501,8 @@ void SCIProwChgRank(
 #define SCIProwChgRank(row, cutrank)    ((row)->rank = (cutrank))
 
 #endif
+
+/**@} */
 
 #ifdef __cplusplus
 }

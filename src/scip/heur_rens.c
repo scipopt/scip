@@ -729,6 +729,10 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    if( heurdata->startsol == 'l' && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
+   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
+   if( heurdata->startsol == 'l' && SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+      return SCIP_OKAY;
+
    /* only continue with some fractional variables */
    if( heurdata->startsol == 'l' && SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;

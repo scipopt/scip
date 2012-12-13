@@ -483,7 +483,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpDisjunction)
 
    branch = SCIPgetNPseudoBranchCands(scip) == 0 || conshdlrdata->alwaysbranch;
 
-   for( c = 0; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   for( c = 0; c < nconss && *result != SCIP_BRANCHED; ++c )
    {
       /* check the disjunction */
       SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, FALSE, FALSE, result) );
@@ -513,7 +513,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsDisjunction)
 
    branch = SCIPgetNPseudoBranchCands(scip) == 0 || conshdlrdata->alwaysbranch;
 
-   for( c = 0; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   for( c = 0; c < nconss && *result != SCIP_BRANCHED; ++c )
    {
       /* check the disjunction */
       SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, FALSE, FALSE, result) );

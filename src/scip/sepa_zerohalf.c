@@ -3177,14 +3177,14 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
       /* generate cut for delta = 1.0 */
       SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
             BOUNDSFORTRANS, BOUNDTYPESFORTRANS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-            weights, 1.0, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
+            weights, NULL, 1.0, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
             &(cutdata->success), &(cutdata->islocal), &(cutdata->cutrank)) );
      
       if( sepadata->trynegscaling )
       {
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
                BOUNDSFORTRANS, BOUNDTYPESFORTRANS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-               weights, -1.0, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
+               weights, NULL, -1.0, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
                &(cutdata->success), &(cutdata->islocal), &(cutdata->cutrank)) );
       }
    }
@@ -3227,7 +3227,7 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
       {  
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
                BOUNDSFORTRANS, BOUNDTYPESFORTRANS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-               weights, bestdelta, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
+               weights, NULL, bestdelta, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
                &(cutdata->success), &(cutdata->islocal), &(cutdata->cutrank)) );
       }
    }

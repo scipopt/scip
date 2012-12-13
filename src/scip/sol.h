@@ -441,7 +441,7 @@ void SCIPsolSetPrimalIndex(
 
 #else
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

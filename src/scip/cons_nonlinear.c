@@ -70,13 +70,14 @@
  */
 
 /** event data for linear variable bound change events */
-struct SCIP_EventData
+struct LinVarEventData
 {
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< the constraint handler data */
    SCIP_CONSDATA*        consdata;           /**< the constraint data */
    int                   varidx;             /**< the index of the linear variable which bound change is catched */
    int                   filterpos;          /**< position of eventdata in SCIP's event filter */
 };
+typedef struct LinVarEventData LINVAREVENTDATA;
 
 /** constraint data for nonlinear constraints */
 struct SCIP_ConsData
@@ -88,7 +89,7 @@ struct SCIP_ConsData
    int                   linvarssize;        /**< length of linear variable arrays */
    SCIP_VAR**            linvars;            /**< linear variables */
    SCIP_Real*            lincoefs;           /**< coefficients of linear variables */
-   SCIP_EVENTDATA**      lineventdata;       /**< eventdata for bound change of linear variable */
+   LINVAREVENTDATA**     lineventdata;       /**< eventdata for bound change of linear variable */
 
    int                   nexprtrees;         /**< number of expression trees */
    SCIP_Real*            nonlincoefs;        /**< coefficients of expression trees */
@@ -190,7 +191,7 @@ SCIP_RETCODE catchLinearVarEvents(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_EVENTDATA* eventdata;
+   LINVAREVENTDATA* eventdata;
    SCIP_EVENTTYPE eventtype;
 
    assert(scip != NULL);
@@ -232,7 +233,7 @@ SCIP_RETCODE catchLinearVarEvents(
    eventdata->conshdlrdata = conshdlrdata;
    eventdata->consdata = consdata;
    eventdata->varidx = linvarpos;
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->linvars[linvarpos], eventtype, conshdlrdata->linvareventhdlr, eventdata, &eventdata->filterpos) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->linvars[linvarpos], eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)eventdata, &eventdata->filterpos) );
 
    /* ensure lineventdata array is existing */
    if( consdata->lineventdata == NULL )
@@ -300,7 +301,7 @@ SCIP_RETCODE dropLinearVarEvents(
          eventtype |= SCIP_EVENTTYPE_LBCHANGED;
    }
 
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->linvars[linvarpos], eventtype, conshdlrdata->linvareventhdlr, consdata->lineventdata[linvarpos], consdata->lineventdata[linvarpos]->filterpos) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->linvars[linvarpos], eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)consdata->lineventdata[linvarpos], consdata->lineventdata[linvarpos]->filterpos) );
 
    SCIPfreeBlockMemory(scip, &consdata->lineventdata[linvarpos]);  /*lint !e866*/
 
@@ -682,16 +683,19 @@ SCIP_DECL_EVENTEXEC(processLinearVarEvent)
 {
    SCIP_CONSDATA* consdata;
    SCIP_EVENTTYPE eventtype;
+   int varidx;
 
    assert(scip != NULL);
    assert(event != NULL);
    assert(eventdata != NULL);
    assert(eventhdlr != NULL);
 
-   consdata = eventdata->consdata;
+   consdata = ((LINVAREVENTDATA*)eventdata)->consdata;
    assert(consdata != NULL);
-   assert(eventdata->varidx >= 0);
-   assert(eventdata->varidx < consdata->nlinvars);
+
+   varidx = ((LINVAREVENTDATA*)eventdata)->varidx;
+   assert(varidx >= 0);
+   assert(varidx < consdata->nlinvars);
 
    eventtype = SCIPeventGetType(event);
 
@@ -704,14 +708,14 @@ SCIP_DECL_EVENTEXEC(processLinearVarEvent)
    {
       /* update activity bounds for linear terms */
       if( eventtype & SCIP_EVENTTYPE_LBCHANGED )
-         consdataUpdateLinearActivityLbChange(scip, consdata, consdata->lincoefs[eventdata->varidx], SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
+         consdataUpdateLinearActivityLbChange(scip, consdata, consdata->lincoefs[varidx], SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
       else
-         consdataUpdateLinearActivityUbChange(scip, consdata, consdata->lincoefs[eventdata->varidx], SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
+         consdataUpdateLinearActivityUbChange(scip, consdata, consdata->lincoefs[varidx], SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
 
       if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
       {
-         assert(eventdata->conshdlrdata != NULL);
-         eventdata->conshdlrdata->ispropagated = FALSE;
+         assert(((LINVAREVENTDATA*)eventdata)->conshdlrdata != NULL);
+         ((LINVAREVENTDATA*)eventdata)->conshdlrdata->ispropagated = FALSE;
          consdata->ispropagated = FALSE;
       }
    }
@@ -5427,7 +5431,11 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
       }
 
       /* check if we have a bound change */
-      if ( consdata->nlinvars == 1 )
+      if ( consdata->nlinvars == 0 )
+      {
+         assert(SCIPisFeasLE(scip, lhs, rhs));
+      }
+      else if ( consdata->nlinvars == 1 )
       {
          SCIP_Bool tightened;
          SCIP_Real coef;

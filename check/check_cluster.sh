@@ -47,15 +47,32 @@ PPN=${14}
 CLIENTTMPDIR=${15}
 NOWAITCLUSTER=${16}
 EXCLUSIVE=${17}
+PERMUTE=${18}
 
-
-# check all variables defined
-if test -z $EXCLUSIVE
+# check if all variables defined (by checking the last one)
+if test -z $PERMUTE
 then
-    echo Skipping test since variable EXCLUSIVE is not defined.
+    echo Skipping test since not all variables are defined
+    echo "TSTNAME       = $TSTNAME"
+    echo "BINNAME       = $BINNAME"
+    echo "SETNAME       = $SETNAME"
+    echo "BINID         = $BINID"
+    echo "TIMELIMIT     = $TIMELIMIT"
+    echo "NODELIMIT     = $NODELIMIT"
+    echo "MEMLIMIT      = $MEMLIMIT"
+    echo "THREADS       = $THREADS"
+    echo "FEASTOL       = $FEASTOL"
+    echo "DISPFREQ      = $DISPFREQ"
+    echo "CONTINUE      = $CONTINUE"
+    echo "QUEUETYPE     = $QUEUETYPE"
+    echo "QUEUE         = $QUEUE"
+    echo "PPN           = $PPN"
+    echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
+    echo "NOWAITCLUSTER = $NOWAITCLUSTER"
+    echo "EXCLUSIVE     = $EXCLUSIVE"
+    echo "PERMUTE       = $PERMUTE"
     exit 1;
 fi
-
 
 # get current SCIP path
 SCIPPATH=`pwd`
@@ -107,9 +124,6 @@ else
 fi
 
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
-# NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
-#       jobs get automatically assigned in the "exrpess" queue; this queue has only 4 CPUs
-#       available
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 
 # we add 10% to the hard memory limit and additional 100MB to the hard memory limit
@@ -150,7 +164,7 @@ else
 	    MYHOURS=`expr $TMP % 24`
 	    MYDAYS=`expr $TMP / 24`
 	fi
-   fi
+    fi
     #format seconds to have two characters
     if test ${MYSECONDS} -lt 10
     then
@@ -175,10 +189,6 @@ else
     fi
 fi
 
-EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
-echo > $EVALFILE
-
-
 #define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
 CLUSTERQUEUE=$QUEUE
 
@@ -201,105 +211,131 @@ then
     NICE="--nice=10000"
 fi
 
-
 # counter to define file names for a test set uniquely
 COUNT=0
 
-for i in `cat testset/$TSTNAME.test` DONE
+# loop over permutations
+for ((p = 0; $p <= $PERMUTE; p++))
 do
-  if test "$i" = "DONE"
-      then
-      break
-  fi
+    # if number of permutations is positive, add postfix
+    if test $PERMUTE -gt 0
+    then
+	EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"#p"$p.eval
+    else
+	EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
+    fi
+    echo > $EVALFILE
 
-  # increase the index for the inctance tried to solve, even if the filename does not exist
-  COUNT=`expr $COUNT + 1`
+    # loop over testset
+    for i in `cat testset/$TSTNAME.test` DONE
+    do
+	if test "$i" = "DONE"
+	then
+	    break
+	fi
 
-  # check if problem instance exists
-  if test -f $SCIPPATH/$i
-  then
+        # increase the index for the instance tried to solve, even if the filename does not exist
+	COUNT=`expr $COUNT + 1`
 
-      # the cluster queue has an upper bound of 2000 jobs; if this limit is
-      # reached the submitted jobs are dumped; to avoid that we check the total
-      # load of the cluster and wait until it is save (total load not more than
-      # 1900 jobs) to submit the next job.
-      if test "$NOWAITCLUSTER" != "1"
-      then
-	  if test  "$QUEUETYPE" != "qsub"
-	  then
-	      echo "waitcluster does not work on slurm cluster"
-	  fi
-	  ./waitcluster.sh 1600 $QUEUE 200
-      fi
+        # check if problem instance exists
+	if test -f $SCIPPATH/$i
+	then
 
-      SHORTFILENAME=`basename $i .gz`
-      SHORTFILENAME=`basename $SHORTFILENAME .mps`
-      SHORTFILENAME=`basename $SHORTFILENAME .lp`
-      SHORTFILENAME=`basename $SHORTFILENAME .opb`
+            # the cluster queue has an upper bound of 2000 jobs; if this limit is
+            # reached the submitted jobs are dumped; to avoid that we check the total
+            # load of the cluster and wait until it is save (total load not more than
+            # 1600 jobs) to submit the next job.
+	    if test "$NOWAITCLUSTER" != "1"
+	    then
+		if test  "$QUEUETYPE" != "qsub"
+		then
+		    echo "waitcluster does not work on slurm cluster"
+		fi
+		./waitcluster.sh 1600 $QUEUE 200
+	    fi
 
-      FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTFILENAME.$BINID.$QUEUE.$SETNAME
-      BASENAME=$SCIPPATH/results/$FILENAME
+	    SHORTPROBNAME=`basename $i .gz`
+	    SHORTPROBNAME=`basename $SHORTPROBNAME .mps`
+	    SHORTPROBNAME=`basename $SHORTPROBNAME .lp`
+	    SHORTPROBNAME=`basename $SHORTPROBNAME .opb`
 
-      TMPFILE=$BASENAME.tmp
-      SETFILE=$BASENAME.set
+	    # if number of permutations is positive, add postfix
+	    if test $PERMUTE -gt 0
+	    then
+		FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME#"p"$p
+	    else
+		FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME
+	    fi
 
-      echo $BASENAME >> $EVALFILE
+	    BASENAME=$SCIPPATH/results/$FILENAME
 
-      # in case we want to continue we check if the job was already performed
-      if test "$CONTINUE" != "false"
-      then
-	  if test -e results/$FILENAME.out
-	  then
-	      echo skipping file $i due to existing output file $FILENAME.out
-	      continue
-	  fi
-      fi
+	    TMPFILE=$BASENAME.tmp
+	    SETFILE=$BASENAME.set
 
-      echo > $TMPFILE
-      if test $SETNAME != "default"
-      then
-	  echo set load $SETTINGS            >>  $TMPFILE
-      fi
-      if test $FEASTOL != "default"
-      then
-	  echo set numerics feastol $FEASTOL >> $TMPFILE
-      fi
-      echo set limits time $TIMELIMIT        >> $TMPFILE
-      echo set limits nodes $NODELIMIT       >> $TMPFILE
-      echo set limits memory $MEMLIMIT       >> $TMPFILE
-      echo set lp advanced threads $THREADS  >> $TMPFILE
-      echo set timing clocktype 1            >> $TMPFILE
-      echo set display freq $DISPFREQ        >> $TMPFILE
-      echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
-      if test "$LPS" = "none"
-      then
-          echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
-      fi
-      echo set save $SETFILE                 >> $TMPFILE
-      echo read $SCIPPATH/$i                 >> $TMPFILE
-#      echo presolve                         >> $TMPFILE
-      echo optimize                          >> $TMPFILE
-      echo display statistics                >> $TMPFILE
-#            echo display solution                  >> $TMPFILE
-      echo checksol                          >> $TMPFILE
-      echo quit                              >> $TMPFILE
+	    echo $BASENAME >> $EVALFILE
 
-      # additional environment variables needed by runcluster.sh
-      export SOLVERPATH=$SCIPPATH
-      export EXECNAME=$SCIPPATH/../$BINNAME
-      export BASENAME=$FILENAME
-      export FILENAME=$i
-      export CLIENTTMPDIR=$CLIENTTMPDIR
+            # in case we want to continue we check if the job was already performed
+	    if test "$CONTINUE" != "false"
+	    then
+		if test -e results/$FILENAME.out
+		then
+		    echo skipping file $i due to existing output file $FILENAME.out
+		    continue
+		fi
+	    fi
 
-      # check queue type
-      if test  "$QUEUETYPE" = "srun"
-      then
-	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
-      else
-          # -V to copy all environment variables
-	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null runcluster.sh
-      fi
-  else
-      echo "input file "$SCIPPATH/$i" not found!"
-  fi
+	    echo > $TMPFILE
+	    if test $SETNAME != "default"
+	    then
+		echo set load $SETTINGS            >>  $TMPFILE
+	    fi
+	    if test $FEASTOL != "default"
+	    then
+		echo set numerics feastol $FEASTOL >> $TMPFILE
+	    fi
+
+	    # if permutation counter is positive add permutation seed (0 = default)
+	    if test $p -gt 0
+	    then
+		echo set misc permutationseed $p   >> $TMPFILE
+	    fi
+
+	    echo set limits time $TIMELIMIT        >> $TMPFILE
+	    echo set limits nodes $NODELIMIT       >> $TMPFILE
+	    echo set limits memory $MEMLIMIT       >> $TMPFILE
+	    echo set lp advanced threads $THREADS  >> $TMPFILE
+	    echo set timing clocktype 1            >> $TMPFILE
+	    echo set display freq $DISPFREQ        >> $TMPFILE
+	    echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+	    if test "$LPS" = "none"
+	    then
+		echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
+	    fi
+	    echo set save $SETFILE                 >> $TMPFILE
+	    echo read $SCIPPATH/$i                 >> $TMPFILE
+#           echo presolve                          >> $TMPFILE
+	    echo optimize                          >> $TMPFILE
+	    echo display statistics                >> $TMPFILE
+#           echo display solution                  >> $TMPFILE
+	    echo checksol                          >> $TMPFILE
+	    echo quit                              >> $TMPFILE
+
+            # check queue type
+	    if test  "$QUEUETYPE" = "srun"
+	    then
+                # additional environment variables needed by runcluster.sh
+		export SOLVERPATH=$SCIPPATH
+		export EXECNAME=$SCIPPATH/../$BINNAME
+		export BASENAME=$FILENAME
+		export FILENAME=$i
+		export CLIENTTMPDIR=$CLIENTTMPDIR
+		sbatch --job-name=SCIP$SHORTPROBNAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
+	    else
+                # -V to copy all environment variables
+		qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTPROBNAME -v SOLVERPATH=$SCIPPATH,EXECNAME=$SCIPPATH/../$BINNAME,BASENAME=$FILENAME,FILENAME=$i,CLIENTTMPDIR=$CLIENTTMPDIR -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null runcluster.sh
+	    fi
+	else
+	    echo "input file "$SCIPPATH/$i" not found!"
+	fi
+    done
 done

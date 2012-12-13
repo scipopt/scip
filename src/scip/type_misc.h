@@ -36,6 +36,12 @@ extern "C" {
  */
 typedef struct SCIP_SparseSol SCIP_SPARSESOL;
 
+/** (circular) Queue data structure
+ *
+ *  - \ref Queue "List of all available methods"
+ */
+typedef struct SCIP_Queue SCIP_QUEUE;
+
 /** Priority queue data structure
  *
  *  - \ref PriorityQueue "List of all available methods"
@@ -71,6 +77,12 @@ typedef struct SCIP_BoolArray SCIP_BOOLARRAY;
 
 /** dynamic array for storing pointers */
 typedef struct SCIP_PtrArray SCIP_PTRARRAY;
+
+/** Resource activity data structure
+ *
+ *  - \ref ResourceActivity "List of all available methods"
+ */
+typedef struct SCIP_ResourceActivity SCIP_RESOURCEACTIVITY;
 
 /** Resource profile data structure
  *

@@ -23,10 +23,10 @@
 #ifndef __SCIP_STRUCT_CONS_H__
 #define __SCIP_STRUCT_CONS_H__
 
-
 #include "scip/def.h"
 #include "scip/type_clock.h"
 #include "scip/type_cons.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,6 +58,7 @@ struct SCIP_Cons
    int                   nlocksneg;          /**< number of times, the constraint locked vars for the constraint's negation */
    int                   activedepth;        /**< depth level of constraint activation (-2: inactive, -1: problem constraint) */
    int                   validdepth;         /**< depth level where constraint is valid (-1: equals activedepth) */
+   unsigned int          markedprop:1;       /**< TRUE iff the constraint is marked to be propagated during the next node processing */
    unsigned int          initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
    unsigned int          separate:1;         /**< TRUE iff constraint should be separated during LP processing */
    unsigned int          enforce:1;          /**< TRUE iff constraint should be enforced during node processing */
@@ -79,6 +80,7 @@ struct SCIP_Cons
                                               */
    unsigned int          enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in current node */
    unsigned int          obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
+   unsigned int          markpropagate:1;    /**< TRUE iff constraint is marked to be propagated in the next round */
    unsigned int          deleted:1;          /**< TRUE iff constraint was globally deleted */
    unsigned int          update:1;           /**< TRUE iff constraint has to be updated in update phase */
    unsigned int          updateinsert:1;     /**< TRUE iff constraint has to be inserted in the conss array */
@@ -93,6 +95,8 @@ struct SCIP_Cons
    unsigned int          updateobsolete:1;   /**< TRUE iff obsolete status of constraint has to be updated in update phase */
    unsigned int          updatefree:1;       /**< TRUE iff constraint has to be freed in update phase */
    unsigned int          updateactfocus:1;   /**< TRUE iff delayed constraint activation happened at focus node */
+   unsigned int          updatemarkpropagate:1;/**< TRUE iff constraint has to be marked to be propagated in update phase */
+   unsigned int          updateunmarkpropagate:1;/**< TRUE iff constraint has to be unmarked to be propagated in update phase */
 };
 
 /** tracks additions and removals of the set of active constraints */
@@ -208,6 +212,7 @@ struct SCIP_Conshdlr
    int                   nusefulcheckconss;  /**< number of non-obsolete active constraints that must be checked */
    int                   propconsssize;      /**< size of propconss array */
    int                   npropconss;         /**< number of active constraints that may be propagated during node processing */
+   int                   nmarkedpropconss;   /**< number of active constraints which are marked to be propagated in the next round */
    int                   nusefulpropconss;   /**< number of non-obsolete active constraints that should be propagated */
    int                   updateconsssize;    /**< size of updateconss array */
    int                   nupdateconss;       /**< number of update constraints */
@@ -247,6 +252,8 @@ struct SCIP_Conshdlr
    SCIP_Bool             presolwasdelayed;   /**< was the presolving method delayed at the last call? */
    SCIP_Bool             initialized;        /**< is constraint handler initialized? */
    SCIP_PROPTIMING       timingmask;         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
+
+   SCIP_QUEUE*           pendingconss;       /**< queue of pending constraints */
 };
 
 #ifdef __cplusplus

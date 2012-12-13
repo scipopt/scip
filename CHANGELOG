@@ -1,16 +1,72 @@
 SCIP version NEXT
 ==================
 
+fixed bugs:
+- fixed bug when adding (global) clique, implications or variable bound information in solving stage, that lead to
+  global bound changes which contradict local bounds and therefore need to be stored as pending bound changes
+
+data structures
+- new data structure for (circluar) queues (SCIP_QUEUE)
+
 features:
 - added new dual presolving for setppc-constraints
 - changed dualfix presolver to propagator such that dual fixing can also be applied during repropagation of the root node
 - added upgrade from varbound constraints to set-packing constraints
 - added SCIPwriteCliqueGraph() to scip.{c,h} to write the clique graph in GML format into a given file
 - added upgrade from bounddisjunction constraints to set-packing/logicor constraints
+- added two methods to iterate over a sparse solution (SCIP_SPARSESOLUTION), see pub_misc.h
+- added possibility to not set a cutoff bound in the LP solver (can be enabled by setting <lp/disablecutoff> to TRUE)
+- added passing MEM option of testgams(cluster) target as workspace option to GAMS jobs
+- cumulative constraint handler adds disjunctive constraints (cumulative with capacity 1) for all jobs which cannot
+  be processed in parallel
+- added new clique extraction algorithm for linear constraints
+- added missing debugging solution check for cliques
+- the slack variables of indicator constraints can now be scaled
+- added redundancy check of sides of ranged row varbound constraint
+- added coefficient tightening for ranged row varbound constraint
+- added SCIPsortLongPtrRealBool(), SCIPsortLongPtrRealRealBool(), SCIPsortLongPtrRealRealIntBool() and corresponding
+  methods for sorting, insertion and deletion
+
+performance improvements:
+- conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
+  constraint and the corresponding clique information is globally added
+- improved methods SCIPlpiGetBInv{Row,Col,ACol} for row representation in SoPlex LP interface
+- fasten repropagation for set-packing and -partitioning constraints
+- shorten conflicts and deriving global boundchanges from conflicts
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
-  the rank of a cut can be changed (deafult rank is 0)
+  the rank of a cut can be changed (default rank is 0)
+- methods SCIPlpiIs{PrimalFeasible,DualFeasible,DualUnbounded}() in the SoPlex interface (lpi_spx.cpp) now check that
+  LP is not perturbed, which may happen when stopping due to iteration or time limit
+- new methods for the SCIP_QUEUE data structure in pub_misc.h, misc.c SCIPqueueCreate(), SCIPqueueFree(),
+  SCIPqueueClear(), SCIPqueueInsert(), SCIPqueueRemove(), SCIPqueueFirst(), SCIPqueueIsEmpty(), SCIPqueueNElems()
+- added number of constraints which are marked for propagation to callback method consprop
+- SCIPcalcMIR() takes an additional parameter sidetypes to determine which side of the rows to use
+  (relevant for ranged rows)
+- New methods SCIPconshdlrIncNCutsFound(), SCIPsepaIncNCutsFound(), and SCIPsepaIncNCutsFoundAtNode() to increase the
+  number of found cuts
+- added function SCIPgetFirstLPTime to return the time needed to solve the first LP of the root node
+- added SCIPshrinkDisjunctiveVarSet(), which takes an set of variables with corresponding bounds and boundtypes, and
+  tries to derive global boundchanges and also to shorten this set of variables by using cliqe, implication and variable
+  bound information
+
+parameters:
+- new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
+- new parameter <separating/gomory/sidetypebasis> to decide whether the sides of ranged rows should be determined from
+  the basis status
+- new parameter <write/allconss> to enable that all constraints are written
+- new parameter <constraints/indicator/scaleslackvar> for scaling of the slack variable in indicator constraints
+- added <conflict/maxvarsdetectimpliedbounds> parameter to decide whether the a valid conflict of what maximal length
+  will be used to derive global bound changes
+- added <conflict/fullshortenconflict> parameter to decide whether we want to stop shortening a conflict set, when no
+  global bound changes can be found anymore
+
+core:
+- added presolve.{c,h} which should be used, for all preprocessing mechanismsexecuted from within SCIP, corresponding to
+  solve.{c,h}, and also for presprocessing methods which can be called from different plugins or from the core to avoid
+  code doubling
+
 
 SCIP version 3.0.1
 ==================
@@ -32,14 +88,52 @@ fixed bugs:
 - fixed bug trying to color probing nodes, which are not added to the vbc output anymore
 - fixed bug in sorting template
 - fixed bug in cons_orbitope: in rare cases one cannot repropagate
-- fixed behaviour change of indicator constraint handler when solving a another instance after solving a one using the
+- fixed behaviour change of indicator constraint handler when solving another instance after solving one using the
   interactive shell
+- fixed bug of wrong result code in propagation in prop_genvbound.c
+- fixed several issues in cumulative constraint handler
+- fixed issue in cumulative constraint and separation
+- fixed feasibility decision bug when replacing inactive variables by their active counterparts, which might change the
+  redundancy status of a bounddisjunction constraint due to numerics
+- fixed numerical bug adding a relaxed bound for conflict analysis in cons_varbound
+- fixed bug in cumulative constraint handler concerning conflict analysis
+- fixed bug in CppAD when using signpower functions with expression pointers that do not fit into an unsigned int
+- fixed issue in cumulative constraint w.r.t. separation
+- fixed issue in cumulative constraint w.r.t. conflict analysis
+- fixed numerical bug in conflict.c relaxing bounds while keeping an infeasibility proof
+- fixed wrong solving status (OPTIMAL) in case an unbounded solution was provided or found by heuristic before presolve
+- fixed wrong basis rstat values in CPLEX LPI
+- fixed bug leading to removing a ranged row parallel to the objective function, although one of the sides was still needed
+- fixed a bug correcting the binvarssorted flag in cons_linear.c
+- fixed bug in cons_varbound.c not resolving multi-aggregated variables
+- fixed bug when sorting knapsack constraints with the same weights
+- ensure consistency of LP bounds during OBBT diving, i.e., that lower <= upper holds exactly
+- fixed numerical bug in conflict analysis of genvbounds propagator
+- relaxed assert in SCIPvarCh{Lb,Ub}{Global,Local} that new bound must be tighter to feastol
+- fixed bug in heur_subnlp running with tightened tolerances: sumepsilon must be tightened like feastol and epsilon
+- fixed contra-intuitive behavior when using SCIP with objective limits and solution limit at the same time;
+  SCIP now only stops when sufficiently many solutions better than the objective limit have been found
+- fixed bug when adding binary implications with non-vartype binary variables
+- fixed bug resulting in trying to delete an upgraded linear constraint a second time in exitpre callback
+- fixed bug in nlp diving heuristic for fractional variables with values slightly outside of their domain
+- set lpsolstat to SCIP_LPSOLSTAT_NOTSOLVED in SCIPchg{Lp,Dual}feastol
+- use tighter dual feasibility tolerance for LPs solved during optimization-based bound tightening
+- fixed bug with LP not being flushed after bound changes on columns that are not in the LPI
+
+performance improvements:
+- also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()
+- sort genvbounds only when root node is finished; apply more often
 
 features:
-- added delayed cutpool which only get separated if the sepastore is empty after a separation round
+- added delayed cutpool which only gets separated if the sepastore is empty after a separation round
+- sepa_cgmip can now take the objective row into account
 
-interface
+interface:
 - fixed spelling in the method name SCIPgmlWriteClosing()
+- new method SCIPgetNLimSolsFound() to get number of solutions that respect the objective limit
+- when using an objective limit, heuristic characters are not displayed any longer for worse solutions
+- statistics now include output on number of solutions that respect objective limit
+
 
 SCIP version 3.0.0
 ==================

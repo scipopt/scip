@@ -30,12 +30,13 @@ include make/make.detecthost
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	3.0.0.1
+VERSION		:=	3.0.0.2
 
 TIME     	=  	3600
 NODES           =       2100000000
 MEM		=	6144
 THREADS         =       1
+PERMUTE         =       0
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	short
@@ -154,6 +155,7 @@ include make/make.$(BASE)
 -include make/local/make.$(HOSTNAME)
 -include make/local/make.$(HOSTNAME).$(COMP)
 -include make/local/make.$(HOSTNAME).$(COMP).$(OPT)
+-include make/local/make.local
 #-----------------------------------------------------------------------------
 
 FLAGS		+=	$(USRFLAGS)
@@ -361,7 +363,7 @@ NLPILIBCOBJ	= nlpi/nlpi.o \
 		  nlpi/nlpioracle.o \
 		  nlpi/expr.o
 
-NLPILIBCXXOBJ	= nlpi/intervalarith.o
+NLPILIBCXXOBJ	= nlpi/intervalarithext.o
 
 NLPILIBSCIPOBJ	= blockmemshell/memory.o \
 		  scip/misc.o \
@@ -638,6 +640,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/nodesel.o \
 			scip/paramset.o \
 			scip/presol.o \
+			scip/presolve.o \
 			scip/pricestore.o \
 			scip/pricer.o \
 			scip/primal.o \
@@ -860,7 +863,7 @@ ifeq ($(CLIENTTMPDIR),)
 		CLIENTTMPDIR=/tmp
 endif
 		cd check; \
-		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy $(CLIENTTMPDIR) 1 true;
+		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy $(CLIENTTMPDIR) 1 true;
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@

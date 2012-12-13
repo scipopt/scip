@@ -107,6 +107,12 @@ do
 	exit;
     fi
 
+    echo "get current SoPlex version"
+    cd ../soplex
+    git pull
+    make
+    cd ../scip
+
     echo "run regression test"
 
     for OPT in ${OPTS[@]}

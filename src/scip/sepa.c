@@ -794,6 +794,26 @@ void SCIPsepaIncNAppliedCuts(
    ++sepa->ncutsapplied;
 }
 
+/** increase count of found cuts */
+void SCIPsepaIncNCutsFound(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert( sepa != NULL );
+
+   ++sepa->ncutsfound;
+}
+
+/** increase count of found cuts at current node */
+void SCIPsepaIncNCutsFoundAtNode(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert( sepa != NULL );
+
+   ++sepa->ncutsfoundatnode;
+}
+
 /** gets the number of cutting planes found by this separator at the current node */
 SCIP_Longint SCIPsepaGetNCutsFoundAtNode(
    SCIP_SEPA*            sepa                /**< separator */

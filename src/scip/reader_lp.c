@@ -3177,7 +3177,7 @@ SCIP_RETCODE SCIPincludeReaderLp(
 }
 
 
-/* reads problem from file */
+/** reads problem from file */
 SCIP_RETCODE SCIPreadLp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< the file reader itself */

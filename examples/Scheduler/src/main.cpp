@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cmain.c
- * @brief  Main file for C compilation
+/**@file   main.cpp
+ * @brief  Main file for C++ compilation
  * @author Stefan Heinz
  */
 
@@ -25,10 +25,14 @@
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
 
+#include "cons_optcumulative.h"
+#include "heur_optcumulative.h"
 #include "heur_listscheduling.h"
-#include "reader_rcp.h"
+#include "reader_cmin.h"
 #include "reader_sch.h"
 #include "reader_sm.h"
+#include "reader_rcp.h"
+#include "cpoptimizer.h"
 
 /** runs the shell */
 static
@@ -51,12 +55,21 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* include problem reader */
-   SCIP_CALL( SCIPincludeReaderRcp(scip) );
-   SCIP_CALL( SCIPincludeReaderSm(scip) );
+   SCIP_CALL( SCIPincludeReaderCmin(scip) );
    SCIP_CALL( SCIPincludeReaderSch(scip) );
+   SCIP_CALL( SCIPincludeReaderSm(scip) );
+   SCIP_CALL( SCIPincludeReaderRcp(scip) );
 
    /* include problem specific heuristic */
    SCIP_CALL( SCIPincludeHeurListScheduling(scip) );
+   SCIP_CALL( SCIPincludeHeurOptcumulative(scip) );
+
+   /* include cumulative constraint handler with optional activities */
+   SCIP_CALL( SCIPincludeConshdlrOptcumulative(scip) );
+
+#ifdef WITH_CPOPTIMIZER
+   SCIP_CALL( SCIPsetSolveCumulative(scip, cpoptimizer) );
+#endif
 
    /**********************************
     * Process command line arguments *

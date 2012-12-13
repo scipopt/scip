@@ -25,6 +25,7 @@
 #include "scip/def.h"
 #include "scip/set.h"
 #include "scip/history.h"
+#include "scip/pub_misc.h"
 
 #ifndef NDEBUG
 #include "scip/struct_history.h"
@@ -181,8 +182,162 @@ void SCIPhistoryUpdatePseudocost(
       (void*)history, dir, distance, objdelta, weight, history->pscostcount[dir], history->pscostsum[dir]);
 }
 
+/**@name Value based history
+ *
+ * Value based history methods
+ *
+ * @{
+ */
+
+/** creates an empty value history */
+SCIP_RETCODE SCIPvaluehistoryCreate(
+   SCIP_VALUEHISTORY**   valuehistory,       /**< pointer to store the value based branching and inference histories */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   assert(valuehistory != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, valuehistory) );
+
+   (*valuehistory)->nvalues = 0;
+   (*valuehistory)->sizevalues = 5;
+
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*valuehistory)->histories, (*valuehistory)->sizevalues) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*valuehistory)->values, (*valuehistory)->sizevalues) );
+
+   return SCIP_OKAY;
+}
+
+/** frees a value history */
+void SCIPvaluehistoryFree(
+   SCIP_VALUEHISTORY**   valuehistory,       /**< pointer to value based history */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   assert(valuehistory != NULL);
+
+   if( *valuehistory != NULL )
+   {
+      int i;
+
+      for( i = (*valuehistory)->nvalues-1; i >= 0; --i )
+         SCIPhistoryFree(&(*valuehistory)->histories[i], blkmem);
+
+      BMSfreeBlockMemoryArray(blkmem, &(*valuehistory)->histories, (*valuehistory)->sizevalues);
+      BMSfreeBlockMemoryArray(blkmem, &(*valuehistory)->values, (*valuehistory)->sizevalues);
+
+      BMSfreeBlockMemory(blkmem, valuehistory);
+   }
+}
+
+/** finds for the given domain value the history if it does not exist yet it will be created */
+SCIP_RETCODE SCIPvaluehistoryFind(
+   SCIP_VALUEHISTORY*    valuehistory,       /**< value based history */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             value,              /**< domain value of interest */
+   SCIP_HISTORY**        history             /**< pointer to store the history for the given domain value */
+   )
+{
+   int pos;
+
+   assert(valuehistory != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(history != NULL);
+
+   *history = NULL;
+
+   if( valuehistory->nvalues == 0 || !SCIPsortedvecFindReal(valuehistory->values, value, valuehistory->nvalues, &pos) )
+   {
+      /* check if we need to resize the history array */
+      if( valuehistory->nvalues == valuehistory->sizevalues )
+      {
+         int newsize;
+
+         newsize = SCIPsetCalcMemGrowSize(set, valuehistory->sizevalues + 1);
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &valuehistory->histories, valuehistory->nvalues, newsize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &valuehistory->values, valuehistory->nvalues, newsize) );
+         valuehistory->sizevalues = newsize;
+      }
+
+      /* create new empty history entry */
+      SCIP_CALL( SCIPhistoryCreate(history, blkmem) );
+
+      /* insert new history into the value based history array */
+      SCIPsortedvecInsertRealPtr(valuehistory->values, (void**)valuehistory->histories, value, (void*)(*history), &valuehistory->nvalues, NULL);
+   }
+   else
+      (*history) = valuehistory->histories[pos];
+
+   assert(*history != NULL);
+
+   return SCIP_OKAY;
+}
+
+/** scales the conflict score values with the given scalar for each value history entry */
+void SCIPvaluehistoryScaleVSIDS(
+   SCIP_VALUEHISTORY*    valuehistory,       /**< value based history */
+   SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
+   )
+{
+   if( valuehistory != NULL )
+   {
+      int i;
+
+      for( i = valuehistory->nvalues-1; i >= 0; --i )
+      {
+         SCIPhistoryScaleVSIDS(valuehistory->histories[i], scalar);
+      }
+   }
+}
 
 
+/*
+ * simple functions implemented as defines
+ */
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPvaluehistoryGetNValues
+#undef SCIPvaluehistoryGetHistories
+#undef SCIPvaluehistoryGetValues
+
+/** return the number of (domain) values for which a history exists */
+int SCIPvaluehistoryGetNValues(
+   SCIP_VALUEHISTORY*    valuehistory        /**< value based history */
+   )
+{
+   assert(valuehistory != NULL);
+
+   return valuehistory->nvalues;
+}
+
+/** return the array containing the histories for the individual (domain) values */
+SCIP_HISTORY** SCIPvaluehistoryGetHistories(
+   SCIP_VALUEHISTORY*    valuehistory        /**< value based history */
+   )
+{
+   assert(valuehistory != NULL);
+
+   return valuehistory->histories;
+}
+
+/** return the array containing the (domain) values for which a history exists */
+SCIP_Real* SCIPvaluehistoryGetValues(
+   SCIP_VALUEHISTORY*    valuehistory        /**< value based history */
+   )
+{
+   assert(valuehistory != NULL);
+
+   return valuehistory->values;
+}
+
+/**@} */
 
 /*
  * simple functions implemented as defines
@@ -349,8 +504,8 @@ SCIP_Real SCIPhistoryGetAvgConflictlength(
 /** increases the number of branchings counter */
 void SCIPhistoryIncNBranchings(
    SCIP_HISTORY*         history,            /**< branching and inference history */
-   int                   depth,              /**< depth at which the bound change took place */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   int                   depth               /**< depth at which the bound change took place */
    )
 {
    assert(history != NULL);

@@ -16,6 +16,10 @@
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
  * @author Tobias Achterberg
+ * @author Stefan Heinz
+ * @author Gerald Gamrath
+ * @author Marc Pfetsch
+ * @author Kati Wolter
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -27,6 +31,8 @@
 #include "scip/stat.h"
 #include "scip/clock.h"
 #include "scip/lp.h"
+#include "scip/cons.h"
+#include "scip/sepa.h"
 #include "scip/sepastore.h"
 #include "scip/cutpool.h"
 #include "scip/pub_message.h"
@@ -635,6 +641,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_Bool             cutpoolisdelayed,   /**< is the cutpool delayed (count cuts found)? */
    SCIP_Bool             root,               /**< are we at the root node? */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
@@ -707,6 +714,26 @@ SCIP_RETCODE SCIPcutpoolSeparate(
                SCIPdebugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
                   SCIProwGetName(row), SCIProwGetLPFeasibility(row, set, stat, lp));
                SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, row, FALSE, root) );
+
+               /* count cuts */
+               if ( cutpoolisdelayed )
+               {
+                  if ( SCIProwGetOriginSepa(row) != NULL )
+                  {
+                     SCIP_SEPA* sepa;
+
+                     sepa = SCIProwGetOriginSepa(row);
+                     SCIPsepaIncNCutsFound(sepa);
+                     SCIPsepaIncNCutsFoundAtNode(sepa);
+                  }
+                  else if ( SCIProwGetOriginCons(row) != NULL )
+                  {
+                     SCIP_CONSHDLR* conshdlr;
+
+                     conshdlr = SCIProwGetOriginCons(row);
+                     SCIPconshdlrIncNCutsFound(conshdlr);
+                  }
+               }
 
                found = TRUE;
                cut->age = 0;

@@ -117,7 +117,7 @@
  * - <a class="el" href="AUTHORS.shtml#further">Further developers</a>
  * - <a class="el" href="AUTHORS.shtml#contributors">Contributors</a>
  *
- * @version  3.0.0.1
+ * @version  3.0.0.2
  *
  * \image html scippy.png
  *
@@ -6029,7 +6029,8 @@ SCIP_RETCODE consdataCatchEvent(
  *    GAP to specify a gap limit (default: 0.0),
  *    CLIENTTMPDIR to specify a directory where GAMS should put its scratch files (default: /tmp),
  *    CONVERTSCIP to specify a SCIP which can be used to convert non-gams files into gams format (default: bin/scip, if existing; set to "no" to disable conversion).
- *  The following options are NOT supported (and ignored): MEM, DISPFREQ, FEASTOL, LOCK.
+ *  The following options are NOT supported (and ignored): DISPFREQ, FEASTOL, LOCK.
+ *  A memory limit (MEM option) is only passed as workspace option to GAMS, but not enforced via ulimit (it's up to the solver to regard and obey the limit).
  *
  *  Note: This works only if the referred programs are installed globally on your machine.
  *

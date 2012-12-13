@@ -292,7 +292,7 @@ SCIP_RETCODE copyAndSolveComponent(
    }
 
    /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= (1.0 * nvars / SCIPgetNVars(scip)) / (1.0 * nconss / SCIPgetNConss(scip)) *
+   if( timelimit <= 0.0 || memorylimit <= (1.0 * nvars / SCIPgetNVars(scip)) * (1.0 * nconss / SCIPgetNConss(scip)) *
       ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) )
    {
       SCIPdebugMessage("--> not created (not enough memory or time left)\n");

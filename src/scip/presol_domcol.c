@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*#define SCIP_DEBUG*/
+
 /**@file    presol_domcol.c
  * @ingroup PRESOLVERS
  * @brief   dominated column presolver
@@ -55,9 +55,9 @@
 /** type of fixing direction */
 enum Fixingdirection
 {
-   FIXATLB = -1,
-   NOFIX   =  0,
-   FIXATUB =  1
+   FIXATLB = -1,         /**< fix variable at lower bound */
+   NOFIX   =  0,         /**< do not fix variable */
+   FIXATUB =  1          /**< fix variable at upper bound */
 };
 typedef enum Fixingdirection FIXINGDIRECTION;
 
@@ -82,6 +82,9 @@ struct ConstraintMatrix
    int*                  rowmatind;          /**< column indexed in row major format */
    int*                  rowmatbeg;          /**< row storage offset */
    int*                  rowmatcnt;          /**< number of column entries per row */
+#ifdef SCIP_DEBUG
+   const char**          rowname;            /**< name of row */
+#endif
    int                   nrows;              /**< complete number of rows */
    SCIP_Real*            lhs;                /**< left hand side per row */
    SCIP_Real*            rhs;                /**< right hand side per row */
@@ -134,6 +137,9 @@ SCIP_RETCODE getActiveVariables(
 static
 SCIP_RETCODE addRow(
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix */
+#ifdef SCIP_DEBUG
+   const char*           name,               /**< name of constraint corresponding to row */
+#endif
    SCIP_VAR**            vars,               /**< variables of this row */
    SCIP_Real*            vals,               /**< coefficients of this row */
    int                   nvars,              /**< number of variables of this row */
@@ -152,6 +158,9 @@ SCIP_RETCODE addRow(
 
    matrix->lhs[rowidx] = lhs;
    matrix->rhs[rowidx] = rhs;
+#ifdef SCIP_DEBUG
+   matrix->rowname[rowidx] = name;
+#endif
 
    matrix->rowmatbeg[rowidx] = matrix->nnonzs;
 
@@ -178,6 +187,9 @@ static
 SCIP_RETCODE addConstraint(
    SCIP*                 scip,               /**< current scip instance */
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix */
+#ifdef SCIP_DEBUG
+   const char*           name,               /**< name of constraint corresponding to row */
+#endif
    SCIP_VAR**            vars,               /**< variables of this constraint */
    SCIP_Real*            vals,               /**< variable coefficients of this constraint */
    int                   nvars,              /**< number of variables */
@@ -235,7 +247,11 @@ SCIP_RETCODE addConstraint(
    /* add single row to matrix */
    if( nactivevars > 0 )
    {
+#ifdef SCIP_DEBUG
+      SCIP_CALL( addRow(matrix, name, activevars, activevals, nactivevars, lhs, rhs) );
+#else
       SCIP_CALL( addRow(matrix, activevars, activevals, nactivevars, lhs, rhs) );
+#endif
    }
 
    /* free buffer arrays */
@@ -458,7 +474,6 @@ SCIP_RETCODE initMatrix(
    if( i < nconshdlrs || nconss == 0 )
       return SCIP_OKAY;
 
-
    stopped = FALSE;
 
    vars = SCIPgetVars(scip);
@@ -512,6 +527,9 @@ SCIP_RETCODE initMatrix(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatcnt, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->lhs, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rhs, nconss) );
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowname, nconss) );
+#endif
 
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->minactivity, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->maxactivity, nconss) );
@@ -543,9 +561,15 @@ SCIP_RETCODE initMatrix(
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
 
+#ifdef SCIP_DEBUG
+            SCIP_CALL( addConstraint(scip, matrix, SCIPconsGetName(cons), SCIPgetVarsLinear(scip, cons),
+                  SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
+                  SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons)) );
+#else
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLinear(scip, cons),
                   SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
                   SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons)) );
+#endif
          }
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
@@ -576,8 +600,13 @@ SCIP_RETCODE initMatrix(
                return SCIP_ERROR;
             }
 
+#ifdef SCIP_DEBUG
+            SCIP_CALL( addConstraint(scip, matrix, SCIPconsGetName(cons), SCIPgetVarsSetppc(scip, cons), NULL,
+                  SCIPgetNVarsSetppc(scip, cons), lhs, rhs) );
+#else
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsSetppc(scip, cons), NULL,
                   SCIPgetNVarsSetppc(scip, cons), lhs, rhs) );
+#endif
          }
       }
       else if( strcmp(conshdlrname, "logicor") == 0 )
@@ -587,8 +616,13 @@ SCIP_RETCODE initMatrix(
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
 
-            SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLogicor(scip, cons),
+#ifdef SCIP_DEBUG
+            SCIP_CALL( addConstraint(scip, matrix, SCIPconsGetName(cons), SCIPgetVarsLogicor(scip, cons),
                NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip)) );
+#else
+            SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLogicor(scip, cons),
+                  NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip)) );
+#endif
          }
       }
       else if( strcmp(conshdlrname, "knapsack") == 0 )
@@ -620,9 +654,15 @@ SCIP_RETCODE initMatrix(
                for( v = 0; v < nvars; v++ )
                   consvals[v] = (SCIP_Real)weights[v];
 
+#ifdef SCIP_DEBUG
+               SCIP_CALL( addConstraint(scip, matrix, SCIPconsGetName(cons), SCIPgetVarsKnapsack(scip, cons), consvals,
+                     SCIPgetNVarsKnapsack(scip, cons), -SCIPinfinity(scip),
+                     (SCIP_Real)SCIPgetCapacityKnapsack(scip, cons)) );
+#else
                SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsKnapsack(scip, cons), consvals,
                      SCIPgetNVarsKnapsack(scip, cons), -SCIPinfinity(scip),
                      (SCIP_Real)SCIPgetCapacityKnapsack(scip, cons)) );
+#endif
             }
 
             SCIPfreeBufferArray(scip, &consvals);
@@ -649,8 +689,13 @@ SCIP_RETCODE initMatrix(
 
                consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
+#ifdef SCIP_DEBUG
+               SCIP_CALL( addConstraint(scip, matrix, SCIPconsGetName(cons), consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
+                     SCIPgetRhsVarbound(scip, cons)) );
+#else
                SCIP_CALL( addConstraint(scip, matrix, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
                      SCIPgetRhsVarbound(scip, cons)) );
+#endif
             }
 
             SCIPfreeBufferArray(scip, &consvals);
@@ -707,6 +752,9 @@ void freeMatrix(
       assert((*matrix)->rowmatcnt != NULL);
       assert((*matrix)->lhs != NULL);
       assert((*matrix)->rhs != NULL);
+#ifdef SCIP_DEBUG
+      assert((*matrix)->rowname != NULL);
+#endif
 
       SCIPfreeBufferArray(scip, &((*matrix)->maxactivityposinf));
       SCIPfreeBufferArray(scip, &((*matrix)->maxactivityneginf));
@@ -715,6 +763,9 @@ void freeMatrix(
       SCIPfreeBufferArray(scip, &((*matrix)->maxactivity));
       SCIPfreeBufferArray(scip, &((*matrix)->minactivity));
 
+#ifdef SCIP_DEBUG
+      SCIPfreeBufferArray(scip, &((*matrix)->rowname));
+#endif
       SCIPfreeBufferArray(scip, &((*matrix)->rhs));
       SCIPfreeBufferArray(scip, &((*matrix)->lhs));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatcnt));
@@ -747,7 +798,7 @@ void freeMatrix(
  * Local methods
  */
 
-#if 0
+#ifdef SCIP_DEBUG
 /** print a row from the constraint matrix */
 static
 void printRow(
@@ -791,16 +842,16 @@ void printRow(
    rowend = rowpnt + matrix->rowmatcnt[row];
    valpnt = matrix->rowmatval + matrix->rowmatbeg[row];
 
-   printf("\n(L:%g) [%c] %g  <=",matrix->minactivity[row],relation,matrix->lhs[row]);
+   SCIPdebugPrintf("\n(L:%g) [%c] %g  <=",matrix->minactivity[row],relation,matrix->lhs[row]);
    for(; (rowpnt < rowend); rowpnt++, valpnt++)
    {
       c = *rowpnt;
       val = *valpnt;
-      printf("  %g{%s[idx:%d][bnd:%g,%g]}",
+      SCIPdebugPrintf("  %g{%s[idx:%d][bnd:%g,%g]}",
          val,SCIPvarGetName(matrix->vars[c]),c,
          SCIPvarGetLbGlobal(matrix->vars[c]),SCIPvarGetUbGlobal(matrix->vars[c]));
    }
-   printf(" <=  %g (U:%g)",matrix->rhs[row],matrix->maxactivity[row]);
+   SCIPdebugPrintf(" <=  %g (U:%g)",matrix->rhs[row],matrix->maxactivity[row]);
 }
 
 /** print all rows from the constraint matrix containing a variable */
@@ -828,13 +879,13 @@ SCIP_RETCODE printRowsOfCol(
       rows[i] = *colpnt;
    }
 
-   printf("\n-------");
-   printf("\ncol %d number rows: %d",col,numrows);
+   SCIPdebugPrintf("\n-------");
+   SCIPdebugPrintf("\ncol %d number rows: %d",col,numrows);
    for( i = 0; i < numrows; i++ )
    {
-      printRow(scip,matrix,rows[i]);
+      printRow(scip, matrix, rows[i]);
    }
-   printf("\n-------");
+   SCIPdebugPrintf("\n-------");
 
    SCIPfreeBufferArray(scip, &rows);
 
@@ -866,18 +917,23 @@ SCIP_RETCODE printDomRelInfo(
    case SCIP_VARTYPE_BINARY:
       type='B';
       break;
-   default:
+   case SCIP_VARTYPE_INTEGER:
+   case SCIP_VARTYPE_IMPLINT:
       type='I';
       break;
+   default:
+      SCIPerrorMessage("unknown variable type\n");
+      SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
-   printf("\n\n### [%c], obj:%g->%g,\t%s[idx:%d](nrows:%d)->%s[idx:%d](nrows:%d)\twclb=%g, ub'=%g, ub=%g",
-      type,SCIPvarGetObj(dominatingvar),SCIPvarGetObj(dominatedvar),
-      SCIPvarGetName(dominatingvar),dominatingidx,matrix->colmatcnt[dominatingidx],
-      SCIPvarGetName(dominatedvar),dominatedidx,matrix->colmatcnt[dominatedidx],
-      dominatingwclb,dominatingub,SCIPvarGetUbGlobal(dominatingvar));
+   SCIPdebugPrintf("\n\n### [%c], obj:%g->%g,\t%s[idx:%d](nrows:%d)->%s[idx:%d](nrows:%d)\twclb=%g, ub'=%g, ub=%g",
+      type, SCIPvarGetObj(dominatingvar), SCIPvarGetObj(dominatedvar),
+      SCIPvarGetName(dominatingvar), dominatingidx, matrix->colmatcnt[dominatingidx],
+      SCIPvarGetName(dominatedvar), dominatedidx, matrix->colmatcnt[dominatedidx],
+      dominatingwclb, dominatingub, SCIPvarGetUbGlobal(dominatingvar));
 
-   printRowsOfCol(scip,matrix,dominatingidx);
+   SCIP_CALL( printRowsOfCol(scip, matrix, dominatingidx) );
 
    return SCIP_OKAY;
 }
@@ -1330,7 +1386,7 @@ void findFixings(
    SCIP_Bool             onlybinvars,        /**< flag indicating only binary variables are present */
    int*                  npossiblefixings,   /**< counter for possible fixings */
    int*                  ncliquepreventions, /**< counter for clique preventions */
-   int*                  nboundpreventions   /**> counter for bound preventions */
+   int*                  nboundpreventions   /**< counter for bound preventions */
    )
 {
    if( onlybinvars )
@@ -1338,10 +1394,10 @@ void findFixings(
       if( SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, TRUE, TRUE) &&
          !SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, FALSE, TRUE) )
       {
-         /* we have a (1->1)-clique with dominance relation (x->y) (x dominates y).
-          * from dominance relation we know (1->0) is possible and not worse then (0->1)
-          * concerning the objective function. it follows, only (1->0) or (0->0) are possible,
-          * but in both cases y has the value 0 => y=0
+         /* We have a (1->1)-clique with dominance relation (x->y) (x dominates y).
+          * From this dominance relation, we know (1->0) is possible and not worse than (0->1)
+          * concerning the objective function. It follows that only (1->0) or (0->0) are possible,
+          * but in both cases y has the value 0 => y=0.
           */
          if( varstofix[dominatedidx] == NOFIX )
          {
@@ -1352,9 +1408,9 @@ void findFixings(
       else if( SCIPvarsHaveCommonClique(dominatingvar, FALSE, dominatedvar, FALSE, TRUE) &&
          !SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, FALSE, TRUE) )
       {
-         /* we have a (0->0)-clique with dominance relation x->y (x dominates y).
-          * from dominance relation we know (1->0) is possible and not worse then (0->1)
-          * concerning the objective function. it follows only (1->0) or (1->1) are possible,
+         /* We have a (0->0)-clique with dominance relation x->y (x dominates y).
+          * From this dominance relation, we know (1->0) is possible and not worse than (0->1)
+          * concerning the objective function. It follows that only (1->0) or (1->1) are possible,
           * but in both cases x has the value 1 => x=1
           */
          if( varstofix[dominatingidx] == NOFIX )
@@ -1370,7 +1426,6 @@ void findFixings(
    }
    else
    {
-
       if( matrix->colmatcnt[dominatingidx] == 1 && matrix->colmatcnt[dominatedidx] == 1 )
       {
          /* we have a x->y dominance relation and only one equality constraint
@@ -1388,15 +1443,14 @@ void findFixings(
             {
                varstofix[dominatedidx] = FIXATLB;
                (*npossiblefixings)++;
-#if 0
-               printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
-                  dominatedvar,dominatedidx,dominatingub,dominatingwclb);
+#ifdef SCIP_DEBUG
+               SCIP_CALL_ABORT( printDomRelInfo(scip, matrix, dominatingvar, dominatingidx,
+                     dominatedvar, dominatedidx, dominatingub, dominatingwclb) );
 #endif
                return;
             }
          }
       }
-
 
       if( SCIPisPositive(scip, SCIPvarGetObj(dominatingvar)) )
       {
@@ -1415,9 +1469,9 @@ void findFixings(
             {
                varstofix[dominatedidx] = FIXATLB;
                (*npossiblefixings)++;
-#if 0
-               printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
-                  dominatedvar,dominatedidx,dominatingub,dominatingwclb);
+#ifdef SCIP_DEBUG
+               SCIP_CALL_ABORT( printDomRelInfo(scip, matrix, dominatingvar, dominatingidx,
+                     dominatedvar, dominatedidx, dominatingub, dominatingwclb) );
 #endif
             }
          }
@@ -1445,9 +1499,9 @@ void findFixings(
             {
                varstofix[dominatedidx] = FIXATLB;
                (*npossiblefixings)++;
-#if 0
-               printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
-                  dominatedvar,dominatedidx,dominatingub,dominatingwclb);
+#ifdef SCIP_DEBUG
+               SCIP_CALL_ABORT( printDomRelInfo(scip, matrix, dominatingvar, dominatingidx,
+                     dominatedvar, dominatedidx, dominatingub, dominatingwclb) );
 #endif
             }
          }
@@ -1747,7 +1801,7 @@ SCIP_RETCODE findDominancePairs(
                col1domcol2 = FALSE;
          }
 
-         /* use dominance relation and cliquen/bound-information to find variable fixings */
+         /* use dominance relation and clique/bound-information to find variable fixings */
          if( col1domcol2 )
          {
             findFixings(scip, matrix, matrix->vars[col1], col1,
@@ -1973,6 +2027,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
             /* search for dominance relations between binary variables */
             if( nbinfill > 1 )
             {
+#ifdef SCIP_DEBUG
+               SCIPdebugMessage("Check for dominated pairs in row <%s> ...\n", matrix->rowname[rowidx]);
+#endif
                SCIP_CALL( findDominancePairs(scip, matrix, binsearchcols, nbinfill, TRUE,
                      varstofix, &npossiblefixings, &ndomrelations, &ncliquepreventions, &nboundpreventions) );
             }
@@ -2086,12 +2143,12 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 
       if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 )
       {
-         SCIPdebugMessage("### %d vars [%d dom] (%d clqprev, %d bndprev) ===>>> fixed [c=%d, z=%d, b=%d]\n",
+         SCIPdebugMessage("### %d vars [%d dom] (%d clqprev, %d bndprev) ===>>> fixed [cont: %d, int: %d, bin: %d]\n",
             matrix->ncols, ndomrelations, ncliquepreventions, nboundpreventions, nconvarsfixed, nintvarsfixed, nbinvarsfixed);
       }
       else
       {
-          SCIPdebugMessage("### %d vars [%d dom] (%d clqprev, %d bndprev)\n",
+          SCIPdebugMessage("### %d vars [%d dom] (%d clqprev, %d bndprev) - no fixings found.\n",
             matrix->ncols, ndomrelations, ncliquepreventions, nboundpreventions);
       }
    }
@@ -2119,4 +2176,3 @@ SCIP_RETCODE SCIPincludePresolDomcol(
 
    return SCIP_OKAY;
 }
-

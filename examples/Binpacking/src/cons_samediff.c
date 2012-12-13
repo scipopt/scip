@@ -490,7 +490,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSamediff)
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->propagated);
+   assert(consdata->propagated || SCIPgetNChildren(scip) == 0);
 
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);

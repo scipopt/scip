@@ -40,7 +40,7 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* reads problem from file */
+/** reads problem from file */
 EXTERN
 SCIP_RETCODE SCIPreadOpb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -49,7 +49,7 @@ SCIP_RETCODE SCIPreadOpb(
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    );
 
-/* writes problem to file */
+/** writes problem to file */
 EXTERN
 SCIP_RETCODE SCIPwriteOpb(
    SCIP*                 scip,               /**< SCIP data structure */
