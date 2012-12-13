@@ -234,25 +234,26 @@ if test $SETCUTOFF = 1 ; then
   fi
 fi
 
-#define account and clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
+#define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
+CLUSTERQUEUE=$QUEUE
 
 NICE=""
-if test $QUEUE = "opt"
+ACCOUNT="mip"
+
+if test $CLUSTERQUEUE = "dbg"
 then
-  CLUSTERQUEUE="opt"
-  ACCOUNT="mip"
-elif test $QUEUE = "opt-low"
+    CLUSTERQUEUE="mip-dbg,telecom-dbg"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "telecom-dbg"
 then
-  CLUSTERQUEUE="opt"
-  ACCOUNT="mip"
-  NICE="--nice=10000"
-elif test $QUEUE = "mip-dbg"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "mip-dbg"
 then
-  CLUSTERQUEUE="mip-dbg"
-  ACCOUNT="mip-dbg"
-else
-  CLUSTERQUEUE=$QUEUE
-  ACCOUNT="mip"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "opt-low"
+then
+    CLUSTERQUEUE="opt"
+    NICE="--nice=10000"
 fi
 
 # counter to define file names for a test set uniquely 
@@ -375,7 +376,7 @@ do
     case $QUEUETYPE in
       srun )
         # hard timelimit could be set via --time=0:${HARDTIMELIMIT}
-        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT $NICE ${EXCLUSIVE} --output=/dev/null rungamscluster.sh`
+        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT ${EXCLUSIVE} ${NICE} --output=/dev/null rungamscluster.sh`
         echo $sbatchret
         FINISHDEPEND=$FINISHDEPEND:`echo $sbatchret | cut -d " " -f 4`
         ;;

@@ -4080,54 +4080,73 @@ SCIP_RETCODE SCIPsolveCIP(
          /* change color of node in VBC output */
          SCIPvbcSolvedNode(stat->vbc, stat, focusnode);
 
-         /* if the node is not unbounded, check for feasibility and issue events */
-         /* @todo: Should we also add the current solution, if we are unbounded? This was the case, but is now disabled,
-          *        because the check is less strict in this case and an LP feasible solution might violate the check
-          *        in the original space
-          */
-         if( !unbounded )
+         /* check, if the current solution is feasible */
+         if( !infeasible )
          {
-            /* check, if the current solution is feasible */
-            if( !infeasible )
-            {
-               assert(!SCIPtreeHasFocusNodeLP(tree) || (lp->flushed && lp->solved));
-               assert(!cutoff);
+            SCIP_Bool feasible;
 
-               /* node solution is feasible: add it to the solution store */
-               SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp,
-                     eventqueue, eventfilter) );
+            assert(!SCIPtreeHasFocusNodeLP(tree) || (lp->flushed && lp->solved));
+            assert(!cutoff);
 
-               /* issue NODEFEASIBLE event */
-               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
-               SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
-               SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-            }
-            else
+            /* in the unbounded case, we check the solution w.r.t. the original problem, because we do not want to rely
+             * on the LP feasibility and integrality is not checked for unbounded solutions, anyway
+             */
+            if( unbounded )
             {
-               /* node solution is not feasible */
-               if( tree->nchildren == 0 )
+               SCIP_SOL* sol;
+
+               if( SCIPtreeHasFocusNodeLP(tree) )
                {
-                  /* change color of node in VBC output */
-                  SCIPvbcCutoffNode(stat->vbc, stat, focusnode);
-
-                  /* issue NODEINFEASIBLE event */
-                  SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
-
-                  /* increase the cutoff counter of the branching variable */
-                  if( stat->lastbranchvar != NULL )
-                  {
-                     SCIP_CALL( SCIPvarIncCutoffSum(stat->lastbranchvar, blkmem, set, stat, stat->lastbranchdir, stat->lastbranchvalue, 1.0) );
-                  }
-                  /**@todo if last branching variable is unknown, retrieve it from the nodes' boundchg arrays */
+                  SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
                }
                else
                {
-                  /* issue NODEBRANCHED event */
-                  SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEBRANCHED) );
+                  SCIP_CALL( SCIPsolCreatePseudoSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
                }
-               SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
-               SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+               SCIP_CALL( SCIPcheckSolOrig(set->scip, sol, &feasible, FALSE, FALSE) );
+
+               SCIP_CALL( SCIPsolFree(&sol, blkmem, primal) );
             }
+            else
+               feasible = TRUE;
+
+            /* node solution is feasible: add it to the solution store */
+            if( feasible )
+            {
+               SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp,
+                     eventqueue, eventfilter) );
+            }
+
+            /* issue NODEFEASIBLE event */
+            SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
+            SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
+            SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+         }
+         else if( !unbounded )
+         {
+            /* node solution is not feasible */
+            if( tree->nchildren == 0 )
+            {
+               /* change color of node in VBC output */
+               SCIPvbcCutoffNode(stat->vbc, stat, focusnode);
+
+               /* issue NODEINFEASIBLE event */
+               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+
+               /* increase the cutoff counter of the branching variable */
+               if( stat->lastbranchvar != NULL )
+               {
+                  SCIP_CALL( SCIPvarIncCutoffSum(stat->lastbranchvar, blkmem, set, stat, stat->lastbranchdir, stat->lastbranchvalue, 1.0) );
+               }
+               /**@todo if last branching variable is unknown, retrieve it from the nodes' boundchg arrays */
+            }
+            else
+            {
+               /* issue NODEBRANCHED event */
+               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEBRANCHED) );
+            }
+            SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
+            SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
          }
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 

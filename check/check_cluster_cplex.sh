@@ -259,9 +259,9 @@ do
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-	  sbatch --job-name=CPLEX$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
+         sbatch --job-name=CPLEX$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${NICE} ${EXCLUSIVE} --output=/dev/null runcluster.sh
       else
-	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CPLEX$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+         qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CPLEX$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
       fi
   else
       echo "input file "$SCIPPATH/$i" not found!"
