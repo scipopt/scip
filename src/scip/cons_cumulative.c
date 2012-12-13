@@ -36,9 +36,6 @@
  *   (2009)
  * - energetic reasoning, see Baptiste, Le Pape, Nuijten (2001)
  *
- *
- * TODOS:
- * - normalize demands and capacities of each cumulative constraint
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -194,13 +191,23 @@ struct SCIP_ConshdlrData
 
    SCIP_DECL_SOLVECUMULATIVE((*solveCumulative)); /**< method to use a single cumulative condition */
 
+   /* statistic values which are collected if SCIP_STATISTIC is defined */
 #ifdef SCIP_STATISTIC
-   int                   nirrelevantjobs;
-   int                   nalwaysruns;
-   int                   ndualfixs;
-   int                   nremovedlocks;
-   int                   ndecomps;
-   int                   nallconsdualfixs;
+   SCIP_Longint          nlbtimetable;       /**< number of times the lower bound was tightened by the time-table propagator */
+   SCIP_Longint          nubtimetable;       /**< number of times the upper bound was tightened by the time-table propagator */
+   SCIP_Longint          ncutofftimetable;   /**< number of times the a cutoff was detected due to time-table propagator */
+   SCIP_Longint          nlbedgefinder;      /**< number of times the lower bound was tightened by the edge-finder propagator */
+   SCIP_Longint          nubedgefinder;      /**< number of times the upper bound was tightened by the edge-finder propagator */
+   SCIP_Longint          ncutoffedgefinder;  /**< number of times the a cutoff was detected due to edge-finder propagator */
+   SCIP_Longint          ncutoffoverload;    /**< number of times the a cutoff was detected due to overload checking via edge-finding */
+   SCIP_Longint          ncutoffoverloadTTEF;/**< number of times the a cutoff was detected due to overload checking via time-table edge-finding */
+
+   int                   nirrelevantjobs;    /**< number of time a irrelevant/redundant jobs was removed form a constraint */
+   int                   nalwaysruns;        /**< number of time a job removed form a constraint which run completely during the effective horizon */
+   int                   ndualfixs;          /**< number of times a dual fix was performed by a single constraint */
+   int                   nremovedlocks;      /**< number of times a up or down lock was removed */
+   int                   ndecomps;           /**< number of times a constraint was decomposed */
+   int                   nallconsdualfixs;   /**< number of times a dual fix was performed due to knowledge of all cumulative constraints */
 #endif
 };
 
@@ -1425,6 +1432,15 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->solveCumulative = solveCumulativeViaScip;
 
 #ifdef SCIP_STATISTIC
+   (*conshdlrdata)->nlbtimetable = 0;
+   (*conshdlrdata)->nubtimetable = 0;
+   (*conshdlrdata)->ncutofftimetable = 0;
+   (*conshdlrdata)->nlbedgefinder = 0;
+   (*conshdlrdata)->nubedgefinder = 0;
+   (*conshdlrdata)->ncutoffedgefinder = 0;
+   (*conshdlrdata)->ncutoffoverload = 0;
+   (*conshdlrdata)->ncutoffoverloadTTEF = 0;
+
    (*conshdlrdata)->nirrelevantjobs = 0;
    (*conshdlrdata)->nalwaysruns = 0;
    (*conshdlrdata)->ndualfixs = 0;
@@ -3133,6 +3149,9 @@ SCIP_RETCODE coretimesUpdateLb(
       SCIPdebugMessage("variable <%s> new lower bound <%d> -> <%d>\n", SCIPvarGetName(var), est, newlb);
       (*nchgbds)++;
 
+      /* for the statistic we count the number of times a lower bound was tightened due the the time-table algorithm */
+      SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nlbtimetable++ );
+
       /* adjust the earliest start time
        *
        * @note We are taking the lower of the start time variable on purpose instead of newlb. This is due the fact that
@@ -3263,6 +3282,9 @@ SCIP_RETCODE coretimesUpdateUb(
 
       SCIPdebugMessage("variable <%s>: new upper bound <%d> -> <%d>\n", SCIPvarGetName(var), lst, newub);
       (*nchgbds)++;
+
+      /* for the statistic we count the number of times a upper bound was tightened due the the time-table algorithm */
+      SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nubtimetable++ );
 
       /* adjust the latest start and completion time
        *
@@ -3402,7 +3424,10 @@ SCIP_RETCODE propagateCoretimes(
             if( explanation != NULL )
                explanation[j] = TRUE;
 
-            *cutoff = TRUE;
+            (*cutoff) = TRUE;
+
+            /* for the statistic we count the number of times a cutoff was detected due the time-time */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ncutofftimetable++ );
 
             break;
          }
@@ -3494,7 +3519,10 @@ SCIP_RETCODE propagateCoretimes(
                if( explanation != NULL )
                   explanation[j] = TRUE;
 
-               *cutoff = TRUE;
+               (*cutoff) = TRUE;
+
+               /* for the statistic we count the number of times a cutoff was detected due the time-time */
+               SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ncutofftimetable++ );
 
                break;
             }
@@ -4527,6 +4555,9 @@ SCIP_RETCODE propagateEdgeFinder(
             /* analyze over load */
             SCIP_CALL( analyzeConflictOverload(scip, omegaset, capacity, nelements,  est, lct, 0, propest, shift, usebdwidening, initialized, explanation) );
             (*cutoff) = TRUE;
+
+            /* for the statistic we count the number of times a cutoff was detected due the edge-finder */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ncutoffedgefinder++ );
          }
          else if( newest > 0 )
          {
@@ -4544,6 +4575,9 @@ SCIP_RETCODE propagateEdgeFinder(
 
                SCIP_CALL( SCIPinferVarLbCons(scip, leafdata->var, (SCIP_Real)(newest + shift),
                      cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
+
+               /* for the statistic we count the number of times a lower bound was tightened due the edge-finder */
+               SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nlbedgefinder++ );
             }
             else
             {
@@ -4555,6 +4589,9 @@ SCIP_RETCODE propagateEdgeFinder(
 
                SCIP_CALL( SCIPinferVarUbCons(scip, leafdata->var, (SCIP_Real)(shift - newest - leafdata->duration),
                      cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
+
+               /* for the statistic we count the number of times a upper bound was tightened due the edge-finder */
+               SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nubedgefinder++ );
             }
 
             /* adjust the earliest start time */
@@ -4598,6 +4635,9 @@ SCIP_RETCODE propagateEdgeFinder(
                }
 
                (*cutoff) = TRUE;
+
+               /* for the statistic we count the number of times a cutoff was detected due the edge-finder */
+               SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ncutoffedgefinder++ );
             }
          }
 
@@ -4843,6 +4883,10 @@ SCIP_RETCODE checkOverload(
       {
          SCIPdebugMessage("detects cutoff due to overload in time window [?,%d) (ncands %d)\n", nodedatas[j]->lct, j);
          (*cutoff) = TRUE;
+
+         /* for the statistic we count the number of times a cutoff was detected due the edge-finder */
+         SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ncutoffoverload++ );
+
          break;
       }
    }
@@ -8288,6 +8332,16 @@ SCIP_DECL_CONSFREE(consFreeCumulative)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+#ifdef SCIP_STATISTIC
+   /* statisitc output if SCIP_STATISTIC is defined */
+   SCIPstatisticPrintf("time-table: lb=%"SCIP_LONGINT_FORMAT", ub=%"SCIP_LONGINT_FORMAT", cutoff=%"SCIP_LONGINT_FORMAT"\n",
+      conshdlrdata->nlbtimetable, conshdlrdata->nubtimetable, conshdlrdata->ncutofftimetable);
+   SCIPstatisticPrintf("edge-finder: lb=%"SCIP_LONGINT_FORMAT", ub=%"SCIP_LONGINT_FORMAT", cutoff=%"SCIP_LONGINT_FORMAT"\n",
+      conshdlrdata->nlbedgefinder, conshdlrdata->nubedgefinder, conshdlrdata->ncutoffedgefinder);
+   SCIPstatisticPrintf("overload: time-table=%"SCIP_LONGINT_FORMAT" time-time edge-finding=%"SCIP_LONGINT_FORMAT"\n",
+      conshdlrdata->ncutoffoverload, conshdlrdata->ncutoffoverloadTTEF);
+#endif
 
    conshdlrdataFree(scip, &conshdlrdata);
 
