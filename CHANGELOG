@@ -37,8 +37,6 @@ performance improvements:
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
   the rank of a cut can be changed (default rank is 0)
-- methods SCIPlpiIs{PrimalFeasible,DualFeasible,DualUnbounded}() in the SoPlex interface (lpi_spx.cpp) now check that
-  LP is not perturbed, which may happen when stopping due to iteration or time limit
 - new methods for the SCIP_QUEUE data structure in pub_misc.h, misc.c SCIPqueueCreate(), SCIPqueueFree(),
   SCIPqueueClear(), SCIPqueueInsert(), SCIPqueueRemove(), SCIPqueueFirst(), SCIPqueueIsEmpty(), SCIPqueueNElems()
 - added number of constraints which are marked for propagation to callback method consprop
@@ -119,6 +117,9 @@ fixed bugs:
 - set lpsolstat to SCIP_LPSOLSTAT_NOTSOLVED in SCIPchg{Lp,Dual}feastol
 - use tighter dual feasibility tolerance for LPs solved during optimization-based bound tightening
 - fixed bug with LP not being flushed after bound changes on columns that are not in the LPI
+- methods SCIPlpiIs{PrimalFeasible,DualFeasible,DualUnbounded}() in SoPlex LPi now check that the LP is not perturbed,
+  which may happen when stopping due to iteration or time limit
+- fixed inconsistencies between methods SCIPlpiIs{PrimalFeasible,DualFeasible,Optimal,...} in SoPlex LPi
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()

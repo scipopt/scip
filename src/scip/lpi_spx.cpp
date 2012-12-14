@@ -348,7 +348,8 @@ public:
 
    bool isPerturbed()
    {
-      return (shift() >= epsilon());
+      /* the epsilon is 1e-16; we add a factor of ten to account for numerics */
+      return (shift() >= 10.0 * epsilon());
    }
 
    /** set iteration limit (-1 = unbounded) */
@@ -3282,8 +3283,12 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return lpi->spx->getStatus() == SPxSolver::UNBOUNDED
-      && (lpi->spx->basis().status() == SPxBasis::PRIMAL || lpi->spx->basis().status() == SPxBasis::UNBOUNDED);
+   assert(lpi->spx->getStatus() != SPxSolver::UNBOUNDED || lpi->spx->basis().status() == SPxBasis::UNBOUNDED);
+
+   /* if SoPlex returns unbounded, this may only mean that an unbounded ray is available, not necessarily a primal
+    * feasible point; hence we have to check the perturbation
+    */
+   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED && !lpi->spx->isPerturbed());
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
@@ -3313,8 +3318,12 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    basestatus = lpi->spx->basis().status();
 
-   return (basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::OPTIMAL || basestatus == SPxBasis::UNBOUNDED)
-      && !lpi->spx->isPerturbed();
+   /* note that the solver status may be ABORT_VALUE and the basis status optimal */
+   assert(basestatus != SPxBasis::OPTIMAL || !lpi->spx->isPerturbed());
+   assert(basestatus == SPxBasis::OPTIMAL || lpi->spx->getStatus() != SPxSolver::OPTIMAL);
+
+   return basestatus == SPxBasis::OPTIMAL ||
+      ((basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::UNBOUNDED) && !lpi->spx->isPerturbed());
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -3379,16 +3388,17 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SPxBasis::SPxStatus basestatus;
-
    SCIPdebugMessage("calling SCIPlpiIsDualFeasible()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   basestatus = lpi->spx->basis().status();
+   /* note that the solver status may be ABORT_VALUE and the basis status optimal */
+   assert(lpi->spx->basis().status() != SPxBasis::OPTIMAL || !lpi->spx->isPerturbed());
+   assert(lpi->spx->basis().status() == SPxBasis::OPTIMAL || lpi->spx->getStatus() != SPxSolver::OPTIMAL);
 
-   return (basestatus == SPxBasis::DUAL && !lpi->spx->isPerturbed()) || basestatus == SPxBasis::OPTIMAL;
+   return (lpi->spx->basis().status() == SPxBasis::OPTIMAL) ||
+      (lpi->spx->basis().status() == SPxBasis::DUAL && !lpi->spx->isPerturbed());
 }
 
 /** returns TRUE iff LP was solved to optimality */
@@ -3399,9 +3409,12 @@ SCIP_Bool SCIPlpiIsOptimal(
    SCIPdebugMessage("calling SCIPlpiIsOptimal()\n");
 
    assert(lpi != NULL);
-   assert(lpi->spx != NULL);
+   assert(lpi->spx->basis().status() != SPxBasis::OPTIMAL || !lpi->spx->isPerturbed());
+   assert((lpi->spx->basis().status() == SPxBasis::OPTIMAL)
+      == (SCIPlpiIsPrimalFeasible(lpi) && SCIPlpiIsDualFeasible(lpi)));
 
-   return (lpi->spx->getStatus() == SPxSolver::OPTIMAL);
+   /* note that the solver status may be ABORT_VALUE and the basis status optimal */
+   return (lpi->spx->basis().status() == SPxBasis::OPTIMAL);
 }
 
 /** returns TRUE iff current LP basis is stable */
