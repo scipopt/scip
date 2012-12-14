@@ -4025,8 +4025,6 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 {
    int scaling;
 
-   SCIPdebugMessage("Calling SCIPlpiSetIntpar (%d) Parameter=<%s>  Value=<%d>\n", lpi->lpid, paramty2str(type), ival);
-   
 #if SCIP_CONTROLS_PRICING
    /*lint --e{641}*/
    static int pricing[7] = {
@@ -4039,6 +4037,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       MSK_SIM_SELECTION_DEVEX,
    };
 #endif
+
+   SCIPdebugMessage("Calling SCIPlpiSetIntpar (%d) Parameter=<%s>  Value=<%d>\n", lpi->lpid, paramty2str(type), ival);
 
    assert(SCIP_PRICING_LPIDEFAULT == 0);
    assert(SCIP_PRICING_AUTO == 1);

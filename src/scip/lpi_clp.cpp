@@ -190,7 +190,7 @@ int colpacketNum(
    int                   ncols               /**< number of columns to store */
    )
 {
-   return (ncols+COLS_PER_PACKET-1)/COLS_PER_PACKET;
+   return (ncols+(int)COLS_PER_PACKET-1)/(int)COLS_PER_PACKET;
 }
 
 /** returns the number of packets needed to store row packet information */
@@ -199,7 +199,7 @@ int rowpacketNum(
    int                   nrows               /**< number of rows to store */
    )
 {
-   return (nrows+ROWS_PER_PACKET-1)/ROWS_PER_PACKET;
+   return (nrows+(int)ROWS_PER_PACKET-1)/(int)ROWS_PER_PACKET;
 }
 
 /** store row and column basis status in a packed LPi state object */
