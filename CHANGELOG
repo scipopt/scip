@@ -51,6 +51,7 @@ fixed bugs:
 - fixed bug with LP not being flushed after bound changes on columns that are not in the LPI
 - methods SCIPlpiIs{PrimalFeasible,DualFeasible,DualUnbounded}() in SoPlex LPi now check that the LP is not perturbed,
   which may happen when stopping due to iteration or time limit
+- fixed inconsistencies between methods SCIPlpiIs{PrimalFeasible,DualFeasible,Optimal,...} in SoPlex LPi
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()
