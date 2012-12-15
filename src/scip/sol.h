@@ -413,8 +413,6 @@ SCIP_RETCODE SCIPsolPrintRay(
 
 
 
-#ifndef NDEBUG
-
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
@@ -439,7 +437,7 @@ void SCIPsolSetPrimalIndex(
    int                   primalindex         /**< new primal index of solution */
    );
 
-#else
+#ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
