@@ -4347,7 +4347,7 @@ SCIP_RETCODE analyzeConflictOverload(
    if( !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("est=%d, lct=%d, propest %d, reportedenergy %d, shift %d\n", est, lct, propest, reportedenergy, shift);
+   SCIPdebugMessage("est=%d, lct=%d, propest %ld, reportedenergy %d, shift %d\n", est, lct, propest, reportedenergy, shift);
 
    /* compute energy of initial time window */
    energy = (lct - est) * capacity;
