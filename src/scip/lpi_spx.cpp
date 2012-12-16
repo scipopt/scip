@@ -3318,8 +3318,9 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    basestatus = lpi->spx->basis().status();
 
-   /* note that the solver status may be ABORT_VALUE and the basis status optimal */
-   assert(basestatus != SPxBasis::OPTIMAL || !lpi->spx->isPerturbed());
+   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
+    * still return true as long as perturbation plus violation is within tolerances
+    */
    assert(basestatus == SPxBasis::OPTIMAL || lpi->spx->getStatus() != SPxSolver::OPTIMAL);
 
    return basestatus == SPxBasis::OPTIMAL ||
@@ -3393,8 +3394,9 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   /* note that the solver status may be ABORT_VALUE and the basis status optimal */
-   assert(lpi->spx->basis().status() != SPxBasis::OPTIMAL || !lpi->spx->isPerturbed());
+   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
+    * still return true as long as perturbation plus violation is within tolerances
+    */
    assert(lpi->spx->basis().status() == SPxBasis::OPTIMAL || lpi->spx->getStatus() != SPxSolver::OPTIMAL);
 
    return (lpi->spx->basis().status() == SPxBasis::OPTIMAL) ||
@@ -3409,11 +3411,12 @@ SCIP_Bool SCIPlpiIsOptimal(
    SCIPdebugMessage("calling SCIPlpiIsOptimal()\n");
 
    assert(lpi != NULL);
-   assert(lpi->spx->basis().status() != SPxBasis::OPTIMAL || !lpi->spx->isPerturbed());
    assert((lpi->spx->basis().status() == SPxBasis::OPTIMAL)
       == (SCIPlpiIsPrimalFeasible(lpi) && SCIPlpiIsDualFeasible(lpi)));
 
-   /* note that the solver status may be ABORT_VALUE and the basis status optimal */
+   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
+    * still return true as long as perturbation plus violation is within tolerances
+    */
    return (lpi->spx->basis().status() == SPxBasis::OPTIMAL);
 }
 
