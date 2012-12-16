@@ -607,8 +607,11 @@ void collectNonBinaryImplicationData(
                {
                   /* the implied upper bound on a binary variable should not be trivial, otherwise we might globally fix
                    * this variable to a wrong value
+                   *
+                   * @note is is possible that the implied bound is lower than zero, when the implied variable has
+                   * become binary during the search
                    */
-                  assert(SCIPisFeasZero(scip, implbounds[w]));
+                  assert(SCIPisFeasLE(scip, implbounds[w], 0.0));
                   *foundbin = MIN(*foundbin, idx);
                }
                else
@@ -655,8 +658,13 @@ void collectNonBinaryImplicationData(
 
                if( SCIPvarIsBinary(implvars[w]) )
                {
-                  /* the implied lower bound on a binary variable should not be trivial, otherwise we might globally fix this variable to a wrong value */
-                  assert(SCIPisFeasEQ(scip, implbounds[w], 1.0));
+                  /* the implied lower bound on a binary variable should not be trivial, otherwise we might globally fix
+                   * this variable to a wrong value
+                   *
+                   * @note is is possible that the implied bound is greater than one, when the implied variable has
+                   * become binary during the search
+                   */
+                  assert(SCIPisFeasGE(scip, implbounds[w], 1.0));
                   *foundbin = MIN(*foundbin, idx);
                }
                else
