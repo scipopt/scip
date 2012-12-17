@@ -11644,11 +11644,11 @@ SCIP_RETCODE presolve(
 
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
-   finished = scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds;
-   stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
-
    *infeasible = FALSE;
    *unbounded = SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
+
+   finished = (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds) || (*unbounded);
+   stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    /* perform presolving rounds */
    while( !finished && !stopped )
