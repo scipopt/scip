@@ -11021,10 +11021,14 @@ SCIP_RETCODE SCIPtransformProb(
 
       if( feasible )
       {
+         SCIP_Real solobj;
+
          SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
 
+         solobj = SCIPsolGetObj(sol, scip->set, scip->transprob);
+
          /* we do not want to add solutions with objective value +infinity */
-         if( !SCIPisInfinity(scip, SCIPsolGetObj(sol, scip->set, scip->transprob)) )
+         if( !SCIPisInfinity(scip, solobj) && !SCIPisInfinity(scip, -solobj) )
          {
             SCIP_Bool stored;
 
