@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   history.h
+/**@file   pub_history.h
  * @brief  public methods for branching and inference history structure
  * @author Stefan Heinz
  */
