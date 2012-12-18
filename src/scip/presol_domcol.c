@@ -1598,9 +1598,6 @@ SCIP_RETCODE findDominancePairs(
             }
          }
 
-         if( !col1domcol2 && !col2domcol1 )
-            continue;
-
          if( paircnt == presoldata->maxpairs )
          {
             if( !(*npossiblefixings > nlastpossiblefixings) )
@@ -1612,6 +1609,9 @@ SCIP_RETCODE findDominancePairs(
             paircnt = 0;
          }
          paircnt++;
+
+         if( !col1domcol2 && !col2domcol1 )
+            continue;
 
          /* get the data for both columns */
          vals1 = matrix->colmatval + matrix->colmatbeg[col1];
