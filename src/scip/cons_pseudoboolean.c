@@ -2955,7 +2955,7 @@ SCIP_RETCODE checkAndConss(
          *violated = TRUE;
          break;
       }
-      else
+      else if( sol == NULL )
       {
          SCIP_CALL( SCIPincConsAge(scip, andcons) );
       }
