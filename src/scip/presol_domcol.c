@@ -23,8 +23,14 @@
  * From a dominance relation and certain bound/clique-constellations
  * variable fixings mostly at the lower bound of the dominated variable can be derived.
  *
- * @todo also run on general CIPs, if the number of locks of the investigated variables
- *       comes only from (upgraded) linear constraints
+ * @todo Also run on general CIPs, if the number of locks of the investigated variables comes only from (upgraded)
+ * linear constraints.
+ *
+ * @todo Instead of choosing variables for comparison out of one row, we should try to use 'hashvalues' for columns that
+ *       indicate in which constraint type (<=, >=, or ranged row / ==) they are existing. Then sort the variables (and
+ *       corresponding data) after the ranged row/equation hashvalue and only try to derive dominance on variables with
+ *       the same hashvalue on ranged row/equation and fitting hashvalues for the other constraint types.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -96,6 +102,8 @@ struct ConstraintMatrix
    int                   nrows;              /**< complete number of rows */
    SCIP_Real*            lhs;                /**< left hand side per row */
    SCIP_Real*            rhs;                /**< right hand side per row */
+   SCIP_Bool*            islhsinfinite;      /**< is left hand side -infinity */
+   SCIP_Bool*            isrhsinfinite;      /**< is right hand side infinity */
    int                   nnonzs;             /**< sparsity counter */
    SCIP_Real*            minactivity;        /**< min activity per row */
    SCIP_Real*            maxactivity;        /**< max activity per row */
@@ -144,6 +152,7 @@ SCIP_RETCODE getActiveVariables(
 /** add one row to the constraint matrix */
 static
 SCIP_RETCODE addRow(
+   SCIP*                 scip,               /**< SCIP data structure */
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix */
 #ifdef SCIP_DEBUG
    const char*           name,               /**< name of constraint corresponding to row */
@@ -166,6 +175,12 @@ SCIP_RETCODE addRow(
 
    matrix->lhs[rowidx] = lhs;
    matrix->rhs[rowidx] = rhs;
+
+   if( SCIPisInfinity(scip, -matrix->lhs[rowidx]) )
+      matrix->islhsinfinite[rowidx] = TRUE;
+   if( SCIPisInfinity(scip, matrix->rhs[rowidx]) )
+      matrix->isrhsinfinite[rowidx] = TRUE;
+
 #ifdef SCIP_DEBUG
    matrix->rowname[rowidx] = name;
 #endif
@@ -256,9 +271,9 @@ SCIP_RETCODE addConstraint(
    if( nactivevars > 0 )
    {
 #ifdef SCIP_DEBUG
-      SCIP_CALL( addRow(matrix, name, activevars, activevals, nactivevars, lhs, rhs) );
+      SCIP_CALL( addRow(scip, matrix, name, activevars, activevals, nactivevars, lhs, rhs) );
 #else
-      SCIP_CALL( addRow(matrix, activevars, activevals, nactivevars, lhs, rhs) );
+      SCIP_CALL( addRow(scip, matrix, activevars, activevals, nactivevars, lhs, rhs) );
 #endif
    }
 
@@ -320,7 +335,7 @@ SCIP_RETCODE setColumnMajorFormat(
       rowpnt = matrix->rowmatind + matrix->rowmatbeg[i];
       rowend = rowpnt + matrix->rowmatcnt[i];
       valpnt = matrix->rowmatval + matrix->rowmatbeg[i];
-      for(; rowpnt < rowend; rowpnt++, valpnt++)
+      for( ; rowpnt < rowend; rowpnt++, valpnt++ )
       {
          assert(*rowpnt < matrix->ncols);
          colidx = *rowpnt;
@@ -365,7 +380,7 @@ SCIP_RETCODE calcActivityBounds(
       rowend = rowpnt + matrix->rowmatcnt[row];
       valpnt = matrix->rowmatval + matrix->rowmatbeg[row];
 
-      for(; rowpnt < rowend; rowpnt++, valpnt++)
+      for( ; rowpnt < rowend; rowpnt++, valpnt++ )
       {
          /* get column index */
          col = *rowpnt;
@@ -373,44 +388,36 @@ SCIP_RETCODE calcActivityBounds(
          /* get variable coefficient */
          val = *valpnt;
 
-         if( matrix->ncols <= col)
-         {
-            assert(0);
-         }
+         assert(matrix->ncols > col);
 
          assert(!SCIPisInfinity(scip, matrix->lb[col]));
          assert(!SCIPisInfinity(scip, -matrix->ub[col]));
 
          if( val > 0.0 )
          {
-            if(SCIPisInfinity(scip, matrix->ub[col]))
+            if( SCIPisInfinity(scip, matrix->ub[col]) )
                matrix->maxactivityposinf[row]++;
             else
                matrix->maxactivity[row] += val * matrix->ub[col];
 
-            if(SCIPisInfinity(scip, -matrix->lb[col]))
+            if( SCIPisInfinity(scip, -matrix->lb[col]) )
                matrix->minactivityneginf[row]++;
             else
                matrix->minactivity[row] += val * matrix->lb[col];
          }
          else if( val < 0.0 )
          {
-            if(SCIPisInfinity(scip, -matrix->lb[col]))
+            if( SCIPisInfinity(scip, -matrix->lb[col]) )
                matrix->maxactivityneginf[row]++;
             else
                matrix->maxactivity[row] += val * matrix->lb[col];
 
-            if(SCIPisInfinity(scip, matrix->ub[col]))
+            if( SCIPisInfinity(scip, matrix->ub[col]) )
                matrix->minactivityposinf[row]++;
             else
                matrix->minactivity[row] += val * matrix->ub[col];
          }
       }
-
-      if( (matrix->minactivityneginf[row] + matrix->minactivityposinf[row]) > 0 )
-         matrix->minactivity[row] = -SCIPinfinity(scip);
-      if( (matrix->maxactivityneginf[row] + matrix->maxactivityposinf[row]) > 0 )
-         matrix->maxactivity[row] = SCIPinfinity(scip);
    }
 
    return SCIP_OKAY;
@@ -535,6 +542,11 @@ SCIP_RETCODE initMatrix(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatcnt, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->lhs, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rhs, nconss) );
+
+   /* allocate memory for status of finiteness of row sides */
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &matrix->islhsinfinite, nconss) );
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &matrix->isrhsinfinite, nconss) );
+
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowname, nconss) );
 #endif
@@ -774,6 +786,10 @@ void freeMatrix(
 #ifdef SCIP_DEBUG
       SCIPfreeBufferArray(scip, &((*matrix)->rowname));
 #endif
+
+      SCIPfreeMemoryArray(scip, &((*matrix)->isrhsinfinite));
+      SCIPfreeMemoryArray(scip, &((*matrix)->islhsinfinite));
+
       SCIPfreeBufferArray(scip, &((*matrix)->rhs));
       SCIPfreeBufferArray(scip, &((*matrix)->lhs));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatcnt));
@@ -825,13 +841,13 @@ void printRow(
    relation='-';
    if( !SCIPisInfinity(scip, -matrix->lhs[row]) &&
       !SCIPisInfinity(scip, matrix->rhs[row]) &&
-      SCIPisEQ(scip,matrix->lhs[row],matrix->rhs[row]))
+      SCIPisEQ(scip, matrix->lhs[row], matrix->rhs[row]))
    {
       relation='e';
    }
    else if(  !SCIPisInfinity(scip, -matrix->lhs[row]) &&
       !SCIPisInfinity(scip, matrix->rhs[row]) &&
-      !SCIPisEQ(scip,matrix->lhs[row],matrix->rhs[row]))
+      !SCIPisEQ(scip, matrix->lhs[row], matrix->rhs[row]))
    {
       relation='r';
    }
@@ -850,16 +866,16 @@ void printRow(
    rowend = rowpnt + matrix->rowmatcnt[row];
    valpnt = matrix->rowmatval + matrix->rowmatbeg[row];
 
-   SCIPdebugPrintf("\n(L:%g) [%c] %g  <=",matrix->minactivity[row],relation,matrix->lhs[row]);
+   SCIPdebugPrintf("\n(L:%g) [%c] %g  <=", (matrix->minactivityposinf[row] + matrix->minactivityneginf[row] > 0) ? -SCIPinfinity(scip) : matrix->minactivity[row], relation, matrix->lhs[row]);
    for(; (rowpnt < rowend); rowpnt++, valpnt++)
    {
       c = *rowpnt;
       val = *valpnt;
       SCIPdebugPrintf("  %g{%s[idx:%d][bnd:%g,%g]}",
-         val,SCIPvarGetName(matrix->vars[c]),c,
-         SCIPvarGetLbGlobal(matrix->vars[c]),SCIPvarGetUbGlobal(matrix->vars[c]));
+         val, SCIPvarGetName(matrix->vars[c]), c,
+         SCIPvarGetLbGlobal(matrix->vars[c]), SCIPvarGetUbGlobal(matrix->vars[c]));
    }
-   SCIPdebugPrintf(" <=  %g (U:%g)",matrix->rhs[row],matrix->maxactivity[row]);
+   SCIPdebugPrintf(" <=  %g (U:%g)", (matrix->maxactivityposinf[row] + matrix->maxactivityneginf[row] > 0) ? SCIPinfinity(scip) : matrix->rhs[row], matrix->maxactivity[row]);
 }
 
 /** print all rows from the constraint matrix containing a variable */
@@ -947,6 +963,7 @@ SCIP_RETCODE printDomRelInfo(
 }
 #endif
 
+#ifndef NDEBUG
 /** calculate max activity of one row without one variable */
 static
 SCIP_Real getMaxActSingleRowWithoutCol(
@@ -974,7 +991,7 @@ SCIP_Real getMaxActSingleRowWithoutCol(
    rowend = rowpnt + matrix->rowmatcnt[row];
    valpnt = matrix->rowmatval + matrix->rowmatbeg[row];
 
-   for(; (rowpnt < rowend); rowpnt++, valpnt++)
+   for( ; (rowpnt < rowend); rowpnt++, valpnt++ )
    {
       c = *rowpnt;
       val = *valpnt;
@@ -1052,6 +1069,7 @@ SCIP_Real getMinActSingleRowWithoutCol(
 
    return minactivity;
 }
+#endif
 
 /** get minimum/maximum residual activity without the specified variable */
 static
@@ -1089,7 +1107,10 @@ void getActivityResiduals(
          assert(matrix->maxactivityposinf[row] >= 1);
          assert(matrix->maxactivityneginf[row] >= 0);
          if( matrix->maxactivityposinf[row] == 1 && matrix->maxactivityneginf[row] == 0 )
-            *maxresactivity = getMaxActSingleRowWithoutCol(scip, matrix, row, col);
+         {
+            *maxresactivity = matrix->maxactivity[row];
+            assert(SCIPisFeasEQ(scip, *maxresactivity, getMaxActSingleRowWithoutCol(scip, matrix, row, col)));
+         }
          else
             *maxresactivity = SCIPinfinity(scip);
       }
@@ -1106,7 +1127,10 @@ void getActivityResiduals(
          assert(matrix->minactivityneginf[row] >= 1);
          assert(matrix->minactivityposinf[row] >= 0);
          if( matrix->minactivityneginf[row] == 1 && matrix->minactivityposinf[row] == 0 )
-            *minresactivity = getMinActSingleRowWithoutCol(scip, matrix, row, col);
+         {
+            *minresactivity = matrix->minactivity[row];
+            assert(SCIPisFeasEQ(scip, *minresactivity, getMinActSingleRowWithoutCol(scip, matrix, row, col)));
+         }
          else
             *minresactivity = -SCIPinfinity(scip);
       }
@@ -1125,7 +1149,11 @@ void getActivityResiduals(
          assert(matrix->maxactivityneginf[row] >= 1);
          assert(matrix->maxactivityposinf[row] >= 0);
          if( matrix->maxactivityneginf[row] == 1 && matrix->maxactivityposinf[row] == 0 )
-            *maxresactivity = getMaxActSingleRowWithoutCol(scip, matrix, row, col);
+         {
+            *maxresactivity = matrix->maxactivity[row];
+            assert(SCIPisFeasEQ(scip, *maxresactivity, getMaxActSingleRowWithoutCol(scip, matrix, row, col)));
+         }
+
          else
             *maxresactivity = SCIPinfinity(scip);
       }
@@ -1142,7 +1170,10 @@ void getActivityResiduals(
          assert(matrix->minactivityposinf[row] >= 1);
          assert(matrix->minactivityneginf[row] >= 0);
          if( matrix->minactivityposinf[row] == 1 && matrix->minactivityneginf[row] == 0 )
-            *minresactivity = getMinActSingleRowWithoutCol(scip, matrix, row, col);
+         {
+            *minresactivity = matrix->minactivity[row];
+            assert(SCIPisFeasEQ(scip, *minresactivity, getMinActSingleRowWithoutCol(scip, matrix, row, col)));
+         }
          else
             *minresactivity = -SCIPinfinity(scip);
       }
@@ -1205,12 +1236,10 @@ SCIP_RETCODE calcVarBounds(
    *ubcalculated = FALSE;
    *wclbcalculated = FALSE;
 
-   /* no rowbound analysis for multiaggregated variables */
-   if( SCIPvarGetStatus(vardominating) == SCIP_VARSTATUS_MULTAGGR ||
-      SCIPvarGetStatus(vardominated) == SCIP_VARSTATUS_MULTAGGR )
-   {
-      return SCIP_OKAY;
-   }
+   /* no rowbound analysis for multiaggregated variables, which should not exist, because the matrix only consists of
+    * active variables
+    */
+   assert(SCIPvarGetStatus(vardominating) != SCIP_VARSTATUS_MULTAGGR && SCIPvarGetStatus(vardominated) != SCIP_VARSTATUS_MULTAGGR);
 
    lhs = matrix->lhs[row];
    rhs = matrix->rhs[row];
@@ -1238,7 +1267,7 @@ SCIP_RETCODE calcVarBounds(
    if( valdominating > 0.0 )
    {
       /* upper bound calculation */
-      if( !SCIPisInfinity(scip,rhs) )
+      if( !SCIPisInfinity(scip, rhs) )
       {
          /* <=, = or ranged */
          if( !SCIPisInfinity(scip, -minresactivity) )
@@ -1247,8 +1276,8 @@ SCIP_RETCODE calcVarBounds(
                *calculatedub = (rhs - minresactivity)/valdominating;
             else
             {
-               assert(!SCIPisInfinity(scip,ubdominated));
-               if( !SCIPisInfinity(scip,-lbdominated) )
+               assert(!SCIPisInfinity(scip, ubdominated));
+               if( !SCIPisInfinity(scip, -lbdominated) )
                   *calculatedub = (rhs - (minresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
                else
                   return SCIP_OKAY;
@@ -1258,7 +1287,7 @@ SCIP_RETCODE calcVarBounds(
       }
 
       /* wort case calculation of lower bound */
-      if( !SCIPisInfinity(scip,-lhs) )
+      if( !SCIPisInfinity(scip, -lhs) )
       {
          /* >=, = or ranged */
          if( !SCIPisInfinity(scip, -minresactivity) )
@@ -1267,8 +1296,8 @@ SCIP_RETCODE calcVarBounds(
                *calculatedwclb = (lhs - minresactivity)/valdominating;
             else
             {
-               assert(!SCIPisInfinity(scip,ubdominated));
-               if( !SCIPisInfinity(scip,-lbdominated) )
+               assert(!SCIPisInfinity(scip, ubdominated));
+               if( !SCIPisInfinity(scip, -lbdominated) )
                   *calculatedwclb = (lhs - (minresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
                else
                   return SCIP_OKAY;
@@ -1286,7 +1315,7 @@ SCIP_RETCODE calcVarBounds(
    else
    {
       /* worst case calculation of lower bound */
-      if( !SCIPisInfinity(scip,rhs) )
+      if( !SCIPisInfinity(scip, rhs) )
       {
          /* <=, = or ranged */
          if( !SCIPisInfinity(scip, maxresactivity) )
@@ -1295,8 +1324,8 @@ SCIP_RETCODE calcVarBounds(
                *calculatedwclb = (rhs - maxresactivity)/valdominating;
             else
             {
-               assert(!SCIPisInfinity(scip,ubdominated));
-               if( !SCIPisInfinity(scip,-lbdominated) )
+               assert(!SCIPisInfinity(scip, ubdominated));
+               if( !SCIPisInfinity(scip, -lbdominated) )
                   *calculatedwclb = (rhs - (maxresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
                else
                   return SCIP_OKAY;
@@ -1312,7 +1341,7 @@ SCIP_RETCODE calcVarBounds(
       }
 
       /* upper bound calculation */
-      if( !SCIPisInfinity(scip,-lhs) )
+      if( !SCIPisInfinity(scip, -lhs) )
       {
          /* >=, = or ranged */
          if( !SCIPisInfinity(scip, maxresactivity) )
@@ -1321,8 +1350,8 @@ SCIP_RETCODE calcVarBounds(
                *calculatedub = (lhs - maxresactivity)/valdominating;
             else
             {
-               assert(!SCIPisInfinity(scip,ubdominated));
-               if( !SCIPisInfinity(scip,-lbdominated) )
+               assert(!SCIPisInfinity(scip, ubdominated));
+               if( !SCIPisInfinity(scip, -lbdominated) )
                   *calculatedub = (lhs - (maxresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
                else
                   return SCIP_OKAY;
@@ -1397,6 +1426,7 @@ void findFixings(
 {
    /* we compare only variables from the same type */
    assert(SCIPvarGetType(dominatingvar) == SCIPvarGetType(dominatedvar) ||
+      SCIPvarIsBinary(dominatingvar) == SCIPvarIsBinary(dominatedvar) ||
       (SCIPvarGetType(dominatingvar) == SCIP_VARTYPE_INTEGER && SCIPvarGetType(dominatedvar) == SCIP_VARTYPE_IMPLINT) ||
       (SCIPvarGetType(dominatedvar) == SCIP_VARTYPE_INTEGER && SCIPvarGetType(dominatingvar) == SCIP_VARTYPE_IMPLINT));
 
@@ -1443,8 +1473,8 @@ void findFixings(
             varstofix[dominatedidx] = FIXATLB;
             (*npossiblefixings)++;
 #ifdef SCIP_DEBUG
-            SCIP_CALL_ABORT( printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
-                  dominatedvar,dominatedidx,dominatingub,dominatingwclb) );
+            SCIP_CALL_ABORT( printDomRelInfo(scip, matrix, dominatingvar, dominatingidx,
+                  dominatedvar, dominatedidx, dominatingub, dominatingwclb) );
 #endif
          }
       }
@@ -1468,8 +1498,8 @@ void findFixings(
          varstofix[dominatedidx] = FIXATLB;
          (*npossiblefixings)++;
 #ifdef SCIP_DEBUG
-         SCIP_CALL_ABORT( printDomRelInfo(scip,matrix,dominatingvar,dominatingidx,
-               dominatedvar,dominatedidx,dominatingub,dominatingwclb) );
+         SCIP_CALL_ABORT( printDomRelInfo(scip, matrix, dominatingvar, dominatingidx,
+               dominatedvar, dominatedidx, dominatingub, dominatingwclb) );
 #endif
       }
    }
@@ -1490,32 +1520,26 @@ void findFixings(
 
    if( onlybinvars )
    {
-      if( SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, TRUE, TRUE) )
+      if( varstofix[dominatedidx] == NOFIX && SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, TRUE, TRUE) )
       {
          /* We have a (1->1)-clique with dominance relation (x->y) (x dominates y).
           * From this dominance relation, we know (1->0) is possible and not worse than (0->1)
           * concerning the objective function. It follows that only (1->0) or (0->0) are possible,
           * but in both cases y has the value 0 => y=0.
           */
-         if( varstofix[dominatedidx] == NOFIX )
-         {
-            varstofix[dominatedidx] = FIXATLB;
-            (*npossiblefixings)++;
-         }
+         varstofix[dominatedidx] = FIXATLB;
+         (*npossiblefixings)++;
       }
 
-      if( SCIPvarsHaveCommonClique(dominatingvar, FALSE, dominatedvar, FALSE, TRUE) )
+      if( varstofix[dominatingidx] == NOFIX && SCIPvarsHaveCommonClique(dominatingvar, FALSE, dominatedvar, FALSE, TRUE) )
       {
          /* We have a (0->0)-clique with dominance relation x->y (x dominates y).
           * From this dominance relation, we know (1->0) is possible and not worse than (0->1)
           * concerning the objective function. It follows that only (1->0) or (1->1) are possible,
           * but in both cases x has the value 1 => x=1
           */
-         if( varstofix[dominatingidx] == NOFIX )
-         {
-            varstofix[dominatingidx] = FIXATUB;
-            (*npossiblefixings)++;
-         }
+         varstofix[dominatingidx] = FIXATUB;
+         (*npossiblefixings)++;
       }
    }
 }
@@ -1647,15 +1671,8 @@ SCIP_RETCODE findDominancePairs(
             if( r1 < nrows1 && (r2 == nrows2 || rows1[r1] < rows2[r2]) )
             {
                /* dominance depends on the type of relation */
-               if( !SCIPisInfinity(scip, -matrix->lhs[rows1[r1]]) &&
-                  !SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
-               {
-                  /* no dominance relation for equations or ranged rows */
-                  col2domcol1 = FALSE;
-                  col1domcol2 = FALSE;
-               }
-               else if( SCIPisInfinity(scip, -matrix->lhs[rows1[r1]]) &&
-                  !SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
+               if( matrix->islhsinfinite[rows1[r1]] &&
+                  !matrix->isrhsinfinite[rows1[r1]] )
                {
                   /* <= relation, smaller coefficients dominate larger ones */
                   if( vals1[r1] < 0.0 )
@@ -1663,8 +1680,15 @@ SCIP_RETCODE findDominancePairs(
                   else if( vals1[r1] > 0.0 )
                      col1domcol2 = FALSE;
                }
-               else if( !SCIPisInfinity(scip, -matrix->lhs[rows1[r1]]) &&
-                  SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
+               else if( !matrix->islhsinfinite[rows1[r1]] &&
+                  !matrix->isrhsinfinite[rows1[r1]] )
+               {
+                  /* no dominance relation for equations or ranged rows */
+                  col2domcol1 = FALSE;
+                  col1domcol2 = FALSE;
+               }
+               else if( !matrix->islhsinfinite[rows1[r1]] &&
+                  matrix->isrhsinfinite[rows1[r1]] )
                {
                   /* >= relation, larger coefficients dominate smaller ones */
                   if( vals1[r1] > 0.0 )
@@ -1684,15 +1708,8 @@ SCIP_RETCODE findDominancePairs(
             else if( r2 < nrows2 && (r1 == nrows1 || rows1[r1] > rows2[r2]) )
             {
                /* dominance depends on the type of relation */
-               if( !SCIPisInfinity(scip, -matrix->lhs[rows2[r2]]) &&
-                  !SCIPisInfinity(scip, matrix->rhs[rows2[r2]]) )
-               {
-                  /* no dominance relation for equations or ranged rows */
-                  col2domcol1 = FALSE;
-                  col1domcol2 = FALSE;
-               }
-               else if( SCIPisInfinity(scip, -matrix->lhs[rows2[r2]]) &&
-                  !SCIPisInfinity(scip, matrix->rhs[rows2[r2]]) )
+               if( matrix->islhsinfinite[rows2[r2]] &&
+                  !matrix->isrhsinfinite[rows2[r2]] )
                {
                   /* <= relation, smaller coefficients dominate larger ones */
                   if( vals2[r2] > 0.0 )
@@ -1700,8 +1717,15 @@ SCIP_RETCODE findDominancePairs(
                   else if( vals2[r2] < 0.0 )
                      col1domcol2 = FALSE;
                }
-               else if( !SCIPisInfinity(scip, -matrix->lhs[rows2[r2]]) &&
-                  SCIPisInfinity(scip, matrix->rhs[rows2[r2]]) )
+               else if( !matrix->islhsinfinite[rows2[r2]] &&
+                  !matrix->isrhsinfinite[rows2[r2]] )
+               {
+                  /* no dominance relation for equations or ranged rows */
+                  col2domcol1 = FALSE;
+                  col1domcol2 = FALSE;
+               }
+               else if( !matrix->islhsinfinite[rows2[r2]] &&
+                  matrix->isrhsinfinite[rows2[r2]] )
                {
                   /* >= relation, larger coefficients dominate smaller ones */
                   if( vals2[r2] < 0.0 )
@@ -1724,8 +1748,17 @@ SCIP_RETCODE findDominancePairs(
                assert(rows1[r1] == rows2[r2]);
 
                /* dominance depends on the type of inequality */
-               if( !SCIPisInfinity(scip, -matrix->lhs[rows1[r1]]) &&
-                  !SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
+               if( matrix->islhsinfinite[rows1[r1]] &&
+                  !matrix->isrhsinfinite[rows1[r1]] )
+               {
+                  /* <= relation, smaller coefficients dominate larger ones */
+                  if( vals1[r1] < vals2[r2] )
+                     col2domcol1 = FALSE;
+                  else if( vals1[r1] > vals2[r2] )
+                     col1domcol2 = FALSE;
+               }
+               else if( !matrix->islhsinfinite[rows1[r1]] &&
+                  !matrix->isrhsinfinite[rows1[r1]] )
                {
                   /* no dominance relation if coefficients differ for equations or ranged rows */
                   if( !SCIPisEQ(scip, vals1[r1], vals2[r2]) )
@@ -1734,17 +1767,8 @@ SCIP_RETCODE findDominancePairs(
                      col1domcol2 = FALSE;
                   }
                }
-               else if(  SCIPisInfinity(scip, -matrix->lhs[rows1[r1]]) &&
-                  !SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
-               {
-                  /* <= relation, smaller coefficients dominate larger ones */
-                  if( vals1[r1] < vals2[r2] )
-                     col2domcol1 = FALSE;
-                  else if( vals1[r1] > vals2[r2] )
-                     col1domcol2 = FALSE;
-               }
-               else if( !SCIPisInfinity(scip, -matrix->lhs[rows1[r1]]) &&
-                  SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
+               else if( !matrix->islhsinfinite[rows1[r1]] &&
+                  matrix->isrhsinfinite[rows1[r1]] )
                {
                   /* >= relation, larger coefficients dominate smaller ones */
                   if( vals1[r1] > vals2[r2] )
@@ -1790,8 +1814,8 @@ SCIP_RETCODE findDominancePairs(
          /* no dominance relation for left equations or ranged rows */
          while( r1 < nrows1 )
          {
-            if( !SCIPisInfinity(scip, -matrix->lhs[rows1[r1]]) &&
-               !SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
+            if( !matrix->islhsinfinite[rows1[r1]] &&
+               !matrix->isrhsinfinite[rows1[r1]] )
             {
                col2domcol1 = FALSE;
                col1domcol2 = FALSE;
@@ -1801,8 +1825,8 @@ SCIP_RETCODE findDominancePairs(
          }
          while( r2 < nrows2 )
          {
-            if( !SCIPisInfinity(scip, -matrix->lhs[rows2[r2]]) &&
-               !SCIPisInfinity(scip, matrix->rhs[rows2[r2]]) )
+            if( !matrix->islhsinfinite[rows2[r2]] &&
+               !matrix->isrhsinfinite[rows2[r2]] )
             {
                col2domcol1 = FALSE;
                col1domcol2 = FALSE;
@@ -1817,7 +1841,7 @@ SCIP_RETCODE findDominancePairs(
          if( col1domcol2 && col2domcol1 )
          {
             /* prefer the variable as dominating variable with the greater upper bound */
-            if( SCIPisGE(scip,SCIPvarGetUbGlobal(matrix->vars[col1]),SCIPvarGetUbGlobal(matrix->vars[col2])) )
+            if( SCIPisGE(scip, SCIPvarGetUbGlobal(matrix->vars[col1]), SCIPvarGetUbGlobal(matrix->vars[col2])) )
                col2domcol1 = FALSE;
             else
                col1domcol2 = FALSE;
@@ -1911,9 +1935,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       int r;
       FIXINGDIRECTION* varstofix;
       SCIP_Bool* varsprocessed;
-      int nconvarsfixed;
-      int nintvarsfixed;
-      int nbinvarsfixed;
       int nvars;
       int nrows;
       int* rowidxsorted;
@@ -1925,14 +1946,16 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       int nconfill;
       int nintfill;
       int nbinfill;
+#ifdef SCIP_DEBUG
+      int nconvarsfixed = 0;
+      int nintvarsfixed = 0;
+      int nbinvarsfixed = 0;
+#endif
 
       assert(SCIPgetNVars(scip) == matrix->ncols);
 
       npossiblefixings = 0;
       ndomrelations = 0;
-      nconvarsfixed = 0;
-      nintvarsfixed = 0;
-      nbinvarsfixed = 0;
       nvars = matrix->ncols;
       nrows = matrix->nrows;
 
@@ -1983,7 +2006,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 
          for( ; rowpnt < rowend; rowpnt++ )
          {
-            if( varsprocessed[*rowpnt] == FALSE )
+            if( !(varsprocessed[*rowpnt]) )
             {
                int varidx;
                varidx = *rowpnt;
@@ -1993,14 +2016,14 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                {
                   consearchcols[nconfill++] = varidx;
                }
+               else if( SCIPvarIsBinary(matrix->vars[varidx]) )
+               {
+                  binsearchcols[nbinfill++] = varidx;
+               }
                else if( SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_INTEGER ||
                   SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_IMPLINT )
                {
                   intsearchcols[nintfill++] = varidx;
-               }
-               else if( SCIPvarGetType(matrix->vars[varidx]) == SCIP_VARTYPE_BINARY )
-               {
-                  binsearchcols[nbinfill++] = varidx;
                }
             }
          }
@@ -2046,14 +2069,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 
          /* break if no vars are left */
          if( varcount >= nvars )
-         {
             break;
-         }
       }
-
 
       if( npossiblefixings > 0 )
       {
+         int oldnfixedvars = *nfixedvars;
+
          /* look for fixable variables */
          for( v = matrix->ncols-1; v >= 0; --v )
          {
@@ -2079,24 +2101,27 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                {
                   SCIPdebugMessage(" -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
-                  return SCIP_OKAY;
+
+                  break;
                }
                assert(fixed);
                (*nfixedvars)++;
-               *result = SCIP_SUCCESS;
 
+#ifdef SCIP_DEBUG
                if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
                {
                   nconvarsfixed++;
                }
-               else if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
-               {
-                  nintvarsfixed++;
-               }
-               else
+               else if( SCIPvarIsBinary(var) )
                {
                   nbinvarsfixed++;
                }
+               else
+               {
+                  assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+                  nintvarsfixed++;
+               }
+#endif
             }
             else if( varstofix[v] == FIXATUB )
             {
@@ -2116,26 +2141,33 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                {
                   SCIPdebugMessage(" -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
-                  return SCIP_OKAY;
+
+                  break;
                }
                assert(fixed);
-               (*nfixedvars)++;
-               *result = SCIP_SUCCESS;
 
+               (*nfixedvars)++;
+
+#ifdef SCIP_DEBUG
                if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
                {
                   nconvarsfixed++;
                }
-               else if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
-               {
-                  nintvarsfixed++;
-               }
-               else
+               else if( SCIPvarIsBinary(var) )
                {
                   nbinvarsfixed++;
                }
+               else
+               {
+                  assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+                  nintvarsfixed++;
+               }
+#endif
             }
          }
+
+         if( *result != SCIP_CUTOFF && *nfixedvars > oldnfixedvars )
+            *result = SCIP_SUCCESS;
       }
 
       SCIPfreeBufferArray(scip, &rowsparsity);
@@ -2146,16 +2178,18 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       SCIPfreeBufferArray(scip, &varsprocessed);
       SCIPfreeBufferArray(scip, &varstofix);
 
+#ifdef SCIP_DEBUG
       if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 )
       {
-         SCIPdebugMessage("### %d vars [%lld dom] ===>>> fixed [cont: %d, int: %d, bin: %d]\n",
-            matrix->ncols, ndomrelations, nconvarsfixed, nintvarsfixed, nbinvarsfixed);
+         SCIPdebugMessage("### %d vars [%lld dom] ===>>> fixed [cont: %d, int: %d, bin: %d], %scutoff detected\n",
+            matrix->ncols, ndomrelations, nconvarsfixed, nintvarsfixed, nbinvarsfixed, (*result != SCIP_CUTOFF) ? "no " : "");
       }
       else
       {
          SCIPdebugMessage("### %d vars [%lld dom] - no fixings found.\n",
             matrix->ncols, ndomrelations);
       }
+#endif
    }
 
    freeMatrix(scip, &matrix);
