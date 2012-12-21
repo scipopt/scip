@@ -1621,6 +1621,37 @@ int conflictCalcMaxsize(
    return maxsize;
 }
 
+/** increases the conflict score of the variable in the given direction */
+static
+SCIP_RETCODE incVSIDS(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound for which the score should be increased */
+   SCIP_Real             value,              /**< value of the bound */
+   SCIP_Real             weight              /**< weight of this VSIDS updates */
+   )
+{
+   SCIP_BRANCHDIR branchdir;
+
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   /* weight the VSIDS by the given weight */
+   weight *= stat->vsidsweight;
+
+   if( SCIPsetIsZero(set, weight) )
+      return SCIP_OKAY;
+
+   branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
+   SCIP_CALL( SCIPvarIncVSIDS(var, blkmem, set, stat, branchdir, value, weight) );
+   SCIPhistoryIncVSIDS(stat->glbhistory, branchdir,  weight);
+   SCIPhistoryIncVSIDS(stat->glbhistorycrun, branchdir,  weight);
+
+   return SCIP_OKAY;
+}
+
 /** update conflict statistics */
 static
 SCIP_RETCODE updateStatistics(
@@ -1667,6 +1698,9 @@ SCIP_RETCODE updateStatistics(
          SCIP_CALL( SCIPvarIncNActiveConflicts(var, blkmem, set, stat,  branchdir, bound, (SCIP_Real)conflictlength) );
          SCIPhistoryIncNActiveConflicts(stat->glbhistory, branchdir, (SCIP_Real)conflictlength);
          SCIPhistoryIncNActiveConflicts(stat->glbhistorycrun, branchdir, (SCIP_Real)conflictlength);
+
+         /* each variable which is part of the conflict gets an increase in the VSIDS */
+         SCIP_CALL( incVSIDS(var, blkmem, set, stat, boundtype, bound, set->conf_conflictweight) );
       }
       conflict->nappliedglbconss++;
       conflict->nappliedglbliterals += conflictset->nbdchginfos;
@@ -2803,30 +2837,6 @@ SCIP_RETCODE conflictQueueBound(
    return SCIP_OKAY;
 }
 
-/** increases the conflict score of the variable in the given direction */
-static
-SCIP_RETCODE incVSIDS(
-   SCIP_VAR*             var,                /**< problem variable */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_BOUNDTYPE        boundtype,          /**< type of bound for which the score should be increased */
-   SCIP_Real             value               /**< value of the bound */
-   )
-{
-   SCIP_BRANCHDIR branchdir;
-
-   assert(var != NULL);
-   assert(stat != NULL);
-
-   branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
-   SCIP_CALL( SCIPvarIncVSIDS(var, blkmem, set, stat, branchdir, value, stat->vsidsweight) );
-   SCIPhistoryIncVSIDS(stat->glbhistory, branchdir, stat->vsidsweight);
-   SCIPhistoryIncVSIDS(stat->glbhistorycrun, branchdir, stat->vsidsweight);
-
-   return SCIP_OKAY;
-}
-
 /** convert variable and bound change to active variable */
 static
 SCIP_RETCODE convertToActiveVar(
@@ -2909,7 +2919,12 @@ SCIP_RETCODE conflictAddBound(
 
    /* put bound change information into priority queue */
    SCIP_CALL( conflictQueueBound(conflict, set, bdchginfo, relaxedbd) );
-   SCIP_CALL( incVSIDS(var, blkmem, set, stat, boundtype, relaxedbd) );
+
+   /* each variable which is add to the conflict graph gets an increase in the VSIDS
+    *
+    * @note That is different to the VSIDS preseted in the literature
+    */
+   SCIP_CALL( incVSIDS(var, blkmem, set, stat, boundtype, relaxedbd, set->conf_conflictgraphweight) );
 
    return SCIP_OKAY;
 }
@@ -5379,7 +5394,12 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
             lbchginfoposs[v] == var->nlbchginfos ? SCIPvarGetLbLP(var, set) : SCIPvarGetUbLP(var, set),
             SCIPvarGetStatus(var), SCIPvarGetType(var));
          SCIP_CALL( conflictAddConflictBound(conflict, blkmem, set, bdchginfo, relaxedbd) );
-         SCIP_CALL( incVSIDS(var, blkmem, set, stat, SCIPbdchginfoGetBoundtype(bdchginfo), relaxedbd) );
+
+         /* each variable which is add to the conflict graph gets an increase in the VSIDS
+          *
+          * @note That is different to the VSIDS preseted in the literature
+          */
+         SCIP_CALL( incVSIDS(var, blkmem, set, stat, SCIPbdchginfoGetBoundtype(bdchginfo), relaxedbd, set->conf_conflictgraphweight) );
          nbdchgs++;
       }
       else

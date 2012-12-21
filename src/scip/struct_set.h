@@ -187,6 +187,12 @@ struct SCIP_Set
    SCIP_Bool             conf_fullshortenconflict;/**< try to shorten the whole conflict set or terminate early
                                                    *   (depending on the 'maxvarsdetectimpliedbounds' parameter)
                                                    */
+   SCIP_Real             conf_conflictweight;/**< the weight the VSIDS score is weight by updating the VSIDS for a
+                                              *   variable if it is part of a conflict
+                                              */
+   SCIP_Real             conf_conflictgraphweight; /**< the weight the VSIDS score is weight by updating the VSIDS for a
+                                                    *   variable if it is part of a conflict graph
+                                                    */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
