@@ -846,7 +846,10 @@ SCIP_RETCODE disableCons(
    SCIP_CONS*            cons                /**< bound disjunction constraint to be disabled */
    )
 {
-   if( SCIPgetDepth(scip) == 0 )
+   assert(SCIPconsGetValidDepth(cons) <= SCIPgetDepth(scip));
+
+   /* in case the logic or constraint is satisfied in the depth where it is also valid, we can delete it */
+   if( SCIPgetDepth(scip) == SCIPconsGetValidDepth(cons) )
    {
       SCIP_CALL( SCIPdelCons(scip, cons) );
    }
