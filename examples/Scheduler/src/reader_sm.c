@@ -43,6 +43,17 @@
 #define READER_EXTENSION        "sm"
 
 
+/**@name Default parameter values
+ *
+ * @{
+ */
+
+#define DEFAULT_FILENAME            "-" /**< file name of precedence graph output file (in GML format), or - if no output should be created */
+
+/**@} */
+
+
+
 #define SM_MAX_LINELEN      65536     /**< size of the line buffer for reading or writing */
 
 enum reading_states {
@@ -583,6 +594,7 @@ static
 SCIP_DECL_READERREAD(readerReadSm)
 {  /*lint --e{715}*/
    SCIP_RCPSPDATA rcpspdata;
+   char* predfilename;
    int j;
 
    /* initialize resources constrained project scheduling data */
@@ -599,6 +611,26 @@ SCIP_DECL_READERREAD(readerReadSm)
 
    /* output rcpspdata to check it */
    SCIPdebug( outputRcpspData(scip, &rcpspdata) );
+
+   SCIP_CALL( SCIPgetStringParam(scip, "reading/"READER_NAME"/filename", &predfilename) );
+
+   if( strncmp(predfilename, "-", 1) != 0 )
+   {
+      FILE* file;
+
+      file = fopen(predfilename, "w");
+
+      if( file == NULL )
+      {
+         SCIPerrorMessage("cannot create file <%s> for writing\n", predfilename);
+         SCIPprintSysError(predfilename);
+         return SCIP_FILECREATEERROR;
+      }
+
+      SCIPdigraphPrintGml(rcpspdata.precedencegraph, file);
+
+      fclose(file);
+   }
 
    /* create problem */
    SCIP_CALL( SCIPcreateSchedulingProblem(scip, filename, rcpspdata.jobnames, rcpspdata.resourcenames, rcpspdata.demands,
@@ -670,6 +702,11 @@ SCIP_RETCODE SCIPincludeReaderSm(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/"READER_NAME"/mipmodel", "create MIP model?",
          NULL, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddStringParam(scip,
+         "reading/"READER_NAME"/filename",
+         "file name of precedence graph output file (in GML format), or - if no output should be created",
+         NULL, FALSE, DEFAULT_FILENAME, NULL, NULL) );
 
    return SCIP_OKAY;
 }
