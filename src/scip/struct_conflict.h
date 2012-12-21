@@ -58,7 +58,9 @@ struct SCIP_Conflicthdlr
 struct SCIP_ConflictSet
 {
    SCIP_BDCHGINFO**      bdchginfos;         /**< bound change informations of the conflict set */
+   SCIP_BDCHGINFO*       confbdchginfo;      /**< a bound change at the conflict depth */
    SCIP_Real*            relaxedbds;         /**< array of relaxed bounds which are efficient for a valid conflict */
+   SCIP_Real             confrelaxedbd;      /**< relaxed bound belonging the the bound change at the conflict depth */
    int*                  sortvals;           /**< aggregated var index/bound type values for sorting */
    int                   bdchginfossize;     /**< size of bdchginfos array */
    int                   nbdchginfos;        /**< number of bound change informations in the conflict set */
@@ -66,7 +68,9 @@ struct SCIP_ConflictSet
    int                   insertdepth;        /**< depth level where constraint should be added */
    int                   conflictdepth;      /**< depth in the tree where the conflict set yields a conflict */
    int                   repropdepth;        /**< depth at which the conflict set triggers a deduction */
-   SCIP_Bool             repropagate;        /**< should the conflict constraint trigger a repropagation? */
+   unsigned int          repropagate:1;      /**< should the conflict constraint trigger a repropagation? */
+   unsigned int          depthcalced:1;      /**< are the conflict and repropagation depth calculated? */
+   unsigned int          sorted:1;           /**< is the conflict set sorted */
 };
 
 /** set of LP bound change */
@@ -83,8 +87,10 @@ struct SCIP_LPBdChgs
 /** conflict analysis data structure */
 struct SCIP_Conflict
 {
+   SCIP_Longint          nglbchgbds;         /**< total number of applied global bound changes */
    SCIP_Longint          nappliedglbconss;   /**< total number of conflict constraints added globally to the problem */
    SCIP_Longint          nappliedglbliterals;/**< total number of literals in globally applied conflict constraints */
+   SCIP_Longint          nlocchgbds;         /**< total number of applied local bound changes */
    SCIP_Longint          nappliedlocconss;   /**< total number of conflict constraints added locally to the problem */
    SCIP_Longint          nappliedlocliterals;/**< total number of literals in locally applied conflict constraints */
    SCIP_Longint          npropcalls;         /**< number of calls to propagation conflict analysis */

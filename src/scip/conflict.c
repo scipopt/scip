@@ -2309,6 +2309,16 @@ SCIP_Longint SCIPconflictGetNAppliedLiterals(
    return conflict->nappliedglbliterals + conflict->nappliedlocliterals;
 }
 
+/** returns the total number of global bound changes applied by the conflict analysis */
+SCIP_Longint SCIPconflictGetNGlobalChgBds(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nglbchgbds;
+}
+
 /** returns the total number of conflict constraints that were added globally to the problem */
 SCIP_Longint SCIPconflictGetNAppliedGlobalConss(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -2327,6 +2337,16 @@ SCIP_Longint SCIPconflictGetNAppliedGlobalLiterals(
    assert(conflict != NULL);
 
    return conflict->nappliedglbliterals;
+}
+
+/** returns the total number of local bound changes applied by the conflict analysis */
+SCIP_Longint SCIPconflictGetNLocalChgBds(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nlocchgbds;
 }
 
 /** returns the total number of conflict constraints that were added locally to the problem */
@@ -2440,8 +2460,10 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->tmpbdchginfossize = 0;
    (*conflict)->ntmpbdchginfos = 0;
    (*conflict)->count = 0;
+   (*conflict)->nglbchgbds = 0;
    (*conflict)->nappliedglbconss = 0;
    (*conflict)->nappliedglbliterals = 0;
+   (*conflict)->nlocchgbds = 0;
    (*conflict)->nappliedlocconss = 0;
    (*conflict)->nappliedlocliterals = 0;
    (*conflict)->npropcalls = 0;
