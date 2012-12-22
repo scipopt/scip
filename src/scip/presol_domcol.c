@@ -1421,6 +1421,9 @@ void findFixings(
    int                   dominatedidx,       /**< column index of the dominated variable */
    FIXINGDIRECTION*      varstofix,          /**< array holding fixing information */
    SCIP_Bool             onlybinvars,        /**< flag indicating only binary variables are present */
+   SCIP_Bool             onlyoneone,         /**< when onlybinvars is TRUE, flag indicates if both binary variables are
+                                              *   in clique
+                                              */
    int*                  npossiblefixings    /**< counter for possible fixings */
    )
 {
@@ -1520,7 +1523,7 @@ void findFixings(
 
    if( onlybinvars )
    {
-      if( varstofix[dominatedidx] == NOFIX && SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, TRUE, TRUE) )
+      if( varstofix[dominatedidx] == NOFIX && (onlyoneone || SCIPvarsHaveCommonClique(dominatingvar, TRUE, dominatedvar, TRUE, TRUE)) )
       {
          /* We have a (1->1)-clique with dominance relation (x->y) (x dominates y).
           * From this dominance relation, we know (1->0) is possible and not worse than (0->1)
@@ -1542,6 +1545,9 @@ void findFixings(
          (*npossiblefixings)++;
       }
    }
+   else
+      assert(!onlyoneone);
+
 }
 
 /** find dominance relation between variable pairs */
@@ -1570,6 +1576,7 @@ SCIP_RETCODE findDominancePairs(
    int nrows2;
    SCIP_Bool col1domcol2;
    SCIP_Bool col2domcol1;
+   SCIP_Bool onlyoneone;
    int cnt1;
    int cnt2;
    int col1;
@@ -1598,6 +1605,8 @@ SCIP_RETCODE findDominancePairs(
          /* get indexes of this variable pair */
          col1 = searchcols[cnt1];
          col2 = searchcols[cnt2];
+
+         onlyoneone = FALSE;
 
          /* we always have minimize as obj sense */
 
@@ -1756,6 +1765,12 @@ SCIP_RETCODE findDominancePairs(
                      col2domcol1 = FALSE;
                   else if( vals1[r1] > vals2[r2] )
                      col1domcol2 = FALSE;
+
+                  if( onlybinvars )
+                  {
+                     if( !onlyoneone && (matrix->minactivityposinf[rows1[r1]] + matrix->minactivityneginf[rows1[r1]] == 0) && SCIPisFeasGE(scip, matrix->minactivity[rows1[r1]] + MIN(vals1[r1], vals2[r2]), matrix->rhs[rows1[r1]]) )
+                        onlyoneone = TRUE;
+                  }
                }
                else if( !matrix->islhsinfinite[rows1[r1]] &&
                   !matrix->isrhsinfinite[rows1[r1]] )
@@ -1765,6 +1780,12 @@ SCIP_RETCODE findDominancePairs(
                   {
                      col2domcol1 = FALSE;
                      col1domcol2 = FALSE;
+                  }
+
+                  if( onlybinvars )
+                  {
+                     if( !onlyoneone && (matrix->minactivityposinf[rows1[r1]] + matrix->minactivityneginf[rows1[r1]] == 0) && SCIPisFeasGE(scip, matrix->minactivity[rows1[r1]] + MIN(vals1[r1], vals2[r2]), matrix->rhs[rows1[r1]]) )
+                        onlyoneone = TRUE;
                   }
                }
                else if( !matrix->islhsinfinite[rows1[r1]] &&
@@ -1782,7 +1803,7 @@ SCIP_RETCODE findDominancePairs(
                   col2domcol1 = FALSE;
                }
 
-               if( (vals1[r1] < 0 && vals2[r2] < 0) || (vals1[r1] > 0 && vals2[r2] > 0) )
+               if( !onlyoneone && ((vals1[r1] < 0 && vals2[r2] < 0) || (vals1[r1] > 0 && vals2[r2] > 0)) )
                {
                   if( col1domcol2 )
                   {
@@ -1852,13 +1873,13 @@ SCIP_RETCODE findDominancePairs(
          {
             findFixings(scip, matrix, matrix->vars[col1], col1,
                tmpupperboundcol1, tmpwclowerboundcol1, matrix->vars[col2],
-               col2, varstofix, onlybinvars, npossiblefixings);
+               col2, varstofix, onlybinvars, onlyoneone, npossiblefixings);
          }
          else if( col2domcol1 )
          {
             findFixings(scip, matrix, matrix->vars[col2], col2,
                tmpupperboundcol2, tmpwclowerboundcol2, matrix->vars[col1],
-               col1, varstofix, onlybinvars, npossiblefixings);
+               col1, varstofix, onlybinvars, onlyoneone, npossiblefixings);
          }
       }
    }
