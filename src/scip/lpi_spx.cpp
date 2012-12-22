@@ -904,7 +904,7 @@ public:
          {
             SCIPdebugMessage("simplifier detected primal or dual infeasibility - reloading and solving unsimplified LP\n");
 
-            simplifier->~SPxSimplifier();
+            simplifier->~SPxMainSM();
             spx_free(simplifier);
 
             SPxSolver::loadLP(origlp);
@@ -948,7 +948,7 @@ public:
       {
          SCIPdebugMessage("presolved LP not optimal - reloading and solving original LP\n");
 
-         simplifier->~SPxSimplifier();
+         simplifier->~SPxMainSM();
          spx_free(simplifier);
 
          SPxSolver::loadLP(origlp);
@@ -1055,7 +1055,7 @@ public:
          }
          if( simplifier != NULL )
          {
-            simplifier->~SPxSimplifier();
+            simplifier->~SPxMainSM();
             spx_free(simplifier);
          }
       }
