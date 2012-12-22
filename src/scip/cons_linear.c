@@ -4491,21 +4491,22 @@ SCIP_Bool canTightenBounds(
    )
 {
    SCIP_CONSDATA* consdata;
-   int infcount;
+   int infcountmin;
+   int infcountmax;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   infcount = consdata->minactivityneginf
+   infcountmin = consdata->minactivityneginf
       + consdata->minactivityposinf
       + consdata->minactivityneghuge
-      + consdata->minactivityposhuge
-      + consdata->maxactivityneginf
+      + consdata->minactivityposhuge;
+   infcountmax = consdata->maxactivityneginf
       + consdata->maxactivityposinf
       + consdata->maxactivityneghuge
       + consdata->maxactivityposhuge;
 
-   if( infcount > 1 )
+   if( infcountmin > 1 || infcountmax > 1 )
       return FALSE;
 
    return TRUE;
@@ -5177,18 +5178,12 @@ SCIP_RETCODE tightenBounds(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Real slack;
-   SCIP_Real surplus;
-   SCIP_Real minactivity;
-   SCIP_Real maxactivity;
    int nvars;
    int nrounds;
    int lastchange;
    int oldnchgbds;
    int v;
    SCIP_Bool force;
-   SCIP_Bool minisrelax;
-   SCIP_Bool maxisrelax;
    SCIP_Bool easycase;
 
    assert(scip != NULL);
@@ -5238,17 +5233,27 @@ SCIP_RETCODE tightenBounds(
    if( SCIPisFeasZero(scip, consdata->maxactdelta) )
       return SCIP_OKAY;
 
-   /* use maximal activity delta to skip propagation (cannot deduce anything) */
-   consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minisrelax, &maxisrelax);
-   assert(!SCIPisInfinity(scip, minactivity));
-   assert(!SCIPisInfinity(scip, -maxactivity));
+   if( !SCIPisInfinity(scip, consdata->maxactdelta) )
+   {
+      SCIP_Real slack;
+      SCIP_Real surplus;
+      SCIP_Real minactivity;
+      SCIP_Real maxactivity;
+      SCIP_Bool minisrelax;
+      SCIP_Bool maxisrelax;
 
-   slack = (SCIPisInfinity(scip, consdata->rhs) || SCIPisInfinity(scip, -minactivity)) ? SCIPinfinity(scip) : (consdata->rhs - minactivity);
-   surplus = (SCIPisInfinity(scip, -consdata->lhs) || SCIPisInfinity(scip, maxactivity)) ? SCIPinfinity(scip) : (maxactivity - consdata->lhs);
+      /* use maximal activity delta to skip propagation (cannot deduce anything) */
+      consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minisrelax, &maxisrelax);
+      assert(!SCIPisInfinity(scip, minactivity));
+      assert(!SCIPisInfinity(scip, -maxactivity));
 
-   /* check if the constraint will propagate */
-   if( SCIPisLE(scip, consdata->maxactdelta, MIN(slack, surplus)) )
-      return SCIP_OKAY;
+      slack = (SCIPisInfinity(scip, consdata->rhs) || SCIPisInfinity(scip, -minactivity)) ? SCIPinfinity(scip) : (consdata->rhs - minactivity);
+      surplus = (SCIPisInfinity(scip, -consdata->lhs) || SCIPisInfinity(scip, maxactivity)) ? SCIPinfinity(scip) : (maxactivity - consdata->lhs);
+
+      /* check if the constraint will propagate */
+      if( SCIPisLE(scip, consdata->maxactdelta, MIN(slack, surplus)) )
+         return SCIP_OKAY;
+   }
 
    /* check if we can use fast implementation for easy and numerically well behaved cases */
    easycase = SCIPisLT(scip, consdata->maxactdelta, MAXACTIVITYDELTATHR);
@@ -10686,7 +10691,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
          SCIP_CALL( applyFixings(scip, conss[c], NULL) );
       }
    }
-
 
    return SCIP_OKAY;
 }
