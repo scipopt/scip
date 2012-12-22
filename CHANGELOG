@@ -59,6 +59,7 @@ parameters:
   will be used to derive global bound changes
 - added <conflict/fullshortenconflict> parameter to decide whether we want to stop shortening a conflict set, when no
   global bound changes can be found anymore
+- changed default max coefficient for big-M constraint to be initial from 1e6 to 1e9
 
 core:
 - added presolve.{c,h} which should be used, for all preprocessing mechanismsexecuted from within SCIP, corresponding to

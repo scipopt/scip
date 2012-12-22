@@ -80,7 +80,7 @@
  */
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
-#define DEFAULT_MAXLPCOEF         1e+06 /**< maximum coefficient in varbound constraint to be added as a row into LP */
+#define DEFAULT_MAXLPCOEF         1e+09 /**< maximum coefficient in varbound constraint to be added as a row into LP */
 #define DEFAULT_USEBDWIDENING      TRUE /**< should bound widening be used to initialize conflict analysis? */
 
 
