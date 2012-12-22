@@ -419,12 +419,18 @@ SCIP_Bool checkCons(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Real solval;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    SCIPdebugMessage("checking variable bound constraint <%s> for feasibility of solution %p (lprows=%u)\n",
       SCIPconsGetName(cons), (void*)sol, checklprows);
+
+   solval = SCIPgetSolVal(scip, sol, consdata->var);
+
+   if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vbdvar)) && (!SCIPisFeasLE(scip, solval, consdata->rhs) || !SCIPisFeasGE(scip, solval, consdata->lhs)) )
+      return FALSE;
 
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
@@ -438,6 +444,7 @@ SCIP_Bool checkCons(
    }
    else
       return TRUE;
+
 }
 
 
@@ -831,7 +838,6 @@ SCIP_RETCODE separateCons(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_VAR* vbdvar;
    SCIP_VAR* var;
@@ -851,9 +857,6 @@ SCIP_RETCODE separateCons(
       SCIPerrorMessage("variable bound constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    SCIPdebugMessage("separating variable bound constraint <%s>\n", SCIPconsGetName(cons));
 
@@ -922,7 +925,7 @@ SCIP_RETCODE separateCons(
    }
 
    /* if we already changed a bound or the coefficient is too large to put the row into the LP, stop here */
-   if( *result == SCIP_REDUCEDDOM || SCIPisGT(scip, REALABS(vbdcoef), conshdlrdata->maxlpcoef) )
+   if( *result == SCIP_REDUCEDDOM )
       return SCIP_OKAY;
 
    /* create LP relaxation if not yet existing */
