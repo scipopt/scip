@@ -6825,6 +6825,8 @@ void getNewSidesAfterAggregation(
    assert(SCIPisLE(scip, *newlhs, *newrhs));
 }
 
+#define MAXMULTIAGGRQUOTIENT 1e+03
+
 /* processes equality with more than two variables by multi-aggregating one of the variables and converting the equality
  * into an inequality; if multi-aggregation is not possible, tries to identify one continuous or integer variable that is
  * implicitly integral by this constraint
@@ -6848,6 +6850,8 @@ SCIP_RETCODE convertLongEquality(
    SCIP_Real lhs;
    SCIP_Real rhs;
    SCIP_Real bestslackdomrng;
+   SCIP_Real minabsval;
+   SCIP_Real maxabsval;
    SCIP_Bool bestremovescons;
    SCIP_Bool coefszeroone;
    SCIP_Bool coefsintegral;
@@ -6938,6 +6942,8 @@ SCIP_RETCODE convertLongEquality(
    nintvars = 0;
    nimplvars = 0;
    intvarpos = -1;
+   minabsval = SCIPinfinity(scip);
+   maxabsval = -1.0;
    for( v = 0; v < consdata->nvars; ++v )
    {
       SCIP_VAR* var;
@@ -6960,6 +6966,16 @@ SCIP_RETCODE convertLongEquality(
       val = vals[v];
       absval = REALABS(val);
       assert(SCIPisPositive(scip, absval));
+
+      /* calculate minimal and maximal absolute value */
+      if( absval < minabsval )
+         minabsval = absval;
+      if( absval > maxabsval )
+         maxabsval = absval;
+
+      /* do not try to multi aggregate, when numerical bad */
+      if( maxabsval / minabsval > MAXMULTIAGGRQUOTIENT )
+         return SCIP_OKAY;
 
       slacktype = SCIPvarGetType(var);
       coefszeroone = coefszeroone && SCIPisEQ(scip, absval, 1.0);
@@ -7107,7 +7123,7 @@ SCIP_RETCODE convertLongEquality(
          }
       }
    }
- 
+
    /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
     * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */     
    if( supinf && infinf )
@@ -8014,6 +8030,9 @@ SCIP_RETCODE dualPresolve(
       /* perform the multi-aggregation */
       if( !supinf || !infinf )
       {
+         /* @todo if multi-aggregate makes them numerical trouble, avoid them if the coefficients differ to much, see
+          * also convertLongEquality() early termination due to coefficients
+          */
          SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
       }
       else

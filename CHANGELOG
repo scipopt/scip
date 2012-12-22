@@ -33,6 +33,7 @@ performance improvements:
 - improved methods SCIPlpiGetBInv{Row,Col,ACol} for row representation in SoPlex LP interface
 - fasten repropagation for set-packing and -partitioning constraints
 - shorten conflicts and deriving global boundchanges from conflicts
+- disabled multi-aggregation in linear constraint handler when coefficients differ too much
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
