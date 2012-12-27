@@ -61,6 +61,10 @@ parameters:
 - added <conflict/fullshortenconflict> parameter to decide whether we want to stop shortening a conflict set, when no
   global bound changes can be found anymore
 - changed default max coefficient for big-M constraint to be initial from 1e6 to 1e9
+- changed default reliability branching parameter DEFAULT_MAXLOOKAHEAD from 8 to 9, that increases the number of further
+  variables evaluated without better score
+- changed default gomory cut separation parameter DEFAULT_MAXRANK from 0 to 3, to take also gomory cuts, that could not
+  be scaled to integral coefficients, with maximal rank 3 into account
 
 core:
 - added presolve.{c,h} which should be used, for all preprocessing mechanismsexecuted from within SCIP, corresponding to
