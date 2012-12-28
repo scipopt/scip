@@ -3148,9 +3148,12 @@ SCIP_RETCODE tightenCoefs(
 static
 SCIP_RETCODE upgradeConss(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_CONS**           conss,              /**< constraint set */
    int                   nconss,             /**< number of constraints in constraint set */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    int*                  naggrvars,          /**< pointer to count the number of aggregated variables */
+   int*                  nchgbds,            /**< pointer to count number of bound changes */
    int*                  nchgcoefs,          /**< pointer to count the number of changed coefficients */
    int*                  nchgsides,          /**< pointer to count the number of left and right hand sides */
    int*                  ndelconss,          /**< pointer to count the number of deleted constraints */
@@ -3164,8 +3167,13 @@ SCIP_RETCODE upgradeConss(
    int c;
 
    assert(scip != NULL);
+   assert(conshdlrdata != NULL);
    assert(conss != NULL || nconss == 0);
+   assert(cutoff != NULL);
    assert(naggrvars != NULL);
+   assert(nchgbds != NULL);
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
    assert(ndelconss != NULL);
    assert(naddconss != NULL);
 
@@ -3189,6 +3197,28 @@ SCIP_RETCODE upgradeConss(
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
       assert(SCIPisLE(scip, consdata->lhs, consdata->rhs));
+
+      if( !consdata->presolved )
+      {
+         /* incorporate fixings and aggregations in constraint */
+         SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, cutoff, nchgbds, ndelconss, naddconss) );
+
+         if( *cutoff )
+            return SCIP_OKAY;
+         if( !SCIPconsIsActive(cons) )
+            continue;
+      }
+
+      if( !consdata->propagated )
+      {
+         /* propagate constraint */
+         SCIP_CALL( propagateCons(scip, cons, conshdlrdata->usebdwidening, cutoff, nchgbds, nchgsides, ndelconss) );
+
+         if( *cutoff )
+            return SCIP_OKAY;
+         if( !SCIPconsIsActive(cons) )
+            continue;
+      }
 
       if( !consdata->tightened )
       {
@@ -3218,7 +3248,7 @@ SCIP_RETCODE upgradeConss(
 	       /* check for aggregations like x + y == 1 */
 	       if( SCIPisEQ(scip, consdata->lhs, 1.0) )
 	       {
-		  SCIP_Bool cutoff;
+		  SCIP_Bool infeasible;
 		  SCIP_Bool redundant;
 		  SCIP_Bool aggregated;
 
@@ -3226,8 +3256,8 @@ SCIP_RETCODE upgradeConss(
 		     SCIPconsGetName(cons), SCIPvarGetName(consdata->var), SCIPvarGetName(consdata->vbdvar));
 
 		  /* aggregate both variables */
-		  SCIP_CALL( SCIPaggregateVars(scip, consdata->var, consdata->vbdvar, 1.0, 1.0, 1.0, &cutoff, &redundant, &aggregated) );
-		  assert(!cutoff);
+		  SCIP_CALL( SCIPaggregateVars(scip, consdata->var, consdata->vbdvar, 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
+		  assert(!infeasible);
 		  ++(*naggrvars);
 
 		  SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -3257,7 +3287,7 @@ SCIP_RETCODE upgradeConss(
 	       /* check for aggregations like x - y == 0 */
 	       if( SCIPisZero(scip, consdata->lhs) )
 	       {
-		  SCIP_Bool cutoff;
+		  SCIP_Bool infeasible;
 		  SCIP_Bool redundant;
 		  SCIP_Bool aggregated;
 
@@ -3265,8 +3295,8 @@ SCIP_RETCODE upgradeConss(
 		     SCIPconsGetName(cons), SCIPvarGetName(consdata->var), SCIPvarGetName(consdata->vbdvar));
 
 		  /* aggregate both variables */
-		  SCIP_CALL( SCIPaggregateVars(scip, consdata->var, consdata->vbdvar, 1.0, -1.0, 0.0, &cutoff, &redundant, &aggregated) );
-		  assert(!cutoff);
+		  SCIP_CALL( SCIPaggregateVars(scip, consdata->var, consdata->vbdvar, 1.0, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
+		  assert(!infeasible);
 		  ++(*naggrvars);
 
 		  SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -3836,9 +3866,9 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       SCIP_CALL( prettifyConss(scip, conss, nconss, nchgcoefs, nchgsides) );
 
       /* check if we can upgrade to a set-packing constraint */
-      SCIP_CALL( upgradeConss(scip, conss, nconss, naggrvars, nchgcoefs, nchgsides, ndelconss, naddconss) );
+      SCIP_CALL( upgradeConss(scip, conshdlrdata, conss, nconss, &cutoff, naggrvars, nchgbds, nchgcoefs, nchgsides, ndelconss, naddconss) );
 
-      if( conshdlrdata->presolpairwise )
+      if( !cutoff && conshdlrdata->presolpairwise )
       {
 	 /* preprocess pairs of variable bound constraints */
 	 SCIP_CALL( preprocessConstraintPairs(scip, conss, nconss, &cutoff, nchgbds, ndelconss, nchgcoefs, nchgsides) );
