@@ -6828,10 +6828,11 @@ void getNewSidesAfterAggregation(
 #define MAXMULTIAGGRQUOTIENT 1e+03
 
 /* processes equality with more than two variables by multi-aggregating one of the variables and converting the equality
- * into an inequality; if multi-aggregation is not possible, tries to identify one continuous or integer variable that is
- * implicitly integral by this constraint
+ * into an inequality; if multi-aggregation is not possible, tries to identify one continuous or integer variable that
+ * is implicitly integral by this constraint
  *
- * @todo Check whether a more clever way of avoiding aggregation of variables containing implicitly integer variables can help.
+ * @todo Check whether a more clever way of avoiding aggregation of variables containing implicitly integer variables
+ *       can help.
  */
 static
 SCIP_RETCODE convertLongEquality(
@@ -6856,10 +6857,14 @@ SCIP_RETCODE convertLongEquality(
    SCIP_Bool coefszeroone;
    SCIP_Bool coefsintegral;
    SCIP_Bool varsintegral;
-   SCIP_Bool supinf;                         /* might the supremum of the multi-aggregation be infinite? */
-   SCIP_Bool infinf;                         /* might the infimum of the multi-aggregation be infinite? */
    SCIP_Bool infeasible;
-
+   SCIP_Bool samevar;
+   int supinf;                               /* counter for infinite contributions to the supremum of a possible
+                                              * multi-aggregation
+                                              */
+   int infinf;                               /* counter for infinite contributions to the infimum of a possible
+                                              * multi-aggregation
+                                              */
    int maxnlocksstay;
    int maxnlocksremove;
    int bestslackpos;
@@ -7103,32 +7108,53 @@ SCIP_RETCODE convertLongEquality(
       return SCIP_OKAY;
    }
 
-   supinf = FALSE;
-   infinf = FALSE;
+   supinf = 0;
+   infinf = 0;
+   samevar = FALSE;
 
    /* check whether the the infimum and the supremum of the multi-aggregation can be get infinite */
    for( v = 0; v < consdata->nvars; ++v )
    {
       if( v != bestslackpos )
       {
-         if( SCIPisGT(scip, consdata->vals[v], 0.0) )
+         if( SCIPisPositive(scip, consdata->vals[v]) )
          {
-            supinf = supinf || SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[v]));
-            infinf = infinf || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[v]));
+            if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[v])) )
+            {
+               ++supinf;
+               if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[v])) )
+               {
+                  ++infinf;
+                  samevar = TRUE;
+               }
+            }
+            else if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[v])) )
+               ++infinf;
+
          }
-         else if( SCIPisLT(scip, consdata->vals[v], 0.0) )
+         else if( SCIPisNegative(scip, consdata->vals[v]) )
          {
-            supinf = supinf || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[v]));
-            infinf = infinf || SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[v]));
+            if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[v])) )
+            {
+               ++supinf;
+               if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[v])) )
+               {
+                  ++infinf;
+                  samevar = TRUE;
+               }
+            }
+            else if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[v])) )
+               ++infinf;
          }
       }
    }
+   assert(!samevar || (supinf > 0 && infinf > 0));
 
    /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
-    * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */     
-   if( supinf && infinf )
-   {      
-      SCIPdebugMessage("do not perform multi-aggregation: infimum and supremum are both infinite\n");     
+    * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */
+   if( (samevar && (supinf > 1 || infinf > 1)) || (!samevar && supinf > 0 && infinf > 0) )
+   {
+      SCIPdebugMessage("do not perform multi-aggregation: infimum and supremum are both infinite\n");
       return SCIP_OKAY;
    }
 
@@ -7962,8 +7988,13 @@ SCIP_RETCODE dualPresolve(
       int j;
       SCIP_Bool infeasible;
       SCIP_Bool aggregated;
-      SCIP_Bool supinf;                      /* might the supremum of the multi-aggregation be infinite? */
-      SCIP_Bool infinf;                      /* might the infimum of the multi-aggregation be infinite? */
+      SCIP_Bool samevar;
+      int supinf;                            /* counter for infinite contributions to the supremum of a possible
+                                              * multi-aggregation
+                                              */
+      int infinf;                            /* counter for infinite contributions to the infimum of a possible
+                                              * multi-aggregation
+                                              */
 
       assert(!bestislhs || lhsexists);
       assert(bestislhs || rhsexists);
@@ -7981,8 +8012,9 @@ SCIP_RETCODE dualPresolve(
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIPdebugMessage("linear constraint <%s> (dual): multi-aggregate <%s> ==", SCIPconsGetName(cons), SCIPvarGetName(bestvar));
       naggrs = 0;
-      supinf = FALSE;
-      infinf = FALSE;
+      supinf = 0;
+      infinf = 0;
+      samevar = FALSE;
 
       for( j = 0; j < consdata->nvars; ++j )
       {
@@ -7998,20 +8030,40 @@ SCIP_RETCODE dualPresolve(
                aggrcoefs[naggrs] = SCIPfloor(scip, aggrcoefs[naggrs]+0.5);
             }
 
-            if( SCIPisGT(scip, aggrcoefs[naggrs], 0.0) )
+            if( SCIPisPositive(scip, aggrcoefs[naggrs]) )
             {
-               supinf = supinf || SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[j]));
-               infinf = infinf || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[j]));
+               if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[j])) )
+               {
+                  ++supinf;
+                  if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[j])) )
+                  {
+                     ++infinf;
+                     samevar = TRUE;
+                  }
+               }
+               else if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[j])) )
+                  ++infinf;
             }
-            else if( SCIPisLT(scip, aggrcoefs[naggrs], 0.0) )
+            else if( SCIPisNegative(scip, aggrcoefs[naggrs]) )
             {
-               supinf = supinf || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[j]));
-               infinf = infinf || SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[j]));
+               if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[j])) )
+               {
+                  ++supinf;
+                  if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[j])) )
+                  {
+                     ++infinf;
+                     samevar = TRUE;
+                  }
+               }
+               else if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[j])) )
+                  ++infinf;
             }
 
             naggrs++;
          }
       }
+      assert(!samevar || (supinf > 0 && infinf > 0));
+
       aggrconst = (bestislhs ? consdata->lhs/bestval : consdata->rhs/bestval);
       SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g]\n", aggrconst, SCIPvarGetName(bestvar),
          SCIPvarGetLbGlobal(bestvar), SCIPvarGetUbGlobal(bestvar));
@@ -8028,7 +8080,7 @@ SCIP_RETCODE dualPresolve(
       infeasible = FALSE;
 
       /* perform the multi-aggregation */
-      if( !supinf || !infinf )
+      if( (samevar && supinf == 1 && infinf == 1) || (!samevar && (supinf == 0 || infinf == 0)) )
       {
          /* @todo if multi-aggregate makes them numerical trouble, avoid them if the coefficients differ to much, see
           * also convertLongEquality() early termination due to coefficients
@@ -8044,7 +8096,7 @@ SCIP_RETCODE dualPresolve(
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &aggrcoefs);
       SCIPfreeBufferArray(scip, &aggrvars);
-            
+
       /* check for infeasible aggregation */
       if( infeasible )
       {
@@ -8057,7 +8109,7 @@ SCIP_RETCODE dualPresolve(
       if( aggregated )
       {
          SCIP_CALL( SCIPdelCons(scip, cons) );
-         
+
          if( !consdata->upgraded )
             (*ndelconss)++;
          (*naggrvars)++;

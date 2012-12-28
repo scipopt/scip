@@ -34,6 +34,8 @@ performance improvements:
 - fasten repropagation for set-packing and -partitioning constraints
 - shorten conflicts and deriving global boundchanges from conflicts
 - disabled multi-aggregation in linear constraint handler when coefficients differ too much
+- improved multi-aggregation in linear constraint handler when only one variable in the aggregation has infinity
+  contribution
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
