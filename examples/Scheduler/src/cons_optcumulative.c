@@ -1421,7 +1421,7 @@ static
 SCIP_RETCODE createConflictCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to store the created conflict constraint */
-   const char*           name,
+   const char*           name,               /**< name of conflict constraint */
    SCIP_VAR**            binvars,            /**< array of binary variables */
    int                   nvars               /**< number of variables */
    )
