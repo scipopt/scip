@@ -49,6 +49,10 @@
  * G. Cornuejols, F. Margot and G. Nannicini:@n
  * On the safety of Gomory cut generators.@n
  * Preprint 2012.
+ *
+ * @todo Check whether slack variable is integral and handle it accordingly.
+ * @todo Handle cuts on rows (slack variables), see sepa_gomory.c
+ * @todo Do not modify cutcoef in place (this relies on the correct ordering of the columns)
  */
 
 
@@ -106,43 +110,8 @@ struct SCIP_SepaData
 
 
 /*
- * Callback methods
+ * local methods
  */
-
-/** copy method for separator plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_SEPACOPY(sepaCopyGMI)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
-
-   /* call inclusion method of constraint handler */
-   SCIP_CALL( SCIPincludeSepaGMI(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** destructor of separator to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_SEPAFREE(sepaFreeGMI)
-{  /*lint --e{715}*/
-   SCIP_SEPADATA* sepadata;
-
-   assert(scip != NULL);
-   assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
-
-   /* free separator data */
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
-
-   SCIPfreeMemory(scip, &sepadata);
-
-   SCIPsepaSetData(sepa, NULL);
-
-   return SCIP_OKAY;
-}
 
 /** Modify the cut to make it numerically safer, and packs it from dense format to sparse format.
  *
@@ -185,18 +154,15 @@ SCIP_Bool modifyAndPackCut(
       /* Cycle over small elements that are not zero. If the element is zero, it will be discarded anyway. */
       if( EPSZ(cutcoefs[i], sepadata->epscoeff) && ! SCIPisZero(scip, cutcoefs[i]) )
       {
-         if( (cutcoefs[i] > 0.0) )
+         if( cutcoefs[i] > 0.0 )
          {
             /* If we would have to modify the rhs by a multiple of infinity, discard the cut altogether. */
             if( SCIPisInfinity(scip, -SCIPcolGetLb(col)) )
             {
                return FALSE;
             }
-            else
-            {
-               /* Zero out coefficient and modify rhs to preserve validity and possibly strengthen the cut */
-               *cutrhs -= cutcoefs[i] * SCIPcolGetLb(cols[c]);
-            }
+            /* Zero out coefficient and modify rhs to preserve validity and possibly strengthen the cut */
+            *cutrhs -= cutcoefs[i] * SCIPcolGetLb(cols[c]);
          }
          else if( (cutcoefs[i] < 0.0) )
          {
@@ -205,11 +171,8 @@ SCIP_Bool modifyAndPackCut(
             {
                return FALSE;
             }
-            else
-            {
-               /* Zero out coefficient and modify rhs to preserve validity and possibly strengthen the cut */
-               *cutrhs -= cutcoefs[i] * SCIPcolGetUb(cols[c]);
-            }
+            /* Zero out coefficient and modify rhs to preserve validity and possibly strengthen the cut */
+            *cutrhs -= cutcoefs[i] * SCIPcolGetUb(cols[c]);
          }
       } /* if( EPSZ(cutcoefs[i], sepadata->epscoeff) && !SCIPisZero(cutcoefs[i]) ) */
       else if( ! EPSZ(cutcoefs[i], sepadata->epscoeff) )
@@ -264,7 +227,10 @@ SCIP_Bool checkNumerics(
 
    /* Check maximum support */
    if( *cutnz > (ncols)*(sepadata->maxsupprel) + sepadata->maxsuppabs )
+   {
+      SCIPdebugMessage("Cut too dense (%d > %d).\n", *cutnz, (int) ((ncols)*(sepadata->maxsupprel) + sepadata->maxsuppabs));
       return FALSE;
+   }
 
    /* Compute cut violation and dynamism */
    mincoef = SCIP_REAL_MAX;
@@ -280,7 +246,10 @@ SCIP_Bool checkNumerics(
 
    /* Check dynamism */
    if( maxcoef > mincoef * sepadata->maxdynamism )
+   {
+      SCIPdebugMessage("Cut too dynamic (%g > %g).\n", maxcoef, mincoef * sepadata->maxdynamism);
       return FALSE;
+   }
 
    /* Check minimum violation */
    violation = *cutact - *cutrhs;
@@ -304,10 +273,10 @@ SCIP_Bool getGMIFromRow(
    SCIP_ROW**            rows,               /**< rows of the LP */
    SCIP_Real*            binvrow,            /**< row of the basis inverse */
    SCIP_Real*            binvarow,           /**< row of the simplex tableau */
-   SCIP_Real*            rowrhs,             /**< rhs of the tableau row, i.e. corresponding element in the LP solution */
+   SCIP_Real             rowrhs,             /**< rhs of the tableau row, i.e. corresponding element in the LP solution */
    SCIP_Real*            cutcoefs,           /**< cut elements in sparse format will go here - must be of size ncols */
    int*                  cutind,             /**< indices of nonzero cut coefficients will go here - must be of size ncols */
-   int*                  cutnz,              /**< number of nonzero elements in hte cuts will go here */
+   int*                  cutnz,              /**< number of nonzero elements in the cuts will go here */
    SCIP_Real*            cutrhs,             /**< cut rhs will go here */
    SCIP_Real*            cutact              /**< cut activity at the current LP optimum will go here - only meaningful if returns TRUE */
    )
@@ -318,6 +287,7 @@ SCIP_Bool getGMIFromRow(
    SCIP_Real cutelem;
    SCIP_Real f0;
    SCIP_Real ratiof0compl;
+   SCIP_Bool success;
    int i;
    int c;
 
@@ -326,7 +296,6 @@ SCIP_Bool getGMIFromRow(
    assert(rows != NULL);
    assert(binvrow != NULL);
    assert(binvarow != NULL);
-   assert(rowrhs != NULL);
    assert(cutcoefs != NULL);
    assert(cutind != NULL);
    assert(cutnz != NULL);
@@ -334,11 +303,14 @@ SCIP_Bool getGMIFromRow(
    assert(cutact != NULL);
 
    /* Compute cut fractionality f0 and f0/(1-f0). */
-   f0 = SCIPfeasFrac(scip, *rowrhs);
+   f0 = SCIPfeasFrac(scip, rowrhs);
    ratiof0compl = f0/(1-f0);
 
    /* rhs of the cut is the fractional part of the LP solution for the basic variable */
    *cutrhs = -f0;
+
+   /* clear cutcoefs */
+   BMSclearMemoryArray(cutcoefs, ncols);
 
    /* Generate cut coefficients for the original variables. We first use cutcoefs to store the cut in dense form, then
       we clean and pack the cut to sparse form. */
@@ -374,7 +346,7 @@ SCIP_Bool getGMIFromRow(
          if( cutelem > f0 )
          {
             /* cut element if f > f0 */
-            cutelem = -((1-cutelem) * ratiof0compl);
+            cutelem = -((1.0 - cutelem) * ratiof0compl);
          }
          else
          {
@@ -385,10 +357,10 @@ SCIP_Bool getGMIFromRow(
       /* Continuous variables */
       else
       {
-         if( rowelem < 0 )
+         if( rowelem < 0.0 )
          {
             /* cut element if f < 0 */
-            cutelem = (rowelem*ratiof0compl);
+            cutelem = rowelem * ratiof0compl;
          }
          else
          {
@@ -419,6 +391,7 @@ SCIP_Bool getGMIFromRow(
    for( c = 0; c < nrows; ++c )
    {
       row = rows[c];
+      assert( row != NULL );
 
       /* Get simplex tableau element. */
       switch ( SCIProwGetBasisStatus(row) )
@@ -445,7 +418,9 @@ SCIP_Bool getGMIFromRow(
          continue;
       }
 
-      if( rowelem < 0 )
+      /* @todo Check whether slack variable is integral. */
+
+      if( rowelem < 0.0 )
       {
          /* cut element if f < 0 */
          cutelem = rowelem * ratiof0compl;
@@ -508,8 +483,56 @@ SCIP_Bool getGMIFromRow(
    *cutact = 0.0;
 
    /* Modify cut to make it numerically safer, and check that it is numerically safe */
-   return (modifyAndPackCut(scip, sepadata, ncols, cols, cutcoefs, cutind, cutnz, cutrhs) &&
-      checkNumerics(scip, sepadata, ncols, cols, cutcoefs, cutind, cutnz, cutrhs, cutact));
+   success = modifyAndPackCut(scip, sepadata, ncols, cols, cutcoefs, cutind, cutnz, cutrhs);
+   if ( success )
+   {
+      success = checkNumerics(scip, sepadata, ncols, cols, cutcoefs, cutind, cutnz, cutrhs, cutact);
+      SCIPdebugMessage("checkNumerics returned: %u.\n", success);
+      return success;
+   }
+   SCIPdebugMessage("modifyAndPackCut was not successful.\n");
+
+   return FALSE;
+}
+
+
+/*
+ * Callback methods
+ */
+
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyGMI)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaGMI(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** destructor of separator to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_SEPAFREE(sepaFreeGMI)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* free separator data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   SCIPfreeMemory(scip, &sepadata);
+
+   SCIPsepaSetData(sepa, NULL);
+
+   return SCIP_OKAY;
 }
 
 /** LP solution separation method of separator */
@@ -644,16 +667,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
          /* get the tableau row for this basic integer variable with fractional solution value */
          SCIP_CALL( SCIPgetLPBInvARow(scip, i, binvrow, binvarow) );
 
+         /* this is an approximation (one could also pass over coefficients and check whether local rows have been used): */
          cutislocal = (depth != 0) ? TRUE : FALSE;
 
-         /* clear cutcoefs */
-         BMSclearMemoryArray(cutcoefs, ncols);
-         /* memset(cutcoefs, 0, ncols*sizeof(*cutcoefs)); */
-
          /* create a GMI cut out of the simplex tableau row */
-         success = getGMIFromRow(scip, sepadata, ncols, nrows, cols, rows, binvrow, binvarow, &primsol, cutcoefs, cutind, &cutnz, &cutrhs, &cutact);
+         success = getGMIFromRow(scip, sepadata, ncols, nrows, cols, rows, binvrow, binvarow, primsol, cutcoefs, cutind, &cutnz, &cutrhs, &cutact);
 
-         SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
+         SCIPdebugMessage(" -> success = %u: %g <= %g\n", success, cutact, cutrhs);
 
          /* if successful, add the row as a cut */
          if( success )
