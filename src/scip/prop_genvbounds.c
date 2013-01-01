@@ -1948,7 +1948,7 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
    assert(inferinfo >= 0);
    assert(inferinfo < propdata->ngenvbounds);
 
-   *result = SCIP_DIDNOTRUN;
+   *result = SCIP_DIDNOTFIND;
 
    /* check also in optimized mode that inferinfo is correct */
    if( inferinfo >= propdata->ngenvbounds)
