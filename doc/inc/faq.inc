@@ -98,15 +98,20 @@
       <p class="a">
         <ol>
 	  <li>CIP - file format (own constraint based file format)</li>
-	  <li><a href="http://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html>CNF - file format</a></li>
+	  <li><a href="http://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html">CNF - file format</a></li>
+	  <li><a href="http://www.gams.com/docs/document.htm">GMS format [write only]</a></li>
 	  <li><a href="http://www.g12.cs.mu.oz.au/minizinc/downloads/doc-1.5/flatzinc-spec.pdf">FZN - file format</a></li>
           <li><a href="http://publib.boulder.ibm.com/infocenter/cosinfoc/v12r3/topic/ilog.odms.cplex.help/Content/Optimization/Documentation/Optimization_Studio/_pubskel/ps_reffileformatscplex2159.html">(R)LP - file formats</a></li>
           <li><a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS - file format</a></li>
           <li><a href="http://www.cril.univ-artois.fr/PB12/format.pdf">OPB/WBO - file formats</a></li>
+	  <li><a href="http://www.coin-or.org/OS/OSiL.html">OSiL format for MINLP</a></li>
           <li><a href="http://polip.zib.de/pipformat.php">PIP - file format</a></li>
 	  <li>SOL - file format (solution reader, xml-solutions are also supported)</li>
           <li><a href="http://zimpl.zib.de/download/zimpl.pdf">ZPL - file format</a></li>
         </ol>
+      </p>
+      <p class="a">
+	 See also the page on <a href="group__FILEREADERS.html">file readers</a>.
       </p>
       <li>You can use SCIP as a subroutine for solving MIPs and more general constraint integer programs from your own source code.</li>
       <li>You can use SCIP as a framework in which you implement your own plugins.</li> 
@@ -220,6 +225,7 @@
         <li> <a href="CHG3.html">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
         <li> <a href="CHG4.html">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
         <li> <a href="CHG5.html">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
+        <li> <a href="CHG6.html">Interface changes between SCIP 2.1 and SCIP 3.0</a></li>
     </ul>
     <p class="q">
       <a name="Q1.8">How can I debug in SCIP?</a>
@@ -287,8 +293,8 @@
       nodes and operands as non-terminal nodes.
       Expression operands supported by SCIP include addition, subtraction, multiplication, division, exponentiation and
       logarithm. Trigonometric functions are not yet supported by SCIP.<br>
-      Nonlinear objective functions are not supported by SCIP and must be modeled as constraint function.<br>
-      <b>Note</b>, that the support for non-quadratic nonlinear constraints is still in a <b>BETA</b>-stadium and not yet as
+      Nonlinear objective functions are not supported by SCIP and must be modeled as constraint function.<br><br>
+      <em>Note</em>, that the support for non-quadratic nonlinear constraints is still in a <b>BETA</b>-stadium and not yet as
       robust as the rest of SCIP.
       Missing bounds on nonlinear variables and tiny or huge coefficients can easily lead to numerical problems,
       which can be avoided by careful modeling.
@@ -442,8 +448,8 @@
     <p class="a">
       Mixed-integer nonlinear constrained programs can be input via the reader for OSiL and ZIMPL files and the AMPL interface.
       An interface to the modeling language GAMS is available in the <a href="https://projects.coin-or.org/GAMSlinks">COIN-OR/GAMSlinks</a> project.<br>
-      Further, mixed-integer <b>polynomially</b> constrained programs can be input via the readers for PIP files.<br>
-      Finally, the readers for *.mps and *.lp files support the CPLEX extensions for <b>quadratic</b> constraints and objective.
+      Further, mixed-integer <em>polynomially</em> constrained programs can be input via the readers for PIP files.<br>
+      Finally, the readers for *.mps and *.lp files support the CPLEX extensions for <em>quadratic</em> constraints and objective.
     </p>
 
 
@@ -540,14 +546,14 @@
       <a name="Q3.6">What is SCIP_CALL()? Do I need this?</a>
     </p>
     <p class="a">
-      Yes, you do. SCIP_CALL() is a global define, which handles the return codes of all methods 
+      Yes, you do. SCIP_CALL() is a global define, which handles the return codes of all methods
       which return a SCIP_RETCODE and should therefore parenthesize each such method.
-      SCIP_OKAY is the code which is returned if everything worked well; 
-      there are 17 different error codes, see type_retcode.h.
+      SCIP_OKAY is the code which is returned if everything worked well;
+      there are 17 different error codes, see <a href="type__retcode_8h.html">type_retcode.h</a>.
       Each method that calls methods which return a SCIP_RETCODE should itself return a SCIP_RETCODE.
       If this is not possible, use SCIP_CALL_ABORT() to catch the return codes of the methods.
       If you do not want to use this either, you have to do the exception handling
-      (i.e. the case that the return code is not SCIP_OKAY) on your own. 
+      (i.e. the case that the return code is not SCIP_OKAY) on your own.
     </p>
     <p class="q">
       <a name="Q3.7">I want to stop the solving process after a certain time. How can I do this?</a>
@@ -558,8 +564,8 @@
       If you want to set a limit, you have to change these parameters.
       For example, for setting the time limit to one hour, you have to call 
       <code>SCIP_CALL( SCIPsetRealParam(scip, "limits/time", 3600) )</code>.
-      In the interactive shell, you just enter <code>SCIP> set limits time 3600</code>
-      For more examples, please have a look into heur_rens.c.      
+      In the interactive shell, you just enter <code>set limits time 3600</code>.
+      For more examples, please have a look into <a href="heur__rens_8c.html">heur_rens.c</a>.
     </p>
 
 
@@ -677,10 +683,15 @@
       You can get all rows in the current LP-relaxation by calling <code>SCIPgetLPRowsData()</code>. The methods
       <code>SCIProwGetConstant()</code>, <code>SCIProwGetLhs()</code>, <code>SCIProwGetRhs()</code>,
       <code>SCIProwGetVals()</code>, <code>SCIProwGetNNonz()</code>, <code>SCIProwGetCols()</code> then give you
-      information about each row, see <a href="#Q4.5">previous question</a>.<br> You get a columnwise representation by
+      information about each row, see <a href="#Q4.5">previous question</a>.
+    </p>
+    <p class="a">
+      You get a columnwise representation by
       calling <code>SCIPgetLPColsData()</code>. The methods <code>SCIPcolGetLb()</code> and <code>SCIPcolGetUb()</code>
-      give you the locally valid bounds of a column in the LP relaxation of the current branch-and-bound-node.<br> If
-      you are interested in global information, you have to call <code>SCIPcolGetVar()</code> to get the variable
+      give you the locally valid bounds of a column in the LP relaxation of the current branch-and-bound-node.
+    </p>
+    <p class="a">
+      If you are interested in global information, you have to call <code>SCIPcolGetVar()</code> to get the variable
       associated to a column (see <a href="#Q4.7">next question</a>), which you can ask for global bounds via
       <code>SCIPvarGetLbGlobal()</code> and <code>SCIPvarGetUbGlobal()</code> as well as the type of the variable
       (binary, general integer, implicit integer, or continuous) by calling <code>SCIPvarGetType()</code>.  For more
@@ -693,8 +704,10 @@
       The terms columns and rows always refer to the representation in the current LP-relaxation, variables and
       constraints to your global Constraint Integer Program.<br> Each column has an associated variable, which it
       represents, but not every variable must be part of the current LP-relaxation. E.g., it could be already fixed,
-      aggregated to another variable, or be priced out if a column generation approach was implemented.<br> Each row has
-      either been added to the LP by a constraint handler or by a cutting plane separator.  A constraint handler is able
+      aggregated to another variable, or be priced out if a column generation approach was implemented.
+    </p>
+    <p class="a">
+      Each row has either been added to the LP by a constraint handler or by a cutting plane separator.  A constraint handler is able
       to, but does not need to, add one or more rows to the LP as a linear relaxation of each of its constraints.  E.g.,
       in the usual case (i.e. without using dynamic rows) the linear constraint handler adds one row to the LP for each
       linear constraint.
