@@ -92,7 +92,7 @@ typedef struct SCIP_Col SCIP_COL;
  */
 typedef struct SCIP_Row SCIP_ROW;
 
-/** row of an LP
+/** LP structure
  *
  *  - \ref LPMethods "List of all available methods"
  */
