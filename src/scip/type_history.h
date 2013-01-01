@@ -44,7 +44,7 @@ typedef struct SCIP_History SCIP_HISTORY;         /**< branching and inference h
  *
  *  branching and inference history informations for single variable dependent on the domain value
  *
- *  - \ref ValueHistory "List of all available methods"
+ *  - \ref SCIP_ValueHistory "List of all available methods"
  */
 typedef struct SCIP_ValueHistory SCIP_VALUEHISTORY;
 
