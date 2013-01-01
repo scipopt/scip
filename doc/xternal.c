@@ -94,7 +94,7 @@
  *   - \ref NLPI    "Interfaces to NLP solvers"
  *   - \ref EXPRINT "Interfaces to expression interpreters"
  *   - \ref CONF    "Conflict analysis"
- *   - \ref PARAM   "Adding additional user parameters"
+ *   - \ref PARAM   "additional user parameters"
  *
  * - \ref TEST     "How to run automated tests with SCIP"
  * - \ref COUNTER  "How to use SCIP to count feasible solutions"
@@ -227,7 +227,7 @@
  *  <a href="http://scip.zib.de/doc/examples/Scheduler/index.shtml"><b>Scheduler</b></a>
  *  </td>
  *  <td>
- *  An examples containing three readers and one primal heuristic for scheduling problems.
+ *  An example containing three readers and one primal heuristic for scheduling problems.
  *  </td>
  *  </tr>
  *  </table>
@@ -5553,7 +5553,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page PARAM Adding additional user parameters
+/**@page PARAM How to add additional user parameters
  *
  *  Users may add their own parameters to SCIP by calling SCIPaddXyzParam(). Using
  *  this method, there are two possibilities for where to store the actual parameter value:
@@ -5603,7 +5603,7 @@ SCIP_RETCODE consdataCatchEvent(
    ...
    }
  * \endverbatim
- *
+ *    @n
  *    As you can see, both pointers and integers are checked for valid values at the beginning of the
  *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
  *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>
