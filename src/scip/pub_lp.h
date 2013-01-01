@@ -489,6 +489,13 @@ SCIP_Bool SCIProwIsInLP(
 
 /**@} */
 
+/**@defgroup LPMethods LP methods
+ *
+ * @{
+ */
+
+/**@} */
+
 #ifdef __cplusplus
 }
 #endif
