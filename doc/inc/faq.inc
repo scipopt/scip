@@ -94,7 +94,7 @@
       and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP, MINLP, and PBO.<br>
     <ul>
       <li>You can use the <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>
-          to solve MIPs, MINLPs, or PBO problems. They can read</li>
+          to solve MIPs, MINLPs, or PBO problems. They can read
       <p class="a">
         <ol>
 	  <li>CIP - file format (own constraint based file format)</li>
@@ -113,11 +113,14 @@
       <p class="a">
 	 See also the page on <a href="group__FILEREADERS.html">file readers</a>.
       </p>
+      </li>
       <li>You can use SCIP as a subroutine for solving MIPs and more general constraint integer programs from your own source code.</li>
       <li>You can use SCIP as a framework in which you implement your own plugins.</li> 
       <li>You can use SCIP in any combination of the three purposes above.</li>
    </ul>
+   <p class="a">
       This FAQ contains separate sections covering each of these usages of SCIP. It further considers specific questions for some features.
+   </p>
     <p class="q">
       <a name="Q1.2">When should I use SCIP?</a>
     </p>
