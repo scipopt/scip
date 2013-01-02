@@ -11023,10 +11023,14 @@ SCIP_RETCODE SCIPtransformProb(
 
       if( feasible )
       {
+         SCIP_Real solobj;
+
          SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
 
+         solobj = SCIPsolGetObj(sol, scip->set, scip->transprob);
+
          /* we do not want to add solutions with objective value +infinity */
-         if( !SCIPisInfinity(scip, SCIPsolGetObj(sol, scip->set, scip->transprob)) )
+         if( !SCIPisInfinity(scip, solobj) && !SCIPisInfinity(scip, -solobj) )
          {
             SCIP_Bool stored;
 
@@ -11646,11 +11650,11 @@ SCIP_RETCODE presolve(
 
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
-   finished = scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds;
-   stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
-
    *infeasible = FALSE;
    *unbounded = SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
+
+   finished = (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds) || (*unbounded);
+   stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    /* perform presolving rounds */
    while( !finished && !stopped )
@@ -17626,15 +17630,66 @@ SCIP_RETCODE SCIPaddVarImplication(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddVarImplication", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+   if( !SCIPvarIsBinary(var) )
    {
       SCIPerrorMessage("can't add implication for nonbinary variable\n");
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPvarAddImplic(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
-         scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, varfixing, implvar, impltype, implbound, TRUE,
-         infeasible, nbdchgs) );
+   /* the implication graph can only handle 'real' binary (SCIP_VARTYPE_BINARY) variables, therefore we transform the
+    * implication in variable bounds, (lowerbound of y will be abbreviated by lby, upperbound equivlaent) the follwing
+    * four cases are:
+    *
+    * 1. (x >= 1 => y >= b) => y >= (b - lby) * x + lby
+    * 2. (x >= 1 => y <= b) => y <= (b - uby) * x + uby
+    * 3. (x <= 0 => y >= b) => y >= (lby - b) * x + b
+    * 4. (x <= 0 => y <= b) => y <= (uby - b) * x + b
+    */
+   if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+   {
+      SCIP_Real lby;
+      SCIP_Real uby;
+
+      lby = SCIPvarGetLbGlobal(implvar);
+      uby = SCIPvarGetUbGlobal(implvar);
+
+      if( varfixing == TRUE )
+      {
+         if( impltype == SCIP_BOUNDTYPE_LOWER )
+         {
+            SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+                  scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, implbound - lby, lby, TRUE,
+                  infeasible, nbdchgs) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPvarAddVub(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+                  scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, implbound - uby, uby, TRUE,
+                  infeasible, nbdchgs) );
+         }
+      }
+      else
+      {
+         if( impltype == SCIP_BOUNDTYPE_LOWER )
+         {
+            SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+                  scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, lby - implbound, implbound,
+                  TRUE, infeasible, nbdchgs) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPvarAddVub(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+                  scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, uby - implbound, implbound,
+                  TRUE, infeasible, nbdchgs) );
+         }
+      }
+   }
+   else
+   {
+      SCIP_CALL( SCIPvarAddImplic(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+            scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, varfixing, implvar, impltype, implbound,
+            TRUE, infeasible, nbdchgs) );
+   }
 
    return SCIP_OKAY;
 }

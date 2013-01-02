@@ -770,8 +770,8 @@ td.mainheadertitle
 
 /* faq */
 #faq ul {
-  list-style: none;
-  padding-left: 1em;
+  list-style: circle;
+  padding-left: 2em;
 }
 
 #faq ol {
@@ -784,7 +784,7 @@ td.mainheadertitle
 
 /* question: */
 #faq p.q { 
-  font-weight:   bold;
+  font-weight: bold;
   padding-top: 2em;
 }
 

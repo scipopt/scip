@@ -504,6 +504,13 @@ void SCIProwChgRank(
 
 /**@} */
 
+/**@defgroup LPMethods LP methods
+ *
+ * @{
+ */
+
+/**@} */
+
 #ifdef __cplusplus
 }
 #endif

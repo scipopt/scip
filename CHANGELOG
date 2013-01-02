@@ -128,6 +128,7 @@ fixed bugs:
 - methods SCIPlpiIs{PrimalFeasible,DualFeasible,DualUnbounded}() in SoPlex LPi now check that the LP is not perturbed,
   which may happen when stopping due to iteration or time limit
 - fixed inconsistencies between methods SCIPlpiIs{PrimalFeasible,DualFeasible,Optimal,...} in SoPlex LPi
+- fixed bug adding binary implications on binary variables with type != SCIP_VARTYPE_BINARY
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()
