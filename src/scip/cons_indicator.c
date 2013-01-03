@@ -5520,11 +5520,12 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       {
 	 SCIP_CONS* translincons;
 
-          SCIP_CALL( SCIPgetTransformedCons(sourcescip, sourcelincons, &translincons) );
-          assert(translincons != NULL);
-          SCIP_CALL( SCIPcaptureCons(sourcescip, translincons) );
-          sourceconsdata->lincons = translincons;
-          sourcelincons = translincons;
+         /* adjust the linear constraint in the original constraint (no need to release translincons) */
+         SCIP_CALL( SCIPgetTransformedCons(sourcescip, sourcelincons, &translincons) );
+         assert(translincons != NULL);
+         SCIP_CALL( SCIPcaptureCons(sourcescip, translincons) );
+         sourceconsdata->lincons = translincons;
+         sourcelincons = translincons;
       }
 
       SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcelincons, &targetlincons, conshdlrlinear, varmap, consmap, SCIPconsGetName(sourcelincons),
@@ -5562,11 +5563,11 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       assert( targetbinvar != NULL ); /*lint !e644*/
       assert( targetslackvar != NULL ); /*lint !e644*/
 
+      /* creates indicator constraint (and captures the linear constraint) */
       SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
             initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
    }
-
-   if ( !(*valid) )
+   else
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy linear constraint <%s>\n", SCIPconsGetName(sourcelincons));
    }
@@ -6186,16 +6187,16 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    /* create linear constraint */
    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indlin_%s", name);
 
-   /* if the linear constraint should be activated */
+   /* if the linear constraint should be activated (lincons is captured) */
    if ( linconsactive )
    {
-      /* the constraint is initial, enforced, separated, and checked */
+      /* the constraint is initial if initial is true, enforced, separated, and checked */
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
             initial, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
    else
    {
-      /* the constraint is initial, enforced, separated, and checked */
+      /* create non-active linear constraint, which is neither initial, nor enforced, nor separated, nor checked */
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
