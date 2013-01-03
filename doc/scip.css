@@ -45,10 +45,6 @@ hr {
     border-top: 2px solid #8080A0;
 }
 
-hr.footer {
-    height: 1px;
-}
-
 td.mainheadertitle
 {
     font-weight: bold;
