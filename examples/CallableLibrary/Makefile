@@ -73,6 +73,7 @@ doc:
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipheader.html header.html);
 		cd doc; $(DOXY) scip.dxy
 
 $(MAINSHORTLINKS):	$(MAINFILES)
