@@ -80,6 +80,7 @@ doc:
 		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/pictures/scippy.png);
 		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/pictures/miniscippy.png);
 		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/scipfooter.html footer.html);
+		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/scipheader.html header.html);
 		cd doc; $(DOXY) scheduler.dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)
