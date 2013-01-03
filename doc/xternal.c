@@ -1351,7 +1351,6 @@
  * \par CONSHDLR_DELAYPRESOL: the default for whether the presolving method should be delayed, if other presolvers found reductions.
  * This property is analogous to the DELAYSEPA flag, but deals with the preprocessing method of the constraint handler.
  *
-
  *
  *
  * @section CONS_DATA Constraint Data and Constraint Handler Data
@@ -1387,7 +1386,7 @@
  * the constraint handler available to the model, and looks like this:
  *  -# If you are using constraint handler data, you have to <b>allocate the memory for the data</b> at this point.
  *     You also have to initialize the fields in struct SCIP_ConshdlrData afterwards.
- *  \code
+ *  \verbatim
  * SCIP_RETCODE SCIPincludeConshdlrKnapsack(
  * ...
  * )
@@ -1398,7 +1397,7 @@
  *
  *  SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
  *  ...
- *  \endcode
+ *  \endverbatim
  *  -# Now, <b>SCIP gets notified</b> of the presence of the constraint handler together with its \ref CONS_FUNDAMENTALCALLBACKS "basic callbacks".
  *   \code
  *  SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
