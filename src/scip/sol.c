@@ -213,34 +213,22 @@ SCIP_RETCODE solUnlinkVar(
 
    case SCIP_SOLORIGIN_LPSOL:
       solval = SCIPvarGetLPSol(var);
-      if( !SCIPsetIsZero(set, solval) )
-      {
-         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
-      }
+      SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_NLPSOL:
       solval = SCIPvarGetNLPSol(var);
-      if( !SCIPsetIsZero(set, solval) )
-      {
-         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
-      }
+      SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_RELAXSOL:
       solval = SCIPvarGetRelaxSolTransVar(var);
-      if( !SCIPsetIsZero(set, solval) )
-      {
-         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
-      }
+      SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_PSEUDOSOL:
       solval = SCIPvarGetPseudoSol(var);
-      if( !SCIPsetIsZero(set, solval) )
-      {
-         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
-      }
+      SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_UNKNOWN:

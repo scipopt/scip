@@ -55,6 +55,8 @@ fixed bugs:
 - fixed bug in backward propagation of linear expressions in expression graph
 - fixed bug that Ipopt's error message was not fully shown due to exiting before the message handler buffer was emptied
 - fixed 'bug' when reading a mps formated file with a missing bound in the bound section
+- unlinking a solution now copies solution values smaller than SCIPepsilon() avoiding some feasible solution in the
+  transformed problem to be infeasible in the original problem
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
