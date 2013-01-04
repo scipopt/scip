@@ -4,9 +4,11 @@ SCIP version NEXT
 fixed bugs:
 - fixed bug when adding (global) clique, implications or variable bound information in solving stage, that lead to
   global bound changes which contradict local bounds and therefore need to be stored as pending bound changes
+- unlinking a solution now copies solution values smaller than SCIPepsilon() avoiding some feasible solution in the
+  transformed problem to be infeasible in the original problem
 
 data structures
-- new data structure for (circluar) queues (SCIP_QUEUE)
+- new data structure for (circular) queues (SCIP_QUEUE)
 
 features:
 - added new dual presolving for setppc-constraints

@@ -1957,13 +1957,13 @@ SCIP_RETCODE SCIPrealarrayExtend(
    assert(realarray->maxusedidx == INT_MIN || realarray->maxusedidx < realarray->firstidx + realarray->valssize);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
-   
+
    minidx = MIN(minidx, realarray->minusedidx);
    maxidx = MAX(maxidx, realarray->maxusedidx);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   SCIPdebugMessage("extending realarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending realarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n",
       (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
@@ -2062,7 +2062,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + realarray->valssize);
-      
+
       if( realarray->minusedidx <= realarray->maxusedidx )
       {
          int shift;
@@ -2098,7 +2098,7 @@ SCIP_RETCODE SCIPrealarrayClear(
 {
    assert(realarray != NULL);
 
-   SCIPdebugMessage("clearing realarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing realarray %p (firstidx=%d, size=%d, range=[%d,%d])\n",
       (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx);
 
    if( realarray->minusedidx <= realarray->maxusedidx )
@@ -2130,7 +2130,7 @@ SCIP_Real SCIPrealarrayGetVal(
 {
    assert(realarray != NULL);
    assert(idx >= 0);
-   
+
    if( idx < realarray->minusedidx || idx > realarray->maxusedidx )
       return 0.0;
    else
@@ -2154,16 +2154,16 @@ SCIP_RETCODE SCIPrealarraySetVal(
    assert(realarray != NULL);
    assert(idx >= 0);
 
-   SCIPdebugMessage("setting realarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %g\n", 
+   SCIPdebugMessage("setting realarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %g\n",
       (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, idx, val);
 
-   if( !SCIPsetIsZero(set, val) )
+   if( val != 0.0 )
    {
       /* extend array to be able to store the index */
       SCIP_CALL( SCIPrealarrayExtend(realarray, set, idx, idx) );
       assert(idx >= realarray->firstidx);
       assert(idx < realarray->firstidx + realarray->valssize);
-      
+
       /* set the array value of the index */
       realarray->vals[idx - realarray->firstidx] = val;
 
@@ -2175,7 +2175,7 @@ SCIP_RETCODE SCIPrealarraySetVal(
    {
       /* set the array value of the index to zero */
       realarray->vals[idx - realarray->firstidx] = 0.0;
-      
+
       /* check, if we can tighten the min/maxusedidx */
       if( idx == realarray->minusedidx )
       {
@@ -2186,7 +2186,8 @@ SCIP_RETCODE SCIPrealarraySetVal(
             realarray->minusedidx++;
          }
          while( realarray->minusedidx <= realarray->maxusedidx
-            && SCIPsetIsZero(set, realarray->vals[realarray->minusedidx - realarray->firstidx]) );
+            && realarray->vals[realarray->minusedidx - realarray->firstidx] == 0.0 );
+
          if( realarray->minusedidx > realarray->maxusedidx )
          {
             realarray->minusedidx = INT_MAX;
@@ -2203,8 +2204,8 @@ SCIP_RETCODE SCIPrealarraySetVal(
             realarray->maxusedidx--;
             assert(realarray->minusedidx <= realarray->maxusedidx);
          }
-         while( SCIPsetIsZero(set, realarray->vals[realarray->maxusedidx - realarray->firstidx]) );
-      }      
+         while( realarray->vals[realarray->maxusedidx - realarray->firstidx] == 0.0 );
+      }
    }
 
    return SCIP_OKAY;
