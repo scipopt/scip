@@ -6681,6 +6681,8 @@ SCIP_RETCODE consdataCatchEvent(
 
 /**@page RELEASENOTES Release notes
  *
+ * \verbinclude SCIP-release-notes-3.0.1
+ *
  * \verbinclude SCIP-release-notes-3.0
  *
  * \verbinclude SCIP-release-notes-2.1.1
