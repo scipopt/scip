@@ -109,7 +109,7 @@ extern "C" {
 #endif
 
 
-/** Creates a message handler which deals with warning, information, and dialog (interactive shell) methods.
+/** Creates and captures a message handler which deals with warning, information, and dialog (interactive shell) methods.
  *
  *  @note The message handler does not handle error messages. For that see SCIPmessageSetErrorPrinting()
  */
