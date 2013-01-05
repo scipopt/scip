@@ -1104,7 +1104,7 @@ SCIP_RETCODE SCIPlpiCreate(
    /* set default pricing */
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (*lpi)->pricing) );
 
-   SCIPmessagePrintWarning(messagehdlr, "The Gurobi LPI is a beta version only - use with care.\n\n");
+   SCIPmessagePrintWarning(messagehdlr, "The Gurobi LPI is a beta version only - use with care.\n");
 
    return SCIP_OKAY;
 }
@@ -3379,9 +3379,10 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
    )
 {
-   int i, j;
-   int nrows, ncols;
-   int cnt;
+   int i;
+   int nrows;
+   int ncols;
+   int* bhead;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -3391,6 +3392,24 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
 
+   /* get space for bhead */
+   SCIP_ALLOC( BMSallocMemoryArray(&bhead, nrows+ncols) );
+
+   /* bet basis indices */
+   CHECK_ZERO( lpi->messagehdlr, GRBgetBasisHead(lpi->grbmodel, bhead) );
+
+   for (i = 0; i < nrows; ++i)
+   {
+      /* entries >= ncols refer to slack variables */
+      if ( bhead[i] < ncols )
+         bind[i] = bhead[i];
+      else
+         bind[i] = -1 - (bhead[i] - ncols);
+   }
+   BMSfreeMemoryArray(&bhead);
+
+#if 0
+   /* old implementation */
    cnt = 0;
    for( i = 0; i < nrows; ++i )
    {
@@ -3410,6 +3429,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
          bind[cnt++] = j;
    }
    assert( cnt == nrows );
+#endif
 
    return SCIP_OKAY;
 }
@@ -3422,9 +3442,12 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    )
 {
    SVECTOR x;
+   SVECTOR b;
    int nrows;
+   double val;
+   int ind;
    int k;
-   int j;
+   int i;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -3433,25 +3456,36 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
 
+   /* set up solution vector */
    x.len = 0;
    SCIP_ALLOC( BMSallocMemoryArray(&(x.ind), nrows) );
    SCIP_ALLOC( BMSallocMemoryArray(&(x.val), nrows) );
 
-   /* maybe: CHECK_ZERO( lpi->messagehdlr, GRBBinvRowi(lpi->grbmodel, r, &x) ); */
-   CHECK_ZERO( lpi->messagehdlr, GRBBinvi(lpi->grbmodel, r, &x) );
+   /* set up rhs */
+   b.len = 1;
+   ind = r;
+   val = 1.0;
+   b.ind = &ind;
+   b.val = &val;
+
+   /* solve B^T x = e_r, which results in the r-th row of the basis inverse */
+   CHECK_ZERO( lpi->messagehdlr, GRBBSolve(lpi->grbmodel, &b, &x) );
 
    /* size should be at most the number of rows */
    assert( x.len <= nrows );
 
+   /* copy solution to dense vector */
    k = 0;
-   for( j = 0; j < nrows; ++j )
+   for (i = 0; i < nrows; ++i)
    {
       assert( k <= x.len );
-      if ( k < x.len && (x.ind)[k] == j )
-         coef[j] = (x.val)[k++];
+      if ( k < x.len && (x.ind)[k] == i )
+         coef[i] = (x.val)[k++];
       else
-         coef[j] = 0.0;
+         coef[i] = 0.0;
    }
+
+   /* free solution space */
    BMSfreeMemoryArray(&(x.val));
    BMSfreeMemoryArray(&(x.ind));
 
@@ -3470,9 +3504,12 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    )
 {
    SVECTOR x;
+   SVECTOR b;
    int nrows;
+   double val;
+   int ind;
    int k;
-   int j;
+   int i;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -3481,26 +3518,36 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
 
+   /* set up solution vector */
    x.len = 0;
    SCIP_ALLOC( BMSallocMemoryArray(&(x.ind), nrows) );
    SCIP_ALLOC( BMSallocMemoryArray(&(x.val), nrows) );
-   assert(0 <= c && c < nrows );
 
-   /* maybe: CHECK_ZERO( lpi->messagehdlr, GRBBinvColj(lpi->grbmodel, c, &x) ); */
-   CHECK_ZERO( lpi->messagehdlr, GRBBinvj(lpi->grbmodel, c, &x) );
+   /* set up rhs */
+   b.len = 1;
+   ind = c;
+   val = 1.0;
+   b.ind = &ind;
+   b.val = &val;
+
+   /* solve B x = e_c, which results in the c-th columns of the basis inverse */
+   CHECK_ZERO( lpi->messagehdlr, GRBFSolve(lpi->grbmodel, &b, &x) );
 
    /* size should be at most the number of rows */
    assert( x.len <= nrows );
 
+   /* copy solution to dense vector */
    k = 0;
-   for( j = 0; j < nrows; ++j )
+   for (i = 0; i < nrows; ++i)
    {
       assert( k <= x.len );
-      if ( k < x.len && (x.ind)[k] == j )
-         coef[j] = (x.val)[k++];
+      if ( k < x.len && (x.ind)[k] == i )
+         coef[i] = (x.val)[k++];
       else
-         coef[j] = 0.0;
+         coef[i] = 0.0;
    }
+
+   /* free solution space */
    BMSfreeMemoryArray(&(x.val));
    BMSfreeMemoryArray(&(x.ind));
 
@@ -3517,6 +3564,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 {  /*lint --e{715}*/
    SVECTOR x;
    int ncols;
+   int nrows;
    int k;
    int j;
 
@@ -3526,18 +3574,19 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIPdebugMessage("getting binv-row %d\n", r);
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
 
    x.len = 0;
-   SCIP_ALLOC( BMSallocMemoryArray(&(x.ind), ncols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(x.val), ncols) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(x.ind), ncols + nrows) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(x.val), ncols + nrows) );
 
    CHECK_ZERO( lpi->messagehdlr, GRBBinvRowi(lpi->grbmodel, r, &x) );
 
-   /* size should be at most the number of columns */
-   assert( x.len <= ncols );
+   /* size should be at most the number of columns plus rows for slack variables */
+   assert( x.len <= ncols + nrows );
 
    k = 0;
-   for( j = 0; j < ncols; ++j )
+   for (j = 0; j < ncols; ++j)
    {
       assert( k <= x.len );
       if ( k < x.len && (x.ind)[k] == j )
@@ -3545,6 +3594,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
       else
          coef[j] = 0.0;
    }
+
+   /* free solution space */
    BMSfreeMemoryArray(&(x.val));
    BMSfreeMemoryArray(&(x.ind));
 
@@ -3580,7 +3631,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    assert( x.len <= nrows );
 
    k = 0;
-   for( j = 0; j < nrows; ++j )
+   for (j = 0; j < nrows; ++j)
    {
       assert( k <= x.len );
       if ( k < x.len && (x.ind)[k] == j )
@@ -3588,6 +3639,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       else
          coef[j] = 0.0;
    }
+
+   /* free solution space */
    BMSfreeMemoryArray(&(x.val));
    BMSfreeMemoryArray(&(x.ind));
 
@@ -3737,8 +3790,7 @@ SCIP_RETCODE SCIPlpiClearState(
 {
    assert(lpi != NULL);
 
-   /**@todo implement SCIPlpiClearState() for Gurobi */
-   SCIPmessagePrintWarning(lpi->messagehdlr, "Gurobi interface does not implement SCIPlpiClearState()\n");
+   CHECK_ZERO( lpi->messagehdlr, GRBresetmodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
 }
