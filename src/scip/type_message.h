@@ -64,7 +64,7 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA;   /**< message handler
  *  @note This function is independent of any message handler
  *
  *  input:
- *  - msg             : string to output into the file
+ *  - msg             : string to output into the file (or NULL to flush)
  *  - msglength       : length of message
  *  - data            : data pointer
  */
@@ -77,7 +77,7 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA;   /**< message handler
  *  input:
  *  - messagehdlr     : the message handler itself
  *  - file            : file stream to print into
- *  - msg             : string to output into the file
+ *  - msg             : string to output into the file (or NULL to flush)
  */
 #define SCIP_DECL_MESSAGEWARNING(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
 
@@ -88,7 +88,7 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA;   /**< message handler
  *  input:
  *  - messagehdlr     : the message handler itself
  *  - file            : file stream to print into
- *  - msg             : string to output into the file
+ *  - msg             : string to output into the file (or NULL to flush)
  */
 #define SCIP_DECL_MESSAGEDIALOG(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
 
@@ -99,7 +99,7 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA;   /**< message handler
  *  input:
  *  - messagehdlr     : the message handler itself
  *  - file            : file stream to print into
- *  - msg             : string to output into the file
+ *  - msg             : string to output into the file (or NULL to flush)
  */
 #define SCIP_DECL_MESSAGEINFO(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
 
