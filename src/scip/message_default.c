@@ -33,10 +33,11 @@
 static
 void logMessage(
    FILE*                 file,               /**< file stream to print message into */
-   const char*           msg                 /**< message to print */
+   const char*           msg                 /**< message to print (or NULL to flush) */
    )
 {
-   fputs(msg, file);
+   if ( msg != NULL )
+      fputs(msg, file);
    fflush(file);
 }
 
