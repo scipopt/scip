@@ -54,6 +54,7 @@ interface
 - added SCIPshrinkDisjunctiveVarSet(), which takes an set of variables with corresponding bounds and boundtypes, and
   tries to derive global boundchanges and also to shorten this set of variables by using cliqe, implication and variable
   bound information
+- removed all message length parameters in message.c and for printing error messages (not needed anymore)
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)

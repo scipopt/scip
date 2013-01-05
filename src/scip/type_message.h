@@ -65,10 +65,9 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA;   /**< message handler
  *
  *  input:
  *  - msg             : string to output into the file (or NULL to flush)
- *  - msglength       : length of message
  *  - data            : data pointer
  */
-#define SCIP_DECL_ERRORPRINTING(x) void x (const char* msg, int msglength, void* data)
+#define SCIP_DECL_ERRORPRINTING(x) void x (const char* msg, void* data)
 
 /** warning message print method of message handler
  *
