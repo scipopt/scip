@@ -6,6 +6,7 @@ fixed bugs:
   global bound changes which contradict local bounds and therefore need to be stored as pending bound changes
 - unlinking a solution now copies solution values smaller than SCIPepsilon() avoiding some feasible solution in the
   transformed problem to be infeasible in the original problem
+- fixed bug when flushing the warning buffer when SCIP is closed
 
 data structures
 - new data structure for (circular) queues (SCIP_QUEUE)
@@ -74,6 +75,9 @@ core:
 - added presolve.{c,h} which should be used, for all preprocessing mechanismsexecuted from within SCIP, corresponding to
   solve.{c,h}, and also for presprocessing methods which can be called from different plugins or from the core to avoid
   code doubling
+- the main output routine of message.c (bufferMessage - now handleMessage) has been rewritten: it now does not need
+  a copy of the string to be output anymore, which makes the code much simpler (and also faster); it is passed a
+  function pointer to the output function and uses it to directly output the (buffered) messages
 
 
 SCIP version 3.0.1
