@@ -49,8 +49,8 @@ void logMessage(
 static
 SCIP_DECL_MESSAGEWARNING(messageWarningDefault)
 {  /*lint --e{715}*/
-
-   fputs("WARNING: ", file);
+   if ( msg != NULL && msg[0] != '\0' && msg[0] != '\n' )
+      fputs("WARNING: ", file);
 
    logMessage(file, msg);
 }
