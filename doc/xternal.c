@@ -836,14 +836,14 @@
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project.
  *
  *    We suggest the use one of the following examples:
- *     - The <a href="http://scip.zib.de/doc/examples/VRP/index.html"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
+ *     - The <a href="http://scip.zib.de/doc/examples/VRP/index.shtml"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/Coloring/index.html"><b>Coloring</b></a>
- *        and the <a href="http://scip.zib.de/doc/examples/Binpacking/index.html"><b>Binpacking</b></a>-example are
+ *     - The <a href="http://scip.zib.de/doc/examples/Coloring/index.shtml"><b>Coloring</b></a>
+ *        and the <a href="http://scip.zib.de/doc/examples/Binpacking/index.shtml"><b>Binpacking</b></a>-example are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/TSP/index.html"><b>TSP</b></a>-example
+ *     - The <a href="http://scip.zib.de/doc/examples/TSP/index.shtml"><b>TSP</b></a>-example
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/LOP/index.html"><b>LOP</b></a>-example
+ *     - The <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>LOP</b></a>-example
  *         is a <b>branch-and-cut</b>-code in <b>C</b>.
 
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
@@ -893,7 +893,7 @@
  * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/download.shtml">SCIP download
  * section</a> and download an appropriate binary for your operating system. To follow this tutorial, we recommend downloading the instance
  * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
- * the <a href="http://miplib.zib.de/miplib3/miplib3.html">MIPLIB 3.0</a> homepage.
+ * the <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
  *
  * Now start your binary, without any arguments. This opens the interactive shell, which should look somehow like this:
  *
@@ -5493,7 +5493,7 @@
  * @section Example
  *
  * Consider the constraint handler @p cons_linearordering.c in the
- * <a href="http://scip.zib.de/doc/examples/LOP/index.html"><b>linear ordering example</b></a>
+ * <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>linear ordering example</b></a>
  * (see @p example/LOP directory). This constraint handler propagates the equations \f$x_{ij} + x_{ji} =
  * 1\f$ and triangle inequalities \f$x_{ij} + x_{jk} + x_{ki} \leq 2\f$.
  *
@@ -5642,7 +5642,7 @@ SCIP_RETCODE consdataCatchEvent(
  *  @section EXAMPLE_1 How to activate debug messages
  *    For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
  *    in DBG mode, and run the SCIP interactive shell to solve p0033.mps from the
- *     <a href="http://miplib.zib.de/miplib3/miplib3.shtml">MIPLIB 3.0</a> , we get some output like:
+ *     <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
  * Copyright (c) 2002-2013 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
@@ -5814,7 +5814,7 @@ SCIP_RETCODE consdataCatchEvent(
  *
  *  \arg <code>*.res</code> - ASCII table containing a summary of the computational results
  *  \arg <code>*.tex</code> - TeX table containing a summary of the computational results
- *  \arg <code>*.pav</code> - <a href="http://www.gamsworld.org/performance/paver">PAVER</a> output
+ *  \arg <code>*.pav</code> - <a href="http://www.gamsworld.org/performance/paver/">PAVER</a> output
  *
  *  The last three files in the above list, i.e., the files containing a summary of the computational results,
  *  can also be generated manually. Therefore the user has to call the <code>evalcheck.sh</code> script in the
@@ -5998,7 +5998,7 @@ SCIP_RETCODE consdataCatchEvent(
  *  \code
  *  make testgurobi
  *  \endcode
- *  \arg for <a href="http://projects.coin-or.org/Cbc">cbc</a>
+ *  \arg for <a href="https://projects.coin-or.org/Cbc">cbc</a>
  *  \code
  *  make testcbc
  *  \endcode
@@ -6010,7 +6010,7 @@ SCIP_RETCODE consdataCatchEvent(
  *  \code
  *  make testglpk
  *  \endcode
- *  \arg for <a href="http://projects.coin-or.org/SYMPHONY">symphony</a>
+ *  \arg for <a href="https://projects.coin-or.org/SYMPHONY">symphony</a>
  *  \code
  *  make testsymphony
  *  \endcode
