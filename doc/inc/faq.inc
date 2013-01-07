@@ -111,7 +111,7 @@
         </ol>
       </p>
       <p class="a">
-	 See also the page on <a href="group__FILEREADERS.html">file readers</a>.
+	 See also the page on <a href="group__FILEREADERS.shtml">file readers</a>.
       </p>
       </li>
       <li>You can use SCIP as a subroutine for solving MIPs and more general constraint integer programs from your own source code.</li>
@@ -223,12 +223,12 @@
       Maybe the parameters of a function in SCIP changed. Relevant changes between version are listed below.
     </p>
     <ul>
-        <li> <a href="CHG1.html">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
-        <li> <a href="CHG2.html">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
-        <li> <a href="CHG3.html">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
-        <li> <a href="CHG4.html">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
-        <li> <a href="CHG5.html">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
-        <li> <a href="CHG6.html">Interface changes between SCIP 2.1 and SCIP 3.0</a></li>
+        <li> <a href="CHG1.shtml">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
+        <li> <a href="CHG2.shtml">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
+        <li> <a href="CHG3.shtml">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
+        <li> <a href="CHG4.shtml">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
+        <li> <a href="CHG5.shtml">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
+        <li> <a href="CHG6.shtml">Interface changes between SCIP 2.1 and SCIP 3.0</a></li>
     </ul>
     <p class="q">
       <a name="Q1.8">How can I debug in SCIP?</a>
@@ -552,7 +552,7 @@
       Yes, you do. SCIP_CALL() is a global define, which handles the return codes of all methods
       which return a SCIP_RETCODE and should therefore parenthesize each such method.
       SCIP_OKAY is the code which is returned if everything worked well;
-      there are 17 different error codes, see <a href="type__retcode_8h.html">type_retcode.h</a>.
+      there are 17 different error codes, see <a href="type__retcode_8h.shtml">type_retcode.h</a>.
       Each method that calls methods which return a SCIP_RETCODE should itself return a SCIP_RETCODE.
       If this is not possible, use SCIP_CALL_ABORT() to catch the return codes of the methods.
       If you do not want to use this either, you have to do the exception handling
@@ -568,7 +568,7 @@
       For example, for setting the time limit to one hour, you have to call 
       <code>SCIP_CALL( SCIPsetRealParam(scip, "limits/time", 3600) )</code>.
       In the interactive shell, you just enter <code>set limits time 3600</code>.
-      For more examples, please have a look into <a href="heur__rens_8c.html">heur_rens.c</a>.
+      For more examples, please have a look into heur_rens.c.
     </p>
 
 

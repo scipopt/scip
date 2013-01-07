@@ -3,7 +3,7 @@
 /*                  this file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*                  2002-2012 Konrad-Zuse-Zentrum                            */
+/*                  2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,7 +47,7 @@
  * See the web site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
  *
  * SCIP is developed together with <a href="http://www3.mathematik.tu-darmstadt.de/ags/optimierung/research/discrete-optimization.html">TU Darmstadt</a> and
- * <a href="http://www.am.uni-erlangen.de/optimization/edom.html">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
+ * <a href="http://www.am.uni-erlangen.de/wima/">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
  * and has more than 500,000 lines of C code.
  *
  * @section GETTINGSTARTED Getting started
@@ -899,7 +899,7 @@
  *
  * \code
  * SCIP version 2.0.1 [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 1.5.0]
- * Copyright (c) 2002-2012 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2013 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * External codes:
  *   SoPlex 1.5.0         Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)
@@ -1351,7 +1351,6 @@
  * \par CONSHDLR_DELAYPRESOL: the default for whether the presolving method should be delayed, if other presolvers found reductions.
  * This property is analogous to the DELAYSEPA flag, but deals with the preprocessing method of the constraint handler.
  *
-
  *
  *
  * @section CONS_DATA Constraint Data and Constraint Handler Data
@@ -1387,7 +1386,7 @@
  * the constraint handler available to the model, and looks like this:
  *  -# If you are using constraint handler data, you have to <b>allocate the memory for the data</b> at this point.
  *     You also have to initialize the fields in struct SCIP_ConshdlrData afterwards.
- *  \code
+ *  \verbatim
  * SCIP_RETCODE SCIPincludeConshdlrKnapsack(
  * ...
  * )
@@ -1398,7 +1397,7 @@
  *
  *  SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
  *  ...
- *  \endcode
+ *  \endverbatim
  *  -# Now, <b>SCIP gets notified</b> of the presence of the constraint handler together with its \ref CONS_FUNDAMENTALCALLBACKS "basic callbacks".
  *   \code
  *  SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -5646,7 +5645,7 @@ SCIP_RETCODE consdataCatchEvent(
  *     <a href="http://miplib.zib.de/miplib3/miplib3.shtml">MIPLIB 3.0</a> , we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
- * Copyright (c) 2002-2012 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2013 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * user parameter file <scip.set> not found - using default parameters
  *
@@ -6682,6 +6681,8 @@ SCIP_RETCODE consdataCatchEvent(
  */
 
 /**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-3.0.1
  *
  * \verbinclude SCIP-release-notes-3.0
  *
