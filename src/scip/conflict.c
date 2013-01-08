@@ -5723,7 +5723,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    if( set->nconflicthdlrs == 0 )
       return SCIP_OKAY;
 
-   /* inform the LPI that strong branch is (temporary) finished */
+   /* inform the LPI that strong branch is (temporarily) finished */
    SCIP_CALL( SCIPlpiEndStrongbranch(lp->lpi) );
 
    /* start timing */

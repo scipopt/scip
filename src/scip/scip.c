@@ -15016,7 +15016,7 @@ SCIP_RETCODE analyzeStrongbranch(
       }
    }
 
-   /* the strong branching results can be used to strength the root reduced cost information which is used for example
+   /* the strong branching results can be used to strengthen the root reduced cost information which is used for example
     * to propagate against the cutoff bound
     *
     * @note Ignore the results if the LP solution of the down (up) branch LP is smaller which should not happened by
