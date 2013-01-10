@@ -109,6 +109,7 @@
 #include "scip/presol_components.h"
 #include "scip/presol_convertinttobin.h"
 #include "scip/presol_domcol.h"
+#include "scip/presol_dualinfer.h"
 #include "scip/presol_gateextraction.h"
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
