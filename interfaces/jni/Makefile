@@ -171,7 +171,6 @@ JNILIBOBJ	=	JniLibraryLoader.java \
 			JniScipPresolComponents.java \
 			JniScipPresolConvertinttobin.java \
 			JniScipPresolDomcol.java \
-			JniScipPresolDualfix.java \
 			JniScipPresolGateextraction.java \
 			JniScipPresolImplics.java \
 			JniScipPresolInttobinary.java \
@@ -340,7 +339,6 @@ NATIVELIBOBJ	= 	NativeScipBranchAllfullstrong.java \
 			NativeScipPresolComponents.java \
 			NativeScipPresolConvertinttobin.java \
 			NativeScipPresolDomcol.java \
-			NativeScipPresolDualfix.java \
 			NativeScipPresolGateextraction.java \
 			NativeScipPresolImplics.java \
 			NativeScipPresolInttobinary.java \
