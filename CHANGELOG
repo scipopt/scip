@@ -54,6 +54,7 @@ fixed bugs:
 - fixed inconsistencies between methods SCIPlpiIs{PrimalFeasible,DualFeasible,Optimal,...} in SoPlex LPi
 - fixed bug adding binary implications on binary variables with type != SCIP_VARTYPE_BINARY
 - fixed bug concerning different tolerances for reached objective limit in case of pricing with fastmip
+- fixed bug with unflushed LP arising from global bound changes in strong branching
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()
