@@ -41,9 +41,9 @@
 
 #define PRESOL_NAME             "dualinfer"
 #define PRESOL_DESC             "exploit dual informations for variable fixings"
-#define PRESOL_PRIORITY          5000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_PRIORITY         20010000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY               FALSE     /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_DELAY                TRUE     /**< should presolver be delayed, if other presolvers found reductions? */
 
 #define MAX_LOOPS        7 
 
@@ -863,9 +863,7 @@ void initShadowPrices(
    CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */ 
    RELATIONTYPE*         rowrelation,        /**< row relation type */
    SCIP_Real*            lowershadow,        /**< lower shadow prices */
-   SCIP_Real*            uppershadow,        /**< upper shadow prices */
-   SCIP_Real*            lowershadow2,       /**< second lower shadow prices for ranged rows */
-   SCIP_Real*            uppershadow2        /**< second upper shadow prices for ranged rows */
+   SCIP_Real*            uppershadow         /**< upper shadow prices */
    )
 {
    int r;
@@ -875,49 +873,33 @@ void initShadowPrices(
    assert(rowrelation != NULL);
    assert(lowershadow != NULL);
    assert(uppershadow != NULL);
-   assert(lowershadow2 != NULL);
-   assert(uppershadow2 != NULL);
-   
+
    for( r = 0; r < matrix->nrows; r++ )
    {
       if( rowrelation[r] == EQUALITY )
       {
          lowershadow[r] = -SCIPinfinity(scip);
-         uppershadow[r] = 0; /*SCIPinfinity(scip);*/
-
-         lowershadow2[r] = 0; 
-         uppershadow2[r] = SCIPinfinity(scip);
-       }
+         uppershadow[r] = SCIPinfinity(scip);
+      }
       else if( rowrelation[r] == RANGED )
       {
          lowershadow[r] = -SCIPinfinity(scip);
-         uppershadow[r] = 0;
-         lowershadow2[r] = 0;
-         uppershadow2[r] = SCIPinfinity(scip);
+         uppershadow[r] = SCIPinfinity(scip);
       }
       else if( rowrelation[r] == LESSEQUAL )
       {
          lowershadow[r] = 0;
          uppershadow[r] = SCIPinfinity(scip);
-         
-         lowershadow2[r] = 0;
-         uppershadow2[r] = 0; 
       }
       else if( rowrelation[r] == GREATEREQUAL )
       {
          lowershadow[r] = -SCIPinfinity(scip);
          uppershadow[r] = 0; 
-
-         lowershadow2[r] = 0;
-         uppershadow2[r] = 0;  
       }
       else
       {
          lowershadow[r] = 0;
-         uppershadow[r] = 0;   
-
-         lowershadow2[r] = 0;
-         uppershadow2[r] = 0;                   
+         uppershadow[r] = 0;
       }
    }
 }
@@ -930,11 +912,7 @@ SCIP_RETCODE singletonColumns(
    RELATIONTYPE*         rowrelation,        /**< row relation type */
    SCIP_Real*            lowershadow,        /**< lower shadows */
    SCIP_Real*            uppershadow,        /**< upper shadows */
-   SCIP_Real*            lowershadow2,       /**< second lower shadows for equalities and ranged rows */
-   SCIP_Real*            uppershadow2,       /**< second upper shadows for equalities and ranged rows */
-   int*                  nfitsinglecols,     /**< number of fitting singleton columns */
-   int*                  varstofix,          /**< array holding information for later upper/lower bound fixing */
-   int*                  npossiblefixings    /**< number of possible fixings */
+   int*                  nfitsinglecols      /**< number of fitting singleton columns */
    )
 {
    int c;
@@ -944,11 +922,7 @@ SCIP_RETCODE singletonColumns(
    assert(rowrelation != NULL);
    assert(lowershadow != NULL);
    assert(uppershadow != NULL);
-   assert(lowershadow2 != NULL);
-   assert(uppershadow2 != NULL);
    assert(nfitsinglecols != NULL);
-   assert(varstofix != NULL);
-   assert(npossiblefixings != NULL);
 
    for( c = 0; c < matrix->ncols; c++ )
    {       
@@ -974,17 +948,11 @@ SCIP_RETCODE singletonColumns(
          {
             if( tmp > lowershadow[row] )
                lowershadow[row] = tmp;
-
-            if( tmp > lowershadow2[row] )
-               lowershadow2[row] = tmp;
          }
          else if ( val < 0 )
          { 
             if( tmp < uppershadow[row] )
                uppershadow[row] = tmp;
-
-            if( tmp < uppershadow2[row] )
-               uppershadow2[row] = tmp;
          }            
       }
    }
@@ -1000,8 +968,6 @@ void costCalculation(
    RELATIONTYPE*         rowrelation,        /**< row relation type */
    SCIP_Real*            lowershadow,        /**< lower shadows */
    SCIP_Real*            uppershadow,        /**< upper shadows */
-   SCIP_Real*            lowershadow2,       /**< second lower shadows for equalities and ranged rows */
-   SCIP_Real*            uppershadow2,       /**< second upper shadows for equalities and ranged rows */
    SCIP_Real*            lowercosts,         /**< lower shadow costs */
    SCIP_Real*            uppercosts          /**< upper shadow costs */
    )
@@ -1020,8 +986,6 @@ void costCalculation(
    assert(rowrelation != NULL);
    assert(lowershadow != NULL);
    assert(uppershadow != NULL);
-   assert(lowershadow2 != NULL);
-   assert(uppershadow2 != NULL);
    assert(lowercosts != NULL);
    assert(uppercosts != NULL);
    
@@ -1048,25 +1012,13 @@ void costCalculation(
                mininfinite = mininfinite || SCIPisInfinity(scip, -lowershadow[row]);
                maxinfinite = maxinfinite || SCIPisInfinity(scip, uppershadow[row]);
                
-               if( rowrelation[row] == EQUALITY || rowrelation[row] == RANGED )
-               {
-                  mininfinite = mininfinite || SCIPisInfinity(scip, -lowershadow2[row]);
-                  maxinfinite = maxinfinite || SCIPisInfinity(scip, uppershadow2[row]);
-               }
-
                if( !mininfinite )
                {
                   lowercosts[c] += val * lowershadow[row];
-
-                  if( rowrelation[row] == EQUALITY || rowrelation[row] == RANGED )
-                     lowercosts[c] += val * lowershadow2[row];
                }
                if( !maxinfinite )
                {
                   uppercosts[c] += val * uppershadow[row];
-
-                  if( rowrelation[row] == EQUALITY || rowrelation[row] == RANGED )
-                     uppercosts[c] += val * uppershadow2[row];
                }
             }
             else 
@@ -1074,25 +1026,13 @@ void costCalculation(
                mininfinite = mininfinite || SCIPisInfinity(scip, uppershadow[row]);
                maxinfinite = maxinfinite || SCIPisInfinity(scip, -lowershadow[row]);
 
-               if( rowrelation[row] == EQUALITY || rowrelation[row] == RANGED )
-               {
-                  mininfinite = mininfinite || SCIPisInfinity(scip, uppershadow2[row]);
-                  maxinfinite = maxinfinite || SCIPisInfinity(scip, -lowershadow2[row]);
-               }
-
                if( !mininfinite )
                {
                   lowercosts[c] += val * uppershadow[row];
-
-                  if( rowrelation[row] == EQUALITY || rowrelation[row] == RANGED )
-                     lowercosts[c] += val * uppershadow2[row];
                }
                if( !maxinfinite )
                {
                   uppercosts[c] += val * lowershadow[row];
-
-                  if( rowrelation[row] == EQUALITY || rowrelation[row] == RANGED )
-                     uppercosts[c] += val * lowershadow2[row];
                }
             }
          }
@@ -1171,8 +1111,6 @@ SCIP_RETCODE costFixing(
 {
    SCIP_Real* lowershadow;
    SCIP_Real* uppershadow;
-   SCIP_Real* lowershadow2;
-   SCIP_Real* uppershadow2;
    SCIP_Real* lowercosts;
    SCIP_Real* uppercosts;
 
@@ -1185,27 +1123,19 @@ SCIP_RETCODE costFixing(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lowershadow, matrix->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &uppershadow, matrix->nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lowershadow2, matrix->nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &uppershadow2, matrix->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lowercosts, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &uppercosts, matrix->ncols) );
 
-   initShadowPrices(scip, matrix, rowrelation, lowershadow, uppershadow, 
-      lowershadow2, uppershadow2);
+   initShadowPrices(scip, matrix, rowrelation, lowershadow, uppershadow);
 
-   singletonColumns(scip, matrix, rowrelation, lowershadow, uppershadow, 
-      lowershadow2, uppershadow2, nfitsinglecols, varstofix, npossiblefixings);
+   singletonColumns(scip, matrix, rowrelation, lowershadow, uppershadow, nfitsinglecols);
 
-   costCalculation(scip, matrix, rowrelation, lowershadow, uppershadow, 
-      lowershadow2, uppershadow2, lowercosts, uppercosts);
+   costCalculation(scip, matrix, rowrelation, lowershadow, uppershadow, lowercosts, uppercosts);
 
-   fixColumns(scip, matrix, rowrelation, lowercosts, uppercosts, 
-      npossiblefixings, varstofix);
+   fixColumns(scip, matrix, rowrelation, lowercosts, uppercosts, npossiblefixings, varstofix);
 
    SCIPfreeBufferArray(scip, &uppercosts);
    SCIPfreeBufferArray(scip, &lowercosts);
-   SCIPfreeBufferArray(scip, &uppershadow2);
-   SCIPfreeBufferArray(scip, &lowershadow2);
    SCIPfreeBufferArray(scip, &uppershadow);
    SCIPfreeBufferArray(scip, &lowershadow);
 
@@ -1619,7 +1549,7 @@ void updateDualBounds(
             ubdual[row] = newubdual;            
             (*boundchanges)++;
          }
-      }    
+      }
    }
    else if( val < 0 )
    {
@@ -1798,7 +1728,7 @@ SCIP_RETCODE dualBoundStrengthening(
    int* mincolactposinf;
    int* mincolactneginf;
    int loops;
- 
+
    assert(scip != NULL);
    assert(matrix != NULL);
    assert(rowrelation != NULL);
@@ -2090,10 +2020,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
       nbinvarsfixed = 0;  
       npossiblefixings = 0;
       nfitsinglecols = 0;   
-      
+
       SCIP_CALL( SCIPallocBufferArray(scip, &rowrelation, matrix->nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &varstofix, matrix->ncols) );
-      
+
       /* determine row relation types */
       initRowRelation(scip, matrix, rowrelation);
 
@@ -2205,11 +2135,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
       {
          SCIPdebugMessage("### %d vars [%d column singletons] ===>>> fixed [cont: %d, int: %d, bin: %d]\n",
             matrix->ncols, nfitsinglecols, nconvarsfixed, nintvarsfixed, nbinvarsfixed);
-      }
-      else
-      {
-         SCIPdebugMessage("### %d vars [%d column singletons] - no fixings found.\n",
-            matrix->ncols, nfitsinglecols);
       }
    }
 
