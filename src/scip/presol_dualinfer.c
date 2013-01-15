@@ -873,18 +873,18 @@ void initShadowPrices(
    assert(rowrelation != NULL);
    assert(lowershadow != NULL);
    assert(uppershadow != NULL);
-   
+
    for( r = 0; r < matrix->nrows; r++ )
    {
       if( rowrelation[r] == EQUALITY )
       {
          lowershadow[r] = -SCIPinfinity(scip);
          uppershadow[r] = SCIPinfinity(scip);
-       }
+      }
       else if( rowrelation[r] == RANGED )
       {
          lowershadow[r] = -SCIPinfinity(scip);
-         uppershadow[r] = SCIPinfinity(scip);  
+         uppershadow[r] = SCIPinfinity(scip);
       }
       else if( rowrelation[r] == LESSEQUAL )
       {
@@ -899,7 +899,7 @@ void initShadowPrices(
       else
       {
          lowershadow[r] = 0;
-         uppershadow[r] = 0;                     
+         uppershadow[r] = 0;
       }
    }
 }
@@ -2020,7 +2020,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
       nbinvarsfixed = 0;  
       npossiblefixings = 0;
       nfitsinglecols = 0;   
-      
+
       SCIP_CALL( SCIPallocBufferArray(scip, &rowrelation, matrix->nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &varstofix, matrix->ncols) );
      
