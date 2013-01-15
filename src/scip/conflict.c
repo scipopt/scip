@@ -1671,17 +1671,78 @@ SCIP_RETCODE updateStatistics(
 }
 
 
+/** check conflict set for redundancy, other conflicts in the same conflict analysis could have led to global reductions
+ *  an made this conflict set redundant
+ */
+static
+SCIP_Bool checkRedundancy(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONFLICTSET*     conflictset         /**< conflict set */
+   )
+{
+   SCIP_BDCHGINFO** bdchginfos;
+   SCIP_VAR* var;
+   SCIP_Real* relaxedbds;
+   SCIP_Real bound;
+   int v;
+
+   assert(set != NULL);
+   assert(conflictset != NULL);
+
+   bdchginfos = conflictset->bdchginfos;
+   relaxedbds = conflictset->relaxedbds;
+   assert(bdchginfos != NULL);
+   assert(relaxedbds != NULL);
+
+   /* check all boundtypes and bounds for redundancy */
+   for( v = conflictset->nbdchginfos - 1; v >= 0; --v )
+   {
+      var = SCIPbdchginfoGetVar(bdchginfos[v]);
+      assert(var != NULL);
+      assert(SCIPvarGetProbindex(var) >= 0);
+
+      /* check if the relaxed bound is really a relaxed bound */
+      assert(SCIPbdchginfoGetBoundtype(bdchginfos[v]) == SCIP_BOUNDTYPE_LOWER || SCIPsetIsGE(set, relaxedbds[v], SCIPbdchginfoGetNewbound(bdchginfos[v])));
+      assert(SCIPbdchginfoGetBoundtype(bdchginfos[v]) == SCIP_BOUNDTYPE_UPPER || SCIPsetIsLE(set, relaxedbds[v], SCIPbdchginfoGetNewbound(bdchginfos[v])));
+
+      bound = relaxedbds[v];
+
+      if( SCIPbdchginfoGetBoundtype(bdchginfos[v]) == SCIP_BOUNDTYPE_UPPER )
+      {
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         {
+            assert(SCIPsetIsIntegral(set, bound));
+            bound += 1.0;
+         }
+
+         /* check if the bound is already fulfilled globally */
+         if( SCIPsetIsFeasGE(set, SCIPvarGetLbGlobal(var), bound) )
+            return TRUE;
+      }
+      else
+      {
+         assert(SCIPbdchginfoGetBoundtype(bdchginfos[v]) == SCIP_BOUNDTYPE_LOWER);
+
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         {
+            assert(SCIPsetIsIntegral(set, bound));
+            bound -= 1.0;
+         }
+
+         /* check if the bound is already fulfilled globally */
+         if( SCIPsetIsFeasLE(set, SCIPvarGetUbGlobal(var), bound) )
+            return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
 /** find global fixings which can be derived from the new conflict set */
 static
 SCIP_RETCODE detectImpliedBounds(
    SCIP_SET*             set,                /**< global SCIP settings */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CONFLICTSET*     conflictset,        /**< conflict set to add to the tree */
    int*                  nbdchgs,            /**< number of global deducted bound changes due to the conflict set */
    int*                  nredvars,           /**< number of redundant and removed variables from conflict set */
@@ -1699,14 +1760,8 @@ SCIP_RETCODE detectImpliedBounds(
    int v;
 
    assert(set != NULL);
-   assert(blkmem != NULL);
-   assert(stat != NULL);
    assert(prob != NULL);
    assert(SCIPprobIsTransformed(prob));
-   assert(tree != NULL);
-   assert(lp != NULL);
-   assert(branchcand != NULL);
-   assert(eventqueue != NULL);
    assert(conflictset != NULL);
    assert(nbdchgs != NULL);
    assert(nredvars != NULL);
@@ -1715,7 +1770,12 @@ SCIP_RETCODE detectImpliedBounds(
 
    *nbdchgs = 0;
    *nredvars = 0;
-   *redundant = FALSE;
+
+   /* due to other conflict in the same conflict analysis, this conflict set might have become redundant */
+   *redundant = checkRedundancy(set, conflictset);
+
+   if( *redundant )
+      return SCIP_OKAY;
 
    /* do not check to big conflicts */
    if( conflictset->nbdchginfos > set->conf_maxvarsdetectimpliedbounds )
@@ -1946,8 +2006,7 @@ SCIP_RETCODE conflictAddConflictCons(
       SCIPclockStart(conflict->dIBclock, set);
 
       /* find global bound changes which can be derived from the new conflict set */
-      SCIP_CALL( detectImpliedBounds(set, blkmem, stat, prob, tree, lp, branchcand, eventqueue,
-            conflictset, &nbdchgs, &nredvars, &redundant) );
+      SCIP_CALL( detectImpliedBounds(set, prob, conflictset, &nbdchgs, &nredvars, &redundant) );
 
       /* debug check for reduced conflict set */
       if( nredvars > 0 )
@@ -1966,7 +2025,9 @@ SCIP_RETCODE conflictAddConflictCons(
 
       if( redundant )
       {
-         *success = TRUE;
+         if( nbdchgs > 0 )
+            *success = TRUE;
+
          return SCIP_OKAY;
       }
    }
