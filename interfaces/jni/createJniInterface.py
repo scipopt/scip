@@ -533,6 +533,10 @@ if len(sys.argv) < 2:
     print "Usage: %s [<xml-doxygen-filename>, ...]" % sys.argv[0]
     sys.exit(1)
 
+# remove NativeScip.java and JniScip.java
+os.remove("java/de/zib/jscip/nativ/NativeScip.java");
+os.remove("java/de/zib/jscip/nativ/jni/JniScip.java");
+
 # create for each imput file one output file
 for arg in sys.argv[1:]:
 
@@ -571,12 +575,12 @@ for arg in sys.argv[1:]:
         continue
 
     # check if the java files already exist
-    if component == "" and os.path.isfile("NativeScip.java") :
-        nativejnifile = open("NativeScip.java")
+    if component == "" and os.path.isfile("java/de/zib/jscip/nativ/NativeScip.java") :
+        nativejnifile = open("java/de/zib/jscip/nativ/NativeScip.java")
         nativelines = nativejnifile.readlines()
         nativejnifile.close()
 
-        jnifile = open("JniScip.java")
+        jnifile = open("java/de/zib/jscip/nativ/jni/JniScip.java")
         jnilines = jnifile.readlines()
         jnifile.close()
     else:
