@@ -1,4 +1,8 @@
-# SCIP version 3.0.0
+# SCIP version 3.0.1
+
+# LP pricing strategy ('l'pi default, 'a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)
+# [type: char, range: {lafpsqd}, default: l]
+lp/pricing = d
 
 # should presolving of LP solver be used?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -225,5 +229,5 @@ propagating/probing/maxprerounds = 0
 separating/gomory/maxroundsroot = -1
 
 # maximal number of gomory cuts separated per separation round in the root node
-# [type: int, range: [0,2147483647], default: 50]
+# [type: int, range: [0,2147483647], default: 200]
 separating/gomory/maxsepacutsroot = 500
