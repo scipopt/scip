@@ -765,6 +765,13 @@ SCIP_RETCODE SCIPdigraphCreate(
    int                   nnodes              /**< number of nodes */
    );
 
+/** resize directed graph structure */
+EXTERN
+SCIP_RETCODE SCIPdigraphResize(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   nnodes              /**< new number of nodes */
+   );
+
 /** copies directed graph structure */
 EXTERN
 SCIP_RETCODE SCIPdigraphCopy(
@@ -814,6 +821,21 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
 EXTERN
 int SCIPdigraphGetNNodes(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
+
+/** returns the node data, or NULL if no data exist */
+EXTERN
+void* SCIPdigraphGetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the node data is returned */
+   );
+
+/** sets the node data */
+EXTERN
+void SCIPdigraphSetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   void*                 dataptr,            /**< user node data pointer, or NULL */
+   int                   node                /**< node for which the node data is returned */
    );
 
 /** returns the total number of arcs in the given digraph */

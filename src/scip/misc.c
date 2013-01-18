@@ -4978,6 +4978,38 @@ SCIP_RETCODE SCIPdigraphCreate(
    return SCIP_OKAY;
 }
 
+/** resize directed graph structure */
+SCIP_RETCODE SCIPdigraphResize(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   nnodes              /**< new number of nodes */
+   )
+{
+   int n;
+
+   /* check if the digraph has already a proper size */
+   if( nnodes <= digraph->nnodes )
+      return SCIP_OKAY;
+
+   /* reallocate memory for increasing the arrays storing arcs and datas */
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successorssize, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nsuccessors, nnodes) );
+
+   /* initialize the new node data structures */
+   for( n = digraph->nnodes; n < nnodes; ++n )
+   {
+      digraph->nodedatas[n] = NULL;
+      digraph->successorssize[n] = 0;
+      digraph->nsuccessors[n] = 0;
+   }
+
+   /* store the new number of nodes */
+   digraph->nnodes = nnodes;
+
+   return SCIP_OKAY;
+}
+
 /** copies directed graph structure */
 SCIP_RETCODE SCIPdigraphCopy(
    SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
@@ -5199,6 +5231,36 @@ int SCIPdigraphGetNNodes(
    return digraph->nnodes;
 }
 
+/** returns the node data, or NULL if no data exist */
+void* SCIPdigraphGetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the node data is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+
+   return digraph->nodedatas[node];
+}
+
+/** sets the node data
+ *
+ *  @note The old user pointer is not freed. This has to be done by the user
+ */
+void SCIPdigraphSetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   void*                 dataptr,            /**< user node data pointer, or NULL */
+   int                   node                /**< node for which the node data is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+
+   digraph->nodedatas[node] = dataptr;
+}
+
 /** returns the total number of arcs in the given digraph */
 int SCIPdigraphGetNArcs(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
@@ -5365,6 +5427,12 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
 
    assert(digraph != NULL);
    assert(digraph->nnodes > 0);
+
+   /* first free the old components */
+   if( digraph->ncomponents > 0 )
+   {
+      SCIPdigraphFreeComponents(digraph);
+   }
 
    digraph->ncomponents = 0;
    digraph->componentstartsize = 10;

@@ -29,6 +29,7 @@ features:
 - added coefficient tightening for ranged row varbound constraint
 - added SCIPsortLongPtrRealBool(), SCIPsortLongPtrRealRealBool(), SCIPsortLongPtrRealRealIntBool() and corresponding
   methods for sorting, insertion and deletion
+- added a data pointer to each node of the SCIP_DIGRAPH
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
