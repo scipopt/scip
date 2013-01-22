@@ -18,7 +18,11 @@
  * @brief   dual inference presolver
  * @author  Dieter Weninger
  *
- * This presolver exploits dual information for primal variable fixings.
+ * This presolver exploits dual information for primal variable fixings:
+ * a) The first method is an enhanced dual fixing technique.
+ * b) The second method does dual bound strengthening on continuous primal
+ *    variables and applies complementary slackness (yA-c)_i > 0 => x_i = 0
+ *    for fixing primal variables at their lower bound.
  *
  */
 
