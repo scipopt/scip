@@ -1,3 +1,10 @@
+SCIP version NEXT
+==================
+
+features:
+- can now output the solutions in the solution pool in the interactive shell
+
+
 SCIP version 3.0.1
 ==================
 
