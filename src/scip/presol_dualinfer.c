@@ -307,7 +307,7 @@ SCIP_RETCODE setColumnMajorFormat(
    assert(matrix->rowmatind != NULL);
    assert(matrix->rowmatbeg != NULL);
    assert(matrix->rowmatcnt != NULL);
-  
+
    SCIP_CALL( SCIPallocBufferArray(scip, &fillidx, matrix->ncols) );
    BMSclearMemoryArray(fillidx, matrix->ncols);
    BMSclearMemoryArray(matrix->colmatcnt, matrix->ncols);
@@ -2061,7 +2061,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
                {
                   lb = SCIPfeasCeil(scip, lb);
                }
-               lb = MAX(lb, 0.0);
 
                /* fix at lower bound */
                SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
