@@ -2930,7 +2930,7 @@ SCIP_RETCODE enforceConstraints(
       /* the enforcement method may add a primal solution, after which the LP status could be set to
        * objective limit reached
        */
-      if( SCIPtreeHasFocusNodeLP(tree) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+      if( !(*branched) && SCIPtreeHasFocusNodeLP(tree) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
       {
          *cutoff = TRUE;
          *infeasible = TRUE;
