@@ -64,18 +64,6 @@ enum Fixingdirection
 };
 typedef enum Fixingdirection FIXINGDIRECTION;
 
-/** relation type */
-enum Relationtype
-{
-   LESSEQUAL,
-   GREATEREQUAL,
-   EQUALITY,
-   RANGED
-};
-typedef enum Relationtype RELATIONTYPE;
-
-
-
 /********************************************************************/
 /************** matrix data structure and functions *****************/
 
@@ -102,7 +90,6 @@ struct ConstraintMatrix
    int                   nrows;              /**< complete number of rows */
    SCIP_Real*            lhs;                /**< left hand side per row */
    SCIP_Real*            rhs;                /**< right hand side per row */
-   SCIP_Bool*            islhsinfinite;      /**< is left hand side -infinity */
    SCIP_Bool*            isrhsinfinite;      /**< is right hand side infinity */
    int                   nnonzs;             /**< sparsity counter */
    SCIP_Real*            minactivity;        /**< min activity per row */
@@ -167,19 +154,29 @@ SCIP_RETCODE addRow(
    int j;
    int probindex;
    int rowidx;
+   SCIP_Real factor;
 
    assert(vars != NULL);
    assert(vals != NULL);
 
    rowidx = matrix->nrows;
 
-   matrix->lhs[rowidx] = lhs;
-   matrix->rhs[rowidx] = rhs;
-
-   if( SCIPisInfinity(scip, -matrix->lhs[rowidx]) )
-      matrix->islhsinfinite[rowidx] = TRUE;
-   if( SCIPisInfinity(scip, matrix->rhs[rowidx]) )
+   if( SCIPisInfinity(scip, -lhs) )
+   {
+      factor = -1.0;
+      matrix->lhs[rowidx] = -rhs;
+      matrix->rhs[rowidx] = SCIPinfinity(scip);
       matrix->isrhsinfinite[rowidx] = TRUE;
+   }
+   else
+   {
+      factor = 1.0;
+      matrix->lhs[rowidx] = lhs;
+      matrix->rhs[rowidx] = rhs;
+      matrix->isrhsinfinite[rowidx] = SCIPisInfinity(scip, matrix->rhs[rowidx]);
+   }
+   assert(!SCIPisInfinity(scip, -matrix->lhs[rowidx]));
+
 
 #ifdef SCIP_DEBUG
    matrix->rowname[rowidx] = name;
@@ -189,13 +186,13 @@ SCIP_RETCODE addRow(
 
    for( j = 0; j < nvars; j++ )
    {
-      matrix->rowmatval[matrix->nnonzs] = vals[j];
+      matrix->rowmatval[matrix->nnonzs] = factor * vals[j];
       probindex = SCIPvarGetProbindex(vars[j]);
       assert(matrix->vars[probindex] == vars[j]);
 
       assert(0 <= probindex && probindex < matrix->ncols);
       matrix->rowmatind[matrix->nnonzs] = probindex;
-      matrix->nnonzs = matrix->nnonzs + 1;
+      (matrix->nnonzs)++;
    }
 
    matrix->rowmatcnt[rowidx] = matrix->nnonzs - matrix->rowmatbeg[rowidx];
@@ -550,7 +547,6 @@ SCIP_RETCODE initMatrix(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rhs, nconss) );
 
    /* allocate memory for status of finiteness of row sides */
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &matrix->islhsinfinite, nconss) );
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &matrix->isrhsinfinite, nconss) );
 
 #ifdef SCIP_DEBUG
@@ -794,7 +790,6 @@ void freeMatrix(
 #endif
 
       SCIPfreeMemoryArray(scip, &((*matrix)->isrhsinfinite));
-      SCIPfreeMemoryArray(scip, &((*matrix)->islhsinfinite));
 
       SCIPfreeBufferArray(scip, &((*matrix)->rhs));
       SCIPfreeBufferArray(scip, &((*matrix)->lhs));
@@ -834,27 +829,15 @@ static
 SCIP_Bool isRowRedundant(
    SCIP*                 scip,               /**< SCIP main data structure */
    CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
-   int                   row                 /**< row index */
+   int                   row                 /**< row to be checked for redundancy */
    )
 {
-   SCIP_Bool redundant;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
-   SCIP_Real minact;
-   SCIP_Real maxact;
-
    assert(scip != NULL);
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
 
-   lhs = matrix->lhs[row];
-   rhs = matrix->rhs[row];
-   minact = matrix->minactivity[row];
-   maxact = matrix->maxactivity[row];
-
-   redundant = SCIPisFeasLE(scip, lhs, minact) && SCIPisFeasLE(scip, maxact, rhs);
-
-   return redundant;
+   return SCIPisFeasLE(scip, matrix->lhs[row], matrix->minactivity[row])
+      && SCIPisFeasLE(scip, matrix->maxactivity[row], matrix->rhs[row]);
 }
 
 /** initialize shadow prices */
@@ -862,7 +845,6 @@ static
 void initShadowPrices(
    SCIP*                 scip,               /**< SCIP main data structure */
    CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
-   RELATIONTYPE*         rowrelation,        /**< row relation type */
    SCIP_Real*            lowershadow,        /**< lower shadow prices */
    SCIP_Real*            uppershadow         /**< upper shadow prices */
    )
@@ -871,37 +853,13 @@ void initShadowPrices(
 
    assert(scip != NULL);
    assert(matrix != NULL);
-   assert(rowrelation != NULL);
    assert(lowershadow != NULL);
    assert(uppershadow != NULL);
 
    for( r = 0; r < matrix->nrows; r++ )
    {
-      if( rowrelation[r] == EQUALITY )
-      {
-         lowershadow[r] = -SCIPinfinity(scip);
-         uppershadow[r] = SCIPinfinity(scip);
-      }
-      else if( rowrelation[r] == RANGED )
-      {
-         lowershadow[r] = -SCIPinfinity(scip);
-         uppershadow[r] = SCIPinfinity(scip);
-      }
-      else if( rowrelation[r] == LESSEQUAL )
-      {
-         lowershadow[r] = 0;
-         uppershadow[r] = SCIPinfinity(scip);
-      }
-      else if( rowrelation[r] == GREATEREQUAL )
-      {
-         lowershadow[r] = -SCIPinfinity(scip);
-         uppershadow[r] = 0;
-      }
-      else
-      {
-         lowershadow[r] = 0;
-         uppershadow[r] = 0;
-      }
+      lowershadow[r] = -SCIPinfinity(scip);
+      uppershadow[r] = matrix->isrhsinfinite[r] ? 0 : SCIPinfinity(scip);
    }
 }
 
@@ -910,7 +868,6 @@ static
 SCIP_RETCODE singletonColumns(
    SCIP*                 scip,               /**< SCIP main data structure */
    CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
-   RELATIONTYPE*         rowrelation,        /**< row relation type */
    SCIP_Real*            lowershadow,        /**< lower shadows */
    SCIP_Real*            uppershadow,        /**< upper shadows */
    int*                  nfitsinglecols      /**< number of fitting singleton columns */
@@ -920,7 +877,6 @@ SCIP_RETCODE singletonColumns(
 
    assert(scip != NULL);
    assert(matrix != NULL);
-   assert(rowrelation != NULL);
    assert(lowershadow != NULL);
    assert(uppershadow != NULL);
    assert(nfitsinglecols != NULL);
@@ -929,13 +885,13 @@ SCIP_RETCODE singletonColumns(
    {
       if( matrix->colmatcnt[c] == 1 && SCIPvarGetType(matrix->vars[c]) == SCIP_VARTYPE_CONTINUOUS &&
          SCIPisInfinity(scip, SCIPvarGetUbGlobal(matrix->vars[c]))
-         /*&& SCIPisEQ(scip,SCIPvarGetLbGlobal(matrix->vars[c]),0)*/ )
+         /*&& SCIPisEQ(scip, SCIPvarGetLbGlobal(matrix->vars[c]), 0)*/ )
       {
          int row;
 
          row = *(matrix->colmatind + matrix->colmatbeg[c]);
 
-         if( rowrelation[row] == LESSEQUAL || rowrelation[row] == GREATEREQUAL )
+         if( matrix->isrhsinfinite[row] )
          {
             SCIP_Real val;
             SCIP_Real tmp;
@@ -969,7 +925,6 @@ static
 void costCalculation(
    SCIP*                 scip,               /**< SCIP main data structure */
    CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
-   RELATIONTYPE*         rowrelation,        /**< row relation type */
    SCIP_Real*            lowershadow,        /**< lower shadows */
    SCIP_Real*            uppershadow,        /**< upper shadows */
    SCIP_Real*            lowercosts,         /**< lower shadow costs */
@@ -987,7 +942,6 @@ void costCalculation(
 
    assert(scip != NULL);
    assert(matrix != NULL);
-   assert(rowrelation != NULL);
    assert(lowershadow != NULL);
    assert(uppershadow != NULL);
    assert(lowercosts != NULL);
@@ -1054,7 +1008,6 @@ static
 void fixColumns(
    SCIP*                 scip,               /**< SCIP main data structure */
    CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
-   RELATIONTYPE*         rowrelation,        /**< row relation type */
    SCIP_Real*            lowercosts,         /**< lower shadow costs */
    SCIP_Real*            uppercosts,         /**< upper shadow costs */
    int*                  npossiblefixings,   /**< number of possible fixings */
@@ -1065,7 +1018,6 @@ void fixColumns(
 
    assert(scip != NULL);
    assert(matrix != NULL);
-   assert(rowrelation != NULL);
    assert(lowercosts != NULL);
    assert(uppercosts != NULL);
    assert(npossiblefixings != NULL);
@@ -1107,8 +1059,7 @@ static
 SCIP_RETCODE costFixing(
    SCIP*                 scip,               /**< SCIP main data structure */
    CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
-   RELATIONTYPE*         rowrelation,        /**< row relation type */
-   FIXINGDIRECTION*      varstofix,          /**< array holding information for later upper/lower bound fixing */
+   int*                  varstofix,          /**< array holding information for later upper/lower bound fixing */
    int*                  nfitsinglecols,     /**< number of continuous singleton columns */
    int*                  npossiblefixings    /**< number of possible fixings */
    )
@@ -1120,7 +1071,6 @@ SCIP_RETCODE costFixing(
 
    assert(scip != NULL);
    assert(matrix != NULL);
-   assert(rowrelation != NULL);
    assert(varstofix != NULL);
    assert(nfitsinglecols != NULL);
    assert(npossiblefixings != NULL);
@@ -1130,13 +1080,13 @@ SCIP_RETCODE costFixing(
    SCIP_CALL( SCIPallocBufferArray(scip, &lowercosts, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &uppercosts, matrix->ncols) );
 
-   initShadowPrices(scip, matrix, rowrelation, lowershadow, uppershadow);
+   initShadowPrices(scip, matrix, lowershadow, uppershadow);
 
-   SCIP_CALL( singletonColumns(scip, matrix, rowrelation, lowershadow, uppershadow, nfitsinglecols) );
+   singletonColumns(scip, matrix, lowershadow, uppershadow, nfitsinglecols);
 
-   costCalculation(scip, matrix, rowrelation, lowershadow, uppershadow, lowercosts, uppercosts);
+   costCalculation(scip, matrix, lowershadow, uppershadow, lowercosts, uppercosts);
 
-   fixColumns(scip, matrix, rowrelation, lowercosts, uppercosts, npossiblefixings, varstofix);
+   fixColumns(scip, matrix, lowercosts, uppercosts, npossiblefixings, varstofix);
 
    SCIPfreeBufferArray(scip, &uppercosts);
    SCIPfreeBufferArray(scip, &lowercosts);
@@ -1154,8 +1104,7 @@ SCIP_Real getMaxColActWithoutRow(
    int                   col,                /**< column index */
    int                   withoutrow,         /**< exclude row index */
    SCIP_Real*            lbdual,             /**< lower bounds of dual variables */
-   SCIP_Real*            ubdual,             /**< upper bounds of dual variables */
-   RELATIONTYPE*         rowrelation         /**< row relations */
+   SCIP_Real*            ubdual              /**< upper bounds of dual variables */
    )
 {
    SCIP_Real* valpnt;
@@ -1171,7 +1120,6 @@ SCIP_Real getMaxColActWithoutRow(
    assert(0 <= withoutrow && withoutrow < matrix->nrows);
    assert(lbdual != NULL);
    assert(ubdual != NULL);
-   assert(rowrelation != NULL);
    assert(SCIPvarGetType(matrix->vars[col]) == SCIP_VARTYPE_CONTINUOUS);
 
    maxcolactivity = 0;
@@ -1185,13 +1133,10 @@ SCIP_Real getMaxColActWithoutRow(
       row = *colpnt;
       val = *valpnt;
 
-      assert(rowrelation[row] == LESSEQUAL || rowrelation[row] == GREATEREQUAL);
+      assert(matrix->isrhsinfinite[row]);
 
       if( row == withoutrow )
          continue;
-
-      if( rowrelation[row] == LESSEQUAL )
-         val = -val;
 
       if( val > 0 )
       {
@@ -1215,8 +1160,7 @@ SCIP_Real getMinColActWithoutRow(
    int                   col,                /**< column index */
    int                   withoutrow,         /**< exclude row index */
    SCIP_Real*            lbdual,             /**< lower bounds of dual variables */
-   SCIP_Real*            ubdual,             /**< upper bounds of dual variables */
-   RELATIONTYPE*         rowrelation         /**< row relations */
+   SCIP_Real*            ubdual              /**< upper bounds of dual variables */
    )
 {
    SCIP_Real* valpnt;
@@ -1232,7 +1176,6 @@ SCIP_Real getMinColActWithoutRow(
    assert(0 <= withoutrow && withoutrow < matrix->nrows);
    assert(lbdual != NULL);
    assert(ubdual != NULL);
-   assert(rowrelation != NULL);
    assert(SCIPvarGetType(matrix->vars[col]) == SCIP_VARTYPE_CONTINUOUS);
 
    mincolactivity = 0;
@@ -1246,13 +1189,10 @@ SCIP_Real getMinColActWithoutRow(
       row = *colpnt;
       val = *valpnt;
 
-      assert(rowrelation[row] == LESSEQUAL || rowrelation[row] == GREATEREQUAL);
+      assert(matrix->isrhsinfinite[row]);
 
       if( row == withoutrow )
          continue;
-
-      if( rowrelation[row] == LESSEQUAL )
-         val = -val;
 
       if( val > 0 )
       {
@@ -1278,13 +1218,10 @@ void calcColActivityResiduals(
    SCIP_Real             val,                /**< matrix coefficient */
    SCIP_Real*            lbdual,             /**< lower bounds of dual variables */
    SCIP_Real*            ubdual,             /**< upper bounds of dual variables */
-   RELATIONTYPE*         rowrelation,        /**< row relations */
    SCIP_Real*            mincolact,          /**< minimal column activities */
    SCIP_Real*            maxcolact,          /**< maximal column activities */
-   int*                  maxcolactposinf,    /**< number of maximal column activity positive infinities */
-   int*                  maxcolactneginf,    /**< number of maximal column activity negative infinities */
-   int*                  mincolactposinf,    /**< number of minimal column activity positive infinities */
-   int*                  mincolactneginf,    /**< number of minimal column activity negative infinities */
+   int*                  maxcolactinf,       /**< number of (positive) infinite contributions to maximal column activity */
+   int*                  mincolactinf,       /**< number of (negative) infinite contributions to minimal column activity */
    SCIP_Real*            mincolresact,       /**< minimal column residual activity */
    SCIP_Real*            maxcolresact        /**< maximal column residual activity */
    )
@@ -1295,51 +1232,44 @@ void calcColActivityResiduals(
    assert(0 <= row && row < matrix->nrows);
    assert(lbdual != NULL);
    assert(ubdual != NULL);
-   assert(rowrelation != NULL);
    assert(mincolact != NULL);
    assert(maxcolact != NULL);
-   assert(maxcolactposinf != NULL);
-   assert(maxcolactneginf != NULL);
-   assert(mincolactposinf != NULL);
-   assert(mincolactneginf != NULL);
+   assert(maxcolactinf != NULL);
+   assert(mincolactinf != NULL);
    assert(mincolresact != NULL);
    assert(maxcolresact != NULL);
-   assert(rowrelation[row] == LESSEQUAL || rowrelation[row] == GREATEREQUAL);
+   assert(matrix->isrhsinfinite[row]);
    assert(SCIPvarGetType(matrix->vars[col]) == SCIP_VARTYPE_CONTINUOUS);
-
-   /* we assume always a >= relation */
-   if( rowrelation[row] == LESSEQUAL )
-      val = -val;
 
    if( val > 0.0 )
    {
       if( SCIPisInfinity(scip, ubdual[row]) )
       {
-         assert(maxcolactposinf[col] >= 1);
-         if( maxcolactposinf[col] == 1 && maxcolactneginf[col] == 0 )
-            *maxcolresact = getMaxColActWithoutRow(scip, matrix, col, row, lbdual, ubdual, rowrelation);
+         assert(maxcolactinf[col] >= 1);
+         if( maxcolactinf[col] == 1 )
+            *maxcolresact = getMaxColActWithoutRow(scip, matrix, col, row, lbdual, ubdual);
          else
             *maxcolresact = SCIPinfinity(scip);
       }
       else
       {
-         if( (maxcolactneginf[col]+maxcolactposinf[col]) > 0 )
+         if( maxcolactinf[col] > 0 )
             *maxcolresact = SCIPinfinity(scip);
          else
             *maxcolresact = maxcolact[col] - val * ubdual[row];
       }
 
-      if( SCIPisInfinity(scip,-lbdual[row]) )
+      if( SCIPisInfinity(scip, -lbdual[row]) )
       {
-         assert(mincolactneginf[col] >= 1);
-         if( mincolactneginf[col] == 1 && mincolactposinf[col] == 0 )
-            *mincolresact = getMinColActWithoutRow(scip, matrix, col, row, lbdual, ubdual, rowrelation);
+         assert(mincolactinf[col] >= 1);
+         if( mincolactinf[col] == 1 )
+            *mincolresact = getMinColActWithoutRow(scip, matrix, col, row, lbdual, ubdual);
          else
             *mincolresact = -SCIPinfinity(scip);
       }
       else
       {
-         if( (mincolactneginf[col]+mincolactposinf[col]) > 0 )
+         if( mincolactinf[col] > 0 )
             *mincolresact = -SCIPinfinity(scip);
          else
             *mincolresact = mincolact[col] - val * lbdual[row];
@@ -1347,33 +1277,33 @@ void calcColActivityResiduals(
    }
    else if( val < 0.0 )
    {
-      if( SCIPisInfinity(scip,-lbdual[row]) )
+      if( SCIPisInfinity(scip, -lbdual[row]) )
       {
-         assert(maxcolactneginf[col] >= 1);
-         if( maxcolactneginf[col] == 1 && maxcolactposinf[col] == 0 )
-            *maxcolresact = getMaxColActWithoutRow(scip, matrix, col, row, lbdual, ubdual, rowrelation);
+         assert(maxcolactinf[col] >= 1);
+         if( maxcolactinf[col] == 1 )
+            *maxcolresact = getMaxColActWithoutRow(scip, matrix, col, row, lbdual, ubdual);
          else
             *maxcolresact = SCIPinfinity(scip);
       }
       else
       {
-         if( (maxcolactneginf[col]+maxcolactposinf[col]) > 0 )
+         if( maxcolactinf[col] > 0 )
             *maxcolresact = SCIPinfinity(scip);
          else
             *maxcolresact = maxcolact[col] - val * lbdual[row];
       }
 
-      if( SCIPisInfinity(scip,ubdual[row]) )
+      if( SCIPisInfinity(scip, ubdual[row]) )
       {
-         assert(mincolactposinf[col] >= 1);
-         if( mincolactposinf[col] == 1 && mincolactneginf[col] == 0 )
-            *mincolresact = getMinColActWithoutRow(scip, matrix, col, row, lbdual, ubdual, rowrelation);
+         assert(mincolactinf[col] >= 1);
+         if( mincolactinf[col] == 1 )
+            *mincolresact = getMinColActWithoutRow(scip, matrix, col, row, lbdual, ubdual);
          else
             *mincolresact = -SCIPinfinity(scip);
       }
       else
       {
-         if( (mincolactneginf[col]+mincolactposinf[col]) > 0 )
+         if( mincolactinf[col] > 0 )
             *mincolresact = -SCIPinfinity(scip);
          else
             *mincolresact = mincolact[col] - val * ubdual[row];
@@ -1390,14 +1320,11 @@ void calcColActivity(
    SCIP_Real*            ubdual,             /**< upper bounds of dual variables */
    int                   startcol,           /**< start column index */
    int                   stopcol,            /**< stop column index */
-   RELATIONTYPE*         rowrelation,        /**< constraint relations */
-   SCIP_Bool*            excludevar,         /**< indicating of variable is within an equation or ranged row */
+   SCIP_Bool*            excludevar,         /**< indicating if variable is within an equation or ranged row */
    SCIP_Real*            mincolact,          /**< minimal column activities */
    SCIP_Real*            maxcolact,          /**< maximal column activities */
-   int*                  maxcolactposinf,    /**< number of maximal column activity positive infinities */
-   int*                  maxcolactneginf,    /**< number of maximal column activity negative infinities */
-   int*                  mincolactposinf,    /**< number of minimal column activity positive infinities */
-   int*                  mincolactneginf     /**< number of minimal column activity negative infinities */
+   int*                  maxcolactinf,       /**< number of (positive) inifite contributions to maximal column activity */
+   int*                  mincolactinf        /**< number of (negative) infinite contributions to minimal column activity */
    )
 {
    SCIP_Real* valpnt;
@@ -1413,24 +1340,19 @@ void calcColActivity(
    assert(ubdual != NULL);
    assert(0 <= startcol && startcol < matrix->ncols);
    assert(0 < stopcol && stopcol <= matrix->ncols);
-   assert(rowrelation != NULL);
    assert(excludevar != NULL);
    assert(mincolact != NULL);
    assert(maxcolact != NULL);
-   assert(maxcolactposinf != NULL);
-   assert(maxcolactneginf != NULL);
-   assert(mincolactposinf != NULL);
-   assert(mincolactneginf != NULL);
+   assert(maxcolactinf != NULL);
+   assert(mincolactinf != NULL);
 
    for( c = startcol; c < stopcol; c++ )
    {
       excludevar[c] = FALSE;
       mincolact[c] = 0;
       maxcolact[c] = 0;
-      maxcolactposinf[c] = 0;
-      maxcolactneginf[c] = 0;
-      mincolactposinf[c] = 0;
-      mincolactneginf[c] = 0;
+      maxcolactinf[c] = 0;
+      mincolactinf[c] = 0;
 
       /* no activity calculation for non-continuous variables */
       if( SCIPvarGetType(matrix->vars[c]) != SCIP_VARTYPE_CONTINUOUS )
@@ -1446,56 +1368,56 @@ void calcColActivity(
          row = *colpnt;
          val = *valpnt;
 
-         if( rowrelation[row] == LESSEQUAL || rowrelation[row] == GREATEREQUAL )
+         if( matrix->isrhsinfinite[row] )
          {
-            if( rowrelation[row] == LESSEQUAL )
-               val = -val;
-
             if( val > 0 )
             {
                if(SCIPisInfinity(scip, ubdual[row]))
-                  maxcolactposinf[c]++;
+                  maxcolactinf[c]++;
                else
                   maxcolact[c] += val * ubdual[row];
 
                if(SCIPisInfinity(scip, -lbdual[row]))
-                  mincolactneginf[c]++;
+                  mincolactinf[c]++;
                else
                   mincolact[c] += val * lbdual[row];
             }
             else if( val < 0.0 )
             {
                if(SCIPisInfinity(scip, -lbdual[row]))
-                  maxcolactneginf[c]++;
+                  maxcolactinf[c]++;
                else
                   maxcolact[c] += val * lbdual[row];
 
                if(SCIPisInfinity(scip, ubdual[row]))
-                  mincolactposinf[c]++;
+                  mincolactinf[c]++;
                else
                   mincolact[c] += val * ubdual[row];
             }
          }
-         else if( rowrelation[row] == EQUALITY || rowrelation[row] == RANGED )
+         else if( !matrix->isrhsinfinite[row] )
          {
             excludevar[c] = TRUE;
             break;
          }
       }
 
-      /* consider lower bounds on variables */
-      if( SCIPisPositive(scip, SCIPvarGetLbGlobal(matrix->vars[c])) )
-         maxcolactposinf[c]++;
+      if( !excludevar[c] )
+      {
+         /* consider lower bounds on variables */
+         if( SCIPisPositive(scip, SCIPvarGetLbGlobal(matrix->vars[c])) )
+            maxcolactinf[c]++;
 
-      /* consider upper bounds on variables */
-      if( !SCIPisInfinity(scip, SCIPvarGetUbGlobal(matrix->vars[c])) )
-         mincolactposinf[c]++;
+         /* consider upper bounds on variables */
+         if( !SCIPisInfinity(scip, SCIPvarGetUbGlobal(matrix->vars[c])) )
+            mincolactinf[c]++;
 
-      /* update column activities */
-      if( (mincolactneginf[c] + mincolactposinf[c]) > 0 )
-         mincolact[c] = -SCIPinfinity(scip);
-      if( (maxcolactneginf[c] + maxcolactposinf[c]) > 0 )
-         maxcolact[c] = SCIPinfinity(scip);
+         /* update column activities */
+         if( mincolactinf[c] > 0 )
+            mincolact[c] = -SCIPinfinity(scip);
+         if( maxcolactinf[c] > 0 )
+            maxcolact[c] = SCIPinfinity(scip);
+      }
    }
 }
 
@@ -1508,7 +1430,6 @@ void updateDualBounds(
    SCIP_Real             objval,             /**< objective function value */
    SCIP_Real             val,                /**< matrix coefficient */
    int                   row,                /**< row index */
-   RELATIONTYPE*         rowrelation,        /**< row relation type */
    SCIP_Real             mincolresact,       /**< minimal column residual activity */
    SCIP_Real*            lbdual,             /**< dual lower bounds */
    SCIP_Real*            ubdual,             /**< dual upper bounds */
@@ -1521,17 +1442,13 @@ void updateDualBounds(
 
    assert(scip != NULL);
    assert(matrix != NULL);
-   assert(rowrelation != NULL);
    assert(lbdual != NULL);
    assert(ubdual != NULL);
    assert(boundchanges != NULL);
    assert(updateinfcnt != NULL);
-   assert(rowrelation[row] == LESSEQUAL || rowrelation[row] == GREATEREQUAL);
+   assert(matrix->isrhsinfinite[row]);
 
    *updateinfcnt = FALSE;
-
-   if( rowrelation[row] == LESSEQUAL )
-      val = -val;
 
    if( val > 0 )
    {
@@ -1555,7 +1472,7 @@ void updateDualBounds(
       if( !SCIPisInfinity(scip, mincolresact) &&
          !SCIPisInfinity(scip, -mincolresact) )
       {
-         /* lower bound calclulation on dual variable */
+         /* lower bound calculation on dual variable */
          newlbdual = (objval - mincolresact) / val;
          if( newlbdual > lbdual[row] )
          {
@@ -1578,14 +1495,11 @@ void infCounterUpdate(
    int                   row,                /**< row index */
    SCIP_Real*            lbdual,             /**< lower bounds of dual variables */
    SCIP_Real*            ubdual,             /**< upper bounds of dual variables */
-   RELATIONTYPE*         rowrelation,        /**< row relation */
    SCIP_Bool*            excludevar,         /**< indicating if variable is within an equation or ranged row */
    SCIP_Real*            mincolact,          /**< minimal column activities */
    SCIP_Real*            maxcolact,          /**< maximal column activities */
-   int*                  maxcolactposinf,    /**< number of maximal column activity positive infinities */
-   int*                  maxcolactneginf,    /**< number of maximal column activity negative infinities */
-   int*                  mincolactposinf,    /**< number of minimal column activity positive infinities */
-   int*                  mincolactneginf     /**< number of minimal column activity negative infinities */
+   int*                  maxcolactinf,       /**< number of (positive) infinity contributions to maximal column activity */
+   int*                  mincolactinf        /**< number of (negative) infinity contributions to minimal column activity */
    )
 {
    SCIP_Real* valpnt;
@@ -1599,25 +1513,20 @@ void infCounterUpdate(
    assert(0 <= row && row < matrix->nrows);
    assert(lbdual != NULL);
    assert(ubdual != NULL);
-   assert(rowrelation != NULL);
    assert(excludevar != NULL);
    assert(mincolact != NULL);
    assert(maxcolact != NULL);
-   assert(maxcolactposinf != NULL);
-   assert(maxcolactneginf != NULL);
-   assert(mincolactposinf != NULL);
-   assert(mincolactneginf != NULL);
-   assert(rowrelation[row] == LESSEQUAL || rowrelation[row] == GREATEREQUAL);
+   assert(maxcolactinf != NULL);
+   assert(mincolactinf != NULL);
+   assert(matrix->isrhsinfinite[row]);
 
    rowpnt = matrix->rowmatind + matrix->rowmatbeg[row];
    rowend = rowpnt + matrix->rowmatcnt[row];
    valpnt = matrix->rowmatval + matrix->rowmatbeg[row];
 
    /* look at all columns entries present within row and update the corresponding infinity counters.
-      if one counter gets to zero, then calculate this column activity completely new */
-
-   if( rowrelation[row] == LESSEQUAL )
-      val = -val;
+    * if one counter gets to zero, then calculate this column activity completely new
+    */
 
    if( val > 0 )
    {
@@ -1630,31 +1539,26 @@ void infCounterUpdate(
          if( excludevar[c] || SCIPvarGetType(matrix->vars[c]) != SCIP_VARTYPE_CONTINUOUS )
             continue;
 
-         if( rowrelation[row] == LESSEQUAL )
-            aij = -aij;
-
          if( aij > 0 )
          {
-            assert(maxcolactposinf[c] > 0);
-            maxcolactposinf[c]--;
+            assert(maxcolactinf[c] > 0);
+            maxcolactinf[c]--;
 
-            if( maxcolactposinf[c] == 0 )
+            if( maxcolactinf[c] == 0 )
             {
-               calcColActivity(scip, matrix, lbdual, ubdual, c, c+1,
-                  rowrelation, excludevar, mincolact, maxcolact,
-                  maxcolactposinf, maxcolactneginf, mincolactposinf, mincolactneginf);
+               calcColActivity(scip, matrix, lbdual, ubdual, c, c+1, excludevar, mincolact, maxcolact,
+                  maxcolactinf, mincolactinf);
             }
          }
          else if( aij < 0 )
          {
-            assert(mincolactposinf[c] > 0);
-            mincolactposinf[c]--;
+            assert(mincolactinf[c] > 0);
+            mincolactinf[c]--;
 
-            if( mincolactposinf[c] == 0 )
+            if( mincolactinf[c] == 0 )
             {
-               calcColActivity(scip, matrix, lbdual, ubdual, c, c+1,
-                  rowrelation, excludevar, mincolact, maxcolact,
-                  maxcolactposinf, maxcolactneginf, mincolactposinf, mincolactneginf);
+               calcColActivity(scip, matrix, lbdual, ubdual, c, c+1, excludevar, mincolact, maxcolact,
+                  maxcolactinf, mincolactinf);
             }
          }
       }
@@ -1670,28 +1574,23 @@ void infCounterUpdate(
          if( excludevar[c] || SCIPvarGetType(matrix->vars[c]) != SCIP_VARTYPE_CONTINUOUS )
             continue;
 
-         if( rowrelation[row] == LESSEQUAL )
-            aij = -aij;
-
          if( aij > 0 )
          {
-            assert(mincolactneginf[c] > 0);
-            mincolactneginf[c]--;
+            assert(mincolactinf[c] > 0);
+            mincolactinf[c]--;
 
-            if( mincolactneginf[c] == 0 )
-               calcColActivity(scip, matrix, lbdual, ubdual, c, c+1,
-                  rowrelation, excludevar, mincolact, maxcolact,
-                  maxcolactposinf, maxcolactneginf, mincolactposinf, mincolactneginf);
+            if( mincolactinf[c] == 0 )
+               calcColActivity(scip, matrix, lbdual, ubdual, c, c+1, excludevar, mincolact, maxcolact,
+                  maxcolactinf, mincolactinf);
          }
          else if( aij < 0 )
          {
-            assert(maxcolactneginf[c] > 0);
-            maxcolactneginf[c]--;
+            assert(maxcolactinf[c] > 0);
+            maxcolactinf[c]--;
 
-            if( maxcolactneginf[c] == 0 )
-               calcColActivity(scip, matrix, lbdual, ubdual, c, c+1,
-                  rowrelation, excludevar, mincolact, maxcolact,
-                  maxcolactposinf, maxcolactneginf, mincolactposinf, mincolactneginf);
+            if( maxcolactinf[c] == 0 )
+               calcColActivity(scip, matrix, lbdual, ubdual, c, c+1, excludevar, mincolact, maxcolact,
+                  maxcolactinf, mincolactinf);
          }
       }
    }
@@ -1702,8 +1601,7 @@ static
 SCIP_RETCODE dualBoundStrengthening(
    SCIP*                 scip,               /**< SCIP main data structure */
    CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
-   RELATIONTYPE*         rowrelation,        /**< row relation type */
-   FIXINGDIRECTION*      varstofix,          /**< array holding information for later upper/lower bound fixing */
+   int*                  varstofix,          /**< array holding information for later upper/lower bound fixing */
    int*                  nfitsinglecols,     /**< number of continuous singleton columns */
    int*                  npossiblefixings    /**< found number of possible fixings */
    )
@@ -1715,10 +1613,8 @@ SCIP_RETCODE dualBoundStrengthening(
    SCIP_Real* maxcolact;
    SCIP_Bool* excludevar;
    SCIP_Bool* varissingcol;
-   int* maxcolactposinf;
-   int* maxcolactneginf;
-   int* mincolactposinf;
-   int* mincolactneginf;
+   int* maxcolactinf;
+   int* mincolactinf;
    int* colpnt;
    int* colend;
    int cnt;
@@ -1729,7 +1625,6 @@ SCIP_RETCODE dualBoundStrengthening(
 
    assert(scip != NULL);
    assert(matrix != NULL);
-   assert(rowrelation != NULL);
    assert(varstofix != NULL);
    assert(nfitsinglecols != NULL);
    assert(npossiblefixings != NULL);
@@ -1745,10 +1640,8 @@ SCIP_RETCODE dualBoundStrengthening(
    SCIP_CALL( SCIPallocBufferArray(scip, &excludevar, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &mincolact, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &maxcolact, matrix->ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &maxcolactposinf, matrix->ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &maxcolactneginf, matrix->ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &mincolactposinf, matrix->ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &mincolactneginf, matrix->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &maxcolactinf, matrix->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &mincolactinf, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lbdual, matrix->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ubdual, matrix->nrows) );
 
@@ -1768,7 +1661,7 @@ SCIP_RETCODE dualBoundStrengthening(
       row = *(matrix->colmatind + matrix->colmatbeg[c]);
       varissingcol[c] = FALSE;
 
-      if( matrix->colmatcnt[c] == 1 && rowrelation[row] != EQUALITY && rowrelation[row] != RANGED )
+      if( matrix->colmatcnt[c] == 1 && matrix->isrhsinfinite[row] )
       {
          varissingcol[c] = TRUE;
 
@@ -1783,9 +1676,6 @@ SCIP_RETCODE dualBoundStrengthening(
 
             objval = SCIPvarGetObj(matrix->vars[c]);
             val = *(matrix->colmatval + matrix->colmatbeg[c]);
-
-            if( rowrelation[row] == LESSEQUAL )
-               val = -val;
 
             if( val > 0 )
             {
@@ -1816,7 +1706,7 @@ SCIP_RETCODE dualBoundStrengthening(
       loops = 0;
       boundchanges = 1;
 
-      /* continue dual bound strengthening only if boundchanges are occurred and
+      /* continue dual bound strengthening only if some bounds were change in the last round and
        * a maximal number of processing loops is not exceeded
        */
       while( boundchanges && loops < MAX_LOOPS )
@@ -1825,9 +1715,8 @@ SCIP_RETCODE dualBoundStrengthening(
          boundchanges = 0;
 
          /* calculate minimal and maximal column activity */
-         calcColActivity(scip, matrix, lbdual, ubdual, 0, matrix->ncols,
-            rowrelation, excludevar, mincolact, maxcolact,
-            maxcolactposinf, maxcolactneginf, mincolactposinf, mincolactneginf);
+         calcColActivity(scip, matrix, lbdual, ubdual, 0, matrix->ncols, excludevar, mincolact, maxcolact,
+            maxcolactinf, mincolactinf);
 
          for( c = 0 ; c < matrix->ncols; c++ )
          {
@@ -1860,19 +1749,17 @@ SCIP_RETCODE dualBoundStrengthening(
                updateinfcnt = FALSE;
 
                /* calulate column activity residuals */
-               calcColActivityResiduals(scip, matrix, c, row, val, lbdual, ubdual, rowrelation,
-                  mincolact, maxcolact, maxcolactposinf, maxcolactneginf,
-                  mincolactposinf, mincolactneginf, &mincolresact, &maxcolresact);
+               calcColActivityResiduals(scip, matrix, c, row, val, lbdual, ubdual, mincolact, maxcolact,
+                  maxcolactinf, mincolactinf, &mincolresact, &maxcolresact);
 
                /* update dual bounds */
-               updateDualBounds(scip, matrix, objval, val, row, rowrelation, mincolresact,
+               updateDualBounds(scip, matrix, objval, val, row, mincolresact,
                   lbdual, ubdual, &boundchanges, &updateinfcnt);
 
                /* update infinity counters if bound changed properly */
                if( updateinfcnt )
-                  infCounterUpdate(scip, matrix, val, row, lbdual, ubdual,
-                     rowrelation, excludevar, mincolact, maxcolact,
-                     maxcolactposinf, maxcolactneginf, mincolactposinf, mincolactneginf);
+                  infCounterUpdate(scip, matrix, val, row, lbdual, ubdual, excludevar, mincolact, maxcolact,
+                     maxcolactinf, mincolactinf);
             }
          }
       }
@@ -1880,9 +1767,8 @@ SCIP_RETCODE dualBoundStrengthening(
       if( boundchanges > 0 )
       {
          /* calculate minimal/maximal column activity the last time */
-         calcColActivity(scip, matrix, lbdual, ubdual, 0, matrix->ncols,
-            rowrelation, excludevar, mincolact, maxcolact,
-            maxcolactposinf, maxcolactneginf, mincolactposinf, mincolactneginf);
+         calcColActivity(scip, matrix, lbdual, ubdual, 0, matrix->ncols, excludevar, mincolact, maxcolact,
+            maxcolactinf, mincolactinf);
       }
 
       for( c = 0; c < matrix->ncols; c++ )
@@ -1906,10 +1792,8 @@ SCIP_RETCODE dualBoundStrengthening(
 
    SCIPfreeBufferArray(scip, &ubdual);
    SCIPfreeBufferArray(scip, &lbdual);
-   SCIPfreeBufferArray(scip, &mincolactneginf);
-   SCIPfreeBufferArray(scip, &mincolactposinf);
-   SCIPfreeBufferArray(scip, &maxcolactneginf);
-   SCIPfreeBufferArray(scip, &maxcolactposinf);
+   SCIPfreeBufferArray(scip, &mincolactinf);
+   SCIPfreeBufferArray(scip, &maxcolactinf);
    SCIPfreeBufferArray(scip, &maxcolact);
    SCIPfreeBufferArray(scip, &mincolact);
    SCIPfreeBufferArray(scip, &excludevar);
@@ -1917,48 +1801,6 @@ SCIP_RETCODE dualBoundStrengthening(
 
    return SCIP_OKAY;
 }
-
-/** initialize row relations */
-static
-void initRowRelation(
-   SCIP*                 scip,               /**< SCIP main data structure */
-   CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
-   RELATIONTYPE*         rowrelation         /**< row relation type */
-   )
-{
-   int r;
-
-   assert(scip != NULL);
-   assert(matrix != NULL);
-   assert(rowrelation != NULL);
-
-   for( r = 0; r < matrix->nrows; r++ )
-   {
-      assert(!SCIPisInfinity(scip, -matrix->lhs[r]) || !SCIPisInfinity(scip, matrix->rhs[r]));
-
-      if( SCIPisInfinity(scip, -matrix->lhs[r]) )
-      {
-         /* <= */
-         rowrelation[r] = LESSEQUAL;
-      }
-      else if( SCIPisInfinity(scip, matrix->rhs[r]) )
-      {
-         /* >= */
-         rowrelation[r] = GREATEREQUAL;
-      }
-      else if( SCIPisEQ(scip, matrix->lhs[r], matrix->rhs[r]) )
-      {
-         /* = */
-         rowrelation[r] = EQUALITY;
-      }
-      else
-      {
-         /* ranged */
-         rowrelation[r] = RANGED;
-      }
-   }
-}
-
 
 /*
  * Callback methods of presolver
@@ -2001,7 +1843,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    if( initialized )
    {
       FIXINGDIRECTION* varstofix;
-      RELATIONTYPE* rowrelation;
       int nconvarsfixed;
       int nintvarsfixed;
       int nbinvarsfixed;
@@ -2015,22 +1856,18 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
       npossiblefixings = 0;
       nfitsinglecols = 0;
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &rowrelation, matrix->nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &varstofix, matrix->ncols) );
-
-      /* determine row relation types */
-      initRowRelation(scip, matrix, rowrelation);
 
       /* initialize varstofix to 0 (= NOFIX) */
       BMSclearMemoryArray(varstofix, matrix->ncols);
 
       /* dual cost fixing */
-      SCIP_CALL( costFixing(scip, matrix, rowrelation, varstofix, &nfitsinglecols, &npossiblefixings) );
+      SCIP_CALL( costFixing(scip, matrix, varstofix, &nfitsinglecols, &npossiblefixings) );
 
       if( SCIPgetNContVars(scip) > 1 )
       {
          /* dual bound strengthening */
-         SCIP_CALL( dualBoundStrengthening(scip, matrix, rowrelation, varstofix, &nfitsinglecols, &npossiblefixings) );
+         SCIP_CALL( dualBoundStrengthening(scip, matrix, varstofix, &nfitsinglecols, &npossiblefixings) );
       }
 
       if( npossiblefixings > 0 )
@@ -2100,7 +1937,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
       }
 
       SCIPfreeBufferArray(scip, &varstofix);
-      SCIPfreeBufferArray(scip, &rowrelation);
 
       if( (*result) != SCIP_CUTOFF && (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 )
       {
