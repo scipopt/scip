@@ -2047,9 +2047,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
                lb = SCIPvarGetLbLocal(var);
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, lb));
 
-               /* ??? */
-               lb = MAX(lb, 0.0);
-
                /* fix at lower bound */
                SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
                if( infeasible )
