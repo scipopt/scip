@@ -93,6 +93,26 @@ HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
+# init an empty list of command line settings to be used by gurobi_cl
+CLSETTINGSLIST=""
+
+#append feasibility tolerance in case of non-default values
+if test $FEASTOL != "default"
+then
+    CLSETTINGSLIST="$CLSETTINGSLIST FeasibilityTol=$FEASTOL IntFeasTol=$FEASTOL"
+fi
+CLSETTINGSLIST="$CLSETTINGSLIST TimeLimit=$TIMELIMIT NodeLimit=$NODELIMIT DisplayInterval=$DISPFREQ MIPGap=0.0 Threads=$THREADS"
+
+# parse settings from settings file via awk
+if test $SETNAME != "default"
+then
+    echo `pwd`
+    CLSETTINGSLIST="`awk 'BEGIN { finalstr=""} {finalstr=finalstr " "$1"="$2} END {print finalstr}' ../$SETTINGS` $CLSETTINGSLIST"
+fi
+
+#have a look if Gurobi is invoked with the settings you are asking for
+echo "Gurobi will be invoked with arguments: $CLSETTINGSLIST"
+
 for i in `cat testset/$TSTNAME.test`
 do
     if test "$LASTPROB" = ""
@@ -101,39 +121,15 @@ do
         if test -f $i
         then
             rm -f $SETFILE
+
             echo @01 $i ===========
             echo @01 $i ===========                 >> $ERRFILE
-            echo "from gurobipy import *" > $TMPFILE
-            echo "print 'Gurobi Interactive Shell, Version %s' % '.'.join(str(x) for x in gurobi.version())" >> $TMPFILE
-#equivalent formulation from gurobi.py
-#echo "version = str(gurobi.version()[0]) + '.' + str(gurobi.version()[1]) + '.' + str(gurobi.version()[2])" >> $TMPFILE
-#echo "print('\nGurobi Interactive Shell, Version ' + version)" >> $TMPFILE
-#echo "print('Copyright (c) 2009, Gurobi Optimization, Inc.')" >> $TMPFILE
-            if test $SETNAME != "default"
-            then
-                echo "readParams("$SETTINGS")"        >> $TMPFILE
-            fi
-            if test $FEASTOL != "default"
-            then
-                echo "setParam(\"FeasibilityTol\",$FEASTOL)" >> $TMPFILE
-                echo "setParam(\"IntFeasTol\",$FEASTOL)"     >> $TMPFILE
-            fi
-            echo "setParam(\"TimeLimit\",$TIMELIMIT)" >> $TMPFILE
-            echo "setParam(\"DisplayInterval\",$DISPFREQ)"  >> $TMPFILE
-            echo "setParam(\"MIPGap\",0.0)"           >> $TMPFILE
-            echo "setParam(\"NodeLimit\",$NODELIMIT)" >> $TMPFILE
-            echo "setParam(\"Threads\",$THREADS)"     >> $TMPFILE
-            echo "writeParams(\"$SETFILE\")"          >> $TMPFILE
-            echo "problem=read(\"$i\")"               >> $TMPFILE
-            echo "problem.printStats()"               >> $TMPFILE
-            echo "problem.optimize()"                 >> $TMPFILE
-            echo "quit()"                             >> $TMPFILE
             echo -----------------------------
             date
             date >>$ERRFILE
             echo -----------------------------
             date +"@03 %s"
-            bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $GUROBIBIN < $TMPFILE" 2>>$ERRFILE
+            bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $GUROBIBIN $CLSETTINGSLIST $i" 2>>$ERRFILE
             date +"@04 %s"
             echo -----------------------------
             date

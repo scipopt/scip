@@ -29,6 +29,14 @@ testclustercbc:
 		$(THREADS) $(FEASTOL) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
 		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
+.PHONY: testclustergurobi
+testclustergurobi:
+		cd check; \
+		$(SHELL) ./check_cluster_gurobi.sh $(TEST) $(GUROBI) $(SETTINGS) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
+		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+
 .PHONY: testgamscluster
 testgamscluster:
 		cd check; \

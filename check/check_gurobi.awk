@@ -120,8 +120,8 @@ BEGIN {
 #
 /^Gurobi Optimizer version/ { version = $4; }
 /^Gurobi Interactive Shell, Version/ { version = $5; }
-/^Changed value of parameter TimeLimit to/ { timelimit = $7; }
-/^Changed value of parameter Threads to/ { threads = $7; }
+/^Set parameter TimeLimit to value / { timelimit = $6; }
+/^Set parameter Threads to value/ { threads = $6; }
 #
 /^Set parameter MIPGap/ {
    mipgap = $6;
