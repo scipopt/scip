@@ -5830,7 +5830,7 @@ SCIP_RETCODE extractCliques(
                }
                jstart = j;
 
-               assert(j - i >= 2);
+               assert(j >= 2);
                /* add clique with at least two variables */
                SCIP_CALL( SCIPaddClique(scip, &(binvars[i]), NULL, j - i, &infeasible, &nbdchgs) );
 
@@ -6052,7 +6052,7 @@ SCIP_RETCODE extractCliques(
                }
                jstart = j;
 
-               assert(j - i >= 2);
+               assert(j >= 2);
 
                /* add negated clique with at least two variables */
                SCIP_CALL( SCIPaddClique(scip, &(binvars[i]), values, j - i, &infeasible, &nbdchgs) );

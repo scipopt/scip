@@ -8170,7 +8170,7 @@ SCIP_RETCODE createDisjuctiveCons(
       if( consdata->demands[v] > halfcapacity )
       {
          vars[nvars] = consdata->vars[v];
-         demands[nvars] = 1.0;
+         demands[nvars] = 1;
          durations[nvars] = consdata->durations[v];
          nvars++;
 
@@ -8191,12 +8191,12 @@ SCIP_RETCODE createDisjuctiveCons(
 
          if( mindemand + consdata->demands[v] > capacity )
          {
-            demands[nvars] = 1.0;
+            demands[nvars] = 1;
             durations[nvars] = consdata->durations[v];
             vars[nvars] = consdata->vars[v];
 
             /* creates cumulative constraint and adds it to problem */
-            SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars+1, vars, durations, demands, 1.0, consdata->hmin, consdata->hmax,
+            SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars+1, vars, durations, demands, 1, consdata->hmin, consdata->hmax,
                   FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
             (*naddconss)++;
             added = TRUE;
@@ -8206,7 +8206,7 @@ SCIP_RETCODE createDisjuctiveCons(
       if( !added && nvars > 1 )
       {
          /* creates cumulative constraint and adds it to problem */
-         SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars, vars, durations, demands, 1.0, consdata->hmin, consdata->hmax,
+         SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars, vars, durations, demands, 1, consdata->hmin, consdata->hmax,
                FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          (*naddconss)++;
       }

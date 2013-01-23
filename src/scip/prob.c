@@ -1871,8 +1871,7 @@ SCIP_RETCODE SCIPprobSetName(
  *        implicit binary status
  */
 int SCIPprobGetNImplBinVars(
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
    )
 {
    int v;

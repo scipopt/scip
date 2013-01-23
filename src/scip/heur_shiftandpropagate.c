@@ -1638,7 +1638,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIP_Real origsolval;
       SCIP_Real lb;
       SCIP_Real ub;
-      SCIP_Real obj;
       TRANSFORMSTATUS status;
       int nviolations;
       int permutedvarindex;
@@ -1666,9 +1665,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             lb, ub, violatedrows, violatedrowpos, &nviolatedrows);
 
       status = matrix->transformstatus[permutedvarindex];
-      obj = SCIPvarGetObj(var);
-      if( status == TRANSFORMSTATUS_NEG )
-         obj = -obj;
 
       SCIPdebugMessage("Variable %s with local bounds [%g,%g], status <%d>, matrix bound <%g>\n",
          SCIPvarGetName(var), lb, ub, status, matrix->upperbounds[permutedvarindex]);
@@ -1955,18 +1951,17 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       );
 
  TERMINATE2:
-  /* free allocated memory in reverse order of allocation */
-  for( c = matrix->ndiscvars - 1; c >= 0; --c )
-  {
-     SCIP_VAR* var;
+   /* free allocated memory in reverse order of allocation */
+   for( c = matrix->ndiscvars - 1; c >= 0; --c )
+   {
+      SCIP_VAR* var;
 
-     var = SCIPcolGetVar(heurdata->lpcols[c]);
-     assert(var != NULL);
-     assert(eventdatas[c] != NULL);
+      var = SCIPcolGetVar(heurdata->lpcols[c]);
+      assert(var != NULL);
+      assert(eventdatas[c] != NULL);
 
-
-     SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, eventdatas[c], -1);
-     SCIPfreeBuffer(scip, &(eventdatas[c]));
+      SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, eventdatas[c], -1) );
+      SCIPfreeBuffer(scip, &(eventdatas[c]));
    }
    SCIPfreeBufferArray(scip, &eventdatas);
 
@@ -1999,7 +1994,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIP_CALL( SCIPendProbing(scip) );
    freeMatrix(scip, &matrix);
    eventhdlrdata->matrix = NULL;
-
 
    return SCIP_OKAY;
 }

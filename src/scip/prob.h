@@ -434,8 +434,7 @@ SCIP_RETCODE SCIPprobSetName(
  */
 extern
 int SCIPprobGetNImplBinVars(
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** returns the number of variables with non-zero objective coefficient */
