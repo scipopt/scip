@@ -14,7 +14,7 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #
-# Call with "make testcluster"
+# Call with "make testclustercpx"
 #
 # The queue is passed via $QUEUE (possibly defined in a local makefile in scip/make/local).
 #
