@@ -1059,7 +1059,7 @@ static
 SCIP_RETCODE costFixing(
    SCIP*                 scip,               /**< SCIP main data structure */
    CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
-   int*                  varstofix,          /**< array holding information for later upper/lower bound fixing */
+   FIXINGDIRECTION*      varstofix,          /**< array holding information for later upper/lower bound fixing */
    int*                  nfitsinglecols,     /**< number of continuous singleton columns */
    int*                  npossiblefixings    /**< number of possible fixings */
    )
@@ -1082,7 +1082,7 @@ SCIP_RETCODE costFixing(
 
    initShadowPrices(scip, matrix, lowershadow, uppershadow);
 
-   singletonColumns(scip, matrix, lowershadow, uppershadow, nfitsinglecols);
+   SCIP_CALL( singletonColumns(scip, matrix, lowershadow, uppershadow, nfitsinglecols) );
 
    costCalculation(scip, matrix, lowershadow, uppershadow, lowercosts, uppercosts);
 
@@ -1601,7 +1601,7 @@ static
 SCIP_RETCODE dualBoundStrengthening(
    SCIP*                 scip,               /**< SCIP main data structure */
    CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
-   int*                  varstofix,          /**< array holding information for later upper/lower bound fixing */
+   FIXINGDIRECTION*      varstofix,          /**< array holding information for later upper/lower bound fixing */
    int*                  nfitsinglecols,     /**< number of continuous singleton columns */
    int*                  npossiblefixings    /**< found number of possible fixings */
    )
