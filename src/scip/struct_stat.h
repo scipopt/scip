@@ -81,6 +81,7 @@ struct SCIP_Stat
    SCIP_Longint          nprobboundchgs;     /**< total number of bound changes generated in the tree during probing */
    SCIP_Longint          nprobholechgs;      /**< total number of hole changes generated in the tree  during probing */
    SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */   
+   SCIP_Real             rootfirstlpbound;   /**< lower bound of root node computed by first LP solve (without cuts) */
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
    SCIP_Real             vsidsweight;        /**< current weight to use for updating VSIDS in history */
    SCIP_Real             firstprimalbound;   /**< objective value of first primal solution */

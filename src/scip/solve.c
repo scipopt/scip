@@ -1260,7 +1260,22 @@ SCIP_RETCODE solveNodeInitialLP(
 	    || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT)
 	 && SCIPprobAllColsInLP(prob, set, lp) && SCIPlpIsRelax(lp) )
       {
-	 SCIP_CALL( SCIPnodeUpdateLowerboundLP(SCIPtreeGetFocusNode(tree), set, stat, prob, lp) );
+         SCIP_NODE* focusnode;
+
+         focusnode = SCIPtreeGetFocusNode(tree);
+
+	 SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, prob, lp) );
+
+         /* if this is the first LP solved at the root, store its solution value */
+         if( focusnode->depth == 0 )
+         {
+            if( set->misc_exactsolve )
+            {
+               SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &stat->rootfirstlpbound) );
+            }
+            else
+               stat->rootfirstlpbound = SCIPlpGetObjval(lp, set, prob);
+         }
       }
    }
 
