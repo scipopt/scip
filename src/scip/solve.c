@@ -2930,12 +2930,18 @@ SCIP_RETCODE enforceConstraints(
       /* the enforcement method may add a primal solution, after which the LP status could be set to
        * objective limit reached
        */
-      if( !(*branched) && SCIPtreeHasFocusNodeLP(tree) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+      if( SCIPtreeHasFocusNodeLP(tree) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
       {
-         *cutoff = TRUE;
-         *infeasible = TRUE;
-         resolved = TRUE;
-         SCIPdebugMessage(" -> LP exceeded objective limit\n");
+         /* The enforcement method might also change the status of the LP solution, e.g., in strong branching that might
+          * be triggerd by integral enforcing. Thus, we exclude results that possibly changed the LP status. */
+         if ( result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED ||
+              result == SCIP_INFEASIBLE || result == SCIP_FEASIBLE || result == SCIP_DIDNOTRUN )
+         {
+            *cutoff = TRUE;
+            *infeasible = TRUE;
+            resolved = TRUE;
+            SCIPdebugMessage(" -> LP exceeded objective limit\n");
+         }
       }
 
       assert(!(*branched) || (resolved && !(*cutoff) && *infeasible && !(*propagateagain) && !(*solvelpagain)));
