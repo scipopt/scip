@@ -41,6 +41,7 @@ BEGIN {
    NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
    headerprinted = 0;
+   namelength = 18;             # maximal length of instance names (can be increased)
 
    nprobs   = 0;
    sbab     = 0;
@@ -79,8 +80,8 @@ BEGIN {
    for( i = 2; i < m; ++i )
       prob = prob "." b[i];
 
-   if( useshortnames && length(prob) > 18 )
-      shortprob = substr(prob, length(prob)-17, 18);
+   if( useshortnames && length(prob) > namelength )
+      shortprob = substr(prob, length(prob)-namelength-1, namelength);
    else
       shortprob = prob;
 
@@ -406,11 +407,11 @@ BEGIN {
       if( timelimit > 0.0 )
          tottime = min(tottime, timelimit);
 
-      printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
-	     pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
+      printf("%-*s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
+	     namelength, pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
-      printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
-	     shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
+      printf("%-*s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
+	     namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
       if( aborted ) {
          printf("abort\n");
