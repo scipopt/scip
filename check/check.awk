@@ -22,6 +22,7 @@
 #@author  Timo Berthold
 #@author  Robert Waniek
 #@author  Gregor Hendel
+#@author  Marc Pfetsch
 #
 function abs(x)
 {
@@ -527,8 +528,12 @@ BEGIN {
       headerprinted = 1;
    }
 
-   if( (!onlyinsolufile || solstatus[prob] != "") &&
-       (!onlyintestfile || intestfile[filename]) ) {
+   if( (!onlyinsolufile || prob in solstatus) &&
+       (!onlyintestfile || intestfile[filename]) )
+   {
+      # if sol file could not be read, fix status to be "unkown"
+      if ( ! (prob in solstatus) )
+         solstatus[prob] = "unkown";
 
       #avoid problems when comparing floats and integer (make everything float)
       temp = pb;
@@ -839,7 +844,7 @@ BEGIN {
          reltol = 1e-5 * max(abs(pb),1.0);
          abstol = 1e-4;
 
-         if( timeout || gapreached || sollimitreached || memlimit || nodelimit ) {
+         if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) {
 	    if( timeout )
 	       status = "timeout";
 	    else if( gapreached )
@@ -1017,4 +1022,9 @@ END {
       printf(" [GitHash: %s]\n", githash);
    else
       printf("\n");
+
+   if ( TEXFILE != "" )
+      close(TEXFILE);
+   if ( PAVFILE != "" )
+      close(PAVFILE);
 }

@@ -618,7 +618,7 @@ END {
       nthisfails = 0;
       ismini = 0;
       ismaxi = 0;
-      mark = " ";
+      marker = " ";
       countprob = 1;
       notimeout = 1;
 
