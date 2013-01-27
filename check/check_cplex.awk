@@ -335,9 +335,28 @@ BEGIN {
       printf("\\tablecaption{CPLEX with %s settings}\n",settings)      >TEXFILE;
       printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
 
-      printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+--------\n");
-      printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |       \n");
-      printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+--------\n");
+      # prepare header
+      hyphenstr = "";
+      for (i = 0; i < namelength; ++i)
+         hyphenstr = sprintf("%s-", hyphenstr);
+
+      # first part: name of given length
+      tablehead1 = hyphenstr;
+      tablehead2 = sprintf("Name%*s", namelength-4, " ");
+      tablehead3 = hyphenstr;
+
+      # append rest of header
+      tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+-------+";
+      tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |";
+      tablehead3 = tablehead3"+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+";
+
+      tablehead1 = tablehead1"--------\n";
+      tablehead2 = tablehead2"       \n";
+      tablehead3 = tablehead3"--------\n";
+   
+      printf(tablehead1);
+      printf(tablehead2);
+      printf(tablehead3);
 
       headerprinted = 1;
    }
@@ -383,18 +402,18 @@ BEGIN {
       if( vars == 0 )
          probtype = "--";
       else if( binvars == 0 && intvars == 0 )
-         probtype = "LP";
+         probtype = "   LP";
       else if( contvars == 0 ) {
          if( intvars == 0 && implvars == 0 )
-            probtype = "BP";
+            probtype = "   BP";
          else
-            probtype = "IP";
+            probtype = "   IP";
       }
       else {
          if( intvars == 0 )
-            probtype = "MBP";
+            probtype = "  MBP";
          else
-            probtype = "MIP";
+            probtype = "  MIP";
       }
 
       if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
@@ -410,7 +429,7 @@ BEGIN {
       printf("%-*s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
 	     namelength, pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
-      printf("%-*s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
+      printf("%-*s  %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
 	     namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
       if( aborted ) {
