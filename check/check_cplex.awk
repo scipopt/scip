@@ -18,6 +18,7 @@
 #@brief   CPLEX Check Report Generator
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
+#@author  Marc Pfetsch
 #@author  Robert Waniek
 #
 function abs(x)
@@ -177,18 +178,25 @@ BEGIN {
 # problem size
 #
 /^Variables            : / {
-   if ( parsedvars == 0 )
-   {
-      if ( $3 != "Min" ) {
-	 origvars = $3;
-	 intvars = $10;
-	 binvars = $7;
-      }
-      if ( vars == 0 )
-	 vars = origvars;
-      contvars = vars - intvars - binvars;
-      parsedvars = 1;
-   }
+    if ( parsedvars == 0 )
+    {
+	origvars = $3;
+	for (i = 4; i < NF; i = i + 1)
+	{
+	    if ( $i == "[Binary:" )
+	    {
+		binvars = $(i+1);
+	    }
+	    if ( $i == "[General Integer:" )
+	    {
+		intvars = $(i+1);
+	    }
+	}
+	if ( vars == 0 )
+	    vars = origvars;
+	contvars = vars - intvars - binvars;
+	parsedvars = 1;
+    }
 }
 /^Linear constraints   : / {
    if ( parsedcons == 0 )
@@ -200,6 +208,7 @@ BEGIN {
       parsedcons = 1;
    }
 }
+# find line that ends with "nonzeros.", which corresponds to information about presolved constraints
 /nonzeros.$/ {
    if ( parsednnz == 0 )
    {
@@ -208,6 +217,7 @@ BEGIN {
       parsednnz = 1;
    }
 }
+# find line that ends with "indicators.", which corresponds to information about presolved variables
 /indicators.$/ {
    if ( parsedind == 0 )
    {
