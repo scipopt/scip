@@ -90,6 +90,13 @@ BEGIN {
    pprob = a[1];
    for( i = 2; i <= n; i++ )
       pprob = pprob "\\_" a[i];
+
+   # for marking section (is repeated with bounds in newer CPLEX versions)
+   parsedvars = 0;
+   parsedcons = 0;
+   parsednnz  = 0;
+   parsedind  = 0;
+
    origvars   = 0;
    origcons   = 0;
    vars       = 0;
@@ -170,29 +177,45 @@ BEGIN {
 # problem size
 #
 /^Variables            : / {
-   if ( $3 != "Min" ) {
-      origvars = $3;
-      intvars = $10;
-      binvars = $7;
+   if ( parsedvars == 0 )
+   {
+      if ( $3 != "Min" ) {
+	 origvars = $3;
+	 intvars = $10;
+	 binvars = $7;
+      }
+      if ( vars == 0 )
+	 vars = origvars;
+      contvars = vars - intvars - binvars;
+      parsedvars = 1;
    }
-   if ( vars == 0 )
-      vars = origvars;
-   contvars = vars - intvars - binvars;
 }
 /^Linear constraints   : / {
-   if ( $4 > 0 )
-      origcons = $4;
-   if ( cons == 0 )
-      cons = origcons;
+   if ( parsedcons == 0 )
+   {
+      if ( $4 > 0 )
+	 origcons = $4;
+      if ( cons == 0 )
+	 cons = origcons;
+      parsedcons = 1;
+   }
 }
-/nonzeros.$/ { 
-   cons = $4; 
-   vars = $6; 
+/nonzeros.$/ {
+   if ( parsednnz == 0 )
+   {
+      cons = $4;
+      vars = $6;
+      parsednnz = 1;
+   }
 }
 /indicators.$/ {
-   binvars = $4;
-   intvars = $6;
-   contvars = vars - intvars - binvars;
+   if ( parsedind == 0 )
+   {
+      binvars = $4;
+      intvars = $6;
+      contvars = vars - intvars - binvars;
+      parsedind = 1;
+   }
 }
 #
 # solution
