@@ -97,6 +97,9 @@ endif
 		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 		@echo "-> remove binary"
 
+# include local targets 
+-include ../../make/local/make.targets
+
 .PHONY: test
 test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
