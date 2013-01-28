@@ -88,7 +88,7 @@ fi
 # check if the slurm blades should be used exclusively
 if test "$EXCLUSIVE" = "true"
 then
-    EXCLUSIVE=" --exclusive"
+    EXCLUSIVE="  --exclusive --exclude=opt233,opt234,opt235,opt236,opt237,opt238,opt239,opt240,opt241,opt242,opt243,opt244,opt245,opt246,opt247,opt248"
 else
     EXCLUSIVE=""
 fi
@@ -216,7 +216,6 @@ do
       # reached the submitted jobs are dumped; to avoid that we check the total
       # load of the cluster and wait until it is save (total load not more than
       # 1900 jobs) to submit the next job.
-      echo "Nowaitcluster $NOWAITCLUSTER"
       if test "$NOWAITCLUSTER" != "1"
       then
 	  ./waitcluster.sh 1500 $QUEUE 200
@@ -260,7 +259,6 @@ do
       if test  "$QUEUETYPE" = "srun"
       then
          sbatch --job-name=GUROBI$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${NICE} ${EXCLUSIVE} --output=/dev/null runcluster_gurobi.sh
-         runcluster.sh
       else
          qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N GUROBI$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster_gurobi.sh
       fi
