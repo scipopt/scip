@@ -102,7 +102,6 @@ struct ConstraintMatrix
    int                   nrows;              /**< complete number of rows */
    SCIP_Real*            lhs;                /**< left hand side per row */
    SCIP_Real*            rhs;                /**< right hand side per row */
-   SCIP_Bool*            islhsinfinite;      /**< is left hand side -infinity */
    SCIP_Bool*            isrhsinfinite;      /**< is right hand side infinity */
    int                   nnonzs;             /**< sparsity counter */
    SCIP_Real*            minactivity;        /**< min activity per row */
@@ -167,19 +166,29 @@ SCIP_RETCODE addRow(
    int j;
    int probindex;
    int rowidx;
+   SCIP_Real factor;
 
    assert(vars != NULL);
    assert(vals != NULL);
 
    rowidx = matrix->nrows;
 
-   matrix->lhs[rowidx] = lhs;
-   matrix->rhs[rowidx] = rhs;
-
-   if( SCIPisInfinity(scip, -matrix->lhs[rowidx]) )
-      matrix->islhsinfinite[rowidx] = TRUE;
-   if( SCIPisInfinity(scip, matrix->rhs[rowidx]) )
+   if( SCIPisInfinity(scip, -lhs) )
+   {
+      factor = -1.0;
+      matrix->lhs[rowidx] = -rhs;
+      matrix->rhs[rowidx] = SCIPinfinity(scip);
       matrix->isrhsinfinite[rowidx] = TRUE;
+   }
+   else
+   {
+      factor = 1.0;
+      matrix->lhs[rowidx] = lhs;
+      matrix->rhs[rowidx] = rhs;
+      matrix->isrhsinfinite[rowidx] = SCIPisInfinity(scip, matrix->rhs[rowidx]);
+   }
+   assert(!SCIPisInfinity(scip, -matrix->lhs[rowidx]));
+
 
 #ifdef SCIP_DEBUG
    matrix->rowname[rowidx] = name;
@@ -189,13 +198,13 @@ SCIP_RETCODE addRow(
 
    for( j = 0; j < nvars; j++ )
    {
-      matrix->rowmatval[matrix->nnonzs] = vals[j];
+      matrix->rowmatval[matrix->nnonzs] = factor * vals[j];
       probindex = SCIPvarGetProbindex(vars[j]);
       assert(matrix->vars[probindex] == vars[j]);
 
       assert(0 <= probindex && probindex < matrix->ncols);
       matrix->rowmatind[matrix->nnonzs] = probindex;
-      matrix->nnonzs = matrix->nnonzs + 1;
+      (matrix->nnonzs)++;
    }
 
    matrix->rowmatcnt[rowidx] = matrix->nnonzs - matrix->rowmatbeg[rowidx];
@@ -335,6 +344,7 @@ SCIP_RETCODE setColumnMajorFormat(
       rowpnt = matrix->rowmatind + matrix->rowmatbeg[i];
       rowend = rowpnt + matrix->rowmatcnt[i];
       valpnt = matrix->rowmatval + matrix->rowmatbeg[i];
+
       for( ; rowpnt < rowend; rowpnt++, valpnt++ )
       {
          assert(*rowpnt < matrix->ncols);
@@ -544,7 +554,6 @@ SCIP_RETCODE initMatrix(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rhs, nconss) );
 
    /* allocate memory for status of finiteness of row sides */
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &matrix->islhsinfinite, nconss) );
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &matrix->isrhsinfinite, nconss) );
 
 #ifdef SCIP_DEBUG
@@ -788,7 +797,6 @@ void freeMatrix(
 #endif
 
       SCIPfreeMemoryArray(scip, &((*matrix)->isrhsinfinite));
-      SCIPfreeMemoryArray(scip, &((*matrix)->islhsinfinite));
 
       SCIPfreeBufferArray(scip, &((*matrix)->rhs));
       SCIPfreeBufferArray(scip, &((*matrix)->lhs));
@@ -839,27 +847,19 @@ void printRow(
    char relation;
 
    relation='-';
-   if( !SCIPisInfinity(scip, -matrix->lhs[row]) &&
-      !SCIPisInfinity(scip, matrix->rhs[row]) &&
+   if( !matrix->isrhsinfinite &&
       SCIPisEQ(scip, matrix->lhs[row], matrix->rhs[row]))
    {
       relation='e';
    }
-   else if( !SCIPisInfinity(scip, -matrix->lhs[row]) &&
-      !SCIPisInfinity(scip, matrix->rhs[row]) &&
+   else if( !matrix->isrhsinfinite &&
       !SCIPisEQ(scip, matrix->lhs[row], matrix->rhs[row]))
    {
       relation='r';
    }
-   else if( !SCIPisInfinity(scip, -matrix->lhs[row]) &&
-      SCIPisInfinity(scip, matrix->rhs[row]) )
+   else
    {
       relation='g';
-   }
-   else if( SCIPisInfinity(scip, -matrix->lhs[row]) &&
-      !SCIPisInfinity(scip, matrix->rhs[row]) )
-   {
-      relation='l';
    }
 
    rowpnt = matrix->rowmatind + matrix->rowmatbeg[row];
@@ -1601,7 +1601,7 @@ SCIP_RETCODE detectParallelCols(
    /* loop over all rows */
    for( r = 0; r < matrix->nrows; ++r )
    {
-      isequality = !matrix->islhsinfinite[r] && !matrix->isrhsinfinite[r];
+      isequality = !matrix->isrhsinfinite[r];
 
       /* we consider only equations or ranged rows */
       if( isequality )
@@ -2011,35 +2011,19 @@ SCIP_RETCODE findDominancePairs(
             if( r1 < nrows1 && (r2 == nrows2 || rows1[r1] < rows2[r2]) )
             {
                /* dominance depends on the type of relation */
-               if( matrix->islhsinfinite[rows1[r1]] &&
-                  !matrix->isrhsinfinite[rows1[r1]] )
-               {
-                  /* <= relation, smaller coefficients dominate larger ones */
-                  if( vals1[r1] < 0.0 )
-                     col2domcol1 = FALSE;
-                  else if( vals1[r1] > 0.0 )
-                     col1domcol2 = FALSE;
-               }
-               else if( !matrix->islhsinfinite[rows1[r1]] &&
-                  !matrix->isrhsinfinite[rows1[r1]] )
+               if( !matrix->isrhsinfinite[rows1[r1]] )
                {
                   /* no dominance relation for equations or ranged rows */
                   col2domcol1 = FALSE;
                   col1domcol2 = FALSE;
                }
-               else if( !matrix->islhsinfinite[rows1[r1]] &&
-                  matrix->isrhsinfinite[rows1[r1]] )
+               else
                {
                   /* >= relation, larger coefficients dominate smaller ones */
                   if( vals1[r1] > 0.0 )
                      col2domcol1 = FALSE;
                   else if( vals1[r1] < 0.0 )
                      col1domcol2 = FALSE;
-               }
-               else
-               {
-                  col2domcol1 = FALSE;
-                  col1domcol2 = FALSE;
                }
 
                r1++;
@@ -2048,35 +2032,19 @@ SCIP_RETCODE findDominancePairs(
             else if( r2 < nrows2 && (r1 == nrows1 || rows1[r1] > rows2[r2]) )
             {
                /* dominance depends on the type of relation */
-               if( matrix->islhsinfinite[rows2[r2]] &&
-                  !matrix->isrhsinfinite[rows2[r2]] )
-               {
-                  /* <= relation, smaller coefficients dominate larger ones */
-                  if( vals2[r2] > 0.0 )
-                     col2domcol1 = FALSE;
-                  else if( vals2[r2] < 0.0 )
-                     col1domcol2 = FALSE;
-               }
-               else if( !matrix->islhsinfinite[rows2[r2]] &&
-                  !matrix->isrhsinfinite[rows2[r2]] )
+               if( !matrix->isrhsinfinite[rows2[r2]] )
                {
                   /* no dominance relation for equations or ranged rows */
                   col2domcol1 = FALSE;
                   col1domcol2 = FALSE;
                }
-               else if( !matrix->islhsinfinite[rows2[r2]] &&
-                  matrix->isrhsinfinite[rows2[r2]] )
+               else
                {
                   /* >= relation, larger coefficients dominate smaller ones */
                   if( vals2[r2] < 0.0 )
                      col2domcol1 = FALSE;
                   else if( vals2[r2] > 0.0 )
                      col1domcol2 = FALSE;
-               }
-               else
-               {
-                  col2domcol1 = FALSE;
-                  col1domcol2 = FALSE;
                }
 
                r2++;
@@ -2088,23 +2056,7 @@ SCIP_RETCODE findDominancePairs(
                assert(rows1[r1] == rows2[r2]);
 
                /* dominance depends on the type of inequality */
-               if( matrix->islhsinfinite[rows1[r1]] &&
-                  !matrix->isrhsinfinite[rows1[r1]] )
-               {
-                  /* <= relation, smaller coefficients dominate larger ones */
-                  if( vals1[r1] < vals2[r2] )
-                     col2domcol1 = FALSE;
-                  else if( vals1[r1] > vals2[r2] )
-                     col1domcol2 = FALSE;
-
-                  if( onlybinvars )
-                  {
-                     if( !onlyoneone && (matrix->minactivityposinf[rows1[r1]] + matrix->minactivityneginf[rows1[r1]] == 0) && SCIPisFeasGE(scip, matrix->minactivity[rows1[r1]] + MIN(vals1[r1], vals2[r2]), matrix->rhs[rows1[r1]]) )
-                        onlyoneone = TRUE;
-                  }
-               }
-               else if( !matrix->islhsinfinite[rows1[r1]] &&
-                  !matrix->isrhsinfinite[rows1[r1]] )
+               if( !matrix->isrhsinfinite[rows1[r1]] )
                {
                   /* no dominance relation if coefficients differ for equations or ranged rows */
                   if( !SCIPisEQ(scip, vals1[r1], vals2[r2]) )
@@ -2119,19 +2071,13 @@ SCIP_RETCODE findDominancePairs(
                         onlyoneone = TRUE;
                   }
                }
-               else if( !matrix->islhsinfinite[rows1[r1]] &&
-                  matrix->isrhsinfinite[rows1[r1]] )
-               {
-                  /* >= relation, larger coefficients dominate smaller ones */
-                  if( vals1[r1] > vals2[r2] )
-                     col2domcol1 = FALSE;
-                  else if( vals1[r1] < vals2[r2] )
-                     col1domcol2 = FALSE;
-               }
                else
                {
-                  col1domcol2 = FALSE;
-                  col2domcol1 = FALSE;
+                  /* >= relation, larger coefficients dominate smaller ones */
+                  if( vals1[r1] >= vals2[r2] )
+                     col2domcol1 = FALSE;
+                  else
+                     col1domcol2 = FALSE;
                }
 
                if( !onlyoneone && ((vals1[r1] < 0 && vals2[r2] < 0) || (vals1[r1] > 0 && vals2[r2] > 0)) )
@@ -2166,8 +2112,7 @@ SCIP_RETCODE findDominancePairs(
          /* no dominance relation for left equations or ranged rows */
          while( r1 < nrows1 )
          {
-            if( !matrix->islhsinfinite[rows1[r1]] &&
-               !matrix->isrhsinfinite[rows1[r1]] )
+            if( !matrix->isrhsinfinite[rows1[r1]] )
             {
                col2domcol1 = FALSE;
                col1domcol2 = FALSE;
@@ -2177,8 +2122,7 @@ SCIP_RETCODE findDominancePairs(
          }
          while( r2 < nrows2 )
          {
-            if( !matrix->islhsinfinite[rows2[r2]] &&
-               !matrix->isrhsinfinite[rows2[r2]] )
+            if( !matrix->isrhsinfinite[rows2[r2]] )
             {
                col2domcol1 = FALSE;
                col1domcol2 = FALSE;
@@ -2278,106 +2222,7 @@ SCIP_RETCODE singletonColumnStuffing(
 
          rowprocessed[row] = TRUE;
 
-         if( matrix->islhsinfinite[row] && !matrix->isrhsinfinite[row] )
-         {
-            /* singleton column pushing for <= relation */
-            fillcnt = 0;
-            tryfixing = TRUE;
-            constant = 0.0;
-
-            rowpnt = matrix->rowmatind + matrix->rowmatbeg[row];
-            rowend = rowpnt + matrix->rowmatcnt[row];
-            valpnt = matrix->rowmatval + matrix->rowmatbeg[row];
-
-            for( ; (rowpnt < rowend); rowpnt++, valpnt++ )
-            {
-               val = *valpnt;
-               colidx = *rowpnt;
-               var = matrix->vars[colidx];
-               assert(var != NULL);
-               assert(val != 0.0);
-
-               if( SCIPisGE(scip, SCIPvarGetLbGlobal(var), 0.0) )
-               {
-                  if( SCIPisPositive(scip, val) )
-                  {
-                     /* do we have a continuous singleton column */
-                     if( matrix->colmatcnt[colidx] == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-                     {
-                        if( SCIPisPositive(scip, SCIPvarGetLbGlobal(var)) )
-                        {
-                           constant += val * SCIPvarGetLbGlobal(var);
-                           colnozerolb[fillcnt] = 1;
-                        }
-
-                        colratios[fillcnt] = SCIPvarGetObj(var) / val;
-                        colindices[fillcnt] = colidx;
-                        colcoeffs[fillcnt] = val;
-                        fillcnt++;
-                     }
-                     else
-                     {
-                        /* discrete variables or variables which are present within
-                         * more than one row are estimated at their upper bound
-                         */
-                        if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
-                        {
-                           tryfixing = FALSE;
-                           break;
-                        }
-                        constant += val * SCIPvarGetUbGlobal(var);
-                     }
-                  }
-                  else if( SCIPisNegative(scip, val) )
-                  {
-                     /* consider lower bound for negative coefficients */
-                     constant += val * SCIPvarGetLbGlobal(var);
-                  }
-               }
-               else
-               {
-                  tryfixing = FALSE;
-                  break;
-               }
-            }
-
-            if( tryfixing )
-            {
-               SCIPsortRealRealIntInt(colratios, colcoeffs, colindices, colnozerolb, fillcnt);
-
-               /* try to fix continuous singleton columns by their ratio */
-               for( k = 0; k < fillcnt; k++ )
-               {
-                  boundoffset = 0.0;
-                  idx = colindices[k];
-                  value = colcoeffs[k] * SCIPvarGetUbGlobal(matrix->vars[idx]);
-
-                  if( colnozerolb[k] )
-                  {
-                     boundoffset = colcoeffs[k] * SCIPvarGetLbGlobal(matrix->vars[idx]);
-                  }
-
-                  if( matrix->colmatcnt[idx] == 1 &&
-                     SCIPvarGetType(matrix->vars[idx]) == SCIP_VARTYPE_CONTINUOUS &&
-                     SCIPisNegative(scip, SCIPvarGetObj(matrix->vars[idx])) )
-                  {
-                     if( SCIPisLE(scip, value, matrix->rhs[row] - constant + boundoffset) )
-                     {
-                        constant += value;
-                        varstofix[idx] = FIXATUB;
-                        varsprocessed[idx] = TRUE;
-                        (*npossiblefixings)++;
-
-                        if( colnozerolb[k] )
-                           constant -= boundoffset;
-                     }
-                     else
-                        break;
-                  }
-               }
-            }
-         }
-         else if( !matrix->islhsinfinite[row] && matrix->isrhsinfinite[row] )
+         if( matrix->isrhsinfinite[row] )
          {
             /* singleton column pushing for >= relation */
             fillcnt = 0;
@@ -2475,107 +2320,7 @@ SCIP_RETCODE singletonColumnStuffing(
          }
 
 
-         if( matrix->islhsinfinite[row] && !matrix->isrhsinfinite[row] )
-         {
-            /* singleton column pulling for <= relation */
-            fillcnt = 0;
-            tryfixing = TRUE;
-            constant = 0.0;
-
-            rowpnt = matrix->rowmatind + matrix->rowmatbeg[row];
-            rowend = rowpnt + matrix->rowmatcnt[row];
-            valpnt = matrix->rowmatval + matrix->rowmatbeg[row];
-
-            for( ; (rowpnt < rowend); rowpnt++, valpnt++ )
-            {
-               val = *valpnt;
-               colidx = *rowpnt;
-               var = matrix->vars[colidx];
-               assert(var != NULL);
-               assert(val != 0.0);
-
-               if( SCIPisGE(scip, SCIPvarGetLbGlobal(var), 0.0) )
-               {
-                  if( SCIPisNegative(scip, val) )
-                  {
-                     /* do we have a continuous singleton column */
-                     if( matrix->colmatcnt[colidx] == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
-                        && SCIPisPositive(scip, SCIPvarGetObj(var)) )
-                     {
-                        if( SCIPisPositive(scip, SCIPvarGetLbGlobal(var)) )
-                        {
-                           constant += val * SCIPvarGetLbGlobal(var);
-                           colnozerolb[fillcnt] = 1;
-                        }
-
-                        colratios[fillcnt] = SCIPvarGetObj(var) / val;
-                        colindices[fillcnt] = colidx;
-                        colcoeffs[fillcnt] = val;
-                        fillcnt++;
-                     }
-                     else
-                     {
-                        /* discrete variables or variables which are present within
-                         * more than one row are estimated at their upper bound
-                         */
-                        if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
-                        {
-                           tryfixing = FALSE;
-                           break;
-                        }
-                        constant += val * SCIPvarGetUbGlobal(var);
-                     }
-                  }
-                  else if( SCIPisPositive(scip, val) )
-                  {
-                     /* consider lower bound for negative coefficients */
-                     constant += val * SCIPvarGetLbGlobal(var);
-                  }
-               }
-               else
-               {
-                  tryfixing = FALSE;
-                  break;
-               }
-            }
-
-            if( tryfixing )
-            {
-               SCIPsortRealRealIntInt(colratios, colcoeffs, colindices, colnozerolb, fillcnt);
-
-               /* try to fix continuous singleton columns by their ratio */
-               for( k = fillcnt - 1; k >= 0; k-- )
-               {
-                  boundoffset = 0.0;
-                  idx = colindices[k];
-                  value = colcoeffs[k] * SCIPvarGetUbGlobal(matrix->vars[idx]);
-
-                  if( colnozerolb[k] )
-                  {
-                     boundoffset = colcoeffs[k] * SCIPvarGetLbGlobal(matrix->vars[idx]);
-                  }
-
-                  if( matrix->colmatcnt[idx] == 1 &&
-                     SCIPvarGetType(matrix->vars[idx]) == SCIP_VARTYPE_CONTINUOUS &&
-                     SCIPisPositive(scip, SCIPvarGetObj(matrix->vars[idx])) )
-                  {
-                     if( SCIPisGE(scip, value, matrix->rhs[row] - constant + boundoffset) )
-                     {
-                        constant += value;
-                        varstofix[idx] = FIXATUB;
-                        varsprocessed[idx] = TRUE;
-                        (*npossiblefixings)++;
-
-                        if( colnozerolb[k] )
-                           constant -= boundoffset;
-                     }
-                     else
-                        break;
-                  }
-               }
-            }
-         }
-         else if( !matrix->islhsinfinite[row] && matrix->isrhsinfinite[row] )
+         if( matrix->isrhsinfinite[row] )
          {
             /* singleton column pulling for >= relation */
             fillcnt = 0;
