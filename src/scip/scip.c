@@ -31134,6 +31134,25 @@ SCIP_Longint SCIPgetNRootLPIterations(
    return scip->stat->nrootlpiterations;
 }
 
+/** gets total number of iterations used in primal and dual simplex and barrier algorithm for the first LP at the root
+ *  node
+ *
+ *  @return the total number of iterations used in primal and dual simplex and barrier algorithm for the first root LP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Longint SCIPgetNRootFirstLPIterations(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNRootFirstLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return scip->stat->nrootfirstlpiterations;
+}
+
 /** gets total number of primal LPs solved so far
  *
  *  @return the total number of primal LPs solved so far
@@ -32077,10 +32096,7 @@ SCIP_Real SCIPgetFirstLPDualboundRoot(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetFirstLPDualboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPsetIsInfinity(scip->set, scip->stat->rootfirstlpbound) )
-      return getPrimalbound(scip);
-   else
-      return SCIPprobExternObjval(scip->transprob, scip->set, scip->stat->rootfirstlpbound);
+   return scip->stat->firstlpdualbound;
 }
 
 /** gets lower (dual) bound in transformed problem obtained by the first LP solve at the root node
@@ -32101,10 +32117,10 @@ SCIP_Real SCIPgetFirstLPLowerboundRoot(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetFirstLPLowerboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPsetIsInfinity(scip->set, scip->stat->rootfirstlpbound) )
-      return getUpperbound(scip);
+   if( scip->stat->firstlpdualbound == SCIP_INVALID )
+      return -SCIPinfinity(scip);
    else
-      return scip->stat->rootfirstlpbound;
+      return SCIPprobInternObjval(scip->transprob, scip->set, scip->stat->firstlpdualbound);
 }
 
 /** gets global primal bound (objective value of best solution or user objective limit) for the original problem
@@ -33594,8 +33610,6 @@ void printSolutionStatistics(
 {
    SCIP_Real primalbound;
    SCIP_Real dualbound;
-   SCIP_Real dualboundroot;
-   SCIP_Real firstdualboundroot;
    SCIP_Real bestsol;
    SCIP_Real gap;
    SCIP_Real firstprimalbound;
@@ -33607,8 +33621,6 @@ void printSolutionStatistics(
 
    primalbound = getPrimalbound(scip);
    dualbound = getDualbound(scip);
-   dualboundroot = SCIPgetDualboundRoot(scip);
-   firstdualboundroot = SCIPgetFirstLPDualboundRoot(scip);
    gap = SCIPgetGap(scip);
 
    if( scip->primal->nsolsfound !=  scip->primal->nlimsolsfound )
@@ -33693,18 +33705,42 @@ void printSolutionStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap              :   infinite\n");
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap              : %10.2f %%\n", 100.0 * gap);
-   if( SCIPsetIsInfinity(scip->set, REALABS(firstdualboundroot)) )
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  First Root LP    :          -\n");
-   else
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  First Root LP    : %+21.14e\n", firstdualboundroot);
-   if( SCIPsetIsInfinity(scip->set, REALABS(dualboundroot)) )
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Root Dual Bound  :          -\n");
-   else
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Root Dual Bound  : %+21.14e\n", dualboundroot);
-
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Root Iterations  : %10"SCIP_LONGINT_FORMAT"\n", scip->stat->nrootlpiterations);
 }
-      
+
+/** display first LP statistics */
+static
+void printRootStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   SCIP_Real dualboundroot;
+   SCIP_Real firstdualboundroot;
+
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->primal != NULL);
+
+   dualboundroot = SCIPgetDualboundRoot(scip);
+   firstdualboundroot = SCIPgetFirstLPDualboundRoot(scip);
+   printf("firstdualboundroot = %g\n", firstdualboundroot);
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Root Node          :\n");
+   if( SCIPsetIsInfinity(scip->set, REALABS(firstdualboundroot)) )
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  First LP value   :          -\n");
+   else
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  First LP value   : %+21.14e\n", firstdualboundroot);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file,    "  First LP Iters   : %10"SCIP_LONGINT_FORMAT"\n", scip->stat->nrootfirstlpiterations);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file,    "  First LP Time    : %10.2f\n", SCIPgetFirstLPTime(scip));
+
+   if( SCIPsetIsInfinity(scip->set, REALABS(dualboundroot)) )
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Final Dual Bound :          -\n");
+   else
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Final Dual Bound : %+21.14e\n", dualboundroot);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file,    "  Final Root Iters : %10"SCIP_LONGINT_FORMAT"\n", scip->stat->nrootlpiterations);
+
+}
+
 /** display timing statistics */
 static
 void printTimingStatistics(
@@ -33848,7 +33884,9 @@ SCIP_RETCODE SCIPprintStatistics(
       printNLPStatistics(scip, file);
       printRelaxatorStatistics(scip, file);
       printTreeStatistics(scip, file);
+      printRootStatistics(scip, file);
       printSolutionStatistics(scip, file);
+
       return SCIP_OKAY;
    }
    default:

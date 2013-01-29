@@ -58,6 +58,11 @@ interface
   bound information
 - removed all message length parameters in message.c and for printing error messages (not needed anymore)
 - new methods SCIPgetFirstLP{Dual/Lower}boundRoot() which return the value of the first LP solved at the root node
+- new method SCIPgetNRootFirstLPIterations() which returns the number of LP iterations for the first LP solved at the
+  root node
+- new section "Root Node" in statistics, listing objective value, iterations and solving time for the first LP solved
+  at the root node as well as final dual bound of the root node and LP iterations for processing the root node
+  (those where listed in the "Solutions" section before, named "Root Dual Bound" and "Root Iterations")
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)

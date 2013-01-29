@@ -1201,6 +1201,8 @@ SCIP_RETCODE solveNodeInitialLP(
    )
 {
    SCIP_Real starttime;
+   SCIP_Longint nlpiterations;
+   SCIP_NODE* focusnode;
 
    assert(stat != NULL);
    assert(tree != NULL);
@@ -1222,8 +1224,16 @@ SCIP_RETCODE solveNodeInitialLP(
    /* load the LP state */
    SCIP_CALL( SCIPtreeLoadLPState(tree, blkmem, set, stat, eventqueue, lp) );
 
+   focusnode = SCIPtreeGetFocusNode(tree);
+
+   /* store current LP iteration count and solving time if we are at the root node */
+   if( focusnode->depth == 0 )
+   {
+      nlpiterations = stat->nlpiterations;
+      starttime = SCIPclockGetTime(stat->solvingtime);
+   }
+
    /* solve initial LP */
-   starttime = SCIPclockGetTime(stat->solvingtime);
    SCIPdebugMessage("node: solve initial LP\n");
    SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob,
          SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) == 0 ? set->lp_rootiterlim : set->lp_iterlim, TRUE, TRUE, FALSE, lperror) );
@@ -1231,7 +1241,7 @@ SCIP_RETCODE solveNodeInitialLP(
    assert(lp->solved || *lperror);
 
    /* save time for very first LP in root node */
-   if ( stat->nnodelps == 0 && SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) == 0 )
+   if ( stat->nnodelps == 0 && focusnode->depth == 0 )
    {
       stat->firstlptime = SCIPclockGetTime(stat->solvingtime) - starttime;
    }
@@ -1260,21 +1270,24 @@ SCIP_RETCODE solveNodeInitialLP(
 	    || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT)
 	 && SCIPprobAllColsInLP(prob, set, lp) && SCIPlpIsRelax(lp) )
       {
-         SCIP_NODE* focusnode;
-
-         focusnode = SCIPtreeGetFocusNode(tree);
-
 	 SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, prob, lp) );
 
-         /* if this is the first LP solved at the root, store its solution value */
-         if( focusnode->depth == 0 )
+         /* if this is the first LP solved at the root, store its iteration count and solution value */
+         if( stat->nnodelps == 0 && focusnode->depth == 0 )
          {
+            SCIP_Real lowerbound;
+
+            assert(stat->nrootfirstlpiterations == 0);
+            stat->nrootfirstlpiterations = stat->nlpiterations - nlpiterations;
+
             if( set->misc_exactsolve )
             {
-               SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &stat->rootfirstlpbound) );
+               SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lowerbound) );
             }
             else
-               stat->rootfirstlpbound = SCIPlpGetObjval(lp, set, prob);
+               lowerbound = SCIPlpGetObjval(lp, set, prob);
+
+            stat->firstlpdualbound = SCIPprobExternObjval(prob, set, lowerbound);
          }
       }
    }

@@ -16081,6 +16081,21 @@ SCIP_Longint SCIPgetNRootLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets total number of iterations used in primal and dual simplex and barrier algorithm for the first LP at the root
+ *  node
+ *
+ *  @return the total number of iterations used in primal and dual simplex and barrier algorithm for the first root LP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Longint SCIPgetNRootFirstLPIterations(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets total number of primal LPs solved so far
  *
  *  @return the total number of primal LPs solved so far

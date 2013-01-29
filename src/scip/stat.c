@@ -180,6 +180,7 @@ void SCIPstatReset(
    stat->vsidsweight = 1.0;
    stat->nlpiterations = 0;
    stat->nrootlpiterations = 0;
+   stat->nrootfirstlpiterations = 0;
    stat->nprimallpiterations = 0;
    stat->nduallpiterations = 0;
    stat->nlexduallpiterations = 0;
@@ -246,6 +247,7 @@ void SCIPstatReset(
    stat->maxcopytime = SCIP_REAL_MIN;
    stat->mincopytime = SCIP_REAL_MAX;
    stat->firstlptime = 0.0;
+   stat->firstlpdualbound = SCIP_UNKNOWN;
    stat->ncopies = 0;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
@@ -307,7 +309,6 @@ void SCIPstatResetCurrentRun(
    stat->lastconflictnode = 0;
    stat->bestsolnode = 0;
    stat->rootlowerbound = SCIP_REAL_MIN;
-   stat->rootfirstlpbound = SCIP_REAL_MIN;
    stat->lastbranchvalue = SCIP_UNKNOWN;
    stat->lastbranchvar = NULL;
    stat->status = SCIP_STATUS_UNKNOWN;
