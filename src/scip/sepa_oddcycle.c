@@ -885,7 +885,7 @@ SCIP_RETCODE generateOddCycleCut(
    unsigned int          startnode,          /**< a node of the cycle */
    unsigned int*         pred,               /**< predecessor of each node (original and negated) in odd cycle */
    unsigned int          ncyclevars,         /**< number of variables in the odd cycle */
-   SCIP_Bool*            incut,              /**< TRUE iff node is covered already by a cut */
+   unsigned int*         incut,              /**< TRUE iff node is covered already by a cut */
    SCIP_Real*            vals,               /**< values of the variables in the given solution */
    SCIP_SEPADATA*        sepadata,           /**< separator data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
@@ -1068,7 +1068,7 @@ SCIP_RETCODE cleanCycle(
    SCIP*                 scip,               /**< SCIP data structure */
    unsigned int*         pred,               /**< predecessor list of current cycle segment */
    SCIP_Bool*            incycle,            /**< flag array iff node is in cycle segment */
-   SCIP_Bool*            incut,              /**< flag array iff node is already covered by a cut */
+   unsigned int*         incut,              /**< flag array iff node is already covered by a cut */
    unsigned int          x,                  /**< index of current variable */
    unsigned int          startnode,          /**< index of first variable of cycle segment */
    unsigned int          nbinvars,           /**< number of binary problem variables */
@@ -2485,7 +2485,7 @@ SCIP_RETCODE separateHeur(
    SCIP_VAR** vars;                          /* variables of the current SCIP (sorted if requested) */
    SCIP_Real* vals;                          /* LP-values of the variables (and negated variables) */
    unsigned int nbinvars;                    /* number of nodecandidates for implicationgraph */
-   SCIP_Bool* incut;                         /* flag array for check if a variable is already covered by a cut */
+   unsigned int* incut;                      /* flag array for check if a variable is already covered by a cut */
 
    /* storage for levelgraph */
    LEVELGRAPH graph;
@@ -3331,7 +3331,7 @@ SCIP_RETCODE separateGLS(
    SCIP_Bool emptygraph;                     /* flag if graph contains an arc */
 
    SCIP_Real* vals;                          /* values of the variables in the given solution */
-   SCIP_Bool* incut;
+   unsigned int* incut;
 
    unsigned int i;
    unsigned int j;
