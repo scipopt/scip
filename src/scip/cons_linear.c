@@ -3588,12 +3588,11 @@ SCIP_RETCODE performVarDeletions(
  *  - multiplication with +1 or -1:
  *      Apply the following rules in the given order, until the sign of the factor is determined. Later rules only apply,
  *      if the current rule doesn't determine the sign):
- *        1. the left hand side must be positive
- *        2. the right hand side must not be negative
- *        3. the right hand side must not be infinite
- *        4. the absolute value of the right hand side must be greater than that of the left hand side
- *        5. the number of positive coefficients must not be smaller than the number of negative coefficients
- *        6. multiply with +1
+ *        1. the right hand side must not be negative
+ *        2. the right hand side must not be infinite
+ *        3. the absolute value of the right hand side must be greater than that of the left hand side
+ *        4. the number of positive coefficients must not be smaller than the number of negative coefficients
+ *        5. multiply with +1
  *  - rationals to integrals
  *      Try to identify a rational representation of the fractional coefficients, and multiply all coefficients
  *      by the smallest common multiple of all denominators to get integral coefficients.
