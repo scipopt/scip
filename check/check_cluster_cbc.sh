@@ -200,11 +200,18 @@ do
 	  fi
       fi
 
-      echo > $TMPFILE
+      if test $SETNAME != "default"
+      then
+          cp $SETTINGS $TMPFILE
+          echo ""                              >> $TMPFILE
+      else
+          echo ""                              > $TMPFILE
+      fi
+#       echo > $TMPFILE
       if test $FEASTOL != "default"
       then
-	  echo primalTolerance $FEASTOL       >> $TMPFILE
-	  echo integerTolerance $FEASTOL      >> $TMPFILE
+	       echo primalTolerance $FEASTOL       >> $TMPFILE
+	       echo integerTolerance $FEASTOL      >> $TMPFILE
       fi
       #workaround: since CBC only looks at cpu-time, we multiply the timelimit with the number of threads
       TIMELIMIT=`expr $TIMELIMIT \* $THREADS`

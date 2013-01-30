@@ -45,7 +45,7 @@ TEXFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.tex
 TMPFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.tmp
 SETFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.prm
 
-SETTINGS=settings/$SETNAME.grbset
+SETTINGS=settings/$SETNAME.set
 
 if test "$CONTINUE" = "true"
 then
