@@ -638,7 +638,7 @@ void SCIPheurSetTimingmask(
 }
 
 /** does the heuristic use a secondary SCIP instance? */
-SCIP_HEURTIMING SCIPheurUsesSubscip(
+SCIP_Bool SCIPheurUsesSubscip(
    SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
