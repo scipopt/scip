@@ -1200,8 +1200,9 @@ SCIP_RETCODE solveNodeInitialLP(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
 {
-   SCIP_Real starttime;
-   SCIP_Longint nlpiterations;
+   /* initializing variables for compiler warnings, which are not correct */
+   SCIP_Real starttime = 0.0;
+   SCIP_Longint nlpiterations = 0;
    SCIP_NODE* focusnode;
 
    assert(stat != NULL);
