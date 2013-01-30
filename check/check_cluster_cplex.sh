@@ -57,14 +57,14 @@ then
     mkdir $SCIPPATH/results
 fi
 
-SETTINGS=$SCIPPATH/../settings/$SETNAME.set
+SETTINGS=$SCIPPATH/../settings/$SETNAME.prm
 
 # check if the settings file exists
 if test $SETNAME != "default"
 then
     if test ! -e $SETTINGS
     then
-        echo skipping test due to not existes of the settings file $SETTINGS
+        echo skipping test due to non-existence of settings file $SETTINGS
         exit
     fi
 fi
@@ -223,15 +223,20 @@ do
 
       if test -e $SETFILE
       then
-	  rm -f $SETFILE
+	       rm -f $SETFILE
       fi
 
       echo > $TMPFILE
       echo ""                              > $TMPFILE
+      if test $SETNAME != "default"
+      then
+          echo read $SETTINGS                  >> $TMPFILE
+          echo disp settings changed           >> $TMPFILE
+      fi
       if test $FEASTOL != "default"
       then
-	  echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
-	  echo set mip tolerances integrality $FEASTOL >> $TMPFILE
+	       echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
+	       echo set mip tolerances integrality $FEASTOL >> $TMPFILE
       fi
       echo set timelimit $TIMELIMIT           >> $TMPFILE
       echo set clocktype 0                    >> $TMPFILE
