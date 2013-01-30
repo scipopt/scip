@@ -1659,7 +1659,7 @@ SCIP_RETCODE detectParallelCols(
             startk = k;
 
             /* find pclass-sets */
-            while( pcs[k] == startpc && k < i )
+            while( k < i && pcs[k] == startpc )
                k++;
 
             /* sort on the A values which have equal pclass values */
@@ -1674,7 +1674,7 @@ SCIP_RETCODE detectParallelCols(
                startt = t;
 
                /* find A-sets */
-               while( SCIPisEQ(scip, startval, values[startk + t]) && t < k - startk )
+               while( t < k - startk && SCIPisEQ(scip, startval, values[startk + t]) )
                   t++;
 
                /* get new pclass */
