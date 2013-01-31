@@ -2062,6 +2062,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   double cnt;
    int retval;
    int primalfeasible;
    int dualfeasible;
@@ -2098,8 +2099,13 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       return SCIP_LPERROR;
    }
 
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+   lpi->iterations = (int) cnt;
+
    lpi->solisbasic = TRUE;
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
+
+   SCIPdebugMessage("Gurobi primal simplex needed %d iterations to gain LP status %d\n", (int) cnt, lpi->solstat);
 
    /*
      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->grbenv, lpi->grbmodel, NULL, NULL, &primalfeasible, &dualfeasible) );
@@ -2113,16 +2119,17 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       || (lpi->solstat == GRB_INFEASIBLE && !dualfeasible)
       || (lpi->solstat == GRB_UNBOUNDED && !primalfeasible) )
    {
-      int cnt;
       int presolve;
+
       CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(lpi->grbenv, GRB_INT_PAR_PRESOLVE, &presolve) );
+
       if( presolve != GRB_PRESOLVE_OFF )
       {
          /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
          SCIPdebugMessage("presolver may have solved the problem -> calling Gurobi primal simplex again without presolve\n");
 
          /* switch off preprocessing */
-         CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(lpi->grbenv, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_OFF) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(lpi->grbenv, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_OFF) );
          SCIP_CALL( setParameterValues(lpi, &(lpi->grbparam)) );
 
          retval = GRBoptimize(lpi->grbmodel);
@@ -2136,8 +2143,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
             return SCIP_LPERROR;
          }
 
-         CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
-         lpi->iterations += cnt;
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+         lpi->iterations += (int) cnt;
          CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
          SCIPdebugMessage(" -> Gurobi returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
@@ -2204,6 +2211,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    lpi->solisbasic = TRUE;
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
+
+   SCIPdebugMessage("Gurobi dual simplex needed %d iterations to gain LP status %d\n", (int) cnt, lpi->solstat);
 
    /*
      SCIPdebugMessage(" -> Gurobi returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
@@ -2312,6 +2321,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    lpi->solisbasic = crossover;
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
+
+   SCIPdebugMessage("Gurobi barrier needed %d iterations to gain LP status %d\n", (int) cnt, lpi->solstat);
 
    /*
      SCIPdebugMessage(" -> Gurobi returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
@@ -2446,7 +2457,8 @@ SCIP_RETCODE lpiStrongbranch(
       CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_UB, col, newub) );
 
       SCIP_CALL( SCIPlpiSolveDual(lpi) );
-      if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
+      /* when iteration limit was reached the objective value is not computed */
+      if( SCIPlpiIsOptimal(lpi) ) /*|| SCIPlpiIsIterlimExc(lpi) ) */
       {
          SCIP_CALL( SCIPlpiGetObjval(lpi, down) );
          *downvalid = TRUE;
@@ -2455,7 +2467,7 @@ SCIP_RETCODE lpiStrongbranch(
       {
          CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, down) );
       }
-      else
+      else if( !SCIPlpiIsIterlimExc(lpi) )
          error = TRUE;
 
       if( iter != NULL )
@@ -2497,7 +2509,8 @@ SCIP_RETCODE lpiStrongbranch(
          CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_LB, col, newlb) );
 
          SCIP_CALL( SCIPlpiSolveDual(lpi) );
-         if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
+         /* when iteration limit was reached the objective value is not computed */
+         if( SCIPlpiIsOptimal(lpi) ) /*|| SCIPlpiIsIterlimExc(lpi) ) */
          {
             SCIP_CALL( SCIPlpiGetObjval(lpi, up) );
             *upvalid = TRUE;
@@ -2506,7 +2519,7 @@ SCIP_RETCODE lpiStrongbranch(
          {
             CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, up) );
          }
-         else
+         else if( !SCIPlpiIsIterlimExc(lpi) )
             error = TRUE;
 
          if( iter != NULL )
@@ -2627,7 +2640,7 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
 {
    /* pass call on to lpiStrongbranch() */
    SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -3020,7 +3033,10 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
    return SCIP_OKAY;
 }
 
-/** gets objective value of solution */
+/** gets objective value of solution
+ *
+ *  @note if the solution status is iteration limit reached (GRB_ITERATION_LIMIT), the objective value was not computed
+ */
 SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval              /**< stores the objective value */
