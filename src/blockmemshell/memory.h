@@ -42,7 +42,7 @@ extern "C" {
 #endif
 
 /*
- * Define the marco EXTERN depending if the OS is Windows or not
+ * Define the macro EXTERN depending if the OS is Windows or not
  */
 #ifndef EXTERN
 
