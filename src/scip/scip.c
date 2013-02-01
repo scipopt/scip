@@ -9059,6 +9059,8 @@ SCIP_RETCODE SCIPdelVar(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note Variables in the vars array are ordered: binaries first, then integers, implicit integers and continuous last.
  */
 SCIP_RETCODE SCIPgetVarsData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9133,6 +9135,8 @@ SCIP_RETCODE SCIPgetVarsData(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note Variables in the array are ordered: binaries first, then integers, implicit integers and continuous last.
  *
  *  @warning If your are using the methods which add or change bound of variables (e.g., SCIPchgVarType(), SCIPfixVar(),
  *           SCIPaggregateVars(), and SCIPmultiaggregateVar()), it can happen that the internal variable array (which is
@@ -27626,6 +27630,9 @@ int SCIPgetNPrioLPBranchCands(
  *       - \ref SCIP_STAGE_SOLVING
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ *
+ *  @note Candidate variables with maximal priority are ordered: binaries first, then integers, implicit integers and
+ *        continuous last.
  */
 SCIP_RETCODE SCIPgetExternBranchCands(
    SCIP*                 scip,               /**< SCIP data structure */

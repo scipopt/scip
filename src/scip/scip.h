@@ -4538,6 +4538,8 @@ SCIP_RETCODE SCIPdelVar(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note Variables in the vars array are ordered: binaries first, then integers, implicit integers and continuous last.
  */
 EXTERN
 SCIP_RETCODE SCIPgetVarsData(
@@ -4570,6 +4572,8 @@ SCIP_RETCODE SCIPgetVarsData(
  *           SCIPaggregateVars(), and SCIPmultiaggregateVar()), it can happen that the internal variable array (which is
  *           accessed via this method) gets resized and/or resorted. This can invalid the data pointer which is returned
  *           by this method.
+ *
+ *  @note Variables in the array are ordered: binaries first, then integers, implicit integers and continuous last.
  */
 EXTERN
 SCIP_VAR** SCIPgetVars(
@@ -13833,6 +13837,9 @@ int SCIPgetNPrioLPBranchCands(
  *       - \ref SCIP_STAGE_SOLVING
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ *
+ *  @note Candidate variables with maximal priority are ordered: binaries first, then integers, implicit integers and
+ *        continuous last.
  */
 EXTERN
 SCIP_RETCODE SCIPgetExternBranchCands(
