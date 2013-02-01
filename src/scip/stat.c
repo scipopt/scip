@@ -241,6 +241,8 @@ void SCIPstatReset(
    stat->firstprimalheur = NULL; 
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
    stat->firstprimalbound = SCIP_DEFAULT_INFINITY;
+   stat->firstsolgap = SCIP_DEFAULT_INFINITY;
+   stat->lastsolgap = SCIP_DEFAULT_INFINITY;
    stat->primalzeroittime = 0.0;
    stat->dualzeroittime = 0.0;
    stat->barrierzeroittime = 0.0;

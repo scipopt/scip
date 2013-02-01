@@ -618,6 +618,43 @@ void SCIPprintError(
    SCIPmessagePrintError("\n");
 }
 
+/** update statistical information when a new solution was found */
+void SCIPstoreSolutionGap(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real primalbound;
+   SCIP_Real dualbound;
+
+   primalbound = getPrimalbound(scip);
+   dualbound = getDualbound(scip);
+
+   if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
+   {
+      scip->stat->lastsolgap = 0.0;
+
+      if( scip->primal->nsols == 1 )
+         scip->stat->firstsolgap = 0.0;
+   }
+   else if( SCIPsetIsZero(scip->set, dualbound)
+      || SCIPsetIsZero(scip->set, primalbound)
+      || SCIPsetIsInfinity(scip->set, REALABS(primalbound))
+      || SCIPsetIsInfinity(scip->set, REALABS(dualbound))
+      || primalbound * dualbound < 0.0 )
+   {
+      scip->stat->lastsolgap = SCIPsetInfinity(scip->set);
+
+      if( scip->primal->nsols == 1 )
+         scip->stat->firstsolgap = scip->stat->lastsolgap;
+   }
+   else
+   {
+      scip->stat->lastsolgap = REALABS((primalbound - dualbound)/MIN(REALABS(dualbound), REALABS(primalbound)));
+
+      if( scip->primal->nsols == 1 )
+         scip->stat->firstsolgap = scip->stat->lastsolgap;
+   }
+}
 
 /*
  * general SCIP methods
@@ -11032,6 +11069,7 @@ SCIP_RETCODE SCIPtransformProb(
          /* we do not want to add solutions with objective value +infinity */
          if( !SCIPisInfinity(scip, solobj) && !SCIPisInfinity(scip, -solobj) )
          {
+            SCIP_SOL* bestsol = SCIPgetBestSol(scip);
             SCIP_Bool stored;
 
             /* add primal solution to solution storage by copying it */
@@ -11039,7 +11077,12 @@ SCIP_RETCODE SCIPtransformProb(
                   scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, sol, &stored) );
 
             if( stored )
+            {
                nfeassols++;
+
+               if( bestsol != SCIPgetBestSol(scip) )
+                  SCIPstoreSolutionGap(scip);
+            }
          }
       }
 
@@ -29588,6 +29631,7 @@ SCIP_SOL** SCIPgetSols(
    case SCIP_STAGE_INIT:
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_FREE:
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return NULL;
@@ -29631,7 +29675,7 @@ SCIP_SOL* SCIPgetBestSol(
          return scip->origprimal->sols[0];
       }
       break;
-      
+
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
@@ -29649,9 +29693,10 @@ SCIP_SOL* SCIPgetBestSol(
          return scip->primal->sols[0];
       }
       break;
-      
+
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_FREE:
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return NULL;
@@ -29668,7 +29713,6 @@ SCIP_SOL* SCIPgetBestSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
@@ -29678,7 +29722,6 @@ SCIP_SOL* SCIPgetBestSol(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREE
  */
 SCIP_RETCODE SCIPprintBestSol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -29688,7 +29731,7 @@ SCIP_RETCODE SCIPprintBestSol(
 {
    SCIP_SOL* sol;
 
-   SCIP_CALL( checkStage(scip, "SCIPprintBestSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPprintBestSol", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    sol = SCIPgetBestSol(scip);
 
@@ -29710,7 +29753,6 @@ SCIP_RETCODE SCIPprintBestSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
@@ -29720,7 +29762,6 @@ SCIP_RETCODE SCIPprintBestSol(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREE
  */
 SCIP_RETCODE SCIPprintBestTransSol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -29730,7 +29771,7 @@ SCIP_RETCODE SCIPprintBestTransSol(
 {
    SCIP_SOL* sol;
 
-   SCIP_CALL( checkStage(scip, "SCIPprintBestTransSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPprintBestTransSol", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    sol = SCIPgetBestSol(scip);
 
@@ -29910,10 +29951,20 @@ SCIP_RETCODE SCIPaddSol(
       /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
+   {
+      SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+
       SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, scip->tree,
             scip->lp, scip->eventqueue, scip->eventfilter, sol, stored) );
-      return SCIP_OKAY;
 
+      if( *stored )
+      {
+         if( bestsol != SCIPgetBestSol(scip) )
+            SCIPstoreSolutionGap(scip);
+      }
+
+      return SCIP_OKAY;
+   }
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVED:
@@ -29970,10 +30021,20 @@ SCIP_RETCODE SCIPaddSolFree(
       /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
+   {
+      SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+
       SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, scip->tree,
             scip->lp, scip->eventqueue, scip->eventfilter, sol, stored) );
-      return SCIP_OKAY;
 
+      if( *stored )
+      {
+         if( bestsol != SCIPgetBestSol(scip) )
+            SCIPstoreSolutionGap(scip);
+      }
+
+      return SCIP_OKAY;
+   }
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVED:
@@ -29999,10 +30060,20 @@ SCIP_RETCODE SCIPaddCurrentSol(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
+   SCIP_SOL* bestsol;
+
    SCIP_CALL( checkStage(scip, "SCIPaddCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   bestsol = SCIPgetBestSol(scip);
 
    SCIP_CALL( SCIPprimalAddCurrentSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
          scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, heur, stored) );
+
+   if( *stored )
+   {
+      if( bestsol != SCIPgetBestSol(scip) )
+         SCIPstoreSolutionGap(scip);
+   }
 
    return SCIP_OKAY;
 }
@@ -30030,9 +30101,13 @@ SCIP_RETCODE SCIPtrySol(
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    )
 {
+   SCIP_SOL* bestsol;
+
    assert(stored != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPtrySol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   bestsol = SCIPgetBestSol(scip);
 
    /* if the solution is added during presolving and it is not defined on original variables, 
     * presolving operations will destroy its validity, so we retransform it to the original space
@@ -30054,6 +30129,12 @@ SCIP_RETCODE SCIPtrySol(
       {
          SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
                scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, sol, stored) );
+
+         if( *stored )
+         {
+            if( bestsol != SCIPgetBestSol(scip) )
+               SCIPstoreSolutionGap(scip);
+         }
       }
       else
          *stored = FALSE;
@@ -30062,6 +30143,12 @@ SCIP_RETCODE SCIPtrySol(
    {
       SCIP_CALL( SCIPprimalTrySol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, scip->tree,
             scip->lp, scip->eventqueue, scip->eventfilter, sol, printreason, checkbounds, checkintegrality, checklprows, stored) );
+
+      if( *stored )
+      {
+         if( bestsol != SCIPgetBestSol(scip) )
+            SCIPstoreSolutionGap(scip);
+      }
    }
 
    return SCIP_OKAY;
@@ -30090,10 +30177,14 @@ SCIP_RETCODE SCIPtrySolFree(
    SCIP_Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    )
 {
+   SCIP_SOL* bestsol;
+
    assert(stored != NULL);
    assert(sol != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   bestsol = SCIPgetBestSol(scip);
 
    /* if the solution is added during presolving and it is not defined on original variables, 
     * presolving operations will destroy its validity, so we retransform it to the original space
@@ -30117,6 +30208,12 @@ SCIP_RETCODE SCIPtrySolFree(
       {
          SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
                scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, sol, stored) );
+
+         if( *stored )
+         {
+            if( bestsol != SCIPgetBestSol(scip) )
+               SCIPstoreSolutionGap(scip);
+         }
       }
       else
       {
@@ -30128,6 +30225,12 @@ SCIP_RETCODE SCIPtrySolFree(
    {
       SCIP_CALL( SCIPprimalTrySolFree(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
             scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, sol, printreason, checkbounds, checkintegrality, checklprows, stored) );
+
+      if( *stored )
+      {
+         if( bestsol != SCIPgetBestSol(scip) )
+            SCIPstoreSolutionGap(scip);
+      }
    }
 
    return SCIP_OKAY;
@@ -30151,10 +30254,20 @@ SCIP_RETCODE SCIPtryCurrentSol(
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    )
 {
+   SCIP_SOL* bestsol;
+
    SCIP_CALL( checkStage(scip, "SCIPtryCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   bestsol = SCIPgetBestSol(scip);
 
    SCIP_CALL( SCIPprimalTryCurrentSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
          scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, heur, printreason, checkintegrality, checklprows, stored) );
+
+   if( *stored )
+   {
+      if( bestsol != SCIPgetBestSol(scip) )
+         SCIPstoreSolutionGap(scip);
+   }
 
    return SCIP_OKAY;
 }
@@ -33667,7 +33780,7 @@ void printSolutionStatistics(
          /* display first primal bound line */
          firstprimalbound = scip->stat->firstprimalbound;
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  First Solution   : %+21.14e", firstprimalbound);
-         
+
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (in run %d, after %"SCIP_LONGINT_FORMAT" nodes, %.2f seconds, depth %d, found by <%s>)\n",
             scip->stat->nrunsbeforefirst,
             scip->stat->nnodesbeforefirst,
@@ -33676,9 +33789,19 @@ void printSolutionStatistics(
             ( scip->stat->firstprimalheur != NULL )
             ? ( SCIPheurGetName(scip->stat->firstprimalheur) )
             : (( scip->stat->nrunsbeforefirst == 0 ) ? "initial" : "relaxation"));
-         
+
+         if( SCIPisInfinity(scip, scip->stat->firstsolgap) )
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap First Sol.   :   infinite\n");
+         else
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap First Sol.   : %10.2f %%\n", 100.0 * scip->stat->firstsolgap);
+
+         if( SCIPisInfinity(scip, scip->stat->lastsolgap) )
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap Last Sol.    :   infinite\n");
+         else
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap Last Sol.    : %10.2f %%\n",  100.0 * scip->stat->lastsolgap);
+
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e", primalbound);
-         
+
          /* display (best) primal bound */
          bestsol = SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob);
          bestsol = SCIPretransformObj(scip, bestsol);
@@ -33723,7 +33846,6 @@ void printRootStatistics(
 
    dualboundroot = SCIPgetDualboundRoot(scip);
    firstdualboundroot = SCIPgetFirstLPDualboundRoot(scip);
-   printf("firstdualboundroot = %g\n", firstdualboundroot);
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Root Node          :\n");
    if( SCIPsetIsInfinity(scip->set, REALABS(firstdualboundroot)) )

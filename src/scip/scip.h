@@ -182,6 +182,12 @@ void SCIPprintError(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    );
 
+/** update statistical information when a new solution was found */
+EXTERN
+void SCIPstoreSolutionGap(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@} */
 
 

@@ -64,6 +64,7 @@ interface
 - new section "Root Node" in statistics, listing objective value, iterations and solving time for the first LP solved
   at the root node as well as final dual bound of the root node and LP iterations for processing the root node
   (those where listed in the "Solutions" section before, named "Root Dual Bound" and "Root Iterations")
+- new method SCIPstoreSolutionGap() in scip.c, to store the gap when the first and last solution is found
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)

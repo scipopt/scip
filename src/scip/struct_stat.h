@@ -87,6 +87,8 @@ struct SCIP_Stat
    SCIP_Real             vsidsweight;        /**< current weight to use for updating VSIDS in history */
    SCIP_Real             firstprimalbound;   /**< objective value of first primal solution */
    SCIP_Real             firstprimaltime;    /**< time (in seconds) needed for first primal solution */
+   SCIP_Real             firstsolgap;        /**< solution gap when first solution is found */
+   SCIP_Real             lastsolgap;         /**< solution gap when last solution is found */
    SCIP_Real             primalzeroittime;   /**< time used in primal simplex calls without iterations */
    SCIP_Real             dualzeroittime;     /**< time used in dual simplex calls without iterations */
    SCIP_Real             barrierzeroittime;  /**< time used in barrier calls without iterations */

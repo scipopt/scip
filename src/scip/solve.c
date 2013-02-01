@@ -2564,7 +2564,8 @@ SCIP_RETCODE solveNodeLP(
          SCIP_Bool checklprows;
          SCIP_Bool stored;
          SCIP_SOL* sol;
-         
+         SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
+
          SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
 
          if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
@@ -2590,6 +2591,12 @@ SCIP_RETCODE solveNodeLP(
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, lp,
                eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, checklprows, &stored) );
 #endif
+         if( stored )
+         {
+            if( bestsol != SCIPgetBestSol(set->scip) )
+               SCIPstoreSolutionGap(set->scip);
+         }
+
          if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
             *unbounded = TRUE;
       }
@@ -3611,12 +3618,19 @@ SCIP_RETCODE solveNode(
        */
       if( pricingaborted && !(*infeasible) && !(*cutoff) )
       {
-         SCIP_Bool stored;
+         SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
          SCIP_SOL* sol;
+         SCIP_Bool stored;
 
          SCIP_CALL( SCIPsolCreateCurrentSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, lp,
                eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+
+         if( stored )
+         {
+            if( bestsol != SCIPgetBestSol(set->scip) )
+               SCIPstoreSolutionGap(set->scip);
+         }
 
          *infeasible = TRUE;
       }
@@ -3883,6 +3897,7 @@ SCIP_RETCODE addCurrentSolution(
    SCIP_EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
    )
 {
+   SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
    SCIP_SOL* sol;
    SCIP_Bool foundsol;
 
@@ -3907,8 +3922,14 @@ SCIP_RETCODE addCurrentSolution(
          SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, lp,
                eventqueue, eventfilter, &sol, &foundsol) );
       }
+
       if( foundsol )
+      {
          stat->nlpsolsfound++;
+
+         if( bestsol != SCIPgetBestSol(set->scip) )
+            SCIPstoreSolutionGap(set->scip);
+      }
 
       /* stop clock for LP solutions */
       SCIPclockStop(stat->lpsoltime, set);
@@ -3936,7 +3957,12 @@ SCIP_RETCODE addCurrentSolution(
       SCIPclockStop(stat->pseudosoltime, set);
 
       if( foundsol )
+      {
          stat->npssolsfound++;
+
+         if( bestsol != SCIPgetBestSol(set->scip) )
+            SCIPstoreSolutionGap(set->scip);
+      }
    }
 
    return SCIP_OKAY;
@@ -4238,12 +4264,19 @@ SCIP_RETCODE SCIPsolveCIP(
       }
       else if( !infeasible )
       {
+         SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
          SCIP_SOL* sol;
          SCIP_Bool stored;
 
          SCIP_CALL( SCIPsolCreateCurrentSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, lp,
                eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+
+         if( stored )
+         {
+            if( bestsol != SCIPgetBestSol(set->scip) )
+               SCIPstoreSolutionGap(set->scip);
+         }
       }
 
       /* compute number of successfully applied conflicts */
