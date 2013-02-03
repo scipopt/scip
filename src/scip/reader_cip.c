@@ -533,9 +533,9 @@ SCIP_DECL_READERREAD(readerReadCip)
 
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
    
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamiccols", &dynamiccols) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
 
    initialvar = !dynamiccols;
    removablevar = dynamiccols;
@@ -692,16 +692,5 @@ SCIP_RETCODE SCIPincludeReaderCip(
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCip) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteCip) );
 
-   /* add cip reader parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamicconss", "should model constraints be subject to aging?",
-         NULL, FALSE, TRUE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   
    return SCIP_OKAY;
 }

@@ -191,9 +191,9 @@ SCIP_RETCODE readCnf(
    }
 
    /* get parameter values */
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamiccols", &dynamiccols) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/useobj", &useobj) );
 
    /* get temporary memory */
@@ -429,18 +429,9 @@ SCIP_RETCODE SCIPincludeReaderCnf(
 
    /* add cnf reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/cnfreader/dynamicconss", "should model constraints be subject to aging?",
-         NULL, FALSE, TRUE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/cnfreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/cnfreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/cnfreader/useobj", "should an artificial objective, depending on the number of clauses a variable appears in, be used?",
          NULL, FALSE, FALSE, NULL, NULL) );
-   
+
    return SCIP_OKAY;
 }
 

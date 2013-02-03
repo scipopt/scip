@@ -382,6 +382,11 @@ struct SCIP_Set
    SCIP_Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in VBC output? */
    SCIP_Bool             vbc_dispsols;       /**< should the node where solutions are found be visualized? */
 
+   /* Reading */
+   SCIP_Bool             read_dynamicconss;  /**< should model constraints be subject to aging? */
+   SCIP_Bool             read_dynamiccols;   /**< should columns be added and removed dynamically to the LP? */
+   SCIP_Bool             read_dynamicrows;   /**< should rows be added and removed dynamically to the LP? */
+
    /* Writing */
    SCIP_Bool             write_allconss;     /**< should all constraints be written (including the redundant constraints)? */
 };

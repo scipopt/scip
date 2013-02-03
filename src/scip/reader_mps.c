@@ -767,8 +767,8 @@ SCIP_RETCODE readRows(
 
    SCIPdebugMessage("read rows\n");
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
 
    while( mpsinputReadLine(mpsi) )
    {
@@ -864,7 +864,7 @@ SCIP_RETCODE readCols(
 
    SCIPdebugMessage("read columns\n");
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
 
    var = NULL;
    while( mpsinputReadLine(mpsi) )
@@ -1240,10 +1240,10 @@ SCIP_RETCODE readBounds(
 
    semicont = NULL;
    nsemicont = 0;
-   semicontsize = 0;  
+   semicontsize = 0;
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
 
    SCIPdebugMessage("read bounds\n");
 
@@ -4294,17 +4294,6 @@ SCIP_RETCODE SCIPincludeReaderMps(
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyMps) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadMps) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteMps) );
-
-   /* add mps reader parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/mpsreader/dynamicconss", "should model constraints be subject to aging?",
-         NULL, FALSE, TRUE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/mpsreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/mpsreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

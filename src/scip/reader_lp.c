@@ -789,7 +789,7 @@ SCIP_RETCODE getVariable(
       SCIP_Bool initial;
       SCIP_Bool removable;
 
-      SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamiccols", &dynamiccols) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
       initial = !dynamiccols;
       removable = dynamiccols;
 
@@ -1398,8 +1398,8 @@ SCIP_RETCODE createIndicatorConstraint(
    }
 
    /* create and add the indicator constraint */
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
    initial = !dynamicrows && !lpinput->inlazyconstraints && !lpinput->inusercuts;
    separate = TRUE;
    enforce = !lpinput->inusercuts;
@@ -1619,8 +1619,8 @@ SCIP_RETCODE readConstraints(
    if( !isIndicatorCons )
    {
       /* create and add the linear constraint */
-      SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicconss", &dynamicconss) );
-      SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicrows", &dynamicrows) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
       initial = !dynamicrows && !lpinput->inlazyconstraints && !lpinput->inusercuts;
       separate = TRUE;
       enforce = !lpinput->inusercuts;
@@ -1950,8 +1950,8 @@ SCIP_RETCODE readSemicontinuous(
 
    assert(lpinput != NULL);
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamiccols", &dynamiccols) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
 
    /* if section is titles "semi-continuous", then the parser breaks this into parts */
    if( strcasecmp(lpinput->token, "SEMI") == 0 )
@@ -3161,17 +3161,6 @@ SCIP_RETCODE SCIPincludeReaderLp(
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyLp) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadLp) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteLp) );
-
-   /* add lp reader parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/lpreader/dynamicconss", "should model constraints be subject to aging?",
-         NULL, FALSE, TRUE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/lpreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/lpreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

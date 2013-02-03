@@ -697,8 +697,8 @@ SCIP_RETCODE createVariable(
    SCIP_Bool dynamiccols;
    SCIP_Bool initial;
    SCIP_Bool removable;
-   
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamiccols", &dynamiccols) );
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
    initial = !dynamiccols;
    removable = dynamiccols;
    
@@ -1410,8 +1410,8 @@ SCIP_RETCODE readConstraints(
    }
 
    /* create and add the linear constraint */
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
    initial = !dynamicrows;
    separate = TRUE;
    enforce = TRUE;
@@ -4050,15 +4050,6 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteOpb) );
 
    /* add opb reader parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamicconss", "should model constraints be subject to aging?",
-         NULL, FALSE, TRUE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/"READER_NAME"/multisymbol", "use '*' between coefficients and variables by writing to problem?",
          NULL, TRUE, FALSE, NULL, NULL) );

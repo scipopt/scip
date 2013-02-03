@@ -312,6 +312,11 @@
                                                  *   in VBC output? */
 #define SCIP_DEFAULT_VBC_DISPSOLS         FALSE /**< should the node where solutions are found be visualized? */
 
+/* Reading */
+#define SCIP_DEFAULT_READ_DYNAMICCONSS     TRUE /**< should model constraints be subject to aging? */
+#define SCIP_DEFAULT_READ_DYNAMICCOLS     FALSE /**< should columns be added and removed dynamically to the LP? */
+#define SCIP_DEFAULT_READ_DYNAMICROWS     FALSE /**< should rows be added and removed dynamically to the LP? */
+
 /* Writing */
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
 
@@ -1616,6 +1621,23 @@ SCIP_RETCODE SCIPsetCreate(
          "vbc/dispsols",
          "should the node where solutions are found be visualized?",
          &(*set)->vbc_dispsols, FALSE, SCIP_DEFAULT_VBC_DISPSOLS,
+         NULL, NULL) );
+
+   /* Reading parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reading/dynamicconss",
+         "should model constraints be subject to aging?",
+         &(*set)->read_dynamicconss, FALSE, SCIP_DEFAULT_READ_DYNAMICCONSS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reading/dynamiccols",
+         "should columns be added and removed dynamically to the LP?",
+         &(*set)->read_dynamiccols, FALSE, SCIP_DEFAULT_READ_DYNAMICCOLS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reading/dynamicrows",
+         "should rows be added and removed dynamically to the LP?",
+         &(*set)->read_dynamicrows, FALSE, SCIP_DEFAULT_READ_DYNAMICROWS,
          NULL, NULL) );
 
    /* Writing parameters */

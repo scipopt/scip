@@ -81,6 +81,8 @@ parameters:
   variables evaluated without better score
 - changed default gomory cut separation parameter DEFAULT_MAXRANK from 0 to 3, to take also gomory cuts, that could not
   be scaled to integral coefficients, with maximal rank 3 into account
+- removed all local parameters "reading/(READER)/dynamic{conss|cols|rows}" and replaced them by global parameters
+  "reading/dynamic{conss|cols|rows}"
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to

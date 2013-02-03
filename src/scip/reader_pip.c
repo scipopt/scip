@@ -653,7 +653,7 @@ SCIP_RETCODE getVariable(
       SCIP_Bool initial;
       SCIP_Bool removable;
 
-      SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamiccols", &dynamiccols) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
       initial = !dynamiccols;
       removable = dynamiccols;
 
@@ -1323,8 +1323,8 @@ SCIP_RETCODE readObjective(
 
          getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
 
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicconss", &dynamicconss) );
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicrows", &dynamicrows) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
          initial = !dynamicrows;
          separate = TRUE;
          enforce = TRUE;
@@ -1390,8 +1390,8 @@ SCIP_RETCODE readObjective(
          SCIP_Bool dynamic;
          SCIP_Bool removable;
 
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicconss", &dynamicconss) );
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicrows", &dynamicrows) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
          initial = !dynamicrows;
          separate = TRUE;
          enforce = TRUE;
@@ -1527,8 +1527,8 @@ SCIP_RETCODE readConstraints(
    sidevalue *= sidesign;
 
    /* create and add the linear constraint */
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
    initial = !dynamicrows;
    separate = TRUE;
    enforce = TRUE;
@@ -3750,17 +3750,6 @@ SCIP_RETCODE SCIPincludeReaderPip(
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyPip) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadPip) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWritePip) );
-
-   /* add lp reader parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamicconss", "should model constraints be subject to aging?",
-         NULL, FALSE, TRUE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamiccols", "should columns be added and removed dynamically to the PIP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamicrows", "should rows be added and removed dynamically to the PIP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
