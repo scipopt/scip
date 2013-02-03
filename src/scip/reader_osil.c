@@ -68,6 +68,9 @@ SCIP_RETCODE readVariables(
    const XML_NODE*       datanode,           /**< XML root node for instance data */
    SCIP_VAR***           vars,               /**< buffer to store pointer to variable array */
    int*                  nvars,              /**< buffer to store number of variables */
+   SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamiccols,        /**< should columns be added and removed dynamically to the LP? */
+   SCIP_Bool             dynamicrows,        /**< should rows be added and removed dynamically to the LP? */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occured */
    )
 {
@@ -84,6 +87,8 @@ SCIP_RETCODE readVariables(
 
    *vars = NULL;
    *nvars = 0;
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
 
    variables = xmlFindNodeMaxdepth(datanode, "variables", 0, 1);
 
@@ -218,7 +223,7 @@ SCIP_RETCODE readVariables(
       }
 
       /* create SCIP variable */
-      SCIP_CALL( SCIPcreateVar(scip, &(*vars)[*nvars], varname, varlb, varub, 0.0, vartype, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVar(scip, &(*vars)[*nvars], varname, varlb, varub, 0.0, vartype, !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
       assert((*vars)[*nvars] != NULL);
 
       /* add variable to problem */
@@ -244,7 +249,7 @@ SCIP_RETCODE readVariables(
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_semibound", SCIPvarGetName((*vars)[*nvars]));
 
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, consvars, boundtypes, bounds, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, consvars, boundtypes, bounds, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
@@ -268,6 +273,7 @@ SCIP_RETCODE readObjective(
    const XML_NODE*       datanode,           /**< XML root node for instance data */
    SCIP_VAR**            vars,               /**< variables in order of OSiL indices */
    int                   nvars,              /**< number of variables */
+   SCIP_Bool             dynamiccols,        /**< should columns be added and removed dynamically to the LP? */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occured */
    )
 {
@@ -279,6 +285,8 @@ SCIP_RETCODE readObjective(
    assert(datanode != NULL);
    assert(vars != NULL || nvars == 0);
    assert(doingfine != NULL);
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
 
    /* check for first objective */
    objective = xmlFindNodeMaxdepth(datanode, "obj", 0, 2);
@@ -378,7 +386,7 @@ SCIP_RETCODE readObjective(
       {
          SCIP_VAR* objconstvar;
 
-         SCIP_CALL( SCIPcreateVar(scip, &objconstvar, "objconstvar", objconst, objconst, 1.0, SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVar(scip, &objconstvar, "objconstvar", objconst, objconst, 1.0, SCIP_VARTYPE_CONTINUOUS, !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, objconstvar) );
          SCIP_CALL( SCIPreleaseVar(scip, &objconstvar) );
       }
@@ -405,6 +413,8 @@ SCIP_RETCODE readConstraints(
    SCIP_CONS***          conss,              /**< buffer to store array of (linear) constraints */
    CONSTYPE**            constypes,          /**< buffer to store type of constraints (will be all LINEAR) */
    int*                  nconss,             /**< buffer to store number of constraints */
+   SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamicrows,        /**< should rows be added and removed dynamically to the LP? */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occured */
    )
 {
@@ -532,7 +542,7 @@ SCIP_RETCODE readConstraints(
       }
 
       /* create SCIP linear constraint */
-      SCIP_CALL( SCIPcreateConsLinear(scip, &(*conss)[*nconss], consname, 0, NULL, NULL, conslhs, consrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateConsLinear(scip, &(*conss)[*nconss], consname, 0, NULL, NULL, conslhs, consrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
       assert((*conss)[*nconss] != NULL);
 
       (*constypes)[*nconss] = LINEAR;
@@ -972,6 +982,9 @@ SCIP_RETCODE readQuadraticCoefs(
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           objcons,            /**< buffer to store constraint for nonlinear part of objective function, or to add to if already existing */
    CONSTYPE*             objconstype,        /**< buffer to store type of objective constraint, if created (should be QUADRATIC) */
+   SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamiccols,        /**< should columns be added and removed dynamically to the LP? */
+   SCIP_Bool             dynamicrows,        /**< should rows be added and removed dynamically to the LP? */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occured */
    )
 {
@@ -1115,14 +1128,14 @@ SCIP_RETCODE readQuadraticCoefs(
             SCIP_VAR* objvar;
             SCIP_Real minusone;
 
-            SCIP_CALL( SCIPcreateVar(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVar(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS, !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, objvar) );
 
             minusone = -1.0;
             SCIP_CALL( SCIPcreateConsQuadratic(scip, objcons, "objcons", 1, &objvar, &minusone, 0, NULL, NULL, NULL,
-               SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
-               SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+                  SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
+                  SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
             *objconstype = QUADRATIC;
 
             SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
@@ -2036,6 +2049,9 @@ SCIP_RETCODE readNonlinearExprs(
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           objcons,            /**< buffer to store constraint for nonlinear part of objective function, or to add to if already existing */
    CONSTYPE*             objconstype,        /**< buffer to store type of objective constraint, if created (should be QUADRATIC) */
+   SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamiccols,        /**< should columns be added and removed dynamically to the LP? */
+   SCIP_Bool             dynamicrows,        /**< should rows be added and removed dynamically to the LP? */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
@@ -2159,15 +2175,15 @@ SCIP_RETCODE readNonlinearExprs(
          SCIP_Real minusone;
          SCIP_Real one;
 
-         SCIP_CALL( SCIPcreateVar(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVar(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS, !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, objvar) );
 
          minusone = -1.0;
          one = 1.0;
          SCIP_CALL( SCIPcreateConsNonlinear(scip, objcons, "objcons", 1, &objvar, &minusone, 1, &exprtree, &one,
-            SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
-            SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+               SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
+               SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
          *objconstype = NONLINEAR;
 
          SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
@@ -2199,12 +2215,12 @@ SCIP_RETCODE readNonlinearExprs(
 
             one = 1.0;
             SCIP_CALL( SCIPcreateConsNonlinear(scip, cons, SCIPconsGetName(*cons),
-               SCIPgetNVarsLinear(scip, *cons), SCIPgetVarsLinear(scip, *cons), SCIPgetValsLinear(scip, *cons),
-               1, &exprtree, &one,
-               SCIPgetLhsLinear(scip, *cons), SCIPgetRhsLinear(scip, *cons),
-               SCIPconsIsInitial(*cons), SCIPconsIsSeparated(*cons), SCIPconsIsEnforced(*cons),
-               SCIPconsIsChecked(*cons), SCIPconsIsPropagated(*cons), SCIPconsIsLocal(*cons),
-               SCIPconsIsModifiable(*cons), SCIPconsIsDynamic(*cons), SCIPconsIsRemovable(*cons), SCIPconsIsStickingAtNode(*cons)) );
+                  SCIPgetNVarsLinear(scip, *cons), SCIPgetVarsLinear(scip, *cons), SCIPgetValsLinear(scip, *cons),
+                  1, &exprtree, &one,
+                  SCIPgetLhsLinear(scip, *cons), SCIPgetRhsLinear(scip, *cons),
+                  SCIPconsIsInitial(*cons), SCIPconsIsSeparated(*cons), SCIPconsIsEnforced(*cons),
+                  SCIPconsIsChecked(*cons), SCIPconsIsPropagated(*cons), SCIPconsIsLocal(*cons),
+                  SCIPconsIsModifiable(*cons), SCIPconsIsDynamic(*cons), SCIPconsIsRemovable(*cons), SCIPconsIsStickingAtNode(*cons)) );
 
             SCIP_CALL( SCIPreleaseCons(scip, &oldcons) );
 
@@ -2348,6 +2364,9 @@ SCIP_DECL_READERREAD(readerReadOsil)
    const XML_NODE* data;
    SCIP_RETCODE retcode;
    SCIP_Bool doingfine;
+   SCIP_Bool dynamicconss;
+   SCIP_Bool dynamiccols;
+   SCIP_Bool dynamicrows;
    SCIP_VAR** vars;
    int nvars;
    SCIP_CONS** conss;
@@ -2414,19 +2433,23 @@ SCIP_DECL_READERREAD(readerReadOsil)
       goto CLEANUP;
    }
 
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
+
    /* read variables */
-   SCIP_CALL( readVariables(scip, data, &vars, &nvars, &doingfine) );
+   SCIP_CALL( readVariables(scip, data, &vars, &nvars, dynamicconss, dynamiccols, dynamicrows, &doingfine) );
    if( !doingfine )
       goto CLEANUP;
    assert(vars != NULL || nvars == 0);
 
    /* read objective sense, coefficient, and constant */
-   SCIP_CALL( readObjective(scip, data, vars, nvars, &doingfine) );
+   SCIP_CALL( readObjective(scip, data, vars, nvars, dynamiccols, &doingfine) );
    if( !doingfine )
       goto CLEANUP;
 
    /* read constraint data (names, constants, lhs/rhs) */
-   SCIP_CALL( readConstraints(scip, data, &conss, &constypes, &nconss, &doingfine) );
+   SCIP_CALL( readConstraints(scip, data, &conss, &constypes, &nconss, dynamicconss, dynamicrows, &doingfine) );
    if( !doingfine )
       goto CLEANUP;
    assert(conss != NULL || nconss == 0);
@@ -2437,12 +2460,12 @@ SCIP_DECL_READERREAD(readerReadOsil)
       goto CLEANUP;
 
    /* read quadratic coefficients (turns linear constraints into quadratic ones, may create objcons) */
-   SCIP_CALL( readQuadraticCoefs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine) );
+   SCIP_CALL( readQuadraticCoefs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, dynamicconss, dynamicrows, dynamiccols, &doingfine) );
    if( !doingfine )
       goto CLEANUP;
 
    /* read nonlinear expressions (turns constraints into nonlinear ones, may create objcons) */
-   SCIP_CALL( readNonlinearExprs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine) );
+   SCIP_CALL( readNonlinearExprs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, dynamicconss, dynamicrows, dynamiccols, &doingfine) );
    if( !doingfine )
       goto CLEANUP;
 
