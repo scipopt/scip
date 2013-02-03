@@ -161,6 +161,9 @@ struct FznInput
    SCIP_Bool             comment;            /**< current buffer contains everything until a comment starts */
    SCIP_Bool             haserror;           /**< a error was detected during parsing */
    SCIP_Bool             valid;
+   SCIP_Bool             dynamicconss;       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamiccols;        /**< should columns be added and removed dynamically to the LP? */
+   SCIP_Bool             dynamicrows;        /**< should rows be added and removed dynamically to the LP? */
 
    VARARRAY**            vararrays;          /**< variable arrays */
    int                   nvararrays;         /**< number of variables */
@@ -1167,13 +1170,15 @@ SCIP_RETCODE createQuadraticCons(
    SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms (z_j) */
    SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms (a_j) */
    SCIP_Real             lhs,                /**< left hand side of quadratic equation (ell) */
-   SCIP_Real             rhs                 /**< right hand side of quadratic equation (u) */
+   SCIP_Real             rhs,                /**< right hand side of quadratic equation (u) */
+   SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamicrows         /**< should rows be added and removed dynamically to the LP? */
    )
 {
    SCIP_CONS* cons;
 
    SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2,
-         quadcoefs, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+         quadcoefs, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
 
    SCIPdebugPrintCons(scip, cons, NULL);
 
@@ -1192,13 +1197,15 @@ SCIP_RETCODE createLinearCons(
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
    SCIP_Real*            vals,               /**< array with coefficients of constraint entries */
    SCIP_Real             lhs,                /**< left hand side of constraint */
-   SCIP_Real             rhs                 /**< right hand side of constraint */
+   SCIP_Real             rhs,                /**< right hand side of constraint */
+   SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamicrows         /**< should rows be added and removed dynamically to the LP? */
    )
 {
    SCIP_CONS* cons;
 
    SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nvars, vars, vals, lhs, rhs,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
 
    SCIPdebugPrintCons(scip, cons, NULL);
 
@@ -1270,7 +1277,7 @@ SCIP_RETCODE createLinking(
    if( !SCIPisInfinity(scip, rhs) )
       rhs += (value2 - value1);
 
-   SCIP_CALL( createLinearCons(scip, consname, nvars, vars, vals, lhs, rhs) );
+   SCIP_CALL( createLinearCons(scip, consname, nvars, vars, vals, lhs, rhs, fzninput->dynamicconss, fzninput->dynamicrows) );
 
    SCIPfreeBufferArray(scip, &vars);
 
@@ -1732,7 +1739,7 @@ SCIP_RETCODE applyVariableAssignment(
       }
 
       /* create fixing constraint */
-      SCIP_CALL( createLinearCons(scip, "fixing", 1, &var, vals, fixvalue, fixvalue) );
+      SCIP_CALL( createLinearCons(scip, "fixing", 1, &var, vals, fixvalue, fixvalue, fzninput->dynamicconss, fzninput->dynamicrows) );
    }
    else
    {
@@ -1742,7 +1749,7 @@ SCIP_RETCODE applyVariableAssignment(
       vars[0] = var;
       vars[1] = linkVar;
 
-      SCIP_CALL( createLinearCons(scip, "link", 2, vars, vals, 0.0, 0.0) );
+      SCIP_CALL( createLinearCons(scip, "link", 2, vars, vals, 0.0, 0.0, fzninput->dynamicconss, fzninput->dynamicrows) );
 
       SCIPfreeBufferArray(scip, &vars);
    }
@@ -1962,7 +1969,7 @@ SCIP_RETCODE createVariable(
    }
 
    /* create variable */
-   SCIP_CALL( SCIPcreateVar(scip, &varcopy, name, lb, ub, 0.0, vartype, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(scip, &varcopy, name, lb, ub, 0.0, vartype, !(fzninput->dynamiccols), fzninput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, varcopy) );
 
    SCIPdebugMessage("created variable\n");
@@ -2620,12 +2627,12 @@ SCIP_RETCODE parseQuadratic(
             SCIP_Real linval;
             linval = -1.0;
 
-            SCIP_CALL( createQuadraticCons(scip, name, 1, &vars[2], &linval, 1, &vars[0], &vars[1], &quadval, rhs, rhs) );
+            SCIP_CALL( createQuadraticCons(scip, name, 1, &vars[2], &linval, 1, &vars[0], &vars[1], &quadval, rhs, rhs, fzninput->dynamicconss, fzninput->dynamicrows) );
          }
          else
          {
             rhs += vals[2];
-            SCIP_CALL( createQuadraticCons(scip, name, 0, NULL, NULL, 1, &vars[0], &vars[1], &quadval, rhs, rhs));
+            SCIP_CALL( createQuadraticCons(scip, name, 0, NULL, NULL, 1, &vars[0], &vars[1], &quadval, rhs, rhs, fzninput->dynamicconss, fzninput->dynamicrows));
          }
       }
       else if( vars[0] != NULL || vars[1] != NULL )
@@ -2655,7 +2662,7 @@ SCIP_RETCODE parseQuadratic(
             rhs += vals[2];
          }
 
-         SCIP_CALL( createLinearCons(scip, name, nvars, vars, vals, rhs, rhs) );
+         SCIP_CALL( createLinearCons(scip, name, nvars, vars, vals, rhs, rhs, fzninput->dynamicconss, fzninput->dynamicrows) );
       }
       else
       {
@@ -2669,13 +2676,13 @@ SCIP_RETCODE parseQuadratic(
          {
             SCIP_Real val;
             val = -1.0;
-            SCIP_CALL( createLinearCons(scip, name, 1, &vars[2], &val, rhs, rhs) );
+            SCIP_CALL( createLinearCons(scip, name, 1, &vars[2], &val, rhs, rhs, fzninput->dynamicconss, fzninput->dynamicrows) );
          }
          else
          {
             assert(vals[2] != SCIP_INVALID); /*lint !e777*/
             rhs += vals[2];
-            SCIP_CALL( createLinearCons(scip, name, 0, NULL, NULL, rhs, rhs) );
+            SCIP_CALL( createLinearCons(scip, name, 0, NULL, NULL, rhs, rhs, fzninput->dynamicconss, fzninput->dynamicrows) );
          }
       }
 
@@ -2787,7 +2794,7 @@ SCIP_RETCODE parseAggregation(
          }
       }
 
-      SCIP_CALL( createLinearCons(scip, name, nvars, vars, vals, rhs, rhs) );
+      SCIP_CALL( createLinearCons(scip, name, nvars, vars, vals, rhs, rhs, fzninput->dynamicconss, fzninput->dynamicrows) );
 
       /* free buffer arrays */
       SCIPfreeBufferArray(scip, &vals);
@@ -2947,21 +2954,21 @@ CREATE_CONSTRAINT(createLogicalOpCons)
             SCIP_Real vals[] = {1.0, 1.0};
 
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, fname, 2, vars, vals, 1.0, 1.0,
-                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, fzninput->dynamicconss, fzninput->dynamicrows, FALSE) );
 
             *created = TRUE;
          }
          else if( equalTokens(scip, ftokens[1], "or" ) )
          {
             SCIP_CALL( SCIPcreateConsOr(scip, &cons, fname, vars[2], 2, vars,
-                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, fzninput->dynamicconss, fzninput->dynamicrows, FALSE) );
 
             *created = TRUE;
          }
          else if( equalTokens(scip, ftokens[1], "and") )
          {
             SCIP_CALL( SCIPcreateConsAnd(scip, &cons, fname, vars[2], 2, vars,
-                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, fzninput->dynamicconss, fzninput->dynamicrows, FALSE) );
 
             *created = TRUE;
          }
@@ -2971,7 +2978,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
             SCIPswapPointers((void**)&vars[0], (void**)&vars[2]);
 
             SCIP_CALL( SCIPcreateConsXor(scip, &cons, fname, FALSE, 3, vars,
-                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, fzninput->dynamicconss, fzninput->dynamicrows, FALSE) );
 
             *created = TRUE;
          }
@@ -3053,14 +3060,14 @@ CREATE_CONSTRAINT(createLogicalOpCons)
       if( equalTokens(scip, ftokens[2], "or" ) )
       {
          SCIP_CALL( SCIPcreateConsOr(scip, &cons, fname, resvar, nvars, vars,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, fzninput->dynamicconss, fzninput->dynamicrows, FALSE) );
       }
       else
       {
          assert( equalTokens(scip, ftokens[2], "and") );
 
          SCIP_CALL( SCIPcreateConsAnd(scip, &cons, fname, resvar, nvars, vars,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, fzninput->dynamicconss, fzninput->dynamicrows, FALSE) );
       }
 
       SCIPdebugPrintCons(scip, cons, NULL);
@@ -3205,7 +3212,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
          if( hasError(fzninput) )
             goto TERMINATE;
 
-         SCIP_CALL( createLinearCons(scip, fname, nvars, vars, vals, lhs, rhs) );
+         SCIP_CALL( createLinearCons(scip, fname, nvars, vars, vals, lhs, rhs, fzninput->dynamicconss, fzninput->dynamicrows) );
       }
 
    TERMINATE:
@@ -3268,7 +3275,7 @@ CREATE_CONSTRAINT(createAlldifferentOpCons)
 #ifdef ALLDIFFERENT
    /* create alldifferent constraint */
    SCIP_CALL( SCIPcreateConsAlldifferent(scip, &cons, fname, nvars, vars,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, fzninput->dynamicconss, fzninput->dynamicrows, FALSE) );
 
    SCIPdebugPrintCons(scip, cons, NULL);
 
@@ -3376,7 +3383,7 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
 
    /* create cumulative constraint */
    SCIP_CALL( SCIPcreateConsCumulative(scip, &cons, fname, nvars, vars, durations, demands, capacity,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, fzninput->dynamicconss, fzninput->dynamicrows, FALSE) );
 
    SCIPdebugPrintCons(scip, cons, NULL);
 
@@ -3446,7 +3453,7 @@ SCIP_RETCODE parseConstraint(
       SCIP_Real vals[] = {1.0};
 
       /* create fixing constraint */
-      SCIP_CALL( createLinearCons(scip, "fixing", 1, &var, vals, 1.0, 1.0) );
+      SCIP_CALL( createLinearCons(scip, "fixing", 1, &var, vals, 1.0, 1.0, fzninput->dynamicconss, fzninput->dynamicrows) );
       return SCIP_OKAY;
    }
 
@@ -4767,6 +4774,9 @@ SCIP_DECL_READERREAD(readerReadFzn)
    fzninput.constarrays = NULL;
    fzninput.nconstarrays = 0;
    fzninput.constarrayssize = 0;
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &(fzninput.dynamicconss)) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &(fzninput.dynamiccols)) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &(fzninput.dynamicrows)) );
 
    SCIP_CALL( SCIPhashtableCreate(&fzninput.varHashtable, SCIPblkmem(scip), SCIP_HASHSIZE_NAMES,
          hashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
