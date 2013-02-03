@@ -104,6 +104,9 @@ struct MpsInput
    const char*           f5;
    char                  probname[MPS_MAX_NAMELEN];
    char                  objname [MPS_MAX_NAMELEN];
+   SCIP_Bool             dynamicconss;       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamiccols;        /**< should columns be added and removed dynamically to the LP? */
+   SCIP_Bool             dynamicrows;        /**< should rows be added and removed dynamically to the LP? */
    SCIP_Bool             isinteger;
    SCIP_Bool             isnewformat;
 };
@@ -149,6 +152,10 @@ SCIP_RETCODE mpsinputCreate(
    (*mpsi)->f3          = NULL;
    (*mpsi)->f4          = NULL;
    (*mpsi)->f5          = NULL;
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &((*mpsi)->dynamicconss)) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &((*mpsi)->dynamiccols)) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &((*mpsi)->dynamicrows)) );
 
    return SCIP_OKAY;
 }
@@ -762,13 +769,7 @@ SCIP_RETCODE readRows(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Bool dynamicrows;
-   SCIP_Bool dynamicconss;
-
    SCIPdebugMessage("read rows\n");
-
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
 
    while( mpsinputReadLine(mpsi) )
    {
@@ -812,15 +813,15 @@ SCIP_RETCODE readRows(
          if( cons != NULL )
             break;
 
-         initial = !dynamicrows && (mpsinputSection(mpsi) == MPS_ROWS);
+         initial = !mpsi->dynamicrows && (mpsinputSection(mpsi) == MPS_ROWS);
          separate = TRUE;
          enforce = (mpsinputSection(mpsi) != MPS_USERCUTS);
          check = (mpsinputSection(mpsi) != MPS_USERCUTS);
          propagate = TRUE;
          local = FALSE;
          modifiable = FALSE;
-         dynamic = dynamicconss;
-         removable = dynamicrows || (mpsinputSection(mpsi) == MPS_USERCUTS);
+         dynamic = mpsi->dynamicconss;
+         removable = mpsi->dynamicrows || (mpsinputSection(mpsi) == MPS_USERCUTS);
 
          switch(*mpsinputField1(mpsi))
          {
@@ -860,11 +861,8 @@ SCIP_RETCODE readCols(
    SCIP_CONS*    cons;
    SCIP_VAR*     var;
    SCIP_Real     val;
-   SCIP_Bool     dynamiccols;
 
    SCIPdebugMessage("read columns\n");
-
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
 
    var = NULL;
    while( mpsinputReadLine(mpsi) )
@@ -904,14 +902,14 @@ SCIP_RETCODE readCols(
          if( mpsinputIsInteger(mpsi) )
          {
             /* for integer variables, default bounds are 0 <= x < 1(not +infinity, like it is for continuous variables), and default cost is 0 */
-            SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, 
-                  !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
+                  !mpsi->dynamiccols, mpsi->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
          }
          else
          {
             /* for continuous variables, default bounds are 0 <= x, and default cost is 0 */
             SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
-                  !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+                  !mpsi->dynamiccols, mpsi->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
          }
       }
       assert(var != NULL);
@@ -1235,15 +1233,10 @@ SCIP_RETCODE readBounds(
    SCIP_VAR** semicont;
    int nsemicont;
    int semicontsize;
-   SCIP_Bool dynamiccols;
-   SCIP_Bool dynamicconss;
 
    semicont = NULL;
    nsemicont = 0;
    semicontsize = 0;
-
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
 
    SCIPdebugMessage("read bounds\n");
 
@@ -1320,7 +1313,7 @@ SCIP_RETCODE readBounds(
             SCIP_VAR* varcpy;
 
             SCIP_CALL( SCIPcreateVar(scip, &var, mpsinputField3(mpsi), 0.0, SCIPinfinity(scip), 0.0, 
-                  SCIP_VARTYPE_CONTINUOUS, !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+                  SCIP_VARTYPE_CONTINUOUS, !mpsi->dynamiccols, mpsi->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
 
             SCIP_CALL( SCIPaddVar(scip, var) );
             varcpy = var;
@@ -1474,7 +1467,7 @@ SCIP_RETCODE readBounds(
          bounds[1] = oldlb;
 
          SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds,
-               !dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamiccols, FALSE) );
+               !mpsi->dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, mpsi->dynamicconss, mpsi->dynamiccols, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
@@ -1526,8 +1519,8 @@ SCIP_RETCODE readSOS(
    propagate = TRUE;
    local = FALSE;
    modifiable = FALSE;
-   dynamic = FALSE;
-   removable = FALSE;
+   dynamic = mpsi->dynamicconss;
+   removable = mpsi->dynamicrows;
 
    /* loop through section */
    while( mpsinputReadLine(mpsi) )
@@ -1814,8 +1807,8 @@ SCIP_RETCODE readQMatrix(
       propagate  = TRUE;
       local      = FALSE;
       modifiable = FALSE;
-      dynamic    = FALSE;
-      removable  = FALSE;
+      dynamic    = mpsi->dynamicconss;
+      removable  = mpsi->dynamicrows;
 
       SCIP_CALL( SCIPcreateVar(scip, &qmatrixvar, "qmatrixvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
             SCIP_VARTYPE_CONTINUOUS, initial, removable, NULL, NULL, NULL, NULL, NULL) );
@@ -2054,8 +2047,8 @@ SCIP_RETCODE readIndicators(
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
-   dynamic = FALSE;
-   removable = FALSE;
+   dynamic = mpsi->dynamicconss;
+   removable = mpsi->dynamicrows;
    stickingatnode = FALSE;
 
    /* loop through section */
