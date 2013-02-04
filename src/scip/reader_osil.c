@@ -88,8 +88,6 @@ SCIP_RETCODE readVariables(
    *vars = NULL;
    *nvars = 0;
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
-
    variables = xmlFindNodeMaxdepth(datanode, "variables", 0, 1);
 
    if( variables == NULL )
@@ -285,8 +283,6 @@ SCIP_RETCODE readObjective(
    assert(datanode != NULL);
    assert(vars != NULL || nvars == 0);
    assert(doingfine != NULL);
-
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
 
    /* check for first objective */
    objective = xmlFindNodeMaxdepth(datanode, "obj", 0, 2);
