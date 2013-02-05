@@ -2902,7 +2902,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
          if( term->sqrcoef < 0.0 )
          {
-            if( lhscount >= nquadvars )
+            if( lhscount >= nquadvars - 1 )
             { /* too many variables on lhs, i.e., all variables seem to have negative coefficient */
                rhsvar = NULL;
                break;
