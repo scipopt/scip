@@ -460,37 +460,37 @@ void SCIPdecodeDualBitNeg(
 
       m = *inp++;
 
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       m >>= 2;
-      *out++ = -(m & 3);
+      *out++ = -(int)(m & 3);
       assert(m >> 2 == 0);
    }
 
@@ -502,7 +502,7 @@ void SCIPdecodeDualBitNeg(
       m = *inp;
       for( i = 0; i < rest; i++ )
       {
-         *out++ = -(m & 3);
+         *out++ = -(int)(m & 3);
          m >>= 2;
       }
    }
@@ -1931,6 +1931,8 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
    )
 {
+   int grbobjsen;
+
    assert( lpi != NULL );
    assert( lpi->grbmodel != NULL );
    assert( objsen != NULL );
@@ -1938,7 +1940,9 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    /* note that the objective sense is define equally in SCIP (LPI) and Gurobi */
    assert( GRB_MINIMIZE == SCIP_OBJSEN_MINIMIZE );
    assert( GRB_MAXIMIZE == SCIP_OBJSEN_MAXIMIZE );
-   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, objsen) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &grbobjsen) );
+
+   *objsen = grbobjsen;
 
    return SCIP_OKAY;
 }
