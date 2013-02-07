@@ -4,6 +4,7 @@ SCIP version NEXT
 fixed bugs:
 - fixed assert in solve.c with branched status and LP reached the objective limit
 - fixed bug in cons_bounddisjunction with satisfied literal of multi-aggregated variable
+- fixed bug in upgrade method of cons_soc
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
