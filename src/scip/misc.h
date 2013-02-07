@@ -314,8 +314,17 @@ int SCIPptrarrayGetMaxIdx(
    );
 
 /*
-  local methods
-*/
+ * Additional math functions
+ */
+
+/** negates a number
+ *
+ * negation of a number that can be used to avoid that a negation is optimized away by a compiler
+ */
+extern
+SCIP_Real SCIPnegateReal(
+   SCIP_Real             x                   /**< value to negate */
+   );
 
 #ifdef __cplusplus
 }
