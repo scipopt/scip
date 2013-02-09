@@ -99,6 +99,7 @@ struct LpInput
    SCIP_OBJSENSE         objsense;
    SCIP_Bool             inlazyconstraints;
    SCIP_Bool             inusercuts;
+   SCIP_Bool             initialconss;       /**< should model constraints be marked as initial? */
    SCIP_Bool             dynamicconss;       /**< should model constraints be subject to aging? */
    SCIP_Bool             dynamiccols;        /**< should columns be added and removed dynamically to the LP? */
    SCIP_Bool             dynamicrows;        /**< should rows be added and removed dynamically to the LP? */
@@ -1238,7 +1239,7 @@ SCIP_RETCODE readObjective(
 
          minusone = -1.0;
          SCIP_CALL( SCIPcreateConsQuadratic(scip, &quadobjcons, "quadobj", 1, &quadobjvar, &minusone, nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, lpinput->dynamicconss, lpinput->dynamicrows) );
+               lpinput->initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, lpinput->dynamicconss, lpinput->dynamicrows) );
 
          SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
          SCIPdebugMessage("(line %d) added constraint <%s> to represent quadratic objective: ", lpinput->linenumber, SCIPconsGetName(quadobjcons));
@@ -1399,7 +1400,7 @@ SCIP_RETCODE createIndicatorConstraint(
    }
 
    /* create and add the indicator constraint */
-   initial = !lpinput->dynamicrows && !lpinput->inlazyconstraints && !lpinput->inusercuts;
+   initial = lpinput->initialconss && !lpinput->inlazyconstraints && !lpinput->inusercuts;
    separate = TRUE;
    enforce = !lpinput->inusercuts;
    check = !lpinput->inusercuts;
@@ -1616,7 +1617,7 @@ SCIP_RETCODE readConstraints(
    if( !isIndicatorCons )
    {
       /* create and add the linear constraint */
-      initial = !lpinput->dynamicrows && !lpinput->inlazyconstraints && !lpinput->inusercuts;
+      initial = lpinput->initialconss && !lpinput->inlazyconstraints && !lpinput->inusercuts;
       separate = TRUE;
       enforce = !lpinput->inusercuts;
       check = !lpinput->inusercuts;
@@ -2037,7 +2038,7 @@ SCIP_RETCODE readSos(
    assert(lpinput != NULL);
 
    /* standard settings for SOS constraints: */
-   initial = TRUE;
+   initial = lpinput->initialconss;
    separate = FALSE;
    enforce = TRUE;
    check = TRUE;
@@ -3191,6 +3192,7 @@ SCIP_RETCODE SCIPreadLp(
    lpinput.haserror = FALSE;
    lpinput.comment = FALSE;
    lpinput.endline = FALSE;
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &(lpinput.initialconss)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &(lpinput.dynamicconss)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &(lpinput.dynamiccols)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &(lpinput.dynamicrows)) );

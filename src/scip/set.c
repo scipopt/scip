@@ -313,6 +313,7 @@
 #define SCIP_DEFAULT_VBC_DISPSOLS         FALSE /**< should the node where solutions are found be visualized? */
 
 /* Reading */
+#define SCIP_DEFAULT_READ_INITIALCONSS     TRUE /**< should model constraints be marked as initial? */
 #define SCIP_DEFAULT_READ_DYNAMICCONSS     TRUE /**< should model constraints be subject to aging? */
 #define SCIP_DEFAULT_READ_DYNAMICCOLS     FALSE /**< should columns be added and removed dynamically to the LP? */
 #define SCIP_DEFAULT_READ_DYNAMICROWS     FALSE /**< should rows be added and removed dynamically to the LP? */
@@ -1624,6 +1625,11 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* Reading parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reading/initialconss",
+         "should model constraints be marked as initial?",
+         &(*set)->read_initialconss, FALSE, SCIP_DEFAULT_READ_INITIALCONSS,
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reading/dynamicconss",
          "should model constraints be subject to aging?",

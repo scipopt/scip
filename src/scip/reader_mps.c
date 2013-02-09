@@ -104,6 +104,7 @@ struct MpsInput
    const char*           f5;
    char                  probname[MPS_MAX_NAMELEN];
    char                  objname [MPS_MAX_NAMELEN];
+   SCIP_Bool             initialconss;       /**< should model constraints be marked as initial? */
    SCIP_Bool             dynamicconss;       /**< should model constraints be subject to aging? */
    SCIP_Bool             dynamiccols;        /**< should columns be added and removed dynamically to the LP? */
    SCIP_Bool             dynamicrows;        /**< should rows be added and removed dynamically to the LP? */
@@ -153,6 +154,7 @@ SCIP_RETCODE mpsinputCreate(
    (*mpsi)->f4          = NULL;
    (*mpsi)->f5          = NULL;
 
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &((*mpsi)->initialconss)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &((*mpsi)->dynamicconss)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &((*mpsi)->dynamiccols)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &((*mpsi)->dynamicrows)) );
@@ -813,7 +815,7 @@ SCIP_RETCODE readRows(
          if( cons != NULL )
             break;
 
-         initial = !mpsi->dynamicrows && (mpsinputSection(mpsi) == MPS_ROWS);
+         initial = mpsi->initialconss && (mpsinputSection(mpsi) == MPS_ROWS);
          separate = TRUE;
          enforce = (mpsinputSection(mpsi) != MPS_USERCUTS);
          check = (mpsinputSection(mpsi) != MPS_USERCUTS);
@@ -1510,9 +1512,9 @@ SCIP_RETCODE readSOS(
    int cnt = 0;
 
    SCIPdebugMessage("read SOS constraints\n");
-   
+
    /* standard settings for SOS constraints: */
-   initial = TRUE;
+   initial = mpsi->initialconss;
    separate = FALSE;
    enforce = TRUE;
    check = TRUE;
@@ -1800,7 +1802,7 @@ SCIP_RETCODE readQMatrix(
       SCIP_Real  minusone = -1.0;
 
       /* standard settings for quadratic constraints: */
-      initial    = TRUE;
+      initial    = mpsi->initialconss;
       separate   = TRUE;
       enforce    = TRUE;
       check      = TRUE;
@@ -2041,7 +2043,7 @@ SCIP_RETCODE readIndicators(
    SCIPdebugMessage("read INDICATORS constraints\n");
    
    /* standard settings for indicator constraints: */
-   initial = TRUE;
+   initial = mpsi->initialconss;
    separate = TRUE;
    enforce = TRUE;
    check = TRUE;

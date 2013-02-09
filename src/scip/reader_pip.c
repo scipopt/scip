@@ -62,32 +62,32 @@
 
 /** Section in PIP File */
 enum PipSection
-   {
-      PIP_START,
-      PIP_OBJECTIVE,
-      PIP_CONSTRAINTS,
-      PIP_BOUNDS,
-      PIP_GENERALS,
-      PIP_BINARIES,
-      PIP_END
-   };
+{
+   PIP_START,
+   PIP_OBJECTIVE,
+   PIP_CONSTRAINTS,
+   PIP_BOUNDS,
+   PIP_GENERALS,
+   PIP_BINARIES,
+   PIP_END
+};
 typedef enum PipSection PIPSECTION;
 
 enum PipExpType
-   {
-      PIP_EXP_NONE,
-      PIP_EXP_UNSIGNED,
-      PIP_EXP_SIGNED
-   };
+{
+   PIP_EXP_NONE,
+   PIP_EXP_UNSIGNED,
+   PIP_EXP_SIGNED
+};
 typedef enum PipExpType PIPEXPTYPE;
 
 enum PipSense
-   {
-      PIP_SENSE_NOTHING,
-      PIP_SENSE_LE,
-      PIP_SENSE_GE,
-      PIP_SENSE_EQ
-   };
+{
+   PIP_SENSE_NOTHING,
+   PIP_SENSE_LE,
+   PIP_SENSE_GE,
+   PIP_SENSE_EQ
+};
 typedef enum PipSense PIPSENSE;
 
 /** PIP reading data */
@@ -105,6 +105,10 @@ struct PipInput
    int                   linepos;
    PIPSECTION            section;
    SCIP_OBJSENSE         objsense;
+   SCIP_Bool             initialconss;       /**< should model constraints be marked as initial? */
+   SCIP_Bool             dynamicconss;       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamiccols;        /**< should columns be added and removed dynamically to the LP? */
+   SCIP_Bool             dynamicrows;        /**< should rows be added and removed dynamically to the LP? */
    SCIP_Bool             haserror;
 };
 typedef struct PipInput PIPINPUT;
@@ -638,6 +642,7 @@ static
 SCIP_RETCODE getVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    char*                 name,               /**< name of the variable */
+   SCIP_Bool             dynamiccols,        /**< should columns be added and removed dynamically to the LP? */
    SCIP_VAR**            var,                /**< pointer to store the variable */
    SCIP_Bool*            created             /**< pointer to store whether a new variable was created, or NULL */
    )
@@ -649,18 +654,11 @@ SCIP_RETCODE getVariable(
    if( *var == NULL )
    {
       SCIP_VAR* newvar;
-      SCIP_Bool dynamiccols;
-      SCIP_Bool initial;
-      SCIP_Bool removable;
-
-      SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
-      initial = !dynamiccols;
-      removable = dynamiccols;
 
       /* create new variable of the given name */
       SCIPdebugMessage("creating new variable: <%s>\n", name);
       SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
-            initial, removable, NULL, NULL, NULL, NULL, NULL) );
+            !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, newvar) );
       *var = newvar;
 
@@ -1074,7 +1072,7 @@ SCIP_RETCODE readPolynomial(
       }
 
       /* the token is a variable name: get the corresponding variable (or create a new one) */
-      SCIP_CALL( getVariable(scip, pipinput->token, &var, NULL) );
+      SCIP_CALL( getVariable(scip, pipinput->token, pipinput->dynamiccols, &var, NULL) );
 
       /* get the index of the variable in the vars array, or add there if not in it yet */
       SCIP_CALL( getVariableIndex(scip, &vars, &varssize, &nvars, varhash, var, &varidx) );
@@ -1239,8 +1237,28 @@ SCIP_RETCODE readObjective(
    SCIP_Bool newsection;
    int varidx;
    int nmonomials;
+   SCIP_Bool initial;
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool local;
+   SCIP_Bool modifiable;
+   SCIP_Bool dynamic;
+   SCIP_Bool removable;
 
    assert(pipinput != NULL);
+
+   /* determine settings */
+   initial = pipinput->initialconss;
+   separate = TRUE;
+   enforce = TRUE;
+   check = TRUE;
+   propagate = TRUE;
+   local = FALSE;
+   modifiable = FALSE;
+   dynamic = pipinput->dynamicconss;
+   removable = pipinput->dynamicrows;
 
    /* read the objective coefficients */
    SCIP_CALL( readPolynomial(scip, pipinput, name, &exprtree, &degree, &newsection) );
@@ -1294,17 +1312,6 @@ SCIP_RETCODE readObjective(
          SCIP_CONS* quadobjcons;
          SCIP_Real  lhs;
          SCIP_Real  rhs;
-         SCIP_Bool dynamicconss;
-         SCIP_Bool dynamicrows;
-         SCIP_Bool initial;
-         SCIP_Bool separate;
-         SCIP_Bool enforce;
-         SCIP_Bool check;
-         SCIP_Bool propagate;
-         SCIP_Bool local;
-         SCIP_Bool modifiable;
-         SCIP_Bool dynamic;
-         SCIP_Bool removable;
 
          SCIP_Real constant;
          int nlinvars;
@@ -1323,20 +1330,8 @@ SCIP_RETCODE readObjective(
 
          getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
 
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
-         initial = !dynamicrows;
-         separate = TRUE;
-         enforce = TRUE;
-         check = TRUE;
-         propagate = TRUE;
-         local = FALSE;
-         modifiable = FALSE;
-         dynamic = dynamicconss;
-         removable = dynamicrows;
-
-         SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, 
-               SCIP_VARTYPE_CONTINUOUS, initial, removable, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+               SCIP_VARTYPE_CONTINUOUS, !pipinput->dynamiccols, pipinput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, quadobjvar) );
 
          if ( pipinput->objsense == SCIP_OBJSENSE_MINIMIZE )
@@ -1378,32 +1373,9 @@ SCIP_RETCODE readObjective(
          SCIP_Real  minusone;
          SCIP_Real  lhs;
          SCIP_Real  rhs;
-         SCIP_Bool dynamicconss;
-         SCIP_Bool dynamicrows;
-         SCIP_Bool initial;
-         SCIP_Bool separate;
-         SCIP_Bool enforce;
-         SCIP_Bool check;
-         SCIP_Bool propagate;
-         SCIP_Bool local;
-         SCIP_Bool modifiable;
-         SCIP_Bool dynamic;
-         SCIP_Bool removable;
-
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
-         initial = !dynamicrows;
-         separate = TRUE;
-         enforce = TRUE;
-         check = TRUE;
-         propagate = TRUE;
-         local = FALSE;
-         modifiable = FALSE;
-         dynamic = dynamicconss;
-         removable = dynamicrows;
 
          SCIP_CALL( SCIPcreateVar(scip, &nonlinobjvar, "nonlinobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-               SCIP_VARTYPE_CONTINUOUS, initial, removable, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_CONTINUOUS, !pipinput->dynamiccols, pipinput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, nonlinobjvar) );
 
          minusone = -1.0;
@@ -1440,7 +1412,7 @@ SCIP_RETCODE readObjective(
    return SCIP_OKAY;
 }
 
-/** reads the constraints section 
+/** reads the constraints section
  */
 static
 SCIP_RETCODE readConstraints(
@@ -1470,8 +1442,6 @@ SCIP_RETCODE readConstraints(
    SCIP_Real sidevalue;
    SCIP_Real lhs;
    SCIP_Real rhs;
-   SCIP_Bool dynamicconss;
-   SCIP_Bool dynamicrows;
    SCIP_Bool initial;
    SCIP_Bool separate;
    SCIP_Bool enforce;
@@ -1526,18 +1496,16 @@ SCIP_RETCODE readConstraints(
    }
    sidevalue *= sidesign;
 
-   /* create and add the linear constraint */
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
-   initial = !dynamicrows;
+   /* determine settings */
+   initial = pipinput->initialconss;
    separate = TRUE;
    enforce = TRUE;
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
    modifiable = FALSE;
-   dynamic = dynamicconss;
-   removable = dynamicrows;
+   dynamic = pipinput->dynamicconss;
+   removable = pipinput->dynamicrows;
 
    if( degree > 2 )
    {
@@ -1716,7 +1684,7 @@ SCIP_RETCODE readBounds(
          syntaxError(scip, pipinput, "expected variable name");
          return SCIP_OKAY;
       }
-      SCIP_CALL( getVariable(scip, pipinput->token, &var, NULL) );
+      SCIP_CALL( getVariable(scip, pipinput->token, pipinput->dynamiccols, &var, NULL) );
 
       /* the next token might be another sense, or the word "free" */
       if( getNextToken(scip, pipinput) )
@@ -1827,7 +1795,7 @@ SCIP_RETCODE readGenerals(
          return SCIP_OKAY;
 
       /* the token must be the name of an existing variable */
-      SCIP_CALL( getVariable(scip, pipinput->token, &var, &created) );
+      SCIP_CALL( getVariable(scip, pipinput->token, pipinput->dynamiccols, &var, &created) );
       if( created )
       {
          syntaxError(scip, pipinput, "unknown variable in generals section");
@@ -1862,7 +1830,7 @@ SCIP_RETCODE readBinaries(
          return SCIP_OKAY;
 
       /* the token must be the name of an existing variable */
-      SCIP_CALL( getVariable(scip, pipinput->token, &var, &created) );
+      SCIP_CALL( getVariable(scip, pipinput->token, pipinput->dynamiccols, &var, &created) );
       if( created )
       {
          syntaxError(scip, pipinput, "unknown variable in binaries section");
@@ -3786,6 +3754,11 @@ SCIP_RETCODE SCIPreadPip(
    pipinput.section = PIP_START;
    pipinput.objsense = SCIP_OBJSENSE_MINIMIZE;
    pipinput.haserror = FALSE;
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &(pipinput.initialconss)) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &(pipinput.dynamicconss)) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &(pipinput.dynamiccols)) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &(pipinput.dynamicrows)) );
 
    /* read the file */
    SCIP_CALL( readPIPFile(scip, &pipinput, filename) );

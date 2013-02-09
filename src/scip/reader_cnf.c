@@ -18,7 +18,7 @@
  * @author Thorsten Koch
  * @author Tobias Achterberg
  *
- * DIMACS CNF (conjunctive normal form) file format used for example for SAT problems. For a detailed description of
+ * The DIMACS CNF (conjunctive normal form) is a file format used for example for SAT problems. For a detailed description of
  * this format see http://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html .
  */
 
@@ -140,6 +140,7 @@ SCIP_RETCODE readCnf(
    char format[SCIP_MAXSTRLEN];
    char varname[SCIP_MAXSTRLEN];
    char s[SCIP_MAXSTRLEN];
+   SCIP_Bool initialconss;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
    SCIP_Bool dynamicrows;
@@ -191,6 +192,7 @@ SCIP_RETCODE readCnf(
    }
 
    /* get parameter values */
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initialconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
@@ -245,17 +247,17 @@ SCIP_RETCODE readCnf(
                (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "c%d", clausenum);
                
                if( SCIPfindConshdlr(scip, "logicor") != NULL )
-               {   
+               {
                   /* if the constraint handler logicor exit create a logicor constraint */
-                  SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, s, clauselen, clausevars, 
-                        !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+                  SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, s, clauselen, clausevars,
+                        initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
                }
                else if( SCIPfindConshdlr(scip, "setppc") != NULL )
                {
                   /* if the constraint handler logicor does not exit but constraint
                    *  handler setppc create a setppc constraint */
-                  SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, s, clauselen, clausevars, 
-                        !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+                  SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, s, clauselen, clausevars,
+                        initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
                }
                else
                {
@@ -268,10 +270,10 @@ SCIP_RETCODE readCnf(
                   
                   for( i = 0; i < clauselen; ++i )
                      vals[i] = 1.0;
-                  
+
                   SCIP_CALL( SCIPcreateConsLinear(scip, &cons, s, clauselen, clausevars, vals, 1.0, SCIPinfinity(scip),
-                        !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
-                  
+                        initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+
                   SCIPfreeBufferArray(scip, &vals);
                }
 

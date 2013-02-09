@@ -71,6 +71,7 @@ SCIP_ReaderData
    SCIP_Bool             valid;              /**< is the primal solution candidate valid */
    SCIP_Bool             branchpriowarning;  /**< store if the waring regarding fractional value for the branching
                                               *   priority was already posted */
+   SCIP_Bool             initialconss;       /**< should model constraints be marked as initial? */
    SCIP_Bool             dynamicconss;       /**< should model constraints be subject to aging? */
    SCIP_Bool             dynamiccols;        /**< should columns be added and removed dynamically to the LP? */
    SCIP_Bool             dynamicrows;        /**< should rows be added and removed dynamically to the LP? */
@@ -219,7 +220,7 @@ SCIP_RETCODE addConsTerm(
    cons = NULL;
 
    /* default values */
-   initial = TRUE;
+   initial = readerdata->initialconss;
    separate = TRUE;
    propagate = TRUE;
    enforce = TRUE;
@@ -996,7 +997,6 @@ SCIP_RETCODE addSOS(
    )
 {
    SCIP_CONS* cons;
-   SCIP_Bool initial;
    SCIP_Bool separate;
    SCIP_Bool enforce;
    SCIP_Bool check;
@@ -1007,7 +1007,6 @@ SCIP_RETCODE addSOS(
    switch( type )
    {
    case SOS_TYPE1:
-      initial = TRUE;
       separate = TRUE;
       enforce = TRUE;
       check = enforce;
@@ -1015,7 +1014,7 @@ SCIP_RETCODE addSOS(
       local = FALSE;
 
       SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL,
-            initial, separate, enforce, check, propagate, local, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
+            readerdata->initialconss, separate, enforce, check, propagate, local, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
 
       for( i = 0; i < term_get_elements(term); i++ )
@@ -1033,7 +1032,6 @@ SCIP_RETCODE addSOS(
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       break;
    case SOS_TYPE2:
-      initial = TRUE;
       separate = TRUE;
       enforce = TRUE;
       check = enforce;
@@ -1041,7 +1039,7 @@ SCIP_RETCODE addSOS(
       local = FALSE;
 
       SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL,
-            initial, separate, enforce, check, propagate, local, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
+            readerdata->initialconss, separate, enforce, check, propagate, local, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       for( i = 0; i < term_get_elements(term); i++ )
       {
@@ -1404,6 +1402,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    readerdata->branchpriowarning = FALSE;
    readerdata->readerror = FALSE;
    readerdata->retcode = SCIP_OKAY;
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &(readerdata->initialconss)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &(readerdata->dynamicconss)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &(readerdata->dynamiccols)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &(readerdata->dynamicrows)) );

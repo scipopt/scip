@@ -506,15 +506,14 @@ SCIP_DECL_READERREAD(readerReadCip)
    CIPINPUT cipinput;
    SCIP_Real objscale;
    SCIP_Real objoffset;
+   SCIP_Bool initalconss;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
    SCIP_Bool dynamicrows;
 
    SCIP_Bool initialvar;
    SCIP_Bool removablevar;
-   SCIP_Bool initialcons;
-   SCIP_Bool removablecons;
-   
+
    if( NULL == (cipinput.file = SCIPfopen(filename, "r")) )
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
@@ -532,16 +531,14 @@ SCIP_DECL_READERREAD(readerReadCip)
    cipinput.readingsize = 65535;
 
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-   
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initalconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
 
    initialvar = !dynamiccols;
    removablevar = dynamiccols;
-   
-   initialcons = !dynamicrows;
-   removablecons = dynamicrows;
 
    objscale = 1.0;
    objoffset = 0.0;
@@ -572,7 +569,7 @@ SCIP_DECL_READERREAD(readerReadCip)
          SCIP_CALL( getFixedVariables(scip, &cipinput) );
          break;
       case CIP_CONSTRAINTS:
-         SCIP_CALL( getConstraints(scip, &cipinput, initialcons, dynamicconss, removablecons) );
+         SCIP_CALL( getConstraints(scip, &cipinput, initalconss, dynamicconss, dynamicrows) );
          break;
       default:
          SCIPerrorMessage("invalid CIP state\n");

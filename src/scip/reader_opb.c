@@ -1291,6 +1291,7 @@ SCIP_RETCODE readConstraints(
    SCIP_Real sidevalue;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   SCIP_Bool initialconss;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamicrows;
    SCIP_Bool initial;
@@ -1410,9 +1411,10 @@ SCIP_RETCODE readConstraints(
    }
 
    /* create and add the linear constraint */
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initialconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
-   initial = !dynamicrows;
+   initial = initialconss;
    separate = TRUE;
    enforce = TRUE;
    check = TRUE;
