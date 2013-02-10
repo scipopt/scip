@@ -2475,22 +2475,33 @@ SCIP_DECL_CONSPARSE(consParseXor)
       str = endptr;
 
       /* search for the equal symbol */
-      while( *str != '=' )
+      while( *str != '=' && *str != '\0' )
          str++;
-      /* skip '=' character */
-      ++str;
 
-      if( SCIPstrToRealValue(str, &rhs, &endptr) )
+      /* if the string end has been reached without finding the '=' */
+      if ( *str == '\0' )
       {
-         assert(SCIPisZero(scip, rhs) || SCIPisEQ(scip, rhs, 1.0));
-         /* create or constraint */
-         SCIP_CALL( SCIPcreateConsXor(scip, cons, name, (rhs > 0.5 ? TRUE : FALSE), nvars, vars,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-
-         SCIPdebugPrintCons(scip, *cons, NULL);
+         SCIPerrorMessage("Could not find terminating '='.\n");
+         *success = FALSE;
       }
       else
-         *success = FALSE;
+      {
+         /* skip '=' character */
+         ++str;
+
+         if( SCIPstrToRealValue(str, &rhs, &endptr) )
+         {
+            assert(SCIPisZero(scip, rhs) || SCIPisEQ(scip, rhs, 1.0));
+
+            /* create or constraint */
+            SCIP_CALL( SCIPcreateConsXor(scip, cons, name, (rhs > 0.5 ? TRUE : FALSE), nvars, vars,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+            SCIPdebugPrintCons(scip, *cons, NULL);
+         }
+         else
+            *success = FALSE;
+      }
    }
 
    /* free variable buffer */
