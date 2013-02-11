@@ -2028,7 +2028,9 @@ SCIP_RETCODE findDominancePairs(
                      col1domcol2 = FALSE;
                }
 
-               /* why must the vals have the same sign? ???????????????????????????????? */
+               /* we claim the same sign for the coefficients to achieve monotonically
+                * decreasing predictive bound functions
+                */
                if( !onlyoneone && ((vals1[r1] < 0 && vals2[r2] < 0) || (vals1[r1] > 0 && vals2[r2] > 0)) )
                {
                   if( col1domcol2 )
