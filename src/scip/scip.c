@@ -33846,6 +33846,8 @@ void printRootStatistics(
 {
    SCIP_Real dualboundroot;
    SCIP_Real firstdualboundroot;
+   SCIP_Real firstlptime;
+   SCIP_Real firstlpspeed;
 
    assert(scip != NULL);
    assert(scip->stat != NULL);
@@ -33853,14 +33855,25 @@ void printRootStatistics(
 
    dualboundroot = SCIPgetDualboundRoot(scip);
    firstdualboundroot = SCIPgetFirstLPDualboundRoot(scip);
+   firstlptime = SCIPgetFirstLPTime(scip);
+
+   if( firstlptime > 0.0 )
+      firstlpspeed = (SCIP_Real)scip->stat->nrootfirstlpiterations/firstlptime;
+   else
+      firstlpspeed = 0.0;
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Root Node          :\n");
    if( SCIPsetIsInfinity(scip->set, REALABS(firstdualboundroot)) )
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  First LP value   :          -\n");
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  First LP value   : %+21.14e\n", firstdualboundroot);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file,    "  First LP Iters   : %10"SCIP_LONGINT_FORMAT"\n", scip->stat->nrootfirstlpiterations);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file,    "  First LP Time    : %10.2f\n", SCIPgetFirstLPTime(scip));
+   if( firstlpspeed > 0.0 )
+      SCIPmessageFPrintInfo(scip->messagehdlr, file,    "  First LP Iters   : %10"SCIP_LONGINT_FORMAT" (%.2f Iter/sec)\n",
+         scip->stat->nrootfirstlpiterations,
+         (SCIP_Real)scip->stat->nrootfirstlpiterations/firstlptime);
+   else
+      SCIPmessageFPrintInfo(scip->messagehdlr, file,    "  First LP Iters   : %10"SCIP_LONGINT_FORMAT"\n", scip->stat->nrootfirstlpiterations);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file,    "  First LP Time    : %10.2f\n", firstlptime);
 
    if( SCIPsetIsInfinity(scip->set, REALABS(dualboundroot)) )
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Final Dual Bound :          -\n");
