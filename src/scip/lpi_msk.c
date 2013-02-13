@@ -827,10 +827,8 @@ SCIP_RETCODE SCIPlpiAddCols(
 {  /*lint --e{715}*/
 #if MSK_VERSION_MAJOR < 7
    const int* aptrb;
-   int* aptre;
-#else
-   int i;
 #endif
+   int* aptre;
    MSKboundkeye* bkx;
    double* blx;
    double* bux;
@@ -875,15 +873,10 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    if( nnonz > 0 )
    {
-      /* @todo better use MSK_putacollist with a dummy index array */
-      for( i = 0; i < ncols-1; ++i )
-      {
-         MOSEK_CALL( MSK_putacol(lpi->task, oldcols+i, beg[i+1]-beg[i], ind+beg[i], val+beg[i]) );
-      }
-      assert(ncols >= 1);
-      MOSEK_CALL( MSK_putacol(lpi->task, oldcols+i, nnonz-beg[ncols-1], ind+beg[i], val+beg[i]) );
+      SCIP_CALL( getEndptrs(ncols, beg, nnonz, &aptre) );
+      MOSEK_CALL( MSK_putacolslice(lpi->task, oldcols, oldcols+ncols, beg, aptre, ind, val) );
+      BMSfreeMemoryArray(&aptre);
    }
-
 #endif
 
    BMSfreeMemoryArray(&bux);
@@ -1010,10 +1003,8 @@ SCIP_RETCODE SCIPlpiAddRows(
 {  /*lint --e{715}*/
 #if MSK_VERSION_MAJOR < 7
    const int* aptrb;
-   int* aptre;
-#else
-   MSKint32t i;
 #endif
+   int* aptre;
    MSKboundkeye* bkc;
    double* blc;
    double* buc;
@@ -1054,18 +1045,13 @@ SCIP_RETCODE SCIPlpiAddRows(
 
 #else
    MOSEK_CALL( MSK_appendcons(lpi->task, nrows) );
-
    MOSEK_CALL( MSK_putconboundslice(lpi->task, oldrows, oldrows+nrows, bkc, blc, buc) );
 
    if( nnonz > 0 )
    {
-      assert(nrows >= 1);
-      /* @todo better use MSK_putarowlist with a dummy index array */
-      for( i = 0; i < nrows-1; ++i )
-      {
-         MOSEK_CALL( MSK_putarow(lpi->task, oldrows+i, beg[i+1]-beg[i], ind+beg[i], val+beg[i]) );
-      }
-      MOSEK_CALL( MSK_putarow(lpi->task, oldrows+i, nnonz-beg[nrows-1], ind+beg[i], val+beg[i]) );
+      SCIP_CALL( getEndptrs(nrows, beg, nnonz, &aptre) );
+      MOSEK_CALL( MSK_putarowslice(lpi->task, oldrows, oldrows+nrows, beg, aptre, ind, val) );
+      BMSfreeMemoryArray(&aptre);
    }
 #endif
 
