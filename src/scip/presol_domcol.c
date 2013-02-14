@@ -1063,16 +1063,17 @@ SCIP_Real getMinActSingleRowWithoutColAndColAtLb(
 
       if( c == lbcol )
       {
+         assert(!SCIPisInfinity(scip, -matrix->lb[c]));
          minactivity += val * matrix->lb[c];
       }
       else if( val > 0.0 )
       {
-         assert(!SCIPisInfinity(scip,-matrix->lb[c]));
+         assert(!SCIPisInfinity(scip, -matrix->lb[c]));
          minactivity += val * matrix->lb[c];
       }
       else if( val < 0.0 )
       {
-         assert(!SCIPisInfinity(scip,matrix->ub[c]));
+         assert(!SCIPisInfinity(scip, matrix->ub[c]));
          minactivity += val * matrix->ub[c];
       }
    }
@@ -1153,6 +1154,7 @@ void getActivityResiduals(
          {
             assert(maxactinf > 0);
             maxactinf--;
+            tmpmaxact += (lowerboundcoef * lblowerboundvar);
          }
          else
          {
@@ -1166,6 +1168,7 @@ void getActivityResiduals(
          {
             assert(minactinf > 0);
             minactinf--;
+            tmpminact += (lowerboundcoef * lblowerboundvar);
          }
          else
          {
