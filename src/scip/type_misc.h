@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,6 +35,12 @@ extern "C" {
  *  - \ref SparseSol "List of all available methods"
  */
 typedef struct SCIP_SparseSol SCIP_SPARSESOL;
+
+/** (circular) Queue data structure
+ *
+ *  - \ref Queue "List of all available methods"
+ */
+typedef struct SCIP_Queue SCIP_QUEUE;
 
 /** Priority queue data structure
  *
@@ -71,6 +77,12 @@ typedef struct SCIP_BoolArray SCIP_BOOLARRAY;
 
 /** dynamic array for storing pointers */
 typedef struct SCIP_PtrArray SCIP_PTRARRAY;
+
+/** Resource activity data structure
+ *
+ *  - \ref ResourceActivity "List of all available methods"
+ */
+typedef struct SCIP_ResourceActivity SCIP_RESOURCEACTIVITY;
 
 /** Resource profile data structure
  *

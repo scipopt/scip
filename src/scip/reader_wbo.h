@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,7 +18,7 @@
  * @brief  WBO file reader (LP format with generic variables and row names)
  * @author Michael Winkler
  *
- * This file reader parses the \f$wbo\f$ format by using the \f$opb\f$ reader. For a detailed description of this format
+ * This file reader parses the @a wbo format by using the @a opb reader. For a detailed description of this format
  * see http://www.cril.univ-artois.fr/PB10/format.pdf .
  */
 

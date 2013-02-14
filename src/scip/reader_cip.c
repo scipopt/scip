@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -506,15 +506,14 @@ SCIP_DECL_READERREAD(readerReadCip)
    CIPINPUT cipinput;
    SCIP_Real objscale;
    SCIP_Real objoffset;
+   SCIP_Bool initalconss;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
    SCIP_Bool dynamicrows;
 
    SCIP_Bool initialvar;
    SCIP_Bool removablevar;
-   SCIP_Bool initialcons;
-   SCIP_Bool removablecons;
-   
+
    if( NULL == (cipinput.file = SCIPfopen(filename, "r")) )
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
@@ -532,16 +531,14 @@ SCIP_DECL_READERREAD(readerReadCip)
    cipinput.readingsize = 65535;
 
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-   
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamiccols", &dynamiccols) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicrows", &dynamicrows) );
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initalconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
 
    initialvar = !dynamiccols;
    removablevar = dynamiccols;
-   
-   initialcons = !dynamicrows;
-   removablecons = dynamicrows;
 
    objscale = 1.0;
    objoffset = 0.0;
@@ -572,7 +569,7 @@ SCIP_DECL_READERREAD(readerReadCip)
          SCIP_CALL( getFixedVariables(scip, &cipinput) );
          break;
       case CIP_CONSTRAINTS:
-         SCIP_CALL( getConstraints(scip, &cipinput, initialcons, dynamicconss, removablecons) );
+         SCIP_CALL( getConstraints(scip, &cipinput, initalconss, dynamicconss, dynamicrows) );
          break;
       default:
          SCIPerrorMessage("invalid CIP state\n");
@@ -692,16 +689,5 @@ SCIP_RETCODE SCIPincludeReaderCip(
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCip) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteCip) );
 
-   /* add cip reader parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamicconss", "should model constraints be subject to aging?",
-         NULL, FALSE, TRUE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   
    return SCIP_OKAY;
 }

@@ -50,7 +50,7 @@ do
 done
 echo
 
-LPSS=(cpx spx none) # spx132 xprs msk clp grb qso)
+LPSS=(grb cpx spx none) # spx132 xprs msk clp qso)
 OPTS=(dbg opt prf opt-gccold)
 
 # first ensure that links are available so we don't fail because of that when making with -j later

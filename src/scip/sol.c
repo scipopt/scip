@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -213,34 +213,22 @@ SCIP_RETCODE solUnlinkVar(
 
    case SCIP_SOLORIGIN_LPSOL:
       solval = SCIPvarGetLPSol(var);
-      if( !SCIPsetIsZero(set, solval) )
-      {
-         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
-      }
+      SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_NLPSOL:
       solval = SCIPvarGetNLPSol(var);
-      if( !SCIPsetIsZero(set, solval) )
-      {
-         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
-      }
+      SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_RELAXSOL:
       solval = SCIPvarGetRelaxSolTransVar(var);
-      if( !SCIPsetIsZero(set, solval) )
-      {
-         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
-      }
+      SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_PSEUDOSOL:
       solval = SCIPvarGetPseudoSol(var);
-      if( !SCIPsetIsZero(set, solval) )
-      {
-         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
-      }
+      SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_UNKNOWN:
@@ -1591,6 +1579,9 @@ void SCIPsolRecomputeObj(
          sol->obj += SCIPvarGetObj(vars[v]) * solval;
       }
    }
+
+   if( SCIPsetIsInfinity(set, -sol->obj) )
+      sol->obj = -SCIPsetInfinity(set);
 }
 
 /** returns whether the given solutions are equal */

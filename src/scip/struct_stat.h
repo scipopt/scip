@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -45,6 +45,7 @@ struct SCIP_Stat
 {
    SCIP_Longint          nlpiterations;      /**< total number of LP iterations */
    SCIP_Longint          nrootlpiterations;  /**< total number of LP iterations in root node */
+   SCIP_Longint          nrootfirstlpiterations;/**< number of LP iterations for first LP solved at the root node */
    SCIP_Longint          nprimallpiterations;/**< number of iterations in primal simplex */
    SCIP_Longint          nduallpiterations;  /**< number of iterations in dual simplex */
    SCIP_Longint          nlexduallpiterations;/**< number of iterations in lexicographic dual simplex */
@@ -81,15 +82,20 @@ struct SCIP_Stat
    SCIP_Longint          nprobboundchgs;     /**< total number of bound changes generated in the tree during probing */
    SCIP_Longint          nprobholechgs;      /**< total number of hole changes generated in the tree  during probing */
    SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */   
+   SCIP_Real             firstlpdualbound;   /**< dual bound of root node computed by first LP solve (without cuts) */
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
    SCIP_Real             vsidsweight;        /**< current weight to use for updating VSIDS in history */
    SCIP_Real             firstprimalbound;   /**< objective value of first primal solution */
    SCIP_Real             firstprimaltime;    /**< time (in seconds) needed for first primal solution */
+   SCIP_Real             firstsolgap;        /**< solution gap when first solution is found */
+   SCIP_Real             lastsolgap;         /**< solution gap when last solution is found */
    SCIP_Real             primalzeroittime;   /**< time used in primal simplex calls without iterations */
    SCIP_Real             dualzeroittime;     /**< time used in dual simplex calls without iterations */
    SCIP_Real             barrierzeroittime;  /**< time used in barrier calls without iterations */
    SCIP_Real             maxcopytime;        /**< maxmimal time needed for copying a problem */
    SCIP_Real             mincopytime;        /**< minimal time needed for copying a problem */
+   SCIP_Real             firstlptime;        /**< time needed to solve the very first LP in the root node */
+   SCIP_Real             lastbranchvalue;    /**< domain value of the last branching */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    SCIP_CLOCK*           primallptime;       /**< primal LP solution time */

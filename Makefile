@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -30,12 +30,13 @@ include make/make.detecthost
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	3.0.1
+VERSION		:=	3.0.1.1
 
 TIME     	=  	3600
 NODES           =       2100000000
 MEM		=	6144
 THREADS         =       1
+PERMUTE         =       0
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	short
@@ -102,7 +103,7 @@ CPLEX		=	cplex
 CBC		=	cbc
 CBCPARALLEL	=	cbc-parallel
 MOSEK           =       mosek
-GUROBI          =       gurobi.sh
+GUROBI          =       gurobi_cl
 GLPK            =       glpsol
 SYMPHONY        =       symphony
 BLIS            =       blis
@@ -154,6 +155,7 @@ include make/make.$(BASE)
 -include make/local/make.$(HOSTNAME)
 -include make/local/make.$(HOSTNAME).$(COMP)
 -include make/local/make.$(HOSTNAME).$(COMP).$(OPT)
+-include make/local/make.local
 #-----------------------------------------------------------------------------
 
 FLAGS		+=	$(USRFLAGS)
@@ -573,11 +575,11 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_convertinttobin.o \
 			scip/presol_domcol.o\
 			scip/presol_dualinfer.o \
-			scip/presol_dualfix.o \
 			scip/presol_gateextraction.o \
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
 			scip/presol_trivial.o \
+			scip/prop_dualfix.o \
 			scip/prop_genvbounds.o \
 			scip/prop_obbt.o \
 			scip/prop_probing.o \
@@ -639,6 +641,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/nodesel.o \
 			scip/paramset.o \
 			scip/presol.o \
+			scip/presolve.o \
 			scip/pricestore.o \
 			scip/pricer.o \
 			scip/primal.o \
@@ -861,7 +864,7 @@ ifeq ($(CLIENTTMPDIR),)
 		CLIENTTMPDIR=/tmp
 endif
 		cd check; \
-		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy $(CLIENTTMPDIR) 1 true;
+		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy $(CLIENTTMPDIR) 1 true;
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@

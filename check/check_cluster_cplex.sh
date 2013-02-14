@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -14,7 +14,7 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #
-# Call with "make testcluster"
+# Call with "make testclustercpx"
 #
 # The queue is passed via $QUEUE (possibly defined in a local makefile in scip/make/local).
 #
@@ -70,14 +70,14 @@ then
     mkdir $SCIPPATH/results
 fi
 
-SETTINGS=$SCIPPATH/../settings/$SETNAME.set
+SETTINGS=$SCIPPATH/../settings/$SETNAME.prm
 
 # check if the settings file exists
 if test $SETNAME != "default"
 then
     if test ! -e $SETTINGS
     then
-        echo Skipping test since the settings file $SETTINGS does not exist.
+        echo skipping test due to non-existence of settings file $SETTINGS
         exit
     fi
 fi
@@ -106,7 +106,7 @@ fi
 # check if the slurm blades should be used exclusively
 if test "$EXCLUSIVE" = "true"
 then
-    EXCLUSIVE=" --exclusive"
+    EXCLUSIVE="  --exclusive --exclude=opt233,opt234,opt235,opt236,opt237,opt238,opt239,opt240,opt241,opt242,opt243,opt244,opt245,opt246,opt247,opt248"
 else
     EXCLUSIVE=""
 fi
@@ -212,7 +212,7 @@ do
 
       if test -e $SETFILE
       then
-	  rm -f $SETFILE
+	       rm -f $SETFILE
       fi
 
       echo > $TMPFILE
@@ -220,6 +220,11 @@ do
       echo set mip tolerances integrality 1e-08 >> $TMPFILE
       echo set simplex tolerances feas 1e-08    >> $TMPFILE
       echo set mip tolerances mipgap 1e-08    >> $TMPFILE
+      if test $SETNAME != "default"
+      then
+          echo read $SETTINGS                  >> $TMPFILE
+          echo disp settings changed           >> $TMPFILE
+      fi
       echo set timelimit $TIMELIMIT           >> $TMPFILE
       echo set clocktype 0                    >> $TMPFILE
       echo set mip display 3                  >> $TMPFILE
@@ -245,9 +250,9 @@ do
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-	  sbatch --job-name=CPLEX$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
+         sbatch --job-name=CPLEX$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${NICE} ${EXCLUSIVE} --output=/dev/null runcluster.sh
       else
-	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CPLEX$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+         qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CPLEX$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
       fi
   else
       echo "input file "$SCIPPATH/$i" not found!"

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -47,6 +47,7 @@ PPN=${14}
 CLIENTTMPDIR=${15}
 NOWAITCLUSTER=${16}
 EXCLUSIVE=${17}
+PERMUTE=${18}
 
 MAXFACTOR=24
 
@@ -55,13 +56,30 @@ then
     TIMEFACTOR=1
 fi
 
-# check all variables defined
-if test -z $EXCLUSIVE
+# check if all variables defined (by checking the last one)
+if test -z $PERMUTE
 then
-    echo Skipping test since variable EXCLUSIVE is not defined.
+    echo Skipping test since not all variables are defined
+    echo "TSTNAME       = $TSTNAME"
+    echo "BINNAME       = $BINNAME"
+    echo "SETNAME       = $SETNAME"
+    echo "BINID         = $BINID"
+    echo "TIMELIMIT     = $TIMELIMIT"
+    echo "NODELIMIT     = $NODELIMIT"
+    echo "MEMLIMIT      = $MEMLIMIT"
+    echo "THREADS       = $THREADS"
+    echo "FEASTOL       = $FEASTOL"
+    echo "DISPFREQ      = $DISPFREQ"
+    echo "CONTINUE      = $CONTINUE"
+    echo "QUEUETYPE     = $QUEUETYPE"
+    echo "QUEUE         = $QUEUE"
+    echo "PPN           = $PPN"
+    echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
+    echo "NOWAITCLUSTER = $NOWAITCLUSTER"
+    echo "EXCLUSIVE     = $EXCLUSIVE"
+    echo "PERMUTE       = $PERMUTE"
     exit 1;
 fi
-
 
 # get current SCIP path
 SCIPPATH=`pwd`
@@ -107,7 +125,7 @@ fi
 # check if the slurm blades should be used exclusively
 if test "$EXCLUSIVE" = "true"
 then
-    EXCLUSIVE=" --exclusive"
+    EXCLUSIVE=" --exclusive --exclude=opt233,opt234,opt235,opt236,opt237,opt238,opt239,opt240,opt241,opt242,opt243,opt244,opt245,opt246,opt247,opt248"
 else
     EXCLUSIVE=""
 fi
@@ -242,7 +260,7 @@ do
       # the cluster queue has an upper bound of 2000 jobs; if this limit is
       # reached the submitted jobs are dumped; to avoid that we check the total
       # load of the cluster and wait until it is save (total load not more than
-      # 1900 jobs) to submit the next job.
+      # 1600 jobs) to submit the next job.
       if test "$NOWAITCLUSTER" != "1"
       then
 	  if test  "$QUEUETYPE" != "qsub"
@@ -252,12 +270,12 @@ do
 	  ./waitcluster.sh 1600 $QUEUE 200
       fi
 
-      SHORTFILENAME=`basename $i .gz`
-      SHORTFILENAME=`basename $SHORTFILENAME .mps`
-      SHORTFILENAME=`basename $SHORTFILENAME .lp`
-      SHORTFILENAME=`basename $SHORTFILENAME .opb`
+      SHORTPROBNAME=`basename $i .gz`
+      SHORTPROBNAME=`basename $SHORTPROBNAME .mps`
+      SHORTPROBNAME=`basename $SHORTPROBNAME .lp`
+      SHORTPROBNAME=`basename $SHORTPROBNAME .opb`
 
-      FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTFILENAME.$BINID.$QUEUE.$SETNAME
+      FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME
       BASENAME=$SCIPPATH/results/$FILENAME
 
       TMPFILE=$BASENAME.tmp
@@ -284,6 +302,7 @@ do
       then
 	  echo set numerics feastol $FEASTOL >> $TMPFILE
       fi
+
       echo set limits time $TIMELIMIT        >> $TMPFILE
       echo set limits nodes $NODELIMIT       >> $TMPFILE
       echo set limits memory $MEMLIMIT       >> $TMPFILE
@@ -297,27 +316,26 @@ do
       fi
       echo set save $SETFILE                 >> $TMPFILE
       echo read $SCIPPATH/$i                 >> $TMPFILE
-#      echo presolve                         >> $TMPFILE
+#     echo presolve                          >> $TMPFILE
       echo optimize                          >> $TMPFILE
       echo display statistics                >> $TMPFILE
-#            echo display solution                  >> $TMPFILE
+#     echo display solution                  >> $TMPFILE
       echo checksol                          >> $TMPFILE
       echo quit                              >> $TMPFILE
-
-      # additional environment variables needed by runcluster.sh
-      export SOLVERPATH=$SCIPPATH
-      export EXECNAME=$SCIPPATH/../$BINNAME
-      export BASENAME=$FILENAME
-      export FILENAME=$i
-      export CLIENTTMPDIR=$CLIENTTMPDIR
 
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
+          # additional environment variables needed by runcluster.sh
+	  export SOLVERPATH=$SCIPPATH
+	  export EXECNAME=$SCIPPATH/../$BINNAME
+	  export BASENAME=$FILENAME
+	  export FILENAME=$i
+	  export CLIENTTMPDIR=$CLIENTTMPDIR
+	  sbatch --job-name=SCIP$SHORTPROBNAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
       else
           # -V to copy all environment variables
-	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null runcluster.sh
+	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTPROBNAME -v SOLVERPATH=$SCIPPATH,EXECNAME=$SCIPPATH/../$BINNAME,BASENAME=$FILENAME,FILENAME=$i,CLIENTTMPDIR=$CLIENTTMPDIR -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null runcluster.sh
       fi
   else
       echo "input file "$SCIPPATH/$i" not found!"

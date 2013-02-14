@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -19,16 +19,17 @@ SOLVER=${3^^}
 SETNAME=$4
 TIMELIMIT=$6
 NODELIMIT=$7
-GAPLIMIT=${8:-0}
-THREADS=$9
-CONTINUE=${10,,}
-CONVERTSCIP=${11}
-QUEUETYPE=${12}
-QUEUE=${13}
-PPN=${14}
-CLIENTTMPDIR=${15}
-NOWAITCLUSTER=${16}
-EXCLUSIVE=${17}
+MEMLIMIT=$8
+GAPLIMIT=${9:-0}
+THREADS=${10}
+CONTINUE=${11,,}
+CONVERTSCIP=${12}
+QUEUETYPE=${13}
+QUEUE=${14}
+PPN=${15}
+CLIENTTMPDIR=${16}
+NOWAITCLUSTER=${17}
+EXCLUSIVE=${18}
 
 # set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
 SETCUTOFF=0
@@ -49,7 +50,7 @@ fi
 # check if the slurm blades should be used exclusively
 if test "$EXCLUSIVE" = "true"
 then
-    EXCLUSIVE="--exclusive"
+    EXCLUSIVE=" --exclusive --exclude=opt233,opt234,opt235,opt236,opt237,opt238,opt239,opt240,opt241,opt242,opt243,opt244,opt245,opt246,opt247,opt248"
 else
     EXCLUSIVE=""
 fi
@@ -127,14 +128,9 @@ GAMSOPTS="pf4=0 domlim=9999999" # solvelink=5
 GAMSOPTS="$GAMSOPTS logoption=3 stepsum=1 solprint=0 limcol=0 limrow=0 pc=2 pw=255" #appendout=1
 GAMSOPTS="$GAMSOPTS reslim=$TIMELIMIT"
 GAMSOPTS="$GAMSOPTS nodlim=$NODELIMIT"
+GAMSOPTS="$GAMSOPTS workspace=$MEMLIMIT"
 GAMSOPTS="$GAMSOPTS optcr=$GAPLIMIT"
 GAMSOPTS="$GAMSOPTS threads=$THREADS"
-
-# set workfactor to it's maximum for BARON, so it can keep more nodes in memory
-if test $SOLVER = BARON
-then
-  GAMSOPTS="$GAMSOPTS workfactor=1500"
-fi
 
 # set SBB option to overwrite NLP solver status files in each node instead of appending
 if test $SOLVER = SBB
@@ -238,23 +234,26 @@ if test $SETCUTOFF = 1 ; then
   fi
 fi
 
-#define account and clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
+#define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
+CLUSTERQUEUE=$QUEUE
 
-if test $QUEUE = "opt"
+NICE=""
+ACCOUNT="mip"
+
+if test $CLUSTERQUEUE = "dbg"
 then
-  CLUSTERQUEUE="opt,opt-long"
-  ACCOUNT="mip"
-elif test $QUEUE = "opt-low"
+    CLUSTERQUEUE="mip-dbg,telecom-dbg"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "telecom-dbg"
 then
-  CLUSTERQUEUE="opt-low"
-  ACCOUNT="opt-low"
-elif test $QUEUE = "mip-dbg"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "mip-dbg"
 then
-  CLUSTERQUEUE="mip-dbg"
-  ACCOUNT="mip-dbg"
-else
-  CLUSTERQUEUE=$QUEUE
-  ACCOUNT="mip"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "opt-low"
+then
+    CLUSTERQUEUE="opt"
+    NICE="--nice=10000"
 fi
 
 # counter to define file names for a test set uniquely 
@@ -377,7 +376,7 @@ do
     case $QUEUETYPE in
       srun )
         # hard timelimit could be set via --time=0:${HARDTIMELIMIT}
-        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT ${EXCLUSIVE} --output=/dev/null rungamscluster.sh`
+        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT ${EXCLUSIVE} ${NICE} --output=/dev/null rungamscluster.sh`
         echo $sbatchret
         FINISHDEPEND=$FINISHDEPEND:`echo $sbatchret | cut -d " " -f 4`
         ;;

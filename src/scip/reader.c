@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -274,12 +274,18 @@ SCIP_RETCODE SCIPreaderWrite(
          nconshdlrs = set->nconshdlrs;
          
          /* collect number of constraints which have to be enforced; these are the constraints which currency (locally)
-          * enabled; these also includes the local constraints 
+          * enabled; these also includes the local constraints
           */
          nconss = 0;
          for( i = 0; i < nconshdlrs; ++i )
-            nconss += SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
-         
+         {
+            /* check if all constraints of the constraint handler should be written */
+            if( set->write_allconss )
+               nconss += SCIPconshdlrGetNConss(conshdlrs[i]);
+            else
+               nconss += SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
+         }
+
          SCIP_ALLOC( BMSallocMemoryArray(&conss, nconss) );
 
          /* copy the constraints */
@@ -289,10 +295,19 @@ SCIP_RETCODE SCIPreaderWrite(
             SCIP_CONS** conshdlrconss;
             int nconshdlrconss;
             int c;
-            
-            conshdlrconss = SCIPconshdlrGetEnfoConss(conshdlrs[i]);
-            nconshdlrconss = SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
-            
+
+            /* check if all constraints of the constraint handler should be written */
+            if( set->write_allconss )
+            {
+               conshdlrconss = SCIPconshdlrGetConss(conshdlrs[i]);
+               nconshdlrconss = SCIPconshdlrGetNConss(conshdlrs[i]);
+            }
+            else
+            {
+               conshdlrconss = SCIPconshdlrGetEnfoConss(conshdlrs[i]);
+               nconshdlrconss = SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
+            }
+
             for( c = 0; c < nconshdlrconss; ++c )
             {
                conss[nconss] = conshdlrconss[c];

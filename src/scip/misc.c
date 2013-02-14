@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,6 +16,10 @@
 /**@file   misc.c
  * @brief  miscellaneous methods
  * @author Tobias Achterberg
+ * @author Gerald Gamrath
+ * @author Stefan Heinz
+ * @author Michael Winkler
+ * @author Kati Wolter
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -323,6 +327,303 @@ SCIP_Longint* SCIPsparseSolGetUbs(
    assert(sparsesol != NULL);
 
    return sparsesol->ubvalues;
+}
+
+/** constructs the first solution of sparse solution (all variables are set to their lower bound value */
+void SCIPsparseSolGetFirstSol(
+   SCIP_SPARSESOL*       sparsesol,          /**< sparse solutions */
+   SCIP_Longint*         sol,                /**< array to store the first solution */
+   int                   nvars               /**< number of variables */
+   )
+{
+   SCIP_Longint* lbvalues;
+   int v;
+
+   assert(sparsesol != NULL);
+   assert(sol != NULL);
+   assert(nvars == SCIPsparseSolGetNVars(sparsesol));
+
+   lbvalues = SCIPsparseSolGetLbs(sparsesol);
+   assert(lbvalues != NULL);
+
+   /* copy the lower bounds */
+   for( v = 0; v < nvars; ++v )
+      sol[v] = lbvalues[v];
+}
+
+
+/** constructs the next solution of the sparse solution and return whether there was one more or not */
+SCIP_Bool SCIPsparseSolGetNextSol(
+   SCIP_SPARSESOL*       sparsesol,          /**< sparse solutions */
+   SCIP_Longint*         sol,                /**< current solution array which get changed to the next solution */
+   int                   nvars               /**< number of variables */
+   )
+{
+   SCIP_Longint* lbvalues;
+   SCIP_Longint* ubvalues;
+   SCIP_Longint lbvalue;
+   SCIP_Longint ubvalue;
+   SCIP_Bool singular;
+   SCIP_Bool carryflag;
+   int v;
+
+   assert(sparsesol != NULL);
+   assert(sol != NULL);
+
+   if( nvars == 0 )
+      return FALSE;
+
+   assert(nvars > 0);
+   assert(nvars == SCIPsparseSolGetNVars(sparsesol));
+
+   lbvalues = SCIPsparseSolGetLbs(sparsesol);
+   ubvalues = SCIPsparseSolGetUbs(sparsesol);
+   assert(lbvalues != NULL);
+   assert(ubvalues != NULL);
+
+   singular = TRUE;
+   carryflag = FALSE;
+
+   for( v = 0; v < nvars; ++v )
+   {
+      lbvalue = lbvalues[v];
+      ubvalue = ubvalues[v];
+
+      if( lbvalue < ubvalue )
+      {
+         singular = FALSE;
+
+         if( carryflag == FALSE )
+         {
+            if( sol[v] < ubvalue )
+            {
+               sol[v]++;
+               break;
+            }
+            else
+            {
+               /* in the last solution the variables v was set to its upper bound value */
+               assert(sol[v] == ubvalue);
+               sol[v] = lbvalue;
+               carryflag = TRUE;
+            }
+         }
+         else
+         {
+            if( sol[v] < ubvalue )
+            {
+               sol[v]++;
+               carryflag = FALSE;
+               break;
+            }
+            else
+            {
+               assert(sol[v] == ubvalue);
+               sol[v] = lbvalue;
+            }
+         }
+      }
+   }
+
+   return (!carryflag && !singular);
+}
+
+
+/*
+ * Queue
+ */
+
+/** resizes element memory to hold at least the given number of elements */
+static
+SCIP_RETCODE queueResize(
+   SCIP_QUEUE*           queue,              /**< pointer to a queue */
+   int                   minsize             /**< minimal number of storable elements */
+   )
+{
+   assert(queue != NULL);
+   assert(minsize > 0);
+
+   if( minsize <= queue->size )
+      return SCIP_OKAY;
+
+   queue->size = MAX(minsize, (int)(queue->size * queue->sizefac));
+   SCIP_ALLOC( BMSreallocMemoryArray(&queue->slots, queue->size) );
+
+   return SCIP_OKAY;
+}
+
+
+/** creates a (circular) queue, best used if the size will be fixed or will not be increased that much */
+SCIP_RETCODE SCIPqueueCreate(
+   SCIP_QUEUE**          queue,              /**< pointer to the new queue */
+   int                   initsize,           /**< initial number of available element slots */
+   SCIP_Real             sizefac             /**< memory growing factor applied, if more element slots are needed */
+   )
+{
+   assert(queue != NULL);
+
+   initsize = MAX(1, initsize);
+   sizefac = MAX(1.0, sizefac);
+
+   SCIP_ALLOC( BMSallocMemory(queue) );
+   (*queue)->firstfree = 0;
+   (*queue)->firstused = -1;
+   (*queue)->size = 0;
+   (*queue)->sizefac = sizefac;
+   (*queue)->slots = NULL;
+
+   SCIP_CALL( queueResize(*queue, initsize) );
+
+   return SCIP_OKAY;
+}
+
+/** frees queue, but not the data elements themselves */
+void SCIPqueueFree(
+   SCIP_QUEUE**          queue               /**< pointer to a queue */
+   )
+{
+   assert(queue != NULL);
+
+   BMSfreeMemoryArray(&(*queue)->slots);
+   BMSfreeMemory(queue);
+}
+
+/** clears the queue, but doesn't free the data elements themselves */
+void SCIPqueueClear(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   assert(queue != NULL);
+
+   queue->firstfree = 0;
+   queue->firstused = -1;
+}
+
+/** inserts element at the end of the queue */
+SCIP_RETCODE SCIPqueueInsert(
+   SCIP_QUEUE*           queue,              /**< queue */
+   void*                 elem                /**< element to be inserted */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->slots != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+   assert(elem != NULL);
+
+   if( queue->firstfree == queue->firstused )
+   {
+      int sizediff;
+      int oldsize = queue->size;
+
+      SCIP_CALL( queueResize(queue, queue->size+1) );
+      assert(oldsize < queue->size);
+
+      sizediff = queue->size - oldsize;
+
+      /* move the used memory at the slots to the end */
+      BMSmoveMemoryArray(&(queue->slots[queue->firstused + sizediff]), &(queue->slots[queue->firstused]), oldsize - queue->firstused); /*lint !e866*/
+      queue->firstused += sizediff;
+   }
+   assert(queue->firstfree != queue->firstused);
+
+   /* insert element as leaf in the tree, move it towards the root as long it is better than its parent */
+   queue->slots[queue->firstfree] = elem;
+   ++(queue->firstfree);
+
+   /* if we saved the value at the last position we need to reset the firstfree position */
+   if( queue->firstfree == queue->size )
+      queue->firstfree = 0;
+
+   /* if a first element was added, we need to update the firstused counter */
+   if( queue->firstused == -1 )
+      queue->firstused = 0;
+
+   return SCIP_OKAY;
+}
+
+/** removes and returns the first element of the queue */
+void* SCIPqueueRemove(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   int pos;
+
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   if( queue->firstused == -1 )
+      return NULL;
+
+   assert(queue->slots != NULL);
+
+   pos = queue->firstused;
+   ++(queue->firstused);
+
+   /* if we removed the value at the last position we need to reset the firstused position */
+   if( queue->firstused == queue->size )
+      queue->firstused = 0;
+
+   /* if we reached the first free position we can reset both, firstused and firstused, positions */
+   if( queue->firstused == queue->firstfree )
+   {
+      queue->firstused = -1;
+      queue->firstfree = 0; /* this is not necessary but looks better if we have an empty list to reset this value */
+   }
+
+   return (queue->slots[pos]);
+}
+
+/** returns the first element of the queue without removing it */
+void* SCIPqueueFirst(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   if( queue->firstused == -1 )
+      return NULL;
+
+   assert(queue->slots != NULL);
+
+   return queue->slots[queue->firstused];
+}
+
+/** returns whether the queue is empty */
+SCIP_Bool SCIPqueueIsEmpty(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   return (queue->firstused == -1);
+}
+
+/** returns the number of elements in the queue */
+int SCIPqueueNElems(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   if( queue->firstused < queue->firstfree )
+      return queue->firstfree - queue->firstused;
+   else if( queue->firstused == queue->firstfree )
+      return queue->size;
+   else
+      return queue->firstfree + (queue->size - queue->firstused);
 }
 
 
@@ -1118,7 +1419,6 @@ SCIP_RETCODE hashmaplistAppend(
    SCIP_HASHMAPLIST* newlist;
 
    assert(hashmaplist != NULL);
-   assert(origin != NULL);
 
    if( blkmem != NULL )
    {
@@ -1176,8 +1476,6 @@ SCIP_HASHMAPLIST* hashmaplistFind(
    void*                 origin              /**< origin to find */
    )
 {
-   assert(origin != NULL);
-
    while( hashmaplist != NULL )
    {
       if( hashmaplist->origin == origin )
@@ -1245,7 +1543,6 @@ SCIP_RETCODE hashmaplistRemove(
    SCIP_HASHMAPLIST* nextlist;
 
    assert(hashmaplist != NULL);
-   assert(origin != NULL);
 
    while( *hashmaplist != NULL && (*hashmaplist)->origin != origin )
    {
@@ -1329,7 +1626,6 @@ SCIP_RETCODE SCIPhashmapInsert(
    assert(hashmap != NULL);
    assert(hashmap->lists != NULL);
    assert(hashmap->nlists > 0);
-   assert(origin != NULL);
 
    /* get the hash value */
    hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
@@ -1351,7 +1647,6 @@ void* SCIPhashmapGetImage(
    assert(hashmap != NULL);
    assert(hashmap->lists != NULL);
    assert(hashmap->nlists > 0);
-   assert(origin != NULL);
 
    /* get the hash value */
    hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
@@ -1374,7 +1669,6 @@ SCIP_RETCODE SCIPhashmapSetImage(
    assert(hashmap != NULL);
    assert(hashmap->lists != NULL);
    assert(hashmap->nlists > 0);
-   assert(origin != NULL);
 
    /* get the hash value */
    hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
@@ -1396,7 +1690,6 @@ SCIP_Bool SCIPhashmapExists(
    assert(hashmap != NULL);
    assert(hashmap->lists != NULL);
    assert(hashmap->nlists > 0);
-   assert(origin != NULL);
 
    /* get the hash value */
    hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
@@ -1415,7 +1708,6 @@ SCIP_RETCODE SCIPhashmapRemove(
    assert(hashmap != NULL);
    assert(hashmap->lists != NULL);
    assert(hashmap->nlists > 0);
-   assert(origin != NULL);
 
    /* get the hash value */
    hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
@@ -1665,13 +1957,13 @@ SCIP_RETCODE SCIPrealarrayExtend(
    assert(realarray->maxusedidx == INT_MIN || realarray->maxusedidx < realarray->firstidx + realarray->valssize);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
-   
+
    minidx = MIN(minidx, realarray->minusedidx);
    maxidx = MAX(maxidx, realarray->maxusedidx);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   SCIPdebugMessage("extending realarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending realarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n",
       (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
@@ -1770,7 +2062,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + realarray->valssize);
-      
+
       if( realarray->minusedidx <= realarray->maxusedidx )
       {
          int shift;
@@ -1806,7 +2098,7 @@ SCIP_RETCODE SCIPrealarrayClear(
 {
    assert(realarray != NULL);
 
-   SCIPdebugMessage("clearing realarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing realarray %p (firstidx=%d, size=%d, range=[%d,%d])\n",
       (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx);
 
    if( realarray->minusedidx <= realarray->maxusedidx )
@@ -1838,7 +2130,7 @@ SCIP_Real SCIPrealarrayGetVal(
 {
    assert(realarray != NULL);
    assert(idx >= 0);
-   
+
    if( idx < realarray->minusedidx || idx > realarray->maxusedidx )
       return 0.0;
    else
@@ -1862,16 +2154,16 @@ SCIP_RETCODE SCIPrealarraySetVal(
    assert(realarray != NULL);
    assert(idx >= 0);
 
-   SCIPdebugMessage("setting realarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %g\n", 
+   SCIPdebugMessage("setting realarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %g\n",
       (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, idx, val);
 
-   if( !SCIPsetIsZero(set, val) )
+   if( val != 0.0 )
    {
       /* extend array to be able to store the index */
       SCIP_CALL( SCIPrealarrayExtend(realarray, set, idx, idx) );
       assert(idx >= realarray->firstidx);
       assert(idx < realarray->firstidx + realarray->valssize);
-      
+
       /* set the array value of the index */
       realarray->vals[idx - realarray->firstidx] = val;
 
@@ -1883,7 +2175,7 @@ SCIP_RETCODE SCIPrealarraySetVal(
    {
       /* set the array value of the index to zero */
       realarray->vals[idx - realarray->firstidx] = 0.0;
-      
+
       /* check, if we can tighten the min/maxusedidx */
       if( idx == realarray->minusedidx )
       {
@@ -1894,7 +2186,8 @@ SCIP_RETCODE SCIPrealarraySetVal(
             realarray->minusedidx++;
          }
          while( realarray->minusedidx <= realarray->maxusedidx
-            && SCIPsetIsZero(set, realarray->vals[realarray->minusedidx - realarray->firstidx]) );
+            && realarray->vals[realarray->minusedidx - realarray->firstidx] == 0.0 );
+
          if( realarray->minusedidx > realarray->maxusedidx )
          {
             realarray->minusedidx = INT_MAX;
@@ -1911,8 +2204,8 @@ SCIP_RETCODE SCIPrealarraySetVal(
             realarray->maxusedidx--;
             assert(realarray->minusedidx <= realarray->maxusedidx);
          }
-         while( SCIPsetIsZero(set, realarray->vals[realarray->maxusedidx - realarray->firstidx]) );
-      }      
+         while( realarray->vals[realarray->maxusedidx - realarray->firstidx] == 0.0 );
+      }
    }
 
    return SCIP_OKAY;
@@ -3150,6 +3443,15 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
+
 /* SCIPsortPtrRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     PtrRealIntInt
 #define SORTTPL_KEYTYPE     void*
@@ -3388,6 +3690,36 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     SCIP_Longint
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  int
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortLongPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     LongPtrRealBool
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortLongPtrRealRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     LongPtrRealRealBool
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Real
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortLongPtrRealRealIntBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     LongPtrRealRealIntBool
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Real
+#define SORTTPL_FIELD4TYPE  int
+#define SORTTPL_FIELD5TYPE  SCIP_Bool
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
@@ -3807,6 +4139,39 @@ void SCIPsortDown(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortDownLongPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownLongPtrRealBool
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownLongPtrRealRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownLongPtrRealRealBool
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Real
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortLongPtrRealRealIntBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownLongPtrRealRealIntBool
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Real
+#define SORTTPL_FIELD4TYPE  int
+#define SORTTPL_FIELD5TYPE  SCIP_Bool
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortDownLongPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownLongPtrPtrInt
 #define SORTTPL_KEYTYPE     SCIP_Longint
@@ -3861,6 +4226,93 @@ void SCIPsortDown(
 #define SORTTPL_FIELD5TYPE  SCIP_Bool
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
+
+/*
+ * Resulting activity
+ */
+
+/** create a resource activity */
+SCIP_RETCODE SCIPactivityCreate(
+   SCIP_RESOURCEACTIVITY** activity,         /**< pointer to store the resource activity */
+   SCIP_VAR*             var,                /**< start time variable of the activity */
+   int                   duration,           /**< duration of the activity */
+   int                   demand              /**< demand of the activity */
+   )
+{
+   assert(activity != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(activity) );
+
+   (*activity)->var = var;
+   (*activity)->duration = duration;
+   (*activity)->demand = demand;
+
+   return SCIP_OKAY;
+}
+
+/** frees a resource activity */
+void SCIPactivityFree(
+   SCIP_RESOURCEACTIVITY** activity          /**< pointer to the resource activity */
+   )
+{
+   assert(activity != NULL);
+   assert(*activity != NULL);
+
+   BMSfreeMemory(activity);
+}
+
+/* some simple variable functions implemented as defines */
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPactivityGetVar
+#undef SCIPactivityGetDuration
+#undef SCIPactivityGetDemand
+#undef SCIPactivityGetEnergy
+
+/** returns the start time variable of the resource activity */
+SCIP_VAR* SCIPactivityGetVar(
+   SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
+   )
+{
+   assert(activity != NULL);
+
+   return activity->var;
+}
+
+/** returns the duration of the resource activity */
+int SCIPactivityGetDuration(
+   SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
+   )
+{
+   assert(activity != NULL);
+
+   return activity->duration;
+}
+
+/** returns the demand of the resource activity */
+int SCIPactivityGetDemand(
+   SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
+   )
+{
+   assert(activity != NULL);
+
+   return activity->demand;
+}
+
+/** returns the energy of the resource activity */
+int SCIPactivityGetEnergy(
+   SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
+   )
+{
+   assert(activity != NULL);
+
+   return activity->duration * activity->demand ;
+}
 
 
 /*
@@ -4526,6 +4978,38 @@ SCIP_RETCODE SCIPdigraphCreate(
    return SCIP_OKAY;
 }
 
+/** resize directed graph structure */
+SCIP_RETCODE SCIPdigraphResize(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   nnodes              /**< new number of nodes */
+   )
+{
+   int n;
+
+   /* check if the digraph has already a proper size */
+   if( nnodes <= digraph->nnodes )
+      return SCIP_OKAY;
+
+   /* reallocate memory for increasing the arrays storing arcs and datas */
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successorssize, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nsuccessors, nnodes) );
+
+   /* initialize the new node data structures */
+   for( n = digraph->nnodes; n < nnodes; ++n )
+   {
+      digraph->nodedatas[n] = NULL;
+      digraph->successorssize[n] = 0;
+      digraph->nsuccessors[n] = 0;
+   }
+
+   /* store the new number of nodes */
+   digraph->nnodes = nnodes;
+
+   return SCIP_OKAY;
+}
+
 /** copies directed graph structure */
 SCIP_RETCODE SCIPdigraphCopy(
    SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
@@ -4747,6 +5231,36 @@ int SCIPdigraphGetNNodes(
    return digraph->nnodes;
 }
 
+/** returns the node data, or NULL if no data exist */
+void* SCIPdigraphGetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the node data is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+
+   return digraph->nodedatas[node];
+}
+
+/** sets the node data
+ *
+ *  @note The old user pointer is not freed. This has to be done by the user
+ */
+void SCIPdigraphSetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   void*                 dataptr,            /**< user node data pointer, or NULL */
+   int                   node                /**< node for which the node data is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+
+   digraph->nodedatas[node] = dataptr;
+}
+
 /** returns the total number of arcs in the given digraph */
 int SCIPdigraphGetNArcs(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
@@ -4913,6 +5427,12 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
 
    assert(digraph != NULL);
    assert(digraph->nnodes > 0);
+
+   /* first free the old components */
+   if( digraph->ncomponents > 0 )
+   {
+      SCIPdigraphFreeComponents(digraph);
+   }
 
    digraph->ncomponents = 0;
    digraph->componentstartsize = 10;
@@ -5934,7 +6454,9 @@ SCIP_Bool isIntegralScalar(
 static const SCIP_Real scalars[] = {3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0};
 static const int nscalars = 9;
 
-/** tries to find a value, such that all given values, if scaled with this value become integral */
+/** tries to find a value, such that all given values, if scaled with this value become integral in relative allowed
+ *  difference in between mindelta and maxdelta
+ */
 SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Real*            vals,               /**< values to scale */
    int                   nvals,              /**< number of values to scale */

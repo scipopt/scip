@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -185,6 +185,18 @@ void SCIPsepaSetExitsol(
 /** increase count of applied cuts */
 extern
 void SCIPsepaIncNAppliedCuts(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** increase count of found cuts */
+extern
+void SCIPsepaIncNCutsFound(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** increase count of found cuts at current node */
+extern
+void SCIPsepaIncNCutsFoundAtNode(
    SCIP_SEPA*            sepa                /**< separator */
    );
 

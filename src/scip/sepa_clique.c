@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1160,6 +1160,9 @@ SCIP_RETCODE newsolCliqueAddRow(
    }
    /*SCIPdebugPrintf("\n");*/
    SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
+   /* set cut rank: for clique cuts we always set to 1 */
+   SCIProwChgRank(cut, 1);
 
    /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 

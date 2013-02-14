@@ -3,7 +3,7 @@
 /*                  This1 file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,13 +16,14 @@
 /**@file   message.c
  * @brief  message output methods
  * @author Tobias Achterberg
+ * @author Marc Pfetsch
+ * @author Michael Winkler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <stdarg.h>
 #include <stdio.h>
-#include <string.h>
 #include <assert.h>
 
 #include "scip/type_message.h"
@@ -42,110 +43,93 @@
 #define vsnprintf _vsnprintf
 #endif
 
-/** stores the given message in the buffer and returns the part of the buffer and message that should be printed now */
+/** handles the output of the given message */
 static
-SCIP_Bool bufferMessage(
+void handleMessage(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_DECL_MESSAGEOUTPUTFUNC(outputfunc),  /**< message handler function used for output */
+   FILE*                 file1,              /**< file stream to print into, or NULL for stdout */
+   SCIP_Bool             usefile1,           /**< Should file1 be used? */
+   FILE*                 file2,              /**< file stream to print into */
+   SCIP_Bool             usefile2,           /**< Should file2 be used? */
+   const char*           msg,                /**< message to print; NULL to flush the output buffer */
    char*                 buffer,             /**< message buffer */
-   int*                  bufferlen,          /**< pointer to the currently used entries in the message buffer */
-   const char*           msg,                /**< message to store in the buffer; NULL to flush the buffer */
-   char*                 outmsg,             /**< array to store message that should be printed immediately */
-   int*                  outmsgsize          /**< pointer which stored allocated space in outmsg, size should be at
-                                              *   least SCIP_MAXSTRLEN, if space would be not enough the needed sized is
-                                              *   returned
-                                              */
+   int*                  bufferlen           /**< pointer to the currently used entries in the message buffer */
    )
 {
-   assert(outmsg != NULL);
-   assert(outmsgsize != NULL);
-   assert(*outmsgsize >= SCIP_MAXSTRLEN);
+   const char* s;
 
-   *outmsg = '\0';
+   assert( messagehdlr != NULL );
+   assert( outputfunc != NULL );
+   assert( !usefile2 || file2 != NULL );
+   assert( buffer == NULL || bufferlen != NULL );
+
+   /* if we do not have a buffer directly output the message */
+   if ( buffer == NULL )
+   {
+      /* we do not have a buffer, so it makes no sense to flush it if msg == NULL */
+      if ( msg != NULL )
+      {
+         if ( usefile1 )
+            outputfunc(messagehdlr, file1, msg);
+         if ( usefile2 )
+            outputfunc(messagehdlr, file2, msg);
+      }
+      return;
+   }
+   assert(bufferlen != NULL);
 
    /* should the buffer be flushed? */
-   if( msg == NULL )
+   if ( msg == NULL )
    {
-      if( buffer != NULL )
-         (void)strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
-      (*bufferlen) = 0;
-      assert((int)strlen(outmsg) < SCIP_MAXSTRLEN);
-      return TRUE;
+      assert( *bufferlen < SCIP_MAXSTRLEN );
+      assert( buffer[*bufferlen] == '\0' );
+      if ( usefile1 )
+         outputfunc(messagehdlr, file1, buffer);
+      if ( usefile2 )
+         outputfunc(messagehdlr, file2, buffer);
+      *bufferlen = 0;
+      buffer[0] = '\0';
+      return;
    }
+   assert( msg != NULL && buffer != NULL );
 
-   /* do we have a buffer? */
-   if( buffer == NULL )
+   /* if no output is activated, to not copy message into buffer */
+   if ( ! usefile1 && ! usefile2 )
+      return;
+
+   /* determine message length and last newline (if any) */
+   s = msg;
+   while ( *s != '\0' )
    {
-      /* check if the message fits into the output message */
-      if( (int)strlen(msg) >= *outmsgsize )
+      /* if we reached a newline or the size limit, empty buffer and reset (need possibly space for newline and '\0') */
+      if ( *s == '\n' || *bufferlen >= SCIP_MAXSTRLEN-2 )
       {
-         *outmsgsize = (int)strlen(msg) + 1;
-         return FALSE;
+         if ( *s == '\n' )
+            buffer[(*bufferlen)++] = *(s++);
+         buffer[*bufferlen] = '\0';
+
+         if ( usefile1 )
+            outputfunc(messagehdlr, file1, buffer);
+         if ( usefile2 )
+            outputfunc(messagehdlr, file2, buffer);
+         *bufferlen = 0;
+         buffer[0] = '\0';
       }
-      /* no buffer exists -> just copy the message to the output */
-      (void)strncpy(outmsg, msg, strlen(msg));
-      outmsg[strlen(msg)] = '\0';
-      assert((int)strlen(outmsg) < *outmsgsize);
+      else
+         buffer[(*bufferlen)++] = *(s++);
    }
-   else
-   {
-      char* outmsgpos;
+   buffer[*bufferlen] = '\0';
 
-      assert(bufferlen != NULL);
-
-      /* check if the message fits into the output message */
-      if( (int)strlen(msg) + *bufferlen >= *outmsgsize + SCIP_MAXSTRLEN-1 )
-      {
-         *outmsgsize = (int)strlen(msg) + *bufferlen - SCIP_MAXSTRLEN + 2;
-         return FALSE;
-      }
-
-      outmsgpos = outmsg;
-
-      while( *msg != '\0' )
-      {
-         char c;
-
-         assert(*bufferlen < SCIP_MAXSTRLEN-1);
-         c = *msg;
-         msg++;
-         buffer[*bufferlen] = c;
-         (*bufferlen)++;
-
-         /* if the buffer is full or we reached a newline, move the buffer to the output message and store the
-          * remaining message in the buffer
-          */
-         if( *bufferlen >= SCIP_MAXSTRLEN-1 || c == '\n' )
-         {
-            buffer[*bufferlen] = '\0';
-            (void)strncpy(outmsgpos, buffer, SCIP_MAXSTRLEN);
-            outmsgpos = &(outmsgpos[*bufferlen]);
-
-            /* if rest fits into buffer copy all */
-            if( (int)strlen(msg) < SCIP_MAXSTRLEN - 1 )
-            {
-               (void)strncpy(buffer, msg, SCIP_MAXSTRLEN);
-               *bufferlen = (int)strlen(msg);
-               assert(*bufferlen < SCIP_MAXSTRLEN-1);
-               assert((int)strlen(outmsg) < *outmsgsize);
-               break;
-            }
-            else
-            {
-               (void)strncpy(buffer, msg, SCIP_MAXSTRLEN - 2);
-               *bufferlen = SCIP_MAXSTRLEN - 2;
-               msg += (SCIP_MAXSTRLEN - 2);
-            }
-         }
-      }
-   }
-
-   return TRUE;
+   return;
 }
 
 /** default error printing method which is used to print all occurring errors */
 static
 SCIP_DECL_ERRORPRINTING(errorPrintingDefault)
 {  /*lint --e{715}*/
-   fputs(msg, stderr);
+   if ( msg != NULL )
+      fputs(msg, stderr);
    fflush(stderr);
 }
 
@@ -158,62 +142,24 @@ static void* staticErrorPrintingData = NULL;
 /** prints error message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintError(
-   const char*           msg,                /**< message to print; NULL to flush the output buffer */
-   int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
+   const char*           msg                 /**< message to print; NULL to flush the output buffer */
    )
 {
    if( staticErrorPrinting != NULL )
-      staticErrorPrinting(msg, msglength, staticErrorPrintingData);
+      staticErrorPrinting(msg, staticErrorPrintingData);
 }
 
 /** prints warning message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintWarning(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           msg,                /**< message to print; NULL to flush the output buffer */
-   int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
+   const char*           msg                 /**< message to print; NULL to flush the output buffer */
    )
-{
-   if( messagehdlr != NULL && messagehdlr->messagewarning != NULL && (!messagehdlr->quiet || messagehdlr->logfile != NULL) )
+{  /*lint --e{715}*/
+   if ( messagehdlr != NULL && messagehdlr->messagewarning != NULL && (! messagehdlr->quiet || messagehdlr->logfile != NULL) )
    {
-      char* outmsg;
-      int outmsgsize;
-
-      outmsgsize = msglength + 1;
-
-      if( BMSallocMemorySize(&outmsg, outmsgsize) == NULL )
-         return;
-
-      if( !bufferMessage(messagehdlr->warningbuffer, &messagehdlr->warningbufferlen, msg, outmsg, &outmsgsize) )
-      {
-         assert(outmsgsize > msglength + 1);
-         if( BMSreallocMemorySize(&outmsg, outmsgsize) != NULL )
-         {
-#ifndef NDEBUG
-            SCIP_Bool ret;
-
-            ret = bufferMessage(messagehdlr->warningbuffer, &messagehdlr->warningbufferlen, msg, outmsg, &outmsgsize);
-            assert(ret);
-#else
-            bufferMessage(messagehdlr->warningbuffer, &messagehdlr->warningbufferlen, msg, outmsg, &outmsgsize);
-#endif
-         }
-         else
-         {
-            BMSfreeMemory(&outmsg);
-            return;
-         }
-      }
-
-      if( *outmsg != '\0' )
-      {
-         if( !messagehdlr->quiet )
-            messagehdlr->messagewarning(messagehdlr, stderr, outmsg);
-         if( messagehdlr->logfile != NULL )
-            messagehdlr->messagewarning(messagehdlr, messagehdlr->logfile, outmsg);
-      }
-
-      BMSfreeMemory(&outmsg);
+      handleMessage(messagehdlr, messagehdlr->messagewarning, stderr, ! messagehdlr->quiet, messagehdlr->logfile, (messagehdlr->logfile != NULL),
+         msg, messagehdlr->warningbuffer, &messagehdlr->warningbufferlen);
    }
 }
 
@@ -222,67 +168,22 @@ static
 void messagePrintDialog(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
-   const char*           msg,                /**< message to print; NULL to flush the output buffer */
-   int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
+   const char*           msg                 /**< message to print; NULL to flush the output buffer */
    )
-{
-
-   if( messagehdlr != NULL && messagehdlr->messagedialog != NULL )
+{  /*lint --e{715}*/
+   if ( messagehdlr != NULL && messagehdlr->messagedialog != NULL )
    {
-      if( (file == NULL || file == stdout) && !messagehdlr->quiet )
+      if ( (file == NULL || file == stdout) && ! messagehdlr->quiet )
       {
-         char* outmsg;
-         int outmsgsize;
-
-         outmsgsize = msglength + 1;
-
-         if( BMSallocMemorySize(&outmsg, outmsgsize) == NULL )
-            return;
-
-         if( !bufferMessage(messagehdlr->dialogbuffer, &messagehdlr->dialogbufferlen, msg, outmsg, &outmsgsize) )
-         {
-            assert(outmsgsize > msglength + 1);
-            if( BMSreallocMemorySize(&outmsg, outmsgsize) != NULL )
-            {
-#ifndef NDEBUG
-               SCIP_Bool ret;
-
-               ret = bufferMessage(messagehdlr->dialogbuffer, &messagehdlr->dialogbufferlen, msg, outmsg, &outmsgsize);
-               assert(ret);
-#else
-               bufferMessage(messagehdlr->dialogbuffer, &messagehdlr->dialogbufferlen, msg, outmsg, &outmsgsize);
-#endif
-            }
-            else
-            {
-               BMSfreeMemory(&outmsg);
-               return;
-            }
-         }
-
-         if( *outmsg != '\0' )
-         {
-            messagehdlr->messagedialog(messagehdlr, stdout, outmsg);
-
-            if( messagehdlr->logfile != NULL )
-               messagehdlr->messagedialog(messagehdlr, messagehdlr->logfile, outmsg);
-         }
-
-
-         BMSfreeMemory(&outmsg);
+         handleMessage(messagehdlr, messagehdlr->messagedialog, (file == NULL) ? stdout : file, TRUE, messagehdlr->logfile, (messagehdlr->logfile != NULL),
+            msg, messagehdlr->dialogbuffer, &messagehdlr->dialogbufferlen);
       }
-      else if( msg != NULL )
+      else if ( msg != NULL )
       {
          /* file output cannot be buffered because the output file may change */
-         if( *msg != '\0' )
+         if ( *msg != '\0' )
          {
-            if( !messagehdlr->quiet || (file != NULL && file != stdout) )
-            {
-               assert(file != NULL);
-               messagehdlr->messagedialog(messagehdlr, file, msg);
-            }
-            if( messagehdlr->logfile != NULL && (file == NULL || file == stdout) )
-               messagehdlr->messagedialog(messagehdlr, messagehdlr->logfile, msg);
+            handleMessage(messagehdlr, messagehdlr->messagedialog, file, ! messagehdlr->quiet, messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
          }
       }
    }
@@ -293,62 +194,22 @@ static
 void messagePrintInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
-   const char*           msg,                /**< message to print; NULL to flush the output buffer */
-   int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
+   const char*           msg                 /**< message to print; NULL to flush the output buffer */
    )
-{
-   if( messagehdlr != NULL && messagehdlr->messageinfo != NULL )
+{  /*lint --e{715}*/
+   if ( messagehdlr != NULL && messagehdlr->messageinfo != NULL )
    {
-      if( (file == NULL || file == stdout) && !messagehdlr->quiet && (msg == NULL || strlen(msg) < SCIP_MAXSTRLEN) )
+      if ( (file == NULL || file == stdout) && ! messagehdlr->quiet )
       {
-         char* outmsg;
-         int outmsgsize;
-
-         outmsgsize = msglength + 1;
-
-         if( BMSallocMemorySize(&outmsg, outmsgsize) == NULL )
-            return;
-
-         if( !bufferMessage(messagehdlr->infobuffer, &messagehdlr->infobufferlen, msg, outmsg, &outmsgsize) )
-         {
-            assert(outmsgsize > msglength + 1);
-            if( BMSreallocMemorySize(&outmsg, outmsgsize) != NULL )
-            {
-#ifndef NDEBUG
-               SCIP_Bool ret;
-
-               ret = bufferMessage(messagehdlr->infobuffer, &messagehdlr->infobufferlen, msg, outmsg, &outmsgsize);
-               assert(ret);
-#else
-               bufferMessage(messagehdlr->infobuffer, &messagehdlr->infobufferlen, msg, outmsg, &outmsgsize);
-#endif
-            }
-            else
-            {
-               BMSfreeMemory(&outmsg);
-               return;
-            }
-         }
-
-         if( *outmsg != '\0' )
-         {
-            messagehdlr->messageinfo(messagehdlr, stdout, outmsg);
-
-            if( messagehdlr->logfile != NULL )
-               messagehdlr->messageinfo(messagehdlr, messagehdlr->logfile, outmsg);
-         }
-
-         BMSfreeMemory(&outmsg);
+         handleMessage(messagehdlr, messagehdlr->messageinfo, (file == NULL) ? stdout : file, TRUE, messagehdlr->logfile, (messagehdlr->logfile != NULL),
+            msg, messagehdlr->infobuffer, &messagehdlr->infobufferlen);
       }
-      else if( msg != NULL )
+      else if ( msg != NULL )
       {
          /* file output cannot be buffered because the output file may change or the message is to long */
-         if( *msg != '\0' )
+         if ( *msg != '\0' )
          {
-            if( !messagehdlr->quiet || (file != NULL && file != stdout) )
-               messagehdlr->messageinfo(messagehdlr, file == NULL ? stdout : file, msg);
-            if( messagehdlr->logfile != NULL && (file == NULL || file == stdout) )
-               messagehdlr->messageinfo(messagehdlr, messagehdlr->logfile, msg);
+            handleMessage(messagehdlr, messagehdlr->messagedialog, file, ! messagehdlr->quiet, messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
          }
       }
    }
@@ -385,9 +246,9 @@ SCIP_RETCODE messagehdlrFree(
    if( *messagehdlr != NULL )
    {
       /* flush message buffers */
-      messagePrintWarning(*messagehdlr, NULL, SCIP_MAXSTRLEN);
-      messagePrintDialog(*messagehdlr, NULL, NULL, SCIP_MAXSTRLEN);
-      messagePrintInfo(*messagehdlr, NULL, NULL, SCIP_MAXSTRLEN);
+      messagePrintWarning(*messagehdlr, NULL);
+      messagePrintDialog(*messagehdlr, NULL, NULL);
+      messagePrintInfo(*messagehdlr, NULL, NULL);
 
       if( (*messagehdlr)->messagehdlrfree != NULL )
       {
@@ -411,10 +272,9 @@ SCIP_RETCODE messagehdlrFree(
    return SCIP_OKAY;
 }
 
-/** Creates a message handler which deals with warning, information, and dialog (interactive shell) methods.
+/** Creates and captures a message handler which deals with warning, information, and dialog (interactive shell) methods.
  *
- *  @note The message handler does not handle error messages. For that see SCIPmessageSetErrorPrinting()
- *  @note Creating a message handler automatically captures it.
+ *  @note The message handler does not handle error messages; see SCIPmessageSetErrorPrinting()
  */
 SCIP_RETCODE SCIPmessagehdlrCreate(
    SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
@@ -503,7 +363,9 @@ SCIP_RETCODE SCIPmessagehdlrSetData(
    SCIP_MESSAGEHDLRDATA* messagehdlrdata     /**< new message handler data to attach to the handler */
    )
 {
-   if( messagehdlr == NULL )
+   assert(messagehdlr != NULL);
+
+   if( messagehdlr == NULL ) /*lint !e774*/
       return SCIP_INVALIDDATA;
 
    messagehdlr->messagehdlrdata = messagehdlrdata;
@@ -517,6 +379,8 @@ void SCIPmessagehdlrSetLogfile(
    const char*           filename            /**< log file name where to copy messages into, or NULL */
    )
 {
+   assert(messagehdlr != NULL);
+
    /* close the old log file if one exists */
    if( messagehdlr->logfile != NULL )
    {
@@ -533,6 +397,13 @@ void SCIPmessagehdlrSetQuiet(
    SCIP_Bool             quiet               /**< should screen messages be suppressed? */
    )
 {
+   assert(messagehdlr != NULL);
+
+   /* flush message buffers in order to not loose information */
+   messagePrintWarning(messagehdlr, NULL);
+   messagePrintDialog(messagehdlr, NULL, NULL);
+   messagePrintInfo(messagehdlr, NULL, NULL);
+
    messagehdlr->quiet = quiet;
 }
 
@@ -610,12 +481,12 @@ void SCIPmessageVFPrintWarning(
 #endif
       assert(m == n);
       va_end(aq);
-      messagePrintWarning(messagehdlr, bigmsg, n);
+      messagePrintWarning(messagehdlr, bigmsg);
       BMSfreeMemory(&bigmsg);
       return;
    }
 
-   messagePrintWarning(messagehdlr, msg, SCIP_MAXSTRLEN);
+   messagePrintWarning(messagehdlr, msg);
    va_end(aq);
 }
 
@@ -695,11 +566,11 @@ void SCIPmessageVFPrintDialog(
 #endif
       assert(m == n);
       va_end(aq);
-      messagePrintDialog(messagehdlr, file, bigmsg, n);
+      messagePrintDialog(messagehdlr, file, bigmsg);
       BMSfreeMemory(&bigmsg);
       return;
    }
-   messagePrintDialog(messagehdlr, file, msg, SCIP_MAXSTRLEN);
+   messagePrintDialog(messagehdlr, file, msg);
    va_end(aq);
 }
 
@@ -779,11 +650,11 @@ void SCIPmessageVFPrintInfo(
 #endif
       assert(m == n);
       va_end(aq);
-      messagePrintInfo(messagehdlr, file, bigmsg, n);
+      messagePrintInfo(messagehdlr, file, bigmsg);
       BMSfreeMemory(&bigmsg);
       return;
    }
-   messagePrintInfo(messagehdlr, file, msg, SCIP_MAXSTRLEN);
+   messagePrintInfo(messagehdlr, file, msg);
    va_end(aq);
 }
 
@@ -877,11 +748,11 @@ void SCIPmessageVFPrintVerbInfo(
 #endif
          assert(m == n);
          va_end(aq);
-         messagePrintInfo(messagehdlr, file, bigmsg, n);
+         messagePrintInfo(messagehdlr, file, bigmsg);
          BMSfreeMemory(&bigmsg);
          return;
       }
-      messagePrintInfo(messagehdlr, file, msg, SCIP_MAXSTRLEN);
+      messagePrintInfo(messagehdlr, file, msg);
       va_end(aq);
    }
 }
@@ -897,7 +768,7 @@ void SCIPmessagePrintErrorHeader(
    /* safe string printing - do not use SCIPsnprintf() since message.c should be independent */
    (void) snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] ERROR: ", sourcefile, sourceline);
    msg[SCIP_MAXSTRLEN-1] = '\0';
-   messagePrintError(msg, SCIP_MAXSTRLEN);
+   messagePrintError(msg);
 }
 
 /** prints a error message, acting like the printf() command */
@@ -935,12 +806,12 @@ void SCIPmessagePrintError(
 #endif
       assert(m == n);
       va_end(ap);
-      messagePrintError(bigmsg, n);
+      messagePrintError(bigmsg);
       BMSfreeMemory(&bigmsg);
       return;
    }
 
-   messagePrintError(msg, SCIP_MAXSTRLEN);
+   messagePrintError(msg);
    va_end(ap);
 }
 

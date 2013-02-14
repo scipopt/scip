@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3342,10 +3342,11 @@ SCIP_RETCODE SCIPlpiSetBase(
    return SCIP_OKAY;
 }
 
-/** returns the indices of the basic columns and rows */
+/** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
+extern
 SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  bind                /**< basic column n gives value n, basic row m gives value -1-m */
+   int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
    )
 {
    int nrows;
@@ -4025,8 +4026,6 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 {
    int scaling;
 
-   SCIPdebugMessage("Calling SCIPlpiSetIntpar (%d) Parameter=<%s>  Value=<%d>\n", lpi->lpid, paramty2str(type), ival);
-   
 #if SCIP_CONTROLS_PRICING
    /*lint --e{641}*/
    static int pricing[7] = {
@@ -4039,6 +4038,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       MSK_SIM_SELECTION_DEVEX,
    };
 #endif
+
+   SCIPdebugMessage("Calling SCIPlpiSetIntpar (%d) Parameter=<%s>  Value=<%d>\n", lpi->lpid, paramty2str(type), ival);
 
    assert(SCIP_PRICING_LPIDEFAULT == 0);
    assert(SCIP_PRICING_AUTO == 1);

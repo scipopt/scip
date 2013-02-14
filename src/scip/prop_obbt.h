@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,10 +15,10 @@
 
 /**@file    prop_obbt.h
  * @ingroup PROPAGATORS
- * @brief   optimality-based bound tightening propagator
+ * @brief   optimization-based bound tightening propagator
  * @author  Stefan Weltge
  *
- * In Optimality-Based Bound Tightening (OBBT), we solve auxiliary LPs of the form
+ * In Optimization-Based Bound Tightening (OBBT), we solve auxiliary LPs of the form
  * \f[
  *      \min / \max \, \{ x_i \mid x \in P' \},
  * \f]

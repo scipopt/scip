@@ -3,7 +3,7 @@
 /*                  this file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*                  2002-2012 Konrad-Zuse-Zentrum                            */
+/*                  2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,7 +47,7 @@
  * See the web site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
  *
  * SCIP is developed together with <a href="http://www3.mathematik.tu-darmstadt.de/ags/optimierung/research/discrete-optimization.html">TU Darmstadt</a> and
- * <a href="http://www.am.uni-erlangen.de/optimization/edom.html">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
+ * <a href="http://www.am.uni-erlangen.de/wima/">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
  * and has more than 500,000 lines of C code.
  *
  * @section GETTINGSTARTED Getting started
@@ -94,7 +94,7 @@
  *   - \ref NLPI    "Interfaces to NLP solvers"
  *   - \ref EXPRINT "Interfaces to expression interpreters"
  *   - \ref CONF    "Conflict analysis"
- *   - \ref PARAM   "Adding additional user parameters"
+ *   - \ref PARAM   "additional user parameters"
  *
  * - \ref TEST     "How to run automated tests with SCIP"
  * - \ref COUNTER  "How to use SCIP to count feasible solutions"
@@ -117,7 +117,7 @@
  * - <a class="el" href="AUTHORS.shtml#further">Further developers</a>
  * - <a class="el" href="AUTHORS.shtml#contributors">Contributors</a>
  *
- * @version  3.0.1
+ * @version  3.0.1.1
  *
  * \image html scippy.png
  *
@@ -227,7 +227,7 @@
  *  <a href="http://scip.zib.de/doc/examples/Scheduler/index.shtml"><b>Scheduler</b></a>
  *  </td>
  *  <td>
- *  An examples containing three readers and one primal heuristic for scheduling problems.
+ *  An example containing three readers and one primal heuristic for scheduling problems.
  *  </td>
  *  </tr>
  *  </table>
@@ -836,14 +836,14 @@
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project.
  *
  *    We suggest the use one of the following examples:
- *     - The <a href="http://scip.zib.de/doc/examples/VRP/index.html"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
+ *     - The <a href="http://scip.zib.de/doc/examples/VRP/index.shtml"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/Coloring/index.html"><b>Coloring</b></a>
- *        and the <a href="http://scip.zib.de/doc/examples/Binpacking/index.html"><b>Binpacking</b></a>-example are
+ *     - The <a href="http://scip.zib.de/doc/examples/Coloring/index.shtml"><b>Coloring</b></a>
+ *        and the <a href="http://scip.zib.de/doc/examples/Binpacking/index.shtml"><b>Binpacking</b></a>-example are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/TSP/index.html"><b>TSP</b></a>-example
+ *     - The <a href="http://scip.zib.de/doc/examples/TSP/index.shtml"><b>TSP</b></a>-example
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/LOP/index.html"><b>LOP</b></a>-example
+ *     - The <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>LOP</b></a>-example
  *         is a <b>branch-and-cut</b>-code in <b>C</b>.
 
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
@@ -899,7 +899,7 @@
  *
  * \code
  * SCIP version 2.0.1 [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 1.5.0]
- * Copyright (c) 2002-2012 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2013 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * External codes:
  *   SoPlex 1.5.0         Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)
@@ -1351,7 +1351,6 @@
  * \par CONSHDLR_DELAYPRESOL: the default for whether the presolving method should be delayed, if other presolvers found reductions.
  * This property is analogous to the DELAYSEPA flag, but deals with the preprocessing method of the constraint handler.
  *
-
  *
  *
  * @section CONS_DATA Constraint Data and Constraint Handler Data
@@ -1387,7 +1386,7 @@
  * the constraint handler available to the model, and looks like this:
  *  -# If you are using constraint handler data, you have to <b>allocate the memory for the data</b> at this point.
  *     You also have to initialize the fields in struct SCIP_ConshdlrData afterwards.
- *  \code
+ *  \verbatim
  * SCIP_RETCODE SCIPincludeConshdlrKnapsack(
  * ...
  * )
@@ -1398,7 +1397,7 @@
  *
  *  SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
  *  ...
- *  \endcode
+ *  \endverbatim
  *  -# Now, <b>SCIP gets notified</b> of the presence of the constraint handler together with its \ref CONS_FUNDAMENTALCALLBACKS "basic callbacks".
  *   \code
  *  SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -5494,7 +5493,7 @@
  * @section Example
  *
  * Consider the constraint handler @p cons_linearordering.c in the
- * <a href="http://scip.zib.de/doc/examples/LOP/index.html"><b>linear ordering example</b></a>
+ * <a href="http://scip.zib.de/doc/examples/LOP/index.shtml"><b>linear ordering example</b></a>
  * (see @p example/LOP directory). This constraint handler propagates the equations \f$x_{ij} + x_{ji} =
  * 1\f$ and triangle inequalities \f$x_{ij} + x_{jk} + x_{ki} \leq 2\f$.
  *
@@ -5553,7 +5552,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page PARAM Adding additional user parameters
+/**@page PARAM How to add additional user parameters
  *
  *  Users may add their own parameters to SCIP by calling SCIPaddXyzParam(). Using
  *  this method, there are two possibilities for where to store the actual parameter value:
@@ -5603,7 +5602,7 @@ SCIP_RETCODE consdataCatchEvent(
    ...
    }
  * \endverbatim
- *
+ *    @n
  *    As you can see, both pointers and integers are checked for valid values at the beginning of the
  *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
  *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>
@@ -5646,7 +5645,7 @@ SCIP_RETCODE consdataCatchEvent(
  *     <a href="http://miplib.zib.de/miplib3/miplib3.shtml">MIPLIB 3.0</a> , we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
- * Copyright (c) 2002-2012 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2013 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * user parameter file <scip.set> not found - using default parameters
  *
@@ -6029,7 +6028,8 @@ SCIP_RETCODE consdataCatchEvent(
  *    GAP to specify a gap limit (default: 0.0),
  *    CLIENTTMPDIR to specify a directory where GAMS should put its scratch files (default: /tmp),
  *    CONVERTSCIP to specify a SCIP which can be used to convert non-gams files into gams format (default: bin/scip, if existing; set to "no" to disable conversion).
- *  The following options are NOT supported (and ignored): MEM, DISPFREQ, FEASTOL, LOCK.
+ *  The following options are NOT supported (and ignored): DISPFREQ, FEASTOL, LOCK.
+ *  A memory limit (MEM option) is only passed as workspace option to GAMS, but not enforced via ulimit (it's up to the solver to regard and obey the limit).
  *
  *  Note: This works only if the referred programs are installed globally on your machine.
  *
@@ -6681,6 +6681,8 @@ SCIP_RETCODE consdataCatchEvent(
  */
 
 /**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-3.0.1
  *
  * \verbinclude SCIP-release-notes-3.0
  *

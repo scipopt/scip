@@ -1,0 +1,125 @@
+STATISTICS
+  Problem name     : disj_conj_rail
+  Variables        : 53 (0 binary, 0 integer, 0 implicit integer, 53 continuous)
+  Constraints      : 0 initial, 63 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [continuous] <A1_3_5>: obj=0, original bounds=[0,+inf]
+  [continuous] <C1_End>: obj=0, original bounds=[0,+inf]
+  [continuous] <OBJ_C1_End>: obj=3.33333333333333, original bounds=[0,+inf]
+  [continuous] <B1_7_6>: obj=0, original bounds=[0,+inf]
+  [continuous] <MOW0_11_12>: obj=0, original bounds=[0,0]
+  [continuous] <A1_8_11>: obj=0, original bounds=[0,+inf]
+  [continuous] <C1_Exit>: obj=0, original bounds=[0,+inf]
+  [continuous] <OBJ_C1_Exit>: obj=6.66666666666667, original bounds=[0,+inf]
+  [continuous] <B1_6>: obj=0, original bounds=[0,+inf]
+  [continuous] <OBJ_B1_6>: obj=3.33333333333333, original bounds=[0,+inf]
+  [continuous] <A1_1_3>: obj=0, original bounds=[0,+inf]
+  [continuous] <C1_6>: obj=0, original bounds=[0,+inf]
+  [continuous] <OBJ_C1_6>: obj=3.33333333333333, original bounds=[0,+inf]
+  [continuous] <B1_End>: obj=0, original bounds=[0,+inf]
+  [continuous] <OBJ_B1_End>: obj=3.33333333333333, original bounds=[0,+inf]
+  [continuous] <B1_5_3>: obj=0, original bounds=[0,+inf]
+  [continuous] <C1_3_5>: obj=0, original bounds=[0,+inf]
+  [continuous] <A1_6>: obj=0, original bounds=[0,+inf]
+  [continuous] <OBJ_A1_6>: obj=3.33333333333333, original bounds=[0,+inf]
+  [continuous] <B1_12_11>: obj=0, original bounds=[0,+inf]
+  [continuous] <B1_3_1>: obj=0, original bounds=[0,+inf]
+  [continuous] <B1_1_0>: obj=0, original bounds=[0,+inf]
+  [continuous] <C1_11_12>: obj=0, original bounds=[0,+inf]
+  [continuous] <B1_10_9>: obj=0, original bounds=[0,+inf]
+  [continuous] <C1_10_11>: obj=0, original bounds=[0,+inf]
+  [continuous] <C1_5_6>: obj=0, original bounds=[0,+inf]
+  [continuous] <A1_End>: obj=0, original bounds=[0,+inf]
+  [continuous] <OBJ_A1_End>: obj=3.33333333333333, original bounds=[0,+inf]
+  [continuous] <C1_6_7>: obj=0, original bounds=[0,+inf]
+  [continuous] <C1_7_9>: obj=0, original bounds=[0,+inf]
+  [continuous] <C1_9_10>: obj=0, original bounds=[0,+inf]
+  [continuous] <A1_11_12>: obj=0, original bounds=[0,+inf]
+  [continuous] <B1_Terminal>: obj=0, original bounds=[0,+inf]
+  [continuous] <OBJ_B1_Terminal>: obj=1.25, original bounds=[0,+inf]
+  [continuous] <A1_Terminal>: obj=0, original bounds=[0,+inf]
+  [continuous] <OBJ_A1_Terminal>: obj=1.25, original bounds=[0,+inf]
+  [continuous] <C1_0_1>: obj=0, original bounds=[0,+inf]
+  [continuous] <B1_11_10>: obj=0, original bounds=[0,+inf]
+  [continuous] <Entry>: obj=0, original bounds=[0,+inf]
+  [continuous] <A1_5_6>: obj=0, original bounds=[0,+inf]
+  [continuous] <C1_1_3>: obj=0, original bounds=[0,+inf]
+  [continuous] <A1_Exit>: obj=0, original bounds=[0,+inf]
+  [continuous] <OBJ_A1_Exit>: obj=10, original bounds=[0,+inf]
+  [continuous] <MOW0_End>: obj=0, original bounds=[0,0]
+  [continuous] <A1_0_1>: obj=0, original bounds=[0,+inf]
+  [continuous] <A1_7_8>: obj=0, original bounds=[0,+inf]
+  [continuous] <C1_Terminal>: obj=0, original bounds=[0,+inf]
+  [continuous] <OBJ_C1_Terminal>: obj=1.25, original bounds=[0,+inf]
+  [continuous] <B1_Exit>: obj=0, original bounds=[0,+inf]
+  [continuous] <OBJ_B1_Exit>: obj=8.33333333333333, original bounds=[0,+inf]
+  [continuous] <B1_6_5>: obj=0, original bounds=[0,+inf]
+  [continuous] <A1_6_7>: obj=0, original bounds=[0,+inf]
+  [continuous] <B1_9_7>: obj=0, original bounds=[0,+inf]
+CONSTRAINTS
+  [linear] <Costs_max_C1_End>:  -<C1_End>[C] +<OBJ_C1_End>[C] >= -220;
+  [linear] <Costs_max_C1_Exit>:  -<C1_Exit>[C] +<OBJ_C1_Exit>[C] >= -86.4;
+  [linear] <Costs_max_B1_6>:  -<B1_6>[C] +<OBJ_B1_6>[C] >= -70;
+  [linear] <Costs_max_C1_6>:  -<C1_6>[C] +<OBJ_C1_6>[C] >= -170;
+  [linear] <Costs_max_B1_End>:  -<B1_End>[C] +<OBJ_B1_End>[C] >= -210;
+  [linear] <Costs_max_A1_6>:  -<A1_6>[C] +<OBJ_A1_6>[C] >= -160;
+  [linear] <Costs_max_A1_End>:  -<A1_End>[C] +<OBJ_A1_End>[C] >= -200;
+  [linear] <Costs_max_B1_Terminal>:  -<B1_Terminal>[C] +<OBJ_B1_Terminal>[C] >= -260;
+  [linear] <Costs_min_B1_Terminal>: <B1_Terminal>[C] +<OBJ_B1_Terminal>[C] >= 20;
+  [linear] <Costs_max_A1_Terminal>:  -<A1_Terminal>[C] +<OBJ_A1_Terminal>[C] >= -325;
+  [linear] <Costs_min_A1_Terminal>: <A1_Terminal>[C] +<OBJ_A1_Terminal>[C] >= 85;
+  [linear] <Costs_max_A1_Exit>:  -<A1_Exit>[C] +<OBJ_A1_Exit>[C] >= -80;
+  [linear] <Costs_max_C1_Terminal>:  -<C1_Terminal>[C] +<OBJ_C1_Terminal>[C] >= -300;
+  [linear] <Costs_min_C1_Terminal>: <C1_Terminal>[C] +<OBJ_C1_Terminal>[C] >= 60;
+  [linear] <Costs_max_B1_Exit>:  -<B1_Exit>[C] +<OBJ_B1_Exit>[C] >= -87.0554621848739;
+  [linear] <fixedArc_0>:  -<A1_3_5>[C] +<A1_5_6>[C] >= 0.75;
+  [linear] <fixedArc_1>:  -<C1_End>[C] +<C1_Terminal>[C] >= 0;
+  [linear] <fixedArc_2>:  -<B1_7_6>[C] +<B1_6>[C] >= 18.1512605042017;
+  [linear] <fixedArc_3>:  -<MOW0_11_12>[C] +<MOW0_End>[C] >= 0;
+  [linear] <fixedArc_4>:  -<A1_8_11>[C] +<A1_11_12>[C] >= 0.75;
+  [linear] <fixedArc_5>:  -<B1_6>[C] +<B1_6_5>[C] >= 0;
+  [linear] <fixedArc_6>:  -<A1_1_3>[C] +<A1_3_5>[C] >= 0.75;
+  [linear] <fixedArc_7>:  -<C1_6>[C] +<C1_6_7>[C] >= 0;
+  [linear] <fixedArc_8>:  -<B1_End>[C] +<B1_Terminal>[C] >= 0;
+  [linear] <fixedArc_9>:  -<B1_5_3>[C] +<B1_3_1>[C] >= 1.00840336134454;
+  [linear] <fixedArc_10>:  -<C1_3_5>[C] +<C1_5_6>[C] >= 1;
+  [linear] <fixedArc_11>:  -<A1_6>[C] +<A1_6_7>[C] >= 0;
+  [linear] <fixedArc_12>:  -<B1_12_11>[C] +<B1_11_10>[C] >= 20.1680672268908;
+  [linear] <fixedArc_13>:  -<B1_3_1>[C] +<B1_1_0>[C] >= 1.00840336134454;
+  [linear] <fixedArc_14>:  -<B1_1_0>[C] +<B1_End>[C] >= 18.1512605042017;
+  [linear] <fixedArc_15>:  -<C1_11_12>[C] +<C1_End>[C] >= 20;
+  [linear] <fixedArc_16>:  -<B1_10_9>[C] +<B1_9_7>[C] >= 6;
+  [linear] <fixedArc_17>:  -<C1_10_11>[C] +<C1_11_12>[C] >= 1.2;
+  [linear] <fixedArc_18>:  -<C1_5_6>[C] +<C1_6>[C] >= 20;
+  [linear] <fixedArc_19>:  -<A1_End>[C] +<A1_Terminal>[C] >= 0;
+  [linear] <fixedArc_20>:  -<C1_6_7>[C] +<C1_7_9>[C] >= 18;
+  [linear] <fixedArc_21>:  -<C1_7_9>[C] +<C1_9_10>[C] >= 1.2;
+  [linear] <fixedArc_22>:  -<C1_9_10>[C] +<C1_10_11>[C] >= 6;
+  [linear] <fixedArc_23>:  -<A1_11_12>[C] +<A1_End>[C] >= 15;
+  [linear] <fixedArc_24>:  -<B1_Terminal>[C] +<B1_Exit>[C] >= 0;
+  [linear] <fixedArc_25>:  -<A1_Terminal>[C] +<A1_Exit>[C] >= 0;
+  [linear] <fixedArc_26>:  -<C1_0_1>[C] +<C1_1_3>[C] >= 18;
+  [linear] <fixedArc_27>:  -<B1_11_10>[C] +<B1_10_9>[C] >= 1.2;
+  [linear] <fixedArc_28>:  -<Entry>[C] +<B1_12_11>[C] >= 0;
+  [linear] <fixedArc_29>:  -<Entry>[C] +<A1_0_1>[C] >= 20;
+  [linear] <fixedArc_30>:  -<Entry>[C] +<MOW0_11_12>[C] >= 0;
+  [linear] <fixedArc_31>:  -<Entry>[C] +<C1_0_1>[C] >= 0;
+  [linear] <fixedArc_32>:  -<A1_5_6>[C] +<A1_6>[C] >= 15;
+  [linear] <fixedArc_33>:  -<C1_1_3>[C] +<C1_3_5>[C] >= 1;
+  [linear] <fixedArc_34>:  -<A1_0_1>[C] +<A1_1_3>[C] >= 13.5;
+  [linear] <fixedArc_35>:  -<A1_7_8>[C] +<A1_8_11>[C] >= 0.75;
+  [linear] <fixedArc_36>:  -<C1_Terminal>[C] +<C1_Exit>[C] >= 0;
+  [linear] <fixedArc_37>:  -<B1_6_5>[C] +<B1_5_3>[C] >= 20.1680672268908;
+  [linear] <fixedArc_38>:  -<A1_6_7>[C] +<A1_7_8>[C] >= 13.5;
+  [linear] <fixedArc_39>:  -<B1_9_7>[C] +<B1_7_6>[C] >= 1.2;
+  [disjunction] <disj_0>: disjunction(  [conjunction] <Con_   0>: conjunction(  [linear] <AltArc_  40:       C1_1_3 -       A1_3_5  GE   5.00>:  -<A1_3_5>[C] +<C1_1_3>[C] >= 5,   [linear] <AltArc_  50:       C1_7_9 -      A1_8_11 GE   5.00>:  -<A1_8_11>[C] +<C1_7_9>[C] >= 5,   [linear] <AltArc_  52:       C1_0_1 -       A1_1_3 GE   5.00>:  -<A1_1_3>[C] +<C1_0_1>[C] >= 5,   [linear] <AltArc_  60:       C1_5_6 -       A1_6_7 GE   5.00>:  -<A1_6_7>[C] +<C1_5_6>[C] >= 5),   [conjunction] <Con_   0>: conjunction(  [linear] <AltArc_  41:       A1_1_3 -       C1_3_5 GE   5.25>:  -<C1_3_5>[C] +<A1_1_3>[C] >= 5.25,   [linear] <AltArc_  51:       A1_7_8 -      C1_9_10 GE   5.00>:  -<C1_9_10>[C] +<A1_7_8>[C] >= 5,   [linear] <AltArc_  53:       A1_0_1 -       C1_1_3 GE   5.00>:  -<C1_1_3>[C] +<A1_0_1>[C] >= 5,   [linear] <AltArc_  61:       A1_5_6 -       C1_6_7 GE   8.00>:  -<C1_6_7>[C] +<A1_5_6>[C] >= 8));
+  [disjunction] <disj_1>: disjunction(  [conjunction] <Con_   1>: conjunction(  [linear] <AltArc_  46:     C1_11_12 -       A1_End GE   5.00>:  -<A1_End>[C] +<C1_11_12>[C] >= 5,   [linear] <AltArc_  54:     C1_10_11 -     A1_11_12 GE   5.00>:  -<A1_11_12>[C] +<C1_10_11>[C] >= 5),   [conjunction] <Con_   1>: conjunction(  [linear] <AltArc_  47:     A1_11_12 -       C1_End GE   5.00>:  -<C1_End>[C] +<A1_11_12>[C] >= 5,   [linear] <AltArc_  55:      A1_8_11 -     C1_11_12 GE   5.00>:  -<C1_11_12>[C] +<A1_8_11>[C] >= 5));
+  [disjunction] <disj_2>: disjunction(  [conjunction] <Con_   2>: conjunction(  [linear] <AltArc_  42:       C1_0_1 -       B1_End GE   5.00>:  -<B1_End>[C] +<C1_0_1>[C] >= 5),   [conjunction] <Con_   2>: conjunction(  [linear] <AltArc_  43:     B1_12_11 -       C1_End GE   5.00>:  -<C1_End>[C] +<B1_12_11>[C] >= 5));
+  [disjunction] <disj_3>: disjunction(  [conjunction] <Con_   3>: conjunction(  [linear] <AltArc_  48:       B1_9_7 -      A1_8_11 GE   5.00>:  -<A1_8_11>[C] +<B1_9_7>[C] >= 5),   [conjunction] <Con_   3>: conjunction(  [linear] <AltArc_  49:       A1_0_1 -       B1_End GE   5.00>:  -<B1_End>[C] +<A1_0_1>[C] >= 5));
+  [disjunction] <disj_4>: disjunction(  [conjunction] <Con_   4>: conjunction(  [linear] <AltArc_  56:     B1_12_11 -       A1_End GE   5.00>:  -<A1_End>[C] +<B1_12_11>[C] >= 5),   [conjunction] <Con_   4>: conjunction(  [linear] <AltArc_  57:      A1_8_11 -      B1_10_9 GE   5.00>:  -<B1_10_9>[C] +<A1_8_11>[C] >= 5));
+  [disjunction] <disj_5>: disjunction(  [conjunction] <Con_   5>: conjunction(  [linear] <AltArc_  44:   MOW0_11_12 -       C1_End GE   0.00>:  -<C1_End>[C] +<MOW0_11_12>[C] >= 0),   [conjunction] <Con_   5>: conjunction(  [linear] <AltArc_  45:     C1_11_12 -     MOW0_End GE  20.00>:  -<MOW0_End>[C] +<C1_11_12>[C] >= 20));
+  [disjunction] <disj_6>: disjunction(  [conjunction] <Con_   6>: conjunction(  [linear] <AltArc_  58:   MOW0_11_12 -       A1_End GE   0.00>:  -<A1_End>[C] +<MOW0_11_12>[C] >= 0),   [conjunction] <Con_   6>: conjunction(  [linear] <AltArc_  59:     A1_11_12 -     MOW0_End GE  20.00>:  -<MOW0_End>[C] +<A1_11_12>[C] >= 20));
+  [disjunction] <disj_7>: disjunction(  [conjunction] <Con_   7>: conjunction(  [linear] <AltArc_  62:   MOW0_11_12 -     B1_11_10 GE   0.00>:  -<B1_11_10>[C] +<MOW0_11_12>[C] >= 0),   [conjunction] <Con_   7>: conjunction(  [linear] <AltArc_  63:     B1_12_11 -     MOW0_End GE  20.00>:  -<MOW0_End>[C] +<B1_12_11>[C] >= 20));
+END

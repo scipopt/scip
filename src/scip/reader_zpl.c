@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -71,6 +71,10 @@ SCIP_ReaderData
    SCIP_Bool             valid;              /**< is the primal solution candidate valid */
    SCIP_Bool             branchpriowarning;  /**< store if the waring regarding fractional value for the branching
                                               *   priority was already posted */
+   SCIP_Bool             initialconss;       /**< should model constraints be marked as initial? */
+   SCIP_Bool             dynamicconss;       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamiccols;        /**< should columns be added and removed dynamically to the LP? */
+   SCIP_Bool             dynamicrows;        /**< should rows be added and removed dynamically to the LP? */
    SCIP_Bool             readerror;          /**< was a reading error be discovered */
    SCIP_RETCODE          retcode;            /**< store a none SCIP_OKAY return code if an error occurred */
 };
@@ -178,8 +182,6 @@ SCIP_RETCODE addConsTerm(
    SCIP_Bool propagate;
    SCIP_Bool local;
    SCIP_Bool modifiable;
-   SCIP_Bool dynamic;
-   SCIP_Bool removable;
    SCIP_Bool usercut;
    SCIP_Bool lazycut;
    int i;
@@ -218,15 +220,13 @@ SCIP_RETCODE addConsTerm(
    cons = NULL;
 
    /* default values */
-   initial = TRUE;
+   initial = readerdata->initialconss;
    separate = TRUE;
    propagate = TRUE;
    enforce = TRUE;
    check = TRUE;
-   removable = FALSE;
    local = FALSE;
    modifiable = FALSE;
-   dynamic = FALSE;
 
    usercut = (flags & LP_FLAG_CON_SEPAR) != 0;
    lazycut = (flags & LP_FLAG_CON_CHECK) != 0;
@@ -285,7 +285,7 @@ SCIP_RETCODE addConsTerm(
          if ( lhsIndCons )
          {
             SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, NULL, 0, NULL, NULL, -sciplhs,
-                  initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+                  initial, separate, enforce, check, propagate, local, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
             for( i = 0; i < term_get_elements(term); i++ )
@@ -321,7 +321,7 @@ SCIP_RETCODE addConsTerm(
          if ( rhsIndCons )
          {
             SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, NULL, 0, NULL, NULL, sciprhs,
-                  initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+                  initial, separate, enforce, check, propagate, local, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
             for( i = 0; i < term_get_elements(term); i++ )
@@ -356,7 +356,7 @@ SCIP_RETCODE addConsTerm(
       else
       {
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+               initial, separate, enforce, check, propagate, local, modifiable, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          for( i = 0; i < term_get_elements(term); i++ )
@@ -419,7 +419,7 @@ SCIP_RETCODE addConsTerm(
       }
 
       SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvar1, quadvar2, quadcoefs, sciplhs, sciprhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+            initial, separate, enforce, check, propagate, local, modifiable, readerdata->dynamicconss, readerdata->dynamicrows) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
 
       SCIPfreeBufferArray(scip, &linvars);
@@ -767,7 +767,7 @@ SCIP_RETCODE addConsTerm(
 
          /* create constraint */
          SCIP_CALL( SCIPcreateConsNonlinear(scip, &cons, name, 0, NULL, NULL, 1, &exprtree, NULL, sciplhs, sciprhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+               initial, separate, enforce, check, propagate, local, modifiable, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
          SCIP_CALL( SCIPexprtreeFree(&exprtree) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
       }
@@ -842,10 +842,7 @@ SCIP_RETCODE addVar(
    SCIP_VARTYPE vartype;
    SCIP_Bool initial;
    SCIP_Bool removable;
-   SCIP_Bool dynamiccols;
    int branchpriority;
-
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/zplreader/dynamiccols", &dynamiccols) );
 
    switch( bound_get_type(lower) )
    {
@@ -900,8 +897,8 @@ SCIP_RETCODE addVar(
       readerdata->readerror = TRUE;
       break;
    }
-   initial = !dynamiccols;
-   removable = dynamiccols;
+   initial = !(readerdata->dynamiccols);
+   removable = readerdata->dynamiccols;
 
    /* create variable */
    SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL, NULL) );
@@ -1000,30 +997,24 @@ SCIP_RETCODE addSOS(
    )
 {
    SCIP_CONS* cons;
-   SCIP_Bool initial;
    SCIP_Bool separate;
    SCIP_Bool enforce;
    SCIP_Bool check;
    SCIP_Bool propagate;
    SCIP_Bool local;
-   SCIP_Bool dynamic;
-   SCIP_Bool removable;
    int i;
 
    switch( type )
    {
    case SOS_TYPE1:
-      initial = TRUE;
       separate = TRUE;
       enforce = TRUE;
       check = enforce;
       propagate = TRUE;
       local = FALSE;
-      dynamic = FALSE;
-      removable = dynamic;
 
       SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL,
-            initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+            readerdata->initialconss, separate, enforce, check, propagate, local, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
 
       for( i = 0; i < term_get_elements(term); i++ )
@@ -1041,17 +1032,14 @@ SCIP_RETCODE addSOS(
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       break;
    case SOS_TYPE2:
-      initial = TRUE;
       separate = TRUE;
       enforce = TRUE;
       check = enforce;
       propagate = TRUE;
       local = FALSE;
-      dynamic = FALSE;
-      removable = dynamic;
 
       SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL,
-            initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+            readerdata->initialconss, separate, enforce, check, propagate, local, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       for( i = 0; i < term_get_elements(term); i++ )
       {
@@ -1414,6 +1402,10 @@ SCIP_DECL_READERREAD(readerReadZpl)
    readerdata->branchpriowarning = FALSE;
    readerdata->readerror = FALSE;
    readerdata->retcode = SCIP_OKAY;
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &(readerdata->initialconss)) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &(readerdata->dynamicconss)) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &(readerdata->dynamiccols)) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &(readerdata->dynamicrows)) );
 
    /* get the parameter string */
    SCIP_CALL( SCIPgetStringParam(scip, "reading/zplreader/parameters", &paramstr) );
@@ -1603,17 +1595,13 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    readerdata = NULL;
    reader = NULL;
    /* include zpl reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerdata) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
    assert(reader != NULL);
 
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyZpl) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadZpl) );
 
    /* add zpl reader parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/zplreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/zplreader/changedir", "should the current directory be changed to that of the ZIMPL file before parsing?",
          NULL, FALSE, TRUE, NULL, NULL) );
@@ -1624,8 +1612,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
          "reading/zplreader/parameters", "additional parameter string passed to the ZIMPL parser (or - for no additional parameters)",
          NULL, FALSE, "-", NULL, NULL) );
 
-   (void) SCIPsnprintf(extcodename, SCIP_MAXSTRLEN, "ZIMPL %d.%d.%d", 
-      ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);
+   (void) SCIPsnprintf(extcodename, SCIP_MAXSTRLEN, "ZIMPL %d.%d.%d", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, extcodename, "Zuse Institute Mathematical Programming Language developed by T. Koch (zimpl.zib.de)"));
 #else
    SCIPwarningMessage(scip, "SCIP does only support ZIMPL 3.2.0 and higher. Please update your ZIMPL version %d.%d.%d\n",

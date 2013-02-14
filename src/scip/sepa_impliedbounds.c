@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,6 +81,8 @@ SCIP_RETCODE addCut(
       SCIP_CALL( SCIPaddVarToRow(scip, cut, var1, val1) );
       SCIP_CALL( SCIPaddVarToRow(scip, cut, var2, val2) );
       SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+      /* set cut rank: for implied bounds we always set to 1 */
+      SCIProwChgRank(cut, 1);
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage(" -> found cut (activity = %g): ", activity);

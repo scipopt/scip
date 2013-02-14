@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -336,33 +336,16 @@ SCIP_RETCODE SCIPheurExitsol(
    return SCIP_OKAY;
 }
 
-/** calls execution method of primal heuristic */
-SCIP_RETCODE SCIPheurExec(
+/** should the heuristic be executed at the given depth, frequency, timing, ... */
+SCIP_Bool SCIPheurShouldBeExecuted(
    SCIP_HEUR*            heur,               /**< primal heuristic */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PRIMAL*          primal,             /**< primal data */
    int                   depth,              /**< depth of current node */
    int                   lpstateforkdepth,   /**< depth of the last node with solved LP */
    SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
-   int*                  ndelayedheurs,      /**< pointer to count the number of delayed heuristics */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_Bool*            delayed             /**< pointer to store whether the heuristic should be delayed */
    )
 {
    SCIP_Bool execute;
-
-   assert(heur != NULL);
-   assert(heur->heurexec != NULL);
-   assert(heur->freq >= -1);
-   assert(heur->freqofs >= 0);
-   assert(heur->maxdepth >= -1);
-   assert(set != NULL);
-   assert(set->scip != NULL);
-   assert(primal != NULL);
-   assert(depth >= 0 || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL || heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP);
-   assert(ndelayedheurs != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_DIDNOTRUN;
 
    if( ((heur->timingmask & SCIP_HEURTIMING_BEFOREPRESOL) && heurtiming == SCIP_HEURTIMING_BEFOREPRESOL)
        || ((heur->timingmask & SCIP_HEURTIMING_DURINGPRESOLLOOP) && heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP) )
@@ -406,11 +389,52 @@ SCIP_RETCODE SCIPheurExec(
    {
       /* the heuristic should be delayed until plunging is finished */
       execute = FALSE;
-      *result = SCIP_DELAYED;
+      *delayed = TRUE;
    }
 
    /* execute heuristic only if its timing mask fits the current point in the node solving process */
    execute = execute && (heur->timingmask & heurtiming) > 0;
+
+   return execute;
+}
+
+/** calls execution method of primal heuristic */
+SCIP_RETCODE SCIPheurExec(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   int                   depth,              /**< depth of current node */
+   int                   lpstateforkdepth,   /**< depth of the last node with solved LP */
+   SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
+   int*                  ndelayedheurs,      /**< pointer to count the number of delayed heuristics */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   SCIP_Bool execute;
+   SCIP_Bool delayed;
+
+   assert(heur != NULL);
+   assert(heur->heurexec != NULL);
+   assert(heur->freq >= -1);
+   assert(heur->freqofs >= 0);
+   assert(heur->maxdepth >= -1);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+   assert(primal != NULL);
+   assert(depth >= 0 || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL || heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP);
+   assert(ndelayedheurs != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   delayed = FALSE;
+   execute = SCIPheurShouldBeExecuted(heur, depth, lpstateforkdepth, heurtiming, &delayed);
+
+   if( delayed )
+   {
+      assert(!execute);
+      *result = SCIP_DELAYED;
+   }
 
    if( execute )
    {
@@ -614,7 +638,7 @@ void SCIPheurSetTimingmask(
 }
 
 /** does the heuristic use a secondary SCIP instance? */
-SCIP_HEURTIMING SCIPheurUsesSubscip(
+SCIP_Bool SCIPheurUsesSubscip(
    SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {

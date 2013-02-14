@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -110,11 +110,11 @@
 #include "scip/presol_convertinttobin.h"
 #include "scip/presol_domcol.h"
 #include "scip/presol_dualinfer.h"
-#include "scip/presol_dualfix.h"
 #include "scip/presol_gateextraction.h"
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
 #include "scip/presol_trivial.h"
+#include "scip/prop_dualfix.h"
 #include "scip/prop_genvbounds.h"
 #include "scip/prop_obbt.h"
 #include "scip/prop_probing.h"

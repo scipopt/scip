@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -725,11 +725,11 @@ SCIP_RETCODE SCIPlpiSetBase(
    int*                  rstat               /**< array with row basis status */
    );
 
-/** returns the indices of the basic columns and rows */
+/** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
 extern
 SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  bind                /**< basic column n gives value n, basic row m gives value -1-m */
+   int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
    );
 
 /** get dense row of inverse basis matrix B^-1 */

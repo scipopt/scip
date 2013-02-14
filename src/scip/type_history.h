@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,6 +39,15 @@ enum SCIP_BranchDir
 typedef enum SCIP_BranchDir SCIP_BRANCHDIR;       /**< branching direction for branching on variables */
 
 typedef struct SCIP_History SCIP_HISTORY;         /**< branching and inference history information for single variable */
+
+/** Value history data structure
+ *
+ *  branching and inference history informations for single variable dependent on the domain value
+ *
+ *  - \ref SCIP_ValueHistory "List of all available methods"
+ */
+typedef struct SCIP_ValueHistory SCIP_VALUEHISTORY;
+
 
 #ifdef __cplusplus
 }

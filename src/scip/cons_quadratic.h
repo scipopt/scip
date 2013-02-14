@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -67,6 +67,9 @@
 extern "C" {
 #endif
 
+/** event data for variable bound changes in quadratic constraints */
+typedef struct SCIP_QuadVarEventData SCIP_QUADVAREVENTDATA;
+
 /** data structure to store a single term associated to a quadratic variable
  */
 struct SCIP_QuadVarTerm
@@ -79,7 +82,7 @@ struct SCIP_QuadVarTerm
    int                   adjbilinsize;       /**< size of adjacent bilinear terms array */
    int*                  adjbilin;           /**< indices of associated bilinear terms */
 
-   SCIP_EVENTDATA*       eventdata;          /**< event data for bound change events */
+   SCIP_QUADVAREVENTDATA* eventdata;          /**< event data for bound change events */
 };
 typedef struct SCIP_QuadVarTerm SCIP_QUADVARTERM;
 

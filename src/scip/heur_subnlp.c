@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -949,9 +949,13 @@ SCIP_RETCODE solveSubNLP(
 
    if( tighttolerances )
    {
+      SCIP_Real sumepsilon;
+
       /* reduce feasibility tolerance of sub-SCIP and do less aggressive presolve */
       SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", heurdata->resolvetolfactor*SCIPfeastol(scip)) );
       SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/epsilon", heurdata->resolvetolfactor*SCIPepsilon(scip)) );
+      SCIP_CALL( SCIPgetRealParam(scip, "numerics/sumepsilon", &sumepsilon) );
+      SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/sumepsilon", heurdata->resolvetolfactor*sumepsilon) );
       SCIP_CALL( SCIPsetPresolving(heurdata->subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
       if( !SCIPisParamFixed(heurdata->subscip, "constraints/linear/aggregatevariables") )
@@ -1306,9 +1310,13 @@ SCIP_RETCODE solveSubNLP(
       SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
       if( tighttolerances )
       {
+         SCIP_Real sumepsilon;
+
          /* reset feasibility tolerance of sub-SCIP and reset to normal presolve */
          SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", SCIPfeastol(scip)) );
          SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/epsilon", SCIPepsilon(scip)) );
+         SCIP_CALL( SCIPgetRealParam(scip, "numerics/sumepsilon", &sumepsilon) );
+         SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/sumepsilon", sumepsilon) );
          SCIP_CALL( SCIPsetPresolving(heurdata->subscip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
          SCIP_CALL( SCIPresetParam(heurdata->subscip, "constraints/linear/aggregatevariables") );
       }

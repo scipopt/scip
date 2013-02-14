@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,9 +36,6 @@
  *   (2009)
  * - energetic reasoning, see Baptiste, Le Pape, Nuijten (2001)
  *
- *
- * TODOS:
- * - normalize demands and capacities of each cumulative constraint
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -100,6 +97,7 @@
 #define DEFAULT_DUALPRESOLVE            TRUE /**< should dual presolving be applied? */
 #define DEFAULT_COEFTIGHTENING         FALSE /**< should coeffisient tightening be applied? */
 #define DEFAULT_NORMALIZE               TRUE /**< should demands and capacity be normalized? */
+#define DEFAULT_DISJUNCTIVE             TRUE /**< extract disjunctive constraints? */
 #define DEFAULT_MAXNODES             10000LL /**< number of branch-and-bound nodes to solve an independent cumulative constraint  (-1: no limit) */
 
 /* enforcement */
@@ -129,7 +127,7 @@ struct SCIP_ConsData
 {
    SCIP_VAR**            vars;               /**< array of variable representing the start time of each job */
    SCIP_Bool*            downlocks;          /**< array to store if the variable has a down lock */
-   SCIP_Bool*            uplocks;            /**< array to store if the variable has a down lock */
+   SCIP_Bool*            uplocks;            /**< array to store if the variable has an uplock */
    SCIP_CONS**           linkingconss;       /**< array of linking constraints for the integer variables */
    SCIP_ROW**            demandrows;         /**< array of rows of linear relaxation of this problem */
    SCIP_ROW**            scoverrows;         /**< array of rows of small cover cuts of this problem */
@@ -158,14 +156,10 @@ struct SCIP_ConsData
    unsigned int          normalized:1;       /**< is the constraint normalized */
    unsigned int          covercuts:1;        /**< cover cuts are created? */
    unsigned int          propagated:1;       /**< is constraint propagted */
+   unsigned int          triedsolving:1;     /**< bool to store if we tried already to solve that constraint as independent subproblem */
 
 #ifdef SCIP_STATISTIC
    int                   maxpeak;
-   int                   nirrelevantjobs;
-   int                   nalwaysruns;
-   int                   ndualfixs;
-   int                   nremovedlocks;
-   int                   ndecomps;
 #endif
 };
 
@@ -190,17 +184,30 @@ struct SCIP_ConshdlrData
    SCIP_Bool             dualpresolve;       /**< should dual presolving be applied? */
    SCIP_Bool             coeftightening;     /**< should coeffisient tightening be applied? */
    SCIP_Bool             normalize;          /**< should demands and capacity be normalized? */
+   SCIP_Bool             disjunctive;        /**< extract disjunctive constraints? */
    SCIP_Bool             usebdwidening;      /**< should bound widening be used during conflict analysis? */
 
    SCIP_Longint          maxnodes;           /**< number of branch-and-bound nodes to solve an independent cumulative constraint  (-1: no limit) */
 
+   SCIP_DECL_SOLVECUMULATIVE((*solveCumulative)); /**< method to use a single cumulative condition */
+
+   /* statistic values which are collected if SCIP_STATISTIC is defined */
 #ifdef SCIP_STATISTIC
-   int                   nirrelevantjobs;
-   int                   nalwaysruns;
-   int                   ndualfixs;
-   int                   nremovedlocks;
-   int                   ndecomps;
-   int                   nallconsdualfixs;
+   SCIP_Longint          nlbtimetable;       /**< number of times the lower bound was tightened by the time-table propagator */
+   SCIP_Longint          nubtimetable;       /**< number of times the upper bound was tightened by the time-table propagator */
+   SCIP_Longint          ncutofftimetable;   /**< number of times the a cutoff was detected due to time-table propagator */
+   SCIP_Longint          nlbedgefinder;      /**< number of times the lower bound was tightened by the edge-finder propagator */
+   SCIP_Longint          nubedgefinder;      /**< number of times the upper bound was tightened by the edge-finder propagator */
+   SCIP_Longint          ncutoffedgefinder;  /**< number of times the a cutoff was detected due to edge-finder propagator */
+   SCIP_Longint          ncutoffoverload;    /**< number of times the a cutoff was detected due to overload checking via edge-finding */
+   SCIP_Longint          ncutoffoverloadTTEF;/**< number of times the a cutoff was detected due to overload checking via time-table edge-finding */
+
+   int                   nirrelevantjobs;    /**< number of time a irrelevant/redundant jobs was removed form a constraint */
+   int                   nalwaysruns;        /**< number of time a job removed form a constraint which run completely during the effective horizon */
+   int                   ndualfixs;          /**< number of times a dual fix was performed by a single constraint */
+   int                   nremovedlocks;      /**< number of times a up or down lock was removed */
+   int                   ndecomps;           /**< number of times a constraint was decomposed */
+   int                   nallconsdualfixs;   /**< number of times a dual fix was performed due to knowledge of all cumulative constraints */
 #endif
 };
 
@@ -479,24 +486,23 @@ static
 SCIP_RETCODE createWorstCaseProfile(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROFILE*         profile,            /**< resource profile */
-   SCIP_CONSDATA*        consdata            /**< constraint data to use for filling the worst case profile */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity            /**< available cumulative capacity */
    )
-{
-   SCIP_VAR** vars;
+{  /*lint --e{715}*/
    SCIP_VAR* var;
    SCIP_HASHMAP* addedvars;
-   int* demands;
+   int* copydemands;
    int* perm;
    int duration;
-   int nvars;
    int impliedest;
    int est;
    int impliedlct;
    int lct;
    int v;
-
-   nvars = consdata->nvars;
-   vars = consdata->vars;
 
    assert(SCIPgetDepth(scip) <= 0);
 
@@ -504,15 +510,15 @@ SCIP_RETCODE createWorstCaseProfile(
    SCIP_CALL( SCIPhashmapCreate(&addedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars)) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &demands, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &copydemands, nvars) );
 
    /* sort variables  w.r.t. job demands */
    for( v = 0; v < nvars; ++v )
    {
-      demands[v] = consdata->demands[v];
+      copydemands[v] = demands[v];
       perm[v] = v;
    }
-   SCIPsortDownIntInt(demands, perm, nvars);
+   SCIPsortDownIntInt(copydemands, perm, nvars);
 
    /* add each job with its earliest start and latest completion time into the resource profile */
    for( v = 0; v < nvars; ++v )
@@ -520,12 +526,12 @@ SCIP_RETCODE createWorstCaseProfile(
       int idx;
 
       idx = perm[v];
-      assert(idx >= 0 && idx < nvars),
+      assert(idx >= 0 && idx < nvars);
 
-         var = vars[idx];
+      var = vars[idx];
       assert(var != NULL);
 
-      duration = consdata->durations[idx];
+      duration = durations[idx];
       assert(duration > 0);
 
       est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
@@ -539,7 +545,7 @@ SCIP_RETCODE createWorstCaseProfile(
          SCIP_Bool infeasible;
          int pos;
 
-         SCIP_CALL( SCIPprofileInsertCore(profile, impliedest, impliedlct, demands[v], &pos, &infeasible) );
+         SCIP_CALL( SCIPprofileInsertCore(profile, impliedest, impliedlct, copydemands[v], &pos, &infeasible) );
          assert(!infeasible);
          assert(pos == -1);
       }
@@ -550,7 +556,7 @@ SCIP_RETCODE createWorstCaseProfile(
       }
    }
 
-   SCIPfreeBufferArray(scip, &demands);
+   SCIPfreeBufferArray(scip, &copydemands);
    SCIPfreeBufferArray(scip, &perm);
 
    SCIPhashmapFree(&addedvars);
@@ -1177,8 +1183,8 @@ SCIP_RETCODE evaluateCumulativeness(
             &ntimepoints, &maxdemand, &minfreecapacity) );
 
       /* free buffer arrays */
-      SCIPfreeBufferArray(scip, &timepoints);
       SCIPfreeBufferArray(scip, &estimateddemands);
+      SCIPfreeBufferArray(scip, &timepoints);
 
       consdata->estimatedstrength = (SCIP_Real)(capacity - minfreecapacity) / (SCIP_Real) capacity;
    }
@@ -1240,6 +1246,162 @@ SCIP_RETCODE getActiveVar(
 
 /**@} */
 
+/**@name Default method to solve a cumulative condition
+ *
+ * @{
+ */
+
+/** solve single cumulative condition using SCIP */
+static
+SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScip)
+{
+   SCIP* subscip;
+   SCIP_VAR** subvars;
+   SCIP_CONS* cons;
+   SCIP_RETCODE retcode;
+   char name[SCIP_MAXSTRLEN];
+   int v;
+
+   assert(njobs > 0);
+
+   (*solved) = FALSE;
+   (*infeasible) = FALSE;
+   (*unbounded) = FALSE;
+   (*error) = FALSE;
+
+   SCIPdebugMessage("solve independent cumulative condition with %d variables\n", njobs);
+
+   /* initialize the sub-problem */
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   /* copy all plugins */
+   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+
+   /* create the subproblem */
+   SCIP_CALL( SCIPcreateProbBasic(subscip, "cumulative") );
+
+   SCIP_CALL( SCIPallocMemoryArray(subscip, &subvars, njobs) );
+
+   /* create for each job a start time variable */
+   for( v = 0; v < njobs; ++v )
+   {
+      /* construct varibale name */
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d", v);
+
+      SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[v], name, ests[v], lsts[v], objvals[v], SCIP_VARTYPE_INTEGER) );
+      SCIP_CALL( SCIPaddVar(subscip, subvars[v]) );
+   }
+
+   /* create cumulative constraint */
+   SCIP_CALL( SCIPcreateConsBasicCumulative(subscip, &cons, "cumulative",
+         njobs, subvars, durations, demands, capacity) );
+
+   /* set effective horizon */
+   SCIP_CALL( SCIPsetHminCumulative(subscip, cons, hmin) );
+   SCIP_CALL( SCIPsetHmaxCumulative(subscip, cons, hmax) );
+
+   /* add cumulative constraint */
+   SCIP_CALL( SCIPaddCons(subscip, cons) );
+   SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+
+   /* set CP solver settings
+    *
+    * @note This "meta" setting has to be set first since this call overwrite all parameters including for example the
+    *       time limit.
+    */
+   SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+
+   /* disable output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+
+   /* set limits for the subproblem */
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+
+   /* forbid recursive call of heuristics and separators solving subMIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
+
+   /* solve single cumulative constraint by branch and bound */
+   retcode = SCIPsolve(subscip);
+
+   if( retcode != SCIP_OKAY )
+      (*error) = TRUE;
+   else
+   {
+      SCIPdebugMessage("solved single cumulative condition with status %d\n", SCIPgetStatus(subscip));
+
+      /* evaluated solution status */
+      switch( SCIPgetStatus(subscip) )
+      {
+      case SCIP_STATUS_INFORUNBD:
+      case SCIP_STATUS_INFEASIBLE:
+         (*infeasible) = TRUE;
+         (*solved) = TRUE;
+         break;
+      case SCIP_STATUS_UNBOUNDED:
+         (*unbounded) = TRUE;
+         (*solved) = TRUE;
+         break;
+      case SCIP_STATUS_OPTIMAL:
+      {
+         SCIP_SOL* sol;
+         SCIP_Real solval;
+
+         sol = SCIPgetBestSol(subscip);
+
+         for( v = 0; v < njobs; ++v )
+         {
+            solval = SCIPgetSolVal(subscip, sol, subvars[v]);
+
+            ests[v] = solval;
+            lsts[v] = solval;
+         }
+         (*solved) = TRUE;
+         break;
+      }
+      case SCIP_STATUS_NODELIMIT:
+      case SCIP_STATUS_TOTALNODELIMIT:
+      case SCIP_STATUS_TIMELIMIT:
+      case SCIP_STATUS_MEMLIMIT:
+      case SCIP_STATUS_USERINTERRUPT:
+         /* transfer the global bound changes */
+         for( v = 0; v < njobs; ++v )
+         {
+            ests[v] = SCIPvarGetLbGlobal(subvars[v]);
+            lsts[v] = SCIPvarGetUbGlobal(subvars[v]);
+         }
+         (*solved) = FALSE;
+         break;
+
+      case SCIP_STATUS_UNKNOWN:
+      case SCIP_STATUS_STALLNODELIMIT:
+      case SCIP_STATUS_GAPLIMIT:
+      case SCIP_STATUS_SOLLIMIT:
+      case SCIP_STATUS_BESTSOLLIMIT:
+         SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(subscip));
+         return SCIP_INVALIDDATA;
+      }
+   }
+
+   /* release all variables */
+   for( v = 0; v < njobs; ++v )
+   {
+      SCIP_CALL( SCIPreleaseVar(subscip, &subvars[v]) );
+   }
+
+   SCIPfreeMemoryArray(scip, &subvars);
+
+   SCIP_CALL( SCIPfree(&subscip) );
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
 /**@name Constraint handler data
  *
  * Method used to create and free the constraint handler data when including and removing the cumulative constraint
@@ -1266,7 +1428,19 @@ SCIP_RETCODE conshdlrdataCreate(
    /* set event handler for checking if bounds of start time variables are tighten */
    (*conshdlrdata)->eventhdlr = eventhdlr;
 
+   /* set default methed for solving single cumulative conditions */
+   (*conshdlrdata)->solveCumulative = solveCumulativeViaScip;
+
 #ifdef SCIP_STATISTIC
+   (*conshdlrdata)->nlbtimetable = 0;
+   (*conshdlrdata)->nubtimetable = 0;
+   (*conshdlrdata)->ncutofftimetable = 0;
+   (*conshdlrdata)->nlbedgefinder = 0;
+   (*conshdlrdata)->nubedgefinder = 0;
+   (*conshdlrdata)->ncutoffedgefinder = 0;
+   (*conshdlrdata)->ncutoffoverload = 0;
+   (*conshdlrdata)->ncutoffoverloadTTEF = 0;
+
    (*conshdlrdata)->nirrelevantjobs = 0;
    (*conshdlrdata)->nalwaysruns = 0;
    (*conshdlrdata)->ndualfixs = 0;
@@ -1411,16 +1585,10 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->bcoverrowssize = 0;
    (*consdata)->nvars = nvars;
    (*consdata)->varssize = nvars;
-   (*consdata)->covercuts = FALSE;
    (*consdata)->normalized = FALSE;
-
-#ifdef SCIP_STATISTIC
-   (*consdata)->nirrelevantjobs = 0;
-   (*consdata)->nalwaysruns = 0;
-   (*consdata)->ndualfixs = 0;
-   (*consdata)->nremovedlocks = 0;
-   (*consdata)->ndecomps = 0;
-#endif
+   (*consdata)->covercuts = FALSE;
+   (*consdata)->propagated = FALSE;
+   (*consdata)->triedsolving = FALSE;
 
    if( nvars > 0 )
    {
@@ -1608,7 +1776,8 @@ void consdataPrint(
       assert(consdata->vars[v] != NULL);
       if( v > 0 )
          SCIPinfoMessage(scip, file, ", ");
-      SCIPinfoMessage(scip, file, "<%s>(%d)[%d]", SCIPvarGetName(consdata->vars[v]),
+      SCIPinfoMessage(scip, file, "<%s>[%g,%g](%d)[%d]", SCIPvarGetName(consdata->vars[v]),
+         SCIPvarGetLbGlobal(consdata->vars[v]), SCIPvarGetUbGlobal(consdata->vars[v]),
          consdata->durations[v], consdata->demands[v]);
    }
    SCIPinfoMessage(scip, file, ")[%d,%d) <= %d", consdata->hmin, consdata->hmax, consdata->capacity);
@@ -1630,8 +1799,7 @@ SCIP_RETCODE consdataDeletePos(
    assert(consdata != NULL);
    assert(cons != NULL);
    assert(SCIPconsIsTransformed(cons));
-
-   assert(pos < consdata->nvars);
+   assert(!SCIPinProbing(scip));
 
    SCIPdebugMessage("cumulative constraint <%s>: remove variable <%s>\n",
       SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[pos]));
@@ -1743,130 +1911,6 @@ SCIP_RETCODE consdataCollectLinkingCons(
 
 /**@} */
 
-/**@name Sorting methods
- *
- * @{
- */
-
-/** comparison method for two variables w.r.t. the lower bounds (earliest start time) */
-static
-SCIP_DECL_SORTPTRCOMP(compVarsEst)
-{
-   int est1;
-   int est2;
-
-   est1 = (int)(SCIPvarGetLbLocal((SCIP_VAR*)elem1) + 0.5);
-   est2 = (int)(SCIPvarGetLbLocal((SCIP_VAR*)elem2) + 0.5);
-
-   return (est1 - est2);
-}
-
-/** check if the variables are sorted in a non-increasing w.r.t. the earliest start time */
-#ifndef NDEBUG
-static
-void checkSortVariablesEst(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
-   int                   nvars               /**< number of variables to check */
-   )
-{
-   int i;
-   int lb1;
-   int lb2;
-
-   for( i = 0; i < nvars-1; ++i )
-   {
-      lb1 = convertBoundToInt(scip, SCIPvarGetLbGlobal(consdata->vars[i]));
-      lb2 = convertBoundToInt(scip, SCIPvarGetLbGlobal(consdata->vars[i+1]));
-      assert(lb1 >= lb2);
-   }
-}
-#endif
-
-/** sorts variables in non-increasing order w.r.t. their earliest start times */
-static
-SCIP_RETCODE sortVariablesEst(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< cumulative constraint */
-   )
-{
-   SCIP_CONSDATA* consdata;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->nvars == 0 || consdata->vars != NULL);
-   assert(consdata->nvars == 0 || consdata->durations != NULL);
-
-   /* sort array w.r.t. earliest start time */
-   SCIPsortDownPtrIntIntBoolBool((void**)consdata->vars, consdata->durations, consdata->demands, consdata->downlocks, consdata->uplocks,
-      compVarsEst, consdata->nvars);
-
-#ifndef NDEBUG
-   checkSortVariablesEst(scip, consdata, consdata->nvars);
-#endif
-
-   return SCIP_OKAY;
-}
-
-/** check if the variables are sorted in a non-decreasing w.r.t. the latest completion time */
-#ifndef NDEBUG
-static
-void checkSortVariablesLct(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
-   int                   nvars               /**< number of variables to check */
-   )
-{
-   int i;
-   int ub1;
-   int ub2;
-
-   for( i = 0; i < nvars-1; ++i )
-   {
-      ub1 = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[i])) + consdata->durations[i];
-      ub2 = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[i+1]))  + consdata->durations[i+1];
-      assert(ub1 <= ub2);
-   }
-}
-#endif
-
-/** sorts variables in non-decreasing order w.r.t. their latest completion time */
-static
-SCIP_RETCODE sortVariablesLct(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< cumulative constraint */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   int* lcts;
-   int nvars;
-   int v;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->nvars == 0 || consdata->vars != NULL);
-   assert(consdata->nvars == 0 || consdata->durations != NULL);
-
-   nvars = consdata->nvars;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &lcts, nvars) );
-
-   for( v = 0; v < nvars; ++v )
-      lcts[v] = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[v])) + consdata->durations[v];
-
-   /* sort of three joint arrays of ints/ints/Ptr, sorted by first array in non-decreasing order via sort template */
-   SCIPsortIntPtrIntIntBoolBool(lcts, (void**)consdata->vars, consdata->durations, consdata->demands, consdata->downlocks, consdata->uplocks, nvars);
-
-#ifndef NDEBUG
-   checkSortVariablesLct(scip, consdata, consdata->nvars);
-#endif
-
-   SCIPfreeBufferArray(scip, &lcts);
-
-   return SCIP_OKAY;
-}
-
-/**@} */
 
 /**@name Check methods
  *
@@ -2014,6 +2058,7 @@ SCIP_RETCODE checkCumulativeCondition(
 
    return SCIP_OKAY;
 }
+
 /** check if the given constrait is valid; checks each starting point of a job whether the remaining capacity is at
  *  least zero or not. If not (*violated) is set to TRUE
  */
@@ -2805,23 +2850,27 @@ SCIP_RETCODE solveIndependentCons(
    SCIP_Bool*            unbounded           /**< pointer to store if the constraint is unbounded */
    )
 {
-   SCIP* subscip;
    SCIP_CONSDATA* consdata;
-   SCIP_HASHMAP* varmapfw;
-   SCIP_CONS* targetcons;
    SCIP_VAR** vars;
-   SCIP_Real timelimit;
-   SCIP_Real memorylimit;
-   SCIP_Bool succeed;
-   char probname[SCIP_MAXSTRLEN];
+   SCIP_Real* lbs;
+   SCIP_Real* ubs;
+   SCIP_Bool solved;
+   SCIP_Bool error;
    int nvars;
    int v;
 
+   assert(scip != NULL);
    assert(!SCIPconsIsModifiable(cons));
    assert(SCIPgetNConss(scip) > 0);
 
-   /* if the cumulative constraint is the only constraint do nothing */
-   if( SCIPgetNConss(scip) == 1 )
+   /* if SCIP is in probing mode or repropagation we cannot perform this dual reductions since this dual reduction
+    * would/could end in an implication which can lead to cutoff of the/all optimal solution
+    */
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
+      return SCIP_OKAY;
+
+   /* if the cumulative constraint is the only constraint of the original problem or the presolved problem do nothing */
+   if( SCIPgetNOrigConss(scip) == 1 || SCIPgetNConss(scip) == 1 )
       return SCIP_OKAY;
 
    /* constraints for which the check flag is set to FALSE, did not contribute to the lock numbers; therefore, we cannot
@@ -2830,163 +2879,94 @@ SCIP_RETCODE solveIndependentCons(
    if( !SCIPconsIsChecked(cons) )
       return SCIP_OKAY;
 
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check if already tried to solve that constraint as independent sub problem; we do not want to try it again if we
+    * fail on the first place
+    */
+   if( consdata->triedsolving )
+      return SCIP_OKAY;
+
    /* check if constraint is independently */
    if( !isConsIndependently(scip, cons) )
       return SCIP_OKAY;
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   /* mark the constraint to be tried of solving it as independent sub problem; in case that is successful the
+    * constraint is deleted; otherwise, we want to ensure that we do not try that again
+    */
+   consdata->triedsolving = TRUE;
 
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
-      return SCIP_OKAY;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
+   SCIPdebugMessage("the cumulative constraint <%s> is independent from rest of the problem (%d variables, %d constraints)\n",
+      SCIPconsGetName(cons), SCIPgetNVars(scip), SCIPgetNConss(scip));
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    nvars = consdata->nvars;
    vars = consdata->vars;
 
-   SCIPdebugMessage("the cumulative constraint <%s> is independent from rest of the problem\n", SCIPconsGetName(cons));
-   SCIPdebugPrintCons(scip, cons, NULL);
+   SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
 
-   /* initialize the subproblem */
-   SCIP_CALL( SCIPcreate(&subscip) );
+   /* solve the cumulative condition separately */
+   SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, consdata->durations, consdata->demands, consdata->capacity,
+         consdata->hmin, consdata->hmax, TRUE, lbs, ubs, maxnodes, &solved, cutoff, unbounded, &error) );
 
-   /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
-
-   /* copy all plugins */
-   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-
-   /* get name of the original problem and add the string "_cumulative" */
-   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_cumulative", SCIPgetProbName(scip));
-
-   /* create the subproblem */
-   SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-
-   /* copy cumulative constraint */
-   SCIP_CALL( SCIPgetConsCopy(scip, subscip, cons, &targetcons, SCIPconsGetHdlr(cons), varmapfw, NULL, NULL,
-         FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, &succeed) );
-
-   if( succeed )
+   if( !(*cutoff) && !(*unbounded) && !error )
    {
-      /* add constraint to subscip */
-      SCIP_CALL( SCIPaddCons(subscip, targetcons) );
+      SCIP_Bool infeasible;
+      SCIP_Bool tightened;
+      SCIP_Bool allfixed;
 
-      /* do not abort subproblem on CTRL-C */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+      allfixed = TRUE;
 
-      /* disable output to console */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-
-      /* set limits for the subproblem */
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) );
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-
-      /* forbid recursive call of heuristics and separators solving subMIPs */
-      SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
-
-      /* solve single cumulative constraint by branch and bound */
-      SCIP_CALL( SCIPsolve(subscip) );
-
-      /* evaluated solution status */
-      switch( SCIPgetStatus(subscip) )
+      for( v = 0; v < nvars; ++v )
       {
-      case SCIP_STATUS_INFORUNBD:
-      case SCIP_STATUS_INFEASIBLE:
-         *cutoff = TRUE;
-         break;
-      case SCIP_STATUS_UNBOUNDED:
-         *unbounded = TRUE;
-         break;
-      case SCIP_STATUS_OPTIMAL:
-      {
-         /* copy optimal as dual reduction into the original SCIP instance */
-         SCIP_SOL* sol;
-
-         sol = SCIPgetBestSol(subscip);
-
-         for( v = 0; v < nvars; ++v )
+         /* check if variable is fixed */
+         if( lbs[v] + 0.5 > ubs[v] )
          {
-            SCIP_VAR* subvar;
-            SCIP_VAR* var;
-            SCIP_Real fixval;
-            SCIP_Bool infeasible;
-            SCIP_Bool fixed;
-
-            var = vars[v];
-
-            subvar = (SCIP_VAR*)SCIPhashmapGetImage(varmapfw, var);
-            fixval =  SCIPgetSolVal(subscip, sol, subvar);
-
-            SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
+            SCIP_CALL( SCIPfixVar(scip, vars[v], lbs[v], &infeasible, &tightened) );
             assert(!infeasible);
 
-            if( fixed )
+            if( tightened )
+            {
                (*nfixedvars)++;
+               consdata->triedsolving = FALSE;
+            }
          }
-
-         SCIP_CALL( SCIPdelCons(scip, cons) );
-         (*ndelconss)++;
-
-         break;
-      }
-      case SCIP_STATUS_NODELIMIT:
-      case SCIP_STATUS_TIMELIMIT:
-      case SCIP_STATUS_MEMLIMIT:
-      {
-         SCIP_VAR* var;
-         SCIP_Bool infeasible;
-         SCIP_Bool tightened;
-
-         /* transfer the bound changes */
-         for( v = 0; v < nvars; ++v )
+         else
          {
-            var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[v]);
-
-            SCIP_CALL( SCIPtightenVarLb(scip, vars[v], SCIPvarGetLbGlobal(var), TRUE, &infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarLb(scip, vars[v], lbs[v], TRUE, &infeasible, &tightened) );
             assert(!infeasible);
 
             if( tightened )
+            {
                (*nchgbds)++;
+               consdata->triedsolving = FALSE;
+            }
 
-            SCIP_CALL( SCIPtightenVarUb(scip, vars[v], SCIPvarGetUbGlobal(var), TRUE, &infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarUb(scip, vars[v], ubs[v], TRUE, &infeasible, &tightened) );
             assert(!infeasible);
 
             if( tightened )
+            {
                (*nchgbds)++;
+               consdata->triedsolving = FALSE;
+            }
 
+            allfixed = FALSE;
          }
-         break;
       }
-      case SCIP_STATUS_UNKNOWN:
-      case SCIP_STATUS_USERINTERRUPT:
-      case SCIP_STATUS_STALLNODELIMIT:
-      case SCIP_STATUS_GAPLIMIT:
-      case SCIP_STATUS_SOLLIMIT:
-      case SCIP_STATUS_BESTSOLLIMIT:
-      case SCIP_STATUS_TOTALNODELIMIT:
-         SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
-         return SCIP_INVALIDDATA;
+
+      /* if all variables are fixed, remove the cumulative constraint since it is redundant */
+      if( allfixed )
+      {
+         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+         (*ndelconss)++;
       }
    }
 
-   /* free hash map */
-   SCIPhashmapFree(&varmapfw);
-
-   SCIP_CALL( SCIPfree(&subscip) );
+   SCIPfreeBufferArray(scip, &ubs);
+   SCIPfreeBufferArray(scip, &lbs);
 
    return SCIP_OKAY;
 }
@@ -3153,7 +3133,6 @@ SCIP_RETCODE coretimesUpdateLb(
 
          *infeasible = TRUE;
 
-
          break;
       }
 
@@ -3170,8 +3149,17 @@ SCIP_RETCODE coretimesUpdateLb(
       SCIPdebugMessage("variable <%s> new lower bound <%d> -> <%d>\n", SCIPvarGetName(var), est, newlb);
       (*nchgbds)++;
 
-      /* adjust the earliest start time */
-      est = newlb;
+      /* for the statistic we count the number of times a lower bound was tightened due the the time-table algorithm */
+      SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nlbtimetable++ );
+
+      /* adjust the earliest start time
+       *
+       * @note We are taking the lower of the start time variable on purpose instead of newlb. This is due the fact that
+       *       the proposed lower bound might be even strength by be the core which can be the case if aggregations are
+       *       involved.
+       */
+      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+      assert(est >= newlb);
 
       /* adjust the search position for the resource profile for the next step */
       if( est == SCIPprofileGetTime(profile, peak+1) )
@@ -3295,8 +3283,17 @@ SCIP_RETCODE coretimesUpdateUb(
       SCIPdebugMessage("variable <%s>: new upper bound <%d> -> <%d>\n", SCIPvarGetName(var), lst, newub);
       (*nchgbds)++;
 
-      /* adjust the latest start and completion time */
-      lst = newub;
+      /* for the statistic we count the number of times a upper bound was tightened due the the time-table algorithm */
+      SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nubtimetable++ );
+
+      /* adjust the latest start and completion time
+       *
+       * @note We are taking the upper of the start time variable on purpose instead of newub. This is due the fact that
+       *       the proposed upper bound might be even strength by be the core which can be the case if aggregations are
+       *       involved.
+       */
+      lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+      assert(lst <= newub);
       lct = lst + duration;
 
       /* adjust the search position for the resource profile for the next step */
@@ -3427,7 +3424,10 @@ SCIP_RETCODE propagateCoretimes(
             if( explanation != NULL )
                explanation[j] = TRUE;
 
-            *cutoff = TRUE;
+            (*cutoff) = TRUE;
+
+            /* for the statistic we count the number of times a cutoff was detected due the time-time */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ncutofftimetable++ );
 
             break;
          }
@@ -3519,7 +3519,10 @@ SCIP_RETCODE propagateCoretimes(
                if( explanation != NULL )
                   explanation[j] = TRUE;
 
-               *cutoff = TRUE;
+               (*cutoff) = TRUE;
+
+               /* for the statistic we count the number of times a cutoff was detected due the time-time */
+               SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ncutofftimetable++ );
 
                break;
             }
@@ -4335,13 +4338,17 @@ SCIP_RETCODE analyzeConflictOverload(
    if( !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
+   SCIPdebugMessage("est=%d, lct=%d, propest %u, reportedenergy %d, shift %d\n", est, lct, propest, reportedenergy, shift);
+
    /* compute energy of initial time window */
    energy = (lct - est) * capacity;
 
    /* sort the start time variables which were added to search tree w.r.t. earliest start time */
    SCIPsortDownPtr((void**)leaves, compNodeEst, nleaves);
 
-   /* collect the energy of the responsible leaves until the cumulative energy is large enough an overload */
+   /* collect the energy of the responsible leaves until the cumulative energy is large enough to detect an overload;
+    * thereby, compute the time window of interest
+    */
    for( j = 0; j < nleaves && reportedenergy <= energy; ++j )
    {
       SCIP_NODEDATA* nodedata;
@@ -4354,14 +4361,34 @@ SCIP_RETCODE analyzeConflictOverload(
       /* adjust energy if the earliest start time decrease */
       if( nodedata->est < est )
       {
-         energy = (lct - est) * capacity;
          est = nodedata->est;
+         energy = (lct - est) * capacity;
       }
    }
    assert(reportedenergy > energy);
 
+   SCIPdebugMessage("time window [%d,%d) available energy %d, required energy %d\n", est, lct, energy, reportedenergy);
+
    /* initialize conflict analysis */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+   /* flip earliest start time and latest completion time */
+   if( !propest )
+   {
+      SCIPswapInts(&est, &lct);
+
+      /* shift earliest start time and latest completion time */
+      lct = shift - lct;
+      est = shift - est;
+   }
+   else
+   {
+      /* shift earliest start time and latest completion time */
+      lct = lct + shift;
+      est = est + shift;
+   }
+
+   nleaves = j;
 
    /* report the variables and relax their bounds to final time interval [est,lct) which was been detected to be
     * overloaded
@@ -4377,16 +4404,8 @@ SCIP_RETCODE analyzeConflictOverload(
       /* check if bound widening should be used */
       if( usebdwidening )
       {
-         if( propest )
-         {
-            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, nodedata->var, NULL, (SCIP_Real)(shift + est  - nodedata->leftadjust)) );
-            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, nodedata->var, NULL, (SCIP_Real)(shift + lct  - nodedata->duration + nodedata->rightadjust)) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, nodedata->var, NULL, (SCIP_Real)(shift - est - nodedata->leftadjust)) );
-            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, nodedata->var, NULL, (SCIP_Real)(shift - lct - nodedata->duration + nodedata->rightadjust)) );
-         }
+         SCIP_CALL( SCIPaddConflictRelaxedUb(scip, nodedata->var, NULL, (SCIP_Real)(est - nodedata->leftadjust)) );
+         SCIP_CALL( SCIPaddConflictRelaxedLb(scip, nodedata->var, NULL, (SCIP_Real)(lct - nodedata->duration + nodedata->rightadjust)) );
       }
       else
       {
@@ -4536,6 +4555,9 @@ SCIP_RETCODE propagateEdgeFinder(
             /* analyze over load */
             SCIP_CALL( analyzeConflictOverload(scip, omegaset, capacity, nelements,  est, lct, 0, propest, shift, usebdwidening, initialized, explanation) );
             (*cutoff) = TRUE;
+
+            /* for the statistic we count the number of times a cutoff was detected due the edge-finder */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ncutoffedgefinder++ );
          }
          else if( newest > 0 )
          {
@@ -4553,6 +4575,9 @@ SCIP_RETCODE propagateEdgeFinder(
 
                SCIP_CALL( SCIPinferVarLbCons(scip, leafdata->var, (SCIP_Real)(newest + shift),
                      cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
+
+               /* for the statistic we count the number of times a lower bound was tightened due the edge-finder */
+               SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nlbedgefinder++ );
             }
             else
             {
@@ -4564,6 +4589,9 @@ SCIP_RETCODE propagateEdgeFinder(
 
                SCIP_CALL( SCIPinferVarUbCons(scip, leafdata->var, (SCIP_Real)(shift - newest - leafdata->duration),
                      cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
+
+               /* for the statistic we count the number of times a upper bound was tightened due the edge-finder */
+               SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nubedgefinder++ );
             }
 
             /* adjust the earliest start time */
@@ -4607,6 +4635,9 @@ SCIP_RETCODE propagateEdgeFinder(
                }
 
                (*cutoff) = TRUE;
+
+               /* for the statistic we count the number of times a cutoff was detected due the edge-finder */
+               SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ncutoffedgefinder++ );
             }
          }
 
@@ -4852,6 +4883,10 @@ SCIP_RETCODE checkOverload(
       {
          SCIPdebugMessage("detects cutoff due to overload in time window [?,%d) (ncands %d)\n", nodedatas[j]->lct, j);
          (*cutoff) = TRUE;
+
+         /* for the statistic we count the number of times a cutoff was detected due the edge-finder */
+         SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ncutoffoverload++ );
+
          break;
       }
    }
@@ -4894,7 +4929,12 @@ SCIP_RETCODE checkOverload(
             duration -= (glblct - lct);
 
          if( duration > 0 )
-            glbenery +=   nodedata->demand * duration;
+         {
+            glbenery += nodedata->demand * duration;
+
+            if( explanation != NULL )
+               explanation[nodedata->idx] = TRUE;
+         }
       }
 
       /* analyze the overload */
@@ -5286,7 +5326,8 @@ SCIP_RETCODE computeAlternativeBounds(
          SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
          /* create worst case resource profile */
-         SCIP_CALL( createWorstCaseProfile(scip, profile, consdata) );
+         SCIP_CALL( createWorstCaseProfile(scip, profile,
+               consdata->nvars, consdata->vars, consdata->durations, consdata->demands, consdata->capacity) );
 
          hmin = computeHmin(scip, profile, consdata->capacity);
          hmax = computeHmax(scip, profile, consdata->capacity);
@@ -5412,6 +5453,11 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
             assert(fixed);
 
             (*nfixedvars)++;
+
+            /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
+             * constraints
+             */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
          }
       }
 
@@ -5424,6 +5470,11 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
             assert(fixed);
 
             (*nfixedvars)++;
+
+            /* for the statistic we count the number of jobs which are dual fixed due the information of all cumulative
+             * constraints
+             */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
          }
       }
    }
@@ -5452,7 +5503,7 @@ SCIP_RETCODE propagateAllConss(
    int nvars;
    int v;
 
-   if( SCIPinProbing(scip) )
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
    nvars = SCIPgetNVars(scip);
@@ -5473,15 +5524,11 @@ SCIP_RETCODE propagateAllConss(
       alternativeubs[v] = INT_MIN;
    }
 
-   SCIPstatistic( conshdlrdata->nallconsdualfixs -= *nfixedvars );
-
    /* compute alternative bounds */
    SCIP_CALL( computeAlternativeBounds(scip, conss, nconss, local, alternativelbs, alternativeubs, downlocks, uplocks) );
 
    /* apply fixing which result of the alternative bounds directly */
    SCIP_CALL( applyAlternativeBoundsFixing(scip, vars, nvars, alternativelbs, alternativeubs, downlocks, uplocks, nfixedvars) );
-
-   SCIPstatistic( conshdlrdata->nallconsdualfixs += *nfixedvars );
 
    if( oldnfixedvars == *nfixedvars && branched != NULL )
    {
@@ -6562,7 +6609,10 @@ SCIP_Bool checkDemands(
 }
 #endif
 
-/** delete constraint if it consists of at most one job */
+/** delete constraint if it consists of at most one job
+ *
+ *  @todo this method needs to be adjusted w.r.t. effective horizon
+ */
 static
 SCIP_RETCODE deleteTrivilCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6824,10 +6874,10 @@ SCIP_RETCODE fixIntegerVariableUb(
    SCIP_Bool infeasible;
    SCIP_Bool tightened;
 
-   /* if SCIP is in probing mode we cannot perform this dual reductions since this dual reduction would end in an
-    * implication which can lead to an infeasible cutoff (optimal solution)
+   /* if SCIP is in probing mode or repropagation we cannot perform this dual reductions since this dual reduction
+    * would/could end in an implication which can lead to cutoff of the/all optimal solution
     */
-   if( SCIPinProbing(scip) )
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
    /* rounding the variable to the upper bound is only a feasible dual reduction if the cumulative constraint
@@ -6876,10 +6926,10 @@ SCIP_RETCODE fixIntegerVariableLb(
    SCIP_Bool infeasible;
    SCIP_Bool tightened;
 
-   /* if SCIP is in probing mode we cannot perform this dual reductions since this dual reduction would end in an
-    * implication which can lead to cutoff the optimal solution
+   /* if SCIP is in probing mode or repropagation we cannot perform this dual reductions since this dual reduction
+    * would/could end in an implication which can lead to cutoff of the/all optimal solution
     */
-   if( SCIPinProbing(scip) )
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
    /* rounding the variable to the lower bound is only a feasible dual reduction if the cumulative constraint
@@ -6925,11 +6975,14 @@ SCIP_RETCODE normalizeCumulativeCondition(
    int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
    int*                  nchgsides           /**< pointer to count number of side changes */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Longint gcd;
    int mindemand1;
    int mindemand2;
    int v;
+
+   if( *capacity == 1 || nvars <= 1 )
+      return SCIP_OKAY;
 
    assert(demands[nvars-1] <= *capacity);
    assert(demands[nvars-2] <= *capacity);
@@ -7003,7 +7056,7 @@ SCIP_RETCODE normalizeDemands(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->normalized || consdata->capacity == 1 || consdata->nvars <= 1 )
+   if( consdata->normalized )
       return SCIP_OKAY;
 
    /**@todo sort items w.r.t. the demands, because we can stop earlier if the smaller weights are evaluated first */
@@ -7016,73 +7069,40 @@ SCIP_RETCODE normalizeDemands(
    return SCIP_OKAY;
 }
 
-
-/** computes the effective horizon and checks if the constraint can be decompesd */
+/** computes for the given cumulative condition the effective horizon */
 static
-SCIP_RETCODE computeEffectiveHorizon(
+SCIP_RETCODE computeEffectiveHorizonCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< cumulative constraint */
-   int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
-   int*                  naddconss,          /**< pointer to store the number of added constraints */
-   int*                  nchgsides           /**< pointer to store the number of changed sides */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< available cumulative capacity */
+   int*                  hmin,               /**< pointer to store the left bound of the effective horizon */
+   int*                  hmax,               /**< pointer to store the right bound of the effective horizon */
+   int*                  split               /**< point were the cumulative condition can be split */
    )
 {
-   SCIP_CONSDATA* consdata;
    SCIP_PROFILE* profile;
-   int capacity;
-   int hmin;
-   int hmax;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   if( consdata->nvars <= 1 )
-      return SCIP_OKAY;
-
-   capacity = consdata->capacity;
 
    /* create empty resource profile with infinity resource capacity */
    SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
    /* create worst case resource profile */
-   SCIP_CALL( createWorstCaseProfile(scip, profile, consdata) );
+   SCIP_CALL( createWorstCaseProfile(scip, profile, nvars, vars, durations, demands, capacity) );
 
    /* print resource profile in if SCIP_DEBUG is defined */
    SCIPdebug( SCIPprofilePrint(profile, SCIPgetMessagehdlr(scip), NULL) );
 
    /* computes the first time point where the resource capacity can be violated */
-   hmin = computeHmin(scip, profile, capacity);
-
-   /* check if this time point improves the effective horizon */
-   if( consdata->hmin < hmin )
-   {
-      SCIPdebugMessage("cumulative constraint <%s> adjust hmin <%d> -> <%d>\n", SCIPconsGetName(cons), consdata->hmin, hmin);
-
-      consdata->hmin = hmin;
-      (*nchgsides)++;
-   }
+   (*hmin) = computeHmin(scip, profile, capacity);
 
    /* computes the first time point where the resource capacity is satisfied for sure */
-   hmax = computeHmax(scip, profile, capacity);
+   (*hmax) = computeHmax(scip, profile, capacity);
 
-   /* check if this time point improves the effective horizon */
-   if( consdata->hmax > hmax )
-   {
-      SCIPdebugMessage("cumulative constraint <%s> adjust hmax <%d> -> <%d>\n", SCIPconsGetName(cons), consdata->hmax,  hmax);
-      consdata->hmax = hmax;
-      (*nchgsides)++;
-   }
+   (*split) = (*hmax);
 
-   /* check if the constraint is redundant */
-   if( consdata->hmax <= consdata->hmin )
-   {
-      SCIPdebugMessage("constraint <%s> is redundant since hmax(%d) <= hmin(%d)\n",
-         SCIPconsGetName(cons), consdata->hmax, consdata->hmin);
-
-      SCIP_CALL( SCIPdelCons(scip, cons) );
-      (*ndelconss)++;
-   }
-   else if( !SCIPinRepropagation(scip) )
+   if( *hmin < *hmax && !SCIPinRepropagation(scip) )
    {
       int* timepoints;
       int* loads;
@@ -7105,11 +7125,11 @@ SCIP_RETCODE computeEffectiveHorizon(
       for( t = 0; t < ntimepoints; ++t )
       {
          /* ignore all time points before the effective horizon */
-         if( timepoints[t] <= consdata->hmin )
+         if( timepoints[t] <= *hmin )
             continue;
 
          /* ignore all time points after the effective horizon */
-         if( timepoints[t] >= consdata->hmax )
+         if( timepoints[t] >= *hmax )
             break;
 
          /* check if the current time point does not exceed the capacity w.r.t. worst case resource profile; if so we
@@ -7117,36 +7137,7 @@ SCIP_RETCODE computeEffectiveHorizon(
           */
          if( loads[t] <= capacity )
          {
-            SCIP_CONS* splitcons;
-            char name[SCIP_MAXSTRLEN];
-
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "(%s)'", SCIPconsGetName(cons));
-
-            SCIPdebugMessage("split cumulative constraint <%s>[%d,%d) with %d jobs at time point %d\n",
-               SCIPconsGetName(cons), consdata->hmin, consdata->hmax, consdata->nvars, timepoints[t]);
-
-            SCIP_CALL( SCIPcreateConsCumulative(scip, &splitcons, name, consdata->nvars, consdata->vars,
-                  consdata->durations, consdata->demands, capacity,
-                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-
-            /* adjust the effective time horizon of the new constraint */
-            SCIP_CALL( SCIPsetHminCumulative(scip, splitcons, timepoints[t]) );
-            SCIP_CALL( SCIPsetHmaxCumulative(scip, splitcons, consdata->hmax) );
-
-            assert(timepoints[t] < consdata->hmax);
-
-            /* add and release new cumulative constraint */
-            SCIP_CALL( SCIPaddCons(scip, splitcons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &splitcons) );
-
-            /* adjust the effective time horizon of the constraint */
-            consdata->hmax = timepoints[t];
-
-            assert(consdata->hmin < consdata->hmax);
-
-            SCIPstatistic( consdata->ndecomps++ );
-            (*naddconss)++;
+            (*split) = timepoints[t];
             break;
          }
       }
@@ -7158,7 +7149,141 @@ SCIP_RETCODE computeEffectiveHorizon(
    return SCIP_OKAY;
 }
 
-/** presolve constraint w.r.t. the earlier start times (est)
+/** creates and adds a cumulative constraint */
+static
+SCIP_RETCODE createConsCumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< available cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are seperated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node?
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   )
+{
+   SCIP_CONS* cons;
+
+   /* creates cumulative constraint and adds it to problem */
+   SCIP_CALL( SCIPcreateConsCumulative(scip, &cons, name, nvars, vars, durations, demands, capacity,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+   /* adjust the effective time horizon of the new constraint */
+   SCIP_CALL( SCIPsetHminCumulative(scip, cons, hmin) );
+   SCIP_CALL( SCIPsetHmaxCumulative(scip, cons, hmax) );
+
+   /* add and release new cumulative constraint */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   return SCIP_OKAY;
+}
+
+/** computes the effective horizon and checks if the constraint can be decompsed */
+static
+SCIP_RETCODE computeEffectiveHorizon(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< cumulative constraint */
+   int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
+   int*                  naddconss,          /**< pointer to store the number of added constraints */
+   int*                  nchgsides           /**< pointer to store the number of changed sides */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int hmin;
+   int hmax;
+   int split;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nvars <= 1 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( computeEffectiveHorizonCumulativeCondition(scip, consdata->nvars, consdata->vars,
+         consdata->durations, consdata->demands, consdata->capacity, &hmin, &hmax, &split) );
+
+   /* check if this time point improves the effective horizon */
+   if( consdata->hmin < hmin )
+   {
+      SCIPdebugMessage("cumulative constraint <%s> adjust hmin <%d> -> <%d>\n", SCIPconsGetName(cons), consdata->hmin, hmin);
+
+      consdata->hmin = hmin;
+      (*nchgsides)++;
+   }
+
+   /* check if this time point improves the effective horizon */
+   if( consdata->hmax > hmax )
+   {
+      SCIPdebugMessage("cumulative constraint <%s> adjust hmax <%d> -> <%d>\n", SCIPconsGetName(cons), consdata->hmax,  hmax);
+      consdata->hmax = hmax;
+      (*nchgsides)++;
+   }
+
+   /* check if the constraint is redundant */
+   if( consdata->hmax <= consdata->hmin )
+   {
+      SCIPdebugMessage("constraint <%s> is redundant since hmax(%d) <= hmin(%d)\n",
+         SCIPconsGetName(cons), consdata->hmax, consdata->hmin);
+
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      (*ndelconss)++;
+   }
+   else if( consdata->hmin < split && split < consdata->hmax )
+   {
+      char name[SCIP_MAXSTRLEN];
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "(%s)'", SCIPconsGetName(cons));
+
+      SCIPdebugMessage("split cumulative constraint <%s>[%d,%d) with %d jobs at time point %d\n",
+         SCIPconsGetName(cons), consdata->hmin, consdata->hmax, consdata->nvars, split);
+
+      assert(split < consdata->hmax);
+
+      /* creates cumulative constraint and adds it to problem */
+      SCIP_CALL( createConsCumulative(scip, name, consdata->nvars, consdata->vars,
+            consdata->durations, consdata->demands, consdata->capacity, split, consdata->hmax,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+
+      /* adjust the effective time horizon of the constraint */
+      consdata->hmax = split;
+
+      assert(consdata->hmin < consdata->hmax);
+
+      /* for the statistic we count the number of time we decompose a cumulative constraint */
+      SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndecomps++ );
+      (*naddconss)++;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** presolve cumulative condition w.r.t. the earlier start times (est)
  *
  *  (1) Let the variables array be non-increasing ordered by there earlier start time and j1 and j2 the last two
  *      variables of w.r.t. that ordering. If the latest completion time (lct) of job j1 is less than or equal to the
@@ -7169,68 +7294,50 @@ SCIP_RETCODE computeEffectiveHorizon(
  *  (2) if the earliest completion time (ect) of job j1 is less than or equal to the earliest start time (est) of job j2
  *       and fixing the start time variable of job j1 to the lower bound is a feasible dual reduction
  *       => j1 can be removed from the cumulative constraint and fixed to its earliest start time
+ *
+ *  @note That method does not remove any variable form the arrays. It only mark the variables which are irrelevant for
+ *        the cumulative condition; The deletion has to be done later.
  */
 static
 SCIP_RETCODE presolveConsEst(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< cumulative constraint */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   SCIP_Bool*            downlocks,          /**< array to store if the variable has a down lock, or NULL */
+   SCIP_Bool*            uplocks,            /**< array to store if the variable has an up lock, or NULL */
+   SCIP_CONS*            cons,               /**< underlying constraint, or NULL */
+   SCIP_Bool*            irrelevants,        /**< array mark those variables which are irrelevant for the cumulative condition */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
-   int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
-   int*                  nchgsides,          /**< pointer to store the number of changed sides */
-   SCIP_Bool*            cutoff              /**< pointer to store if a cutoff was detected */
+   int*                  nchgsides           /**< pointer to store the number of changed sides */
    )
 {
-   SCIP_CONSDATA* consdata;
-   SCIP_VAR* cand;
-   SCIP_Bool downlock;
-   SCIP_Bool uplock;
-   int duration;
-   int nvars;
-   int hmin;
-   int est;
-   int lst;
-   int ect;
-   int lct;
    int v;
 
    assert(scip != NULL);
+   assert(nvars > 1);
    assert(cons != NULL);
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
+   SCIPdebugMessage("check for irrelevant variable for cumulative condition (hmin %d) w.r.t. earlier start time\n", hmin);
 
-   nvars = consdata->nvars;
-
-   /* check if a cutoff was already detected */
-   if( *cutoff )
-      return SCIP_OKAY;
-
-   if( nvars <= 1 )
-      return SCIP_OKAY;
-
-   hmin = consdata->hmin;
-   assert(hmin < consdata->hmax);
-
-   SCIPdebugMessage("presolve constraint <%s>[%d,%d) <= %d w.r.t. earlier start time\n", SCIPconsGetName(cons), hmin, consdata->hmax, consdata->capacity);
-
-   /* make sure, the variables are sorted by non-increasing order of the earliest start times */
-   SCIP_CALL( sortVariablesEst(scip, cons) );
-
-   for( v = nvars-1; v >= 0 && nvars > 1; --v )
+   for( v = 0; v < nvars; ++v )
    {
-#ifndef NDEBUG
-      checkSortVariablesEst(scip, consdata, v);
-#endif
+      SCIP_VAR* var;
+      int duration;
+      int lst;
+      int ect;
+      int lct;
 
-      cand = consdata->vars[v];
-      duration = consdata->durations[v];
-      downlock = consdata->downlocks[v];
-      uplock = consdata->uplocks[v];
+      var = vars[v];
+      assert(var != NULL);
+
+      duration = durations[v];
+      assert(duration > 0);
 
       /* collect latest completion time (lct) and earliest completion time (ect) from last job */
-      est = convertBoundToInt(scip, SCIPvarGetLbGlobal(cand));
-      ect = est + duration;
-      lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(cand));
+      ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + duration;
+      lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
       lct = lst + duration;
 
       /* check if the job runs completely before the effective horizon; if so the job can be removed form the
@@ -7238,17 +7345,14 @@ SCIP_RETCODE presolveConsEst(
        */
       if( lct <= hmin )
       {
-         SCIPdebugMessage("  remove variable <%s>[%g,%g] with duration <%d> is irrelevant\n",
-            SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), duration);
+         SCIPdebugMessage("  variable <%s>[%g,%g] with duration <%d> is irrelevant\n",
+            SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration);
 
-         /* delete variable at the given position */
-         SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
-         (*nchgcoefs)++;
+         /* mark variable to be irrelevant */
+         irrelevants[v] = TRUE;
 
-         /* adjust nvars after deleting the variable */
-         nvars = consdata->nvars;
-
-         SCIPstatistic( consdata->nirrelevantjobs++ );
+         /* for the statistic we count the number of jobs which are irrelevant */
+         SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nirrelevantjobs++ );
 
          continue;
       }
@@ -7262,21 +7366,25 @@ SCIP_RETCODE presolveConsEst(
          /* job can be removed from the constraint only if the integer start time variable can be fixed to its lower
           * bound;
           */
-
-         /* fix integer start time variable if possible to it lower bound */
-         SCIP_CALL( fixIntegerVariableLb(scip, cand, downlock, nfixedvars) );
-
-         if( SCIPvarGetLbGlobal(cand) + 0.5 > SCIPvarGetUbGlobal(cand) )
+         if( downlocks != NULL && SCIPconsIsChecked(cons) )
          {
-            SCIPdebugMessage("  remove variable <%s>[%d,%d] with duration <%d> is irrelevant due to dual reductions wrt EST\n",
-               SCIPvarGetName(cand), est, lct, duration);
+            /* fix integer start time variable if possible to it lower bound */
+            SCIP_CALL( fixIntegerVariableLb(scip, var, downlocks[v], nfixedvars) );
+         }
 
-            SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
-            (*nchgcoefs)++;
+         if( SCIPvarGetLbGlobal(var) + 0.5 > SCIPvarGetUbGlobal(var) )
+         {
+            SCIPdebugMessage("  variable <%s>[%d,%d] with duration <%d> is irrelevant due to dual fixing wrt EST\n",
+               SCIPvarGetName(var), ect - duration, lst, duration);
 
-            /* adjust nvars after deleting the variable */
-            nvars = consdata->nvars;
-            SCIPstatistic( consdata->ndualfixs++ );
+            /* after fixing the start time variable to its lower bound, the (new) earliest completion time should be smaller or equal ti hmin */
+            assert(convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + duration <= hmin);
+
+            /* mark variable to be irrelevant */
+            irrelevants[v] = TRUE;
+
+            /* for the statistic we count the number of jobs which are dual fixed */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndualfixs++ );
 
             continue;
          }
@@ -7285,53 +7393,43 @@ SCIP_RETCODE presolveConsEst(
       /* check if the jobs overlaps with the time point hmin if it overlaps at all with the effective horizon; if so the
        * down lock can be omitted
        */
-      if( lst <= hmin )
+      if( lst <= hmin && SCIPconsIsChecked(cons) )
       {
-         if( !uplock )
+         assert(downlocks != NULL);
+         assert(uplocks != NULL);
+
+         if( !uplocks[v] )
          {
             /* the variables has no up lock and we can also remove the down lock;
              * => lst <= hmin and ect >= hmax
              * => remove job and reduce capacity by the demand of that job
+             *
+             * We mark the job to be deletable. The removement together with the capacity reducion is done later
              */
 
-            assert(ect >= consdata->hmax);
+            SCIPdebugMessage("  variables <%s>[%d,%d] (duration <%d>) is irrelevant due to no up lock\n",
+               SCIPvarGetName(var), ect - duration, lst, duration);
 
-            /* if the capacity is smaller than the demand we detected an infeasibility */
-            if( consdata->capacity < consdata->demands[v] )
-            {
-               (*cutoff) = TRUE;
-               break;
-            }
+            /* mark variable to be irrelevant */
+            irrelevants[v] = TRUE;
 
-            consdata->capacity -= consdata->demands[v];
-            assert(consdata->capacity >= 0);
-
-            (*nchgsides)++;
-
-            SCIPdebugMessage("  remove variables <%s>[%d,%d] (duration <%d>, demand <%d>) due to no uplocks, new capacity = %d\n",
-               SCIPvarGetName(cand), est, lst, duration, consdata->demands[v], consdata->capacity);
-
-            SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
-            (*nchgcoefs)++;
-
-            /* adjust nvars after deleting the variable */
-            nvars = consdata->nvars;
-            SCIPstatistic( consdata->nalwaysruns++ );
+            /* for the statistic we count the number of jobs which always run during the effective horizon */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nalwaysruns++ );
          }
-         else if( downlock )
+
+         if( downlocks[v] )
          {
             SCIPdebugMessage("  remove down lock of variable <%s>[%g,%g] with duration <%d>\n",
-               SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), consdata->durations[v]);
+               SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration);
 
-            SCIP_CALL( SCIPunlockVarCons(scip, cand, cons, TRUE, FALSE) );
-            consdata->downlocks[v] = FALSE;
+            SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
+            downlocks[v] = FALSE;
             (*nchgsides)++;
 
-            SCIPstatistic( consdata->nremovedlocks++ );
+            /* for the statistic we count the number of removed locks */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nremovedlocks++ );
          }
       }
-      else if ( est >= hmin )
-         break;
    }
 
    return SCIP_OKAY;
@@ -7348,88 +7446,65 @@ SCIP_RETCODE presolveConsEst(
  *  (2) if the latest start time (lst) of job j1 is greater than or equal to the latest completion time (lct) of job j2
  *      and fixing the start time variable of job j1 to the upper bound is a feasible dual reduction
  *      => j1 can be removed from the cumulative constraint and fixed to its latest start time
+ *
+ *  @note That method does not remove any variable form the arrays. It only mark the variables which are irrelevant for
+ *        the cumulative condition; The deletion has to be done later.
  */
 static
 SCIP_RETCODE presolveConsLct(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< cumulative constraint */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool*            downlocks,          /**< array to store if the variable has a down lock, or NULL */
+   SCIP_Bool*            uplocks,            /**< array to store if the variable has an up lock, or NULL */
+   SCIP_CONS*            cons,               /**< underlying constraint, or NULL */
+   SCIP_Bool*            irrelevants,        /**< array mark those variables which are irrelevant for the cumulative condition */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
-   int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
-   int*                  nchgsides,          /**< pointer to store the number of changed sides */
-   SCIP_Bool*            cutoff              /**< pointer to store if a cutoff was detected */
+   int*                  nchgsides           /**< pointer to store the number of changed sides */
    )
 {
-   SCIP_CONSDATA* consdata;
-   SCIP_VAR* cand;
-   SCIP_Bool downlock;
-   SCIP_Bool uplock;
-   int duration;
-   int nvars;
-   int hmin;
-   int hmax;
-   int est;
-   int lst;
-   int ect;
-   int lct;
    int v;
 
    assert(scip != NULL);
+   assert(nvars > 1);
    assert(cons != NULL);
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
+   SCIPdebugMessage("check for irrelevant variable for cumulative condition (hmax %d) w.r.t. latest completion time\n", hmax);
 
-   /* check if a cutoff was already detected */
-   if( *cutoff )
-      return SCIP_OKAY;
-
-   nvars = consdata->nvars;
-
-   if( nvars <= 1 )
-      return SCIP_OKAY;
-
-   hmin = consdata->hmin;
-   hmax = consdata->hmax;
-   assert(hmin < hmax);
-
-   SCIPdebugMessage("presolve constraint <%s>[%d,%d) <= %d w.r.t. latest completion time\n", SCIPconsGetName(cons), hmin, hmax, consdata->capacity);
-
-   /* make sure, the variables are sorted by non-increasing order of the latest completion time */
-   SCIP_CALL( sortVariablesLct(scip, cons) );
-
-   for( v = nvars-1; v >= 0 && nvars > 1; --v )
+   for( v = 0; v < nvars; ++v )
    {
-#ifndef NDEBUG
-      checkSortVariablesLct(scip, consdata, v);
-#endif
+      SCIP_VAR* var;
+      int duration;
+      int est;
+      int lst;
+      int ect;
 
-      cand = consdata->vars[v];
-      duration = consdata->durations[v];
-      downlock = consdata->downlocks[v];
-      uplock = consdata->uplocks[v];
+      var = vars[v];
+      assert(var != NULL);
+
+      duration = durations[v];
+      assert(duration > 0);
 
       /* collect latest completion time (lct) and earliest completion time (ect) from last job */
-      est = convertBoundToInt(scip, SCIPvarGetLbGlobal(cand));
+      est = convertBoundToInt(scip, SCIPvarGetLbGlobal(var));
       ect = est + duration;
-      lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(cand));
-      lct = lst + duration;
+      lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
 
       /* check if the job runs completely after the effective horizon; if so the job can be removed form the cumulative
        * condition
        */
       if( est >= hmax )
       {
-         SCIPdebugMessage("  remove variable <%s>[%g,%g] with duration <%d> is irrelevant\n",
-            SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), duration);
+         SCIPdebugMessage("  variable <%s>[%g,%g] with duration <%d> is irrelevant\n",
+            SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration);
 
-         /* delete variable at the given position */
-         SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
-         (*nchgcoefs)++;
+         /* mark variable to be irrelevant */
+         irrelevants[v] = TRUE;
 
-         /* adjust nvars after deleting the variable */
-         nvars = consdata->nvars;
-
-         SCIPstatistic( consdata->nirrelevantjobs++ );
+         /* for the statistic we count the number of jobs which are irrelevant */
+         SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nirrelevantjobs++ );
 
          continue;
       }
@@ -7443,21 +7518,25 @@ SCIP_RETCODE presolveConsLct(
          /* job can be removed from the constraint only if the integer start time variable can be fixed to its upper
           * bound
           */
-
-         /* fix integer start time variable if possible to its upper bound */
-         SCIP_CALL( fixIntegerVariableUb(scip, cand, uplock, nfixedvars) );
-
-         if( SCIPvarGetLbGlobal(cand) + 0.5 > SCIPvarGetUbGlobal(cand) )
+         if( uplocks != NULL && SCIPconsIsChecked(cons) )
          {
-            SCIPdebugMessage("  remove variable <%s>[%d,%d] with duration <%d> is irrelevant due to dual reductions wrt LCT\n",
-               SCIPvarGetName(cand), est, lst, duration);
+            /* fix integer start time variable if possible to its upper bound */
+            SCIP_CALL( fixIntegerVariableUb(scip, var, uplocks[v], nfixedvars) );
+         }
 
-            SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
-            (*nchgcoefs)++;
+         if( SCIPvarGetLbGlobal(var) + 0.5 > SCIPvarGetUbGlobal(var) )
+         {
+            SCIPdebugMessage("  variable <%s>[%d,%d] with duration <%d> is irrelevant due to dual fixing wrt LCT\n",
+               SCIPvarGetName(var), est, lst, duration);
 
-            /* adjust nvars after deleting the variable */
-            nvars = consdata->nvars;
-            SCIPstatistic( consdata->ndualfixs++ );
+            /* after fixing the start time variable to its upper bound, the (new) latest start time should be greather or equal ti hmax */
+            assert(convertBoundToInt(scip, SCIPvarGetUbGlobal(var)) >= hmax);
+
+            /* mark variable to be irrelevant */
+            irrelevants[v] = TRUE;
+
+            /* for the statistic we count the number of jobs which are dual fixed */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ndualfixs++ );
 
             continue;
          }
@@ -7466,55 +7545,121 @@ SCIP_RETCODE presolveConsLct(
       /* check if the jobs overlaps with the time point hmax if it overlaps at all with the effective horizon; if so the
        * up lock can be omitted
        */
-      if( ect >= hmax )
+      if( ect >= hmax && SCIPconsIsChecked(cons) )
       {
-         if( !downlock )
+         assert(downlocks != NULL);
+         assert(uplocks != NULL);
+
+         if( !downlocks[v] )
          {
             /* the variables has no down lock and we can also remove the up lock;
              * => lst <= hmin and ect >= hmax
              * => remove job and reduce capacity by the demand of that job
              */
+            SCIPdebugMessage("  variables <%s>[%d,%d] with duration <%d> is irrelevant due to no down lock\n",
+               SCIPvarGetName(var), est, lst, duration);
 
-            assert(lst <= consdata->hmin);
+            /* mark variable to be irrelevant */
+            irrelevants[v] = TRUE;
 
-            /* if the capacity is smaller than the demand we detected an infeasibility */
+            /* for the statistic we count the number of jobs which always run during the effective horizon */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nalwaysruns++ );
+         }
+
+         if( uplocks[v] )
+         {
+            SCIPdebugMessage("  remove up lock of variable <%s>[%g,%g] with duration <%d>\n",
+               SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration);
+
+            SCIP_CALL( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
+            uplocks[v] = FALSE;
+            (*nchgsides)++;
+
+            /* for the statistic we count the number of removed locks */
+            SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nremovedlocks++ );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** presolve cumulative constraint w.r.t. the boundary of the effective horizon */
+static
+SCIP_RETCODE presolveConsEffectiveHorizon(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< cumulative constraint */
+   int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
+   int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
+   int*                  nchgsides,          /**< pointer to store the number of changed sides */
+   SCIP_Bool*            cutoff              /**< pointer to store if a cutoff was detected */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool* irrelevants;
+   int nvars;
+   int v;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(!(*cutoff));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   nvars = consdata->nvars;
+
+   if( nvars <= 1 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &irrelevants, nvars) );
+   BMSclearMemoryArray(irrelevants, nvars);
+
+   /* presolve constraint form the earlier start time point of view */
+   SCIP_CALL( presolveConsEst(scip, nvars, consdata->vars, consdata->durations,
+         consdata->hmin, consdata->downlocks, consdata->uplocks, cons,
+         irrelevants, nfixedvars, nchgsides) );
+
+   /* presolve constraint form the latest completion time point of view */
+   SCIP_CALL( presolveConsLct(scip, nvars, consdata->vars, consdata->durations,
+         consdata->hmax, consdata->downlocks, consdata->uplocks, cons,
+         irrelevants, nfixedvars, nchgsides) );
+
+   /* remove variables from the cumulative constraint which are marked to be deleted; we need to that in the reverse
+    * order to ensure a correct behaviour
+    */
+   for( v = nvars-1; v >= 0; --v )
+   {
+      if( irrelevants[v] )
+      {
+         SCIP_VAR* var;
+         int ect;
+         int lst;
+
+         var = consdata->vars[v];
+         assert(var != NULL);
+
+         ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + consdata->durations[v];
+         lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
+
+         /* check if the jobs runs completely during the effective horizon */
+         if( lst <= consdata->hmin && ect >= consdata->hmax )
+         {
             if( consdata->capacity < consdata->demands[v] )
             {
-               (*cutoff) = TRUE;
+               *cutoff = TRUE;
                break;
             }
 
             consdata->capacity -= consdata->demands[v];
-            assert(consdata->capacity >= 0);
-
-            (*nchgsides)++;
-
-            SCIPdebugMessage("  remove variables <%s>[%d,%d] with duration <%d> due to no downlocks, new capacity = %d\n",
-               SCIPvarGetName(cand), est, lst, duration, consdata->capacity);
-
-            SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
-            (*nchgcoefs)++;
-
-            /* adjust nvars after deleting the variable */
-            nvars = consdata->nvars;
-
-            SCIPstatistic( consdata->nalwaysruns++ );
          }
-         else if( uplock )
-         {
-            SCIPdebugMessage("  remove up lock of variable <%s>[%g,%g] with duration <%d>\n",
-               SCIPvarGetName(cand), SCIPvarGetLbGlobal(cand), SCIPvarGetUbGlobal(cand), consdata->durations[v]);
 
-            SCIP_CALL( SCIPunlockVarCons(scip, cand, cons, FALSE, TRUE) );
-            consdata->uplocks[v] = FALSE;
-            (*nchgsides)++;
-
-            SCIPstatistic( consdata->nremovedlocks++ );
-         }
+         SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
+         (*nchgcoefs)++;
       }
-      else if( lct <= hmax )
-         break;
    }
+
+   SCIPfreeBufferArray(scip, &irrelevants);
 
    return SCIP_OKAY;
 }
@@ -7985,6 +8130,95 @@ SCIP_RETCODE reformulateCons(
 }
 #endif
 
+/** creare a disjunctive constraint which contains all jobs which cannot run in parallel */
+static
+SCIP_RETCODE createDisjuctiveCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< cumulative constraint */
+   int*                  naddconss           /**< pointer to store the number of added constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   int* durations;
+   int* demands;
+   int capacity;
+   int halfcapacity;
+   int mindemand;
+   int nvars;
+   int v;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   capacity = consdata->capacity;
+
+   if( capacity == 1 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &durations, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &demands, consdata->nvars) );
+
+   halfcapacity = capacity / 2;
+   mindemand = consdata->capacity;
+   nvars = 0;
+
+   /* collect all jobs with demand larger than half of the capacity */
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      if( consdata->demands[v] > halfcapacity )
+      {
+         vars[nvars] = consdata->vars[v];
+         demands[nvars] = 1;
+         durations[nvars] = consdata->durations[v];
+         nvars++;
+
+         mindemand = MIN(mindemand, consdata->demands[v]);
+      }
+   }
+
+   if( nvars > 0 )
+   {
+      SCIP_Bool added;
+
+      added = FALSE;
+
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         if( consdata->demands[v] > halfcapacity )
+            continue;
+
+         if( mindemand + consdata->demands[v] > capacity )
+         {
+            demands[nvars] = 1;
+            durations[nvars] = consdata->durations[v];
+            vars[nvars] = consdata->vars[v];
+
+            /* creates cumulative constraint and adds it to problem */
+            SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars+1, vars, durations, demands, 1, consdata->hmin, consdata->hmax,
+                  FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            (*naddconss)++;
+            added = TRUE;
+         }
+      }
+
+      if( !added && nvars > 1 )
+      {
+         /* creates cumulative constraint and adds it to problem */
+         SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars, vars, durations, demands, 1, consdata->hmin, consdata->hmax,
+               FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         (*naddconss)++;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &demands);
+   SCIPfreeBufferArray(scip, &durations);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /** presolve given constraint */
 static
 SCIP_RETCODE presolveCons(
@@ -8001,20 +8235,11 @@ SCIP_RETCODE presolveCons(
    SCIP_Bool*            unbounded           /**< pointer to store if the problem is unbounded */
    )
 {
-#ifdef SCIP_STATISTIC
-   SCIP_CONSDATA* consdata;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-#endif
-
    assert(!SCIPconsIsDeleted(cons));
 
    /* only perform dual reductions on model constraints */
-   if( conshdlrdata->dualpresolve && SCIPconsIsChecked(cons) )
+   if( conshdlrdata->dualpresolve )
    {
-      SCIPstatistic( conshdlrdata->ndecomps -= consdata->ndecomps );
-
       /* in case the cumulative constraint is independent of every else, solve the cumulative problem and apply the
        * fixings (dual reductions)
        */
@@ -8026,27 +8251,10 @@ SCIP_RETCODE presolveCons(
       /* computes the effective horizon and checks if the constraint can be decomposed */
       SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
 
-      SCIPstatistic( conshdlrdata->ndecomps += consdata->ndecomps );
-
       if( SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
 
-      SCIPstatistic( conshdlrdata->nirrelevantjobs -= consdata->nirrelevantjobs );
-      SCIPstatistic( conshdlrdata->nremovedlocks -= consdata->nremovedlocks );
-      SCIPstatistic( conshdlrdata->ndualfixs -= consdata->ndualfixs );
-      SCIPstatistic( conshdlrdata->nalwaysruns -= consdata->nalwaysruns );
-
-      /* presolve constraint form the earlier start time point of view */
-      SCIP_CALL( presolveConsEst(scip, cons, nfixedvars, nchgcoefs, nchgsides, cutoff) );
-
-      /* presolve constraint form the latest completion time point of view */
-      SCIP_CALL( presolveConsLct(scip, cons, nfixedvars, nchgcoefs, nchgsides, cutoff) );
-
-      SCIPstatistic( conshdlrdata->nirrelevantjobs += consdata->nirrelevantjobs );
-      SCIPstatistic( conshdlrdata->nremovedlocks += consdata->nremovedlocks );
-      SCIPstatistic( conshdlrdata->ndualfixs += consdata->ndualfixs );
-      SCIPstatistic( conshdlrdata->nalwaysruns += consdata->nalwaysruns );
-
+      SCIP_CALL( presolveConsEffectiveHorizon(scip, cons, nfixedvars, nchgcoefs, nchgsides, cutoff) );
 
       if( *cutoff || SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
@@ -8125,6 +8333,16 @@ SCIP_DECL_CONSFREE(consFreeCumulative)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+#ifdef SCIP_STATISTIC
+   /* statisitc output if SCIP_STATISTIC is defined */
+   SCIPstatisticPrintf("time-table: lb=%"SCIP_LONGINT_FORMAT", ub=%"SCIP_LONGINT_FORMAT", cutoff=%"SCIP_LONGINT_FORMAT"\n",
+      conshdlrdata->nlbtimetable, conshdlrdata->nubtimetable, conshdlrdata->ncutofftimetable);
+   SCIPstatisticPrintf("edge-finder: lb=%"SCIP_LONGINT_FORMAT", ub=%"SCIP_LONGINT_FORMAT", cutoff=%"SCIP_LONGINT_FORMAT"\n",
+      conshdlrdata->nlbedgefinder, conshdlrdata->nubedgefinder, conshdlrdata->ncutoffedgefinder);
+   SCIPstatisticPrintf("overload: time-table=%"SCIP_LONGINT_FORMAT" time-time edge-finding=%"SCIP_LONGINT_FORMAT"\n",
+      conshdlrdata->ncutoffoverload, conshdlrdata->ncutoffoverloadTTEF);
+#endif
+
    conshdlrdataFree(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
@@ -8167,7 +8385,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
       SCIP_CALL( evaluateCumulativeness(scip, conss[c]) );
 
 #if 0
-      SCIP_CALL( SCIPconsdataVisualize(scip, conss[c]) );
+      SCIP_CALL( SCIPvisualizeConsCumulative(scip, conss[c]) );
 #endif
    }
 
@@ -8675,7 +8893,7 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("presolve cumulative constraints\n");
+   SCIPdebugMessage("presolve %d cumulative constraints\n", nconss);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -8704,6 +8922,12 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
 
       if( SCIPconsIsDeleted(cons) )
          continue;
+
+      /* in the first round we create a disjunctive constraint containing those jobs which cannot run in parallel */
+      if( nrounds == 1 && SCIPgetNRuns(scip) == 1 && conshdlrdata->disjunctive )
+      {
+         SCIP_CALL( createDisjuctiveCons(scip, cons, naddconss) );
+      }
 
       /* propagate cumulative constraint */
       SCIP_CALL( propagateCons(scip, cons, conshdlrdata, nchgbds, ndelconss, &cutoff) );
@@ -9147,6 +9371,10 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/normalize", "should demands and capacity be normalized?",
          &conshdlrdata->normalize, FALSE, DEFAULT_NORMALIZE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/disjunctive", "extract disjunctive constraints?",
+         &conshdlrdata->disjunctive, FALSE, DEFAULT_DISJUNCTIVE, NULL, NULL) );
+
    SCIP_CALL( SCIPaddLongintParam(scip,
          "constraints/"CONSHDLR_NAME"/maxnodes",
          "number of branch-and-bound nodes to solve an independent cumulative constraint (-1: no limit)?",
@@ -9493,6 +9721,55 @@ SCIP_RETCODE SCIPnormalizeCumulativeCondition(
    return SCIP_OKAY;
 }
 
+/** searches for a time point within the cumulative condition were the cumulative condition can be split */
+SCIP_RETCODE SCIPsplitCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< available cumulative capacity */
+   int*                  hmin,               /**< pointer to store the left bound of the effective horizon */
+   int*                  hmax,               /**< pointer to store the right bound of the effective horizon */
+   int*                  split               /**< point were the cumulative condition can be split */
+   )
+{
+   SCIP_CALL( computeEffectiveHorizonCumulativeCondition(scip, nvars, vars, durations, demands, capacity,
+         hmin, hmax, split) );
+
+   return SCIP_OKAY;
+}
+
+/** presolve cumulative condition w.r.t. effective horizon by detecting irrelevant variables */
+SCIP_RETCODE SCIPpresolveCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int                   hmin,               /**< left bound of time axis to be considered */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool*            downlocks,          /**< array storing if the variable has a down lock, or NULL */
+   SCIP_Bool*            uplocks,            /**< array storing if the variable has an up lock, or NULL */
+   SCIP_CONS*            cons,               /**< constraint which gets propagated, or NULL */
+   SCIP_Bool*            irrelevants,        /**< array mark those variables which are irrelevant for the cumulative condition */
+   int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
+   int*                  nchgsides           /**< pointer to store the number of changed sides */
+   )
+{
+   if( nvars <= 1 )
+      return SCIP_OKAY;
+
+   /* presolve constraint form the earlier start time point of view */
+   SCIP_CALL( presolveConsEst(scip, nvars, vars, durations, hmin, downlocks, uplocks, cons,
+         irrelevants, nfixedvars, nchgsides) );
+
+   /* presolve constraint form the latest completion time point of view */
+   SCIP_CALL( presolveConsLct(scip, nvars, vars, durations, hmax, downlocks, uplocks, cons,
+         irrelevants, nfixedvars,  nchgsides) );
+
+   return SCIP_OKAY;
+}
+
 /** propagate the given cumulative condition */
 SCIP_RETCODE SCIPpropCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9566,7 +9843,7 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
 }
 
 /** this method visualizes the cumulative structure in GML format */
-SCIP_RETCODE SCIPconsdataVisualize(
+SCIP_RETCODE SCIPvisualizeConsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< cumulative constraint */
    )
@@ -9662,6 +9939,130 @@ SCIP_RETCODE SCIPconsdataVisualize(
    fclose(file);
 
    SCIPhashtableFree(&vars);
+
+   return SCIP_OKAY;
+}
+
+/** sets method to solve an individual cumulative condition */
+SCIP_RETCODE SCIPsetSolveCumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_SOLVECUMULATIVE((*solveCumulative)) /**< method to use an individual cumulative condition */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   /* find the cumulative constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage(""CONSHDLR_NAME" constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   conshdlrdata->solveCumulative = solveCumulative;
+
+   return SCIP_OKAY;
+}
+
+/** solves given cumulative condition as independent sub problem
+ *
+ *  @note The time and memory limit of the SCIP environment in transferred to sub solver
+ *
+ *  @note If the problem was solved to the earliest start times (ests) and latest start times (lsts) array contain the
+ *        solution values; If the problem was not solved these two arrays contain the global bounds at the time the sub
+ *        solver was interrupted.
+ */
+SCIP_RETCODE SCIPsolveCumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool             local,              /**< use local bounds, otherwise global */
+   SCIP_Real*            ests,               /**< array to store the earlier start time for each job */
+   SCIP_Real*            lsts,               /**< array to store the latest start time for each job */
+   SCIP_Longint          maxnodes,           /**< maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit) */
+   SCIP_Bool*            solved,             /**< pointer to store if the problem is solved (to optimality) */
+   SCIP_Bool*            infeasible,         /**< pointer to store if the problem is infeasible */
+   SCIP_Bool*            unbounded,          /**< pointer to store if the problem is unbounded */
+   SCIP_Bool*            error               /**< pointer to store if an error occurred */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Real* objvals;
+   SCIP_Real timelimit;
+   SCIP_Real memorylimit;
+   int v;
+
+   (*solved) = FALSE;
+   (*infeasible) = FALSE;
+   (*unbounded) = FALSE;
+   (*error) = FALSE;
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   /* find the cumulative constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage(""CONSHDLR_NAME" constraint handler not found\n");
+      (*error) = TRUE;
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nvars) );
+
+   for( v = 0; v < nvars; ++v )
+   {
+      assert(vars[v] != NULL);
+
+      if( local )
+      {
+         ests[v] = SCIPvarGetLbLocal(vars[v]);
+         lsts[v] = SCIPvarGetUbLocal(vars[v]);
+      }
+      else
+      {
+         ests[v] = SCIPvarGetLbGlobal(vars[v]);
+         lsts[v] = SCIPvarGetUbGlobal(vars[v]);
+      }
+
+      objvals[v] = SCIPvarGetObj(vars[v]);
+   }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+   if( !SCIPisInfinity(scip, memorylimit) )
+   {
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+   if( timelimit > 0.0 && memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+   {
+      SCIP_CALL( conshdlrdata->solveCumulative(nvars, ests, lsts, objvals, durations, demands, capacity,
+            hmin, hmax, timelimit, memorylimit, maxnodes, solved, infeasible, unbounded, error) );
+   }
+
+   SCIPfreeBufferArray(scip, &objvals);
 
    return SCIP_OKAY;
 }

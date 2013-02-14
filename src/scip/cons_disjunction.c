@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -45,6 +45,8 @@
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 
+#define DEFAULT_ALWAYSBRANCH       TRUE /**< alawys perform branching if one of the constraints is violated, otherwise only if all integers are fixed */
+
 /*
  * Data structures
  */
@@ -60,6 +62,11 @@ struct SCIP_ConsData
    int                   nconss;             /**< number of constraints in disjunction */
 };
 
+/** constraint handler data */
+struct SCIP_ConshdlrData
+{
+   SCIP_Bool             alwaysbranch;       /**< alawys perform branching if one of the constraints is violated, otherwise only if all integers are fixed */
+};
 
 /*
  * Local methods
@@ -384,6 +391,26 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyDisjunction)
    return SCIP_OKAY;
 }
 
+/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
+static
+SCIP_DECL_CONSFREE(consFreeDisjunction)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* free constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIPfreeMemory(scip, &conshdlrdata);
+
+   SCIPconshdlrSetData(conshdlr, NULL);
+
+   return SCIP_OKAY;
+}
 
 /** frees specific constraint data */
 static
@@ -445,16 +472,23 @@ SCIP_DECL_CONSINITLP(consInitlpDisjunction)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpDisjunction)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool branch;
    int c;
 
    *result = SCIP_FEASIBLE;
 
-   for( c = 0; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   branch = SCIPgetNPseudoBranchCands(scip) == 0 || conshdlrdata->alwaysbranch;
+
+   for( c = 0; c < nconss && *result != SCIP_BRANCHED; ++c )
    {
       /* check the disjunction */
       SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, FALSE, FALSE, result) );
 
-      if( *result == SCIP_INFEASIBLE )
+      if( *result == SCIP_INFEASIBLE && branch )
       {
          SCIP_CALL( branchCons(scip, conss[c], result) );
       }
@@ -468,16 +502,23 @@ SCIP_DECL_CONSENFOLP(consEnfolpDisjunction)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsDisjunction)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool branch;
    int c;
 
    *result = SCIP_FEASIBLE;
 
-   for( c = 0; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   branch = SCIPgetNPseudoBranchCands(scip) == 0 || conshdlrdata->alwaysbranch;
+
+   for( c = 0; c < nconss && *result != SCIP_BRANCHED; ++c )
    {
       /* check the disjunction */
       SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, FALSE, FALSE, result) );
 
-      if( *result == SCIP_INFEASIBLE )
+      if( *result == SCIP_INFEASIBLE && branch )
       {
          SCIP_CALL( branchCons(scip, conss[c], result) );
       }
@@ -926,7 +967,7 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    SCIP_CONSHDLR* conshdlr;
 
    /* create disjunction constraint handler data */
-   conshdlrdata = NULL;
+   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -938,6 +979,7 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyDisjunction, consCopyDisjunction) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeDisjunction) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteDisjunction) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpDisjunction) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseDisjunction) );
@@ -948,6 +990,11 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
          CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransDisjunction) );
 
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/alwaysbranch",
+         "alawys perform branching if one of the constraints is violated, otherwise only if all integers are fixed",
+         &conshdlrdata->alwaysbranch, FALSE, DEFAULT_ALWAYSBRANCH, NULL, NULL) );
 
    return SCIP_OKAY;
 }

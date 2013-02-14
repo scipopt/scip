@@ -44,3 +44,4 @@ instances/SOS/pcu_0.1.lp
 instances/SOS/sparse2.lp
 instances/Orbitope/packorb_1-FullIns_3.cip
 instances/Orbitope/partorb_1-FullIns_3.cip
+instances/CP/disj_conj_rail.cip

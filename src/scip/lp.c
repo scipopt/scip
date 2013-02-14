@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -22,7 +22,7 @@
  * @author Gerald Gamrath
  *
  *  In LP management, we have to differ between the current LP and the SCIP_LP
- *  stored in the LP solver. All LP methods affect the current LP only. 
+ *  stored in the LP solver. All LP methods affect the current LP only.
  *  Before solving the current LP with the LP solver or setting an LP state,
  *  the LP solvers data has to be updated to the current LP with a call to
  *  lpFlush().
@@ -2476,8 +2476,10 @@ SCIP_RETCODE lpSetUobjlim(
    assert(lp != NULL);
    assert(set != NULL);
 
-   /* if we want so solve exactly, we cannot rely on the LP solver's objective limit handling */
-   if( set->misc_exactsolve )
+   /* we disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
+    * solver's objective limit handling, so we return here and do not apply the objective limit
+    */
+   if( set->lp_disablecutoff || set->misc_exactsolve )
       return SCIP_OKAY;
 
    /* convert SCIP infinity value to lp-solver infinity value if necessary */
@@ -3233,47 +3235,6 @@ SCIP_RETCODE SCIPcolIncCoef(
    return SCIP_OKAY;
 }
 
-/** changes objective value of column */
-SCIP_RETCODE SCIPcolChgObj(
-   SCIP_COL*             col,                /**< LP column to change */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_Real             newobj              /**< new objective value */
-   )
-{
-   assert(col != NULL);
-   assert(col->var != NULL);
-   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetCol(col->var) == col);
-   assert(lp != NULL);
-   
-   SCIPdebugMessage("changing objective value of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->obj, newobj);
-
-   if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->obj, newobj) )
-   {
-      /* insert column in the chgcols list (if not already there) */
-      if( !col->objchanged && !col->lbchanged && !col->ubchanged )
-      {
-         SCIP_CALL( ensureChgcolsSize(lp, set, lp->nchgcols+1) );
-         lp->chgcols[lp->nchgcols] = col;
-         lp->nchgcols++;
-      }
-      
-      /* mark objective value change in the column */
-      col->objchanged = TRUE;
-      
-      /* mark the current LP unflushed */
-      lp->flushed = FALSE;
-
-      assert(lp->nchgcols > 0);
-   }  
-
-   /* store new objective function value */
-   col->obj = newobj;
-
-   return SCIP_OKAY;
-}
-
 /** insert column in the chgcols list (if not already there) */
 static
 SCIP_RETCODE insertColChgcols(
@@ -3295,6 +3256,53 @@ SCIP_RETCODE insertColChgcols(
    return SCIP_OKAY;
 }
 
+/** changes objective value of column */
+SCIP_RETCODE SCIPcolChgObj(
+   SCIP_COL*             col,                /**< LP column to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             newobj              /**< new objective value */
+   )
+{
+   assert(col != NULL);
+   assert(col->var != NULL);
+   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetCol(col->var) == col);
+   assert(lp != NULL);
+
+   SCIPdebugMessage("changing objective value of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->obj, newobj);
+
+   /* only add actual changes */
+   if( !SCIPsetIsEQ(set, col->obj, newobj) )
+   {
+      /* only variables with a real position in the LPI can be inserted */
+      if( col->lpipos >= 0 )
+      {
+         /* insert column in the chgcols list (if not already there) */
+         SCIP_CALL( insertColChgcols(col, set, lp) );
+
+         /* mark objective value change in the column */
+         col->objchanged = TRUE;
+
+         assert(lp->nchgcols > 0);
+      }
+      /* in any case, when the sign of the objective (and thereby the best bound) changes, the variable has to enter the
+       * LP and the LP has to be flushed
+       */
+      else if( (col->obj < 0.0 && newobj >= 0.0 && SCIPsetIsZero(set, col->ub))
+         || (col->obj >= 0.0 && newobj < 0.0 && SCIPsetIsZero(set, col->lb)) )
+      {
+         /* mark the LP unflushed */
+         lp->flushed = FALSE;
+      }
+   }
+
+   /* store new objective function value */
+   col->obj = newobj;
+
+   return SCIP_OKAY;
+}
+
 /** changes lower bound of column */
 SCIP_RETCODE SCIPcolChgLb(
    SCIP_COL*             col,                /**< LP column to change */
@@ -3308,19 +3316,32 @@ SCIP_RETCODE SCIPcolChgLb(
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
    assert(lp != NULL);
-   
+
    SCIPdebugMessage("changing lower bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->lb, newlb);
 
-   if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->lb, newlb) )
+   /* only add actual changes */
+   if( !SCIPsetIsEQ(set, col->lb, newlb) )
    {
-      /* insert column in the chgcols list (if not already there) */
-      SCIP_CALL( insertColChgcols(col, set, lp) );
-      
-      /* mark bound change in the column */
-      col->lbchanged = TRUE;
-      
-      assert(lp->nchgcols > 0);
-   }  
+      /* only variables with a real position in the LPI can be inserted */
+      if( col->lpipos >= 0 )
+      {
+         /* insert column in the chgcols list (if not already there) */
+         SCIP_CALL( insertColChgcols(col, set, lp) );
+
+         /* mark bound change in the column */
+         col->lbchanged = TRUE;
+
+         assert(lp->nchgcols > 0);
+      }
+      /* in any case, when the best bound is zero and gets changed, the variable has to enter the LP and the LP has to be
+       * flushed
+       */
+      else if( col->obj >= 0.0 && SCIPsetIsZero(set, col->lb) )
+      {
+         /* mark the LP unflushed */
+         lp->flushed = FALSE;
+      }
+   }
 
    col->lb = newlb;
 
@@ -3340,19 +3361,32 @@ SCIP_RETCODE SCIPcolChgUb(
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
    assert(lp != NULL);
-   
+
    SCIPdebugMessage("changing upper bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->ub, newub);
 
-   if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->ub, newub) )
+   /* only add actual changes */
+   if( !SCIPsetIsEQ(set, col->ub, newub) )
    {
-      /* insert column in the chgcols list (if not already there) */
-      SCIP_CALL( insertColChgcols(col, set, lp) );
+      /* only variables with a real position in the LPI can be inserted */
+      if( col->lpipos >= 0 )
+      {
+         /* insert column in the chgcols list (if not already there) */
+         SCIP_CALL( insertColChgcols(col, set, lp) );
 
-      /* mark bound change in the column */
-      col->ubchanged = TRUE;
+         /* mark bound change in the column */
+         col->ubchanged = TRUE;
 
-      assert(lp->nchgcols > 0);
-   }  
+         assert(lp->nchgcols > 0);
+      }
+      /* in any case, when the best bound is zero and gets changed, the variable has to enter the LP and the LP has to be
+       * flushed
+       */
+      else if( col->obj < 0.0 && SCIPsetIsZero(set, col->ub) )
+      {
+         /* mark the LP unflushed */
+         lp->flushed = FALSE;
+      }
+   }
 
    col->ub = newub;
 
@@ -4535,6 +4569,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->validpsactivitydomchg = -1;
    (*row)->validactivitybdsdomchg = -1;
    (*row)->age = 0;
+   (*row)->rank = 0;
    (*row)->obsoletenode = -1;
    (*row)->basisstatus = SCIP_BASESTAT_BASIC; /*lint !e641*/
    (*row)->lpcolssorted = TRUE;
@@ -7187,6 +7222,9 @@ SCIP_RETCODE lpFlushChgCols(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+#ifndef NDEBUG
+   SCIP_Bool lpinone = (strcmp( SCIPlpiGetSolverName(), "NONE") == 0);
+#endif
    SCIP_COL* col;
    int* objind;
    int* bdind;
@@ -7228,7 +7266,7 @@ SCIP_RETCODE lpFlushChgCols(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         if( !lpinone )
          {
             SCIP_Real lpiobj;
             SCIP_Real lpilb;
@@ -7257,6 +7295,7 @@ SCIP_RETCODE lpFlushChgCols(
             }
             col->objchanged = FALSE;
          }
+
          if( col->lbchanged || col->ubchanged )
          {
             SCIP_Real newlb;
@@ -7279,6 +7318,7 @@ SCIP_RETCODE lpFlushChgCols(
             col->ubchanged = FALSE;
          }
       }
+      /* maybe lb/ub/objchanged should all be set to false when lpipos is -1 */
    }
 
    /* change objective values in LP */
@@ -7326,6 +7366,9 @@ SCIP_RETCODE lpFlushChgRows(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+#ifndef NDEBUG
+   SCIP_Bool lpinone = (strcmp( SCIPlpiGetSolverName(), "NONE") == 0);
+#endif
    SCIP_ROW* row;
    int* ind;
    SCIP_Real* lhs;
@@ -7360,7 +7403,7 @@ SCIP_RETCODE lpFlushChgRows(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         if( !lpinone )
          {
             SCIP_Real lpilhs;
             SCIP_Real lpirhs;
@@ -7477,6 +7520,9 @@ SCIP_RETCODE SCIPlpMarkFlushed(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+#ifndef NDEBUG
+   SCIP_Bool lpinone = (strcmp( SCIPlpiGetSolverName(), "NONE") == 0);
+#endif
    int i;
 
    assert(lp != NULL);
@@ -7526,7 +7572,7 @@ SCIP_RETCODE SCIPlpMarkFlushed(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         if( !lpinone )
          {
             SCIP_Real lpiobj;
             SCIP_Real lpilb;
@@ -7546,6 +7592,7 @@ SCIP_RETCODE SCIPlpMarkFlushed(
          col->lbchanged = FALSE;
          col->ubchanged = FALSE;
       }
+      /* maybe lb/ub/objchanged should  be set to false also when lpipos is -1 */
    }
    lp->nchgcols = 0;
 
@@ -7561,7 +7608,7 @@ SCIP_RETCODE SCIPlpMarkFlushed(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         if( !lpinone )
          {
             SCIP_Real lpilhs;
             SCIP_Real lpirhs;
@@ -8369,7 +8416,7 @@ void SCIPlpSetSizeMark(
 /** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
 SCIP_RETCODE SCIPlpGetBasisInd(
    SCIP_LP*              lp,                 /**< LP data */
-   int*                  basisind            /**< pointer to store the basis indices */
+   int*                  basisind            /**< pointer to store basis indices ready to keep number of rows entries */
    )
 {
    assert(lp != NULL);
@@ -8692,6 +8739,7 @@ void sumMIRRow(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
    int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
@@ -8706,10 +8754,12 @@ void sumMIRRow(
    int*                  nrowinds,           /**< pointer to store number of used rows */
    SCIP_Bool*            emptyrow,           /**< pointer to store whether the returned row is empty */
    SCIP_Bool*            localrowsused,      /**< pointer to store whether local rows were used in summation */
-   SCIP_Bool*            rowtoolong          /**< pointer to store whether the aggregated row is too long and thus invalid */
+   SCIP_Bool*            rowtoolong,         /**< pointer to store whether the aggregated row is too long and thus invalid */
+   int*                  cutrank             /**< pointer to store the rank of the returned aggregation; or NULL */
    )
 {
    SCIP_Real maxweight;
+   int maxrank = 0;
    int rowlensum;
    int i;
 
@@ -8762,7 +8812,7 @@ void sumMIRRow(
       int r;
 
       r = rowinds[i];
-      assert(0 <= i && i < lp->nrows);
+      assert(0 <= r && r < lp->nrows);
       assert(weights[r] != 0.0);
 
       row = lp->rows[r];
@@ -8782,13 +8832,41 @@ void sumMIRRow(
       {
          SCIP_Bool uselhs;
 
-         /* Decide, if we want to use the left or the right hand side of the row in the summation.
-          * If possible, use the side that leads to a positive slack value in the summation.
-          */
-         if( SCIPsetIsInfinity(set, row->rhs) || (!SCIPsetIsInfinity(set, -row->lhs) && weight < 0.0) )
-            uselhs = TRUE;
+         /* choose sides for lhs/rhs of row */
+         if ( sidetypes != NULL )
+         {
+            assert( sidetypes[r] == -1 || sidetypes[r] == 0 || sidetypes[r] == 1 );
+            if ( sidetypes[r] == -1 )
+            {
+               assert( ! SCIPsetIsInfinity(set, -row->lhs) );
+               uselhs = TRUE;
+            }
+            else if ( sidetypes[r] == 1 )
+            {
+               assert( ! SCIPsetIsInfinity(set, row->rhs) );
+               uselhs = FALSE;
+            }
+            else
+            {
+               /* Automatically decide, whether we want to use the left or the right hand side of the row in the summation.
+                * If possible, use the side that leads to a positive slack value in the summation.
+                */
+               if( SCIPsetIsInfinity(set, row->rhs) || (!SCIPsetIsInfinity(set, -row->lhs) && weight < 0.0) )
+                  uselhs = TRUE;
+               else
+                  uselhs = FALSE;
+            }
+         }
          else
-            uselhs = FALSE;
+         {
+            /* Automatically decide, whether we want to use the left or the right hand side of the row in the summation.
+             * If possible, use the side that leads to a positive slack value in the summation.
+             */
+            if( SCIPsetIsInfinity(set, row->rhs) || (!SCIPsetIsInfinity(set, -row->lhs) && weight < 0.0) )
+               uselhs = TRUE;
+            else
+               uselhs = FALSE;
+         }
 
          /* add the row to the aggregation */
          addRowToAggregation(set, mircoef, mirrhs, slacksign, varused, varinds, nvarinds, row, weight, uselhs);
@@ -8799,6 +8877,9 @@ void sumMIRRow(
             r, SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, 
             scale, weights[r], slacksign[r], *mirrhs);
          debugRowPrint(row);
+
+         /* update the rank of the aggregation */
+         maxrank = MAX(maxrank, row->rank);
 
          ++i; /* handle next row */
       }
@@ -8816,6 +8897,10 @@ void sumMIRRow(
    /* check if the total number of non-zeros is too large */
    if( *nvarinds > maxmksetcoefs )
       *rowtoolong = TRUE;
+
+   /* set rank of the aggregated cut */
+   if( cutrank != NULL )
+      *cutrank = maxrank + 1;
 }
 
 /** removes all nearly-zero coefficients from MIR row and relaxes the right hand side correspondingly in order to
@@ -9985,6 +10070,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
    SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
@@ -9992,7 +10078,8 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
    SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
-   SCIP_Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the returned cut is only valid locally */
+   int*                  cutrank             /**< pointer to store the rank of the returned cut; or NULL */
    )
 {
    int* slacksign;
@@ -10040,9 +10127,9 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, lp->nrows) );
 
    /* calculate the row summation */
-   sumMIRRow(set, prob, lp, weights, scale, allowlocal, 
+   sumMIRRow(set, prob, lp, weights, sidetypes, scale, allowlocal,
       maxmksetcoefs, maxweightrange, mircoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
-      &emptyrow, &localrowsused, &rowtoolong);
+      &emptyrow, &localrowsused, &rowtoolong, cutrank);
    assert(allowlocal || !localrowsused);
    *cutislocal = localrowsused;
    if( emptyrow || rowtoolong )
@@ -10191,11 +10278,13 @@ void sumStrongCGRow(
    int*                  nrowinds,           /**< pointer to store number of used rows */
    SCIP_Bool*            emptyrow,           /**< pointer to store whether the returned row is empty */
    SCIP_Bool*            localrowsused,      /**< pointer to store whether local rows were used in summation */
-   SCIP_Bool*            rowtoolong          /**< pointer to store whether the aggregated row is too long and thus invalid */
+   SCIP_Bool*            rowtoolong,         /**< pointer to store whether the aggregated row is too long and thus invalid */
+   int*                  cutrank             /**< pointer to store the rank of the returned aggregation; or NULL */
    )
 {
    SCIP_Real maxweight;
    int rowlensum;
+   int maxrank = 0;
    int i;
 
    assert(prob != NULL);
@@ -10302,6 +10391,8 @@ void sumStrongCGRow(
             *emptyrow = FALSE;
             *localrowsused = *localrowsused || row->local;
 
+            maxrank = MAX(maxrank, row->rank);
+
             SCIPdebugMessage("strong CG: %d: row <%s>, lhs = %g, rhs = %g, scale = %g, weight = %g, slacksign = %d -> rhs = %g\n",
                r, SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, 
                scale, weights[r], slacksign[r], *strongcgrhs);
@@ -10327,6 +10418,10 @@ void sumStrongCGRow(
    /* check if the total number of non-zeros is too large */
    if( *nrowinds > maxmksetcoefs )
       *rowtoolong = TRUE;
+
+   /* set rank of the cut */
+   if( cutrank != NULL )
+      *cutrank = maxrank + 1;
 }
 
 /** Transform equation  \f$ a*x == b \f$, \f$ lb <= x <= ub \f$ into standard form \f$ a^\prime*x^\prime == b\f$, \f$ 0 <= x^\prime <= ub^\prime \f$.
@@ -11034,7 +11129,8 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_Real*            strongcgrhs,        /**< pointer to store the right hand side of the strong CG row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
    SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid strong CG cut */
-   SCIP_Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the returned cut is only valid locally */
+   int*                  cutrank             /**< pointer to store the rank of the returned cut; or NULL */
    )
 {
    int* slacksign;
@@ -11084,7 +11180,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    /* calculate the row summation */
    sumStrongCGRow(set, prob, lp, weights, scale, allowlocal, 
       maxmksetcoefs, maxweightrange, strongcgcoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
-      &emptyrow, &localrowsused, &rowtoolong);
+      &emptyrow, &localrowsused, &rowtoolong, cutrank);
    assert(allowlocal || !localrowsused);
    *cutislocal = *cutislocal || localrowsused;
    if( emptyrow || rowtoolong )
@@ -11294,9 +11390,7 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
       return SCIP_OKAY;
    }
 
-   /* if the cutoff bound is increased, and the LP was proved to exceed the old cutoff, it is no longer solved;
-    * if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit
-    */
+   /* if the cutoff bound is increased, and the LP was proved to exceed the old cutoff, it is no longer solved */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && cutoffbound > lp->cutoffbound )
    {
       /* mark the current solution invalid */
@@ -11304,7 +11398,11 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
-   else if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetObjval(lp, set, prob) >= cutoffbound )
+   /* if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit;
+    * if the objective limit in the LP solver was disabled, the solution status of the LP is not changed
+    */
+   else if( !set->lp_disablecutoff && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+      && SCIPlpGetObjval(lp, set, prob) >= cutoffbound )
    {
       assert(lp->flushed);
       assert(lp->solved);
@@ -12887,9 +12985,15 @@ SCIP_RETCODE lpSolve(
          lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
          lp->lpobjval = SCIPsetInfinity(set);
       }
+      /* if we did not disable the cutoff bound in the LP solver, the LP solution status should be objective limit
+       * reached if the LP objective value is greater than the cutoff bound
+       */
+      assert(set->lp_disablecutoff || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsInfinity(set, lp->cutoffbound)
+         || SCIPsetIsLE(set, lp->lpobjval + getFiniteLooseObjval(lp, set, prob), lp->cutoffbound));
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
+      assert(!set->lp_disablecutoff);
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
       lp->lpobjval = SCIPsetInfinity(set);
    }
@@ -13383,7 +13487,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
 
-         SCIPdebugMessage(" -> LP has unbounded primal ray\n");
+         SCIPdebugMessage(" -> LP has unbounded primal ray (primalfeas=%u, rayfeas=%u)\n",
+            primalfeasible, rayfeasible);
 
          if( !primalfeasible || !rayfeasible )
          {
@@ -13434,6 +13539,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
+         assert(!set->lp_disablecutoff);
          /* if we do branch-and-price, make sure that a dual feasible solution exists, that exceeds the objective limit;
           * With FASTMIP setting, CPLEX does not apply the final pivot to reach the dual solution exceeding the objective
           * limit. Therefore, we have to either turn off FASTMIP and resolve the problem or continue solving it without
@@ -13475,7 +13581,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_CALL( SCIPsetSetCharParam(set, messagehdlr, "lp/pricing", 's') );
 
                /* resolve LP with an iteration limit of 1 */
-               SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, 1, -1,
+               SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, 1, 1,
                      FALSE, FALSE, TRUE, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
 
                /* reinstall old cutoff bound and lp pricing strategy */
@@ -13549,8 +13655,11 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      dualfeasible = TRUE;
                   }
 
-                  /* in debug mode, check that lazy bounds (if present) are not violated */
-                  checkLazyBounds(lp, set);
+                  /* in debug mode, check that lazy bounds (if present) are not violated by an optimal LP solution */
+                  if( solstat == SCIP_LPSOLSTAT_OPTIMAL )
+                  {
+                     checkLazyBounds(lp, set);
+                  }
 
                   /* if objective value is larger than the cutoff bound, set solution status to objective
                    * limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
@@ -16755,6 +16864,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIProwGetName
 #undef SCIProwGetIndex
 #undef SCIProwGetAge
+#undef SCIProwGetRank
 #undef SCIProwIsIntegral
 #undef SCIProwIsLocal
 #undef SCIProwIsModifiable
@@ -16766,6 +16876,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIProwGetLPPos
 #undef SCIProwGetLPDepth
 #undef SCIProwIsInLP
+#undef SCIProwChgRank
 #undef SCIPlpGetCols
 #undef SCIPlpGetNCols
 #undef SCIPlpGetRows
@@ -17189,6 +17300,16 @@ int SCIProwGetAge(
    return row->age;
 }
 
+/** gets rank of row */
+int SCIProwGetRank(
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->rank;
+}
+
 /** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
 SCIP_Bool SCIProwIsIntegral(
    SCIP_ROW*             row                 /**< LP row */
@@ -17310,6 +17431,17 @@ SCIP_Bool SCIProwIsInLP(
    assert((row->lppos == -1) == (row->lpdepth == -1));
 
    return (row->lppos >= 0);
+}
+
+/** changes the rank of LP row */
+void SCIProwChgRank(
+   SCIP_ROW*             row,                /**< LP row */
+   int                   rank                /**< new value for rank */
+   )
+{
+   assert(row != NULL);
+
+   row->rank = rank;
 }
 
 /** gets array with columns of the LP */

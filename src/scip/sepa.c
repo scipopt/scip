@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -792,6 +792,26 @@ void SCIPsepaIncNAppliedCuts(
    assert( sepa != NULL );
 
    ++sepa->ncutsapplied;
+}
+
+/** increase count of found cuts */
+void SCIPsepaIncNCutsFound(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert( sepa != NULL );
+
+   ++sepa->ncutsfound;
+}
+
+/** increase count of found cuts at current node */
+void SCIPsepaIncNCutsFoundAtNode(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert( sepa != NULL );
+
+   ++sepa->ncutsfoundatnode;
 }
 
 /** gets the number of cutting planes found by this separator at the current node */

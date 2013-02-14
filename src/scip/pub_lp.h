@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -57,12 +57,6 @@ EXTERN
 void SCIPcolSort(
    SCIP_COL*             col                 /**< column to be sorted */
    );
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
 
 /** gets objective value of column */
 EXTERN
@@ -203,9 +197,9 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
    SCIP_BOUNDTYPE        boundtype           /**< type of bound (lower or upper) */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
@@ -296,12 +290,6 @@ EXTERN
 void SCIProwSort(
    SCIP_ROW*             row                 /**< row to be sorted */
    );
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
 
 /** get number of nonzero entries in row vector */
 EXTERN
@@ -398,6 +386,12 @@ int SCIProwGetAge(
    SCIP_ROW*             row                 /**< LP row */
    );
 
+/** gets rank of row */
+EXTERN
+int SCIProwGetRank(
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
 /** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
 EXTERN
 SCIP_Bool SCIProwIsIntegral(
@@ -464,9 +458,16 @@ SCIP_Bool SCIProwIsInLP(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-#else
+/** changes the rank of LP row */
+EXTERN
+void SCIProwChgRank(
+   SCIP_ROW*             row,                /**< LP row */
+   int                   rank                /**< new value for rank */
+   );
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
@@ -485,6 +486,7 @@ SCIP_Bool SCIProwIsInLP(
 #define SCIProwGetName(row)             (row)->name
 #define SCIProwGetIndex(row)            (row)->index
 #define SCIProwGetAge(row)              (row)->age
+#define SCIProwGetRank(row)             (row)->rank
 #define SCIProwIsIntegral(row)          (row)->integral
 #define SCIProwIsLocal(row)             (row)->local
 #define SCIProwIsModifiable(row)        (row)->modifiable
@@ -496,8 +498,16 @@ SCIP_Bool SCIProwIsInLP(
 #define SCIProwGetLPPos(row)            (row)->lppos
 #define SCIProwGetLPDepth(row)          (row)->lpdepth
 #define SCIProwIsInLP(row)              ((row)->lppos >= 0)
+#define SCIProwChgRank(row, cutrank)    ((row)->rank = (cutrank))
 
 #endif
+
+/**@} */
+
+/**@defgroup LPMethods LP methods
+ *
+ * @{
+ */
 
 /**@} */
 

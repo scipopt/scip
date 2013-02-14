@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,6 +39,16 @@ struct SCIP_SparseSol
    SCIP_Longint*         lbvalues;           /**< array of lower bounds */
    SCIP_Longint*         ubvalues;           /**< array of upper bounds */
    int                   nvars;              /**< number of variables */
+};
+
+/** (circular) Queue data structure */
+struct SCIP_Queue
+{
+   SCIP_Real             sizefac;            /**< memory growing factor */
+   void**                slots;              /**< array of element slots */
+   int                   firstfree;          /**< first free slot */
+   int                   firstused;          /**< first used slot */
+   int                   size;               /**< total number of available element slots */
 };
 
 /** priority queue data structure
@@ -138,6 +148,14 @@ struct SCIP_PtrArray
    int                   maxusedidx;         /**< index of last non zero element in vals array */
 };
 
+/** resource activity */
+struct SCIP_ResourceActivity
+{
+   SCIP_VAR*             var;                /**< start time variable of the activity */
+   int                   duration;           /**< duration of the activity */
+   int                   demand;             /**< demand of the activity */
+};
+
 /** resource profile */
 struct SCIP_Profile
 {
@@ -153,6 +171,7 @@ struct SCIP_Digraph
 {
    int**                 successors;         /**< adjacency list: for each node (first dimension) list of all successors */
    void***               arcdatas;           /**< arc datas corresponding to the arcs to successors given by the successors array  */
+   void**                nodedatas;          /**< arc datas corresponding to the arcs to successors given by the successors array  */
    int*                  successorssize;     /**< sizes of the successor lists for the nodes */
    int*                  nsuccessors;        /**< number of successors stored in the adjacency lists of the nodes */
    int*                  components;         /**< array to store the node indices of the components, one component after the other */
