@@ -779,6 +779,17 @@ SCIP_RETCODE applyFixings(
          /* get binary representative of variable */
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
 
+         /* remove all negations by replacing them with the active variable
+          * it holds that xor(x1, ~x2) = 0 <=> xor(x1, x2) = 1
+          */
+         if( negated )
+         {
+            assert(SCIPvarIsNegated(repvar));
+
+            repvar = SCIPvarGetNegationVar(repvar);
+            consdata->rhs = !consdata->rhs;
+         }
+
          /* check, if the variable should be replaced with the representative */
          if( repvar != var )
          {
