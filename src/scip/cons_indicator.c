@@ -4754,8 +4754,11 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
          /* add implications if not yet done */
          if ( ! consdata->implicationadded )
          {
+            int nbnds = 0;
             SCIP_CALL( SCIPaddVarImplication(scip, consdata->binvar, TRUE, consdata->slackvar, SCIP_BOUNDTYPE_UPPER, 0.0,
-                  &cutoff, nchgbds) );
+                  &cutoff, &nbnds) );
+            *nchgbds += nbnds;
+
             /* cutoff/infeasible might be true if preprocessing was truncated */
             /* note: nbdchgs == 0 is not necessarily true, because preprocessing might be truncated. */
             consdata->implicationadded = TRUE;

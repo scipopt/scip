@@ -15065,7 +15065,7 @@ SCIP_RETCODE analyzeStrongbranch(
       }
    }
 
-   /* the strong branching results can be used to strength the root reduced cost information which is used for example
+   /* the strong branching results can be used to strengthen the root reduced cost information which is used for example
     * to propagate against the cutoff bound
     *
     * @note Ignore the results if the LP solution of the down (up) branch LP is smaller which should not happened by
@@ -21925,6 +21925,10 @@ SCIP_Bool SCIPisLPConstructed(
 }
 
 /** makes sure that the LP of the current node is loaded and may be accessed through the LP information methods
+ *
+ *  @warning Contructing the LP might change the amount of variables known in the transformed problem and therefore also
+ *           the variables array of SCIP (returned by SCIPgetVars() and SCIPgetVarsData()), so it might be necessary to
+ *           call one of the later method after this one
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

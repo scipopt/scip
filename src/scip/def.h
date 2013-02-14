@@ -51,10 +51,14 @@
 #define strncasecmp _strnicmp
 #define getcwd _getcwd
 
+#ifndef EXTERN
 #define EXTERN __declspec(dllexport)
+#endif
 
 #else
+#ifndef EXTERN
 #define EXTERN extern
+#endif
 #endif
 
 

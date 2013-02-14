@@ -95,6 +95,22 @@ core:
   function pointer to the output function and uses it to directly output the (buffered) messages
 
 
+SCIP version 3.0.2
+==================
+
+fixed bugs:
+- fixed assert in solve.c with branched status and LP reached the objective limit
+- fixed bug in cons_bounddisjunction with satisfied literal of multi-aggregated variable
+- fixed bug in upgrade method of cons_soc
+- fixed bug in heur_oneopt.c and heur_clique.c which was caused by side-effects when calling SCIPconstructLP(); when
+  adding new variables in this method (e.g. adding new variables needed for a relaxation), this changes the variables
+  array of SCIP
+
+features:
+- can now output the solutions in the solution pool in the interactive shell
+- updated Mosek interface to compile with Mosek 7, too
+
+
 SCIP version 3.0.1
 ==================
 
@@ -150,6 +166,8 @@ fixed bugs:
   which may happen when stopping due to iteration or time limit
 - fixed inconsistencies between methods SCIPlpiIs{PrimalFeasible,DualFeasible,Optimal,...} in SoPlex LPi
 - fixed bug adding binary implications on binary variables with type != SCIP_VARTYPE_BINARY
+- fixed bug concerning different tolerances for reached objective limit in case of pricing with fastmip
+- fixed bug with unflushed LP arising from global bound changes in strong branching
 
 performance improvements:
 - also copying active tight cuts from the delayed cut pool when calling SCIPcopyCuts()

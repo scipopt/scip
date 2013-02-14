@@ -28,6 +28,7 @@
 #include "scip/def.h"
 #include "scip/intervalarith.h"
 #include "scip/pub_message.h"
+#include "scip/misc.h"
 
 #ifdef ROUNDING_FE
 #define ROUNDING
@@ -248,18 +249,20 @@ double negate(
 #define nextafter(x,y) _nextafter(x,y)
 #endif
 
-#else /* unknown compiler */
+#else /* unknown compiler or MSVS 64bit */
 
 /** gets the negation of a double
- * Do this in a way that the compiler does not "optimize" it away, which usually does not considers rounding modes.
+ *
+ * Fallback implementation that calls the negation method from misc.o.
+ * Having the implementation in a different object file will hopefully prevent
+ * it from being "optimized away".
  */
 static
 SCIP_Real negate(
    SCIP_Real             x                   /**< number that should be negated */
    )
 {
-   SCIPerrorMessage("setting rounding mode not available - interval arithmetic is invalid!\n");
-   return -x;
+   return SCIPnegateReal(x);
 }
 
 #endif

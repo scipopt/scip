@@ -131,6 +131,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution);
 
+/** dialog execution method for the display of solutions in the pool command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolutionPool);
+
 /** dialog execution method for the display statistics command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics);
