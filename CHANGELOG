@@ -8,6 +8,7 @@ fixed bugs:
 - fixed bug in heur_oneopt.c and heur_clique.c which was caused by side-effects when calling SCIPconstructLP(); when
   adding new variables in this method (e.g. adding new variables needed for a relaxation), this changes the variables
   array of SCIP
+- fixed issue with negated variables in cons_xor.c
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
