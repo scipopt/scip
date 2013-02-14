@@ -1,10 +1,13 @@
-SCIP version NEXT
+SCIP version 3.0.2
 ==================
 
 fixed bugs:
 - fixed assert in solve.c with branched status and LP reached the objective limit
 - fixed bug in cons_bounddisjunction with satisfied literal of multi-aggregated variable
 - fixed bug in upgrade method of cons_soc
+- fixed bug in heur_oneopt.c and heur_clique.c which was caused by side-effects when calling SCIPconstructLP(); when
+  adding new variables in this method (e.g. adding new variables needed for a relaxation), this changes the variables
+  array of SCIP
 
 features:
 - can now output the solutions in the solution pool in the interactive shell

@@ -516,7 +516,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          if( valid )
             *result = SCIP_FOUNDSOL;
       }
-      
+
       /* free subproblem */
       SCIPfreeBufferArray(scip, &subvars);
       SCIP_CALL( SCIPfree(&subscip) );
@@ -533,7 +533,11 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_Bool cutoff;
       cutoff = FALSE;
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-      SCIP_CALL( SCIPflushLP(scip) ); 
+      SCIP_CALL( SCIPflushLP(scip) );
+
+      /* get problem variables again, SCIPconstructLP() might have added new variables */
+      SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+      nintvars += nbinvars;
    }
 
    /* we need an LP */
