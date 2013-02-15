@@ -750,7 +750,6 @@ SCIP_RETCODE setupObjective(
 
          if( !*success )
          {
-            SCIPexprFreeDeep(SCIPblkmem(scip), &objexpr);
             SCIPfreeBufferArray(scip, &exprvaridx);
 
             return SCIP_OKAY;
@@ -901,10 +900,7 @@ SCIP_RETCODE setupConstraints(
          SCIP_CALL( walkExpression(scip, &consexpr, probdata->asl, ((ASL_fg*)asl)->I.con_de_[c].e, exprvaridx, &nexprvars, probdata->nvars, success) );  /*lint !e826*/
 
          if( !*success )
-         {
-            SCIPexprFreeDeep(SCIPblkmem(scip), &consexpr);
             break;
-         }
 
          /* assemble array exprvars with SCIP_VAR*'s */
          for( i = 0; i < probdata->nvars; ++i )
@@ -1095,6 +1091,14 @@ SCIP_DECL_DIALOGEXEC(dialogExecWriteAmplSol)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_INIT || SCIPgetStage(scip) == SCIP_STAGE_FREE )
+   {
+      SCIPerrorMessage("No AMPL problem read, cannot write AMPL solution then.\n");
+      return SCIP_OKAY;
+   }
+
    probdata = SCIPgetProbData(scip);
    if( probdata == NULL || probdata->asl == NULL )
    {
@@ -1162,8 +1166,6 @@ SCIP_DECL_DIALOGEXEC(dialogExecWriteAmplSol)
    write_sol((char*)msg, x, NULL, NULL);
 
    SCIPfreeBufferArrayNull(scip, &x);
-
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;
 }
