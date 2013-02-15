@@ -335,7 +335,10 @@ SCIP_RETCODE walkExpression(
 
          SCIP_CALL( walkExpression(scip, &child2, asl, amplexpr->R.e, exprvaridx, nexprvars, nvars, doingfine) );
          if( !*doingfine )
+         {
+            SCIPexprFreeDeep(SCIPblkmem(scip), &child1);
             break;
+         }
 
          switch( opnum )
          {
@@ -373,7 +376,13 @@ SCIP_RETCODE walkExpression(
                break;
          }
          if( !*doingfine )
+         {
+            for( --i; i >= 0; --i )
+               SCIPexprFreeDeep(SCIPblkmem(scip), &children[i]);
+
+            SCIPfreeBufferArray(scip, &children);
             break;
+         }
 
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_SUM, nchildren, children) );
 
@@ -387,6 +396,8 @@ SCIP_RETCODE walkExpression(
          SCIP_Real minusone;
 
          SCIP_CALL( walkExpression(scip, scipexpr, asl, amplexpr->L.e, exprvaridx, nexprvars, nvars, doingfine) );
+         if( !*doingfine )
+            break;
 
          minusone = -1.0;
          SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), scipexpr, 1, scipexpr, &minusone, 0.0) );
@@ -405,7 +416,10 @@ SCIP_RETCODE walkExpression(
 
          SCIP_CALL( walkExpression(scip, &child2, asl, amplexpr->R.e, exprvaridx, nexprvars, nvars, doingfine) );
          if( !*doingfine )
+         {
+            SCIPexprFreeDeep(SCIPblkmem(scip), &child1);
             break;
+         }
 
          if( SCIPexprGetOperator(child2) == SCIP_EXPR_CONST )
          {
@@ -471,9 +485,7 @@ SCIP_RETCODE walkExpression(
 
       case OPCPOW: /* power number^expr */
       {
-         SCIP_CALL( walkExpression(scip, scipexpr, asl, amplexpr->R.e, exprvaridx, nexprvars, nvars, doingfine) );
-         if( !*doingfine )
-            break;
+         SCIP_EXPR* tmp;
 
          /* number^expr is exp(expr * ln(number)) */
          if( amplexpr->L.en->v < 0.0 )
@@ -482,14 +494,14 @@ SCIP_RETCODE walkExpression(
             *doingfine = FALSE;
             break;
          }
-         else
-         {
-            SCIP_EXPR* tmp;
 
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_CONST, log(amplexpr->L.en->v)) );
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_MUL, tmp, *scipexpr) );
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_EXP, tmp) );
-         }
+         SCIP_CALL( walkExpression(scip, scipexpr, asl, amplexpr->R.e, exprvaridx, nexprvars, nvars, doingfine) );
+         if( !*doingfine )
+            break;
+
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_CONST, log(amplexpr->L.en->v)) );
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_MUL, tmp, *scipexpr) );
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_EXP, tmp) );
 
          break;
       }
@@ -565,7 +577,10 @@ SCIP_RETCODE walkExpression(
 
                SCIP_CALL( walkExpression(scip, &arg2, asl, amplexpr->L.ep[1], exprvaridx, nexprvars, nvars, doingfine) );
                if( !*doingfine )
+               {
+                  SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
                   break;
+               }
 
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, arg1, arg2) );
 
@@ -573,7 +588,10 @@ SCIP_RETCODE walkExpression(
                {
                   SCIP_CALL( walkExpression(scip, &arg1, asl, amplexpr->L.ep[i], exprvaridx, nexprvars, nvars, doingfine) );
                   if( !*doingfine )
+                  {
+                     SCIPexprFreeDeep(SCIPblkmem(scip), scipexpr);
                      break;
+                  }
 
                   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, *scipexpr, arg1) );
                }
@@ -591,7 +609,13 @@ SCIP_RETCODE walkExpression(
                break;
          }
          if( !*doingfine )
+         {
+            for( --i; i >= 0; --i )
+               SCIPexprFreeDeep(SCIPblkmem(scip), &children[i]);
+
+            SCIPfreeBufferArray(scip, &children);
             break;
+         }
 
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_SUM, nchildren, children) );
 
@@ -601,7 +625,15 @@ SCIP_RETCODE walkExpression(
       }
 
       case OP_cos:
+         SCIPerrorMessage("AMPL operand number OP_cos not supported so far.\n");
+         *doingfine = FALSE;
+         break;
+
       case OP_sin:
+         SCIPerrorMessage("AMPL operand number OP_sin not supported so far.\n");
+         *doingfine = FALSE;
+         break;
+
       default:
          SCIPerrorMessage("AMPL operand number %d not supported so far.\n", opnum);
          *doingfine = FALSE;
@@ -751,6 +783,7 @@ SCIP_RETCODE setupObjective(
          if( !*success )
          {
             SCIPfreeBufferArray(scip, &exprvaridx);
+            SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
 
             return SCIP_OKAY;
          }
@@ -900,7 +933,12 @@ SCIP_RETCODE setupConstraints(
          SCIP_CALL( walkExpression(scip, &consexpr, probdata->asl, ((ASL_fg*)asl)->I.con_de_[c].e, exprvaridx, &nexprvars, probdata->nvars, success) );  /*lint !e826*/
 
          if( !*success )
+         {
+            SCIPfreeBufferArray(scip, &exprvaridx);
+            SCIPfreeBufferArray(scip, &exprvars);
+
             break;
+         }
 
          /* assemble array exprvars with SCIP_VAR*'s */
          for( i = 0; i < probdata->nvars; ++i )
