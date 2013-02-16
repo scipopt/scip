@@ -1122,10 +1122,9 @@ SCIP_DECL_READERREAD(readerReadNl)
 static
 SCIP_DECL_DIALOGEXEC(dialogExecWriteAmplSol)
 {  /*lint --e{715}*/
-   SCIP_PROBDATA* probdata;
-   SCIP_Real* x;
-   const char* msg;
-   ASL* asl;
+   assert(scip != NULL);
+   assert(dialoghdlr != NULL);
+   assert(dialog != NULL);
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
@@ -1136,6 +1135,82 @@ SCIP_DECL_DIALOGEXEC(dialogExecWriteAmplSol)
       SCIPerrorMessage("No AMPL problem read, cannot write AMPL solution then.\n");
       return SCIP_OKAY;
    }
+
+   /* currently, can pass NULL as reader
+    * in the future, the reader should be changed to store its data in the readerdata
+    * instead of the problem data
+    */
+   SCIP_CALL( SCIPwriteAmplSolReaderNl(scip, NULL) );
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * reader specific interface methods
+ */
+
+/** includes the AMPL .nl file reader in SCIP */
+SCIP_RETCODE SCIPincludeReaderNl(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_READER* reader;
+   SCIP_READERDATA* readerdata;
+   SCIP_DIALOG* dialog;
+   SCIP_DIALOG* parentdialog;
+
+   readerdata = NULL;
+   reader = NULL;
+
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+   assert(reader != NULL);
+
+   /* set non fundamental callbacks via setter functions */
+   /* SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyNl) ); */
+   /* SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeNl) ); */
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadNl) );
+
+   if( SCIPgetRootDialog(scip) != NULL )
+   {
+      /* get parent dialog "write" */
+      if( SCIPdialogFindEntry(SCIPgetRootDialog(scip), "write", &parentdialog) != 1 )
+      {
+         SCIPerrorMessage("sub menu \"write\" not found\n");
+         return SCIP_PLUGINNOTFOUND;
+      }
+      assert(parentdialog != NULL);
+
+      /* create, include, and release dialog */
+      if( !SCIPdialogHasEntry(parentdialog, DIALOG_WRITEAMPLSOL_NAME) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL, dialogExecWriteAmplSol, NULL, NULL,
+            DIALOG_WRITEAMPLSOL_NAME, DIALOG_WRITEAMPLSOL_DESC, DIALOG_WRITEAMPLSOL_ISSUBMENU, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "ASL", "AMPL Solver Library developed by D. Gay (www.netlib.com/ampl)") );
+
+   return SCIP_OKAY;
+}
+
+
+/** writes AMPL solution file */
+SCIP_RETCODE SCIPwriteAmplSolReaderNl(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          nlreader            /**< AMPL .nl file reader */
+   )
+{  /*lint --e{715}*/
+   SCIP_PROBDATA* probdata;
+   SCIP_Real* x;
+   const char* msg;
+   ASL* asl;
+
+   assert(scip != NULL);
 
    probdata = SCIPgetProbData(scip);
    if( probdata == NULL || probdata->asl == NULL )
@@ -1208,55 +1283,3 @@ SCIP_DECL_DIALOGEXEC(dialogExecWriteAmplSol)
    return SCIP_OKAY;
 }
 
-
-/*
- * reader specific interface methods
- */
-
-/** includes the AMPL .nl file reader in SCIP */
-SCIP_RETCODE SCIPincludeReaderNl(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_READER* reader;
-   SCIP_READERDATA* readerdata;
-   SCIP_DIALOG* dialog;
-   SCIP_DIALOG* parentdialog;
-
-   readerdata = NULL;
-   reader = NULL;
-
-   /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
-   assert(reader != NULL);
-
-   /* set non fundamental callbacks via setter functions */
-   /* SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyNl) ); */
-   /* SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeNl) ); */
-   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadNl) );
-
-   if( SCIPgetRootDialog(scip) != NULL )
-   {
-      /* get parent dialog "write" */
-      if( SCIPdialogFindEntry(SCIPgetRootDialog(scip), "write", &parentdialog) != 1 )
-      {
-         SCIPerrorMessage("sub menu \"write\" not found\n");
-         return SCIP_PLUGINNOTFOUND;
-      }
-      assert(parentdialog != NULL);
-
-      /* create, include, and release dialog */
-      if( !SCIPdialogHasEntry(parentdialog, DIALOG_WRITEAMPLSOL_NAME) )
-      {
-         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-            NULL, dialogExecWriteAmplSol, NULL, NULL,
-            DIALOG_WRITEAMPLSOL_NAME, DIALOG_WRITEAMPLSOL_DESC, DIALOG_WRITEAMPLSOL_ISSUBMENU, NULL) );
-         SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
-         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-      }
-   }
-
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "ASL", "AMPL Solver Library developed by D. Gay (www.netlib.com/ampl)") );
-
-   return SCIP_OKAY;
-}
