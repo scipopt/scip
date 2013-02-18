@@ -119,9 +119,6 @@ MINLP/instances/MINLPLib/zpl/nuclearvc.zpl
 MINLP/instances/MINLPLib/zpl/nuclearvd.zpl
 MINLP/instances/MINLPLib/zpl/nuclearve.zpl
 MINLP/instances/MINLPLib/zpl/nuclearvf.zpl
-MINLP/instances/MINLPLib/zpl/nuclear24.zpl
-MINLP/instances/MINLPLib/zpl/nuclear24a.zpl
-MINLP/instances/MINLPLib/zpl/nuclear24b.zpl
 MINLP/instances/MINLPLib/zpl/nuclear25.zpl
 MINLP/instances/MINLPLib/zpl/nuclear25a.zpl
 MINLP/instances/MINLPLib/zpl/nuclear25b.zpl

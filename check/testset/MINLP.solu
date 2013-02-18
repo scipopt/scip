@@ -1366,3 +1366,13 @@
 =best= topo_orig_00045          4684.46054
 =inf= topo_orig_00046
 =best= topo_orig_00047          11789.7215
+
+=opt= wnd_shamir                    419000
+=opt= wnd_hanoi                    6109621
+=opt= wnd_blacksburg                116945
+=opt= wnd_foss_poly_0             67559218
+=opt= wnd_foss_iron                 175922
+=opt= wnd_foss_poly_1             28043.86
+=best= wnd_newyork                39307780
+=best= wnd_pescara                 1820264
+=best= wnd_modena                  2576589
