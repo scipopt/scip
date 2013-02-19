@@ -15,6 +15,12 @@ features:
 - can now output the solutions in the solution pool in the interactive shell
 - updated Mosek interface to compile with Mosek 7, too
 
+performance improvements:
+- improved SCIPlpiAdd{Cols,Rows}() in SoPlex LPi
+
+interface:
+- allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
+
 
 SCIP version 3.0.1
 ==================
