@@ -1742,23 +1742,23 @@ SCIP_RETCODE SCIPlpiAddCols(
    {
       LPColSet cols(ncols);
       DSVector colVector(ncols);
-      int nrows = spx->nRows();
+      int start;
       int last;
       int i;
-      int j;
-
+#ifndef NDEBUG
+      int nrows = spx->nRows();
+      for( int k = nnonz-1; k >= 0; --k)
+         assert(ind[k] >= 0 && ind[k] < nrows);
+#endif
       /* create column vectors with coefficients and bounds */
       for( i = 0; i < ncols; ++i )
       {
          colVector.clear();
          if( nnonz > 0 )
          {
+            start = beg[i];
             last = (i == ncols-1 ? nnonz : beg[i+1]);
-            for( j = beg[i]; j < last; ++j )
-            {
-               if( ind[j] < nrows )
-                  colVector.add(ind[j], val[j]);
-            }
+            colVector.add( last-start, &ind[start], &val[start] );
          }
          cols.add(obj[i], lb[i], colVector, ub[i]);
       }
@@ -1861,19 +1861,23 @@ SCIP_RETCODE SCIPlpiAddRows(
       SPxSCIP* spx = lpi->spx;
       LPRowSet rows(nrows);
       DSVector rowVector;
+      int start;
       int last;
       int i;
-      int j;
-
+#ifndef NDEBUG
+      int ncols = spx->nCols();
+      for( int k = nnonz-1; k >= 0; --k)
+         assert(ind[k] >= 0 && ind[k] < ncols);
+#endif
       /* create row vectors with given sides */
       for( i = 0; i < nrows; ++i )
       {
          rowVector.clear();
          if( nnonz > 0 )
          {
+            start = beg[i];
             last = (i == nrows-1 ? nnonz : beg[i+1]);
-            for( j = beg[i]; j < last; ++j )
-               rowVector.add(ind[j], val[j]);
+            rowVector.add( last-start, &ind[start], &val[start] );
          }
          rows.add(lhs[i], rowVector, rhs[i]);
       }
