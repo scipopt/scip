@@ -106,6 +106,8 @@ fixed bugs:
   adding new variables in this method (e.g. adding new variables needed for a relaxation), this changes the variables
   array of SCIP
 - fixed issue with negated variables in cons_xor.c
+- fixed issues with ungraceful termination when encountering unsupported expression operands in AMPL interface
+- fixed bug in cons_xor.c calling method on null pointer row
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
