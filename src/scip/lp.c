@@ -13555,13 +13555,15 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             lpi = SCIPlpGetLPI(lp);
 
             assert(lpi != NULL);
-            assert(lp->lastlpalgo != SCIP_LPALGO_DUALSIMPLEX || SCIPlpiIsObjlimExc(lpi)
-               || SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiuobjlim));
+            /* actually, SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) should hold, but we are a bit less strict in
+             * the assert by using !SCIPsetIsFeasNegative()
+             */
+            assert(SCIPlpiIsObjlimExc(lpi) || !SCIPsetIsFeasNegative(set, lp->lpobjval - lp->lpiuobjlim));
 
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
             /* do one additional simplex step if the computed dual solution doesn't exceed the objective limit */
-            if( objval < lp->lpiuobjlim )
+            if( SCIPsetIsLT(set, objval, lp->lpiuobjlim) )
             {
                SCIP_Real tmpcutoff;
                char tmppricingchar;
@@ -13607,7 +13609,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                 * was stopped due to time or iteration limit, solve again with fastmip turned off
                 */
                if( solstat == SCIP_LPSOLSTAT_ITERLIMIT &&
-                  SCIPsetIsRelLT(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
+                  SCIPsetIsLT(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
                {
                   assert(!(*lperror));
 
@@ -13735,7 +13737,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                }
 
                assert(lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT);
-               assert(SCIPsetIsRelGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))
+               assert(SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))
                   || lp->lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT);
             }
             else

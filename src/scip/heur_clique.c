@@ -793,6 +793,9 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       valid = FALSE;
 
+      /* get all variables again because SCIPconstructLP() might have changed the variables array */
+      SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
       /* create subproblem */
       SCIP_CALL( SCIPcreate(&subscip) );
 

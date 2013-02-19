@@ -16,6 +16,10 @@
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
  * @author Tobias Achterberg
+ * @author Timo Berthold
+ * @author Stefan Heinz
+ * @author Marc Pfetsch
+ * @author Michael Winkler
  *
  * This file implements a conflict analysis method like the one used in modern
  * SAT solvers like zchaff. The algorithm works as follows:
@@ -2033,13 +2037,13 @@ SCIP_RETCODE conflictAddConflictCons(
    }
 
    /* in case the conflict set contains only one bound change which is globally valid we apply that bound change
-    * directly
+    * directly (except if we are in strong branching - in this case a bound change would yield an unflushed LP)
     *
     * @note A bound change can only be applied if it is are related to the active node or if is a global bound
     *       change. Bound changes which are related to any other node cannot be handled at point due to the internal
     *       data structure
     */
-   if( conflictset->nbdchginfos == 1 && insertdepth == 0 )
+   if( conflictset->nbdchginfos == 1 && insertdepth == 0 && ! lp->strongbranching )
    {
       SCIP_VAR* var;
       SCIP_Real bound;
@@ -6235,7 +6239,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    if( set->nconflicthdlrs == 0 )
       return SCIP_OKAY;
 
-   /* inform the LPI that strong branch is (temporary) finished */
+   /* inform the LPI that strong branch is (temporarily) finished */
    SCIP_CALL( SCIPlpiEndStrongbranch(lp->lpi) );
 
    /* start timing */

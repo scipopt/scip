@@ -6880,6 +6880,13 @@ SCIP_Longint SCIPcalcBinomCoef(
    }
 }
 
+/** negates a number */
+SCIP_Real SCIPnegateReal(
+   SCIP_Real             x                   /**< value to negate */
+   )
+{
+   return -x;
+}
 
 /*
  * Permutations / Shuffling
