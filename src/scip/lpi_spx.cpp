@@ -1745,11 +1745,7 @@ SCIP_RETCODE SCIPlpiAddCols(
       int start;
       int last;
       int i;
-#ifndef NDEBUG
-      int nrows = spx->nRows();
-      for( int k = nnonz-1; k >= 0; --k)
-         assert(ind[k] >= 0 && ind[k] < nrows);
-#endif
+
       /* create column vectors with coefficients and bounds */
       for( i = 0; i < ncols; ++i )
       {
@@ -1864,11 +1860,7 @@ SCIP_RETCODE SCIPlpiAddRows(
       int start;
       int last;
       int i;
-#ifndef NDEBUG
-      int ncols = spx->nCols();
-      for( int k = nnonz-1; k >= 0; --k)
-         assert(ind[k] >= 0 && ind[k] < ncols);
-#endif
+
       /* create row vectors with given sides */
       for( i = 0; i < nrows; ++i )
       {
