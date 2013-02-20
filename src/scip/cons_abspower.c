@@ -2451,7 +2451,7 @@ SCIP_RETCODE propagateCons(
          /* propagate bounds on x (if not multiaggregated):
           *  (1) left hand side and bounds on z -> lower bound on x
           */
-         if( SCIPvarIsActive(SCIPvarGetProbvar(consdata->x)) )
+         if( SCIPvarIsActive(SCIPvarGetProbvar(consdata->x)) && (!SCIPisFeasEQ(scip, zlb, zub) || !SCIPisInfinity(scip, REALABS(zlb))) )
          {
             /* if z is fixed, first compute new lower bound on x without tolerances
              * if that is feasible, project new lower bound onto current bounds
@@ -2563,6 +2563,11 @@ SCIP_RETCODE propagateCons(
                newbd  = consdata->lhs - SIGN(newbd) * consdata->power(REALABS(newbd), consdata->exponent);
                newbd /= consdata->zcoef;
 
+               if( SCIPisInfinity(scip, newbd) )
+                  newbd = SCIPinfinity(scip);
+               else if( SCIPisInfinity(scip, -newbd) )
+                  newbd = -SCIPinfinity(scip);
+
                if( (consdata->zcoef > 0.0 && SCIPisFeasGT(scip, newbd, zub)) || (consdata->zcoef < 0.0 && SCIPisFeasLT(scip, newbd, zlb)) )
                {
                   /* if infeasible, recompute with tolerances */
@@ -2646,7 +2651,7 @@ SCIP_RETCODE propagateCons(
          /* propagate bounds on x:
           *  (3) right hand side and bounds on z -> upper bound on x
           */
-         if( SCIPvarIsActive(SCIPvarGetProbvar(consdata->x)) ) /* cannot change bounds of multaggr or fixed vars */
+         if( SCIPvarIsActive(SCIPvarGetProbvar(consdata->x)) && (!SCIPisFeasEQ(scip, zlb, zub) || !SCIPisInfinity(scip, REALABS(zlb))) ) /* cannot change bounds of multaggr or fixed vars */
          {
             /* if z is fixed, first compute new upper bound on x without tolerances
              * if that is feasible, project new upper bound onto current bounds
@@ -2756,6 +2761,11 @@ SCIP_RETCODE propagateCons(
                newbd  = xlb + consdata->xoffset;
                newbd  = consdata->rhs - SIGN(newbd) * consdata->power(REALABS(newbd), consdata->exponent);
                newbd /= consdata->zcoef;
+
+               if( SCIPisInfinity(scip, newbd) )
+                  newbd = SCIPinfinity(scip);
+               else if( SCIPisInfinity(scip, -newbd) )
+                  newbd = -SCIPinfinity(scip);
 
                if( (consdata->zcoef > 0.0 && SCIPisFeasLT(scip, newbd, zlb)) || (consdata->zcoef < 0.0 && SCIPisFeasGT(scip, newbd, zub)) )
                {
