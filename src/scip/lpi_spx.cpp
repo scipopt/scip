@@ -219,6 +219,7 @@ class SPxSCIP : public SPxSolver
    Status                m_stat;             /**< solving status */
    bool                  m_lpinfo;           /**< storing whether output is turned on */
    bool                  m_autopricing;      /**< is automatic pricing selected? */
+   bool                  m_partialpricing;   /**< is partial (=incomplete) pricing enabled? */
    int                   m_itlim;            /**< iteration limit (-1 for unbounded) */
    int                   m_itused;           /**< number of iterations spent in phase one of auto pricing */
    SPxSolver::VarStatus* m_rowstat;          /**< basis status of rows before starting strong branching (if available, 0 otherwise) */
@@ -249,6 +250,7 @@ public:
         m_stat(NO_PROBLEM),
         m_lpinfo(false),
         m_autopricing(true),
+        m_partialpricing(true),
         m_itlim(-1),
         m_itused(0),
         m_rowstat(NULL),
@@ -264,6 +266,9 @@ public:
       setPricer(&m_price_steep);
 #if ((SOPLEX_VERSION == 170 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 170)
       SPxSolver::setMaxUpdates(500);
+#if SOPLEX_SUBVERSION >= 3
+      SPxSolver::setPartialPricing(m_partialpricing);
+#endif
 #endif
       /* no starter */
 
