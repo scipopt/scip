@@ -189,7 +189,7 @@ CLSETTINGSLIST="$CLSETTINGSLIST TimeLimit=$TIMELIMIT NodeLimit=$NODELIMIT Displa
 if test $SETNAME != "default"
 then
     echo `pwd`
-    CLSETTINGSLIST="`awk 'BEGIN { finalstr=""} {finalstr=finalstr " "$1"="$2} END {print finalstr}' ../$SETTINGS` $CLSETTINGSLIST"
+    CLSETTINGSLIST="`awk 'BEGIN { finalstr=""} {finalstr=finalstr " "$1"="$2} END {print finalstr}' $SETTINGS` $CLSETTINGSLIST"
 fi
 
 #have a look if Gurobi is invoked with the settings you are asking for

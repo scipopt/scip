@@ -62,7 +62,7 @@ if test $SETNAME != "default"
 then
     if test ! -e $SETTINGS
     then
-        echo skipping test due to not existes of the settings file $SETTINGS
+        echo skipping test due to non-existence of the settings file $SETTINGS
         exit
     fi
 fi
