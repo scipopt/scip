@@ -1015,6 +1015,7 @@ SCIP_RETCODE printSignpowerRow(
    char linebuffer[GMS_MAX_PRINTLEN] = { '\0' };
    int linecnt;
    SCIP_Bool nisoddint;
+   SCIP_Bool fixedsign;
 
    char consname[GMS_MAX_NAMELEN + 3]; /* four extra characters for ' ..' */
    char buffer[GMS_MAX_PRINTLEN];
@@ -1041,51 +1042,137 @@ SCIP_RETCODE printSignpowerRow(
     * if signpowerallowed, then signpow(x,n) is printed as power(x,n) if n is an odd integer and as signpower(x,n) otherwiser
     */
    nisoddint = SCIPisIntegral(scip, exponent) && ((int)SCIPfloor(scip, exponent+0.5))%2 == 1;
-   if( !nisoddint )
+   fixedsign = !SCIPisNegative(scip, SCIPvarGetLbGlobal(nonlinvar)) || !SCIPisPositive(scip, SCIPvarGetUbGlobal(nonlinvar));
+   if( !nisoddint && !fixedsign )
    {
       if( signpowerallowed )
       {
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "signpower(%g ", offset);
-         appendLine(scip, file, linebuffer, &linecnt, buffer);
-         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ",", 1, &nonlinvar, NULL, transformed) );
+         if( offset != 0.0 )
+         {
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "signpower(%g ", offset);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ",", 1, &nonlinvar, NULL, transformed) );
+         }
+         else
+         {
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "signpower(", ",", 1, &nonlinvar, NULL, transformed) );
+         }
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%g)", exponent);
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
       else
       {
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "(%g ", offset);
-         appendLine(scip, file, linebuffer, &linecnt, buffer);
-         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ") * ", 1, &nonlinvar, NULL, transformed) );
+         if( offset != 0.0 )
+         {
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "(%g ", offset);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ") * ", 1, &nonlinvar, NULL, transformed) );
+         }
+         else
+         {
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, NULL, " * ", 1, &nonlinvar, NULL, transformed) );
+         }
 
          if( exponent == 2.0)
          {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "abs(%g ", offset);
+            if( offset != 0.0 )
+            {
+               (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "abs(%g ", offset);
+               appendLine(scip, file, linebuffer, &linecnt, buffer);
+               SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ")", 1, &nonlinvar, NULL, transformed) );
+            }
+            else
+            {
+               SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "abs", NULL, 1, &nonlinvar, NULL, transformed) );
+            }
+         }
+         else
+         {
+            if( offset != 0.0 )
+            {
+               (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "abs(%g ", offset);
+               appendLine(scip, file, linebuffer, &linecnt, buffer);
+               SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ")", 1, &nonlinvar, NULL, transformed) );
+            }
+            else
+            {
+               SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "abs", NULL, 1, &nonlinvar, NULL, transformed) );
+            }
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "**%g", exponent-1.0);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+         }
+      }
+   }
+   else if( nisoddint || !SCIPisNegative(scip, SCIPvarGetLbGlobal(nonlinvar)) )
+   {
+      if( exponent == 2.0 )
+      {
+         if( offset != 0.0 )
+         {
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "sqr(%g ", offset);
             appendLine(scip, file, linebuffer, &linecnt, buffer);
             SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ")", 1, &nonlinvar, NULL, transformed) );
          }
          else
          {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "abs(%g ", offset);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
-            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ")", 1, &nonlinvar, NULL, transformed) );
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " ** %g)", exponent-1.0);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "sqr", NULL, 1, &nonlinvar, NULL, transformed) );
          }
+      }
+      else
+      {
+         if( offset != 0.0 )
+         {
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "power(%g ", offset);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ",", 1, &nonlinvar, NULL, transformed) );
+         }
+         else
+         {
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "power(", ",", 1, &nonlinvar, NULL, transformed) );
+         }
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%g)", exponent);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
    }
    else
    {
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "power(%g ", offset);
-      appendLine(scip, file, linebuffer, &linecnt, buffer);
-      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ",", 1, &nonlinvar, NULL, transformed) );
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%g)", exponent);
-      appendLine(scip, file, linebuffer, &linecnt, buffer);
+      assert(fixedsign && !SCIPisPositive(scip, SCIPvarGetUbGlobal(nonlinvar)));
+      if( exponent == 2.0 )
+      {
+         if( offset != 0.0 )
+         {
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "-sqr(%g ", -offset);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "-", ")", 1, &nonlinvar, NULL, transformed) );
+         }
+         else
+         {
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "-sqr(-", ")", 1, &nonlinvar, NULL, transformed) );
+         }
+      }
+      else
+      {
+         if( offset != 0.0 )
+         {
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "-power(%g ", -offset);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "-", ",", 1, &nonlinvar, NULL, transformed) );
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%g)", exponent);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+         }
+         else
+         {
+            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "-power(-", ",", 1, &nonlinvar, NULL, transformed) );
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%g)", exponent);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+         }
+      }
    }
 
    /* print linear term */
    if( linvar != NULL )
    {
-      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", "", 1, &linvar, &coeflinear, transformed) );
+      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, " +", "", 1, &linvar, &coeflinear, transformed) );
    }
 
    /* print right hand side */
