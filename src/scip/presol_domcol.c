@@ -1970,7 +1970,7 @@ SCIP_RETCODE findDominancePairs(
                   /* >= relation, larger coefficients dominate smaller ones */
                   if( vals1[r1] > 0.0 )
                      col2domcol1 = FALSE;
-                  else
+                  else if( vals1[r1] < 0.0 )
                      col1domcol2 = FALSE;
                }
 
@@ -1991,7 +1991,7 @@ SCIP_RETCODE findDominancePairs(
                   /* >= relation, larger coefficients dominate smaller ones */
                   if( vals2[r2] < 0.0 )
                      col2domcol1 = FALSE;
-                  else
+                  else if( vals2[r2] > 0.0 )
                      col1domcol2 = FALSE;
                }
 
@@ -2025,9 +2025,9 @@ SCIP_RETCODE findDominancePairs(
                else
                {
                   /* >= relation, larger coefficients dominate smaller ones */
-                  if( vals1[r1] >= vals2[r2] )
+                  if( vals1[r1] > vals2[r2] )
                      col2domcol1 = FALSE;
-                  else
+                  else if( vals1[r1] < vals2[r2] )
                      col1domcol2 = FALSE;
                }
 
