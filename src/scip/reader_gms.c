@@ -2092,6 +2092,8 @@ SCIP_RETCODE SCIPwriteGms(
          {
             if( !SCIPisInfinity(scip, -lb) )
                SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, SCIPceil(scip, lb));
+            else if( freeints )
+               SCIPinfoMessage(scip, file, " %s.lo = -inf;\n", varname); /* -inf is allowed when running gams with pf4=0, which we assume if freeints is TRUE */
             else
                SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, -SCIPinfinity(scip)); /* sorry, -inf not allowed in gams file here */
             nondefbounds = TRUE;
@@ -2121,7 +2123,7 @@ SCIP_RETCODE SCIPwriteGms(
             if( !SCIPisInfinity(scip, ub) )
                SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfeasFloor(scip, ub));
             else
-               SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPinfinity(scip)); /* sorry, +inf not allowed in gams file here */
+               SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPinfinity(scip)); /* sorry, +inf not allowed in gams file here (unless pf4=0) */
             nondefbounds = TRUE;
          }
       }
