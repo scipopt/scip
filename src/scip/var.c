@@ -2185,6 +2185,8 @@ SCIP_RETCODE parseBounds(
 {
    char token[SCIP_MAXSTRLEN];
 
+   SCIPdebugMessage("parsing bounds: '%s'\n", str);
+
    /* get bound type */
    SCIPstrCopySection(str, ' ', ' ', type, SCIP_MAXSTRLEN, endptr);
    SCIPdebugMessage("parsed bound type <%s>\n", type);
@@ -2192,13 +2194,16 @@ SCIP_RETCODE parseBounds(
    /* get lower bound */
    SCIPstrCopySection(str, '[', ',', token, SCIP_MAXSTRLEN, endptr);
    str = *endptr;
-
    SCIP_CALL( parseValue(set, token, lb, endptr) );
-
-   SCIPdebugMessage("str <%s>\n", str);
 
    /* get upper bound */
    SCIP_CALL( parseValue(set, str, ub, endptr) );
+
+   SCIPdebugMessage("parsed bounds: [%g,%g]\n", *lb, *ub);
+
+   /* skip end of bounds */
+   while ( **endptr != '\0' && (**endptr == ']' || **endptr == ',') )
+      ++(*endptr);
 
    return SCIP_OKAY;
 }
@@ -2275,7 +2280,7 @@ SCIP_RETCODE varParse(
    str = endptr;
 
    /* get objective coefficient */
-   if( !SCIPstrToRealValue(token,  obj, &endptr) )
+   if( !SCIPstrToRealValue(token, obj, &endptr) )
       return SCIP_READERROR;
 
    SCIPdebugMessage("parsed objective coefficient <%g>\n", *obj);
@@ -2291,11 +2296,11 @@ SCIP_RETCODE varParse(
    /* parse optional local and lazy bounds */
    for( i = 0; i < 2; ++i )
    {
+      /* start after previous bounds */
+      str = endptr;
+
       /* parse global bounds */
       SCIP_CALL( parseBounds(set, str, token, &parsedlb, &parsedub, &endptr) );
-
-      if( str != endptr )
-         break;
 
       if( strncmp(token, "local", 5) == 0 && local )
       {
@@ -2307,6 +2312,10 @@ SCIP_RETCODE varParse(
          *lazylb = parsedlb;
          *lazyub = parsedub;
       }
+
+      /* stop parsing */
+      if ( *endptr == '\0' )
+         break;
    }
 
    /* check bounds for binary variables */

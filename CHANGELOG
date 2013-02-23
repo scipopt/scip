@@ -12,10 +12,12 @@ fixed bugs:
 - fixed issues with ungraceful termination when encountering unsupported expression operands in AMPL interface
 - fixed bug in cons_xor.c calling method on null pointer row
 - fixed bug in cons_abspower.c handling infinity values in propagation
+- fixed bug in parsing bounds from CIP-files
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
 - updated Mosek interface to compile with Mosek 7, too
+- reading erroneous CIP files can now output some indication of syntax errors
 
 performance improvements:
 - improved SCIPlpiAdd{Cols,Rows}() in SoPlex LPi
