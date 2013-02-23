@@ -2192,7 +2192,7 @@ SCIP_RETCODE parseBounds(
    char*                 type,               /**< bound type (global, local, or lazy) */
    SCIP_Real*            lb,                 /**< pointer to store the lower bound */
    SCIP_Real*            ub,                 /**< pointer to store the upper bound */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed (or NULL if an error occured) */
    )
 {
    char token[SCIP_MAXSTRLEN];
@@ -2204,9 +2204,7 @@ SCIP_RETCODE parseBounds(
    if ( strncmp(type, "original", 8) != 0 && strncmp(type, "global", 6) != 0 && strncmp(type, "local", 5) != 0 && strncmp(type, "lazy", 4) != 0 )
    {
       SCIPdebugMessage("unkown bound type <%s>\n", type);
-      /* skip until end of string */
-      while ( **endptr != '\0' )
-         ++(*endptr);
+      *endptr = NULL;
       return SCIP_OKAY;
    }
 
@@ -2250,6 +2248,7 @@ SCIP_RETCODE varParse(
    SCIP_Real parsedlb;
    SCIP_Real parsedub;
    char token[SCIP_MAXSTRLEN];
+   char* strptr;
    int i;
 
    assert(lb != NULL);
@@ -2315,14 +2314,17 @@ SCIP_RETCODE varParse(
    *lazylb = -SCIPsetInfinity(set);
    *lazyub =  SCIPsetInfinity(set);
 
+   /* store pointer */
+   strptr = *endptr;
+
    /* possibly parse optional local and lazy bounds */
-   for( i = 0; i < 2 && **endptr != '\0'; ++i )
+   for( i = 0; i < 2 && *endptr != NULL && **endptr != '\0'; ++i )
    {
       /* start after previous bounds */
-      str = *endptr;
+      strptr = *endptr;
 
       /* parse global bounds */
-      SCIP_CALL( parseBounds(set, str, token, &parsedlb, &parsedub, endptr) );
+      SCIP_CALL( parseBounds(set, strptr, token, &parsedlb, &parsedub, endptr) );
 
       if( strncmp(token, "local", 5) == 0 && local )
       {
@@ -2335,6 +2337,10 @@ SCIP_RETCODE varParse(
          *lazyub = parsedub;
       }
    }
+
+   /* restore pointer */
+   if ( *endptr == NULL )
+      *endptr = strptr;
 
    /* check bounds for binary variables */
    if ( (*vartype) == SCIP_VARTYPE_BINARY )
