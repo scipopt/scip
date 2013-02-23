@@ -18,16 +18,18 @@
  * @author Stefan Heinz
  * @author Marc Pfetsch
  * @author Michael Winkler
+ *
+ * @todo Ensure order of fixed/(multi-)aggregated/negated variables in output to ensure correct reading; all used
+ * variables in aggregations have to be defined previously.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 
 #include <string.h>
 #include <ctype.h>
 
 #include "scip/reader_cip.h"
-
+#include "scip/cons_linear.h"
 
 #define READER_NAME             "cipreader"
 #define READER_DESC             "file reader for CIP (Constraint Integer Program) format"
@@ -62,6 +64,7 @@ struct CipInput
    CIPSECTION            section;            /**< current section */
    SCIP_Bool             haserror;           /**< some error occurred */
    SCIP_Bool             endfile;            /**< we have reached the end of the file */
+   SCIP_Bool             aggregatedvars;     /**< whether there are (multi-)aggregated variables in the input */
 };
 typedef struct CipInput CIPINPUT;            /**< CIP reading data */
 
@@ -386,7 +389,11 @@ SCIP_RETCODE getFixedVariable(
    CIPINPUT*             cipinput            /**< CIP parsing data */
    )
 {
+   SCIP_Bool success;
+   SCIP_VAR* var;
    char* buf;
+   char* endptr;
+   char name[SCIP_MAXSTRLEN];
 
    buf = cipinput->strbuf;
 
@@ -394,13 +401,81 @@ SCIP_RETCODE getFixedVariable(
       cipinput->section = CIP_CONSTRAINTS;
    else if( strncmp(buf, "END", 3) == 0 )
       cipinput->section = CIP_END;
-   
+
    if( cipinput->section != CIP_FIXEDVARS )
       return SCIP_OKAY;
-   
+
    SCIPdebugMessage("parse fixed variables\n");
-   
-   /* @todo implement parsing of fixed variables, in case of some constraints that use these variables */
+
+   /* parse the variable */
+   SCIP_CALL( SCIPparseVar(scip, &var, buf, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL, &endptr, &success) );
+
+   if( !success )
+   {
+      SCIPerrorMessage("syntax error in variable information (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* skip intermediate stuff */
+   buf = endptr;
+
+   while ( *buf != '\0' && (*buf == ' ' || *buf == ',') )
+      ++buf;
+
+   /* check whether variable is fixed */
+   if ( strncmp(buf, "fixed:", 6) == 0 )
+   {
+      SCIP_CALL( SCIPaddVar(scip, var) );
+      SCIPdebug( SCIP_CALL( SCIPprintVar(scip, var, NULL) ) );
+   }
+   else if ( strncmp(buf, "negated:", 8) == 0 )
+   {
+      SCIP_CONS* lincons;
+      SCIP_VAR* negvar;
+      SCIP_Real vals[2];
+      SCIP_VAR* vars[2];
+
+      buf += 8;
+
+      /* we can just parse the next variable (ignoring all other information in between) */
+      SCIP_CALL( SCIPparseVarName(scip, buf, &negvar, &endptr) );
+
+      if ( negvar == NULL )
+      {
+         SCIPerrorMessage("could not parse negated variable (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
+         cipinput->haserror = TRUE;
+         return SCIP_OKAY;
+      }
+      assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
+      assert( SCIPvarGetType(negvar) == SCIP_VARTYPE_BINARY );
+
+      SCIP_CALL( SCIPaddVar(scip, var) );
+
+      SCIPdebugMessage("creating negated variable <%s> (of <%s>) ...\n", SCIPvarGetName(var), SCIPvarGetName(negvar) );
+      SCIPdebug( SCIP_CALL( SCIPprintVar(scip, var, NULL) ) );
+
+      /* add linear constraint for negation */
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "neg_%s", SCIPvarGetName(var) );
+      vars[0] = var;
+      vars[1] = negvar;
+      vals[0] = 1.0;
+      vals[1] = 1.0;
+      SCIPdebugMessage("coupling constraint:\n");
+      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, 2, vars, vals, 1.0, 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+      SCIPdebugPrintCons(scip, lincons, NULL);
+      SCIP_CALL( SCIPaddCons(scip, lincons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+   }
+   else
+   {
+      if ( ! cipinput->aggregatedvars )
+      {
+         cipinput->aggregatedvars = TRUE;
+         SCIPwarningMessage(scip, "the CIP-input contains (multi-)aggregated variables - this is not supported yet. Note that this might lead to parsing errors later.\n");
+      }
+   }
+   SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
    return SCIP_OKAY;
 }
@@ -540,6 +615,7 @@ SCIP_DECL_READERREAD(readerReadCip)
    cipinput.haserror = FALSE;
    cipinput.endfile = FALSE;
    cipinput.readingsize = 65535;
+   cipinput.aggregatedvars = FALSE;
 
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
@@ -650,9 +726,29 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    if( nfixedvars > 0 )
    {
       SCIPinfoMessage(scip, file, "FIXED\n");
+
+      /* first print fixed variables to increase chance that variables are defined for aggregated variables */
       for( i = 0; i < nfixedvars; ++i )
       {
-         SCIP_CALL( SCIPprintVar(scip, fixedvars[i], file) );
+         assert( SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_AGGREGATED ||
+            SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_NEGATED );
+
+         if (SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_FIXED )
+            SCIP_CALL( SCIPprintVar(scip, fixedvars[i], file) );
+      }
+
+      /* next print aggregated or negated variables */
+      for( i = 0; i < nfixedvars; ++i )
+      {
+         if ( SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_AGGREGATED || SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_NEGATED )
+            SCIP_CALL( SCIPprintVar(scip, fixedvars[i], file) );
+      }
+
+      /* finally print multi-aggregated variables */
+      for( i = 0; i < nfixedvars; ++i )
+      {
+         if ( SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_MULTAGGR )
+            SCIP_CALL( SCIPprintVar(scip, fixedvars[i], file) );
       }
    }
 
