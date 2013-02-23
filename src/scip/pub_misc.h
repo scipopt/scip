@@ -4572,24 +4572,25 @@ int SCIPsnprintf(
    ...                                       /**< further parameters */
    );
 
-/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to str */
+/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str */
 EXTERN
 SCIP_Bool SCIPstrToIntValue(
    const char*           str,                /**< string to search */
    int*                  value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 
-/** extract the next token as a double value if it is one; in case a value is parsed the endptr is set to NULL */
+/** extract the next token as a double value if it is one; in case a value is parsed the endptr is set to @p str */
 EXTERN
 SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed
-                                              *   otherwise NULL */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 
-/** copies the string between a start and end character */
+/** copies the first size characters between a start and end character of str into token, if no error occured endptr
+ *  will point to the position after the read part, otherwise it will point to @p str
+ */
 EXTERN
 void SCIPstrCopySection(
    const char*           str,                /**< string to search */
@@ -4597,8 +4598,7 @@ void SCIPstrCopySection(
    char                  endchar,            /**< character which defines the ending */
    char*                 token,              /**< string to store the copy */
    int                   size,               /**< size of the token char array */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed
-                                              *   otherwise NULL */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 
 /**@} */
