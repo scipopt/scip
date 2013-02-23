@@ -13155,6 +13155,7 @@ SCIP_RETCODE SCIPparseVar(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
@@ -13166,7 +13167,7 @@ SCIP_RETCODE SCIPparseVar(
    {
    case SCIP_STAGE_PROBLEM:
       SCIP_CALL( SCIPvarParseOriginal(var, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
-            str, initial, removable, varcopy, vardelorig, vartrans, vardeltrans, vardata, success) );
+            str, initial, removable, varcopy, vardelorig, vartrans, vardeltrans, vardata, endptr, success) );
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -13176,7 +13177,7 @@ SCIP_RETCODE SCIPparseVar(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPvarParseTransformed(var, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
-            str, initial, removable, varcopy, vardelorig, vartrans, vardeltrans, vardata, success) );
+            str, initial, removable, varcopy, vardelorig, vartrans, vardeltrans, vardata, endptr, success) );
       break;
 
    default:

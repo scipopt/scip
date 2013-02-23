@@ -336,10 +336,11 @@ SCIP_RETCODE getVariable(
    SCIP_Real             objscale            /**< objective scale */
    )
 {
+   SCIP_Bool success;
    SCIP_VAR* var;
    char* buf;
-   SCIP_Bool success;
-   
+   char* endptr;
+
    buf = cipinput->strbuf;
    
    if( strncmp(buf, "FIXED", 5) == 0 )
@@ -353,10 +354,10 @@ SCIP_RETCODE getVariable(
       return SCIP_OKAY;
    
    SCIPdebugMessage("parse variable\n");
-   
+
    /* parse the variable */
-   SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, NULL, &success) );
-   
+   SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, NULL, &endptr, &success) );
+
    if( !success )
    {
       SCIPerrorMessage("syntax error in variable information (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);

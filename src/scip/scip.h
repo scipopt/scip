@@ -5952,6 +5952,7 @@ SCIP_RETCODE SCIPparseVar(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    );
 
