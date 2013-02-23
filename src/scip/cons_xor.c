@@ -17,6 +17,7 @@
  * @brief  Constraint handler for "xor" constraints,  \f$rhs = x_1 \oplus x_2 \oplus \dots  \oplus x_n\f$
  * @author Tobias Achterberg
  * @author Stefan Heinz
+ * @author Marc Pfetsch
  * @author Michael Winkler
  *
  * This constraint handler deals with "xor" constraint. These are constraint of the form:
@@ -37,6 +38,7 @@
 
 #include "scip/pub_misc.h"
 #include "scip/cons_xor.h"
+#include "scip/cons_linear.h"
 
 
 /* constraint handler properties */
@@ -61,6 +63,7 @@
 #define EVENTHDLR_DESC         "event handler for xor constraints"
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
+#define DEFAULT_ADDEXTENDEDFORM   FALSE /**< should the extended formulation be added in presolving */
 #define HASHSIZE_XORCONS         131101 /**< minimal size of hash table in logicor constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
@@ -78,8 +81,10 @@ struct SCIP_ConsData
 {
    SCIP_VAR**            vars;               /**< variables (including resultant) in the xor operation */
    SCIP_VAR*             intvar;             /**< internal variable for LP relaxation */
+   SCIP_VAR**            flowvars;           /**< variables in extended flow formulation (order: nn, ns, sn, ss) */
    SCIP_ROW*             rows[NROWS];        /**< rows for linear relaxation of xor constraint */
    int                   nvars;              /**< number of variables (including resultant) in xor operation */
+   int                   nflowvars;          /**< number of variables in extended flow formulation */
    int                   varssize;           /**< size of vars array */
    int                   watchedvar1;        /**< position of first watched operator variable */
    int                   watchedvar2;        /**< position of second watched operator variable */
@@ -98,6 +103,7 @@ struct SCIP_ConshdlrData
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for events on watched variables */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
+   SCIP_Bool             addextendedform;    /**< should the extended formulation be added in presolving */
 };
 
 
@@ -303,6 +309,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->propagated = FALSE;
    (*consdata)->sorted = FALSE;
    (*consdata)->changed = TRUE;
+   (*consdata)->flowvars = NULL;
+   (*consdata)->nflowvars = 0;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -359,8 +367,30 @@ SCIP_RETCODE consdataFree(
 
    if( SCIPisTransformed(scip) )
    {
+      int i;
+      int j;
+
       /* drop events for watched variables */
       SCIP_CALL( consdataSwitchWatchedvars(scip, *consdata, eventhdlr, -1, -1) );
+
+      /* release flow variables */
+      if ( (*consdata)->nflowvars > 0 )
+      {
+         assert( (*consdata)->flowvars != NULL );
+         for (i = 0; i < (*consdata)->nvars; ++i)
+         {
+            for (j = 0; j < 4; ++j)
+            {
+               if ( (*consdata)->flowvars[4*i+j] != NULL )
+               {
+                  SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->flowvars[4*i+j])) );
+               }
+            }
+         }
+
+         SCIPfreeBlockMemoryArray(scip, &((*consdata)->flowvars), 4 * (*consdata)->nvars);
+         (*consdata)->nflowvars = 0;
+      }
    }
    else
    {
@@ -845,6 +875,293 @@ SCIP_RETCODE applyFixings(
 
    SCIPdebugMessage("after fixings : ");
    SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
+
+   return SCIP_OKAY;
+}
+
+/** adds extended formulation
+ */
+static
+SCIP_RETCODE addExtendedFormulation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to check */
+   int*                  naddedconss         /**< number of added constraints */
+   )
+{
+   char name[SCIP_MAXSTRLEN];
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* varprevnn = NULL;
+   SCIP_VAR* varprevns = NULL;
+   SCIP_VAR* varprevsn = NULL;
+   SCIP_VAR* varprevss = NULL;
+   SCIP_VAR* vars[4];
+   SCIP_Real vals[4];
+   int i;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( naddedconss != NULL );
+   *naddedconss = 0;
+
+   /* exit if contraints is modifiable */
+   if ( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   /* exit if extended formulation has been added already */
+   if ( consdata->flowvars != NULL )
+      return SCIP_OKAY;
+
+   /* xor constraints with at most 3 variables are handled directly through rows for the convex hull */
+   if ( consdata->nvars <= 3 )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("Add extended formulation for xor constraint <%s> ...\n", SCIPconsGetName(cons));
+   assert( consdata->flowvars == NULL );
+   assert( consdata->nflowvars == 0 );
+
+   /* get storage for auxiliary variables */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->flowvars), 4 * (consdata->nvars) ) );
+
+   /* pass through components */
+   for (i = 0; i < consdata->nvars; ++i)
+   {
+      /* variables: n - north, s - south */
+      SCIP_VAR* varnn = NULL;
+      SCIP_VAR* varns = NULL;
+      SCIP_VAR* varsn = NULL;
+      SCIP_VAR* varss = NULL;
+      SCIP_CONS* newcons;
+      SCIP_Real rhs = 0.0;
+      SCIP_Bool infeasible = FALSE;
+      SCIP_Bool redundant = FALSE;
+      SCIP_Bool aggregated = FALSE;
+      int cnt = 0;
+
+      /* create variables */
+      if ( i == 0 )
+      {
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_nn", SCIPconsGetName(cons), i);
+         SCIP_CALL( SCIPcreateVar(scip, &varnn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPaddVar(scip, varnn) );
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ns", SCIPconsGetName(cons), i);
+         SCIP_CALL( SCIPcreateVar(scip, &varns, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPaddVar(scip, varns) );
+
+         /* need to lock variables, because we aggregate them */
+         SCIP_CALL( SCIPlockVarCons(scip, varnn, cons, TRUE, TRUE) );
+         SCIP_CALL( SCIPlockVarCons(scip, varns, cons, TRUE, TRUE) );
+
+         /* aggregate ns variable with original variable */
+         SCIP_CALL( SCIPaggregateVars(scip, varns, consdata->vars[0], 1.0, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
+         assert( ! infeasible );
+         assert( redundant );
+         assert( aggregated );
+      }
+      else
+      {
+         if ( i == consdata->nvars-1 )
+         {
+            if ( consdata->rhs )
+            {
+               /* if the rhs is 1 (true) the flow goes to the bottom level */
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ns", SCIPconsGetName(cons), i);
+               SCIP_CALL( SCIPcreateVar(scip, &varns, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPaddVar(scip, varns) );
+
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ss", SCIPconsGetName(cons), i);
+               SCIP_CALL( SCIPcreateVar(scip, &varss, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPaddVar(scip, varss) );
+
+               /* need to lock variables, because we aggregate them */
+               SCIP_CALL( SCIPlockVarCons(scip, varns, cons, TRUE, TRUE) );
+               SCIP_CALL( SCIPlockVarCons(scip, varss, cons, TRUE, TRUE) );
+
+               /* aggregate ns variable with original variable */
+               SCIP_CALL( SCIPaggregateVars(scip, varns, consdata->vars[i], 1.0, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
+               assert( ! infeasible );
+               assert( redundant );
+               assert( aggregated );
+            }
+            else
+            {
+               /* if the rhs is 0 (false) the flow stays on the top level */
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_nn", SCIPconsGetName(cons), i);
+               SCIP_CALL( SCIPcreateVar(scip, &varnn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPaddVar(scip, varnn) );
+
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_sn", SCIPconsGetName(cons), i);
+               SCIP_CALL( SCIPcreateVar(scip, &varsn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPaddVar(scip, varsn) );
+
+               /* need to lock variables, because we aggregate them */
+               SCIP_CALL( SCIPlockVarCons(scip, varnn, cons, TRUE, TRUE) );
+               SCIP_CALL( SCIPlockVarCons(scip, varsn, cons, TRUE, TRUE) );
+
+               /* aggregate sn variable with original variable */
+               SCIP_CALL( SCIPaggregateVars(scip, varsn, consdata->vars[i], 1.0, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
+               assert( ! infeasible );
+               assert( redundant );
+               assert( aggregated );
+            }
+         }
+         else
+         {
+            /* add the four flow variables */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_nn", SCIPconsGetName(cons), i);
+            SCIP_CALL( SCIPcreateVar(scip, &varnn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPaddVar(scip, varnn) );
+
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ns", SCIPconsGetName(cons), i);
+            SCIP_CALL( SCIPcreateVar(scip, &varns, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPaddVar(scip, varns) );
+
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_sn", SCIPconsGetName(cons), i);
+            SCIP_CALL( SCIPcreateVar(scip, &varsn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPaddVar(scip, varsn) );
+
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ss", SCIPconsGetName(cons), i);
+            SCIP_CALL( SCIPcreateVar(scip, &varss, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPaddVar(scip, varss) );
+
+            SCIP_CALL( SCIPlockVarCons(scip, varnn, cons, TRUE, TRUE) );
+            SCIP_CALL( SCIPlockVarCons(scip, varns, cons, TRUE, TRUE) );
+            SCIP_CALL( SCIPlockVarCons(scip, varsn, cons, TRUE, TRUE) );
+            SCIP_CALL( SCIPlockVarCons(scip, varss, cons, TRUE, TRUE) );
+
+            /* add coupling constraint */
+            cnt = 0;
+            if ( varns != NULL )
+            {
+               vars[cnt] = varns;
+               vals[cnt++] = 1.0;
+            }
+            if ( varsn != NULL )
+            {
+               vars[cnt] = varsn;
+               vals[cnt++] = 1.0;
+            }
+            assert( SCIPvarIsTransformed(consdata->vars[i]) );
+            vars[cnt] = consdata->vars[i];
+            vals[cnt++] = -1.0;
+
+            assert( cnt >= 2 );
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_couple", SCIPconsGetName(cons));
+            SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, cnt, vars, vals, 0.0, 0.0,
+                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
+                  SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
+                  SCIPconsIsRemovable(cons), FALSE) );
+            SCIP_CALL( SCIPaddCons(scip, newcons) );
+            SCIPdebugPrintCons(scip, newcons, NULL);
+            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+            ++(*naddedconss);
+         }
+
+         /* add south flow conservation constraint */
+
+         /* incoming variables */
+         cnt = 0;
+         if ( varprevss != NULL )
+         {
+            vars[cnt] = varprevss;
+            vals[cnt++] = 1.0;
+         }
+         if ( varprevns != NULL )
+         {
+            vars[cnt] = varprevns;
+            vals[cnt++] = 1.0;
+         }
+
+         /* outgoing variables */
+         if ( varss != NULL )
+         {
+            vars[cnt] = varss;
+            vals[cnt++] = -1.0;
+         }
+         if ( varsn != NULL )
+         {
+            vars[cnt] = varsn;
+            vals[cnt++] = -1.0;
+         }
+
+         assert( cnt >= 2 );
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_south", SCIPconsGetName(cons));
+         SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, cnt, vars, vals, 0.0, 0.0,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
+               SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
+               SCIPconsIsRemovable(cons), FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIPdebugPrintCons(scip, newcons, NULL);
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         ++(*naddedconss);
+      }
+
+      /* add north flow conservation constraint */
+
+      /* incoming variables */
+      cnt = 0;
+      if ( varprevnn != NULL )
+      {
+         vars[cnt] = varprevnn;
+         vals[cnt++] = 1.0;
+      }
+      if ( varprevsn != NULL )
+      {
+         vars[cnt] = varprevsn;
+         vals[cnt++] = 1.0;
+      }
+
+      /* outgoing variables */
+      if ( varnn != NULL )
+      {
+         vars[cnt] = varnn;
+         vals[cnt++] = -1.0;
+      }
+      if ( varns != NULL )
+      {
+         vars[cnt] = varns;
+         vals[cnt++] = -1.0;
+      }
+
+      assert( cnt >= 2 );
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_north", SCIPconsGetName(cons));
+      if ( i == 0 )
+         rhs = -1.0;
+      else
+         rhs = 0.0;
+      SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, cnt, vars, vals, rhs, rhs,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
+            SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
+            SCIPconsIsRemovable(cons), FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, newcons) );
+      SCIPdebugPrintCons(scip, newcons, NULL);
+      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      ++(*naddedconss);
+
+      /* store variables */
+      consdata->flowvars[4*i] = varnn;
+      consdata->flowvars[4*i + 1] = varns;
+      consdata->flowvars[4*i + 2] = varsn;
+      consdata->flowvars[4*i + 3] = varss;
+
+      if ( varnn != NULL )
+         ++(consdata->nflowvars);
+      if ( varns != NULL )
+         ++(consdata->nflowvars);
+      if ( varsn != NULL )
+         ++(consdata->nflowvars);
+      if ( varss != NULL )
+         ++(consdata->nflowvars);
+
+      /* store previous variables */
+      varprevnn = varnn;
+      varprevns = varns;
+      varprevsn = varsn;
+      varprevss = varss;
+   }
 
    return SCIP_OKAY;
 }
@@ -2306,6 +2623,26 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
    else
       *result = SCIP_DIDNOTFIND;
 
+   /* add extended formulation at the end of presolving if required */
+   if ( conshdlrdata->addextendedform && *result == SCIP_DIDNOTFIND && SCIPisPresolveFinished(scip) )
+   {
+      for (c = 0; c < nconss && ! SCIPisStopped(scip); ++c)
+      {
+         int naddedconss = 0;
+
+         cons = conss[c];
+         assert(cons != NULL);
+         consdata = SCIPconsGetData(cons);
+         assert(consdata != NULL);
+
+         if ( consdata->flowvars != NULL )
+            break;
+
+         SCIP_CALL( addExtendedFormulation(scip, cons, &naddedconss) );
+         (*naddconss) += naddedconss;
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2526,30 +2863,42 @@ static
 SCIP_DECL_CONSGETVARS(consGetVarsXor)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   int nintvar = 0;
+   int cnt;
+   int i;
+   int j;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->intvar == NULL )
-   {
-      if( varssize < consdata->nvars )
-         (*success) = FALSE;
-      else
-      {
-         BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
-         (*success) = TRUE;
-      }
-   }
+   if ( consdata->intvar != NULL )
+      nintvar = 1;
+
+   if ( varssize < consdata->nvars + nintvar + consdata->nflowvars )
+      (*success) = FALSE;
    else
    {
-      if( varssize < consdata->nvars  + 1 )
-         (*success) = FALSE;
-      else
-      {
-         BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+      BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+
+      if ( consdata->intvar != NULL )
          vars[consdata->nvars] = consdata->intvar;
-         (*success) = TRUE;
+
+      if ( consdata->nflowvars > 0 )
+      {
+         assert( consdata->flowvars != NULL );
+         cnt = consdata->nvars + nintvar;
+         for (i = 0; i < consdata->nvars; ++i)
+         {
+            for (j = 0; j < 4; ++j)
+            {
+               if ( consdata->flowvars[4*i+j] != NULL )
+                  vars[cnt++] = consdata->flowvars[4*i+j];
+            }
+         }
+         assert( cnt == consdata->nflowvars + consdata->nvars + nintvar );
       }
+
+      (*success) = TRUE;
    }
 
    return SCIP_OKAY;
@@ -2567,9 +2916,9 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsXor)
    assert(consdata != NULL);
 
    if( consdata->intvar == NULL )
-      (*nvars) = consdata->nvars;
+      (*nvars) = consdata->nvars + consdata->nflowvars;
    else
-      (*nvars) = consdata->nvars + 1;
+      (*nvars) = consdata->nvars + 1 + consdata->nflowvars;
 
    (*success) = TRUE;
 
@@ -2648,10 +2997,16 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          "constraints/xor/presolpairwise",
          "should pairwise constraint comparison be performed in presolving?",
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/xor/presolusehashing",
-         "should hash table be used for detecting redundant constraints in advance",
+         "should hash table be used for detecting redundant constraints in advance?",
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/xor/addextendedform",
+         "should the extended formulation be added in presolving?",
+         &conshdlrdata->addextendedform, TRUE, DEFAULT_ADDEXTENDEDFORM, NULL, NULL) );
 
    return SCIP_OKAY;
 }
