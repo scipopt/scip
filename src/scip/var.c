@@ -2189,6 +2189,15 @@ SCIP_RETCODE parseBounds(
 
    /* get bound type */
    SCIPstrCopySection(str, ' ', ' ', type, SCIP_MAXSTRLEN, endptr);
+   if ( strncmp(type, "original", 8) != 0 && strncmp(type, "global", 6) != 0 && strncmp(type, "local", 5) != 0 && strncmp(type, "lazy", 4) != 0 )
+   {
+      SCIPdebugMessage("unkown bound type <%s>\n", type);
+      /* skip until end of string */
+      while ( **endptr != '\0' )
+         ++(*endptr);
+      return SCIP_OKAY;
+   }
+
    SCIPdebugMessage("parsed bound type <%s>\n", type);
 
    /* get lower bound */
@@ -2293,8 +2302,8 @@ SCIP_RETCODE varParse(
    *lazylb = -SCIPsetInfinity(set);
    *lazyub =  SCIPsetInfinity(set);
 
-   /* parse optional local and lazy bounds */
-   for( i = 0; i < 2; ++i )
+   /* possibly parse optional local and lazy bounds */
+   for( i = 0; i < 2 && *endptr != '\0'; ++i )
    {
       /* start after previous bounds */
       str = endptr;
@@ -2312,10 +2321,6 @@ SCIP_RETCODE varParse(
          *lazylb = parsedlb;
          *lazyub = parsedub;
       }
-
-      /* stop parsing */
-      if ( *endptr == '\0' )
-         break;
    }
 
    /* check bounds for binary variables */
