@@ -516,7 +516,7 @@ SCIP_DECL_READERREAD(readerReadCip)
    CIPINPUT cipinput;
    SCIP_Real objscale;
    SCIP_Real objoffset;
-   SCIP_Bool initalconss;
+   SCIP_Bool initialconss;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
    SCIP_Bool dynamicrows;
@@ -542,7 +542,7 @@ SCIP_DECL_READERREAD(readerReadCip)
 
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initalconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initialconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
@@ -579,7 +579,7 @@ SCIP_DECL_READERREAD(readerReadCip)
          SCIP_CALL( getFixedVariable(scip, &cipinput) );
          break;
       case CIP_CONSTRAINTS:
-         SCIP_CALL( getConstraint(scip, &cipinput, initialcons, dynamicconss, removablecons) );
+         SCIP_CALL( getConstraint(scip, &cipinput, initialconss, dynamicconss, dynamicrows) );
          break;
       default:
          SCIPerrorMessage("invalid CIP state\n");
