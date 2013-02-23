@@ -16,6 +16,7 @@
 /**@file   reader_cip.c
  * @brief  CIP file reader
  * @author Stefan Heinz
+ * @author Marc Pfetsch
  * @author Michael Winkler
  */
 
@@ -136,7 +137,7 @@ SCIP_RETCODE getInputString(
 
    if( cipinput->section == CIP_CONSTRAINTS && endcharacter != NULL && endline - endcharacter != 1 )
    {
-      SCIPerrorMessage("Constraint line has to end with ';\\n'.\n");
+      SCIPerrorMessage("Constraint line has to end with ';\\n' (line: %d).\n", cipinput->linenumber);
       cipinput->haserror = TRUE;
       return SCIP_OKAY; /* return error at hightest level */
    }
@@ -165,7 +166,7 @@ SCIP_RETCODE getStart(
 
 /** read the problem name out of the statistics */
 static
-SCIP_RETCODE getStatistic(
+SCIP_RETCODE getStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    CIPINPUT*             cipinput            /**< CIP parsing data */
    )
@@ -180,7 +181,7 @@ SCIP_RETCODE getStatistic(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("parse statistic\n");
+   SCIPdebugMessage("parse statistics\n");
 
    if( strncmp(buf, "  Problem name", 14) == 0 )
    {
@@ -191,7 +192,7 @@ SCIP_RETCODE getStatistic(
 
       if( name == NULL )
       {
-         SCIPwarningMessage(scip, "did not find problem name\n");
+         SCIPwarningMessage(scip, "did not find problem name (line: %d)\n", cipinput->linenumber);
          return SCIP_OKAY;  /* no error, might work with empty problem name */
       }
 
@@ -254,7 +255,7 @@ SCIP_RETCODE getObjective(
 
       if( name == NULL )
       {
-         SCIPwarningMessage(scip, "did not find objective sense\n");
+         SCIPwarningMessage(scip, "did not find objective sense (line: %d)\n", cipinput->linenumber);
          return SCIP_OKAY; /* no error - might work with default */
       }
 
@@ -271,7 +272,7 @@ SCIP_RETCODE getObjective(
          objsense = SCIP_OBJSENSE_MAXIMIZE;
       else
       {
-         SCIPwarningMessage(scip, "unknown objective sense, %s\n", name);
+         SCIPwarningMessage(scip, "unknown objective sense '%s' (line: %d)\n", name, cipinput->linenumber);
          return SCIP_OKAY; /* no error - might work with default */
       }
 
@@ -287,7 +288,7 @@ SCIP_RETCODE getObjective(
 
       if( name == NULL )
       {
-         SCIPwarningMessage(scip, "did not find offset\n");
+         SCIPwarningMessage(scip, "did not find offset (line: %d)\n", cipinput->linenumber);
          return SCIP_OKAY;
       }
 
@@ -308,7 +309,7 @@ SCIP_RETCODE getObjective(
 
       if( name == NULL )
       {
-         SCIPwarningMessage(scip, "did not find scale\n");
+         SCIPwarningMessage(scip, "did not find scale (line: %d)\n", cipinput->linenumber);
          return SCIP_OKAY;
       }
 
@@ -325,7 +326,7 @@ SCIP_RETCODE getObjective(
    return SCIP_OKAY;
 }
 
-/** read variables */
+/** read variable */
 static
 SCIP_RETCODE getVariable(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -358,6 +359,7 @@ SCIP_RETCODE getVariable(
    
    if( !success )
    {
+      SCIPerrorMessage("syntax error in variable information (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
       cipinput->haserror = TRUE;
       return SCIP_OKAY;
    }
@@ -376,9 +378,9 @@ SCIP_RETCODE getVariable(
    return SCIP_OKAY;
 }
 
-/** read fixed variables */
+/** read fixed variable */
 static
-SCIP_RETCODE getFixedVariables(
+SCIP_RETCODE getFixedVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    CIPINPUT*             cipinput            /**< CIP parsing data */
    )
@@ -402,9 +404,9 @@ SCIP_RETCODE getFixedVariables(
    return SCIP_OKAY;
 }
 
-/** read constraints */
+/** read constraint */
 static
-SCIP_RETCODE getConstraints(
+SCIP_RETCODE getConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
    CIPINPUT*             cipinput,           /**< CIP parsing data */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -449,8 +451,15 @@ SCIP_RETCODE getConstraints(
 
    /* get length of line and check for correct ending of constraint line */
    len = (int)strlen(buf);
-   if( len < 1 || buf[len - 1] != ';' )
+   if( len < 1 )
    {
+      SCIPerrorMessage("syntax error: expected constraint in line %d.\n", cipinput->linenumber);
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
+   }
+   if ( buf[len - 1] != ';' )
+   {
+      SCIPerrorMessage("syntax error: line has to end with ';' (line: %d)\n", cipinput->linenumber);
       cipinput->haserror = TRUE;
       return SCIP_OKAY;
    }
@@ -468,6 +477,7 @@ SCIP_RETCODE getConstraints(
 
    if( !success )
    {
+      SCIPerrorMessage("syntax error when reading constraint (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
       cipinput->haserror = TRUE;
       return SCIP_OKAY;
    }
@@ -560,7 +570,7 @@ SCIP_DECL_READERREAD(readerReadCip)
          SCIP_CALL( getStart(scip, &cipinput) );
          break;
       case CIP_STATISTIC:
-         SCIP_CALL( getStatistic(scip, &cipinput) );
+         SCIP_CALL( getStatistics(scip, &cipinput) );
          break;
       case CIP_OBJECTIVE:
          SCIP_CALL( getObjective(scip, &cipinput, &objscale, &objoffset) );
@@ -569,10 +579,10 @@ SCIP_DECL_READERREAD(readerReadCip)
          SCIP_CALL( getVariable(scip, &cipinput, initialvar, removablevar, objscale) );
          break;
       case CIP_FIXEDVARS:
-         SCIP_CALL( getFixedVariables(scip, &cipinput) );
+         SCIP_CALL( getFixedVariable(scip, &cipinput) );
          break;
       case CIP_CONSTRAINTS:
-         SCIP_CALL( getConstraints(scip, &cipinput, initialcons, dynamicconss, removablecons) );
+         SCIP_CALL( getConstraint(scip, &cipinput, initialcons, dynamicconss, removablecons) );
          break;
       default:
          SCIPerrorMessage("invalid CIP state\n");
