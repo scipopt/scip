@@ -63,7 +63,8 @@
 #define EVENTHDLR_DESC         "event handler for xor constraints"
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
-#define DEFAULT_ADDEXTENDEDFORM   FALSE /**< should the extended formulation be added in presolving */
+#define DEFAULT_ADDEXTENDEDFORM   FALSE /**< should the extended formulation be added in presolving? */
+#define DEFAULT_ADDFLOWEXTENDED   FALSE /**< should the extended flow formulation be added (nonsymmetric formulation otherwise)? */
 #define HASHSIZE_XORCONS         131101 /**< minimal size of hash table in logicor constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
@@ -81,11 +82,12 @@ struct SCIP_ConsData
 {
    SCIP_VAR**            vars;               /**< variables (including resultant) in the xor operation */
    SCIP_VAR*             intvar;             /**< internal variable for LP relaxation */
-   SCIP_VAR**            flowvars;           /**< variables in extended flow formulation (order: nn, ns, sn, ss) */
+   SCIP_VAR**            extvars;            /**< variables in extended (flow|asymmetric) formulation (order for flow formulation: nn, ns, sn, ss) */
    SCIP_ROW*             rows[NROWS];        /**< rows for linear relaxation of xor constraint */
    int                   nvars;              /**< number of variables (including resultant) in xor operation */
-   int                   nflowvars;          /**< number of variables in extended flow formulation */
+   int                   nextvars;           /**< number of variables in extended flow formulation */
    int                   varssize;           /**< size of vars array */
+   int                   extvarssize;        /**< size of extvars array */
    int                   watchedvar1;        /**< position of first watched operator variable */
    int                   watchedvar2;        /**< position of second watched operator variable */
    int                   filterpos1;         /**< event filter position of first watched operator variable */
@@ -102,8 +104,9 @@ struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for events on watched variables */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
-   SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
-   SCIP_Bool             addextendedform;    /**< should the extended formulation be added in presolving */
+   SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance? */
+   SCIP_Bool             addextendedform;    /**< should the extended formulation be added in presolving? */
+   SCIP_Bool             addflowextended;    /**< should the extended flow formulation be added (nonsymmetric formulation otherwise)? */
 };
 
 
@@ -309,8 +312,9 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->propagated = FALSE;
    (*consdata)->sorted = FALSE;
    (*consdata)->changed = TRUE;
-   (*consdata)->flowvars = NULL;
-   (*consdata)->nflowvars = 0;
+   (*consdata)->extvars = NULL;
+   (*consdata)->nextvars = 0;
+   (*consdata)->extvarssize = 0;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -367,29 +371,26 @@ SCIP_RETCODE consdataFree(
 
    if( SCIPisTransformed(scip) )
    {
-      int i;
       int j;
 
       /* drop events for watched variables */
       SCIP_CALL( consdataSwitchWatchedvars(scip, *consdata, eventhdlr, -1, -1) );
 
       /* release flow variables */
-      if ( (*consdata)->nflowvars > 0 )
+      if ( (*consdata)->nextvars > 0 )
       {
-         assert( (*consdata)->flowvars != NULL );
-         for (i = 0; i < (*consdata)->nvars; ++i)
+         assert( (*consdata)->extvars != NULL );
+         for (j = 0; j < (*consdata)->extvarssize; ++j)
          {
-            for (j = 0; j < 4; ++j)
+            if ( (*consdata)->extvars[j] != NULL )
             {
-               if ( (*consdata)->flowvars[4*i+j] != NULL )
-               {
-                  SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->flowvars[4*i+j])) );
-               }
+               SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->extvars[j])) );
             }
          }
 
-         SCIPfreeBlockMemoryArray(scip, &((*consdata)->flowvars), 4 * (*consdata)->nvars);
-         (*consdata)->nflowvars = 0;
+         SCIPfreeBlockMemoryArray(scip, &((*consdata)->extvars), (*consdata)->extvarssize);
+         (*consdata)->nextvars = 0;
+         (*consdata)->extvarssize = 0;
       }
    }
    else
@@ -879,10 +880,19 @@ SCIP_RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
-/** adds extended formulation
+/** adds extended flow formulation
+ *
+ *  The extended flow formulation is built as follows: Let \f$x_1, \dots, x_k\f$ be the variables contained in the given
+ *  XOR constraint. We construct a two layered flow network. The upper layer is called the north layer and the lower is
+ *  called the south layer. For each \f$x_i,\; i = 2, \ldots, k-1\f$, we add arcs that stay in the north and south layer
+ *  (denoted by 'nn' and 'ss', respectively), as well as arcs that change the layers (denoted by 'ns' and 'sn'). For
+ *  \f$x_1\f$, we only add two arcs from the source to the two layers. The source is located on the north layer. For
+ *  \f$x_k\f$, we add two arcs connecting the two layers to the sink. Depending on the rhs of the constraint the sink is
+ *  located on the north or south layer. A change in the layers corresponds to a parity change, i.e., the corresponding
+ *  variable \f$x_i\f$ is 1 (and 0 otherwise).
  */
 static
-SCIP_RETCODE addExtendedFormulation(
+SCIP_RETCODE addExtendedFlowFormulation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
    int*                  naddedconss         /**< number of added constraints */
@@ -911,7 +921,7 @@ SCIP_RETCODE addExtendedFormulation(
    assert( consdata != NULL );
 
    /* exit if extended formulation has been added already */
-   if ( consdata->flowvars != NULL )
+   if ( consdata->extvars != NULL )
       return SCIP_OKAY;
 
    /* xor constraints with at most 3 variables are handled directly through rows for the convex hull */
@@ -919,11 +929,13 @@ SCIP_RETCODE addExtendedFormulation(
       return SCIP_OKAY;
 
    SCIPdebugMessage("Add extended formulation for xor constraint <%s> ...\n", SCIPconsGetName(cons));
-   assert( consdata->flowvars == NULL );
-   assert( consdata->nflowvars == 0 );
+   assert( consdata->extvars == NULL );
+   assert( consdata->nextvars == 0 );
+   assert( consdata->extvarssize == 0 );
 
    /* get storage for auxiliary variables */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->flowvars), 4 * (consdata->nvars) ) );
+   consdata->extvarssize = 4 * (consdata->nvars);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->extvars), consdata->extvarssize) );
 
    /* pass through components */
    for (i = 0; i < consdata->nvars; ++i)
@@ -1142,25 +1154,214 @@ SCIP_RETCODE addExtendedFormulation(
       ++(*naddedconss);
 
       /* store variables */
-      consdata->flowvars[4*i] = varnn;
-      consdata->flowvars[4*i + 1] = varns;
-      consdata->flowvars[4*i + 2] = varsn;
-      consdata->flowvars[4*i + 3] = varss;
+      consdata->extvars[4*i] = varnn;
+      consdata->extvars[4*i + 1] = varns;
+      consdata->extvars[4*i + 2] = varsn;
+      consdata->extvars[4*i + 3] = varss;
 
       if ( varnn != NULL )
-         ++(consdata->nflowvars);
+         ++(consdata->nextvars);
       if ( varns != NULL )
-         ++(consdata->nflowvars);
+         ++(consdata->nextvars);
       if ( varsn != NULL )
-         ++(consdata->nflowvars);
+         ++(consdata->nextvars);
       if ( varss != NULL )
-         ++(consdata->nflowvars);
+         ++(consdata->nextvars);
 
       /* store previous variables */
       varprevnn = varnn;
       varprevns = varns;
       varprevsn = varsn;
       varprevss = varss;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds extended asymmetric formulation
+ *
+ *  The extended asymmetric formulation is constructed as follows: Let \f$x_1, \dots, x_k\f$ be the variables contained
+ *  in the given XOR constraint. We introduce variables \f$p_1, \ldots, p_k\f$ with the following constraints: \f$p_1 =
+ *  x_1\f$, \f$p_k = 1\f$, and for \f$i = 2, \ldots, k-1\f$:
+ *  \f[
+ *    \begin{array}{ll}
+ *      p_i & \leq p_{i-1} + x_i\\
+ *      p_i & \leq 2 - (p_{i-1} + x_i)\\
+ *      p_i & \geq p_{i-1} - x_i\\
+ *      p_i & \geq x_i - p_{i-1}.
+ *    \end{array}
+ *  \f]
+ *  This formulation is described in
+ *
+ *  Robert D. Carr and Goran Konjevod@n
+ *  Polyhedral combinatorics@n
+ *  In Harvey Greenberg, editor, Tutorials on emerging methodologies and applications in Operations Research,@n
+ *  Chapter 2, pages (2-1)-(2-48). Springer, 2004.
+ */
+static
+SCIP_RETCODE addExtendedAsymmetricFormulation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to check */
+   int*                  naddedconss         /**< number of added constraints */
+   )
+{
+   char name[SCIP_MAXSTRLEN];
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* vars[3];
+   SCIP_Real vals[3];
+   SCIP_VAR* prevvar = NULL;
+   int i;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( naddedconss != NULL );
+   *naddedconss = 0;
+
+   /* exit if contraints is modifiable */
+   if ( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   /* exit if extended formulation has been added already */
+   if ( consdata->extvars != NULL )
+      return SCIP_OKAY;
+
+   /* xor constraints with at most 3 variables are handled directly through rows for the convex hull */
+   if ( consdata->nvars <= 3 )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("Add extended formulation for xor constraint <%s> ...\n", SCIPconsGetName(cons));
+   assert( consdata->extvars == NULL );
+   assert( consdata->nextvars == 0 );
+
+   /* get storage for auxiliary variables */
+   consdata->extvarssize = consdata->nvars;
+   consdata->nextvars = consdata->nvars;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->extvars), consdata->extvarssize ) );
+
+   /* pass through components */
+   for (i = 0; i < consdata->nvars; ++i)
+   {
+      SCIP_Bool infeasible = FALSE;
+      SCIP_Bool redundant = FALSE;
+      SCIP_Bool aggregated = FALSE;
+      SCIP_CONS* newcons;
+      SCIP_VAR* artvar = NULL;
+      SCIP_Real lb = 0.0;
+      SCIP_Real ub = 1.0;
+
+      /* determine fixing for last variables */
+      if ( i == consdata->nvars-1 )
+      {
+         if ( consdata->rhs )
+         {
+            lb = 1.0;
+            ub = 1.0;
+         }
+         else
+         {
+            lb = 0.0;
+            ub = 0.0;
+         }
+      }
+
+      /* create variable */
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "p_%s_%d", SCIPconsGetName(cons), i);
+      SCIP_CALL( SCIPcreateVar(scip, &artvar, name, lb, ub, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, artvar) );
+      SCIP_CALL( SCIPlockVarCons(scip, artvar, cons, TRUE, TRUE) );
+
+      /* create constraints */
+      if ( i == 0 )
+      {
+         /* aggregate artificial variable with original variable */
+         SCIP_CALL( SCIPaggregateVars(scip, artvar, consdata->vars[0], 1.0, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
+         assert( ! infeasible );
+         assert( redundant );
+         assert( aggregated );
+      }
+      else
+      {
+         assert( SCIPvarIsTransformed(consdata->vars[i]) );
+
+         /* add first constraint */
+         vars[0] = artvar;
+         vals[0] = 1.0;
+         vars[1] = prevvar;
+         vals[1] = -1.0;
+         vars[2] = consdata->vars[i];
+         vals[2] = -1.0;
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_1", SCIPconsGetName(cons), i);
+         SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, 3, vars, vals, -SCIPinfinity(scip), 0.0,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
+               SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
+               SCIPconsIsRemovable(cons), FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIPdebugPrintCons(scip, newcons, NULL);
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         ++(*naddedconss);
+
+         /* add second constraint */
+         vars[0] = artvar;
+         vals[0] = 1.0;
+         vars[1] = prevvar;
+         vals[1] = 1.0;
+         vars[2] = consdata->vars[i];
+         vals[2] = 1.0;
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_2", SCIPconsGetName(cons), i);
+         SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, 3, vars, vals, -SCIPinfinity(scip), 2.0,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
+               SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
+               SCIPconsIsRemovable(cons), FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIPdebugPrintCons(scip, newcons, NULL);
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         ++(*naddedconss);
+
+         /* add third constraint */
+         vars[0] = artvar;
+         vals[0] = -1.0;
+         vars[1] = prevvar;
+         vals[1] = 1.0;
+         vars[2] = consdata->vars[i];
+         vals[2] = -1.0;
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_3", SCIPconsGetName(cons), i);
+         SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, 3, vars, vals, -SCIPinfinity(scip), 0.0,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
+               SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
+               SCIPconsIsRemovable(cons), FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIPdebugPrintCons(scip, newcons, NULL);
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         ++(*naddedconss);
+
+         /* add fourth constraint */
+         vars[0] = artvar;
+         vals[0] = -1.0;
+         vars[1] = prevvar;
+         vals[1] = -1.0;
+         vars[2] = consdata->vars[i];
+         vals[2] = 1.0;
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_4", SCIPconsGetName(cons), i);
+         SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, 3, vars, vals, -SCIPinfinity(scip), 0.0,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
+               SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
+               SCIPconsIsRemovable(cons), FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIPdebugPrintCons(scip, newcons, NULL);
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         ++(*naddedconss);
+      }
+
+      /* store variable */
+      consdata->extvars[i] = artvar;
+      prevvar = artvar;
    }
 
    return SCIP_OKAY;
@@ -2635,10 +2836,17 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
          consdata = SCIPconsGetData(cons);
          assert(consdata != NULL);
 
-         if ( consdata->flowvars != NULL )
+         if ( consdata->extvars != NULL )
             break;
 
-         SCIP_CALL( addExtendedFormulation(scip, cons, &naddedconss) );
+         if ( conshdlrdata->addflowextended )
+         {
+            SCIP_CALL( addExtendedFlowFormulation(scip, cons, &naddedconss) );
+         }
+         else
+         {
+            SCIP_CALL( addExtendedAsymmetricFormulation(scip, cons, &naddedconss) );
+         }
          (*naddconss) += naddedconss;
       }
    }
@@ -2865,7 +3073,6 @@ SCIP_DECL_CONSGETVARS(consGetVarsXor)
    SCIP_CONSDATA* consdata;
    int nintvar = 0;
    int cnt;
-   int i;
    int j;
 
    consdata = SCIPconsGetData(cons);
@@ -2874,7 +3081,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsXor)
    if ( consdata->intvar != NULL )
       nintvar = 1;
 
-   if ( varssize < consdata->nvars + nintvar + consdata->nflowvars )
+   if ( varssize < consdata->nvars + nintvar + consdata->nextvars )
       (*success) = FALSE;
    else
    {
@@ -2883,19 +3090,16 @@ SCIP_DECL_CONSGETVARS(consGetVarsXor)
       if ( consdata->intvar != NULL )
          vars[consdata->nvars] = consdata->intvar;
 
-      if ( consdata->nflowvars > 0 )
+      if ( consdata->nextvars > 0 )
       {
-         assert( consdata->flowvars != NULL );
+         assert( consdata->extvars != NULL );
          cnt = consdata->nvars + nintvar;
-         for (i = 0; i < consdata->nvars; ++i)
+         for (j = 0; j < consdata->extvarssize; ++j)
          {
-            for (j = 0; j < 4; ++j)
-            {
-               if ( consdata->flowvars[4*i+j] != NULL )
-                  vars[cnt++] = consdata->flowvars[4*i+j];
-            }
+            if ( consdata->extvars[j] != NULL )
+               vars[cnt++] = consdata->extvars[j];
          }
-         assert( cnt == consdata->nflowvars + consdata->nvars + nintvar );
+         assert( cnt == consdata->nvars + nintvar + consdata->nextvars );
       }
 
       (*success) = TRUE;
@@ -2916,9 +3120,9 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsXor)
    assert(consdata != NULL);
 
    if( consdata->intvar == NULL )
-      (*nvars) = consdata->nvars + consdata->nflowvars;
+      (*nvars) = consdata->nvars + consdata->nextvars;
    else
-      (*nvars) = consdata->nvars + 1 + consdata->nflowvars;
+      (*nvars) = consdata->nvars + 1 + consdata->nextvars;
 
    (*success) = TRUE;
 
@@ -3007,6 +3211,11 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          "constraints/xor/addextendedform",
          "should the extended formulation be added in presolving?",
          &conshdlrdata->addextendedform, TRUE, DEFAULT_ADDEXTENDEDFORM, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/xor/addflowextended",
+         "should the extended flow formulation be added (nonsymmetric formulation otherwise)?",
+         &conshdlrdata->addflowextended, TRUE, DEFAULT_ADDFLOWEXTENDED, NULL, NULL) );
 
    return SCIP_OKAY;
 }

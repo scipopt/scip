@@ -33,7 +33,7 @@ features:
 - added a data pointer to each node of the SCIP_DIGRAPH
 - the statistics now include the value of the first LP solved at the root node (without cuts)
 - all readers now take the global parameters "reading/dynamic{conss|cols|rows}" and "reading/initialconss" into account.
-- the XOR constraint handler can add an extended formulation (parameter addextendedform)
+- the XOR constraint handler can add two extended formulations (flow/asymmetric, parameter addextendedform)
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -88,6 +88,7 @@ parameters:
   "reading/dynamic{conss|cols|rows}"
 - new parameter "reading/(READER)/initialconss" that determines whether model constraints are initial
 - new parameter "constraints/xor/addextendedform" to add an extended formulation in XOR-constraints
+- new parameter "constraints/xor/addflowextended" to add use the extended flow formulation in XOR-constraints
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
