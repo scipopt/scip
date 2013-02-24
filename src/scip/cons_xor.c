@@ -65,6 +65,7 @@
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_ADDEXTENDEDFORM   FALSE /**< should the extended formulation be added in presolving? */
 #define DEFAULT_ADDFLOWEXTENDED   FALSE /**< should the extended flow formulation be added (nonsymmetric formulation otherwise)? */
+#define DEFAULT_SEPARATEPARITY    FALSE /**< should parity inequalities be separated? */
 #define HASHSIZE_XORCONS         131101 /**< minimal size of hash table in logicor constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
@@ -107,6 +108,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance? */
    SCIP_Bool             addextendedform;    /**< should the extended formulation be added in presolving? */
    SCIP_Bool             addflowextended;    /**< should the extended flow formulation be added (nonsymmetric formulation otherwise)? */
+   SCIP_Bool             separateparity;     /**< should parity inequalities be separated? */
 };
 
 
@@ -1589,6 +1591,7 @@ SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
+   SCIP_Bool             separateparity,     /**< should parity inequalities be separated? */
    SCIP_Bool*            separated           /**< pointer to store whether a cut was found */
    )
 {
@@ -1622,6 +1625,90 @@ SCIP_RETCODE separateCons(
             *separated = TRUE;
          }
       }
+   }
+
+   /* separate parity inequalities if required */
+   if ( separateparity && consdata->nvars > 3 )
+   {
+      SCIP_Real* vals;
+      SCIP_Real sum = 0.0;
+      SCIP_Real val = 0.0;
+      int* idx;
+      int start = 0;
+      int ngen = 0;
+      int j;
+
+      SCIPdebugMessage("separating parity inequalities ...\n");
+
+      /* get solution values */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, consdata->nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &idx, consdata->nvars) );
+      for (j = 0; j < consdata->nvars; ++j)
+      {
+         vals[j] = SCIPgetSolVal(scip, sol, consdata->vars[j]);
+         idx[j] = j;
+      }
+
+      /* sort solution values */
+      SCIPsortDownRealInt(vals, idx, consdata->nvars);
+
+      /* compute total sum */
+      for (j = 0; j < consdata->nvars; ++j)
+         sum += vals[j];
+
+      /* make sure that we consider even sets if the rhs is 1 */
+      if ( consdata->rhs )
+         start = 1;
+
+      /* compute start */
+      for (j = 0; j < start; ++j)
+         val += vals[j];
+
+      /* pass through values */
+      for (j = start; j < consdata->nvars; j = j+2)
+      {
+         val += vals[j];
+
+         if ( SCIPisEfficacious(scip, 2.0 * val - sum - (SCIP_Real) j) )
+         {
+            SCIP_ROW* row;
+            int l;
+
+            SCIPdebugMessage("found violated parity cut (j: %d, efficiacy: %f)\n", j, 2.0 * val - sum - (SCIP_Real) j);
+
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons), -SCIPinfinity(scip), (SCIP_Real) j, FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
+            /* fill in row */
+            for (l = 0; l <= j; ++l)
+            {
+               assert( 0 <= idx[l] && idx[l] < consdata->nvars );
+               SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[idx[l]], 1.0) );
+            }
+            for (l = j+1; l < consdata->nvars; ++l)
+            {
+               assert( 0 <= idx[l] && idx[l] < consdata->nvars );
+               SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[idx[l]], -1.0) );
+            }
+
+            SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            assert( SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), j-1) );
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
+            ++ngen;
+
+            /* stop search -> no more violated inequalites will be found */
+            break;
+         }
+      }
+
+      SCIPdebugMessage("separated parity inequalites: %d\n", ngen);
+      if ( ngen > 0 )
+         *separated = TRUE;
+
+      SCIPfreeBufferArray(scip, &idx);
+      SCIPfreeBufferArray(scip, &vals);
    }
 
    return SCIP_OKAY;
@@ -2494,18 +2581,22 @@ SCIP_DECL_CONSINITLP(consInitlpXor)
 static
 SCIP_DECL_CONSSEPALP(consSepalpXor)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool separated;
    int c;
 
    *result = SCIP_DIDNOTFIND;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &separated) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->separateparity, &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
-   } 
+   }
 
    /* combine constraints to get more cuts */
    /**@todo combine constraints to get further cuts */
@@ -2518,18 +2609,22 @@ SCIP_DECL_CONSSEPALP(consSepalpXor)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolXor)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool separated;
    int c;
 
    *result = SCIP_DIDNOTFIND;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], sol, &separated) );
+      SCIP_CALL( separateCons(scip, conss[c], sol, conshdlrdata->separateparity, &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
-   } 
+   }
 
    /* combine constraints to get more cuts */
    /**@todo combine constraints to get further cuts */
@@ -2542,8 +2637,12 @@ SCIP_DECL_CONSSEPASOL(consSepasolXor)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpXor)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool violated;
    int i;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
 
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
@@ -2553,12 +2652,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpXor)
       {
          SCIP_Bool separated;
 
-         SCIP_CALL( separateCons(scip, conss[i], NULL, &separated) );
+         SCIP_CALL( separateCons(scip, conss[i], NULL, conshdlrdata->separateparity, &separated) );
          assert(separated); /* because the solution is integral, the separation always finds a cut */
          *result = SCIP_SEPARATED;
          return SCIP_OKAY;
       }
-   } 
+   }
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
@@ -3216,6 +3315,11 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          "constraints/xor/addflowextended",
          "should the extended flow formulation be added (nonsymmetric formulation otherwise)?",
          &conshdlrdata->addflowextended, TRUE, DEFAULT_ADDFLOWEXTENDED, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/xor/separateparity",
+         "should parity inequalities be separated?",
+         &conshdlrdata->separateparity, TRUE, DEFAULT_SEPARATEPARITY, NULL, NULL) );
 
    return SCIP_OKAY;
 }
