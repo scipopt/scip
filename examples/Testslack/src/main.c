@@ -820,7 +820,9 @@ SCIP_RETCODE SCIPsolveSlack(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "solving the realaxed original problem with original objective function\n");
 
       /**@todo if moved to scip.c need to use the SCIPchgIntParam() instead of the current function */
-      //SCIP_CALL( SCIPsetIntParam(scip, "limits/maxorigsol", 10) );
+#if 0
+      SCIP_CALL( SCIPsetIntParam(scip, "limits/maxorigsol", 10) );
+#endif
 
       /* adding the last set of solutions */
       for(c = 0; c < nsols; ++c)
@@ -1068,8 +1070,10 @@ SCIP_RETCODE testslack(
    nconss = SCIPgetNConss(scip);
    nvars = SCIPgetNVars(scip);
 
-   //   SCIP_CALL( SCIPallocMemoryArray(scip, &conss, nconss) );
-   //   SCIP_CALL( SCIPallocMemoryArray(scip, &vars, nvars) );
+#if 0
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conss, nconss) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &vars, nvars) );
+#endif
 
    conss = SCIPgetConss(scip);
    vars = SCIPgetVars(scip);
@@ -1086,7 +1090,7 @@ SCIP_RETCODE testslack(
       }
    }
 
-   // transform the value to create some consgroups and vargroups.
+   /* transform the value to create some consgroups and vargroups. */
    /* want ceil(nvars/wsizevargroups) and for cons as well */
    nvargroups = (nusedvars + wsizevargroups -1) / wsizevargroups;
    nconsgroups = (nconss + wsizeconsgroups -1) / wsizeconsgroups;
@@ -1175,8 +1179,10 @@ SCIP_RETCODE testslack(
 
    SCIPfreeMemory(scip, &sols);
 
-   //SCIPfreeMemoryArray(scip, &conss);
-   //SCIPfreeMemoryArray(scip, &vars);
+#if 0
+   SCIPfreeMemoryArray(scip, &conss);
+   SCIPfreeMemoryArray(scip, &vars);
+#endif
 
    SCIPfreeMemoryArray(scip, &consgroups);
    SCIPfreeMemoryArray(scip, &consgroupsizes);
@@ -1185,11 +1191,11 @@ SCIP_RETCODE testslack(
 
    if (nvargroups > 0)
    {
-   SCIPfreeMemoryArray(scip, &vargroups);
-   SCIPfreeMemoryArray(scip, &vargroupsizes);
-   SCIPfreeMemoryArray(scip, &vargroupprios);
-   SCIPfreeMemoryArray(scip, &vargroupweights);
-   SCIPfreeMemoryArray(scip, &varslacktypes);
+      SCIPfreeMemoryArray(scip, &vargroups);
+      SCIPfreeMemoryArray(scip, &vargroupsizes);
+      SCIPfreeMemoryArray(scip, &vargroupprios);
+      SCIPfreeMemoryArray(scip, &vargroupweights);
+      SCIPfreeMemoryArray(scip, &varslacktypes);
    }
 
    SCIPfreeMemoryArray(scip, &usedvars);
