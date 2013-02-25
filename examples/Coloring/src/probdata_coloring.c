@@ -690,7 +690,6 @@ void COLORprobPrintStableSets(
       }
       printf("ub = %f", SCIPvarGetUbLocal(probdata->stablesetvars[i]));
       printf(", inLP = %d", SCIPvarIsInLP(probdata->stablesetvars[i]));
-      //assert( (SCIPvarGetUbLocal(probdata->stablesetvars[i]) == 0) ||  SCIPvarIsInLP(probdata->stablesetvars[i]) );
       printf("\n");
    }
 }
