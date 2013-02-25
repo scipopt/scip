@@ -73,7 +73,7 @@
 #define DEFAULT_WRITESUBMIPDUALBOUND FALSE   /**< write dualbound after solving supmip root for all open node */
 
 /* should the printing be with more information */
-//#define LONGSTATS
+/*#define LONGSTATS*/
 
 /* do we want to create for each printing new files or only one */
 /*#define ONEFILE*/
