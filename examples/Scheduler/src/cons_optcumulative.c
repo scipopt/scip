@@ -1549,6 +1549,7 @@ SCIP_RETCODE enfopsCons(
    return SCIP_OKAY;
 }
 
+#if 0
 /** enforce the LP or pseudo solution */
 static
 SCIP_RETCODE enfoCons(
@@ -1614,6 +1615,7 @@ SCIP_RETCODE enfoCons(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** upgrade constraints to an cumulative constraint */
 static
@@ -2474,7 +2476,9 @@ SCIP_RETCODE propagateCons(
                   /* propagation detected infeasibility, therefore, job cannot be processed by that machine */
                   SCIPdebugMessage("  probing detect infeasibility\n");
                   SCIPdebugMessage("  fix variable <%s> to 0.0\n", SCIPvarGetName(binvar));
-                  //SCIP_CALL( SCIPinferBinvarCons(scip, binvar, FALSE, cons, 0, &infeasible, &tightened) );
+#if 0
+                  SCIP_CALL( SCIPinferBinvarCons(scip, binvar, FALSE, cons, 0, &infeasible, &tightened) );
+#endif
                   SCIP_CALL( SCIPtightenVarUb(scip, binvar, 0.0, FALSE, &infeasible, &tightened) );
                   if( infeasible )
                      (*cutoff) = TRUE;

@@ -520,7 +520,9 @@ SCIP_RETCODE applyOptcumulative(
          }
 
          /* analyze the conflict */
-         //SCIP_CALL( SCIPanalyzeConflict(scip, depth, NULL) );
+#if 0
+         SCIP_CALL( SCIPanalyzeConflict(scip, depth, NULL) );
+#endif
          SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
          SCIP_CALL( SCIPfreeSol(scip, &sol) );
       }
