@@ -1,8 +1,12 @@
-# SCIP version 3.0.0
+# SCIP version 3.0.1.1
 
 # LP pricing strategy ('l'pi default, 'a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)
 # [type: char, range: {lafpsqd}, default: l]
 lp/pricing = d
+
+# should presolving of LP solver be used?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+lp/presolving = FALSE
 
 # values larger than this are considered infinity
 # [type: real, range: [10000000000,1e+98], default: 1e+20]
@@ -30,7 +34,7 @@ constraints/and/sepafreq = 0
 
 # frequency for calling primal heuristic <crossover> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 30]
-heuristics/crossover/freq = -1
+heuristics/crossover/freq = 15
 
 # number of nodes without incumbent change that heuristic should wait
 # [type: longint, range: [0,9223372036854775807], default: 200]
