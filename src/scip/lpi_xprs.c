@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2918,6 +2918,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    SCIP_Real*            ray                 /**< primal ray */
    )
 {
+#if OLDRAYCODE
    int i;
    int irow;
    int nrows;
@@ -2927,6 +2928,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
 
    int    *bind = NULL;
    double *bvec = NULL;
+#endif
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -3109,7 +3111,7 @@ SCIP_RETCODE SCIPlpiGetBase(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
 
-   SCIPdebugMessage("saving Xpress basis into %p/%p\n", rstat, cstat);
+   SCIPdebugMessage("saving Xpress basis into %p/%p\n", (void*)rstat, (void*)cstat);
 
    CHECK_ZERO( XPRSgetbasis(lpi->xprslp, rstat, cstat) );
 
@@ -3152,7 +3154,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert(cstat != NULL);
    assert(rstat != NULL);
 
-   SCIPdebugMessage("loading basis %p/%p into Xpress\n", rstat, cstat);
+   SCIPdebugMessage("loading basis %p/%p into Xpress\n", (void*)rstat, (void*)cstat);
 
    invalidateSolution(lpi);
 
@@ -3395,7 +3397,7 @@ SCIP_RETCODE SCIPlpiGetState(
    /* allocate lpistate data */
    SCIP_CALL( lpistateCreate(lpistate, blkmem, ncols, nrows) );
 
-   SCIPdebugMessage("storing Xpress LPI state in %p (%d cols, %d rows)\n", *lpistate, ncols, nrows);
+   SCIPdebugMessage("storing Xpress LPI state in %p (%d cols, %d rows)\n", (void*)*lpistate, ncols, nrows);
 
    /* get unpacked basis information from Xpress */
    SCIP_CALL( getBase(lpi) );
@@ -3435,7 +3437,7 @@ SCIP_RETCODE SCIPlpiSetState(
    if( lpistate == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into Xpress\n", lpistate, lpistate->ncols, lpistate->nrows);
+   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into Xpress\n", (void*)lpistate, lpistate->ncols, lpistate->nrows);
 
    if( lpistate->ncols == 0 || lpistate->nrows == 0 )
       return SCIP_OKAY;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3235,47 +3235,6 @@ SCIP_RETCODE SCIPcolIncCoef(
    return SCIP_OKAY;
 }
 
-/** changes objective value of column */
-SCIP_RETCODE SCIPcolChgObj(
-   SCIP_COL*             col,                /**< LP column to change */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_Real             newobj              /**< new objective value */
-   )
-{
-   assert(col != NULL);
-   assert(col->var != NULL);
-   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetCol(col->var) == col);
-   assert(lp != NULL);
-   
-   SCIPdebugMessage("changing objective value of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->obj, newobj);
-
-   if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->obj, newobj) )
-   {
-      /* insert column in the chgcols list (if not already there) */
-      if( !col->objchanged && !col->lbchanged && !col->ubchanged )
-      {
-         SCIP_CALL( ensureChgcolsSize(lp, set, lp->nchgcols+1) );
-         lp->chgcols[lp->nchgcols] = col;
-         lp->nchgcols++;
-      }
-      
-      /* mark objective value change in the column */
-      col->objchanged = TRUE;
-      
-      /* mark the current LP unflushed */
-      lp->flushed = FALSE;
-
-      assert(lp->nchgcols > 0);
-   }  
-
-   /* store new objective function value */
-   col->obj = newobj;
-
-   return SCIP_OKAY;
-}
-
 /** insert column in the chgcols list (if not already there) */
 static
 SCIP_RETCODE insertColChgcols(
@@ -3297,6 +3256,53 @@ SCIP_RETCODE insertColChgcols(
    return SCIP_OKAY;
 }
 
+/** changes objective value of column */
+SCIP_RETCODE SCIPcolChgObj(
+   SCIP_COL*             col,                /**< LP column to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             newobj              /**< new objective value */
+   )
+{
+   assert(col != NULL);
+   assert(col->var != NULL);
+   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetCol(col->var) == col);
+   assert(lp != NULL);
+
+   SCIPdebugMessage("changing objective value of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->obj, newobj);
+
+   /* only add actual changes */
+   if( !SCIPsetIsEQ(set, col->obj, newobj) )
+   {
+      /* only variables with a real position in the LPI can be inserted */
+      if( col->lpipos >= 0 )
+      {
+         /* insert column in the chgcols list (if not already there) */
+         SCIP_CALL( insertColChgcols(col, set, lp) );
+
+         /* mark objective value change in the column */
+         col->objchanged = TRUE;
+
+         assert(lp->nchgcols > 0);
+      }
+      /* in any case, when the sign of the objective (and thereby the best bound) changes, the variable has to enter the
+       * LP and the LP has to be flushed
+       */
+      else if( (col->obj < 0.0 && newobj >= 0.0 && SCIPsetIsZero(set, col->ub))
+         || (col->obj >= 0.0 && newobj < 0.0 && SCIPsetIsZero(set, col->lb)) )
+      {
+         /* mark the LP unflushed */
+         lp->flushed = FALSE;
+      }
+   }
+
+   /* store new objective function value */
+   col->obj = newobj;
+
+   return SCIP_OKAY;
+}
+
 /** changes lower bound of column */
 SCIP_RETCODE SCIPcolChgLb(
    SCIP_COL*             col,                /**< LP column to change */
@@ -3310,19 +3316,32 @@ SCIP_RETCODE SCIPcolChgLb(
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
    assert(lp != NULL);
-   
+
    SCIPdebugMessage("changing lower bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->lb, newlb);
 
-   if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->lb, newlb) )
+   /* only add actual changes */
+   if( !SCIPsetIsEQ(set, col->lb, newlb) )
    {
-      /* insert column in the chgcols list (if not already there) */
-      SCIP_CALL( insertColChgcols(col, set, lp) );
-      
-      /* mark bound change in the column */
-      col->lbchanged = TRUE;
-      
-      assert(lp->nchgcols > 0);
-   }  
+      /* only variables with a real position in the LPI can be inserted */
+      if( col->lpipos >= 0 )
+      {
+         /* insert column in the chgcols list (if not already there) */
+         SCIP_CALL( insertColChgcols(col, set, lp) );
+
+         /* mark bound change in the column */
+         col->lbchanged = TRUE;
+
+         assert(lp->nchgcols > 0);
+      }
+      /* in any case, when the best bound is zero and gets changed, the variable has to enter the LP and the LP has to be
+       * flushed
+       */
+      else if( col->obj >= 0.0 && SCIPsetIsZero(set, col->lb) )
+      {
+         /* mark the LP unflushed */
+         lp->flushed = FALSE;
+      }
+   }
 
    col->lb = newlb;
 
@@ -3342,19 +3361,32 @@ SCIP_RETCODE SCIPcolChgUb(
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
    assert(lp != NULL);
-   
+
    SCIPdebugMessage("changing upper bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->ub, newub);
 
-   if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->ub, newub) )
+   /* only add actual changes */
+   if( !SCIPsetIsEQ(set, col->ub, newub) )
    {
-      /* insert column in the chgcols list (if not already there) */
-      SCIP_CALL( insertColChgcols(col, set, lp) );
+      /* only variables with a real position in the LPI can be inserted */
+      if( col->lpipos >= 0 )
+      {
+         /* insert column in the chgcols list (if not already there) */
+         SCIP_CALL( insertColChgcols(col, set, lp) );
 
-      /* mark bound change in the column */
-      col->ubchanged = TRUE;
+         /* mark bound change in the column */
+         col->ubchanged = TRUE;
 
-      assert(lp->nchgcols > 0);
-   }  
+         assert(lp->nchgcols > 0);
+      }
+      /* in any case, when the best bound is zero and gets changed, the variable has to enter the LP and the LP has to be
+       * flushed
+       */
+      else if( col->obj < 0.0 && SCIPsetIsZero(set, col->ub) )
+      {
+         /* mark the LP unflushed */
+         lp->flushed = FALSE;
+      }
+   }
 
    col->ub = newub;
 
@@ -7284,6 +7316,9 @@ SCIP_RETCODE lpFlushChgCols(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+#ifndef NDEBUG
+   SCIP_Bool lpinone = (strcmp( SCIPlpiGetSolverName(), "NONE") == 0);
+#endif
    SCIP_COL* col;
    int* objind;
    int* bdind;
@@ -7325,7 +7360,7 @@ SCIP_RETCODE lpFlushChgCols(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         if( !lpinone )
          {
             SCIP_Real lpiobj;
             SCIP_Real lpilb;
@@ -7354,6 +7389,7 @@ SCIP_RETCODE lpFlushChgCols(
             }
             col->objchanged = FALSE;
          }
+
          if( col->lbchanged || col->ubchanged )
          {
             SCIP_Real newlb;
@@ -7376,6 +7412,7 @@ SCIP_RETCODE lpFlushChgCols(
             col->ubchanged = FALSE;
          }
       }
+      /* maybe lb/ub/objchanged should all be set to false when lpipos is -1 */
    }
 
    /* change objective values in LP */
@@ -7423,6 +7460,9 @@ SCIP_RETCODE lpFlushChgRows(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+#ifndef NDEBUG
+   SCIP_Bool lpinone = (strcmp( SCIPlpiGetSolverName(), "NONE") == 0);
+#endif
    SCIP_ROW* row;
    int* ind;
    SCIP_Real* lhs;
@@ -7457,7 +7497,7 @@ SCIP_RETCODE lpFlushChgRows(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         if( !lpinone )
          {
             SCIP_Real lpilhs;
             SCIP_Real lpirhs;
@@ -7574,6 +7614,9 @@ SCIP_RETCODE SCIPlpMarkFlushed(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+#ifndef NDEBUG
+   SCIP_Bool lpinone = (strcmp( SCIPlpiGetSolverName(), "NONE") == 0);
+#endif
    int i;
 
    assert(lp != NULL);
@@ -7623,7 +7666,7 @@ SCIP_RETCODE SCIPlpMarkFlushed(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         if( !lpinone )
          {
             SCIP_Real lpiobj;
             SCIP_Real lpilb;
@@ -7643,6 +7686,7 @@ SCIP_RETCODE SCIPlpMarkFlushed(
          col->lbchanged = FALSE;
          col->ubchanged = FALSE;
       }
+      /* maybe lb/ub/objchanged should  be set to false also when lpipos is -1 */
    }
    lp->nchgcols = 0;
 
@@ -7658,7 +7702,7 @@ SCIP_RETCODE SCIPlpMarkFlushed(
       {
 #ifndef NDEBUG
          /* do not check consistency of data with LPI in case of LPI=none */
-         if ( strcmp( SCIPlpiGetSolverName(), "NONE") != 0 )
+         if( !lpinone )
          {
             SCIP_Real lpilhs;
             SCIP_Real lpirhs;
@@ -13538,7 +13582,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
 
-         SCIPdebugMessage(" -> LP has unbounded primal ray\n");
+         SCIPdebugMessage(" -> LP has unbounded primal ray (primalfeas=%u, rayfeas=%u)\n",
+            primalfeasible, rayfeasible);
 
          if( !primalfeasible || !rayfeasible )
          {
@@ -13605,13 +13650,15 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             lpi = SCIPlpGetLPI(lp);
 
             assert(lpi != NULL);
-            assert(lp->lastlpalgo != SCIP_LPALGO_DUALSIMPLEX || SCIPlpiIsObjlimExc(lpi)
-               || SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiuobjlim));
+            /* actually, SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) should hold, but we are a bit less strict in
+             * the assert by using !SCIPsetIsFeasNegative()
+             */
+            assert(SCIPlpiIsObjlimExc(lpi) || !SCIPsetIsFeasNegative(set, lp->lpobjval - lp->lpiuobjlim));
 
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
             /* do one additional simplex step if the computed dual solution doesn't exceed the objective limit */
-            if( objval < lp->lpiuobjlim )
+            if( SCIPsetIsLT(set, objval, lp->lpiuobjlim) )
             {
                SCIP_Real tmpcutoff;
                char tmppricingchar;
@@ -13631,7 +13678,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_CALL( SCIPsetSetCharParam(set, messagehdlr, "lp/pricing", 's') );
 
                /* resolve LP with an iteration limit of 1 */
-               SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, 1, -1,
+               SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, 1, 1,
                      FALSE, FALSE, TRUE, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
 
                /* reinstall old cutoff bound and lp pricing strategy */
@@ -13657,7 +13704,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                 * was stopped due to time or iteration limit, solve again with fastmip turned off
                 */
                if( solstat == SCIP_LPSOLSTAT_ITERLIMIT &&
-                  SCIPsetIsRelLT(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
+                  SCIPsetIsLT(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
                {
                   assert(!(*lperror));
 
@@ -13705,8 +13752,11 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      dualfeasible = TRUE;
                   }
 
-                  /* in debug mode, check that lazy bounds (if present) are not violated */
-                  checkLazyBounds(lp, set);
+                  /* in debug mode, check that lazy bounds (if present) are not violated by an optimal LP solution */
+                  if( solstat == SCIP_LPSOLSTAT_OPTIMAL )
+                  {
+                     checkLazyBounds(lp, set);
+                  }
 
                   /* if objective value is larger than the cutoff bound, set solution status to objective
                    * limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
@@ -13782,7 +13832,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                }
 
                assert(lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT);
-               assert(SCIPsetIsRelGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))
+               assert(SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))
                   || lp->lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT);
             }
             else

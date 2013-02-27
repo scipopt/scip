@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,7 +35,7 @@
 #define PROP_NAME                            "genvbounds"
 #define PROP_DESC                            "generalized variable bounds propagator"
 #define PROP_TIMING   SCIP_PROPTIMING_ALWAYS
-#define PROP_PRIORITY                    -10 /**< propagator priority */
+#define PROP_PRIORITY                3000000 /**< propagator priority */
 #define PROP_FREQ                          1 /**< propagator frequency */
 #define PROP_DELAY                     FALSE /**< should propagation method be delayed, if other propagators
                                               *   found reductions? */
@@ -45,6 +45,10 @@
                                               *   reductions? */
 #define PROP_PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates
                                               *   in (-1: no limit) */
+#define DEFAULT_GLOBAL_PROPAGATION      TRUE /**< apply global propagation? */
+#define DEFAULT_PROPAGATE_IN_ROOT_NODE  TRUE /**< apply genvbounds in root node if no new incumbent was found? */
+#define DEFAULT_SORT                    TRUE /**< sort genvbounds and wait for bound change events? (otherwise all
+                                              *   genvbounds are applied in each node) */
 
 #define EVENTHDLR_NAME                       "genvbounds"
 #define EVENTHDLR_DESC                       "event handler for generalized variable bounds propagator"
@@ -114,7 +118,11 @@ struct SCIP_PropData
    int                   ngindices;          /**< number of indices stored in gstartindices array */
    int                   nlbevents;          /**< number of data entries in lbevents array */
    int                   nubevents;          /**< number of data entries in ubevents array */
-   SCIP_Bool             sorted;             /**< stores wether array genvboundstore is topologically sorted */
+   SCIP_Bool             issorted;           /**< stores wether array genvboundstore is topologically sorted */
+   SCIP_Bool             global;             /**< apply global propagation? */
+   SCIP_Bool             propinrootnode;     /**< apply genvbounds in root node if no new incumbent was found? */
+   SCIP_Bool             sort;               /**< sort genvbounds and wait for bound change events? (otherwise all
+                                              *   genvbounds are applied in each node) */
 };
 
 
@@ -529,6 +537,7 @@ SCIP_RETCODE resolveGenVBoundPropagation(
    SCIP_VAR* lhsvar;
    SCIP_VAR** vars;
    SCIP_Real minactivity;
+   SCIP_Real tmpboundval;
    SCIP_Real slack;
    int nvars;
    int i;
@@ -572,10 +581,11 @@ SCIP_RETCODE resolveGenVBoundPropagation(
       genvbound->boundtype == SCIP_BOUNDTYPE_LOWER ? "+" : "-", SCIPvarGetName(lhsvar), *boundval);
 
    /* subtract constant terms from bound value */
-   *boundval -= genvbound->cutoffcoef * SCIPgetCutoffbound(scip);
-   *boundval -= genvbound->constant;
+   tmpboundval = *boundval;
+   tmpboundval -= genvbound->cutoffcoef * SCIPgetCutoffbound(scip);
+   tmpboundval -= genvbound->constant;
 
-   SCIPdebugMessage("subtracting constant terms gives boundval=%.15g\n", *boundval);
+   SCIPdebugMessage("subtracting constant terms gives boundval=%.15g\n", tmpboundval);
 
    /* compute minimal activity; if bdchgidx is NULL, we create the initial conflict and use local bounds */
    minactivity = getGenVBoundsMinActivityConflict(scip, genvbound->vars, genvbound->coefs, genvbound->ncoefs, bdchgidx);
@@ -586,16 +596,16 @@ SCIP_RETCODE resolveGenVBoundPropagation(
     * genvbound can explain the propagation at the given bound change index; note that by now, with smaller cutoff
     * bound, we might even perform a stronger propagation
     */
-   if( SCIPisLT(scip, minactivity, *boundval) )
+   if( SCIPisLT(scip, minactivity, tmpboundval) )
    {
       SCIPdebugMessage("minactivity is too small to explain propagation; was genvbound replaced?\n");
       return SCIP_OKAY;
    }
 
    /* if bdchgidx is NULL, i.e., we create the initial conflict, we should be able to explain the bound change */
-   assert(SCIPisGE(scip, minactivity, *boundval));
+   assert(SCIPisGE(scip, minactivity, tmpboundval));
 
-   slack = MAX(minactivity - *boundval, 0.0);
+   slack = MAX(minactivity - tmpboundval, 0.0);
 
    SCIPdebugMessage("slack=%.15g\n", slack);
 
@@ -711,12 +721,23 @@ SCIP_RETCODE resolveGenVBoundPropagation(
 
    /* if slack is positive, return increased boundval */
    if( SCIPisPositive(scip, slack) )
-      *boundval += slack;
+      tmpboundval += slack;
 
    /* add constant terms again */
-   *boundval += genvbound->cutoffcoef * SCIPgetCutoffbound(scip);
-   *boundval += genvbound->constant;
+   tmpboundval += genvbound->cutoffcoef * SCIPgetCutoffbound(scip);
+   tmpboundval += genvbound->constant;
 
+   /* boundval should not have been decreased; if this happened nevertheless, maybe due to numerical errors, we quit
+    * without success
+    */
+   if( SCIPisLT(scip, tmpboundval, *boundval) )
+   {
+      SCIPdebugMessage("boundval was reduced from %.15g to %.15g; propagation not resolved\n", *boundval, tmpboundval);
+      return SCIP_OKAY;
+   }
+
+   /* return widened boundval */
+   *boundval = tmpboundval;
    *success = TRUE;
 
    return SCIP_OKAY;
@@ -747,7 +768,7 @@ SCIP_RETCODE analyzeGenVBoundConflict(
       SCIP_Real infeasthreshold;
       SCIP_Real bound;
 
-      /* get minimal right-hand side bound that leads to infeasibility */
+      /* get minimal right-hand side bound that leads to infeasibility; first try with a factor of 2 for robustness */
       bound = REALABS(SCIPvarGetUbLocal(genvbound->var));
       infeasthreshold = MAX(bound, 1.0) * 2 * SCIPfeastol(scip);
       bound = SCIPvarGetUbLocal(genvbound->var) + infeasthreshold;
@@ -756,11 +777,29 @@ SCIP_RETCODE analyzeGenVBoundConflict(
        * to conflict set
        */
       SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &bound, &success) );
-      assert(SCIPisFeasGT(scip, bound, SCIPvarGetUbLocal(genvbound->var)));
+      assert(!success || SCIPisFeasGT(scip, bound, SCIPvarGetUbLocal(genvbound->var)));
+
+      /* if infeasibility cannot be proven with the tighter bound, try with actual bound */
+      if( !success )
+      {
+         bound = REALABS(SCIPvarGetUbLocal(genvbound->var));
+         infeasthreshold = MAX(bound, 1.0) * SCIPfeastol(scip);
+         bound = SCIPvarGetUbLocal(genvbound->var) + infeasthreshold;
+
+         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &bound, &success) );
+         success = success && SCIPisFeasGT(scip, bound, SCIPvarGetUbLocal(genvbound->var));
+      }
 
       /* compute upper bound on left-hand side variable that leads to infeasibility */
       bound -= infeasthreshold;
-      assert(SCIPisGE(scip, bound, SCIPvarGetUbLocal(genvbound->var)));
+      success = success && SCIPisGE(scip, bound, SCIPvarGetUbLocal(genvbound->var));
+
+      /* initial reason could not be constructed, maybe due to numerics; do not apply conflict analysis */
+      if( !success )
+      {
+         SCIPdebugMessage("strange: could not create initial reason to start conflict analysis\n");
+         return SCIP_OKAY;
+      }
 
       /* if bound is already enforced by conflict set we do not have to add it */
       if( SCIPisGE(scip, bound, SCIPgetConflictVarUb(scip, genvbound->var)) )
@@ -781,7 +820,7 @@ SCIP_RETCODE analyzeGenVBoundConflict(
       SCIP_Real infeasthreshold;
       SCIP_Real bound;
 
-      /* get minimal right-hand side bound that leads to infeasibility */
+      /* get minimal right-hand side bound that leads to infeasibility; try with a factor of 2 first for robustness */
       bound = REALABS(SCIPvarGetLbLocal(genvbound->var));
       infeasthreshold = MAX(bound, 1.0) * 2 * SCIPfeastol(scip);
       bound = -SCIPvarGetLbLocal(genvbound->var) + infeasthreshold;
@@ -790,11 +829,29 @@ SCIP_RETCODE analyzeGenVBoundConflict(
        * to conflict set
        */
       SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &bound, &success) );
-      assert(SCIPisFeasLT(scip, -bound, SCIPvarGetLbLocal(genvbound->var)));
+      assert(!success || SCIPisFeasLT(scip, -bound, SCIPvarGetLbLocal(genvbound->var)));
+
+      /* if infeasibility cannot be proven with the tighter bound, try with actual bound */
+      if( !success )
+      {
+         bound = REALABS(SCIPvarGetLbLocal(genvbound->var));
+         infeasthreshold = MAX(bound, 1.0) * SCIPfeastol(scip);
+         bound = -SCIPvarGetLbLocal(genvbound->var) + infeasthreshold;
+
+         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &bound, &success) );
+         success = success && SCIPisFeasLT(scip, -bound, SCIPvarGetLbLocal(genvbound->var));
+      }
 
       /* compute lower bound on left-hand side variable that leads to infeasibility */
       bound = -bound + infeasthreshold;
-      assert(SCIPisLE(scip, bound, SCIPvarGetLbLocal(genvbound->var)));
+      success = success && SCIPisLE(scip, bound, SCIPvarGetLbLocal(genvbound->var));
+
+      /* initial reason could not be constructed, maybe due to numerics; do not apply conflict analysis */
+      if( !success )
+      {
+         SCIPdebugMessage("strange: could not create initial reason to start conflict analysis\n");
+         return SCIP_OKAY;
+      }
 
       /* if bound is already enforced by conflict set we do not have to add it */
       if( SCIPisLE(scip, bound, SCIPgetConflictVarLb(scip, genvbound->var)) )
@@ -1174,7 +1231,7 @@ SCIP_RETCODE setUpEvents(
    assert(propdata->eventhdlr != NULL);
    assert(propdata->lbevents == NULL);
    assert(propdata->ubevents == NULL);
-   assert(propdata->sorted);
+   assert(propdata->issorted);
    assert(propdata->nlbevents == -1);
    assert(propdata->nubevents == -1);
 
@@ -1374,7 +1431,7 @@ SCIP_RETCODE sortGenVBounds(
    SCIPfreeMemoryArray(scip, &(genvboundssorted));
 
    /* remember genvboundstore as sorted */
-   propdata->sorted = TRUE;
+   propdata->issorted = TRUE;
 
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("genvbounds got: %d\n", propdata->ngenvbounds);
@@ -1422,14 +1479,39 @@ SCIP_RETCODE applyGenVBounds(
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->genvboundstore != NULL);
-   assert(propdata->sorted);
-
-   startingcomponents = global ? propdata->gstartcomponents : propdata->startcomponents;
-   startingindices = global ? propdata->gstartindices : propdata->startindices;
-   nindices = global ? propdata->ngindices : propdata->nindices;
 
    if( *result == SCIP_DIDNOTRUN )
       *result = SCIP_DIDNOTFIND;
+
+   /* if the genvbounds are not sorted, i.e. if root node processing has not been finished, yet, we just propagate in
+    * the order in which they have been added to genvboundstore
+    */
+   if( !propdata->issorted )
+   {
+      int j;
+
+      assert(!propdata->sort || SCIPinProbing(scip) || SCIPgetDepth(scip) == 0);
+
+      for( j = 0; j < propdata->ngenvbounds && *result != SCIP_CUTOFF; j++ )
+      {
+         if( SCIPvarGetStatus(propdata->genvboundstore[j]->var) == SCIP_VARSTATUS_MULTAGGR )
+         {
+            /**@todo resolve multiaggregation in exitpre */
+         }
+         else
+         {
+            SCIPdebugMessage("applying genvbound with index %d (unsorted mode)\n", j);
+            SCIP_CALL( applyGenVBound(scip, prop, propdata->genvboundstore[j], global, result) );
+         }
+      }
+
+      return SCIP_OKAY;
+   }
+
+   /* otherwise, we propagate only components affected by the latest bound changes */
+   startingcomponents = global ? propdata->gstartcomponents : propdata->startcomponents;
+   startingindices = global ? propdata->gstartindices : propdata->startindices;
+   nindices = global ? propdata->ngindices : propdata->nindices;
 
    for( i = 0; i < nindices && *result != SCIP_CUTOFF; i++ )
    {
@@ -1544,7 +1626,10 @@ SCIP_RETCODE execGenVBounds(
    assert(propdata->prop != NULL);
    assert(result != NULL);
 
-   if( !propdata->sorted )
+   /* we only sort after the root node is finished; this avoids having to sort again after adding more genvbounds; if
+    * the genvbounds are not sorted, we will simply propagate all of them in the order given
+    */
+   if( propdata->sort && !propdata->issorted && !SCIPinProbing(scip) && SCIPgetDepth(scip) > 0 )
    {
       *result = SCIP_DIDNOTFIND;
 
@@ -1572,8 +1657,8 @@ SCIP_RETCODE execGenVBounds(
       SCIP_CALL( setUpEvents(scip, propdata) );
    }
 
-   /* always apply global propagation if primal bound has improved */
-   if( SCIPisFeasLT(scip, SCIPgetCutoffbound(scip), propdata->lastcutoff) )
+   /* apply global propagation if primal bound has improved */
+   if( propdata->global && SCIPisFeasLT(scip, SCIPgetCutoffbound(scip), propdata->lastcutoff) )
    {
       if( propdata->ngindices > 0 )
       {
@@ -1583,11 +1668,19 @@ SCIP_RETCODE execGenVBounds(
       propdata->lastcutoff = SCIPgetCutoffbound(scip);
    }
 
-   /* apply local propagation if bound change events were caught */
-   if( local && *result != SCIP_CUTOFF && SCIPgetCurrentNode(scip) == propdata->lastnodecaught && propdata->nindices > 0 )
+   /* apply local propagation if allowed */
+   if( local && *result != SCIP_CUTOFF )
    {
-      SCIP_CALL( applyGenVBounds(scip, propdata->prop, FALSE, result) );
-      assert(*result != SCIP_DIDNOTRUN);
+      /* check if local propagation in root node is allowed */
+      if( SCIPgetDepth(scip) > 0 || propdata->propinrootnode )
+      {
+         /* if genvbounds are already sorted, check if bound change events were caught; otherwise apply all genvbounds */
+         if( !propdata->issorted || ( SCIPgetCurrentNode(scip) == propdata->lastnodecaught && propdata->nindices > 0 ) )
+         {
+            SCIP_CALL( applyGenVBounds(scip, propdata->prop, FALSE, result) );
+            assert(*result != SCIP_DIDNOTRUN);
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -1702,7 +1795,7 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    }
 
    /* mark genvbounds array to be resorted */
-   propdata->sorted = FALSE;
+   propdata->issorted = FALSE;
 
    /* debug message */
    SCIPdebugMessage("added genvbound ");
@@ -1753,7 +1846,7 @@ SCIP_DECL_PROPINIT(propInitGenvbounds)
    propdata->ngindices = -1;
    propdata->nlbevents = -1;
    propdata->nubevents = -1;
-   propdata->sorted = FALSE;
+   propdata->issorted = FALSE;
 
    propdata->prop = prop;
 
@@ -1815,20 +1908,13 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    /* do not run if no genvbounds were added yet */
    if( propdata->ngenvbounds < 1 )
    {
+      /**@todo is it really no performance issue to be called each time when there are no genvbounds, e.g., for MIPs? */
       SCIPdebugMessage("no bounds were added yet\n");
-
-      /* if this situation appears in a node != root, this means that probably no genvbounds will be added anymore */
-      if( !SCIPinProbing(scip) && SCIPgetDepth(scip) > 0 )
-      {
-         SCIPdebugMessage("disabling prop genvbounds\n");
-         SCIPpropSetFreq(prop, -1);
-      }
-
       return SCIP_OKAY;
    }
 
-   /* propagate locally only in SCIP_PROPTIMING_BEFORELP, but globally always if the cutoff bound has improved */
-   SCIP_CALL( execGenVBounds(scip, propdata, result, (proptiming == SCIP_PROPTIMING_BEFORELP)) );
+   /* propagate locally and globally */
+   SCIP_CALL( execGenVBounds(scip, propdata, result, TRUE) );
 
    /* when called in presolving stage the result is set to SCIP_SUCCESS instead of SCIP_REDUCEDDOM, this is corrected
     * here
@@ -1862,7 +1948,7 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
    assert(inferinfo >= 0);
    assert(inferinfo < propdata->ngenvbounds);
 
-   *result = SCIP_DIDNOTRUN;
+   *result = SCIP_DIDNOTFIND;
 
    /* check also in optimized mode that inferinfo is correct */
    if( inferinfo >= propdata->ngenvbounds)
@@ -2078,6 +2164,19 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolGenvbounds, PROP_PRESOL_PRIORITY,
          PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropGenvbounds) );
+
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/global",
+         "apply global propagation?",
+         &propdata->global, TRUE, DEFAULT_GLOBAL_PROPAGATION, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/propinrootnode",
+         "apply genvbounds in root node if no new incumbent was found?",
+         &propdata->propinrootnode, TRUE, DEFAULT_PROPAGATE_IN_ROOT_NODE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/sort",
+         "sort genvbounds and wait for bound change events?",
+         &propdata->sort, TRUE, DEFAULT_SORT, NULL, NULL) );
 
    /* include event handler */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &propdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecGenvbounds, NULL) );

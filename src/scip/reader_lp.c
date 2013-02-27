@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -85,23 +85,27 @@ typedef enum LpSense LPSENSE;
 /** LP reading data */
 struct LpInput
 {
-   SCIP_FILE*           file;
-   char                 linebuf[LP_MAX_LINELEN+1];
-   char                 probname[LP_MAX_LINELEN];
-   char                 objname[LP_MAX_LINELEN];
-   char*                token;
-   char*                tokenbuf;
-   char*                pushedtokens[LP_MAX_PUSHEDTOKENS];
-   int                  npushedtokens;
-   int                  linenumber;
-   int                  linepos;
-   LPSECTION            section;
-   SCIP_OBJSENSE        objsense;
-   SCIP_Bool            inlazyconstraints;
-   SCIP_Bool            inusercuts;
-   SCIP_Bool            haserror;
-   SCIP_Bool            comment;
-   SCIP_Bool            endline;
+   SCIP_FILE*            file;
+   char                  linebuf[LP_MAX_LINELEN+1];
+   char                  probname[LP_MAX_LINELEN];
+   char                  objname[LP_MAX_LINELEN];
+   char*                 token;
+   char*                 tokenbuf;
+   char*                 pushedtokens[LP_MAX_PUSHEDTOKENS];
+   int                   npushedtokens;
+   int                   linenumber;
+   int                   linepos;
+   LPSECTION             section;
+   SCIP_OBJSENSE         objsense;
+   SCIP_Bool             inlazyconstraints;
+   SCIP_Bool             inusercuts;
+   SCIP_Bool             initialconss;       /**< should model constraints be marked as initial? */
+   SCIP_Bool             dynamicconss;       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamiccols;        /**< should columns be added and removed dynamically to the LP? */
+   SCIP_Bool             dynamicrows;        /**< should rows be added and removed dynamically to the LP? */
+   SCIP_Bool             haserror;
+   SCIP_Bool             comment;
+   SCIP_Bool             endline;
 };
 typedef struct LpInput LPINPUT;
 
@@ -789,7 +793,7 @@ SCIP_RETCODE getVariable(
       SCIP_Bool initial;
       SCIP_Bool removable;
 
-      SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamiccols", &dynamiccols) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
       initial = !dynamiccols;
       removable = dynamiccols;
 
@@ -1235,7 +1239,7 @@ SCIP_RETCODE readObjective(
 
          minusone = -1.0;
          SCIP_CALL( SCIPcreateConsQuadratic(scip, &quadobjcons, "quadobj", 1, &quadobjvar, &minusone, nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+               lpinput->initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, lpinput->dynamicconss, lpinput->dynamicrows) );
 
          SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
          SCIPdebugMessage("(line %d) added constraint <%s> to represent quadratic objective: ", lpinput->linenumber, SCIPconsGetName(quadobjcons));
@@ -1283,8 +1287,6 @@ SCIP_RETCODE createIndicatorConstraint(
    int j;
    SCIP_Bool linConsEQ;
 
-   SCIP_Bool dynamicconss;
-   SCIP_Bool dynamicrows;
    SCIP_Bool initial;
    SCIP_Bool separate;
    SCIP_Bool enforce;
@@ -1398,16 +1400,14 @@ SCIP_RETCODE createIndicatorConstraint(
    }
 
    /* create and add the indicator constraint */
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicrows", &dynamicrows) );
-   initial = !dynamicrows && !lpinput->inlazyconstraints && !lpinput->inusercuts;
+   initial = lpinput->initialconss && !lpinput->inlazyconstraints && !lpinput->inusercuts;
    separate = TRUE;
    enforce = !lpinput->inusercuts;
    check = !lpinput->inusercuts;
    propagate = TRUE;
    local = FALSE;
-   dynamic = dynamicconss;
-   removable = dynamicrows || lpinput->inusercuts;
+   dynamic = lpinput->dynamicconss;
+   removable = lpinput->dynamicrows || lpinput->inusercuts;
 
    SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlincoefs, linvars, lincoefs, linrhs,
          initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
@@ -1471,8 +1471,6 @@ SCIP_RETCODE readConstraints(
    SCIP_Real sidevalue;
    SCIP_Real lhs;
    SCIP_Real rhs;
-   SCIP_Bool dynamicconss;
-   SCIP_Bool dynamicrows;
    SCIP_Bool initial;
    SCIP_Bool separate;
    SCIP_Bool enforce;
@@ -1619,17 +1617,15 @@ SCIP_RETCODE readConstraints(
    if( !isIndicatorCons )
    {
       /* create and add the linear constraint */
-      SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicconss", &dynamicconss) );
-      SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicrows", &dynamicrows) );
-      initial = !dynamicrows && !lpinput->inlazyconstraints && !lpinput->inusercuts;
+      initial = lpinput->initialconss && !lpinput->inlazyconstraints && !lpinput->inusercuts;
       separate = TRUE;
       enforce = !lpinput->inusercuts;
       check = !lpinput->inusercuts;
       propagate = TRUE;
       local = FALSE;
       modifiable = FALSE;
-      dynamic = dynamicconss;
-      removable = dynamicrows || lpinput->inusercuts;
+      dynamic = lpinput->dynamicconss;
+      removable = lpinput->dynamicrows || lpinput->inusercuts;
       if( nquadcoefs == 0 )
       {
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
@@ -1941,17 +1937,12 @@ SCIP_RETCODE readSemicontinuous(
    SCIP_CONS* cons;
    SCIP_VAR* var;
    SCIP_Bool created;
-   SCIP_Bool dynamicconss;
-   SCIP_Bool dynamiccols;
 
    SCIP_VAR* vars[2];
    SCIP_BOUNDTYPE boundtypes[2];
    SCIP_Real bounds[2];
 
    assert(lpinput != NULL);
-
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamiccols", &dynamiccols) );
 
    /* if section is titles "semi-continuous", then the parser breaks this into parts */
    if( strcasecmp(lpinput->token, "SEMI") == 0 )
@@ -2012,7 +2003,7 @@ SCIP_RETCODE readSemicontinuous(
       bounds[1] = oldlb;
 
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds,
-            !dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamiccols, FALSE) );
+            !(lpinput->dynamiccols), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, lpinput->dynamicconss, lpinput->dynamiccols, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
 
       SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
@@ -2047,15 +2038,15 @@ SCIP_RETCODE readSos(
    assert(lpinput != NULL);
 
    /* standard settings for SOS constraints: */
-   initial = TRUE;
+   initial = lpinput->initialconss;
    separate = FALSE;
    enforce = TRUE;
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
    modifiable = FALSE;
-   dynamic = FALSE;
-   removable = FALSE;
+   dynamic = lpinput->dynamicconss;
+   removable = lpinput->dynamicrows;
 
    while( getNextToken(scip, lpinput) )
    {
@@ -3162,17 +3153,6 @@ SCIP_RETCODE SCIPincludeReaderLp(
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadLp) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteLp) );
 
-   /* add lp reader parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/lpreader/dynamicconss", "should model constraints be subject to aging?",
-         NULL, FALSE, TRUE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/lpreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/lpreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-
    return SCIP_OKAY;
 }
 
@@ -3212,6 +3192,10 @@ SCIP_RETCODE SCIPreadLp(
    lpinput.haserror = FALSE;
    lpinput.comment = FALSE;
    lpinput.endline = FALSE;
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &(lpinput.initialconss)) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &(lpinput.dynamicconss)) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &(lpinput.dynamiccols)) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &(lpinput.dynamicrows)) );
 
    /* read the file */
    SCIP_CALL( readLPFile(scip, &lpinput, filename) );

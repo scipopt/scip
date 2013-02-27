@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -62,7 +62,7 @@ if test $SETNAME != "default"
 then
     if test ! -e $SETTINGS
     then
-        echo skipping test due to not existes of the settings file $SETTINGS
+        echo skipping test due to non-existence of the settings file $SETTINGS
         exit
     fi
 fi
@@ -84,7 +84,7 @@ fi
 # check if the slurm blades should be used exclusively
 if test "$EXCLUSIVE" = "true"
 then
-    EXCLUSIVE=" --exclusive"
+    EXCLUSIVE="  --exclusive --exclude=opt233,opt234,opt235,opt236,opt237,opt238,opt239,opt240,opt241,opt242,opt243,opt244,opt245,opt246,opt247,opt248"
 else
     EXCLUSIVE=""
 fi
@@ -200,11 +200,18 @@ do
 	  fi
       fi
 
-      echo > $TMPFILE
+      if test $SETNAME != "default"
+      then
+          cp $SETTINGS $TMPFILE
+          echo ""                              >> $TMPFILE
+      else
+          echo ""                              > $TMPFILE
+      fi
+#       echo > $TMPFILE
       if test $FEASTOL != "default"
       then
-	  echo primalTolerance $FEASTOL       >> $TMPFILE
-	  echo integerTolerance $FEASTOL      >> $TMPFILE
+	       echo primalTolerance $FEASTOL       >> $TMPFILE
+	       echo integerTolerance $FEASTOL      >> $TMPFILE
       fi
       #workaround: since CBC only looks at cpu-time, we multiply the timelimit with the number of threads
       TIMELIMIT=`expr $TIMELIMIT \* $THREADS`

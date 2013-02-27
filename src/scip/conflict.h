@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -353,6 +353,12 @@ SCIP_Longint SCIPconflictGetNAppliedLocalConss(
 /** returns the total number of literals in conflict constraints that were added locally to the problem */
 extern
 SCIP_Longint SCIPconflictGetNAppliedLocalLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets time in seconds used for preprocessing global conflict constraint before appliance */
+extern
+SCIP_Real SCIPconflictGetGlobalApplTime(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 

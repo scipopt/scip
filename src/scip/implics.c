@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,6 +31,8 @@
 #include "scip/implics.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+
+#include "scip/debug.h"
 
 #ifndef NDEBUG
 #include "scip/struct_implics.h"
@@ -1786,6 +1788,9 @@ SCIP_RETCODE SCIPcliquetableAdd(
    SCIP_CALL( cliquetableEnsureSize(cliquetable, set, cliquetable->ncliques+1) );
    cliquetable->cliques[cliquetable->ncliques] = clique;
    cliquetable->ncliques++;
+
+   /* check clique on debugging solution */
+   SCIP_CALL( SCIPdebugCheckClique(set, vars, values, nvars) ); /*lint !e506 !e774*/
 
    /* add the corresponding active problem variables to the clique */
    for( i = 0; i < nvars; ++i )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1862,6 +1862,30 @@ SCIP_RETCODE SCIPprobSetName(
    return SCIP_OKAY;
 }
 
+/** returns the number of implicit binary variables, meaning variable of vartype != SCIP_VARTYPE_BINARY and !=
+ *  SCIP_VARTYPE_CONTINUOUS but with global bounds [0,1]
+ *
+ *  @note this number needs to be computed, because it cannot be update like the othe counters for binary and interger
+ *        variables, each time the variable type changes(, we would need to update this counter each time a global bound
+ *        changes), even at the end of presolving this cannot be computed, because some variable can change to an
+ *        implicit binary status
+ */
+int SCIPprobGetNImplBinVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   int v;
+   int nimplbinvars = 0;
+
+   for( v = prob->nbinvars + prob->nintvars + prob->nimplvars - 1; v >= prob->nbinvars; --v )
+   {
+      if( SCIPvarIsBinary(prob->vars[v]) )
+         ++nimplbinvars;
+   }
+
+   return nimplbinvars;
+}
+
 /** returns the number of variables with non-zero objective coefficient */
 int SCIPprobGetNObjVars(
    SCIP_PROB*            prob,               /**< problem data */
@@ -2032,6 +2056,12 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetObjlim
 #undef SCIPprobGetData
 #undef SCIPprobGetName
+#undef SCIPprobGetNVars
+#undef SCIPprobGetNBinVars
+#undef SCIPprobGetNIntVars
+#undef SCIPprobGetNImplVars
+#undef SCIPprobGetNContVars
+#undef SCIPprobGetVars
 
 /** is the problem data transformed */
 SCIP_Bool SCIPprobIsTransformed(
@@ -2096,4 +2126,58 @@ const char* SCIPprobGetName(
 {
    assert(prob != NULL);
    return prob->name;
+}
+
+/** gets number of problem variables */
+int SCIPprobGetNVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nvars;
+}
+
+/** gets number of binary problem variables */
+int SCIPprobGetNBinVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nbinvars;
+}
+
+/** gets number of integer problem variables */
+int SCIPprobGetNIntVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nintvars;
+}
+
+/** gets number of implicit integer problem variables */
+int SCIPprobGetNImplVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nimplvars;
+}
+
+/** gets number of continuous problem variables */
+int SCIPprobGetNContVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->ncontvars;
+}
+
+/** gets problem variables */
+SCIP_VAR** SCIPprobGetVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->vars;
 }

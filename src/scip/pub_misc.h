@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -765,6 +765,13 @@ SCIP_RETCODE SCIPdigraphCreate(
    int                   nnodes              /**< number of nodes */
    );
 
+/** resize directed graph structure */
+EXTERN
+SCIP_RETCODE SCIPdigraphResize(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   nnodes              /**< new number of nodes */
+   );
+
 /** copies directed graph structure */
 EXTERN
 SCIP_RETCODE SCIPdigraphCopy(
@@ -814,6 +821,21 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
 EXTERN
 int SCIPdigraphGetNNodes(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
+
+/** returns the node data, or NULL if no data exist */
+EXTERN
+void* SCIPdigraphGetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the node data is returned */
+   );
+
+/** sets the node data */
+EXTERN
+void SCIPdigraphSetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   void*                 dataptr,            /**< user node data pointer, or NULL */
+   int                   node                /**< node for which the node data is returned */
    );
 
 /** returns the total number of arcs in the given digraph */
@@ -950,8 +972,6 @@ void SCIPbtnodeFree(
    SCIP_BTNODE**         node                /**< node to be freed */
    );
 
-#ifndef NDEBUG
-
 /** returns the user data pointer stored in that node */
 EXTERN
 void* SCIPbtnodeGetData(
@@ -1006,7 +1026,11 @@ SCIP_Bool SCIPbtnodeIsRightchild(
    SCIP_BTNODE*          node                /**< node */
    );
 
-#else
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
 
 #define SCIPbtnodeGetData(node)               ((node)->dataptr)
 #define SCIPbtnodeGetParent(node)             ((node)->parent)
@@ -1084,8 +1108,6 @@ void SCIPbtPrintGml(
    FILE*                 file                /**< file to write to */
    );
 
-#ifndef NDEBUG
-
 /** returns whether the binary tree is empty (has no nodes) */
 EXTERN
 SCIP_Bool SCIPbtIsEmpty(
@@ -1098,7 +1120,11 @@ SCIP_BTNODE* SCIPbtGetRoot(
    SCIP_BT*              tree                /**< tree to be evaluated */
    );
 
-#else
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
 
 #define SCIPbtIsEmpty(tree) (tree->root == NULL)
 #define SCIPbtGetRoot(tree) (tree->root)
@@ -1524,12 +1550,45 @@ void SCIPsortLongPtr(
    int                   len                 /**< length of arrays */
    );
 
-/** sort of two three arrays of Long/pointer/ints, sorted by the first array in non-decreasing order */
+/** sort of three arrays of Long/pointer/ints, sorted by the first array in non-decreasing order */
 EXTERN
 void SCIPsortLongPtrInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of four arrays of Long/pointer/Real/Bool, sorted by the first array in non-decreasing order */
+EXTERN
+void SCIPsortLongPtrRealBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of five arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-decreasing order */
+EXTERN
+void SCIPsortLongPtrRealRealBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< first SCIP_Real array to be permuted in the same way */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of six arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-decreasing order */
+EXTERN
+void SCIPsortLongPtrRealRealIntBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< first SCIP_Real array to be permuted in the same way */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
@@ -1971,12 +2030,45 @@ void SCIPsortDownLongPtr(
    int                   len                 /**< length of arrays */
    );
 
-/** sort of two three arrays of Long/pointer/ints, sorted by the first array in non-increasing order */
+/** sort of three arrays of Long/pointer/ints, sorted by the first array in non-increasing order */
 EXTERN
 void SCIPsortDownLongPtrInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of four arrays of Long/pointer/Real/Bool, sorted by the first array in non-increasing order */
+EXTERN
+void SCIPsortDownLongPtrRealBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of five arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-increasing order */
+EXTERN
+void SCIPsortDownLongPtrRealRealBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< first SCIP_Real array to be permuted in the same way */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of six arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-increasing order */
+EXTERN
+void SCIPsortDownLongPtrRealRealIntBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< first SCIP_Real array to be permuted in the same way */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
@@ -2590,6 +2682,57 @@ void SCIPsortedvecInsertLongPtrInt(
    SCIP_Longint          keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
+/** insert a new element into four joint arrays of Long/pointer/Real/Bool, sorted by the first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecInsertLongPtrRealBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be inserted */
+   void**                ptrarray,           /**< pointer array where an element is to be inserted */
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be inserted */
+   SCIP_Longint          keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   SCIP_Real             field2val,          /**< additional value of new element */
+   SCIP_Bool             field3val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
+/** insert a new element into five joint arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecInsertLongPtrRealRealBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be inserted */
+   void**                ptrarray,           /**< pointer array where an element is to be inserted */
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be inserted  */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array where an element is to be inserted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be inserted */
+   SCIP_Longint          keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   SCIP_Real             field2val,          /**< additional value of new element */
+   SCIP_Real             field3val,          /**< additional value of new element */
+   SCIP_Bool             field4val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
+/** insert a new element into six joint arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecInsertLongPtrRealRealIntBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be inserted */
+   void**                ptrarray,           /**< pointer array where an element is to be inserted */
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be inserted  */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array where an element is to be inserted */
+   int*                  intarray,           /**< int array where an element is to be inserted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be inserted */
+   SCIP_Longint          keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   SCIP_Real             field2val,          /**< additional value of new element */
+   SCIP_Real             field3val,          /**< additional value of new element */
+   int                   field4val,          /**< additional value of new element */
+   SCIP_Bool             field5val,          /**< additional value of new element */
    int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
@@ -3221,6 +3364,57 @@ void SCIPsortedvecInsertDownLongPtrInt(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
+/** insert a new element into four joint arrays of Long/pointer/Real/Bool, sorted by the first array in non-increasing order */
+EXTERN
+void SCIPsortedvecInsertDownLongPtrRealBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be inserted */
+   void**                ptrarray,           /**< pointer array where an element is to be inserted */
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be inserted */
+   SCIP_Longint          keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   SCIP_Real             field2val,          /**< additional value of new element */
+   SCIP_Bool             field3val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
+/** insert a new element into five joint arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-increasing order */
+EXTERN
+void SCIPsortedvecInsertDownLongPtrRealRealBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be inserted */
+   void**                ptrarray,           /**< pointer array where an element is to be inserted */
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be inserted  */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array where an element is to be inserted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be inserted */
+   SCIP_Longint          keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   SCIP_Real             field2val,          /**< additional value of new element */
+   SCIP_Real             field3val,          /**< additional value of new element */
+   SCIP_Bool             field4val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
+/** insert a new element into six joint arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-increasing order */
+EXTERN
+void SCIPsortedvecInsertDownLongPtrRealRealIntBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be inserted */
+   void**                ptrarray,           /**< pointer array where an element is to be inserted */
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be inserted  */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array where an element is to be inserted */
+   int*                  intarray,           /**< int array where an element is to be inserted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be inserted */
+   SCIP_Longint          keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   SCIP_Real             field2val,          /**< additional value of new element */
+   SCIP_Real             field3val,          /**< additional value of new element */
+   int                   field4val,          /**< additional value of new element */
+   SCIP_Bool             field5val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
 /** insert a new element into four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortedvecInsertDownLongPtrPtrInt(
@@ -3741,6 +3935,42 @@ void SCIPsortedvecDelPosLongPtrInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from four joint arrays of Long/pointer/Real/Bool, sorted by the first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecDelPosLongPtrRealBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be deleted */
+   void**                ptrarray,           /**< pointer array where an element is to be deleted */
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be deleted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from five joint arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecDelPosLongPtrRealRealBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be deleted */
+   void**                ptrarray,           /**< pointer array where an element is to be deleted */
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be deleted */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array where an element is to be deleted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from six joint arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecDelPosLongPtrRealRealIntBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be deleted */
+   void**                ptrarray,           /**< pointer array where an element is to be deleted */
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be deleted */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array where an element is to be deleted */
+   int*                  intarray,           /**< int array where an element is to be deleted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortedvecDelPosLongPtrPtrInt(
@@ -4226,6 +4456,43 @@ void SCIPsortedvecDelPosDownLongPtrInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from three joint arrays of Long/pointer/Real/Bool, sorted by the first array in non-increasing order */
+EXTERN
+void SCIPsortedvecDelPosDownLongPtrRealBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be deleted */
+   void**                ptrarray,           /**< pointer array where an element is to be deleted */
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be deleted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from five joint arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-increasing order */
+EXTERN
+void SCIPsortedvecDelPosDownLongPtrRealRealBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be deleted */
+   void**                ptrarray,           /**< pointer array where an element is to be deleted */
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be deleted */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array where an element is to be deleted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from six joint arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-increasing order */
+EXTERN
+void SCIPsortedvecDelPosDownLongPtrRealRealIntBool(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be deleted */
+   void**                ptrarray,           /**< pointer array where an element is to be deleted */
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be deleted */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array where an element is to be deleted */
+   int*                  intarray,           /**< int array where an element is to be deleted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+
 /** delete the element at the given position from four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortedvecDelPosDownLongPtrPtrInt(
@@ -4489,7 +4756,9 @@ SCIP_Bool SCIPrealToRational(
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    );
 
-/** tries to find a value, such that all given values, if scaled with this value become integral */
+/** tries to find a value, such that all given values, if scaled with this value become integral in relative allowed
+ *  difference in between mindelta and maxdelta
+ */
 EXTERN
 SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Real*            vals,               /**< values to scale */
@@ -4526,8 +4795,6 @@ SCIP_Real SCIPselectSimpleValue(
    SCIP_Longint          maxdnom             /**< maximal denominator allowed for resulting rational number */
    );
 
-#ifndef NDEBUG
-
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
@@ -4539,9 +4806,9 @@ SCIP_Real SCIPrelDiff(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

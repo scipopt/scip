@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,7 +37,7 @@
 #define DEFAULT_CONFLICTWEIGHT  1000.0  /**< weight in score calculations for conflict score */
 #define DEFAULT_CUTOFFWEIGHT       1.0  /**< weight in score calculations for cutoff score */
 #define DEFAULT_INFERENCEWEIGHT    1.0  /**< weight in score calculations for inference score */
-#define DEFAULT_RELIABLESCORE   1000.0  /**< score which is seen to be reliable for a branching decision */
+#define DEFAULT_RELIABLESCORE    0.001  /**< score which is seen to be reliable for a branching decision */
 #define DEFAULT_FRACTIONALS        TRUE /**< should branching on LP solution be restricted to the fractional variables? */
 #define DEFAULT_USEWEIGHTEDSUM     TRUE /**< should a weighted sum of inference, conflict and cutoff weights be used? */
 
@@ -431,7 +431,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
 }
 
 
-/** branching execution method for not completely fixed pseudo solutions */
+/** branching execution method for external candidates */
 static
 SCIP_DECL_BRANCHEXECEXT(branchExecextInference)
 {  /*lint --e{715}*/
@@ -440,7 +440,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextInference)
    SCIP_Real* candsols;
    int ncands;
 
-   SCIPdebugMessage("Execps method of inference branching\n");
+   SCIPdebugMessage("Execext method of inference branching\n");
 
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);

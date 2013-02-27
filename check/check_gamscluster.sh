@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -50,7 +50,7 @@ fi
 # check if the slurm blades should be used exclusively
 if test "$EXCLUSIVE" = "true"
 then
-    EXCLUSIVE="--exclusive"
+    EXCLUSIVE=" --exclusive --exclude=opt233,opt234,opt235,opt236,opt237,opt238,opt239,opt240,opt241,opt242,opt243,opt244,opt245,opt246,opt247,opt248"
 else
     EXCLUSIVE=""
 fi
@@ -234,25 +234,26 @@ if test $SETCUTOFF = 1 ; then
   fi
 fi
 
-#define account and clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
+#define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
+CLUSTERQUEUE=$QUEUE
 
 NICE=""
-if test $QUEUE = "opt"
+ACCOUNT="mip"
+
+if test $CLUSTERQUEUE = "dbg"
 then
-  CLUSTERQUEUE="opt"
-  ACCOUNT="mip"
-elif test $QUEUE = "opt-low"
+    CLUSTERQUEUE="mip-dbg,telecom-dbg"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "telecom-dbg"
 then
-  CLUSTERQUEUE="opt"
-  ACCOUNT="mip"
-  NICE="--nice=10000"
-elif test $QUEUE = "mip-dbg"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "mip-dbg"
 then
-  CLUSTERQUEUE="mip-dbg"
-  ACCOUNT="mip-dbg"
-else
-  CLUSTERQUEUE=$QUEUE
-  ACCOUNT="mip"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "opt-low"
+then
+    CLUSTERQUEUE="opt"
+    NICE="--nice=10000"
 fi
 
 # counter to define file names for a test set uniquely 
@@ -375,7 +376,7 @@ do
     case $QUEUETYPE in
       srun )
         # hard timelimit could be set via --time=0:${HARDTIMELIMIT}
-        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT $NICE ${EXCLUSIVE} --output=/dev/null rungamscluster.sh`
+        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT ${EXCLUSIVE} ${NICE} --output=/dev/null rungamscluster.sh`
         echo $sbatchret
         FINISHDEPEND=$FINISHDEPEND:`echo $sbatchret | cut -d " " -f 4`
         ;;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,14 @@
  * @ingroup LPIS
  * @brief  LP interface for CPLEX >= 8.0
  * @author Tobias Achterberg
+ * @author Timo Berthold
+ * @author Stefan Heinz
+ * @author Gerald Gamrath
+ * @author Ambrox Gleixner
+ * @author Marc Pfetsch
+ * @author Stefan Vigerske
+ * @author Michael Winkler
+ * @author Kati Wolter
  */
 
 /* CPLEX supports FASTMIP which fastens the lp solving process but therefor it might happen that there will be a loss in
@@ -61,6 +69,10 @@
  * it. In a numerical perfect world, this should need no iterations. However, due to numerical inaccuracies after
  * refactorization, it might be necessary to do a few extra pivot steps, in particular if FASTMIP is used. */
 #define CPX_REFACTORMAXITERS     50          /* maximal number of iterations allowed for producing a refactorization of the basis */
+
+/* CPLEX seems to ignore bounds with absolute value less than 1e-10. There is no interface define for this constant yet,
+ * so we define it here. */
+#define CPX_MAGICZEROCONSTANT    1e-10
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
 #define COLS_PER_PACKET SCIP_DUALPACKETSIZE
@@ -1429,8 +1441,9 @@ SCIP_RETCODE SCIPlpiChgBounds(
          CHECK_ZERO( lpi->messagehdlr, CPXgetlb(lpi->cpxenv, lpi->cpxlp, &cpxlb, ind[i], ind[i]) );
          CHECK_ZERO( lpi->messagehdlr, CPXgetub(lpi->cpxenv, lpi->cpxlp, &cpxub, ind[i], ind[i]) );
 
-         assert(cpxlb == lb[i]);
-         assert(cpxub == ub[i]);
+         /* Note that CPLEX seems to set bounds below 1e-10 in absolute value to 0.*/
+         assert( EPSZ(cpxlb, CPX_MAGICZEROCONSTANT) || cpxlb == lb[i] );
+         assert( EPSZ(cpxub, CPX_MAGICZEROCONSTANT) || cpxub == ub[i] );
       }
    }
 #endif
@@ -3244,6 +3257,10 @@ SCIP_RETCODE SCIPlpiGetBase(
    int*                  rstat               /**< array to store row basis status, or NULL */
    )
 {
+   int i;
+   int nrows;
+   char sense;
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
@@ -3251,6 +3268,18 @@ SCIP_RETCODE SCIPlpiGetBase(
    SCIPdebugMessage("saving CPLEX basis into %p/%p\n", (void *) cstat, (void *) rstat);
 
    CHECK_ZERO( lpi->messagehdlr, CPXgetbase(lpi->cpxenv, lpi->cpxlp, cstat, rstat) );
+
+   /* correct rstat values for "<=" constraints: Here CPX_AT_LOWER bound means that the slack is 0, i.e., the upper bound is tight */
+   nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+   for (i = 0; i < nrows; ++i)
+   {
+      if ( rstat[i] == CPX_AT_LOWER )
+      {
+         CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &sense, i, i) );
+         if ( sense == 'L' )
+            rstat[i] = SCIP_BASESTAT_UPPER;
+      }
+   }
 
    /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
    assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
@@ -3268,6 +3297,10 @@ SCIP_RETCODE SCIPlpiSetBase(
    int*                  rstat               /**< array with row basis status */
    )
 {
+   int i;
+   int nrows;
+   char sense;
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
@@ -3283,6 +3316,18 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC);
    assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
    assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
+
+   /* correct rstat values for ">=" constraints: Here CPX_AT_LOWER bound means that the slack is 0, i.e., the upper bound is tight */
+   nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+   for (i = 0; i < nrows; ++i)
+   {
+      if ( rstat[i] == SCIP_BASESTAT_UPPER )
+      {
+         CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &sense, i, i) );
+         if ( sense == 'L' )
+            rstat[i] = CPX_AT_LOWER;
+      }
+   }
 
    CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, cstat, rstat) );
 

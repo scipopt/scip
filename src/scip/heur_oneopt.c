@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -516,7 +516,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          if( valid )
             *result = SCIP_FOUNDSOL;
       }
-      
+
       /* free subproblem */
       SCIPfreeBufferArray(scip, &subvars);
       SCIP_CALL( SCIPfree(&subscip) );
@@ -533,7 +533,11 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_Bool cutoff;
       cutoff = FALSE;
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-      SCIP_CALL( SCIPflushLP(scip) ); 
+      SCIP_CALL( SCIPflushLP(scip) );
+
+      /* get problem variables again, SCIPconstructLP() might have added new variables */
+      SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+      nintvars += nbinvars;
    }
 
    /* we need an LP */

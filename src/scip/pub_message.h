@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -109,7 +109,7 @@ extern "C" {
 #endif
 
 
-/** Creates a message handler which deals with warning, information, and dialog (interactive shell) methods.
+/** Creates and captures a message handler which deals with warning, information, and dialog (interactive shell) methods.
  *
  *  @note The message handler does not handle error messages. For that see SCIPmessageSetErrorPrinting()
  */
@@ -343,12 +343,6 @@ void SCIPmessageSetErrorPrintingDefault(
    );
 
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** returns the user data of the message handler */
 EXTERN
 SCIP_MESSAGEHDLRDATA* SCIPmessagehdlrGetData(
@@ -367,9 +361,9 @@ SCIP_Bool SCIPmessagehdlrIsQuiet(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

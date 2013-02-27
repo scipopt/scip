@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -58,8 +58,8 @@ SCIP_RETCODE SCIPheurCreate(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
    unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
    SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
@@ -103,6 +103,16 @@ extern
 SCIP_RETCODE SCIPheurExitsol(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** should the heuristic be executed at the given depth, frequency, timing, ... */
+extern
+SCIP_Bool SCIPheurShouldBeExecuted(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   int                   depth,              /**< depth of current node */
+   int                   lpstateforkdepth,   /**< depth of the last node with solved LP */
+   SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
+   SCIP_Bool*            delayed             /**< pointer to store whether the heuristic should be delayed */
    );
 
 /** calls execution method of primal heuristic */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -337,12 +337,12 @@ SCIP_Bool runTabuCol(
    if( heurdata->output >= 1 )
       printf("Running tabu coloring with maxcolors = %d...\n", maxcolors);
 
-   // get size
+   /* get size */
    nnodes = tcliqueGetNNodes(graph);
 
    srand( seed );
 
-   // init random coloring
+   /* init random coloring */
    for( i = 0; i < nnodes; i++ )
    {
       int rnd = rand();
@@ -350,9 +350,9 @@ SCIP_Bool runTabuCol(
       assert( 0 <= colors[i] && colors[i] < maxcolors );
    }
 
-   // init matrices
-   SCIP_CALL( SCIPallocMemoryArray(scip, &tabu, nnodes) );   // stores iteration at which tabu node/color pair will expire to be tabu
-   SCIP_CALL( SCIPallocMemoryArray(scip, &adj, nnodes) );    // stores number of adjacent nodes using specified color
+   /* init matrices */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &tabu, nnodes) );   /* stores iteration at which tabu node/color pair will expire to be tabu */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &adj, nnodes) );    /* stores number of adjacent nodes using specified color */
 
    for( i = 0; i < nnodes; i++ )
    {
@@ -365,10 +365,10 @@ SCIP_Bool runTabuCol(
       }
    }
 
-   // objective
+   /* objective */
    obj = 0;
 
-   // init adj-matrix and objective
+   /* init adj-matrix and objective */
    for( node1 = 0; node1 < nnodes; node1++ )
    {
       color1 = colors[node1];
@@ -394,10 +394,10 @@ SCIP_Bool runTabuCol(
    iter = 0;
    if( obj > 0 )
    {
-      // perform predefined number of iterations
+      /* perform predefined number of iterations */
       for( iter = 1; iter <= heurdata->maxiter; iter++ )
       {
-	 // find best 1-move among those with critical vertex
+	 /* find best 1-move among those with critical vertex */
 	 minnode = -1;
 	 mincolor = -1;
 	 minvalue = nnodes * nnodes;
@@ -408,20 +408,20 @@ SCIP_Bool runTabuCol(
 	    color1 = colors[node1];
 	    assert( 0 <= color1 && color1 < maxcolors );
 
-	    // if node is critical (has incident violated edges)
+	    /* if node is critical (has incident violated edges) */
 	    if( adj[node1][color1] > 0 )
 	    {
 	       ncritical++;
-	       // check all colors
+	       /* check all colors */
 	       for( j = 0; j < maxcolors; j++ )
 	       {
-		  // if color is new
+		  /* if color is new */
 		  if( j != color1 )
 		  {
-		     // change in the number of violated edges:
+		     /* change in the number of violated edges: */
 		     d = adj[node1][j] - adj[node1][color1];
 
-		     // 'aspiration criterion': stop if we get feasible solution
+		     /* 'aspiration criterion': stop if we get feasible solution */
 		     if( obj + d == 0 )
 		     {
                         if( heurdata->output >= 1 )
@@ -433,7 +433,7 @@ SCIP_Bool runTabuCol(
 			break;
 		     }
 
-		     // if not tabu and better value
+		     /* if not tabu and better value */
 		     if( tabu[node1][j] < iter &&  d < minvalue )
 		     {
 			minnode = node1;
@@ -447,7 +447,7 @@ SCIP_Bool runTabuCol(
 	       break;
 	 }
 
-	 // if no candidate could be found - tabu list is too restrictive: just skip current iteration
+	 /* if no candidate could be found - tabu list is too restrictive: just skip current iteration */
 	 if( minnode == -1 )
 	 {
 	    restrictive = TRUE;
@@ -456,7 +456,7 @@ SCIP_Bool runTabuCol(
 	 assert( minnode != -1 );
 	 assert( mincolor >= 0 );
 
-	 // perform changes
+	 /* perform changes */
 	 assert( colors[minnode] != mincolor );
 	 oldcolor = colors[minnode];
 	 colors[minnode] = mincolor;
@@ -471,15 +471,15 @@ SCIP_Bool runTabuCol(
                                         iter, obj, ncritical, minnode, mincolor, minvalue);
 	 }
 
-	 // terminate if valid coloring has been found
+	 /* terminate if valid coloring has been found */
 	 if( obj == 0 )
 	    break;
 
-	 // update tabu list
+	 /* update tabu list */
 	 assert( tabu[minnode][oldcolor] < iter );
 	 tabu[minnode][oldcolor] = iter + (heurdata->tabubase) + (int) (((double) ncritical) * (heurdata->tabugamma));
 
-	 // update adj matrix
+	 /* update adj matrix */
 	 for( firstedge = tcliqueGetFirstAdjedge(graph, minnode); firstedge <= tcliqueGetLastAdjedge(graph, minnode); firstedge++ )
 	 {
 	    (adj[*firstedge][mincolor])++;
@@ -509,7 +509,7 @@ SCIP_Bool runTabuCol(
    SCIPfreeMemoryArray(scip, &tabu);
    SCIPfreeMemoryArray(scip, &adj);
 
-   // check whether valid coloring has been found
+   /* check whether valid coloring has been found */
    if( obj == 0 )
       return TRUE;
    return FALSE;

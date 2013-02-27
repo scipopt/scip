@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,14 +31,9 @@
  * See also
  *
  * @par
- * Matthias Jach, Dennis Michaels, and Robert Weismantel@n
- * The convex envelope of (n-1)-convex functions@n
- * SIAM Journal on Optimization 19:3, 1451-1466, 2008.
- *
- * @par
- * Mohit Tawarmalani and Nikolaos V. Sahinidis@n
- * Semidefinite Relaxations of Fractional Programs via Novel Convexification Techniques@n
- * Journal of Global Optimization 20, 137-158, 2001.
+ * Martin Ballerstein, Dennis Michaels, and Stefan Vigerske@n
+ * Linear Underestimators for bivariate functions with a fixed convexity behavior@n
+ * ZIB Report 13-02, 2013. http://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/1764
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

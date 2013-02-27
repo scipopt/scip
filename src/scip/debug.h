@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -112,6 +112,15 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    SCIP_Real             implbound           /**< bound b    in implication y <= b or y >= b */
    );
 
+/** check whether given clique is valid for the debugging solution */
+extern
+SCIP_RETCODE SCIPdebugCheckClique(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< binary variables in the clique: at most one can be set to the given value */
+   SCIP_Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
+   int                   nvars               /**< number of variables in the clique */
+   );
+
 /** checks whether given conflict is valid for the debugging solution */
 extern
 SCIP_RETCODE SCIPdebugCheckConflict(
@@ -159,6 +168,7 @@ SCIP_RETCODE SCIPdebugGetSolVal(
 #define SCIPdebugRemoveNode(blkmem,set,node) SCIP_OKAY
 #define SCIPdebugCheckVbound(set,var,vbtype,vbvar,vbcoef,vbconstant) SCIP_OKAY
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
+#define SCIPdebugCheckClique(set,vars,values,nvars) SCIP_OKAY
 #define SCIPdebugCheckConflict(blkmem,set,node,bdchginfos,relaxedbds,nliterals) SCIP_OKAY
 #define SCIPdebugIncludeProp(scip) SCIP_OKAY
 #define SCIPdebugAddSolVal(scip,var,val) SCIP_OKAY

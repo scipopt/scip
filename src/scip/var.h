@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -265,8 +265,8 @@ SCIP_RETCODE SCIPvarCopy(
    );
 
 /** parses variable information (in cip format) out of a string; if the parsing process was successful an original
- *  problem variable is creates and captures; an integer variable with bounds zero and one is automatically converted
- *  into a binary variable
+ *  variable is created and captured; if variable is of integral type, fractional bounds are automatically rounded; an
+ *  integer variable with bounds zero and one is automatically converted into a binary variable
  */
 extern
 SCIP_RETCODE SCIPvarParseOriginal(
@@ -283,12 +283,14 @@ SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    );
 
 /** parses variable information (in cip format) out of a string; if the parsing process was successful a loose variable
- *  belonging to the transformed problem is creates and captures; an integer variable with bounds zero and one is
- *  automatically converted into a binary variable
+ *  belonging to the transformed problem is created and captured; if variable is of integral type, fractional bounds are
+ *  automatically rounded; an integer variable with bounds zero and one is automatically converted into a binary
+ *  variable
  */
 extern
 SCIP_RETCODE SCIPvarParseTransformed(
@@ -305,6 +307,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    );
 
@@ -1395,13 +1398,6 @@ SCIP_RETCODE SCIPvarPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** includes event handler with given data in variable's event filter */
 extern
 SCIP_RETCODE SCIPvarCatchEvent(
@@ -1440,9 +1436,9 @@ int SCIPbdchgidxGetPos(
    SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

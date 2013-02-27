@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -180,6 +180,12 @@ void SCIPprintVersion(
 EXTERN
 void SCIPprintError(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
+   );
+
+/** update statistical information when a new solution was found */
+EXTERN
+void SCIPstoreSolutionGap(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@} */
@@ -4082,6 +4088,9 @@ SCIP_RETCODE SCIPwriteOrigProblem(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note If you want the write all constraints (including the once which are redundant for example), you need to set
+ *        the parameter <write/allconss> to TRUE
  */
 EXTERN
 SCIP_RETCODE SCIPwriteTransProblem(
@@ -4529,6 +4538,8 @@ SCIP_RETCODE SCIPdelVar(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note Variables in the vars array are ordered: binaries first, then integers, implicit integers and continuous last.
  */
 EXTERN
 SCIP_RETCODE SCIPgetVarsData(
@@ -4561,6 +4572,8 @@ SCIP_RETCODE SCIPgetVarsData(
  *           SCIPaggregateVars(), and SCIPmultiaggregateVar()), it can happen that the internal variable array (which is
  *           accessed via this method) gets resized and/or resorted. This can invalid the data pointer which is returned
  *           by this method.
+ *
+ *  @note Variables in the array are ordered: binaries first, then integers, implicit integers and continuous last.
  */
 EXTERN
 SCIP_VAR** SCIPgetVars(
@@ -5939,6 +5952,7 @@ SCIP_RETCODE SCIPparseVar(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    );
 
@@ -7638,8 +7652,6 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
-#ifndef NDEBUG
-
 /** for a multi-aggregated variable, returns the global lower bound computed by adding the global bounds from all aggregation variables
  * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
  * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbGlobal
@@ -7688,7 +7700,11 @@ SCIP_Real SCIPcomputeVarUbLocal(
    SCIP_VAR*             var                 /**< variable to compute the bound for */
    );
 
-#else
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
 
 #define SCIPcomputeVarLbGlobal(scip, var)  (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbGlobal(var, (scip)->set) : SCIPvarGetLbGlobal(var))
 #define SCIPcomputeVarUbGlobal(scip, var)  (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbGlobal(var, (scip)->set) : SCIPvarGetUbGlobal(var))
@@ -10377,6 +10393,10 @@ SCIP_Bool SCIPisLPConstructed(
    );
 
 /** makes sure that the LP of the current node is loaded and may be accessed through the LP information methods
+ *
+ *  @warning Contructing the LP might change the amount of variables known in the transformed problem and therefore also
+ *           the variables array of SCIP (returned by SCIPgetVars() and SCIPgetVarsData()), so it might be necessary to
+ *           call one of the later method after this one
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -13871,6 +13891,9 @@ int SCIPgetNPrioLPBranchCands(
  *       - \ref SCIP_STAGE_SOLVING
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ *
+ *  @note Candidate variables with maximal priority are ordered: binaries first, then integers, implicit integers and
+ *        continuous last.
  */
 EXTERN
 SCIP_RETCODE SCIPgetExternBranchCands(
@@ -16125,6 +16148,21 @@ SCIP_Longint SCIPgetNRootLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets total number of iterations used in primal and dual simplex and barrier algorithm for the first LP at the root
+ *  node
+ *
+ *  @return the total number of iterations used in primal and dual simplex and barrier algorithm for the first root LP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Longint SCIPgetNRootFirstLPIterations(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets total number of primal LPs solved so far
  *
  *  @return the total number of primal LPs solved so far
@@ -16838,6 +16876,41 @@ SCIP_Real SCIPgetLowerboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets dual bound for the original problem obtained by the first LP solve at the root node
+ *
+ *  @return the dual bound for the original problem of the first LP solve at the root node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Real SCIPgetFirstLPDualboundRoot(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets lower (dual) bound in transformed problem obtained by the first LP solve at the root node
+ *
+ *  @return the lower (dual) bound in transformed problem obtained by first LP solve at the root node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Real SCIPgetFirstLPLowerboundRoot(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
 /** gets global primal bound (objective value of best solution or user objective limit) for the original problem
  *
  *  @return the global primal bound (objective value of best solution or user objective limit) for the original problem
@@ -16991,6 +17064,26 @@ SCIP_Real SCIPgetTransGap(
  */
 EXTERN
 SCIP_Longint SCIPgetNSolsFound(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of feasible primal solutions respecting the objective limit found so far
+ *
+ *  @return the number of feasible primal solutions respecting the objective limit found so far
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+SCIP_Longint SCIPgetNLimSolsFound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -17809,14 +17902,6 @@ void SCIPmarkLimitChanged(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- * In optimized mode, the methods are implemented as defines to improve performance.
- * However, we want to have them in the library anyways, so we have to undef the defines.
- */
-
 /** returns value treated as infinity */
 EXTERN
 SCIP_Real SCIPinfinity(
@@ -18233,9 +18318,9 @@ SCIP_Real SCIPgetHugeValue(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
@@ -18504,12 +18589,6 @@ void SCIPprintMemoryDiagnostic(
 
 /**@name Dynamic Arrays */
 /**@{ */
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
 
 /** creates a dynamic array of real values
  *
@@ -18890,9 +18969,9 @@ int SCIPgetPtrarrayMaxIdx(
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

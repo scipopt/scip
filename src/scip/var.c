@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2192,25 +2192,37 @@ SCIP_RETCODE parseBounds(
    char*                 type,               /**< bound type (global, local, or lazy) */
    SCIP_Real*            lb,                 /**< pointer to store the lower bound */
    SCIP_Real*            ub,                 /**< pointer to store the upper bound */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed (or NULL if an error occured) */
    )
 {
    char token[SCIP_MAXSTRLEN];
 
+   SCIPdebugMessage("parsing bounds: '%s'\n", str);
+
    /* get bound type */
    SCIPstrCopySection(str, ' ', ' ', type, SCIP_MAXSTRLEN, endptr);
+   if ( strncmp(type, "original", 8) != 0 && strncmp(type, "global", 6) != 0 && strncmp(type, "local", 5) != 0 && strncmp(type, "lazy", 4) != 0 )
+   {
+      SCIPdebugMessage("unkown bound type <%s>\n", type);
+      *endptr = NULL;
+      return SCIP_OKAY;
+   }
+
    SCIPdebugMessage("parsed bound type <%s>\n", type);
 
    /* get lower bound */
    SCIPstrCopySection(str, '[', ',', token, SCIP_MAXSTRLEN, endptr);
    str = *endptr;
-
    SCIP_CALL( parseValue(set, token, lb, endptr) );
-
-   SCIPdebugMessage("str <%s>\n", str);
 
    /* get upper bound */
    SCIP_CALL( parseValue(set, str, ub, endptr) );
+
+   SCIPdebugMessage("parsed bounds: [%g,%g]\n", *lb, *ub);
+
+   /* skip end of bounds */
+   while ( **endptr != '\0' && (**endptr == ']' || **endptr == ',') )
+      ++(*endptr);
 
    return SCIP_OKAY;
 }
@@ -2229,13 +2241,14 @@ SCIP_RETCODE varParse(
    SCIP_Real*            lazylb,             /**< pointer to store if the lower bound is lazy */
    SCIP_Real*            lazyub,             /**< pointer to store if the upper bound is lazy */
    SCIP_Bool             local,              /**< should the local bound be applied */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
    SCIP_Real parsedlb;
    SCIP_Real parsedub;
    char token[SCIP_MAXSTRLEN];
-   char* endptr;
+   char* strptr;
    int i;
 
    assert(lb != NULL);
@@ -2244,13 +2257,14 @@ SCIP_RETCODE varParse(
    assert(vartype != NULL);
    assert(lazylb != NULL);
    assert(lazyub != NULL);
+   assert(endptr != NULL);
    assert(success != NULL);
 
    (*success) = TRUE;
 
    /* copy variable type */
-   SCIPstrCopySection(str, '[', ']', token, SCIP_MAXSTRLEN, &endptr);
-   assert(str != endptr);
+   SCIPstrCopySection(str, '[', ']', token, SCIP_MAXSTRLEN, endptr);
+   assert(str != *endptr);
    SCIPdebugMessage("parsed variable type <%s>\n", token);
 
    /* get variable type */
@@ -2270,44 +2284,47 @@ SCIP_RETCODE varParse(
    }
 
    /* move string pointer behind variable type */
-   str = endptr;
+   str = *endptr;
 
    /* get variable name */
-   SCIPstrCopySection(str, '<', '>', name, SCIP_MAXSTRLEN, &endptr);
+   SCIPstrCopySection(str, '<', '>', name, SCIP_MAXSTRLEN, endptr);
    assert(endptr != NULL);
    SCIPdebugMessage("parsed variable name <%s>\n", name);
 
    /* move string pointer behind variable name */
-   str = endptr;
+   str = *endptr;
 
    /* cut out objective coefficient */
-   SCIPstrCopySection(str, '=', ',', token, SCIP_MAXSTRLEN, &endptr);
+   SCIPstrCopySection(str, '=', ',', token, SCIP_MAXSTRLEN, endptr);
 
    /* move string pointer behind objective coefficient */
-   str = endptr;
+   str = *endptr;
 
    /* get objective coefficient */
-   if( !SCIPstrToRealValue(token,  obj, &endptr) )
+   if( !SCIPstrToRealValue(token, obj, endptr) )
       return SCIP_READERROR;
 
    SCIPdebugMessage("parsed objective coefficient <%g>\n", *obj);
 
    /* parse global/original bounds */
-   SCIP_CALL( parseBounds(set, str, token, lb, ub, &endptr) );
+   SCIP_CALL( parseBounds(set, str, token, lb, ub, endptr) );
    assert(strncmp(token, "global", 6) == 0 || strncmp(token, "original", 8) == 0);
 
    /* initialize the lazy bound */
    *lazylb = -SCIPsetInfinity(set);
    *lazyub =  SCIPsetInfinity(set);
 
-   /* parse optional local and lazy bounds */
-   for( i = 0; i < 2; ++i )
-   {
-      /* parse global bounds */
-      SCIP_CALL( parseBounds(set, str, token, &parsedlb, &parsedub, &endptr) );
+   /* store pointer */
+   strptr = *endptr;
 
-      if( str != endptr )
-         break;
+   /* possibly parse optional local and lazy bounds */
+   for( i = 0; i < 2 && *endptr != NULL && **endptr != '\0'; ++i )
+   {
+      /* start after previous bounds */
+      strptr = *endptr;
+
+      /* parse global bounds */
+      SCIP_CALL( parseBounds(set, strptr, token, &parsedlb, &parsedub, endptr) );
 
       if( strncmp(token, "local", 5) == 0 && local )
       {
@@ -2320,6 +2337,10 @@ SCIP_RETCODE varParse(
          *lazyub = parsedub;
       }
    }
+
+   /* restore pointer */
+   if ( *endptr == NULL )
+      *endptr = strptr;
 
    /* check bounds for binary variables */
    if ( (*vartype) == SCIP_VARTYPE_BINARY )
@@ -2341,8 +2362,8 @@ SCIP_RETCODE varParse(
 }
 
 /** parses variable information (in cip format) out of a string; if the parsing process was successful an original
- *  problem variable is creates and captures; an integer variable with bounds zero and one is automatically converted
- *  into a binary variable
+ *  variable is created and captured; if variable is of integral type, fractional bounds are automatically rounded; an
+ *  integer variable with bounds zero and one is automatically converted into a binary variable
  */
 SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_VAR**            var,                /**< pointer to variable data */
@@ -2358,6 +2379,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
@@ -2372,9 +2394,11 @@ SCIP_RETCODE SCIPvarParseOriginal(
    assert(var != NULL);
    assert(blkmem != NULL);
    assert(stat != NULL);
+   assert(endptr != NULL);
+   assert(success != NULL);
 
    /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, success) );
+   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, endptr, success) );
 
    if( *success )
    {
@@ -2401,8 +2425,9 @@ SCIP_RETCODE SCIPvarParseOriginal(
 }
 
 /** parses variable information (in cip format) out of a string; if the parsing process was successful a loose variable
- *  belonging to the transformed problem is creates and captures; an integer variable with bounds zero and one is
- *  automatically converted into a binary variable
+ *  belonging to the transformed problem is created and captured; if variable is of integral type, fractional bounds are
+ *  automatically rounded; an integer variable with bounds zero and one is automatically converted into a binary
+ *  variable
  */
 SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_VAR**            var,                /**< pointer to variable data */
@@ -2418,6 +2443,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
@@ -2429,12 +2455,13 @@ SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_Real lazylb;
    SCIP_Real lazyub;
 
-
    assert(var != NULL);
    assert(blkmem != NULL);
+   assert(endptr != NULL);
+   assert(success != NULL);
 
    /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, success) );
+   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, endptr, success) );
 
    if( *success )
    {
@@ -6572,18 +6599,25 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   /* check that the bound is feasible */
+   /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
+    * of the domain within feastol
+    */
    assert(!SCIPsetIsFeasGT(set, newbound, var->glbdom.ub));
+
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
-   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+
+   /* check that the adjusted bound is feasible */
+   assert(!SCIPsetIsFeasGT(set, newbound, var->glbdom.ub));
 
    /* we do not want to exceed the upperbound, which could have happened due to numerics */
    newbound = MIN(newbound, var->glbdom.ub);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
-   /* the new global bound has to be tighter except we are in the original problem */
-   assert(lp == NULL || SCIPsetIsLE(set, var->glbdom.lb, newbound));
+   /* the new global bound has to be tighter except we are in the original problem; this must be w.r.t. feastol because
+    * SCIPvarFix() allows fixings that are outside of the domain within feastol
+    */
+   assert(lp == NULL || SCIPsetIsFeasLE(set, var->glbdom.lb, newbound));
 
    SCIPdebugMessage("changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
 
@@ -6701,18 +6735,25 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   /* check that the bound is feasible */
+   /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
+    * of the domain within feastol
+    */
    assert(!SCIPsetIsFeasLT(set, newbound, var->glbdom.lb));
+
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
-   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+
+   /* check that the adjusted bound is feasible */
+   assert(!SCIPsetIsFeasLT(set, newbound, var->glbdom.lb));
 
    /* we do not want to undercut the lowerbound, which could have happened due to numerics */
    newbound = MAX(newbound, var->glbdom.lb);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
-   /* the new global bound has to be tighter except we are in the original problem */
-   assert(lp == NULL || SCIPsetIsGE(set, var->glbdom.ub, newbound));
+   /* the new global bound has to be tighter except we are in the original problem; this must be w.r.t. feastol because
+    * SCIPvarFix() allows fixings that are outside of the domain within feastol
+    */
+   assert(lp == NULL || SCIPsetIsFeasGE(set, var->glbdom.ub, newbound));
 
    SCIPdebugMessage("changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
 
@@ -7300,11 +7341,16 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   /* check that the bound is feasible */
+   /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
+    * of the domain within feastol
+    */
    assert(!SCIPsetIsFeasGT(set, newbound, var->locdom.ub));
+
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
-   assert(SCIPsetIsLE(set, newbound, var->locdom.ub));
+
+   /* check that the adjusted bound is feasible */
+   assert(!SCIPsetIsFeasGT(set, newbound, var->locdom.ub));
 
    /* we do not want to exceed the upperbound, which could have happened due to numerics */
    newbound = MIN(newbound, var->locdom.ub);
@@ -7418,11 +7464,16 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   /* check that the bound is feasible */
+   /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
+    * of the domain within feastol
+    */
    assert(!SCIPsetIsFeasLT(set, newbound, var->locdom.lb));
+
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
-   assert(SCIPsetIsGE(set, newbound, var->locdom.lb));
+
+   /* check that the adjusted bound is feasible */
+   assert(!SCIPsetIsFeasLT(set, newbound, var->locdom.lb));
 
    /* we do not want to undercut the lowerbound, which could have happened due to numerics */
    newbound = MAX(newbound, var->locdom.lb);
@@ -8018,20 +8069,20 @@ SCIP_RETCODE SCIPvarAddHoleOriginal(
    /* the the interval bound should already be adjusted */
    assert(SCIPsetIsEQ(set, left, adjustedUb(set, SCIPvarGetType(var), left)));
    assert(SCIPsetIsEQ(set, right, adjustedLb(set, SCIPvarGetType(var), right)));
-   
+
    /* the the interval should lay between the lower and upper bound */
    assert(SCIPsetIsGE(set, left, SCIPvarGetLbOriginal(var)));
    assert(SCIPsetIsLE(set, right, SCIPvarGetUbOriginal(var)));
-   
+
    /* add domain hole */
    SCIP_CALL( domAddHole(&var->data.original.origdom, blkmem, set, left, right, &added) );
-   
+
    /* merges overlapping holes into single holes, moves bounds respectively if hole was added */
    if( added )
    {
       domMerge(&var->data.original.origdom, blkmem, set, NULL, NULL);
    }
-   
+
    /**@todo add hole in parent and child variables (just like with bound changes);
     *       warning! original vars' holes are in original blkmem, transformed vars' holes in transformed blkmem
     */
@@ -8067,10 +8118,12 @@ SCIP_RETCODE varProcessAddHoleGlobal(
    /* the interval bound should already be adjusted */
    assert(SCIPsetIsEQ(set, left, adjustedUb(set, SCIPvarGetType(var), left)));
    assert(SCIPsetIsEQ(set, right, adjustedLb(set, SCIPvarGetType(var), right)));
-   
+
    /* the interval should lay between the lower and upper bound */
    assert(SCIPsetIsGE(set, left, SCIPvarGetLbGlobal(var)));
    assert(SCIPsetIsLE(set, right, SCIPvarGetUbGlobal(var)));
+
+   /* @todo add debugging mechanism for holes when using a debugging solution */
 
    /* add hole to hole list */
    SCIP_CALL( domAddHole(&var->glbdom, blkmem, set, left, right, added) );
@@ -8078,49 +8131,49 @@ SCIP_RETCODE varProcessAddHoleGlobal(
    /* check if the hole is redundant */
    if( !(*added) )
       return SCIP_OKAY;
-   
+
    /* current bounds */
    newlb = var->glbdom.lb;
    newub = var->glbdom.ub;
-      
+
    /* merge domain holes */
    domMerge(&var->glbdom, blkmem, set, &newlb, &newub);
 
    /* the bound should not be changed */
    assert(SCIPsetIsEQ(set, newlb, var->glbdom.lb));
    assert(SCIPsetIsEQ(set, newub, var->glbdom.ub));
-      
+
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
    if( var->eventfilter != NULL )
    {
       SCIP_CALL( varEventGholeAdded(var, blkmem, set, eventqueue, left, right) );
    }
-   
+
    /* process parent variables */
    for( i = 0; i < var->nparentvars; ++i )
    {
       SCIP_Real parentnewleft;
       SCIP_Real parentnewright;
       SCIP_Bool localadded;
-      
+
       parentvar = var->parentvars[i];
       assert(parentvar != NULL);
-      
+
       switch( SCIPvarGetStatus(parentvar) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
          parentnewleft = left;
          parentnewright = right;
          break;
-         
+
       case SCIP_VARSTATUS_COLUMN:
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
          SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          return SCIP_INVALIDDATA;
-      
+
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
 
@@ -8134,7 +8187,7 @@ SCIP_RETCODE varProcessAddHoleGlobal(
          {
             /* a < 0 -> change lower bound of x */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
-            
+
             parentnewright = parentvar->data.aggregate.scalar * left + parentvar->data.aggregate.constant;
             parentnewleft = parentvar->data.aggregate.scalar * right + parentvar->data.aggregate.constant;
          }
@@ -8163,7 +8216,7 @@ SCIP_RETCODE varProcessAddHoleGlobal(
             parentnewleft, parentnewright, &localadded) );
       assert(localadded);
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -8186,7 +8239,7 @@ SCIP_RETCODE SCIPvarAddHoleGlobal(
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
    assert(blkmem != NULL);
    assert(added != NULL);
-   
+
    SCIPdebugMessage("adding global hole (%g,%g) to <%s>\n", left, right, var->name);
 
    /* the interval should not be empty */
@@ -8195,7 +8248,7 @@ SCIP_RETCODE SCIPvarAddHoleGlobal(
    /* the the interval bound should already be adjusted */
    assert(SCIPsetIsEQ(set, left, adjustedUb(set, SCIPvarGetType(var), left)));
    assert(SCIPsetIsEQ(set, right, adjustedLb(set, SCIPvarGetType(var), right)));
-   
+
    /* the the interval should lay between the lower and upper bound */
    assert(SCIPsetIsGE(set, left, SCIPvarGetLbGlobal(var)));
    assert(SCIPsetIsLE(set, right, SCIPvarGetUbGlobal(var)));
@@ -8212,32 +8265,32 @@ SCIP_RETCODE SCIPvarAddHoleGlobal(
       else
       {
          assert(set->stage == SCIP_STAGE_PROBLEM);
-         
+
          SCIP_CALL( varProcessAddHoleGlobal(var, blkmem, set, stat, eventqueue, left, right, added) );
          if( *added )
          {
             SCIP_Bool localadded;
-            
+
             SCIP_CALL( SCIPvarAddHoleLocal(var, blkmem, set, stat, eventqueue, left, right, &localadded) );
          }
       }
       break;
-         
+
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
       SCIP_CALL( varProcessAddHoleGlobal(var, blkmem, set, stat, eventqueue, left, right, added) );
       if( *added )
       {
          SCIP_Bool localadded;
-         
+
          SCIP_CALL( SCIPvarAddHoleLocal(var, blkmem, set, stat, eventqueue, left, right, &localadded) );
       }
       break;
-      
+
    case SCIP_VARSTATUS_FIXED:
       SCIPerrorMessage("cannot add hole of a fixed variable\n");
       return SCIP_INVALIDDATA;
-         
+
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
 
@@ -8260,7 +8313,7 @@ SCIP_RETCODE SCIPvarAddHoleGlobal(
       SCIP_CALL( SCIPvarAddHoleGlobal(var->data.aggregate.var, blkmem, set, stat, eventqueue, 
             childnewleft, childnewright, added) );
       break;
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot add a hole of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
@@ -8272,16 +8325,16 @@ SCIP_RETCODE SCIPvarAddHoleGlobal(
 
       childnewright = -left + var->data.negate.constant;
       childnewleft = -right + var->data.negate.constant;
-      
+
       SCIP_CALL( SCIPvarAddHoleGlobal(var->negatedvar, blkmem, set, stat, eventqueue, 
             childnewleft, childnewright, added) );
       break;
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -8313,29 +8366,29 @@ SCIP_RETCODE varProcessAddHoleLocal(
    /* the the interval bound should already be adjusted */
    assert(SCIPsetIsEQ(set, left, adjustedUb(set, SCIPvarGetType(var), left)));
    assert(SCIPsetIsEQ(set, right, adjustedLb(set, SCIPvarGetType(var), right)));
-   
+
    /* the the interval should lay between the lower and upper bound */
    assert(SCIPsetIsGE(set, left, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsLE(set, right, SCIPvarGetUbLocal(var)));
 
    /* add hole to hole list */
    SCIP_CALL( domAddHole(&var->locdom, blkmem, set, left, right, added) );
-   
+
    /* check if the hole is redundant */
    if( !(*added) )
       return SCIP_OKAY;
-   
+
    /* current bounds */
    newlb = var->locdom.lb;
    newub = var->locdom.ub;
-      
+
    /* merge domain holes */
    domMerge(&var->locdom, blkmem, set, &newlb, &newub);
 
    /* the bound should not be changed */
    assert(SCIPsetIsEQ(set, newlb, var->locdom.lb));
    assert(SCIPsetIsEQ(set, newub, var->locdom.ub));
-      
+
 #if 0
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
@@ -8344,31 +8397,31 @@ SCIP_RETCODE varProcessAddHoleLocal(
       SCIP_CALL( varEventLholeAdded(var, blkmem, set, lp, branchcand, eventqueue, left, right) );
    }
 #endif
-   
+
    /* process parent variables */
    for( i = 0; i < var->nparentvars; ++i )
    {
       SCIP_Real parentnewleft;
       SCIP_Real parentnewright;
       SCIP_Bool localadded;
-      
+
       parentvar = var->parentvars[i];
       assert(parentvar != NULL);
-      
+
       switch( SCIPvarGetStatus(parentvar) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
          parentnewleft = left;
          parentnewright = right;
          break;
-         
+
       case SCIP_VARSTATUS_COLUMN:
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
          SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          return SCIP_INVALIDDATA;
-      
+
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
 
@@ -8382,7 +8435,7 @@ SCIP_RETCODE varProcessAddHoleLocal(
          {
             /* a < 0 -> change lower bound of x */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
-            
+
             parentnewright = parentvar->data.aggregate.scalar * left + parentvar->data.aggregate.constant;
             parentnewleft = parentvar->data.aggregate.scalar * right + parentvar->data.aggregate.constant;
          }
@@ -8403,7 +8456,7 @@ SCIP_RETCODE varProcessAddHoleLocal(
       }
 
       SCIPdebugMessage("add local hole (%g,%g) to parent variable <%s>\n", parentnewleft, parentnewright, SCIPvarGetName(parentvar));
-      
+
       /* perform hole added for parent variable */
       assert(blkmem != NULL);
       assert(SCIPsetIsLT(set, parentnewleft, parentnewright));
@@ -8445,11 +8498,11 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
    /* the the interval bound should already be adjusted */
    assert(SCIPsetIsEQ(set, left, adjustedUb(set, SCIPvarGetType(var), left)));
    assert(SCIPsetIsEQ(set, right, adjustedLb(set, SCIPvarGetType(var), right)));
-   
+
    /* the the interval should lay between the lower and upper bound */
    assert(SCIPsetIsGE(set, left, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsLE(set, right, SCIPvarGetUbLocal(var)));
-   
+
    /* change bounds of attached variables */
    switch( SCIPvarGetStatus(var) )
    {
@@ -8462,12 +8515,12 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
       else
       {
          assert(set->stage == SCIP_STAGE_PROBLEM);
-         
+
          stat->domchgcount++;
          SCIP_CALL( varProcessAddHoleLocal(var, blkmem, set, stat, eventqueue, left, right, added) );
       }
       break;
-         
+
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
       stat->domchgcount++;
@@ -8477,7 +8530,7 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
    case SCIP_VARSTATUS_FIXED:
       SCIPerrorMessage("cannot add domain hole to a fixed variable\n");
       return SCIP_INVALIDDATA;
-         
+
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
 
@@ -8500,7 +8553,7 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
       SCIP_CALL( SCIPvarAddHoleLocal(var->data.aggregate.var, blkmem, set, stat, eventqueue, 
             childnewleft, childnewright, added) );
       break;
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot add domain hole to a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
@@ -8512,15 +8565,15 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
 
       childnewright = -left + var->data.negate.constant;
       childnewleft = -right + var->data.negate.constant;
-      
+
       SCIP_CALL( SCIPvarAddHoleLocal(var->negatedvar, blkmem, set, stat, eventqueue, childnewleft, childnewright, added) );
       break;
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -10140,8 +10193,63 @@ SCIP_RETCODE SCIPvarAddImplic(
       assert(var->negatedvar->negatedvar == var);
       assert(SCIPvarIsBinary(var->negatedvar));
 
-      SCIP_CALL( SCIPvarAddImplic(var->negatedvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
-            !varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
+      if( SCIPvarGetType(var->negatedvar) == SCIP_VARTYPE_BINARY )
+      {
+         SCIP_CALL( SCIPvarAddImplic(var->negatedvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
+               !varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
+      }
+      /** in case one both variables are not of binary type we have to add the implication as variable bounds */
+      else
+      {
+         /* if the implied variable is of binary type exchange the variables */
+         if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
+         {
+            SCIP_CALL( SCIPvarAddImplic(implvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
+                  (impltype == SCIP_BOUNDTYPE_UPPER) ? TRUE : FALSE, var->negatedvar, varfixing ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER, varfixing ? 1.0 : 0.0, transitive, infeasible, nbdchgs) );
+         }
+         else
+         {
+            /* both variables are not of binary type but are implicit binary; in that case we can only add this
+             * implication as variable bounds
+             */
+
+            /* add variable lower bound on the negation of var */
+            if( varfixing )
+            {
+               /* (x = 1 => i) z = 0 ii) z = 1) <=> ( i) z = 1 ii) z = 0 => ~x = 1), this is done by adding ~x >= b*z + d
+                * as variable lower bound
+                */
+               SCIP_CALL( SCIPvarAddVlb(var->negatedvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
+                     implvar, (impltype == SCIP_BOUNDTYPE_UPPER) ? 1.0 : -1.0, (impltype == SCIP_BOUNDTYPE_UPPER) ? 0.0 : 1.0, transitive, infeasible, nbdchgs) );
+            }
+            else
+            {
+               /* (x = 0 => i) z = 0 ii) z = 1) <=> ( i) z = 1 ii) z = 0 => ~x = 0), this is done by adding ~x <= b*z + d
+                * as variable upper bound
+                */
+               SCIP_CALL( SCIPvarAddVub(var->negatedvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
+                     implvar, (impltype == SCIP_BOUNDTYPE_UPPER) ? -1.0 : 1.0, (impltype == SCIP_BOUNDTYPE_UPPER) ? 1.0 : 0.0, transitive, infeasible, nbdchgs) );
+            }
+
+            /* add variable bound on implvar */
+            if( impltype == SCIP_BOUNDTYPE_UPPER )
+            {
+               /* (z = 1 => i) x = 0 ii) x = 1) <=> ( i) ~x = 0 ii) ~x = 1 => z = 0), this is done by adding z <= b*~x + d
+                * as variable upper bound
+                */
+               SCIP_CALL( SCIPvarAddVub(implvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
+                     var->negatedvar, (varfixing) ? 1.0 : -1.0, (varfixing) ? 0.0 : 1.0, transitive, infeasible, nbdchgs) );
+            }
+            else
+            {
+               /* (z = 0 => i) x = 0 ii) x = 1) <=> ( i) ~x = 0 ii) ~x = 1 => z = 1), this is done by adding z >= b*~x + d
+                * as variable upper bound
+                */
+               SCIP_CALL( SCIPvarAddVlb(implvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
+                     var->negatedvar, (varfixing) ? -1.0 : 1.0, (varfixing) ? 1.0 : 0.0, transitive, infeasible, nbdchgs) );
+            }
+         }
+      }
       break;
 
    default:

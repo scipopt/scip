@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,7 +15,7 @@
 
 /**@file    prop_obbt.c
  * @ingroup PROPAGATORS
- * @brief   optimality-based bound tightening propagator
+ * @brief   optimization-based bound tightening propagator
  * @author  Stefan Weltge
  */
 
@@ -41,7 +41,7 @@
 #include "scip/prop_genvbounds.h"
 
 #define PROP_NAME                       "obbt"
-#define PROP_DESC                       "optimality-based bound tightening propagator"
+#define PROP_DESC                       "optimization-based bound tightening propagator"
 #define PROP_TIMING                     SCIP_PROPTIMING_AFTERLPLOOP
 #define PROP_PRIORITY                -1000000      /**< propagator priority */
 #define PROP_FREQ                           0      /**< propagator frequency */
@@ -50,6 +50,10 @@
 #define DEFAULT_CREATE_GENVBOUNDS        TRUE      /**< should obbt try to provide genvbounds if possible? */
 #define DEFAULT_FILTERING_NORM           TRUE      /**< should coefficients in filtering be normalized w.r.t. the
                                                     *   domains sizes? */
+#define DEFAULT_APPLY_FILTERROUNDS      FALSE      /**< try to filter bounds in so-called filter rounds by solving
+                                                    *   auxiliary LPs? */
+#define DEFAULT_DUALFEASTOL              1e-9      /**< feasibility tolerance for reduced costs used in obbt; this value
+                                                    *   is used if SCIP's dual feastol is greater */
 #define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
                                                     *   round */
 #define DEFAULT_ITLIMITFACTOR             5.0      /**< multiple of root node LP iterations used as total LP iteration
@@ -93,8 +97,11 @@ struct SCIP_PropData
    SCIP_ROW*             cutoffrow;          /**< pointer to current objective cutoff row */
    SCIP_PROP*            genvboundprop;      /**< pointer to genvbound propagator */
    SCIP_Longint          lastnode;           /**< number of last node where obbt was performed */
+   SCIP_Real             dualfeastol;        /**< feasibility tolerance for reduced costs used in obbt; this value is
+                                              *   used if SCIP's dual feastol is greater */
    SCIP_Real             itlimitfactor;      /**< LP iteration limit for obbt will be this factor times total LP
                                               *   iterations in root node */
+   SCIP_Bool             applyfilterrounds;  /**< apply filter rounds? */
    SCIP_Bool             creategenvbounds;   /**< should obbt try to provide genvbounds if possible? */
    SCIP_Bool             normalize;          /**< should coefficients in filtering be normalized w.r.t. the domains
                                               *   sizes? */
@@ -430,21 +437,30 @@ SCIP_RETCODE filterRound(
       if( (bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGE(scip, solval, boundval))
          || (bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLE(scip, solval, boundval)) )
       {
+         SCIP_Real objcoef;
+
          /* mark bound as filtered */
          bound->filtered = TRUE;
 
          /* increase number of filtered variables */
          (*nfiltered)++;
 
-         /* update objective (smooth filtering) */
-         SCIP_CALL( SCIPchgVarObjDive(scip, bound->var, 0.0) );
+         /* get the corresponding variable's objective coeffient */
+         objcoef = SCIPgetVarObjDive(scip, bound->var);
+
+         /* change objective coefficient if it was set up for this bound */
+          if( (bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisNegative(scip, objcoef))
+             || (bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisPositive(scip, objcoef)) )
+          {
+             SCIP_CALL( SCIPchgVarObjDive(scip, bound->var, 0.0) );
+          }
       }
    }
 
    return SCIP_OKAY;
 }
 
-/** filter some bounds that are not improvable */
+/** filter some bounds that are not improvable by solving auxiliary LPs */
 static
 SCIP_RETCODE filterBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -470,25 +486,10 @@ SCIP_RETCODE filterBounds(
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   SCIPdebugMessage("filter bounds\n");
+   SCIPdebugMessage("start filter rounds\n");
 
    /*
-    * 0.) Fixed variables are marked as filtered
-    */
-   for( i = 0; i < propdata->nbounds; i++ )
-   {
-      if( varIsFixedLocal(scip, propdata->bounds[i]->var) )
-         propdata->bounds[i]->filtered = TRUE;
-   }
-
-   /*
-    * 1.) Inspect last solution of LP relaxation for tight bounds
-    */
-
-   SCIP_CALL( filterExistingLP(scip, propdata, &nfiltered));
-
-   /*
-    * 2.) Try first to filter lower bounds of interesting variables, whose bounds are not already filtered
+    * 1.) Try first to filter lower bounds of interesting variables, whose bounds are not already filtered
     */
 
    for( i = 0; i < nvars; i++ )
@@ -517,7 +518,7 @@ SCIP_RETCODE filterBounds(
    while( nfiltered >= propdata->nminfilter && ( nleftiterations == -1 ||  nleftiterations > 0 ) );
 
    /*
-    * 3.) Now try to filter the remaining upper bounds of interesting variables, whose bounds are not already filtered
+    * 2.) Now try to filter the remaining upper bounds of interesting variables, whose bounds are not already filtered
     */
 
    for( i = 0; i < nvars; i++ )
@@ -634,21 +635,39 @@ SCIP_RETCODE tightenBoundDive(
    lb = SCIPgetVarLbDive(scip, bound->var);
    ub = SCIPgetVarUbDive(scip, bound->var);
 
-   /* round bounds new value if variable is integral */
-   if( SCIPvarIsIntegral(bound->var) )
+   if( bound->boundtype == SCIP_BOUNDTYPE_LOWER )
    {
-      newval = bound->boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPceil(scip, newval) : SCIPfloor(scip, newval);
-   }
+      /* round bounds new value if variable is integral */
+      if( SCIPvarIsIntegral(bound->var) )
+         newval = SCIPceil(scip, newval);
 
-   if( bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisLbBetter(scip, newval, lb, ub) )
-   {
-      SCIP_CALL( SCIPchgVarLbDive(scip, bound->var, newval) );
-      *tightened = TRUE;
+      /* ensure that we give consistent bounds to the LP solver */
+      if( newval > ub )
+         newval = ub;
+
+      /* tighten if really better */
+      if( SCIPisLbBetter(scip, newval, lb, ub) )
+      {
+         SCIP_CALL( SCIPchgVarLbDive(scip, bound->var, newval) );
+         *tightened = TRUE;
+      }
    }
-   else if( bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisUbBetter(scip, newval, lb, ub) )
+   else
    {
-      SCIP_CALL( SCIPchgVarUbDive(scip, bound->var, newval) );
-      *tightened = TRUE;
+      /* round bounds new value if variable is integral */
+      if( SCIPvarIsIntegral(bound->var) )
+         newval = SCIPfloor(scip, newval);
+
+      /* ensure that we give consistent bounds to the LP solver */
+      if( newval < lb )
+         newval = lb;
+
+      /* tighten if really better */
+      if( SCIPisUbBetter(scip, newval, lb, ub) )
+      {
+         SCIP_CALL( SCIPchgVarUbDive(scip, bound->var, newval) );
+         *tightened = TRUE;
+      }
    }
 
    return SCIP_OKAY;
@@ -979,6 +998,8 @@ SCIP_RETCODE applyObbt(
    )
 {
    SCIP_Longint nolditerations;
+   SCIP_Real olddualfeastol;
+   int nfiltered;
    int i;
 
    assert(scip != NULL);
@@ -987,22 +1008,37 @@ SCIP_RETCODE applyObbt(
 
    *result = SCIP_DIDNOTFIND;
    nolditerations = SCIPgetNLPIterations(scip);
+   olddualfeastol = SCIPdualfeastol(scip);
+   nfiltered = 0;
 
-   /* reset bound data structure flags */
+   /* reset bound data structure flags; fixed variables are marked as filtered */
    for( i = 0; i < propdata->nbounds; i++ )
    {
-      propdata->bounds[i]->filtered = FALSE;
+      propdata->bounds[i]->filtered = varIsFixedLocal(scip, propdata->bounds[i]->var);
       propdata->bounds[i]->found = FALSE;
    }
 
+   /* filter variables via inspecting present LP solution */
+   SCIP_CALL( filterExistingLP(scip, propdata, &nfiltered) );
+   SCIPdebugMessage("filtered %d bounds via inspecting present LP solution\n", nfiltered);
+
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
+
+   /* set dual feastol */
+   if( propdata->dualfeastol < olddualfeastol )
+   {
+      SCIP_CALL( SCIPchgDualfeastol(scip, propdata->dualfeastol) );
+   }
 
    /* add objective cutoff */
    SCIP_CALL( addObjCutoff(scip, propdata) );
 
    /* apply filtering */
-   SCIP_CALL( filterBounds(scip, propdata, itlimit) );
+   if( propdata->applyfilterrounds )
+   {
+      SCIP_CALL( filterBounds(scip, propdata, itlimit) );
+   }
 
    /**@todo maybe endDive, startDive, addObjCutoff to restore old LP basis information here */
 
@@ -1014,6 +1050,9 @@ SCIP_RETCODE applyObbt(
 
    /* try to find new bounds and store them in the bound data structure */
    SCIP_CALL( findNewBounds(scip, propdata, itlimit) );
+
+   /* reset dual feastol */
+   SCIP_CALL( SCIPchgDualfeastol(scip, olddualfeastol) );
 
    /* end diving */
    SCIP_CALL( SCIPendDive(scip) );
@@ -1382,18 +1421,16 @@ SCIP_DECL_PROPEXEC(propExecObbt)
       else
       {
          assert(!SCIPinProbing(scip));
-         SCIPpropSetFreq(prop, -1);
          return SCIP_OKAY;
       }
    }
    assert(propdata->nbounds >= 0);
 
-   /* disable obbt if there are no interesting bounds */
-   if( propdata->nbounds == 0 )
+   /* do not run if there are no interesting bounds */
+   /**@todo disable */
+   if( propdata->nbounds <= 0 )
    {
-      SCIPdebugMessage("there are no interesting bounds, disabling obbt\n");
-      SCIPpropSetFreq(prop, -1);
-
+      SCIPdebugMessage("there are no interesting bounds\n");
       return SCIP_OKAY;
    }
 
@@ -1524,6 +1561,10 @@ SCIP_RETCODE SCIPincludePropObbt(
          "should coefficients in filtering be normalized w.r.t. the domains sizes?",
          &propdata->normalize, TRUE, DEFAULT_FILTERING_NORM, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/applyfilterrounds",
+         "try to filter bounds in so-called filter rounds by solving auxiliary LPs?",
+         &propdata->applyfilterrounds, TRUE, DEFAULT_APPLY_FILTERROUNDS, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/minfilter",
          "minimal number of filtered bounds to apply another filter round",
          &propdata->nminfilter, TRUE, DEFAULT_FILTERING_MIN, 1, INT_MAX, NULL, NULL) );
@@ -1535,6 +1576,10 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/itlimitfactor",
          "multiple of root node LP iterations used as total LP iteration limit for obbt (<= 0: no limit )",
          &propdata->itlimitfactor, FALSE, DEFAULT_ITLIMITFACTOR, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/dualfeastol",
+         "feasibility tolerance for reduced costs used in obbt; this value is used if SCIP's dual feastol is greater",
+         &propdata->dualfeastol, FALSE, DEFAULT_DUALFEASTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -73,7 +73,7 @@
 #define DEFAULT_WRITESUBMIPDUALBOUND FALSE   /**< write dualbound after solving supmip root for all open node */
 
 /* should the printing be with more information */
-//#define LONGSTATS
+/*#define LONGSTATS*/
 
 /* do we want to create for each printing new files or only one */
 /*#define ONEFILE*/

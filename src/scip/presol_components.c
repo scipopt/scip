@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -759,6 +759,142 @@ SCIP_RETCODE fillDigraph(
    return SCIP_OKAY;
 }
 
+#ifdef COMPONENTS_PRINT_STRUCTURE
+
+static
+SCIP_RETCODE printStructure(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables */
+   SCIP_CONS**           conss,              /**< constraints */
+   int*                  components,         /**< array with component number for every variable */
+   int*                  conscomponents,     /**< array with component number for every constraint */
+   int                   nvars,              /**< number of variables */
+   int                   nconss,             /**< number of constraints */
+   int                   ncomponents         /**< number of components */
+   )
+{
+   char probname[SCIP_MAXSTRLEN];
+   char outname[SCIP_MAXSTRLEN];
+   char filename[SCIP_MAXSTRLEN];
+   char* name;
+   FILE* file;
+   SCIP_VAR** consvars;
+   SCIP_VAR* var;
+   int* varidx;
+   int* compstartvars;
+   int* compstartconss;
+   int ncalls;
+   int requiredsize;
+   int nconsvars;
+   int i;
+   int c;
+   int v;
+   SCIP_Bool success;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &varidx, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &compstartvars, ncomponents + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &compstartconss, ncomponents + 1) );
+
+   ncalls = SCIPpresolGetNCalls(SCIPfindPresol(scip, PRESOL_NAME));
+   compstartvars[0] = 0;
+   compstartconss[0] = 0;
+
+   for( v = 0; v < nvars; ++v )
+   {
+      assert(v == 0 || components[v] == components[v-1] || components[v] == components[v-1]+1);
+      varidx[SCIPvarGetProbindex(vars[v])] = v;
+
+      if( v > 0 && components[v] == components[v-1] + 1 )
+      {
+         compstartvars[components[v]] = v;
+      }
+   }
+
+   for( v = 0; v < nconss; ++v )
+   {
+      assert(v == 0 || conscomponents[v] == conscomponents[v-1] || conscomponents[v] == conscomponents[v-1]+1);
+
+      if( v > 0 && conscomponents[v] == conscomponents[v-1] + 1 )
+      {
+         compstartconss[conscomponents[v]] = v;
+      }
+   }
+
+   compstartvars[ncomponents] = nvars;
+   compstartconss[ncomponents] = nconss;
+
+   /* split problem name */
+   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s", SCIPgetProbName(scip));
+   SCIPsplitFilename(probname, NULL, &name, NULL, NULL);
+
+   /* define file name depending on instance name, number of presolver calls and number of components */
+   (void) SCIPsnprintf(outname, SCIP_MAXSTRLEN, "%s_%d_%d", name, ncalls, ncomponents);
+   (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s.gp", outname);
+
+   /* open output file */
+   file = fopen(filename, "w");
+   if( file == NULL )
+   {
+      SCIPerrorMessage("cannot create file <%s> for writing\n", filename);
+      SCIPprintSysError(filename);
+      return SCIP_FILECREATEERROR;
+   }
+
+   /* print header of gnuplot file */
+   SCIPinfoMessage(scip, file, "set terminal pdf\nset output \"%s.pdf\"\nunset xtics\nunset ytics\n\n", outname);
+   SCIPinfoMessage(scip, file, "unset border\nunset key\nset style fill solid 1.0 noborder\nset size ratio -1\n");
+   SCIPinfoMessage(scip, file, "set xrange [0:%d]\nset yrange[%d:0]\n", nvars + 1, nconss + 1);
+
+   /* write rectangles around blocks */
+   for( i = 0; i < ncomponents; ++i )
+   {
+      assert(compstartvars[i] <= nvars);
+      assert(compstartconss[i] <= nconss);
+      assert(compstartvars[i+1] <= nvars);
+      assert(compstartconss[i+1] <= nconss);
+      SCIPinfoMessage(scip, file, "set object %d rect from %.1f,%.1f to %.1f,%.1f fc rgb \"grey\"\n",
+         i + 1, nvars - compstartvars[i] + 0.5, nconss - compstartconss[i] + 0.5,
+         nvars - compstartvars[i+1] + 0.5, nconss - compstartconss[i+1] + 0.5);
+   }
+
+   /* write the plot header */
+   SCIPinfoMessage(scip, file, "plot \"-\" using 1:2:3 with circles fc rgb \"black\"\n");
+
+   /* write data */
+   for( c = 0; c < nconss; ++c )
+   {
+      /* get variables for this constraint */
+      SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
+      SCIP_CALL( SCIPgetConsVars(scip, conss[c], consvars, nvars, &success) );
+      assert(success);
+
+      /* transform given variables to active variables */
+      SCIP_CALL( SCIPgetActiveVars(scip, consvars, &nconsvars, nvars, &requiredsize) );
+      assert(requiredsize <= nvars);
+
+      for( v = 0; v < nconsvars; ++v )
+      {
+         var = consvars[v];
+         SCIPinfoMessage(scip, file, "%d %d 0.5\n", nvars - varidx[SCIPvarGetProbindex(var)], nconss - c);
+      }
+   }
+
+   /* write file end */
+   SCIPinfoMessage(scip, file, "e\n");
+
+   (void) fclose(file);
+
+   SCIPfreeBufferArray(scip, &compstartconss);
+   SCIPfreeBufferArray(scip, &compstartvars);
+   SCIPfreeBufferArray(scip, &consvars);
+   SCIPfreeBufferArray(scip, &varidx);
+
+   return SCIP_OKAY;
+}
+
+#endif
+
 /** use components to assign variables and constraints to the subscips
  *  and try to solve all subscips having not too many integer variables
  */
@@ -819,6 +955,10 @@ SCIP_RETCODE splitProblem(
 
    SCIPsortIntPtr(components, (void**)vars, nvars);
    SCIPsortIntPtr(conscomponent, (void**)conss, nconss);
+
+#ifdef COMPONENTS_PRINT_STRUCTURE
+   printStructure(scip, vars, conss, components, conscomponent, nvars, nconss, ncomponents);
+#endif
 
    compvarsstart = 0;
    compconssstart = 0;

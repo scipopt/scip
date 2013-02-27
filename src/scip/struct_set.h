@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -180,6 +180,13 @@ struct SCIP_Set
                                               *   (0: disable conflict restarts) */
    SCIP_Real             conf_restartfac;    /**< factor to increase restartnum with after each restart */
    SCIP_Bool             conf_ignorerelaxedbd;/**< should relaxed bounds be ignored? */
+   int                   conf_maxvarsdetectimpliedbounds;/**< maximal number of variables to try to detect global bound
+                                                          *   implications and shorten the whole conflict set (0:
+                                                          *   disabled )
+                                                          */
+   SCIP_Bool             conf_fullshortenconflict;/**< try to shorten the whole conflict set or terminate early
+                                                   *   (depending on the 'maxvarsdetectimpliedbounds' parameter)
+                                                   */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
@@ -374,6 +381,15 @@ struct SCIP_Set
    char*                 vbc_filename;       /**< name of the VBC Tool output file, or - if no output should be created */
    SCIP_Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in VBC output? */
    SCIP_Bool             vbc_dispsols;       /**< should the node where solutions are found be visualized? */
+
+   /* Reading */
+   SCIP_Bool             read_initialconss;  /**< should model constraints be marked as initial? */
+   SCIP_Bool             read_dynamicconss;  /**< should model constraints be subject to aging? */
+   SCIP_Bool             read_dynamiccols;   /**< should columns be added and removed dynamically to the LP? */
+   SCIP_Bool             read_dynamicrows;   /**< should rows be added and removed dynamically to the LP? */
+
+   /* Writing */
+   SCIP_Bool             write_allconss;     /**< should all constraints be written (including the redundant constraints)? */
 };
 
 #ifdef __cplusplus

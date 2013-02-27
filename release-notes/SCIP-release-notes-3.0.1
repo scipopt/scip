@@ -1,0 +1,44 @@
+Notes for SCIP Release 3.0.1
+
+
+Interfaces
+==========
+
+- new method SCIPgetNLimSolsFound() to get number of solutions that
+  respect the objective limit
+
+- when using an objective limit, heuristic characters are not
+  displayed any longer for worse solutions
+
+
+Features
+========
+
+- added delayed cutpool which only gets separated if the sepastore is
+  empty after a separation round
+
+
+Performance Improvements and Bug Fixes
+======================================
+
+- better handling of generalized (Lagrangian) variable bounds
+
+- fixed several issues in cumulative constraint handler
+
+- fixed bug which caused deletion of ranged rows parallel to objective
+
+- fixed several numeric issues
+
+- fixed bug with LP not being flushed after bound changes on columns
+  that are not in the LPI
+
+- fixed inconsistent behavior of methods
+  SCIPlpiIs{PrimalFeasible,DualFeasible,Optimal,...}
+
+- fixed bug in copying nonlinear constraints during presolve (resulted
+  in wrongly declaring instances as infeasible when using component
+  presolve)
+
+- fixed bug in CppAD in connection with abspower constraints
+
+- many small bug fixes, see CHANGELOG

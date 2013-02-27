@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -107,6 +107,8 @@
                                                  *   (0: disable conflict restarts) */
 #define SCIP_DEFAULT_CONF_RESTARTFAC        1.5 /**< factor to increase restartnum with after each restart */
 #define SCIP_DEFAULT_CONF_IGNORERELAXEDBD FALSE /**< should relaxed bounds be ignored? */
+#define SCIP_DEFAULT_CONF_MAXVARSDETECTIMPLIEDBOUNDS 250 /**< maximal number of variables to try to detect global bound implications and shorten the whole conflict set (0: disabled) */
+#define SCIP_DEFAULT_CONF_FULLSHORTENCONFLICT TRUE /**< try to shorten the whole conflict set or terminate early (depending on the 'maxvarsdetectimpliedbounds' parameter) */
 
 
 /* Constraints */
@@ -309,6 +311,15 @@
 #define SCIP_DEFAULT_VBC_REALTIME          TRUE /**< should the real solving time be used instead of a time step counter
                                                  *   in VBC output? */
 #define SCIP_DEFAULT_VBC_DISPSOLS         FALSE /**< should the node where solutions are found be visualized? */
+
+/* Reading */
+#define SCIP_DEFAULT_READ_INITIALCONSS     TRUE /**< should model constraints be marked as initial? */
+#define SCIP_DEFAULT_READ_DYNAMICCONSS     TRUE /**< should model constraints be subject to aging? */
+#define SCIP_DEFAULT_READ_DYNAMICCOLS     FALSE /**< should columns be added and removed dynamically to the LP? */
+#define SCIP_DEFAULT_READ_DYNAMICROWS     FALSE /**< should rows be added and removed dynamically to the LP? */
+
+/* Writing */
+#define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
 
 
 
@@ -923,6 +934,16 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/ignorerelaxedbd",
          "should relaxed bounds be ignored?",
          &(*set)->conf_ignorerelaxedbd, TRUE, SCIP_DEFAULT_CONF_IGNORERELAXEDBD,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "conflict/maxvarsdetectimpliedbounds",
+         "maximal number of variables to try to detect global bound implications and shorten the whole conflict set (0: disabled)",
+         &(*set)->conf_maxvarsdetectimpliedbounds, TRUE, SCIP_DEFAULT_CONF_MAXVARSDETECTIMPLIEDBOUNDS, 0, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/fullshortenconflict",
+         "try to shorten the whole conflict set or terminate early (depending on the 'maxvarsdetectimpliedbounds' parameter)",
+         &(*set)->conf_fullshortenconflict, TRUE, SCIP_DEFAULT_CONF_FULLSHORTENCONFLICT,
          NULL, NULL) );
 
    /* constraint parameters */
@@ -1601,6 +1622,35 @@ SCIP_RETCODE SCIPsetCreate(
          "vbc/dispsols",
          "should the node where solutions are found be visualized?",
          &(*set)->vbc_dispsols, FALSE, SCIP_DEFAULT_VBC_DISPSOLS,
+         NULL, NULL) );
+
+   /* Reading parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reading/initialconss",
+         "should model constraints be marked as initial?",
+         &(*set)->read_initialconss, FALSE, SCIP_DEFAULT_READ_INITIALCONSS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reading/dynamicconss",
+         "should model constraints be subject to aging?",
+         &(*set)->read_dynamicconss, FALSE, SCIP_DEFAULT_READ_DYNAMICCONSS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reading/dynamiccols",
+         "should columns be added and removed dynamically to the LP?",
+         &(*set)->read_dynamiccols, FALSE, SCIP_DEFAULT_READ_DYNAMICCOLS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reading/dynamicrows",
+         "should rows be added and removed dynamically to the LP?",
+         &(*set)->read_dynamicrows, FALSE, SCIP_DEFAULT_READ_DYNAMICROWS,
+         NULL, NULL) );
+
+   /* Writing parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "write/allconss",
+         "should all constraints be written (including the redundant constraints)?",
+         &(*set)->write_allconss, FALSE, SCIP_DEFAULT_WRITE_ALLCONSS,
          NULL, NULL) );
 
    return SCIP_OKAY;

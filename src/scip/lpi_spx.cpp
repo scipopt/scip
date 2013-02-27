@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -289,6 +289,17 @@ public:
 
       freePreStrongbranchingBasis();
 
+      if( m_rownames != NULL )
+      {
+         m_rownames->~NameSet();
+         spx_free(m_rownames);
+      }
+      if( m_colnames != NULL )
+      {
+         m_colnames->~NameSet();
+         spx_free(m_colnames);
+      }
+
 #ifdef WITH_LPSCHECK
       (void) CPXfreeprob(m_cpxenv, &m_cpxlp);
       (void) CPXcloseCPLEX(&m_cpxenv);
@@ -337,7 +348,8 @@ public:
 
    bool isPerturbed()
    {
-      return (shift() >= epsilon());
+      /* the epsilon is 1e-16; we add a factor of ten to account for numerics */
+      return (shift() >= 10.0 * epsilon());
    }
 
    /** set iteration limit (-1 = unbounded) */
@@ -823,7 +835,7 @@ public:
       assert(m_sense == sense());
 
       SPxEquiliSC* scaler = NULL;
-      SPxSimplifier* simplifier = NULL;
+      SPxMainSM* simplifier = NULL;
       SPxLP origlp;
       SPxSimplifier::Result result = SPxSimplifier::OKAY;
 
@@ -848,13 +860,15 @@ public:
       /* use scaler and simplifier if no basis is loaded, i.e., if solving for the first time or from scratch */
       if( SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && getScaling() && nCols() > 0 && nRows() > 0 )
       {
-         scaler = new SPxEquiliSC();
+         spx_alloc(scaler, 1);
+         scaler = new (scaler) SPxEquiliSC();
          assert(scaler != NULL);
       }
 
       if( SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && getPresolving() && nCols() > 0 && nRows() > 0 )
       {
-         simplifier = new SPxMainSM();
+         spx_alloc(simplifier, 1);
+         simplifier = new (simplifier) SPxMainSM();
          assert(simplifier != NULL);
       }
 
@@ -890,8 +904,8 @@ public:
          {
             SCIPdebugMessage("simplifier detected primal or dual infeasibility - reloading and solving unsimplified LP\n");
 
-            delete simplifier;
-            simplifier = NULL;
+            simplifier->~SPxMainSM();
+            spx_free(simplifier);
 
             SPxSolver::loadLP(origlp);
             m_sense = sense();
@@ -934,8 +948,8 @@ public:
       {
          SCIPdebugMessage("presolved LP not optimal - reloading and solving original LP\n");
 
-         delete simplifier;
-         simplifier = NULL;
+         simplifier->~SPxMainSM();
+         spx_free(simplifier);
 
          SPxSolver::loadLP(origlp);
          m_sense = sense();
@@ -953,8 +967,8 @@ public:
          if( (simplifier == NULL || result != SPxSimplifier::VANISHED) && SPxSolver::getBasisStatus() >= SPxBasis::REGULAR )
          {
             SCIPdebugMessage("get basis of presolved LP\n");
-            rstat = new SPxSolver::VarStatus[nRows()];
-            cstat = new SPxSolver::VarStatus[nCols()];
+            spx_alloc(rstat, nRows());
+            spx_alloc(cstat, nCols());
             SPxSolver::getBasis(rstat, cstat);
          }
 
@@ -995,21 +1009,17 @@ public:
             }
 
             if( cstat != NULL )
-            {
-               delete[] cstat;
-               cstat = NULL;
-            }
+               spx_free(cstat);
             if( rstat != NULL )
-            {
-               delete[] rstat;
-               rstat = NULL;
-            }
+               spx_free(rstat);
 
             if( simplifier->isUnsimplified() )
             {
                /* get basis for original lp */
-               rstat = new SPxSolver::VarStatus[origlp.nRows()];
-               cstat = new SPxSolver::VarStatus[origlp.nCols()];
+               rstat = NULL;
+               cstat = NULL;
+               spx_alloc(rstat, origlp.nRows());
+               spx_alloc(cstat, origlp.nCols());
                simplifier->getBasis(rstat, cstat);
             }
          }
@@ -1035,13 +1045,19 @@ public:
 
          /* free allocated memory */
          if( cstat != NULL )
-            delete[] cstat;
+            spx_free(cstat);
          if( rstat != NULL )
-            delete[] rstat;
+            spx_free(rstat);
          if( scaler != NULL )
-            delete scaler;
+         {
+            scaler->~SPxEquiliSC();
+            spx_free(scaler);
+         }
          if( simplifier != NULL )
-            delete simplifier;
+         {
+            simplifier->~SPxMainSM();
+            spx_free(simplifier);
+         }
       }
 
       if( m_stat == OPTIMAL )
@@ -1061,8 +1077,8 @@ public:
       assert(m_rowstat == NULL);
       assert(m_colstat == NULL);
 
-      m_rowstat = new SPxSolver::VarStatus[nRows()];
-      m_colstat = new SPxSolver::VarStatus[nCols()];
+      spx_alloc(m_rowstat, nRows());
+      spx_alloc(m_colstat, nCols());
 
       try
       {
@@ -1112,16 +1128,10 @@ public:
    /** if basis is in store, delete it without restoring it */
    void freePreStrongbranchingBasis()
    {
-      if ( m_rowstat != NULL )
-      {
-         delete [] m_rowstat;
-         m_rowstat = NULL;
-      }
-      if ( m_colstat != NULL ) 
-      {
-         delete [] m_colstat;
-         m_colstat = NULL;
-      }
+      if( m_rowstat != NULL )
+         spx_free(m_rowstat);
+      if( m_colstat != NULL )
+         spx_free(m_colstat);
    }
 
    /** is pre-strong-branching basis freed? */
@@ -1164,11 +1174,17 @@ public:
       clear();
 
       if ( m_rownames != 0 )
-         delete m_rownames;
+         m_rownames->~NameSet();
+      else
+         spx_alloc(m_colnames, 1);
+
       if ( m_colnames != 0 )
-         delete m_colnames;
-      m_rownames = new NameSet;
-      m_colnames = new NameSet;
+         m_colnames->~NameSet();
+      else
+         spx_alloc(m_rownames, 1);
+
+      m_rownames = new (m_rownames) NameSet();
+      m_colnames = new (m_colnames) NameSet();
 
       if( SPxSolver::readFile(fname, m_rownames, m_colnames) )
       {
@@ -1726,10 +1742,9 @@ SCIP_RETCODE SCIPlpiAddCols(
    {
       LPColSet cols(ncols);
       DSVector colVector(ncols);
-      int nrows = spx->nRows();
+      int start;
       int last;
       int i;
-      int j;
 
       /* create column vectors with coefficients and bounds */
       for( i = 0; i < ncols; ++i )
@@ -1737,12 +1752,9 @@ SCIP_RETCODE SCIPlpiAddCols(
          colVector.clear();
          if( nnonz > 0 )
          {
+            start = beg[i];
             last = (i == ncols-1 ? nnonz : beg[i+1]);
-            for( j = beg[i]; j < last; ++j )
-            {
-               if( ind[j] < nrows )
-                  colVector.add(ind[j], val[j]);
-            }
+            colVector.add( last-start, &ind[start], &val[start] );
          }
          cols.add(obj[i], lb[i], colVector, ub[i]);
       }
@@ -1845,9 +1857,9 @@ SCIP_RETCODE SCIPlpiAddRows(
       SPxSCIP* spx = lpi->spx;
       LPRowSet rows(nrows);
       DSVector rowVector;
+      int start;
       int last;
       int i;
-      int j;
 
       /* create row vectors with given sides */
       for( i = 0; i < nrows; ++i )
@@ -1855,9 +1867,9 @@ SCIP_RETCODE SCIPlpiAddRows(
          rowVector.clear();
          if( nnonz > 0 )
          {
+            start = beg[i];
             last = (i == nrows-1 ? nnonz : beg[i+1]);
-            for( j = beg[i]; j < last; ++j )
-               rowVector.add(ind[j], val[j]);
+            rowVector.add( last-start, &ind[start], &val[start] );
          }
          rows.add(lhs[i], rowVector, rhs[i]);
       }
@@ -3211,18 +3223,14 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
    )
 {
-   SPxBasis::SPxStatus basestatus;
-
    SCIPdebugMessage("calling SCIPlpiGetSolFeasibility()\n");
 
    assert(lpi != NULL);
-   assert(lpi->spx != NULL);
    assert(primalfeasible != NULL);
    assert(dualfeasible != NULL);
 
-   basestatus = lpi->spx->basis().status();
-   *primalfeasible = (basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::OPTIMAL);
-   *dualfeasible = (basestatus == SPxBasis::DUAL || basestatus == SPxBasis::OPTIMAL);
+   *primalfeasible = SCIPlpiIsPrimalFeasible(lpi);
+   *dualfeasible = SCIPlpiIsDualFeasible(lpi);
 
    return SCIP_OKAY;
 }
@@ -3271,8 +3279,12 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return lpi->spx->getStatus() == SPxSolver::UNBOUNDED
-      && (lpi->spx->basis().status() == SPxBasis::PRIMAL || lpi->spx->basis().status() == SPxBasis::UNBOUNDED);
+   assert(lpi->spx->getStatus() != SPxSolver::UNBOUNDED || lpi->spx->basis().status() == SPxBasis::UNBOUNDED);
+
+   /* if SoPlex returns unbounded, this may only mean that an unbounded ray is available, not necessarily a primal
+    * feasible point; hence we have to check the perturbation
+    */
+   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED && !lpi->spx->isPerturbed());
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
@@ -3302,8 +3314,13 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    basestatus = lpi->spx->basis().status();
 
-   return (basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::OPTIMAL || basestatus == SPxBasis::UNBOUNDED)
-      && !lpi->spx->isPerturbed();
+   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
+    * still return true as long as perturbation plus violation is within tolerances
+    */
+   assert(basestatus == SPxBasis::OPTIMAL || lpi->spx->getStatus() != SPxSolver::OPTIMAL);
+
+   return basestatus == SPxBasis::OPTIMAL ||
+      ((basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::UNBOUNDED) && !lpi->spx->isPerturbed());
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -3368,16 +3385,18 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SPxBasis::SPxStatus basestatus;
-
    SCIPdebugMessage("calling SCIPlpiIsDualFeasible()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   basestatus = lpi->spx->basis().status();
+   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
+    * still return true as long as perturbation plus violation is within tolerances
+    */
+   assert(lpi->spx->basis().status() == SPxBasis::OPTIMAL || lpi->spx->getStatus() != SPxSolver::OPTIMAL);
 
-   return (basestatus == SPxBasis::DUAL && !lpi->spx->isPerturbed()) || basestatus == SPxBasis::OPTIMAL;
+   return (lpi->spx->basis().status() == SPxBasis::OPTIMAL) ||
+      (lpi->spx->basis().status() == SPxBasis::DUAL && !lpi->spx->isPerturbed());
 }
 
 /** returns TRUE iff LP was solved to optimality */
@@ -3388,9 +3407,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    SCIPdebugMessage("calling SCIPlpiIsOptimal()\n");
 
    assert(lpi != NULL);
-   assert(lpi->spx != NULL);
+   assert((lpi->spx->basis().status() == SPxBasis::OPTIMAL)
+      == (SCIPlpiIsPrimalFeasible(lpi) && SCIPlpiIsDualFeasible(lpi)));
 
-   return (lpi->spx->getStatus() == SPxSolver::OPTIMAL);
+   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
+    * still return true as long as perturbation plus violation is within tolerances
+    */
+   return (lpi->spx->basis().status() == SPxBasis::OPTIMAL);
 }
 
 /** returns TRUE iff current LP basis is stable */
@@ -3816,8 +3839,10 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    invalidateSolution(lpi);
 
-   SPxSolver::VarStatus* spxcstat = new SPxSolver::VarStatus[lpi->spx->nCols()];
-   SPxSolver::VarStatus* spxrstat = new SPxSolver::VarStatus[lpi->spx->nRows()];
+   SPxSolver::VarStatus* spxcstat = NULL;
+   SPxSolver::VarStatus* spxrstat = NULL;
+   SCIP_ALLOC( BMSallocMemoryArray(&spxcstat, lpi->spx->nCols()) );
+   SCIP_ALLOC( BMSallocMemoryArray(&spxrstat, lpi->spx->nRows()) );
 
    for( i = 0; i < lpi->spx->nRows(); ++i )
    {
@@ -3834,8 +3859,8 @@ SCIP_RETCODE SCIPlpiSetBase(
          break;
       case SCIP_BASESTAT_ZERO:
          SCIPerrorMessage("slack variable has basis status ZERO (should not occur)\n");
-         delete[] spxcstat;
-         delete[] spxrstat;
+         BMSfreeMemoryArrayNull(&spxcstat);
+         BMSfreeMemoryArrayNull(&spxrstat);
          return SCIP_LPERROR; /*lint !e429*/
       default:
          SCIPerrorMessage("invalid basis status\n");
@@ -3870,8 +3895,8 @@ SCIP_RETCODE SCIPlpiSetBase(
    SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );
    lpi->spx->updateStatus();
 
-   delete[] spxcstat;
-   delete[] spxrstat;
+   BMSfreeMemoryArrayNull(&spxcstat);
+   BMSfreeMemoryArrayNull(&spxrstat);
 
    return SCIP_OKAY;
 }
@@ -3931,7 +3956,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    return SCIP_OKAY;
 }
 
-
+#ifdef OLD_BINV
 /* prepare a factorization of the basis matrix in column representation */
 static
 SCIP_RETCODE prepareFactorization(
@@ -3994,6 +4019,7 @@ SCIP_RETCODE prepareFactorization(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** get dense row of inverse basis matrix B^-1 */
 SCIP_RETCODE SCIPlpiGetBInvRow(
@@ -4016,24 +4042,29 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       SPxSolver* spx = lpi->spx;
 
       Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
-      DVector e(spx->nRows());      /* prepare unit vector */
-      e.clear();
-      e[r] = 1.0;
 
       /* in the column case use the existing factorization */
       if ( spx->rep() == SPxSolver::COLUMN )
       {
-         assert( spx->dim() == spx->nRows() );
-         assert( spx->coDim() == spx->nCols() );
+         DVector e(spx->nRows());
+
+         /* prepare unit vector */
+         e.clear();
+         e[r] = 1.0;
 
          /* solve system "x = e_r^T * B^-1" to get r'th row of B^-1 */
          spx->basis().coSolve(x, e);
       }
       else
       {
-         assert( spx->rep() == SPxSolver::ROW );
-         assert( spx->dim() == spx->nCols() );
-         assert( spx->coDim() == spx->nRows() );
+         assert(spx->rep() == SPxSolver::ROW);
+
+#ifdef OLD_BINV
+         DVector e(spx->nRows());
+
+         /* prepare unit vector */
+         e.clear();
+         e[r] = 1.0;
 
          /* factorization is deleted in invalidateSolution() */
          SCIP_CALL( prepareFactorization(lpi) );
@@ -4042,36 +4073,16 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
          /* solve system "x = e_r^T * B^-1" to get r'th row of B^-1 */
          lpi->factorization->solveLeft(x, e);
-      }
-   }
-   catch(SPxException x)
-   {
-#ifndef NDEBUG
-      std::string s = x.what();
-      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
-#endif
-      return SCIP_LPERROR;
-   }
-
-#ifdef CHECKBINV
-   if( lpi->spx->rep() == SPxSolver::ROW )
-   {
-      try
-      {
-         SSVector y(lpi->spx->nCols());
-         DSVector rhs(lpi->spx->nCols()); /* TODO: should this be a reference? */
-         DVector x(lpi->spx->nRows());
-         Vector xref(lpi->spx->nRows(), coef);
-
+#else
+         /**@todo should rhs be a reference? */
+         DSVector rhs(spx->nCols());
+         SSVector y(spx->nCols());
          int* bind;
          int index;
 
-         assert(lpi != 0);
-         assert(lpi->factorization != 0);
-
+         /**@todo should bind be stored globally in lpi?  */
          /* get ordering of column basis matrix */
-         /* TODO: can/should this be stored globally in lpi?  */
-         SCIP_ALLOC( BMSallocMemoryArray(&bind, lpi->spx->nRows()) );
+         SCIP_ALLOC( BMSallocMemoryArray(&bind, spx->nRows()) );
          SCIP_CALL( SCIPlpiGetBasisInd(lpi, bind) );
 
          /* get vector corresponding to requested index r */
@@ -4084,42 +4095,42 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
             /* should be a valid row index and in the column basis matrix, i.e., not basic w.r.t. row representation */
             assert(index >= 0);
-            assert(index < lpi->spx->nRows());
-            assert(!lpi->spx->isRowBasic(index));
+            assert(index < spx->nRows());
+            assert(!spx->isRowBasic(index));
 
             /* get row vector */
-            rhs = lpi->spx->rowVector(index);
+            rhs = spx->rowVector(index);
             rhs *= -1.0;
          }
          /* r corresponds to a column vector */
          else
          {
             /* should be a valid column index and in the column basis matrix, i.e., not basic w.r.t. row representation */
-            assert(index < lpi->spx->nCols());
-            assert(!lpi->spx->isColBasic(index));
+            assert(index < spx->nCols());
+            assert(!spx->isColBasic(index));
 
             /* get unit vector */
-            rhs = lpi->spx->unitVector(index);
+            rhs = spx->unitVector(index);
          }
 
          /* solve system "y B = rhs", where B is the row basis matrix */
-         lpi->spx->basis().solve(y, rhs);
+         spx->basis().solve(y, rhs);
 
          /* initialize result vector x as zero */
-         x.clear();
+         BMSclearMemoryArray(coef, spx->nRows());
 
          /* add nonzero entries */
-         for( int i = 0; i < lpi->spx->nCols(); ++i )
+         for( int i = 0; i < spx->nCols(); ++i )
          {
-            SPxId id = lpi->spx->basis().baseId(i);
+            SPxId id = spx->basis().baseId(i);
 
             if( id.isSPxRowId() )
             {
-               assert(lpi->spx->number(id) >= 0);
-               assert(lpi->spx->number(id) < lpi->spx->nRows());
-               assert(bind[r] >= 0 || lpi->spx->number(id) != index);
+               assert(spx->number(id) >= 0);
+               assert(spx->number(id) < spx->nRows());
+               assert(bind[r] >= 0 || spx->number(id) != index);
 
-               x[lpi->spx->number(id)] = y[i];
+               x[spx->number(id)] = y[i];
             }
          }
 
@@ -4130,26 +4141,136 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
             x[index] = 1.0;
          }
 
-         /* check deviation */
-         x -= xref;
-         if( x.length() > 1e-6 )
+         /* free memory */
+         BMSfreeMemoryArray(&bind);
+#endif
+      }
+   }
+   catch(SPxException x)
+   {
+#ifndef NDEBUG
+      std::string s = x.what();
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#endif
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** get dense solution of basis matrix B * coef = rhs */
+static
+SCIP_RETCODE lpiGetBInvVec(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Real*            rhs,                /**< right-hand side vector */
+   SCIP_Real*            coef                /**< vector to return coefficients */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetBInvVec()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(lpi->spx->preStrongbranchingBasisFreed());
+   assert(rhs != NULL);
+   assert(coef != NULL);
+
+   try
+   {
+      SPxSolver* spx = lpi->spx;
+      Vector v(spx->nRows(), rhs);
+      Vector x(spx->nRows(), coef);
+
+      /* in the column case use the existing factorization */
+      if( spx->rep() == SPxSolver::COLUMN )
+      {
+         /* solve system "x = B^-1 * A_c" to get c'th column of B^-1 * A */
+         spx->basis().solve(x, v);
+      }
+      else
+      {
+         assert(spx->rep() == SPxSolver::ROW);
+
+#ifdef OLD_BINV
+         /* factorization is deleted in invalidateSolution() */
+         SCIP_CALL( prepareFactorization(lpi) );
+         assert(lpi->factorization != 0);
+         assert(lpi->factorization->dim() == spx->nRows());
+
+         /* solve system B * x = v */
+         lpi->factorization->solveRight(x, v);
+#else
+         DSVector rowrhs(spx->nCols());
+         SSVector y(spx->nCols());
+         int* bind;
+
+         /**@todo should bind be stored globally in lpi?  */
+         /* get ordering of column basis matrix */
+         SCIP_ALLOC( BMSallocMemoryArray(&bind, spx->nRows()) );
+         SCIP_CALL( SCIPlpiGetBasisInd(lpi, bind) );
+
+         /* fill right-hand side for row-based system */
+         for( int i = 0; i < spx->nCols(); ++i )
          {
-            SCIPmessagePrintWarning(lpi->messagehdlr, "SCIPlpiGetBInvRow(): least squares difference = %.3g, max. absolute difference = %.3g\n", x.length(), x.maxAbs());
+            SPxId id = spx->basis().baseId(i);
+
+            if( id.isSPxRowId() )
+            {
+               assert(spx->number(id) >= 0);
+               assert(spx->number(id) < spx->nRows());
+
+               rowrhs.add(i, v[spx->number(id)]);
+            }
+            else
+            {
+               assert(rowrhs[i] == 0.0);
+            }
+         }
+
+         /* solve system "B y = rowrhs", where B is the row basis matrix */
+         spx->basis().coSolve(y, rowrhs);
+
+         /* fill result w.r.t. order given by bind */
+         for( int i = 0; i < spx->nRows(); ++i )
+         {
+            int index;
+
+            index = bind[i];
+
+            if( index < 0 )
+            {
+               index = -index-1;
+
+               /* should be a valid row index and in the column basis matrix, i.e., not basic w.r.t. row representation */
+               assert(index >= 0);
+               assert(index < spx->nRows());
+               assert(!spx->isRowBasic(index));
+
+               x[i] = v[index] - (spx->rowVector(index) * Vector(spx->nCols(), y.get_ptr()));
+            }
+            else
+            {
+               /* should be a valid column index and in the column basis matrix, i.e., not basic w.r.t. row representation */
+               assert(index >= 0);
+               assert(index < spx->nCols());
+               assert(!spx->isColBasic(index));
+
+               x[i] = y[index];
+            }
          }
 
          /* free memory */
          BMSfreeMemoryArray(&bind);
-      }
-      catch(SPxException x)
-      {
-#ifndef NDEBUG
-         std::string s = x.what();
-         SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
-         return SCIP_LPERROR;
       }
    }
+   catch(SPxException x)
+   {
+#ifndef NDEBUG
+      std::string s = x.what();
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 #endif
+      return SCIP_LPERROR;
+   }
 
    return SCIP_OKAY;
 }
@@ -4171,50 +4292,17 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    assert( lpi->spx != NULL );
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
+   /* prepare unit vector */
+   DVector e(lpi->spx->nRows());
+
+   e.clear();
+
    assert(c >= 0);
    assert(c < lpi->spx->nRows());
+   e[c] = 1.0;
 
-   try
-   {
-      SPxSolver* spx = lpi->spx;
-
-      Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
-      DVector e(spx->nRows());      /* prepare unit vector */
-      e.clear();
-      e[c] = 1.0;
-
-      /* in the column case use the existing factorization */
-      if ( spx->rep() == SPxSolver::COLUMN )
-      {
-         assert( spx->dim() == spx->nRows() );
-         assert( spx->coDim() == spx->nCols() );
-
-         /* solve system "x = B^-1 * e_c" to get c'th column of B^-1 */
-         spx->basis().solve(x, e);
-      }
-      else
-      {
-         assert( spx->rep() == SPxSolver::ROW );
-         assert( spx->dim() == spx->nCols() );
-         assert( spx->coDim() == spx->nRows() );
-
-         /* factorization is deleted in invalidateSolution() */
-         SCIP_CALL( prepareFactorization(lpi) );
-         assert( lpi->factorization != 0 );
-         assert( lpi->factorization->dim() == spx->nRows() );
-
-         /* solve system "x = B^-1 * e_c" to get c'th column of B^-1 */
-         lpi->factorization->solveRight(x, e);
-      }
-   }
-   catch(SPxException x)
-   {
-#ifndef NDEBUG
-      std::string s = x.what();
-      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
-#endif
-      return SCIP_LPERROR;
-   }
+   /* solve */
+   SCIP_CALL( lpiGetBInvVec(lpi, e.get_ptr(), coef) );
 
    return SCIP_OKAY;
 }
@@ -4273,151 +4361,24 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_Real*            coef                /**< vector to return coefficients */
    )
 {
+   DVector col(lpi->spx->nRows());
+
    SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
 
    assert( lpi != NULL );
    assert( lpi->spx != NULL );
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   try
-   {
-      assert(lpi != NULL);
-      assert(lpi->spx != NULL);
-      SPxSolver* spx = lpi->spx;
+   /* extract column c of A */
+   assert(c >= 0);
+   assert(c < lpi->spx->nCols());
 
-      Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
-      DVector col(lpi->spx->nRows());
+   col.clear();
+   col = lpi->spx->colVector(c);
+   col.reDim(lpi->spx->nRows());
 
-      /* extract column c of A */
-      col = lpi->spx->colVector(c);
-
-      /* in the column case use the existing factorization */
-      if ( spx->rep() == SPxSolver::COLUMN )
-      {
-         assert( spx->dim() == spx->nRows() );
-         assert( spx->coDim() == spx->nCols() );
-
-         /* solve system "x = B^-1 * A_c" to get c'th column of B^-1 * A */
-         lpi->spx->basis().solve(x, col);
-      }
-      else
-      {
-         assert( spx->rep() == SPxSolver::ROW );
-         assert( spx->dim() == spx->nCols() );
-         assert( spx->coDim() == spx->nRows() );
-
-         /* factorization is deleted in invalidateSolution() */
-         SCIP_CALL( prepareFactorization(lpi) );
-         assert( lpi->factorization != 0 );
-         assert( lpi->factorization->dim() == spx->nRows() );
-
-         /* solve system "x = B^-1 * A_c" to get c'th column of B^-1 * A */
-         lpi->factorization->solveRight(x, col);
-      }
-   }
-   catch(SPxException x)
-   {
-#ifndef NDEBUG
-      std::string s = x.what();
-      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
-#endif
-      return SCIP_LPERROR;
-   }
-
-#ifdef CHECKBINV
-   if( lpi->spx->rep() == SPxSolver::ROW )
-   {
-      try
-      {
-         SSVector y(lpi->spx->nCols());
-         DSVector rhs(lpi->spx->nCols());
-         DVector col(lpi->spx->nRows());
-         DVector x(lpi->spx->nRows());
-         Vector xref(lpi->spx->nRows(), coef);
-         int* bind;
-
-         assert(lpi != 0);
-         assert(lpi->factorization != 0);
-
-         /* get ordering of column basis matrix */
-         /* TODO: can/should this be stored globally in lpi?  */
-         SCIP_ALLOC( BMSallocMemoryArray(&bind, lpi->spx->nRows()) );
-         SCIP_CALL( SCIPlpiGetBasisInd(lpi, bind) );
-
-         /* extract column c of A */
-         col = lpi->spx->colVector(c);
-         col.reDim(lpi->spx->nRows());
-
-         /* fill right-hand side */
-         for( int i = 0; i < lpi->spx->nCols(); ++i )
-         {
-            SPxId id = lpi->spx->basis().baseId(i);
-
-            if( id.isSPxRowId() )
-            {
-               assert(lpi->spx->number(id) >= 0);
-               assert(lpi->spx->number(id) < lpi->spx->nRows());
-
-               rhs.add(i, col[lpi->spx->number(id)]);
-            }
-            else
-            {
-               assert(rhs[i] == 0.0);
-            }
-         }
-
-         /* solve system "B y = rhs", where B is the row basis matrix */
-         lpi->spx->basis().coSolve(y, rhs);
-
-         /* fill result w.r.t. order given by bind */
-         for( int i = 0; i < lpi->spx->nRows(); ++i )
-         {
-            int index;
-
-            index = bind[i];
-
-            if( index < 0 )
-            {
-               index = -index-1;
-
-               /* should be a valid row index and in the column basis matrix, i.e., not basic w.r.t. row representation */
-               assert(index >= 0);
-               assert(index < lpi->spx->nRows());
-               assert(!lpi->spx->isRowBasic(index));
-
-               x[i] = col[index] - (lpi->spx->rowVector(index) * Vector(lpi->spx->nCols(), y.get_ptr()));
-            }
-            else
-            {
-               /* should be a valid column index and in the column basis matrix, i.e., not basic w.r.t. row representation */
-               assert(index >= 0);
-               assert(index < lpi->spx->nCols());
-               assert(!lpi->spx->isColBasic(index));
-
-               x[i] = y[index];
-            }
-         }
-
-         /* check deviation */
-         x -= xref;
-         if( x.length() > 1e-6 )
-         {
-            SCIPmessagePrintWarning(lpi->messagehdlr, "SCIPlpiGetBInvACol(): least squares difference = %.3g, max. absolute difference = %.3g\n", x.length(), x.maxAbs());
-         }
-
-         /* free memory */
-         BMSfreeMemoryArray(&bind);
-      }
-      catch(SPxException x)
-      {
-#ifndef NDEBUG
-         std::string s = x.what();
-         SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
-#endif
-         return SCIP_LPERROR;
-      }
-   }
-#endif
+   /* solve */
+   SCIP_CALL( lpiGetBInvVec(lpi, col.get_ptr(), coef) );
 
    return SCIP_OKAY;
 }

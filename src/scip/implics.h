@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -85,12 +85,6 @@ void SCIPvboundsShrink(
    );
 
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** gets number of variable bounds contained in given variable bounds data structure */
 extern
 int SCIPvboundsGetNVbds(
@@ -115,9 +109,9 @@ SCIP_Real* SCIPvboundsGetConstants(
    SCIP_VBOUNDS*         vbounds             /**< variable bounds data structure */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
@@ -191,12 +185,6 @@ SCIP_Bool SCIPimplicsContainsImpl(
    );
 
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** gets number of implications for a given binary variable fixing */
 extern
 int SCIPimplicsGetNImpls(
@@ -242,9 +230,9 @@ int* SCIPimplicsGetIds(
    SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
@@ -379,12 +367,6 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    );
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** returns the number of cliques stored in the clique list */
 extern
 int SCIPcliquelistGetNCliques(
@@ -418,9 +400,9 @@ SCIP_CLIQUE** SCIPcliquetableGetCliques(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

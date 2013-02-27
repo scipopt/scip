@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -636,6 +636,56 @@ SCIP_RETCODE applyGlobalBounds(
    return SCIP_OKAY;
 }
 
+/** returns whether literal at the given position is satisfied in the local bounds */
+static
+SCIP_Bool isLiteralSatisfied(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< bound disjunction constraint data */
+   int                   pos                 /**< position of the literal */
+   )
+{
+   SCIP_Real bnd;
+
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+
+   if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
+   {
+      bnd = SCIPcomputeVarLbLocal(scip, consdata->vars[pos]);
+      return isFeasGE(scip, consdata->vars[pos], bnd, consdata->bounds[pos]);
+   }
+   else
+   {
+      bnd = SCIPcomputeVarUbLocal(scip, consdata->vars[pos]);
+      return isFeasLE(scip, consdata->vars[pos], bnd, consdata->bounds[pos]);
+   }
+}
+
+/** returns whether literal at the given position is violated in the local bounds */
+static
+SCIP_Bool isLiteralViolated(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< bound disjunction constraint data */
+   int                   pos                 /**< position of the literal */
+   )
+{
+   SCIP_Real bnd;
+
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+
+   if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
+   {
+      bnd = SCIPcomputeVarUbLocal(scip, consdata->vars[pos]);
+      return isFeasLT(scip, consdata->vars[pos], bnd, consdata->bounds[pos]);
+   }
+   else
+   {
+      bnd = SCIPcomputeVarLbLocal(scip, consdata->vars[pos]);
+      return isFeasGT(scip, consdata->vars[pos], bnd, consdata->bounds[pos]);
+   }
+}
+
 /** replace variables by their representative active (or multi-aggregated) variables */
 static
 SCIP_RETCODE removeFixedVariables(
@@ -673,6 +723,13 @@ SCIP_RETCODE removeFixedVariables(
 
       if( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
       {
+         /* check whether the literal is satisfied and the constraint is thus redundant */
+         if( isLiteralSatisfied(scip, consdata, v) )
+         {
+            *redundant = TRUE;
+            break;
+         }
+
          ++v;
          continue;
       }
@@ -848,56 +905,6 @@ SCIP_RETCODE analyzeConflict(
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
    return SCIP_OKAY;
-}
-
-/** returns whether literal at the given position is satisfied in the local bounds */
-static
-SCIP_Bool isLiteralSatisfied(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< bound disjunction constraint data */
-   int                   pos                 /**< position of the literal */
-   )
-{
-   SCIP_Real bnd;
-
-   assert(consdata != NULL);
-   assert(0 <= pos && pos < consdata->nvars);
-
-   if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
-   {
-      bnd = SCIPcomputeVarLbLocal(scip, consdata->vars[pos]);
-      return isFeasGE(scip, consdata->vars[pos], bnd, consdata->bounds[pos]);
-   }
-   else
-   {
-      bnd = SCIPcomputeVarUbLocal(scip, consdata->vars[pos]);
-      return isFeasLE(scip, consdata->vars[pos], bnd, consdata->bounds[pos]);
-   }
-}
-
-/** returns whether literal at the given position is violated in the local bounds */
-static
-SCIP_Bool isLiteralViolated(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< bound disjunction constraint data */
-   int                   pos                 /**< position of the literal */
-   )
-{
-   SCIP_Real bnd;
-
-   assert(consdata != NULL);
-   assert(0 <= pos && pos < consdata->nvars);
-
-   if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
-   {
-      bnd = SCIPcomputeVarUbLocal(scip, consdata->vars[pos]);
-      return isFeasLT(scip, consdata->vars[pos], bnd, consdata->bounds[pos]);
-   }
-   else
-   {
-      bnd = SCIPcomputeVarLbLocal(scip, consdata->vars[pos]);
-      return isFeasGT(scip, consdata->vars[pos], bnd, consdata->bounds[pos]);
-   }
 }
 
 /** disables or deletes the given constraint, depending on the current depth */

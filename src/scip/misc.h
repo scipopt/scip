@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -314,8 +314,17 @@ int SCIPptrarrayGetMaxIdx(
    );
 
 /*
-  local methods
-*/
+ * Additional math functions
+ */
+
+/** negates a number
+ *
+ * negation of a number that can be used to avoid that a negation is optimized away by a compiler
+ */
+extern
+SCIP_Real SCIPnegateReal(
+   SCIP_Real             x                   /**< value to negate */
+   );
 
 #ifdef __cplusplus
 }

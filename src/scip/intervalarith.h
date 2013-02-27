@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -96,8 +96,6 @@ SCIP_Real SCIPintervalNegateReal(
    SCIP_Real             x                   /**< number to negate */
    );
 
-#ifndef NDEBUG
-
 /** returns infimum of interval */
 extern
 SCIP_Real SCIPintervalGetInf(
@@ -164,9 +162,10 @@ SCIP_Bool SCIPintervalIsNegativeInfinity(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
-#else
 
-/* In optimized mode, some methods are implemented as defines to reduce the number of function calls and
+#ifdef NDEBUG
+
+/* In optimized mode, some function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  * With SCIPintervalSetBounds we need to be a bit careful, since i and s could use resultant->inf and resultant->sup,
  * e.g., SCIPintervalSetBounds(&resultant, -resultant->sup, -resultant->inf).
@@ -183,6 +182,7 @@ SCIP_Bool SCIPintervalIsNegativeInfinity(
 #define SCIPintervalIsEntire(infinity, operand)    ( (operand).inf <= -(infinity) && (operand).sup >= (infinity) )
 #define SCIPintervalIsPositiveInfinity(infinity, operand) ( (operand).inf >=  (infinity) && (operand).sup >= (operand).inf )
 #define SCIPintervalIsNegativeInfinity(infinity, operand) ( (operand).sup <= -(infinity) && (operand).sup >= (operand).inf )
+
 #endif
 
 /** indicates whether operand1 is contained in operand2 */

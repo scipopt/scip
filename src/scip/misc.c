@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1957,13 +1957,13 @@ SCIP_RETCODE SCIPrealarrayExtend(
    assert(realarray->maxusedidx == INT_MIN || realarray->maxusedidx < realarray->firstidx + realarray->valssize);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
-   
+
    minidx = MIN(minidx, realarray->minusedidx);
    maxidx = MAX(maxidx, realarray->maxusedidx);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   SCIPdebugMessage("extending realarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending realarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n",
       (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
@@ -2062,7 +2062,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + realarray->valssize);
-      
+
       if( realarray->minusedidx <= realarray->maxusedidx )
       {
          int shift;
@@ -2098,7 +2098,7 @@ SCIP_RETCODE SCIPrealarrayClear(
 {
    assert(realarray != NULL);
 
-   SCIPdebugMessage("clearing realarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing realarray %p (firstidx=%d, size=%d, range=[%d,%d])\n",
       (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx);
 
    if( realarray->minusedidx <= realarray->maxusedidx )
@@ -2130,7 +2130,7 @@ SCIP_Real SCIPrealarrayGetVal(
 {
    assert(realarray != NULL);
    assert(idx >= 0);
-   
+
    if( idx < realarray->minusedidx || idx > realarray->maxusedidx )
       return 0.0;
    else
@@ -2154,16 +2154,16 @@ SCIP_RETCODE SCIPrealarraySetVal(
    assert(realarray != NULL);
    assert(idx >= 0);
 
-   SCIPdebugMessage("setting realarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %g\n", 
+   SCIPdebugMessage("setting realarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %g\n",
       (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, idx, val);
 
-   if( !SCIPsetIsZero(set, val) )
+   if( val != 0.0 )
    {
       /* extend array to be able to store the index */
       SCIP_CALL( SCIPrealarrayExtend(realarray, set, idx, idx) );
       assert(idx >= realarray->firstidx);
       assert(idx < realarray->firstidx + realarray->valssize);
-      
+
       /* set the array value of the index */
       realarray->vals[idx - realarray->firstidx] = val;
 
@@ -2175,7 +2175,7 @@ SCIP_RETCODE SCIPrealarraySetVal(
    {
       /* set the array value of the index to zero */
       realarray->vals[idx - realarray->firstidx] = 0.0;
-      
+
       /* check, if we can tighten the min/maxusedidx */
       if( idx == realarray->minusedidx )
       {
@@ -2186,7 +2186,8 @@ SCIP_RETCODE SCIPrealarraySetVal(
             realarray->minusedidx++;
          }
          while( realarray->minusedidx <= realarray->maxusedidx
-            && SCIPsetIsZero(set, realarray->vals[realarray->minusedidx - realarray->firstidx]) );
+            && realarray->vals[realarray->minusedidx - realarray->firstidx] == 0.0 );
+
          if( realarray->minusedidx > realarray->maxusedidx )
          {
             realarray->minusedidx = INT_MAX;
@@ -2203,8 +2204,8 @@ SCIP_RETCODE SCIPrealarraySetVal(
             realarray->maxusedidx--;
             assert(realarray->minusedidx <= realarray->maxusedidx);
          }
-         while( SCIPsetIsZero(set, realarray->vals[realarray->maxusedidx - realarray->firstidx]) );
-      }      
+         while( realarray->vals[realarray->maxusedidx - realarray->firstidx] == 0.0 );
+      }
    }
 
    return SCIP_OKAY;
@@ -3692,6 +3693,36 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortLongPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     LongPtrRealBool
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortLongPtrRealRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     LongPtrRealRealBool
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Real
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortLongPtrRealRealIntBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     LongPtrRealRealIntBool
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Real
+#define SORTTPL_FIELD4TYPE  int
+#define SORTTPL_FIELD5TYPE  SCIP_Bool
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortLongPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     LongPtrPtrInt
 #define SORTTPL_KEYTYPE     SCIP_Longint
@@ -4104,6 +4135,39 @@ void SCIPsortDown(
 #define SORTTPL_KEYTYPE     SCIP_Longint
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownLongPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownLongPtrRealBool
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownLongPtrRealRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownLongPtrRealRealBool
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Real
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortLongPtrRealRealIntBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownLongPtrRealRealIntBool
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Real
+#define SORTTPL_FIELD4TYPE  int
+#define SORTTPL_FIELD5TYPE  SCIP_Bool
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
@@ -4914,6 +4978,38 @@ SCIP_RETCODE SCIPdigraphCreate(
    return SCIP_OKAY;
 }
 
+/** resize directed graph structure */
+SCIP_RETCODE SCIPdigraphResize(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   nnodes              /**< new number of nodes */
+   )
+{
+   int n;
+
+   /* check if the digraph has already a proper size */
+   if( nnodes <= digraph->nnodes )
+      return SCIP_OKAY;
+
+   /* reallocate memory for increasing the arrays storing arcs and datas */
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successorssize, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nsuccessors, nnodes) );
+
+   /* initialize the new node data structures */
+   for( n = digraph->nnodes; n < nnodes; ++n )
+   {
+      digraph->nodedatas[n] = NULL;
+      digraph->successorssize[n] = 0;
+      digraph->nsuccessors[n] = 0;
+   }
+
+   /* store the new number of nodes */
+   digraph->nnodes = nnodes;
+
+   return SCIP_OKAY;
+}
+
 /** copies directed graph structure */
 SCIP_RETCODE SCIPdigraphCopy(
    SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
@@ -5135,6 +5231,36 @@ int SCIPdigraphGetNNodes(
    return digraph->nnodes;
 }
 
+/** returns the node data, or NULL if no data exist */
+void* SCIPdigraphGetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the node data is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+
+   return digraph->nodedatas[node];
+}
+
+/** sets the node data
+ *
+ *  @note The old user pointer is not freed. This has to be done by the user
+ */
+void SCIPdigraphSetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   void*                 dataptr,            /**< user node data pointer, or NULL */
+   int                   node                /**< node for which the node data is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+
+   digraph->nodedatas[node] = dataptr;
+}
+
 /** returns the total number of arcs in the given digraph */
 int SCIPdigraphGetNArcs(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
@@ -5301,6 +5427,12 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
 
    assert(digraph != NULL);
    assert(digraph->nnodes > 0);
+
+   /* first free the old components */
+   if( digraph->ncomponents > 0 )
+   {
+      SCIPdigraphFreeComponents(digraph);
+   }
 
    digraph->ncomponents = 0;
    digraph->componentstartsize = 10;
@@ -6322,7 +6454,9 @@ SCIP_Bool isIntegralScalar(
 static const SCIP_Real scalars[] = {3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0};
 static const int nscalars = 9;
 
-/** tries to find a value, such that all given values, if scaled with this value become integral */
+/** tries to find a value, such that all given values, if scaled with this value become integral in relative allowed
+ *  difference in between mindelta and maxdelta
+ */
 SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Real*            vals,               /**< values to scale */
    int                   nvals,              /**< number of values to scale */
@@ -6746,6 +6880,13 @@ SCIP_Longint SCIPcalcBinomCoef(
    }
 }
 
+/** negates a number */
+SCIP_Real SCIPnegateReal(
+   SCIP_Real             x                   /**< value to negate */
+   )
+{
+   return -x;
+}
 
 /*
  * Permutations / Shuffling

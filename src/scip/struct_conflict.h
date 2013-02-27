@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -128,6 +128,9 @@ struct SCIP_Conflict
    SCIP_Longint          npseudoconfliterals;/**< total number of literals in valid pseudo solution conflict constraints */
    SCIP_Longint          npseudoreconvconss; /**< number of reconvergence constraints detected in pseudo sol conflict analysis */
    SCIP_Longint          npseudoreconvliterals;/**< total number of literals in valid pseudo solution reconvergence constraints */
+
+   SCIP_CLOCK*           dIBclock;           /**< time used for detect implied bounds */
+
    SCIP_CLOCK*           propanalyzetime;    /**< time used for propagation conflict analysis */
    SCIP_CLOCK*           inflpanalyzetime;   /**< time used for infeasible LP conflict analysis */
    SCIP_CLOCK*           boundlpanalyzetime; /**< time used for bound exceeding LP conflict analysis */

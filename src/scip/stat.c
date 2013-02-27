@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -183,6 +183,7 @@ void SCIPstatReset(
    stat->vsidsweight = 1.0;
    stat->nlpiterations = 0;
    stat->nrootlpiterations = 0;
+   stat->nrootfirstlpiterations = 0;
    stat->nprimallpiterations = 0;
    stat->nduallpiterations = 0;
    stat->nlexduallpiterations = 0;
@@ -243,12 +244,15 @@ void SCIPstatReset(
    stat->firstprimalheur = NULL; 
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
    stat->firstprimalbound = SCIP_DEFAULT_INFINITY;
+   stat->firstsolgap = SCIP_DEFAULT_INFINITY;
+   stat->lastsolgap = SCIP_DEFAULT_INFINITY;
    stat->primalzeroittime = 0.0;
    stat->dualzeroittime = 0.0;
    stat->barrierzeroittime = 0.0;
    stat->maxcopytime = SCIP_REAL_MIN;
    stat->mincopytime = SCIP_REAL_MAX;
    stat->firstlptime = 0.0;
+   stat->firstlpdualbound = SCIP_UNKNOWN;
    stat->ncopies = 0;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
