@@ -25,6 +25,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_clock.h"
 #include "scip/type_event.h"
 #include "scip/type_var.h"
 #include "scip/type_sol.h"

@@ -93,6 +93,7 @@ struct SCIP_Stat
    SCIP_Real             maxcopytime;        /**< maxmimal time needed for copying a problem */
    SCIP_Real             mincopytime;        /**< minimal time needed for copying a problem */
    SCIP_Real             firstlptime;        /**< time needed to solve the very first LP in the root node */
+   SCIP_Real             lastbranchvalue;    /**< domain value of the last branching */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    SCIP_CLOCK*           primallptime;       /**< primal LP solution time */

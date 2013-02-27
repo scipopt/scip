@@ -460,7 +460,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             cutoffbound,        /**< global upper cutoff bound */
    SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
-   SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the branching */
    );
 
 /** calls branching rules to branch on an external solution; if no external branching candidates exist, the result is SCIP_DIDNOTRUN */
@@ -477,7 +477,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             cutoffbound,        /**< global upper cutoff bound */
    SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
-   SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the branching */
    );
 
 /** calls branching rules to branch on a pseudo solution; if no unfixed variables exist, the result is SCIP_DIDNOTRUN */
@@ -493,7 +493,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             cutoffbound,        /**< global upper cutoff bound */
    SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
-   SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the branching */
    );
 
 #ifdef __cplusplus

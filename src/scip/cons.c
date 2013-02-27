@@ -2126,6 +2126,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->lastenfopsdomchgcount = -1;
    (*conshdlr)->lastenfolpnode = -1;
    (*conshdlr)->lastenfopsnode = -1;
+   (*conshdlr)->lastenfolpresult = SCIP_DIDNOTRUN;
+   (*conshdlr)->lastenfopsresult = SCIP_DIDNOTRUN;
    (*conshdlr)->lastnfixedvars = 0;
    (*conshdlr)->lastnaggrvars = 0;
    (*conshdlr)->lastnchgvartypes = 0;
@@ -2291,6 +2293,8 @@ SCIP_RETCODE SCIPconshdlrInit(
       conshdlr->lastenfopsdomchgcount = -1;
       conshdlr->lastenfolpnode = -1;
       conshdlr->lastenfopsnode = -1;
+      conshdlr->lastenfolpresult = SCIP_DIDNOTRUN;
+      conshdlr->lastenfopsresult = SCIP_DIDNOTRUN;
       conshdlr->maxnactiveconss = conshdlr->nactiveconss;
       conshdlr->startnactiveconss = 0;
       conshdlr->lastsepalpcount = -1;
@@ -2418,6 +2422,8 @@ SCIP_RETCODE SCIPconshdlrInitpre(
    conshdlr->lastenfopsdomchgcount = -1;
    conshdlr->lastenfolpnode = -1;
    conshdlr->lastenfopsnode = -1;
+   conshdlr->lastenfolpresult = SCIP_DIDNOTRUN;
+   conshdlr->lastenfopsresult = SCIP_DIDNOTRUN;
    conshdlr->maxnactiveconss = conshdlr->nactiveconss;
    conshdlr->startnactiveconss = 0;
    conshdlr->lastsepalpcount = -1;
@@ -2995,6 +3001,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          && conshdlr->lastenfolpnode == stat->nnodes
          && conshdlr->lastenfolpresult != SCIP_CONSADDED )
       {
+         assert(conshdlr->lastenfolpresult != SCIP_DIDNOTRUN);
          assert(conshdlr->lastenfolpresult != SCIP_CUTOFF);
          assert(conshdlr->lastenfolpresult != SCIP_BRANCHED);
          assert(conshdlr->lastenfolpresult != SCIP_REDUCEDDOM);
@@ -4350,6 +4357,16 @@ void SCIPconshdlrIncNAppliedCuts(
    assert(conshdlr != NULL);
 
    ++conshdlr->ncutsapplied;
+}
+
+/** increase count of found cuts */
+void SCIPconshdlrIncNCutsFound(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   ++conshdlr->ncutsfound;
 }
 
 /** gets total number of additional constraints added by this constraint handler */
@@ -6578,6 +6595,11 @@ SCIP_RETCODE SCIPconsResetAge(
    return SCIP_OKAY;
 }
 
+/** adds an active constraint to the propagation queue(if not already marked for propagation) of corresponding
+ *  constraint handler and marks the constraint to be propagated in the next propagation round
+ *
+ *  @note if constraint is added to the queue it will be captured
+ */
 SCIP_RETCODE SCIPconsPushProp(
    SCIP_CONS*            cons                /**< constraint */
    )
@@ -6599,6 +6621,7 @@ SCIP_RETCODE SCIPconsPushProp(
    return SCIP_OKAY;
 }
 
+/** returns first constraint from propagation queue(if not empty) of given constraint handler */
 SCIP_CONS* SCIPconshdlrFrontProp(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )
@@ -6609,6 +6632,11 @@ SCIP_CONS* SCIPconshdlrFrontProp(
    return (SCIP_CONS*)SCIPqueueFirst(conshdlr->pendingconss);
 }
 
+/** removes constraint from propagation queue(if not empty) of given constraint handler and unmarks constraint to be
+ *  propagated in the next propagation round
+ *
+ *  @note if constraint is removed from the queue it will be released
+ */
 SCIP_RETCODE SCIPconshdlrPopProp(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -6620,11 +6648,10 @@ SCIP_RETCODE SCIPconshdlrPopProp(
    if( SCIPqueueIsEmpty(conshdlr->pendingconss) )
       return SCIP_OKAY;
 
-   cons = (SCIP_CONS*)SCIPqueueFirst(conshdlr->pendingconss);
+   cons = (SCIP_CONS*)SCIPqueueRemove(conshdlr->pendingconss);
    assert(cons != NULL);
 
    cons->markedprop = FALSE;
-   SCIPqueueRemove(conshdlr->pendingconss);
    SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
 
    return SCIP_OKAY;

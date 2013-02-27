@@ -195,6 +195,9 @@ struct SCIP_Set
    int                   disp_headerfreq;    /**< frequency for displaying header lines (every n'th node information line) */
    SCIP_Bool             disp_lpinfo;        /**< should the LP solver display status messages? */
 
+   /* history settings */
+   SCIP_Bool             history_valuebased; /**< should statistics be collected for variable domain value pairs? */
+
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
    SCIP_Real             limit_memory;       /**< maximal memory usage in MB */
@@ -247,6 +250,7 @@ struct SCIP_Set
    int                   lp_lexdualmaxrounds;/**< maximum number of rounds in the lexicographic dual algorithm */
    SCIP_Bool             lp_lexdualbasic;    /**< choose fractional basic variables in lexicographic dual algorithm */
    SCIP_Bool             lp_lexdualstalling; /**< turn on the lex dual algorithm only when stalling? */
+   SCIP_Bool             lp_disablecutoff;   /**< disables the cutoff bound in the LP solver */
    SCIP_Real             lp_rowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
    int                   lp_threads;         /**< number of threads used for solving the LP (0: automatic) */

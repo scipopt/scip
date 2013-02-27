@@ -581,6 +581,10 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
+   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
+   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+      return SCIP_OKAY;
+
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);

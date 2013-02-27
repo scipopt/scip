@@ -922,6 +922,8 @@ SCIP_RETCODE SCIPvarAddVlb(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -944,6 +946,8 @@ SCIP_RETCODE SCIPvarAddVub(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -968,6 +972,8 @@ SCIP_RETCODE SCIPvarAddImplic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -992,6 +998,8 @@ SCIP_RETCODE SCIPvarAddClique(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -1236,8 +1244,11 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
 extern
 SCIP_RETCODE SCIPvarIncVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL if the domain value is SCIP_UNKNOWN */
+   SCIP_SET*             set,                /**< global SCIP settings, or NULL if the domain value is SCIP_UNKNOWN */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_Real             value,              /**< domain value, or SCIP_UNKNOWN */
    SCIP_Real             weight              /**< weight of this update in conflict score */
    );
 
@@ -1251,8 +1262,11 @@ SCIP_RETCODE SCIPvarScaleVSIDS(
 /** increases the number of active conflicts by one and the overall length of the variable by the given length */
 SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL if the domain value is SCIP_UNKNOWN */
+   SCIP_SET*             set,                /**< global SCIP settings, or NULL if the domain value is SCIP_UNKNOWN */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_Real             value,              /**< domain value, or SCIP_UNKNOWN */
    SCIP_Real             length              /**< length of the conflict */
    );
 
@@ -1290,17 +1304,23 @@ SCIP_Real SCIPvarGetAvgConflictlengthCurrentRun(
 extern
 SCIP_RETCODE SCIPvarIncNBranchings(
    SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL if the domain value is SCIP_UNKNOWN */
+   SCIP_SET*             set,                /**< global SCIP settings, or NULL if the domain value is SCIP_UNKNOWN */
    SCIP_STAT*            stat,               /**< problem statistics */
-   int                   depth,              /**< depth at which the bound change took place */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Real             value,              /**< domain value, or SCIP_UNKNOWN */
+   int                   depth               /**< depth at which the bound change took place */
    );
 
 /** increases the inference score of the variable by the given weight */
 extern
 SCIP_RETCODE SCIPvarIncInferenceSum(
    SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL if the domain value is SCIP_UNKNOWN */
+   SCIP_SET*             set,                /**< global SCIP settings, or NULL if the domain value is SCIP_UNKNOWN */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Real             value,              /**< domain value, or SCIP_UNKNOWN */
    SCIP_Real             weight              /**< weight of this update in inference score */
    );
 
@@ -1308,8 +1328,11 @@ SCIP_RETCODE SCIPvarIncInferenceSum(
 extern
 SCIP_RETCODE SCIPvarIncCutoffSum(
    SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL if the domain value is SCIP_UNKNOWN */
+   SCIP_SET*             set,                /**< global SCIP settings, or NULL if the domain value is SCIP_UNKNOWN */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Real             value,              /**< domain value, or SCIP_UNKNOWN */
    SCIP_Real             weight              /**< weight of this update in cutoff score */
    );
 

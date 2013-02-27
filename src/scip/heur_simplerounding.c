@@ -158,6 +158,10 @@ SCIP_RETCODE performLPSimpleRounding(
    if ( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
+   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
+   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+      return SCIP_OKAY;
+
    /* get fractional variables, that should be integral */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL) );
 
@@ -380,6 +384,10 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
 
    /* only call heuristic, if an optimal LP solution is at hand or if relaxation solution is available */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && ! SCIPisRelaxSolValid(scip) )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
+   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
       return SCIP_OKAY;
 
    /* get heuristic data */

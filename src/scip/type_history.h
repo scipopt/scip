@@ -40,6 +40,15 @@ typedef enum SCIP_BranchDir SCIP_BRANCHDIR;       /**< branching direction for b
 
 typedef struct SCIP_History SCIP_HISTORY;         /**< branching and inference history information for single variable */
 
+/** Value history data structure
+ *
+ *  branching and inference history informations for single variable dependent on the domain value
+ *
+ *  - \ref ValueHistory "List of all available methods"
+ */
+typedef struct SCIP_ValueHistory SCIP_VALUEHISTORY;
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -108,7 +108,7 @@ struct SCIP_ConsData
    SCIP_Real             rhs;                /**< right hand side of constraint */
 
    SCIP_Real             root;               /**< root of polynom */
-   DECL_MYPOW            ((*pow));           /**< function for computing power*/
+   DECL_MYPOW            ((*power));         /**< function for computing power*/
 
    SCIP_Real             lhsviol;            /**< current (scaled) violation of left  hand side */
    SCIP_Real             rhsviol;            /**< current (scaled) violation of right hand side */
@@ -1121,11 +1121,9 @@ SCIP_RETCODE presolveDual(
    if( SCIPvarGetType(consdata->z) <= SCIP_VARTYPE_INTEGER )
       return SCIP_OKAY;
 
-   /* we assume that domain propagation has been run and fixed variables were removed */
+   /* we assume that domain propagation has been run and fixed variables were removed if possible */
    assert(consdata->isxpropagated);
    assert(consdata->iszpropagated);
-   assert(SCIPvarIsActive(consdata->x));
-   assert(SCIPvarIsActive(consdata->z));
    assert(consdata->zcoef != 0.0);
 
    lhsexists = !SCIPisInfinity(scip, -consdata->lhs);
@@ -1326,7 +1324,7 @@ SCIP_RETCODE presolveDual(
 
             zlb = SCIPvarGetLbGlobal(consdata->z);
             zub = SCIPvarGetUbGlobal(consdata->z);
-            zfix = consdata->rhs - SIGN(xfix + consdata->xoffset) * consdata->pow(ABS(xfix + consdata->xoffset), consdata->exponent);
+            zfix = consdata->rhs - SIGN(xfix + consdata->xoffset) * consdata->power(ABS(xfix + consdata->xoffset), consdata->exponent);
             zfix /= consdata->zcoef;
 
             /* project zfix into box, it should be at least very close */
@@ -1546,7 +1544,7 @@ void computeBoundsZ(
    if( !SCIPisInfinity(scip,  consdata->rhs) && !SCIPisInfinity(scip, -xbnds.inf) )
    {
       x = xbnds.inf - PROPVARTOL + consdata->xoffset;
-      bnd = consdata->rhs + PROPSIDETOL - SIGN(x) * consdata->pow(REALABS(x), consdata->exponent);
+      bnd = consdata->rhs + PROPSIDETOL - SIGN(x) * consdata->power(REALABS(x), consdata->exponent);
 
       if( consdata->zcoef > 0.0 )
          zbnds->sup = bnd / consdata->zcoef;
@@ -1558,7 +1556,7 @@ void computeBoundsZ(
    if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip,  xbnds.sup) )
    {
       x = xbnds.sup + PROPVARTOL + consdata->xoffset;
-      bnd = consdata->lhs - PROPSIDETOL - SIGN(x) * consdata->pow(REALABS(x), consdata->exponent);
+      bnd = consdata->lhs - PROPSIDETOL - SIGN(x) * consdata->power(REALABS(x), consdata->exponent);
 
       if( consdata->zcoef > 0.0 )
          zbnds->inf = bnd / consdata->zcoef;
@@ -1642,6 +1640,7 @@ SCIP_RETCODE checkFixedVariables(
    SCIP_CONSDATA* consdata;
    SCIP_Real scalar;
    SCIP_Real constant;
+   SCIP_Real factor;
    SCIP_VAR* var;
 
    assert(scip != NULL);
@@ -1701,7 +1700,7 @@ SCIP_RETCODE checkFixedVariables(
                /* compute fixing value for z as value corresponding to fixing of x, projected onto bounds of z */
                SCIP_Real zfix;
 
-               zfix = consdata->rhs - SIGN(constant + consdata->xoffset) * consdata->pow(REALABS(constant + consdata->xoffset), consdata->exponent);
+               zfix = consdata->rhs - SIGN(constant + consdata->xoffset) * consdata->power(REALABS(constant + consdata->xoffset), consdata->exponent);
                zfix /= consdata->zcoef;
                assert(SCIPisLE(scip, zbnds.inf, zfix));
                assert(SCIPisGE(scip, zbnds.sup, zfix));
@@ -1732,65 +1731,76 @@ SCIP_RETCODE checkFixedVariables(
 
       SCIPdebugMessage("in cons <%s>: x = <%s> replaced by %g*<%s> + %g\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->x), scalar, SCIPvarGetName(var), constant);
 
-      /* we drop here the events for both variables, because if x is replaced by a multiaggregated variable here, then we do not need to catch bound tightenings on z anymore */
-      SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
-      SCIP_CALL( SCIPunlockVarCons(scip, consdata->x, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
-
-      consdata->x = var;
-      if( SCIPvarIsActive(consdata->x) )
-      {
-         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->x) );
-      }
-
-      /* add constant to offset */
-      consdata->xoffset += constant;
-
-      /* divide constraint by scalar*pow(|scalar|,exponent-1), if not 1.0 */
-      if( scalar == 1.0 ) ;
+      /* constraint will be divided by scalar*pow(|scalar|,exponent-1), if scalar is not 1.0 */
+      if( scalar == 1.0 )
+         factor = 1.0;
       else if( scalar > 0.0 )
-      {
-         SCIP_Real factor;
+         factor =  consdata->power( scalar, consdata->exponent);
+      else
+         factor = -consdata->power(-scalar, consdata->exponent);
 
-         factor = consdata->pow(scalar, consdata->exponent);
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
-            consdata->lhs /= factor;
-         if( !SCIPisInfinity(scip,  consdata->rhs) )
-            consdata->rhs /= factor;
-         consdata->zcoef /= factor;
-         consdata->xoffset /= scalar;
+      /* aggregate only if this would not lead to a vanishing or infinite coefficient for z */
+      if( !SCIPisZero(scip, consdata->zcoef / factor) && !SCIPisInfinity(scip, REALABS(consdata->zcoef / factor)) )
+      {
+         /* we drop here the events for both variables, because if x is replaced by a multiaggregated variable here, then we do not need to catch bound tightenings on z anymore */
+         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->x, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
+
+         consdata->x = var;
+         if( SCIPvarIsActive(consdata->x) )
+         {
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->x) );
+         }
+
+         /* add constant to offset */
+         consdata->xoffset += constant;
+
+         /* divide constraint by factor */
+         if( scalar == 1.0 ) ;
+         else if( scalar > 0.0 )
+         {
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
+               consdata->lhs /= factor;
+            if( !SCIPisInfinity(scip,  consdata->rhs) )
+               consdata->rhs /= factor;
+            consdata->zcoef /= factor;
+            consdata->xoffset /= scalar;
+         }
+         else
+         {
+            SCIP_Real oldlhs;
+
+            assert(scalar < 0.0);
+            assert(factor < 0.0);
+
+            oldlhs = consdata->lhs;
+
+            if( !SCIPisInfinity(scip,  consdata->rhs) )
+               consdata->lhs = consdata->rhs / factor;
+            else
+               consdata->lhs = -SCIPinfinity(scip);
+            if( !SCIPisInfinity(scip, -oldlhs) )
+               consdata->rhs = oldlhs / factor;
+            else
+               consdata->rhs = SCIPinfinity(scip);
+            consdata->zcoef /= factor;
+            consdata->xoffset /= scalar;
+            /* since we flip both constraint sides and the sign of zcoef, the events catched for z remain the same, so update necessary there */
+         }
+
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->x, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
+         SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+
+         SCIPdebugPrintCons(scip, cons, NULL);
+
+         /* rerun constraint comparison */
+         conshdlrdata->comparedpairwise = FALSE;
       }
       else
       {
-         SCIP_Real factor;
-         SCIP_Real oldlhs;
-
-         assert(scalar < 0.0);
-
-         factor = -consdata->pow(-scalar, consdata->exponent);
-         assert(factor < 0.0);
-
-         oldlhs = consdata->lhs;
-
-         if( !SCIPisInfinity(scip,  consdata->rhs) )
-            consdata->lhs = consdata->rhs / factor;
-         else
-            consdata->lhs = -SCIPinfinity(scip);
-         if( !SCIPisInfinity(scip, -oldlhs) )
-            consdata->rhs = oldlhs / factor;
-         else
-            consdata->rhs = SCIPinfinity(scip);
-         consdata->zcoef /= factor;
-         consdata->xoffset /= scalar;
-         /* since we flip both constraint sides and the sign of zcoef, the events catched for z remain the same, so update necessary there */
+         SCIPwarningMessage(scip, "Skip resolving aggregation of variable <%s> in abspower constraint <%s> to avoid zcoef = %g\n",
+            SCIPvarGetName(consdata->x), SCIPconsGetName(cons), consdata->zcoef / factor);
       }
-
-      SCIP_CALL( SCIPlockVarCons(scip, consdata->x, cons, !SCIPisInfinity(scip, -consdata->lhs), !SCIPisInfinity(scip, consdata->rhs)) );
-      SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
-
-      SCIPdebugPrintCons(scip, cons, NULL);
-
-      /* rerun constraint comparison */
-      conshdlrdata->comparedpairwise = FALSE;
    }
 
    if( !SCIPvarIsActive(consdata->z) && SCIPvarGetStatus(consdata->z) != SCIP_VARSTATUS_MULTAGGR )
@@ -1901,9 +1911,7 @@ SCIP_RETCODE checkFixedVariables(
       conshdlrdata->comparedpairwise = FALSE;
    }
 
-   assert(
-      (SCIPvarIsActive(consdata->x) || SCIPvarGetStatus(consdata->x) == SCIP_VARSTATUS_MULTAGGR) &&
-      (SCIPvarIsActive(consdata->z) || SCIPvarGetStatus(consdata->z) == SCIP_VARSTATUS_MULTAGGR));
+   assert(SCIPvarIsActive(consdata->z) || SCIPvarGetStatus(consdata->z) == SCIP_VARSTATUS_MULTAGGR);
 
    return SCIP_OKAY;
 }
@@ -1971,7 +1979,7 @@ SCIP_RETCODE computeViolation(
 
    xval += consdata->xoffset;
 
-   val  = SIGN(xval) * consdata->pow(REALABS(xval), consdata->exponent);
+   val  = SIGN(xval) * consdata->power(REALABS(xval), consdata->exponent);
    val += consdata->zcoef * SCIPgetSolVal(scip, sol, consdata->z);
 
    if( val < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )
@@ -2093,7 +2101,7 @@ SCIP_Real proposeBranchingPoint(
           *  if we are close to or right of -offset, then branching on -offset gives a convex function on the right branch, this is good
           *  otherwise if branching on -offset yields a violated secant cut in left branch, then current solution would be cutoff there, this is also still good
           */
-         if( !SCIPisFeasNegative(scip, xref) || SCIPisFeasPositive(scip, -consdata->pow(-xlb, consdata->exponent)*xref/xlb + consdata->zcoef * SCIPgetVarSol(scip, consdata->z)) )
+         if( !SCIPisFeasNegative(scip, xref) || SCIPisFeasPositive(scip, -consdata->power(-xlb, consdata->exponent)*xref/xlb + consdata->zcoef * SCIPgetVarSol(scip, consdata->z)) )
             return -consdata->xoffset;
          return SCIP_INVALID;
       }
@@ -2103,7 +2111,7 @@ SCIP_Real proposeBranchingPoint(
        *  if we are close to or left of zero, then branching on 0.0 gives a concave function on the left branch, this is good
        *  otherwise if branching on 0.0 yields a violated secant cut in right branch, then current solution would be cutoff there, this is also still good
        */
-      if( !SCIPisFeasPositive(scip, xref) || SCIPisFeasNegative(scip, -consdata->pow(xub, consdata->exponent)*xref/xub + consdata->zcoef * SCIPgetVarSol(scip, consdata->z)) )
+      if( !SCIPisFeasPositive(scip, xref) || SCIPisFeasNegative(scip, -consdata->power(xub, consdata->exponent)*xref/xub + consdata->zcoef * SCIPgetVarSol(scip, consdata->z)) )
          return -consdata->xoffset;
       return SCIP_INVALID;
    }
@@ -2119,7 +2127,7 @@ SCIP_Real proposeBranchingPoint(
          xlb = MAX(0.0, xlb + consdata->xoffset);
          xub = MAX(0.0, xub + consdata->xoffset);
 
-         ref = (consdata->pow(xub, consdata->exponent) - consdata->pow(xlb, consdata->exponent)) / (consdata->exponent * (xub - xlb));
+         ref = (consdata->power(xub, consdata->exponent) - consdata->power(xlb, consdata->exponent)) / (consdata->exponent * (xub - xlb));
          ref = pow(ref, 1.0/(consdata->exponent-1.0));
          ref -= consdata->xoffset;
          assert(SCIPisGE(scip, ref, SCIPvarGetLbLocal(x)));
@@ -2136,7 +2144,7 @@ SCIP_Real proposeBranchingPoint(
          xlb = MIN(0.0, xlb + consdata->xoffset);
          xub = MIN(0.0, xub + consdata->xoffset);
 
-         ref = (consdata->pow(-xlb, consdata->exponent) - consdata->pow(-xub, consdata->exponent)) / (consdata->exponent * (-xlb + xub));
+         ref = (consdata->power(-xlb, consdata->exponent) - consdata->power(-xub, consdata->exponent)) / (consdata->exponent * (-xlb + xub));
          ref = -pow(ref, 1.0/(consdata->exponent-1.0));
          ref -= consdata->xoffset;
          assert(SCIPisGE(scip, ref, SCIPvarGetLbLocal(x)));
@@ -2547,14 +2555,14 @@ SCIP_RETCODE propagateCons(
             if( SCIPisFeasEQ(scip, xlb, xub) )
             {
                newbd  = xub + consdata->xoffset;
-               newbd  = consdata->lhs - SIGN(newbd) * consdata->pow(REALABS(newbd), consdata->exponent);
+               newbd  = consdata->lhs - SIGN(newbd) * consdata->power(REALABS(newbd), consdata->exponent);
                newbd /= consdata->zcoef;
 
                if( (consdata->zcoef > 0.0 && SCIPisFeasGT(scip, newbd, zub)) || (consdata->zcoef < 0.0 && SCIPisFeasLT(scip, newbd, zlb)) )
                {
                   /* if infeasible, recompute with tolerances */
                   newbd  = xub + PROPVARTOL + consdata->xoffset;
-                  newbd  = consdata->lhs - PROPSIDETOL - SIGN(newbd) * consdata->pow(REALABS(newbd), consdata->exponent);
+                  newbd  = consdata->lhs - PROPSIDETOL - SIGN(newbd) * consdata->power(REALABS(newbd), consdata->exponent);
                   newbd /= consdata->zcoef;
                }
                else
@@ -2566,7 +2574,7 @@ SCIP_RETCODE propagateCons(
             else
             {
                newbd  = xub + PROPVARTOL + consdata->xoffset;
-               newbd  = consdata->lhs - PROPSIDETOL - SIGN(newbd) * consdata->pow(REALABS(newbd), consdata->exponent);
+               newbd  = consdata->lhs - PROPSIDETOL - SIGN(newbd) * consdata->power(REALABS(newbd), consdata->exponent);
                newbd /= consdata->zcoef;
             }
 
@@ -2741,14 +2749,14 @@ SCIP_RETCODE propagateCons(
             if( SCIPisFeasEQ(scip, xlb, xub) )
             {
                newbd  = xlb + consdata->xoffset;
-               newbd  = consdata->rhs - SIGN(newbd) * consdata->pow(REALABS(newbd), consdata->exponent);
+               newbd  = consdata->rhs - SIGN(newbd) * consdata->power(REALABS(newbd), consdata->exponent);
                newbd /= consdata->zcoef;
 
                if( (consdata->zcoef > 0.0 && SCIPisFeasLT(scip, newbd, zlb)) || (consdata->zcoef < 0.0 && SCIPisFeasGT(scip, newbd, zub)) )
                {
                   /* if infeasible, recompute with tolerances */
                   newbd  = xlb - PROPVARTOL + consdata->xoffset;
-                  newbd  = consdata->rhs + PROPSIDETOL - SIGN(newbd) * consdata->pow(REALABS(newbd), consdata->exponent);
+                  newbd  = consdata->rhs + PROPSIDETOL - SIGN(newbd) * consdata->power(REALABS(newbd), consdata->exponent);
                   newbd /= consdata->zcoef;
                }
                else
@@ -2760,7 +2768,7 @@ SCIP_RETCODE propagateCons(
             else
             {
                newbd  = xlb - PROPVARTOL + consdata->xoffset;
-               newbd  = consdata->rhs + PROPSIDETOL - SIGN(newbd) * consdata->pow(REALABS(newbd), consdata->exponent);
+               newbd  = consdata->rhs + PROPSIDETOL - SIGN(newbd) * consdata->power(REALABS(newbd), consdata->exponent);
                newbd /= consdata->zcoef;
             }
 
@@ -2831,12 +2839,12 @@ SCIP_RETCODE propagateCons(
 
    /* check for redundancy */
    if( !SCIPisInfinity(scip, -xlb) && !SCIPisInfinity(scip, consdata->zcoef > 0.0 ? -zlb :  zub) )
-      minact = SIGN(xlb + consdata->xoffset) * consdata->pow(REALABS(xlb + consdata->xoffset), consdata->exponent) + consdata->zcoef * (consdata->zcoef > 0.0 ? zlb : zub);
+      minact = SIGN(xlb + consdata->xoffset) * consdata->power(REALABS(xlb + consdata->xoffset), consdata->exponent) + consdata->zcoef * (consdata->zcoef > 0.0 ? zlb : zub);
    else
       minact = -SCIPinfinity(scip);
 
    if( !SCIPisInfinity(scip,  xub) && !SCIPisInfinity(scip, consdata->zcoef > 0.0 ?  zub : -zlb) )
-      maxact = SIGN(xub + consdata->xoffset) * consdata->pow(REALABS(xub + consdata->xoffset), consdata->exponent) + consdata->zcoef * (consdata->zcoef > 0.0 ? zub : zlb);
+      maxact = SIGN(xub + consdata->xoffset) * consdata->power(REALABS(xub + consdata->xoffset), consdata->exponent) + consdata->zcoef * (consdata->zcoef > 0.0 ? zub : zlb);
    else
       maxact = SCIPinfinity(scip);
 
@@ -3069,13 +3077,13 @@ SCIP_RETCODE propagateVarbounds(
             continue;
 
          /* skip variable bound if coefficient is very small */
-         if( SCIPisFeasZero(scip, consdata->pow(a, consdata->exponent)) )
+         if( SCIPisFeasZero(scip, consdata->power(a, consdata->exponent)) )
             continue;
 
          SCIPdebugMessage("propagate variable bound <%s> <= %g*<%s> + %g\n", SCIPvarGetName(consdata->x), a, SCIPvarGetName(y), b);
 
-         fb  = SIGN(  b + consdata->xoffset) * consdata->pow(  b + consdata->xoffset, consdata->exponent);  /* f(  b) = sign(  b) |  b|^n */
-         fab = SIGN(a+b + consdata->xoffset) * consdata->pow(a+b + consdata->xoffset, consdata->exponent);  /* f(a+b) = sign(a+b) |a+b|^n */
+         fb  = SIGN(  b + consdata->xoffset) * consdata->power(  b + consdata->xoffset, consdata->exponent);  /* f(  b) = sign(  b) |  b|^n */
+         fab = SIGN(a+b + consdata->xoffset) * consdata->power(a+b + consdata->xoffset, consdata->exponent);  /* f(a+b) = sign(a+b) |a+b|^n */
 
          vbcoef  = (fb - fab) / consdata->zcoef;
          vbconst = (consdata->lhs - fb) / consdata->zcoef;
@@ -3114,13 +3122,13 @@ SCIP_RETCODE propagateVarbounds(
             continue;
 
          /* skip variable bound if coefficient is very small */
-         if( SCIPisFeasZero(scip, consdata->pow(a, consdata->exponent)) )
+         if( SCIPisFeasZero(scip, consdata->power(a, consdata->exponent)) )
             continue;
 
          SCIPdebugMessage("propagate variable bound <%s> >= %g*<%s> + %g\n", SCIPvarGetName(consdata->x), a, SCIPvarGetName(y), b);
 
-         fb  = SIGN(  b + consdata->xoffset) * consdata->pow(  b + consdata->xoffset, consdata->exponent);  /* f(  b) = sign(  b) |  b|^n */
-         fab = SIGN(a+b + consdata->xoffset) * consdata->pow(a+b + consdata->xoffset, consdata->exponent);  /* f(a+b) = sign(a+b) |a+b|^n */
+         fb  = SIGN(  b + consdata->xoffset) * consdata->power(  b + consdata->xoffset, consdata->exponent);  /* f(  b) = sign(  b) |  b|^n */
+         fab = SIGN(a+b + consdata->xoffset) * consdata->power(a+b + consdata->xoffset, consdata->exponent);  /* f(a+b) = sign(a+b) |a+b|^n */
 
          vbcoef  = (fb - fab) / consdata->zcoef;
          vbconst = (consdata->rhs - fb) / consdata->zcoef;
@@ -3556,14 +3564,14 @@ SCIP_RETCODE generateCut(
       /* [xlb, xub] completely in negative orthant -> function is concave on whole domain */
       if( SCIPisInfinity(scip, -xlb) )
          return SCIP_OKAY;
-      SCIP_CALL( generateSecantCut(scip, row, SCIPconsGetHdlr(cons), sol, xlb, xub, consdata->exponent, xoffset, consdata->pow, xmult, zcoef, rhs, consdata->x, consdata->z) );
+      SCIP_CALL( generateSecantCut(scip, row, SCIPconsGetHdlr(cons), sol, xlb, xub, consdata->exponent, xoffset, consdata->power, xmult, zcoef, rhs, consdata->x, consdata->z) );
    }
    else if( (c = - consdata->root * (xlb+xoffset) - xoffset) > xub )
    {
       /* c is right of xub -> use secant */
       if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
          return SCIP_OKAY;
-      SCIP_CALL( generateSecantCut(scip, row, SCIPconsGetHdlr(cons), sol, xlb, xub, consdata->exponent, xoffset, consdata->pow, xmult, zcoef, rhs, consdata->x, consdata->z) );
+      SCIP_CALL( generateSecantCut(scip, row, SCIPconsGetHdlr(cons), sol, xlb, xub, consdata->exponent, xoffset, consdata->power, xmult, zcoef, rhs, consdata->x, consdata->z) );
    }
    else if( xval >= c )
    {
@@ -3583,7 +3591,7 @@ SCIP_RETCODE generateCut(
       /* xval between xlb and c -> use secant */
       if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, c) )
          return SCIP_OKAY;
-      SCIP_CALL( generateSecantCut(scip, row, SCIPconsGetHdlr(cons), sol, xlb, c, consdata->exponent, xoffset, consdata->pow, xmult, zcoef, rhs, consdata->x, consdata->z) );
+      SCIP_CALL( generateSecantCut(scip, row, SCIPconsGetHdlr(cons), sol, xlb, c, consdata->exponent, xoffset, consdata->power, xmult, zcoef, rhs, consdata->x, consdata->z) );
    }
 
    /* check numerics */
@@ -3921,7 +3929,7 @@ SCIP_RETCODE proposeFeasibleSolution(
       /* compute value of x-term */
       xtermval  = SCIPgetSolVal(scip, newsol, consdata->x);
       xtermval += consdata->xoffset;
-      xtermval  = SIGN(xtermval) * consdata->pow(ABS(xtermval), consdata->exponent);
+      xtermval  = SIGN(xtermval) * consdata->power(ABS(xtermval), consdata->exponent);
 
       /* if left hand side is violated, try to set z such that lhs is active */
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
@@ -5055,7 +5063,7 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
          iter = 0;
          do
          {
-            polyval = (consdata->exponent - 1.0) * consdata->pow(root, consdata->exponent) + consdata->exponent * pow(root, consdata->exponent-1.0) - 1.0;
+            polyval = (consdata->exponent - 1.0) * consdata->power(root, consdata->exponent) + consdata->exponent * pow(root, consdata->exponent-1.0) - 1.0;
             if( SCIPisZero(scip, polyval) )
                break;
 
@@ -5255,7 +5263,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             {
                /* generate secant between xlb and right changepoint */
                SCIP_CALL( generateSecantCutNoCheck(scip, &row, conshdlr, xlb, MIN(-consdata->root * (xlb+consdata->xoffset) - consdata->xoffset, xub),
-                     consdata->exponent, consdata->xoffset, consdata->pow, 1.0, consdata->zcoef, consdata->rhs, consdata->x, consdata->z) );
+                     consdata->exponent, consdata->xoffset, consdata->power, 1.0, consdata->zcoef, consdata->rhs, consdata->x, consdata->z) );
                if( row != NULL )
                {
                   if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
@@ -5319,7 +5327,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             {
                /* generate secant between left change point and upper bound */
                SCIP_CALL( generateSecantCutNoCheck(scip, &row, conshdlr, -xub, MIN(consdata->root * (xub+consdata->xoffset) + consdata->xoffset, -xlb),
-                     consdata->exponent, -consdata->xoffset, consdata->pow, -1.0, -consdata->zcoef, -consdata->lhs, consdata->x, consdata->z) );
+                     consdata->exponent, -consdata->xoffset, consdata->power, -1.0, -consdata->zcoef, -consdata->lhs, consdata->x, consdata->z) );
                if( row != NULL )
                {
                   if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
@@ -5971,30 +5979,30 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
          {
             SCIP_Real xcoef;
 
-            xcoef = SIGN(consdata->xoffset + 1.0) * consdata->pow(ABS(consdata->xoffset + 1.0), consdata->exponent)
-                   -SIGN(consdata->xoffset)       * consdata->pow(ABS(consdata->xoffset),       consdata->exponent);
+            xcoef = SIGN(consdata->xoffset + 1.0) * consdata->power(ABS(consdata->xoffset + 1.0), consdata->exponent)
+                   -SIGN(consdata->xoffset)       * consdata->power(ABS(consdata->xoffset),       consdata->exponent);
 
             if( xcoef < 0.0 )
             {
                if( SCIPisInfinity(scip, consdata->rhs) )
                   lhs = -SCIPinfinity(scip);
                else
-                  lhs = (consdata->rhs - SIGN(consdata->xoffset) * consdata->pow(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
+                  lhs = (consdata->rhs - SIGN(consdata->xoffset) * consdata->power(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
                if( SCIPisInfinity(scip, -consdata->lhs) )
                   rhs =  SCIPinfinity(scip);
                else
-                  rhs = (consdata->lhs - SIGN(consdata->xoffset) * consdata->pow(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
+                  rhs = (consdata->lhs - SIGN(consdata->xoffset) * consdata->power(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
             }
             else
             {
                if( SCIPisInfinity(scip, -consdata->lhs) )
                   lhs = -SCIPinfinity(scip);
                else
-                  lhs = (consdata->lhs - SIGN(consdata->xoffset) * consdata->pow(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
+                  lhs = (consdata->lhs - SIGN(consdata->xoffset) * consdata->power(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
                if( SCIPisInfinity(scip,  consdata->rhs) )
                   rhs =  SCIPinfinity(scip);
                else
-                  rhs = (consdata->rhs - SIGN(consdata->xoffset) * consdata->pow(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
+                  rhs = (consdata->rhs - SIGN(consdata->xoffset) * consdata->power(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
             }
             zcoef = consdata->zcoef / xcoef;
          }
@@ -6786,12 +6794,12 @@ SCIP_RETCODE SCIPcreateConsAbspower(
    if( SCIPisEQ(scip, exponent, 2.0) )
    {
       consdata->exponent = 2.0;
-      consdata->pow      = square;
+      consdata->power    = square;
    }
    else
    {
       consdata->exponent = exponent;
-      consdata->pow      = pow;
+      consdata->power    = pow;
    }
 
    /* branching on multiaggregated variables does not seem to work well, so try to avoid multiagg. x */

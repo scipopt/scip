@@ -107,6 +107,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_Bool             cutpoolisdelayed,   /**< is the cutpool delayed (count cuts found)? */
    SCIP_Bool             root,               /**< are we at the root node? */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    );

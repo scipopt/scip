@@ -113,6 +113,7 @@ typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method sp
  *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current LP solution infeasible
  *  - SCIP_SEPARATED  : a cutting plane was generated
  *  - SCIP_BRANCHED   : branching was applied
+ *  - SCIP_DIDNOTFIND : the branching rule searched, but did not find a branching
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
 #define SCIP_DECL_BRANCHEXECLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)
@@ -133,6 +134,7 @@ typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method sp
  *                      returned, if allowaddcons is FALSE
  *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current pseudo solution infeasible
  *  - SCIP_BRANCHED   : branching was applied
+ *  - SCIP_DIDNOTFIND : the branching rule searched, but did not find a branching
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
 #define SCIP_DECL_BRANCHEXECEXT(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)
@@ -153,6 +155,7 @@ typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method sp
  *                      returned, if allowaddcons is FALSE
  *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current pseudo solution infeasible
  *  - SCIP_BRANCHED   : branching was applied
+ *  - SCIP_DIDNOTFIND : the branching rule searched, but did not find a branching
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
 #define SCIP_DECL_BRANCHEXECPS(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)

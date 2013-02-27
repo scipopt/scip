@@ -2476,8 +2476,10 @@ SCIP_RETCODE lpSetUobjlim(
    assert(lp != NULL);
    assert(set != NULL);
 
-   /* if we want so solve exactly, we cannot rely on the LP solver's objective limit handling */
-   if( set->misc_exactsolve )
+   /* we disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
+    * solver's objective limit handling, so we return here and do not apply the objective limit
+    */
+   if( set->lp_disablecutoff || set->misc_exactsolve )
       return SCIP_OKAY;
 
    /* convert SCIP infinity value to lp-solver infinity value if necessary */
@@ -8465,7 +8467,7 @@ void SCIPlpSetSizeMark(
 /** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
 SCIP_RETCODE SCIPlpGetBasisInd(
    SCIP_LP*              lp,                 /**< LP data */
-   int*                  basisind            /**< pointer to store the basis indices */
+   int*                  basisind            /**< pointer to store basis indices ready to keep number of rows entries */
    )
 {
    assert(lp != NULL);
@@ -8788,6 +8790,7 @@ void sumMIRRow(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
    int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
@@ -8880,13 +8883,41 @@ void sumMIRRow(
       {
          SCIP_Bool uselhs;
 
-         /* Decide, if we want to use the left or the right hand side of the row in the summation.
-          * If possible, use the side that leads to a positive slack value in the summation.
-          */
-         if( SCIPsetIsInfinity(set, row->rhs) || (!SCIPsetIsInfinity(set, -row->lhs) && weight < 0.0) )
-            uselhs = TRUE;
+         /* choose sides for lhs/rhs of row */
+         if ( sidetypes != NULL )
+         {
+            assert( sidetypes[r] == -1 || sidetypes[r] == 0 || sidetypes[r] == 1 );
+            if ( sidetypes[r] == -1 )
+            {
+               assert( ! SCIPsetIsInfinity(set, -row->lhs) );
+               uselhs = TRUE;
+            }
+            else if ( sidetypes[r] == 1 )
+            {
+               assert( ! SCIPsetIsInfinity(set, row->rhs) );
+               uselhs = FALSE;
+            }
+            else
+            {
+               /* Automatically decide, whether we want to use the left or the right hand side of the row in the summation.
+                * If possible, use the side that leads to a positive slack value in the summation.
+                */
+               if( SCIPsetIsInfinity(set, row->rhs) || (!SCIPsetIsInfinity(set, -row->lhs) && weight < 0.0) )
+                  uselhs = TRUE;
+               else
+                  uselhs = FALSE;
+            }
+         }
          else
-            uselhs = FALSE;
+         {
+            /* Automatically decide, whether we want to use the left or the right hand side of the row in the summation.
+             * If possible, use the side that leads to a positive slack value in the summation.
+             */
+            if( SCIPsetIsInfinity(set, row->rhs) || (!SCIPsetIsInfinity(set, -row->lhs) && weight < 0.0) )
+               uselhs = TRUE;
+            else
+               uselhs = FALSE;
+         }
 
          /* add the row to the aggregation */
          addRowToAggregation(set, mircoef, mirrhs, slacksign, varused, varinds, nvarinds, row, weight, uselhs);
@@ -10090,6 +10121,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
    SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
@@ -10146,7 +10178,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, lp->nrows) );
 
    /* calculate the row summation */
-   sumMIRRow(set, prob, lp, weights, scale, allowlocal, 
+   sumMIRRow(set, prob, lp, weights, sidetypes, scale, allowlocal,
       maxmksetcoefs, maxweightrange, mircoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
       &emptyrow, &localrowsused, &rowtoolong, cutrank);
    assert(allowlocal || !localrowsused);
@@ -11409,9 +11441,7 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
       return SCIP_OKAY;
    }
 
-   /* if the cutoff bound is increased, and the LP was proved to exceed the old cutoff, it is no longer solved;
-    * if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit
-    */
+   /* if the cutoff bound is increased, and the LP was proved to exceed the old cutoff, it is no longer solved */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && cutoffbound > lp->cutoffbound )
    {
       /* mark the current solution invalid */
@@ -11419,7 +11449,11 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
-   else if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetObjval(lp, set, prob) >= cutoffbound )
+   /* if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit;
+    * if the objective limit in the LP solver was disabled, the solution status of the LP is not changed
+    */
+   else if( !set->lp_disablecutoff && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+      && SCIPlpGetObjval(lp, set, prob) >= cutoffbound )
    {
       assert(lp->flushed);
       assert(lp->solved);
@@ -13002,9 +13036,15 @@ SCIP_RETCODE lpSolve(
          lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
          lp->lpobjval = SCIPsetInfinity(set);
       }
+      /* if we did not disable the cutoff bound in the LP solver, the LP solution status should be objective limit
+       * reached if the LP objective value is greater than the cutoff bound
+       */
+      assert(set->lp_disablecutoff || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsInfinity(set, lp->cutoffbound)
+         || SCIPsetIsLE(set, lp->lpobjval + getFiniteLooseObjval(lp, set, prob), lp->cutoffbound));
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
+      assert(!set->lp_disablecutoff);
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
       lp->lpobjval = SCIPsetInfinity(set);
    }
@@ -13549,6 +13589,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
+         assert(!set->lp_disablecutoff);
          /* if we do branch-and-price, make sure that a dual feasible solution exists, that exceeds the objective limit;
           * With FASTMIP setting, CPLEX does not apply the final pivot to reach the dual solution exceeding the objective
           * limit. Therefore, we have to either turn off FASTMIP and resolve the problem or continue solving it without

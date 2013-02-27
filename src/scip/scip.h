@@ -54,6 +54,7 @@
 #include "scip/type_dialog.h"
 #include "scip/type_disp.h"
 #include "scip/type_heur.h"
+#include "scip/type_history.h"
 #include "scip/type_nodesel.h"
 #include "scip/type_presol.h"
 #include "scip/type_pricer.h"
@@ -73,6 +74,7 @@
 #include "scip/pub_event.h"
 #include "scip/pub_fileio.h"
 #include "scip/pub_heur.h"
+#include "scip/pub_history.h"
 #include "scip/pub_implics.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_nlp.h"
@@ -10719,7 +10721,7 @@ SCIP_Bool SCIPisLPSolBasic(
 EXTERN
 SCIP_RETCODE SCIPgetLPBasisInd(
    SCIP*                 scip,               /**< SCIP data structure */
-   int*                  basisind            /**< pointer to store the basis indices */
+   int*                  basisind            /**< pointer to store basis indices ready to keep number of rows entries */
    );
 
 /** gets a row from the inverse basis matrix B^-1
@@ -10845,6 +10847,7 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
+   int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
    SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */

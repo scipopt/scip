@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-/** branching and inference history information for single variable */
+/** branching and inference history information for single variable independent of the domain value */
 struct SCIP_History
 {
    SCIP_Real             pscostcount[2];     /**< nr of (partial) summands in down/upwards pseudo costs (may be fractional) */
@@ -43,6 +43,15 @@ struct SCIP_History
    SCIP_Longint          nactiveconflicts[2];/**< number of active conflicts for which the variable gave reason */
    SCIP_Longint          nbranchings[2];     /**< nr of times, the variable changed its bounds due to branching */
    SCIP_Longint          branchdepthsum[2];  /**< sum of depth levels, at which the branching bound changes took place */
+};
+
+/** branching and inference history information for single variable dependent on the domain value */
+struct SCIP_ValueHistory
+{
+   SCIP_HISTORY**        histories;          /**< branching and inference history information for individual domain values */
+   SCIP_Real*            values;             /**< (sorted) array containing the domain values */
+   int                   nvalues;            /**< number of different domain values */
+   int                   sizevalues;         /**< size of the both arrays */
 };
 
 #ifdef __cplusplus

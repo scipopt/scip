@@ -1889,106 +1889,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    return SCIP_OKAY;
 }
 
-/** constructs the first solution of sparse solution (all variables are set to their lower bound value */
-static
-void getFirstSolution(
-   SCIP_SPARSESOL*       sparsesol,          /**< sparse solutions */
-   SCIP_Longint*         sol,                /**< current solution */
-   int                   nvars               /**< number of variables */
-   )
-{
-   SCIP_Longint* lbvalues;
-
-   if( nvars == 0 )
-      return;
-
-   assert(sparsesol != NULL);
-   assert(sol != NULL);
-   assert(nvars == SCIPsparseSolGetNVars(sparsesol));
-
-   lbvalues = SCIPsparseSolGetLbs(sparsesol);
-   assert(lbvalues != NULL);
-
-   BMScopyMemoryArray(sol, lbvalues, nvars);
-}
-
-/** constructs the next solution of the sparse solution and return whether there was one more or not */
-static
-SCIP_Bool getNextSolution(
-   SCIP_SPARSESOL*       sparsesol,          /**< sparse solutions */
-   SCIP_Longint*         sol,                /**< current solution */
-   int                   nvars               /**< number of variables */
-   )
-{
-   SCIP_Longint* lbvalues;
-   SCIP_Longint* ubvalues;
-   SCIP_Longint lbvalue;
-   SCIP_Longint ubvalue;
-   SCIP_Bool singular;
-   SCIP_Bool carryflag;
-   int v;
-
-   assert(sparsesol != NULL);
-   assert(sol != NULL);
-
-   if( nvars == 0 )
-      return FALSE;
-
-   assert(nvars > 0);
-   assert(nvars == SCIPsparseSolGetNVars(sparsesol));
-
-   lbvalues = SCIPsparseSolGetLbs(sparsesol);
-   ubvalues = SCIPsparseSolGetUbs(sparsesol);
-   assert(lbvalues != NULL);
-   assert(ubvalues != NULL);
-
-   singular = TRUE;
-   carryflag = FALSE;
-
-   for( v = 0; v < nvars; ++v )
-   {
-      lbvalue = lbvalues[v];
-      ubvalue = ubvalues[v];
-
-      if( lbvalue < ubvalue )
-      {
-         singular = FALSE;
-
-         if( carryflag == FALSE )
-         {
-            if( sol[v] < ubvalue )
-            {
-               sol[v]++;
-               break;
-            }
-            else
-            {
-               /* in the last solution the variables v was set to its upper bound value */
-               assert(sol[v] == ubvalue);
-               sol[v] = lbvalue;
-               carryflag = TRUE;
-            }
-         }
-         else
-         {
-            if( sol[v] < ubvalue )
-            {
-               sol[v]++;
-               carryflag = FALSE;
-               break;
-            }
-            else
-            {
-               assert(sol[v] == ubvalue);
-               sol[v] = lbvalue;
-            }
-         }
-      }
-   }
-
-   return (!carryflag && !singular);
-}
-
 /** comparison method for sorting variables by non-decreasing w.r.t. problem index */
 static
 SCIP_DECL_SORTPTRCOMP(varCompProbindex)
@@ -2049,7 +1949,7 @@ SCIP_RETCODE writeExpandedSolutions(
       assert(SCIPsparseSolGetNVars(sparsesol) == nactivevars);
 
       /* get first solution of the sparse solution */
-      getFirstSolution(sparsesol, sol, nactivevars);
+      SCIPsparseSolGetFirstSol(sparsesol, sol, nactivevars);
 
       /* duplicate variables in sparse solution, only used for sorting */
       SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPsparseSolGetVars(sparsesol), nactivevars) );
@@ -2139,7 +2039,7 @@ SCIP_RETCODE writeExpandedSolutions(
          SCIPinfoMessage(scip, file, "%g\n", objval);
 
       }
-      while( getNextSolution(sparsesol, sol, nactivevars) );
+      while( SCIPsparseSolGetNextSol(sparsesol, sol, nactivevars) );
    }
 
    /* free buffer arrays */

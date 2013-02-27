@@ -19,16 +19,17 @@ SOLVER=${3^^}
 SETNAME=$4
 TIMELIMIT=$6
 NODELIMIT=$7
-GAPLIMIT=${8:-0}
-THREADS=$9
-CONTINUE=${10,,}
-CONVERTSCIP=${11}
-QUEUETYPE=${12}
-QUEUE=${13}
-PPN=${14}
-CLIENTTMPDIR=${15}
-NOWAITCLUSTER=${16}
-EXCLUSIVE=${17}
+MEMLIMIT=$8
+GAPLIMIT=${9:-0}
+THREADS=${10}
+CONTINUE=${11,,}
+CONVERTSCIP=${12}
+QUEUETYPE=${13}
+QUEUE=${14}
+PPN=${15}
+CLIENTTMPDIR=${16}
+NOWAITCLUSTER=${17}
+EXCLUSIVE=${18}
 
 # set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
 SETCUTOFF=0
@@ -127,14 +128,9 @@ GAMSOPTS="pf4=0 domlim=9999999" # solvelink=5
 GAMSOPTS="$GAMSOPTS logoption=3 stepsum=1 solprint=0 limcol=0 limrow=0 pc=2 pw=255" #appendout=1
 GAMSOPTS="$GAMSOPTS reslim=$TIMELIMIT"
 GAMSOPTS="$GAMSOPTS nodlim=$NODELIMIT"
+GAMSOPTS="$GAMSOPTS workspace=$MEMLIMIT"
 GAMSOPTS="$GAMSOPTS optcr=$GAPLIMIT"
 GAMSOPTS="$GAMSOPTS threads=$THREADS"
-
-# set workfactor to it's maximum for BARON, so it can keep more nodes in memory
-if test $SOLVER = BARON
-then
-  GAMSOPTS="$GAMSOPTS workfactor=1500"
-fi
 
 # set SBB option to overwrite NLP solver status files in each node instead of appending
 if test $SOLVER = SBB

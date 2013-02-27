@@ -76,7 +76,10 @@
 //#define LONGSTATS
 
 /* do we want to create for each printing new files or only one */
-//#define ONEFILE
+/*#define ONEFILE*/
+
+/* do we want to print the information only on the focusnode or for all open nodes */
+/*#define FOCUSNODE*/
 
 /*
  * Data structures
@@ -85,13 +88,14 @@
 /** LP reading data */
 struct SCIP_EventhdlrData
 {
-   FILE*                  file;
-   SCIP_Longint           freq;
-   char*                  filename;
-   SCIP_Bool              isopen;
    char                   oldfilename[SCIP_MAXSTRLEN];
-   int                    filenumber;
+   FILE*                  file;
+   char*                  filename;
+   SCIP_Real              lastpb;
+   SCIP_Longint           freq;
+   SCIP_Bool              isopen;
    SCIP_Bool              writesubmipdualbound;
+   int                    filenumber;
 };
 
 
@@ -114,6 +118,7 @@ void initEventhdlrdata(
    eventhdlrdata->filenumber = 1;
 }
 
+#ifndef FOCUSNODE
 /* apply all changes to the submip */
 static
 SCIP_RETCODE applyDomainChanges(
@@ -154,6 +159,110 @@ SCIP_RETCODE applyDomainChanges(
 
    return SCIP_OKAY;
 }
+#endif
+
+#ifdef FOCUSNODE
+/** call writing method */
+static
+SCIP_RETCODE writeBoundsFocusNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   )
+{
+   FILE* file;
+   SCIP_Bool writesubmipdualbound;
+   SCIP_NODE* node;
+
+   assert(scip != NULL);
+   assert(eventhdlrdata != NULL);
+
+   file = eventhdlrdata->file;
+   writesubmipdualbound = eventhdlrdata->writesubmipdualbound;
+   node = SCIPgetCurrentNode(scip);
+
+   /* do not process probing nodes */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+      return SCIP_OKAY;
+
+   /* do not process cutoff nodes */
+   if( SCIPisInfinity(scip, SCIPgetNodeDualbound(scip, node)) )
+      return SCIP_OKAY;
+
+   if( !SCIPisEQ(scip, eventhdlrdata->lastpb, SCIPgetPrimalbound(scip)) )
+   {
+#ifdef LONGSTATS
+      SCIPinfoMessage(scip, file, "Status after %"SCIP_LONGINT_FORMAT" processed nodes (%d open)\n", SCIPgetNNodes(scip), SCIPgetNNodesLeft(scip));
+
+      SCIPinfoMessage(scip, file, "Primalbound: %g\n", SCIPgetPrimalbound(scip));
+      SCIPinfoMessage(scip, file, "Dualbound: %g\n", SCIPgetDualbound(scip));
+#else
+      SCIPinfoMessage(scip, file, "PB %g\n", SCIPgetPrimalbound(scip));
+#endif
+      eventhdlrdata->lastpb = SCIPgetPrimalbound(scip);
+   }
+
+   if( writesubmipdualbound )
+   {
+      SCIP* subscip;
+      SCIP_Bool valid;
+      SCIP_Real submipdb;
+      SCIP_Bool cutoff;
+
+      SCIP_CALL( SCIPcreate(&subscip) );
+
+      submipdb = SCIP_INVALID;
+      valid = FALSE;
+      cutoff = FALSE;
+      SCIP_CALL( SCIPcopy(scip, subscip, NULL, NULL, "__boundwriting", FALSE, FALSE, TRUE, &valid) );
+
+      if( valid )
+      {
+	 /* do not abort subproblem on CTRL-C */
+	 SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+	 /* disable output to console */
+	 SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+	 /* solve only root node */
+	 SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
+
+#if 0
+	 /* disable heuristics in subscip */
+	 SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+#endif
+
+	 /* set cutoffbound as objective limit for subscip */
+	 SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetCutoffbound(scip)) );
+
+	 SCIP_CALL( SCIPsolve(subscip) );
+
+	 cutoff = (SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE);
+	 submipdb = SCIPgetDualbound(subscip) * SCIPgetTransObjscale(scip) + SCIPgetTransObjoffset(scip);
+      }
+
+#ifdef LONGSTATS
+      SCIPinfoMessage(scip, file, "Node %"SCIP_LONGINT_FORMAT" (depth %d): dualbound: %g, nodesubmiprootdualbound: %g %s\n", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPgetNodeDualbound(scip, node), submipdb, cutoff ? "(cutoff)" : "");
+#else
+      SCIPinfoMessage(scip, file, "%"SCIP_LONGINT_FORMAT" %d %g %g %s\n", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPgetNodeDualbound(scip, node), submipdb, cutoff ? "(cutoff)" : "");
+#endif
+
+      SCIP_CALL( SCIPfree(&subscip) );
+   }
+   else
+   {
+#ifdef LONGSTATS
+      SCIPinfoMessage(scip, file, "Node %"SCIP_LONGINT_FORMAT" (depth %d): dualbound: %g\n", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPgetNodeDualbound(scip, node));
+#else
+      SCIPinfoMessage(scip, file, "%"SCIP_LONGINT_FORMAT" %d %g\n", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPgetNodeDualbound(scip, node));
+#endif
+   }
+
+#ifdef LONGSTATS
+   SCIPinfoMessage(scip, file, "\n");
+#endif
+
+   return SCIP_OKAY;
+}
+
+#else
 
 /** call writing method */
 static
@@ -312,6 +421,7 @@ SCIP_RETCODE writeBounds(
 
    return SCIP_OKAY;
 }
+#endif
 
 /*
  * Callback methods of event handler
@@ -326,7 +436,9 @@ SCIP_DECL_EVENTCOPY(eventCopyBoundwriting)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
    /* call inclusion method of event handler */
+#if 0
    SCIP_CALL( SCIPincludeEventHdlrBoundwriting(scip) );
+#endif
 
    return SCIP_OKAY;
 }
@@ -354,12 +466,18 @@ SCIP_DECL_EVENTFREE(eventFreeBoundwriting)
 static
 SCIP_DECL_EVENTINIT(eventInitBoundwriting)
 {  /*lint --e{715}*/
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
    /* notify SCIP that your event handler wants to react on the event type best solution found */
    SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, NULL) );
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+   eventhdlrdata->lastpb = SCIPinfinity(scip) * SCIPgetObjsense(scip);
 
    return SCIP_OKAY;
 }
@@ -520,8 +638,13 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
    }
 #endif
 
+#ifdef FOCUSNODE
+   /* call writing method */
+   SCIP_CALL( writeBoundsFocusNode(scip, eventhdlrdata) );
+#else
    /* call writing method */
    SCIP_CALL( writeBounds(scip, eventhdlrdata->file, eventhdlrdata->writesubmipdualbound) );
+#endif
 
 #ifndef ONEFILE
    if( strlen(eventhdlrdata->filename) > 0 )

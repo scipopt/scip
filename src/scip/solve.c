@@ -1186,7 +1186,7 @@ SCIP_RETCODE solveNodeInitialLP(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
 {
-   SCIP_Real starttime = 0.0;
+   SCIP_Real starttime;
 
    assert(stat != NULL);
    assert(tree != NULL);
@@ -1881,6 +1881,7 @@ SCIP_RETCODE cutpoolSeparate(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_Bool             cutpoolisdelayed,   /**< is the cutpool delayed (count cuts found)? */
    SCIP_Bool             root,               /**< are we at the root node? */
    int                   actdepth,           /**< the depth of the focus node */
    SCIP_Bool*            enoughcuts,         /**< pointer to store if enough cuts were found in current separation round */
@@ -1898,7 +1899,7 @@ SCIP_RETCODE cutpoolSeparate(
        */
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
-      SCIP_CALL( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, &result) );
+      SCIP_CALL( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, cutpoolisdelayed, root, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
    }
@@ -2161,7 +2162,7 @@ SCIP_RETCODE priceAndCutLoop(
          /* global cut pool separation */
          if( !enoughcuts && !delayedsepa )
          {
-            SCIP_CALL( cutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, actdepth, &enoughcuts, cutoff) );
+            SCIP_CALL( cutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, FALSE, root, actdepth, &enoughcuts, cutoff) );
 
             if( *cutoff )
             {
@@ -2199,7 +2200,7 @@ SCIP_RETCODE priceAndCutLoop(
          {
             assert( !(*lperror) );
 
-            SCIP_CALL( cutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, actdepth, &enoughcuts, cutoff) );
+            SCIP_CALL( cutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, TRUE, root, actdepth, &enoughcuts, cutoff) );
 
             if( *cutoff )
             {
@@ -3609,7 +3610,7 @@ SCIP_RETCODE solveNode(
             SCIP_CALL( SCIPbranchExecLP(blkmem, set, stat, transprob, tree, lp, sepastore, branchcand, eventqueue,
                   primal->cutoffbound, FALSE, &result) );
             assert(SCIPbufferGetNUsed(set->buffer) == 0);
-            assert(result != SCIP_DIDNOTRUN);
+            assert(result != SCIP_DIDNOTRUN && result != SCIP_DIDNOTFIND);
          }
          else 
          {
@@ -3623,7 +3624,7 @@ SCIP_RETCODE solveNode(
                assert(SCIPbufferGetNUsed(set->buffer) == 0);
             }
 
-            if( result == SCIP_DIDNOTRUN )
+            if( result == SCIP_DIDNOTRUN || result == SCIP_DIDNOTFIND )
             {
                /* branch on pseudo solution */
                SCIPdebugMessage("infeasibility in depth %d was not resolved: branch on pseudo solution with %d unfixed integers\n",
@@ -3672,6 +3673,7 @@ SCIP_RETCODE solveNode(
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             branched = TRUE;
             break;
+         case SCIP_DIDNOTFIND: /*lint -fallthrough*/
          case SCIP_DIDNOTRUN:
             /* all integer variables in the infeasible solution are fixed,
              * - if no continuous variables exist and all variables are known, the infeasible pseudo solution is completely
@@ -4089,7 +4091,7 @@ SCIP_RETCODE SCIPsolveCIP(
                /* increase the cutoff counter of the branching variable */
                if( stat->lastbranchvar != NULL )
                {
-                  SCIP_CALL( SCIPvarIncCutoffSum(stat->lastbranchvar, stat, stat->lastbranchdir, 1.0) );
+                  SCIP_CALL( SCIPvarIncCutoffSum(stat->lastbranchvar, blkmem, set, stat, stat->lastbranchdir, stat->lastbranchvalue, 1.0) );
                }
                /**@todo if last branching variable is unknown, retrieve it from the nodes' boundchg arrays */
             }
@@ -4131,7 +4133,7 @@ SCIP_RETCODE SCIPsolveCIP(
                {
                   SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, tree, lp, branchcand, eventqueue,
                         primal->cutoffbound, FALSE, &result) );
-                  assert(result != SCIP_DIDNOTRUN);
+                  assert(result != SCIP_DIDNOTRUN && result != SCIP_DIDNOTFIND);
                }
             }
             while( result == SCIP_REDUCEDDOM );

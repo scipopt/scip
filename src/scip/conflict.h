@@ -210,6 +210,7 @@ SCIP_RETCODE SCIPconflictInit(
 extern
 SCIP_RETCODE SCIPconflictAddBound(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_VAR*             var,                /**< problem variable */
@@ -221,6 +222,7 @@ SCIP_RETCODE SCIPconflictAddBound(
 extern
 SCIP_RETCODE SCIPconflictAddRelaxedBound(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_VAR*             var,                /**< problem variable */

@@ -7165,6 +7165,67 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
 
    *result = SCIP_DIDNOTFIND;
 
+   /* for two (binary) variables we will create a set packing constraint and add the clique information of the conflict is global */
+   if( nbdchginfos == 2 )
+   {
+      SCIP_CONS* cons;
+      char consname[SCIP_MAXSTRLEN];
+      SCIP_VAR* twovars[2];
+
+      assert(bdchginfos != NULL);
+
+      twovars[0] = SCIPbdchginfoGetVar(bdchginfos[0]);
+
+      /* we can only treat binary variables */
+      if( !SCIPvarIsBinary(twovars[0]) )
+         return SCIP_OKAY;
+
+      /* if the variable is fixed to zero in the conflict set, we have to use its negation */
+      if( SCIPbdchginfoGetNewbound(bdchginfos[0]) < 0.5 )
+      {
+         SCIP_CALL( SCIPgetNegatedVar(scip, twovars[0], &twovars[0]) );
+      }
+
+      twovars[1] = SCIPbdchginfoGetVar(bdchginfos[1]);
+
+      /* we can only treat binary variables */
+      if( !SCIPvarIsBinary(twovars[1]) )
+         return SCIP_OKAY;
+
+      /* if the variable is fixed to zero in the conflict set, we have to use its negation */
+      if( SCIPbdchginfoGetNewbound(bdchginfos[1]) < 0.5 )
+      {
+         SCIP_CALL( SCIPgetNegatedVar(scip, twovars[1], &twovars[1]) );
+      }
+
+      /* create a constraint out of the conflict set */
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+      SCIP_CALL( SCIPcreateConsSetpack(scip, &cons, consname, 2, twovars,
+            FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
+      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
+
+      /* if the constraint gets globally added, we also add the clique information */
+      if( !SCIPconsIsLocal(cons) )
+      {
+         SCIP_Bool infeasible;
+         int ncliquebdchgs;
+
+         SCIP_CALL( SCIPaddClique(scip, twovars, NULL, 2, &infeasible, &ncliquebdchgs) );
+
+         SCIPdebugMessage("new clique of conflict constraint %s led to %d fixings\n", consname, ncliquebdchgs);
+
+         if( infeasible )
+         {
+            SCIPdebugMessage("new clique of conflict constraint %s led to infeasibility\n", consname);
+         }
+      }
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+      *result = SCIP_CONSADDED;
+
+      return SCIP_OKAY;
+   }
+
    /* create array of variables in conflict constraint */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
    for( i = 0; i < nbdchginfos; ++i )

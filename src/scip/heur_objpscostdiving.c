@@ -264,6 +264,10 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
+   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
+   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+      return SCIP_OKAY;
+
    /* only call heuristic, if the LP solution is basic (which allows fast resolve in diving) */
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;

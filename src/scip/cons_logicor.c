@@ -3342,12 +3342,15 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
    assert(bdchginfos != NULL || nbdchginfos == 0);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
    /* don't process already resolved conflicts */
    if( resolved )
-   {
-      *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
-   }
+
+   /* if the conflict consists of only two (binary) variables, it will be handled by the setppc conflict handler */
+   if( nbdchginfos == 2 )
+      return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
