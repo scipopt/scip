@@ -2168,12 +2168,12 @@ SCIP_RETCODE parseValue(
    if( strncmp(str, "+inf", 4) == 0 )
    {
       *value = SCIPsetInfinity(set);
-      (*endptr) += 4;
+      (*endptr) = (char*)str + 4;
    }
    else if( strncmp(str, "-inf", 4) == 0 )
    {
       *value = -SCIPsetInfinity(set);
-      (*endptr) += 4;
+      (*endptr) = (char*)str + 4;
    }
    else
    {
