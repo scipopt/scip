@@ -17566,11 +17566,15 @@ SCIP_RETCODE SCIPaddVarVlb(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
 {
+   int nlocalbdchgs;
+
    SCIP_CALL( checkStage(scip, "SCIPaddVarVlb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPvarAddVlb(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
          scip->cliquetable, scip->branchcand, scip->eventqueue, vlbvar, vlbcoef, vlbconstant, TRUE, infeasible,
-         nbdchgs) );
+         &nlocalbdchgs) );
+
+   *nbdchgs = nlocalbdchgs;
 
    /* if x is not continuous we add a variable bound for z; do not add it if cofficient would be too small or we already
     * detected infeasibility
@@ -17582,15 +17586,16 @@ SCIP_RETCODE SCIPaddVarVlb(
          /* if b > 0, we have a variable upper bound: x >= b*z + d  =>  z <= (x-d)/b */
          SCIP_CALL( SCIPvarAddVub(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
                scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef,
-               TRUE, infeasible, nbdchgs) );
+               TRUE, infeasible, &nlocalbdchgs) );
       }
       else
       {
          /* if b < 0, we have a variable lower bound: x >= b*z + d  =>  z >= (x-d)/b */
          SCIP_CALL( SCIPvarAddVlb(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
                scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef,
-               TRUE, infeasible, nbdchgs) );
+               TRUE, infeasible, &nlocalbdchgs) );
       }
+      *nbdchgs += nlocalbdchgs;
    }
 
    return SCIP_OKAY;
@@ -17620,11 +17625,15 @@ SCIP_RETCODE SCIPaddVarVub(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
 {
+   int nlocalbdchgs;
+
    SCIP_CALL( checkStage(scip, "SCIPaddVarVub", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPvarAddVub(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
          scip->cliquetable, scip->branchcand, scip->eventqueue, vubvar, vubcoef, vubconstant, TRUE, infeasible,
-         nbdchgs) );
+         &nlocalbdchgs) );
+
+   *nbdchgs = nlocalbdchgs;
 
    /* if x is not continuous we add a variable bound for z; do not add it if cofficient would be too small or we already
     * detected infeasibility
@@ -17636,15 +17645,16 @@ SCIP_RETCODE SCIPaddVarVub(
          /* if b < 0, we have a variable lower bound: x >= b*z + d  =>  z >= (x-d)/b */
          SCIP_CALL( SCIPvarAddVlb(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
                scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef,
-               TRUE, infeasible, nbdchgs) );
+               TRUE, infeasible, &nlocalbdchgs) );
       }
       else
       {
          /* if b > 0, we have a variable upper bound: x >= b*z + d  =>  z <= (x-d)/b */
          SCIP_CALL( SCIPvarAddVub(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
                scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef,
-               TRUE, infeasible, nbdchgs) );
+               TRUE, infeasible, &nlocalbdchgs) );
       }
+      *nbdchgs += nlocalbdchgs;
    }
 
    return SCIP_OKAY;

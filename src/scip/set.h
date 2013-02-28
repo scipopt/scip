@@ -1603,6 +1603,8 @@ SCIP_Real SCIPsetGetHugeValue(
 #define SCIPsetIsSumRelLE(set, val1, val2) ( !EPSP(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsSumRelGT(set, val1, val2) ( EPSP(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsSumRelGE(set, val1, val2) ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
+#define SCIPsetIsUpdateUnreliable(set, newvalue, oldvalue) \
+   ( (ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon)) >= set->num_recompfac )
 #define SCIPsetIsHugeValue(set, val) ( (val) >= (set)->num_hugeval )
 #define SCIPsetGetHugeValue(set) ( (set)->num_hugeval )
 
