@@ -459,9 +459,7 @@ SCIP_RETCODE colRestoreSolVals(
       col->validredcostlp = validlp;
       col->basisstatus = storedsolvals->basisstatus; /*lint !e641*/
 
-      /* we do not save the farkas coefficient, since we expected a node with infeasible LP to be pruned anyway; to be
-       * safe, we invalidate it here
-       */
+      /* we do not save the farkas coefficient, since it can be recomputed; thus, we invalidate it here */
       col->validfarkaslp = -1;
    }
    /* if the column was created after performing the storage (possibly during probing), we treat it as implicitly zero;
