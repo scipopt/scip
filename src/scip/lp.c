@@ -16203,6 +16203,8 @@ SCIP_RETCODE SCIPlpStartDive(
          assert(lp->validsollp == stat->lpcount);
       break;
       case SCIP_LPSOLSTAT_OBJLIMIT:
+      case SCIP_LPSOLSTAT_ITERLIMIT:
+      case SCIP_LPSOLSTAT_TIMELIMIT:
          SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
          assert(lp->validsollp == stat->lpcount);
          break;
@@ -16343,6 +16345,8 @@ SCIP_RETCODE SCIPlpEndDive(
          (lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||
             lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY ||
             lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
+            lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT ||
+            lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT ||
             lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE)
          )
       {
