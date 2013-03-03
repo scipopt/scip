@@ -311,7 +311,7 @@ SCIP_Bool getNextLine(
       do
       {
          opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-         (void)SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file);
+         (void)SCIPfgets(opbinput->linebuf, (int) sizeof(opbinput->linebuf), opbinput->file);
       }
       while( opbinput->linebuf[OPB_MAX_LINELEN-2] != '\0' );
 
@@ -331,7 +331,7 @@ SCIP_Bool getNextLine(
    else
       opbinput->linepos += OPB_MAX_LINELEN - 2;
 
-   if( SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file) == NULL )
+   if( SCIPfgets(opbinput->linebuf, (int) sizeof(opbinput->linebuf), opbinput->file) == NULL )
       return FALSE;
 
    opbinput->bufpos = 0;
@@ -1489,7 +1489,7 @@ SCIP_RETCODE getMaxAndConsDim(
 
    do
    {   
-      if( SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file) == NULL )
+      if( SCIPfgets(opbinput->linebuf, (int) sizeof(opbinput->linebuf), opbinput->file) == NULL )
       {
          assert(SCIPfeof( opbinput->file ) );
          break;

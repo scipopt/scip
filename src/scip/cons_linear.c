@@ -320,7 +320,7 @@ int inferInfoGetProprule(
    INFERINFO             inferinfo           /**< inference information to convert */
    )
 {
-   return inferinfo.val.asbits.proprule;
+   return (int) inferinfo.val.asbits.proprule;
 }
 
 /** returns the position stored in the inference information */
@@ -329,7 +329,7 @@ int inferInfoGetPos(
    INFERINFO             inferinfo           /**< inference information to convert */
    )
 {
-   return inferinfo.val.asbits.pos;
+   return (int) inferinfo.val.asbits.pos;
 }
 
 /** constructs an inference information out of a propagation rule and a position number */
@@ -340,9 +340,10 @@ INFERINFO getInferInfo(
    )
 {
    INFERINFO inferinfo;
+   assert( pos >= 0 );
 
-   inferinfo.val.asbits.proprule = proprule; /*lint !e641*/
-   inferinfo.val.asbits.pos = pos; /*lint !e732*/
+   inferinfo.val.asbits.proprule = (unsigned int) proprule; /*lint !e641*/
+   inferinfo.val.asbits.pos = (unsigned int) pos; /*lint !e732*/
 
    return inferinfo;
 }
@@ -8017,7 +8018,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 
    maxabsrealval = consdataGetMaxAbsval(consdata);
    /* hash value depends on vectors of variable indices */
-   if( maxabsrealval > INT_MAX )
+   if( maxabsrealval > (SCIP_Real) INT_MAX )
       maxabsval = 0;
    else if( maxabsrealval < 1.0 )
       maxabsval = (int) (MULTIPLIER * maxabsrealval);

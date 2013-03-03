@@ -2252,7 +2252,7 @@ SCIP_RETCODE prettifyConss(
          if( success )
          {
             /* it is possible that the dominator is a multiple of the nominator */
-            if( SCIPisIntegral(scip, denominator / (SCIP_Real)nominator) )
+            if( SCIPisIntegral(scip, (SCIP_Real) denominator / (SCIP_Real) nominator) )
             {
                denominator /= nominator;
                nominator = 1;

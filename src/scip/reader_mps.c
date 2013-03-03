@@ -441,14 +441,14 @@ SCIP_Bool mpsinputReadLine(
       do
       {
          mpsi->buf[MPS_MAX_LINELEN-1] = '\0';
-         if( NULL == SCIPfgets(mpsi->buf, sizeof(mpsi->buf), mpsi->fp) )
+         if( NULL == SCIPfgets(mpsi->buf, (int) sizeof(mpsi->buf), mpsi->fp) )
             return FALSE;
          mpsi->lineno++;
       }
       while( *mpsi->buf == '*' );
 
       /* Normalize line */
-      len = strlen(mpsi->buf);
+      len = (unsigned int) strlen(mpsi->buf);
 
       for( i = 0; i < len; i++ )
          if( (mpsi->buf[i] == '\t') || (mpsi->buf[i] == '\n') || (mpsi->buf[i] == '\r') )
@@ -2402,7 +2402,7 @@ unsigned int computeFieldWidth(
    unsigned int          width               /**< required width */
    )
 {
-   width = MAX(8, width);
+   width = MAX(8u, width);
    return MIN(MPS_MAX_FIELDLEN, width);
 }
 
@@ -2780,7 +2780,7 @@ SCIP_RETCODE checkVarnames(
       }
       else
       {
-         (*maxnamelen) = MAX(*maxnamelen, l);
+         (*maxnamelen) = MAX(*maxnamelen, (unsigned int) l);
       }
  
       SCIP_CALL( SCIPallocBufferArray(scip, &varname, (int) *maxnamelen + 1) );
@@ -2861,7 +2861,7 @@ SCIP_RETCODE checkConsnames(
          return SCIP_OKAY;
       }
 
-      (*maxnamelen) = MAX(*maxnamelen, l);
+      (*maxnamelen) = MAX(*maxnamelen, (unsigned int) l);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &consname, (int) *maxnamelen + 1) );
       (void) SCIPsnprintf(consname, (int)(*maxnamelen) + 1, "%s", SCIPconsGetName(cons) );
@@ -3642,7 +3642,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          for( i = 0; i < nconsvars; ++i )
             vals[i] = (SCIP_Real)weights[i];
 
-         rhss[c] = SCIPgetCapacityKnapsack(scip, cons);
+         rhss[c] = (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons);
 
          /* compute column entries */
          SCIP_CALL( getLinearCoeffs(scip, consname, SCIPgetVarsKnapsack(scip, cons), vals,
@@ -3894,7 +3894,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          if( l >= MPS_MAX_NAMELEN )
             maxnamelen = MPS_MAX_NAMELEN - 1;
          else
-            maxnamelen = MAX(maxnamelen, l);
+            maxnamelen = MAX(maxnamelen, (unsigned int) l);
 
          SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
          (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
@@ -3910,7 +3910,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          printRowType(scip, file, 1.0, 1.0, namestr);
 
          l = strlen(namestr);
-         maxnamelen = MAX(maxnamelen, l);
+         maxnamelen = MAX(maxnamelen, (unsigned int) l);
 
          consnames[nconss + c] = namestr;
 
@@ -3956,7 +3956,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 	    if( l >= MPS_MAX_NAMELEN )
 	       maxnamelen = MPS_MAX_NAMELEN - 1;
 	    else
-	       maxnamelen = MAX(maxnamelen, l);
+	       maxnamelen = MAX(maxnamelen, (unsigned int) l);
 
 	    SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
 	    (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "%s", SCIPvarGetName(var) );

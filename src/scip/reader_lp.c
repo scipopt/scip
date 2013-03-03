@@ -258,7 +258,7 @@ SCIP_Bool getNextLine(
       do
       {
          lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
-         (void)SCIPfgets(lpinput->linebuf, sizeof(lpinput->linebuf), lpinput->file);
+         (void)SCIPfgets(lpinput->linebuf, (int) sizeof(lpinput->linebuf), lpinput->file);
       }
       while( lpinput->linebuf[LP_MAX_LINELEN-2] != '\0' );
 
@@ -270,7 +270,7 @@ SCIP_Bool getNextLine(
    lpinput->linepos = 0;
    lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
 
-   if( SCIPfgets(lpinput->linebuf, sizeof(lpinput->linebuf), lpinput->file) == NULL )
+   if( SCIPfgets(lpinput->linebuf, (int) sizeof(lpinput->linebuf), lpinput->file) == NULL )
    {
       /* clear the line, this is really necessary here! */
       BMSclearMemoryArray(lpinput->linebuf, LP_MAX_LINELEN);

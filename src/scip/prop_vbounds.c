@@ -225,7 +225,7 @@ int inferInfoGetPos(
    INFERINFO             inferinfo           /**< inference information to convert */
    )
 {
-   return inferinfo.val.asbits.pos;
+   return (int) inferinfo.val.asbits.pos;
 }
 
 /** constructs an inference information out of a position of a variable and a boundtype */
@@ -239,9 +239,10 @@ INFERINFO getInferInfo(
 
    assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
    assert((int)boundtype >= 0 && (int)boundtype <= 1); /*lint !e685 !e568q*/
+   assert(pos >= 0);
 
-   inferinfo.val.asbits.pos = pos; /*lint !e732*/
-   inferinfo.val.asbits.boundtype = boundtype; /*lint !e641*/
+   inferinfo.val.asbits.pos = (unsigned int) pos; /*lint !e732*/
+   inferinfo.val.asbits.boundtype = (unsigned int) boundtype; /*lint !e641*/
 
    return inferinfo;
 }

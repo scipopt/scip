@@ -1641,7 +1641,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
       if( set->conf_repropagate && repropdepth < cutoffdepth && repropdepth < tree->pathlen )
       {
          assert(0 <= repropdepth && repropdepth < tree->pathlen);
-         assert(tree->path[repropdepth]->depth == repropdepth);
+         assert((int) tree->path[repropdepth]->depth == repropdepth);
 
          /* if the conflict constraint of smallest repropagation depth was not yet added, insert it now */
          if( repropconflictset != NULL )
@@ -2405,7 +2405,7 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
    assert(SCIPbdchgidxGetPos(&bdchginfo->bdchgidx) >= 0);
 
    /* get the position of the bound change information within the bound change array of the variable */
-   nbdchgs = bdchginfo->pos;
+   nbdchgs = (int) bdchginfo->pos;
    assert(nbdchgs >= 0);
 
    /* if the relaxed bound should be ignored, set the relaxed bound to the bound given by the bdchgidx; that ensures
