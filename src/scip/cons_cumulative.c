@@ -278,7 +278,7 @@ int inferInfoGetData1(
    INFERINFO             inferinfo           /**< inference information to convert */
    )
 {
-   return inferinfo.val.asbits.data1;
+   return (int) inferinfo.val.asbits.data1;
 }
 
 /** returns data field two of the inference information */
@@ -287,7 +287,7 @@ int inferInfoGetData2(
    INFERINFO             inferinfo           /**< inference information to convert */
    )
 {
-   return inferinfo.val.asbits.data2;
+   return (int) inferinfo.val.asbits.data2;
 }
 
 
@@ -302,8 +302,8 @@ INFERINFO getInferInfo(
    INFERINFO inferinfo;
 
    inferinfo.val.asbits.proprule = proprule; /*lint !e641*/
-   inferinfo.val.asbits.data1 = data1; /*lint !e732*/
-   inferinfo.val.asbits.data2 = data2; /*lint !e732*/
+   inferinfo.val.asbits.data1 = (unsigned int) data1; /*lint !e732*/
+   inferinfo.val.asbits.data2 = (unsigned int) data2; /*lint !e732*/
 
    return inferinfo;
 }
@@ -2383,6 +2383,11 @@ SCIP_RETCODE respropCumulativeCondition(
       SCIP_CALL( resolvePropagationEdgeFinding(scip, nvars, vars, durations, hmin, hmax,
             infervar, inferinfo, bdchgidx, explanation) );
       break;
+
+   default:
+      SCIPerrorMessage("invalid inference information %d\n", inferinfo);
+      SCIPABORT();
+      return SCIP_INVALIDDATA;
    }
 
    (*result) = SCIP_SUCCESS;
@@ -5432,7 +5437,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
       ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
 
       /* ignore fixed variables */
-      if( ub - lb < 0.5 )
+      if( ub - lb <= 0 )
          continue;
 
       if( SCIPvarGetNLocksDown(var) == downlocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
