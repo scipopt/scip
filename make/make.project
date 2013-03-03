@@ -109,6 +109,10 @@ LIBBUILDFLAGS	=       $(ARFLAGS)
 #code check and doxygen
 LINT		=	flexelint
 DOXY		=	doxygen
+SPLINT		=       splint
+#SPLINTFLAGS	=	-UNDEBUG -UWITH_READLINE -UROUNDING_FE -UWITH_GMP -UWITH_ZLIB -preproc -formatcode +skip-sys-headers -weak +relaxtypes
+SPLINTFLAGS	=	-UNDEBUG -UWITH_READLINE -UROUNDING_FE -UWITH_GMP -UWITH_ZLIB -which-lib -warn-posix-headers +skip-sys-headers -preproc -formatcode -weak \
+			-redef +export-header +export-local +decl-undef +relaxtypes
 
 #third party testing parameters
 CPLEX		=	cplex
