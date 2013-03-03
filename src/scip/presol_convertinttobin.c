@@ -134,7 +134,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
       SCIP_CONS* newcons;
       SCIP_Real lb;
       SCIP_Real ub;
-      SCIP_Real domainsize;
+      SCIP_Longint domainsize;
       char newbinvarname[SCIP_MAXSTRLEN];
       char newconsname[SCIP_MAXSTRLEN];
       int nnewbinvars;
@@ -157,15 +157,18 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
       /* get variable's bounds */
       lb = SCIPvarGetLbGlobal(vars[v]);
       ub = SCIPvarGetUbGlobal(vars[v]);
+      assert( SCIPisIntegral(scip, lb) );
+      assert( SCIPisIntegral(scip, ub) );
 
-      domainsize = ub - lb;
-      if( SCIPisInfinity(scip, domainsize) )
-	 domainsize = SCIPinfinity(scip);
+      if( SCIPisInfinity(scip, ub - lb) )
+         domainsize = SCIP_LONGINT_MAX;
+      else
+         domainsize = (SCIP_Longint) SCIPceil(scip, ub - lb);
 
       assert(domainsize >= 0);
 
       /* check for allowed domainsize */
-      if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) || SCIPisGT(scip, domainsize, (SCIP_Real)presoldata->maxdomainsize) )
+      if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) || domainsize > presoldata->maxdomainsize )
          continue;
 
       /* check for domainsize is not 2^p - 1 if necessary */
@@ -175,7 +178,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
          SCIP_Longint tmp;
 
 	 assert(domainsize < SCIP_LONGINT_MAX);
-         tmp = (SCIP_Longint)domainsize + 1;
+         tmp = domainsize + 1;
 
          while( tmp%2 == 0 )
             tmp /= 2;
@@ -185,9 +188,10 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
 
       noconsknapsack = FALSE;
 
-      nnewbinvars = (int)SCIPfloor(scip, (log(domainsize)/log(2.0))) + 1;
+      nnewbinvars = (int)SCIPfloor(scip, (log((SCIP_Real) domainsize)/log(2.0))) + 1;
 
-      SCIPdebugMessage("integer variable <%s> [%g,%g], domainsize %g\n, <uplocks = %d, downlocks = %d will be 'binarized' by %d binary variables\n ", SCIPvarGetName(vars[v]), lb, ub, domainsize, SCIPvarGetNLocksUp(vars[v]), SCIPvarGetNLocksDown(vars[v]), nnewbinvars);
+      SCIPdebugMessage("integer variable <%s> [%g,%g], domainsize %"SCIP_LONGINT_FORMAT"\n, <uplocks = %d, downlocks = %d will be 'binarized' by %d binary variables\n ",
+         SCIPvarGetName(vars[v]), lb, ub, domainsize, SCIPvarGetNLocksUp(vars[v]), SCIPvarGetNLocksDown(vars[v]), nnewbinvars);
 
       assert(nnewbinvars > 0);
 
@@ -235,7 +239,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
       {
          int nodd;
          nodd = 0;
-         while( ((SCIP_Longint) domainsize) % 2 == 1 )
+         while( domainsize % 2 == 1 )
          {
             nodd++;
             domainsize = (domainsize - 1) / 2;
@@ -254,7 +258,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
          }
 
          SCIP_CALL( SCIPcreateConsKnapsack(scip, &newcons, newconsname, nnewbinvars - nodd, &newbinvars[nodd],
-	       &weights[nodd], (SCIP_Longint)domainsize,
+	       &weights[nodd], domainsize,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugPrintCons(scip, newcons, NULL);
