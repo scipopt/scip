@@ -35,8 +35,8 @@ extern "C" {
 #define FALSE 0                              /**< boolean value FALSE */
 #endif
 
-#define DIJKSTRA_FARAWAY 0xffffffffffffffffLL   /**< node has distance 'infinity' */
-#define DIJKSTRA_UNUSED  0xffffffff             /**< node is unused */
+#define DIJKSTRA_FARAWAY 0xffffffffu         /**< node has distance 'infinity' */
+#define DIJKSTRA_UNUSED  0xffffffffu         /**< node is unused */
 
 
 /** graph structure - use consecutive storage for arcs */
@@ -48,8 +48,8 @@ struct DIJKSTRA_Graph
    unsigned int          arcs;               /**< consecutive storage for all arcs */
    unsigned int*         weight;             /**< corresponding weights for all arcs */
    unsigned int*         head;               /**< target nodes for all arcs */
-   unsigned long long    minweight;          /**< total minimal weight */
-   unsigned long long    maxweight;          /**< total maximal weight */
+   unsigned int          minweight;          /**< total minimal weight */
+   unsigned int          maxweight;          /**< total maximal weight */
 };
 
 /** graph structure - use consecutive storage for arcs */
