@@ -912,7 +912,6 @@ SCIP_RETCODE checkKnapsack(
          assert( SCIPvarIsIntegral(vars[v]) );
 
          /* the weights should be greater or equal to zero */
-         assert( weights[v] > -0.5 );
          assert( weights[v] >= 0);
 
          if( !varIsUnfixedLocal(vars[v]) )
@@ -922,7 +921,7 @@ SCIP_RETCODE checkKnapsack(
              */
             capa -= weights[v] * SCIPvarGetLbLocal(vars[v]);
          }
-         else if( weights[v] > 0.5 )
+         else if( weights[v] >= 1 )
          {
             /*  variable is unfixed and weight is greater than 0; therefore, subtract upper bound
              *  value multiplied by the weight
@@ -1276,7 +1275,7 @@ SCIP_RETCODE checkSolution(
        */
       if( conshdlrdata->continuous )
       {
-         conshdlrdata->cutoffSolution(scip, sol, conshdlrdata);
+         SCIP_CALL( conshdlrdata->cutoffSolution(scip, sol, conshdlrdata) );
       }
 
       /* since all integer are fixed we cut off the subtree */
