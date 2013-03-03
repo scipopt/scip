@@ -15018,11 +15018,12 @@ SCIP_RETCODE SCIPlpGetSol(
    /* copy primal solution and reduced costs into columns */
    for( c = 0; c < nlpicols; ++c )
    {
+      assert( 0 <= cstat[c] && cstat[c] < 4 );
       lpicols[c]->primsol = primsol[c];
       lpicols[c]->minprimsol = MIN(lpicols[c]->minprimsol, primsol[c]);
       lpicols[c]->maxprimsol = MAX(lpicols[c]->maxprimsol, primsol[c]);
       lpicols[c]->redcost = redcost[c];
-      lpicols[c]->basisstatus = cstat[c]; /*lint !e732*/
+      lpicols[c]->basisstatus = (unsigned int) cstat[c];
       lpicols[c]->validredcostlp = lpcount;
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
@@ -15061,9 +15062,10 @@ SCIP_RETCODE SCIPlpGetSol(
    /* copy dual solution and activities into rows */
    for( r = 0; r < nlpirows; ++r )
    {
+      assert( 0 <= rstat[r] && rstat[r] < 4 );
       lpirows[r]->dualsol = dualsol[r];
       lpirows[r]->activity = activity[r] + lpirows[r]->constant;
-      lpirows[r]->basisstatus = rstat[r]; /*lint !e732*/
+      lpirows[r]->basisstatus = (unsigned int) rstat[r]; /*lint !e732*/
       lpirows[r]->validactivitylp = lpcount;
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
