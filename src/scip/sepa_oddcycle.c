@@ -842,9 +842,9 @@ SCIP_RETCODE liftOddCycleCut(
          if( coef[bestcand] > 0 )
          {
             if( bestcand >= (int)nbinvars )
-               negated = bestcand - nbinvars;
+               negated = (unsigned int) bestcand - nbinvars;
             else
-               negated = bestcand + nbinvars;
+               negated = (unsigned int) bestcand + nbinvars;
             assert(negated < 2*nbinvars);
 
             candList[negated] = FALSE;
@@ -1499,7 +1499,7 @@ SCIP_RETCODE addNextLevelBinImpls(
       /* calculate arc weight and add arc, if the neighbor node is on the same or a neighbor level */
       if( inlevelgraph[v] && (graph->level[v] == level+1 || graph->level[v] == level || graph->level[v] == level-1))
       {
-         SCIP_Real tmp;
+         int tmp;
 
          /* set weight of arc (x,y) to 1 - x* -y* */
          if( varfixing )
@@ -1507,13 +1507,15 @@ SCIP_RETCODE addNextLevelBinImpls(
             /* x = 1 -> y <= 0 */
             if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
             {
-               tmp = SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - vals[k]));
+               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - vals[k]));
+               assert( tmp >= 0 );
                weight = (unsigned int) MAX(tmp, sepadata->maxreference);
             }
             /* x = 1 -> y >= 1 <-> neg(y) <= 0 */
             else
             {
-               tmp = SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - (1-vals[k])));
+               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - (1-vals[k])));
+               assert( tmp >= 0 );
                weight = (unsigned int) MAX(tmp, sepadata->maxreference);
             }
          }
@@ -1522,13 +1524,15 @@ SCIP_RETCODE addNextLevelBinImpls(
             /* x = 0 <-> neg(x) = 1 -> y <= 0 */
             if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
             {
-               tmp = SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1 - vals[varsidx]) - vals[k]));
+               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1 - vals[varsidx]) - vals[k]));
+               assert( tmp >= 0 );
                weight = (unsigned int) MAX(tmp, sepadata->maxreference);
             }
             /* x = 0 <-> neg(x) = 1 -> y >= 1 <-> neg(y) <= 0 */
             else
             {
-               tmp = SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1 - vals[varsidx]) - (1-vals[k])));
+               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1 - vals[varsidx]) - (1-vals[k])));
+               assert( tmp >= 0 );
                weight = (unsigned int) MAX(tmp, sepadata->maxreference);
             }
          }
@@ -1668,7 +1672,7 @@ SCIP_RETCODE addNextLevelCliques(
          /* calculate arc weight and add arc, if the neighbor node is on the same or a neighbor level */
          if( inlevelgraph[v] && (graph->level[v] == level+1 || graph->level[v] == level || graph->level[v] == level-1))
          {
-            SCIP_Real tmp;
+            int tmp;
 
             /* set weight of arc (x,y) to 1 - x* -y* */
             if( varfixing )
@@ -1676,13 +1680,15 @@ SCIP_RETCODE addNextLevelCliques(
                /* x = 1 -> y <= 0 */
                if( cliquevals[k] )
                {
-                  tmp = SCIPfeasCeil(scip, sepadata->scale * (1 - vals[varsidx] - vals[l]));
+                  tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - vals[varsidx] - vals[l]));
+                  assert( tmp >= 0 );
                   weight = (unsigned int) MAX(tmp, sepadata->maxreference);
                }
                /* x = 1 -> y >= 1 <-> neg(y) <= 0 */
                else
                {
-                  tmp = SCIPfeasCeil(scip, sepadata->scale * (1 - vals[varsidx] - (1-vals[l])));
+                  tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - vals[varsidx] - (1-vals[l])));
+                  assert( tmp >= 0 );
                   weight = (unsigned int) MAX(tmp, sepadata->maxreference);
                }
             }
@@ -1691,13 +1697,15 @@ SCIP_RETCODE addNextLevelCliques(
                /* x = 0 <-> neg(x) = 1 -> y <= 0 */
                if( !cliquevals[k] )
                {
-                  tmp = SCIPfeasCeil(scip, sepadata->scale * (1 - (1 - vals[varsidx]) - vals[l]));
+                  tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - (1 - vals[varsidx]) - vals[l]));
+                  assert( tmp >= 0 );
                   weight = (unsigned int) MAX(tmp, sepadata->maxreference);
                }
                /* x = 0 <-> neg(x) = 1 -> y >= 1 <-> neg(y) <= 0 */
                else
                {
-                  tmp = SCIPfeasCeil(scip, sepadata->scale * (1 - (1 - vals[varsidx]) - (1-vals[l])));
+                  tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - (1 - vals[varsidx]) - (1-vals[l])));
+                  assert( tmp >= 0 );
                   weight = (unsigned int) MAX(tmp, sepadata->maxreference);
                }
             }
@@ -1930,7 +1938,7 @@ SCIP_RETCODE insertSortedRootNeighbors(
    /* insert sorted neighbors until level size limit is reached (or all neighbors are inserted) */
    for( j = 0; j < nneighbors && (*nnewlevel) <= sepadata->maxlevelsize; ++j )
    {
-      SCIP_Real tmp;
+      int tmp;
 
       v = (unsigned int) neighbors[j];
 
@@ -1950,13 +1958,15 @@ SCIP_RETCODE insertSortedRootNeighbors(
       graph->targetForward[graph->lastF] = (int) v;
       if( varfixing )
       {
-         tmp = SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - neighvals[j]));
+         tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - neighvals[j]));
+         assert( tmp >= 0 );
          graph->weightForward[graph->lastF] = (unsigned int) MAX(tmp, sepadata->maxreference);
       }
       else
       {
          assert(varfixing == FALSE);
-         tmp = SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1.0-vals[varsidx]) - neighvals[j]));
+         tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1.0-vals[varsidx]) - neighvals[j]));
+         assert( tmp >= 0 );
          graph->weightForward[graph->lastF] = (unsigned int) MAX(tmp, sepadata->maxreference);
       }
       ++(graph->lastF);
@@ -2606,7 +2616,7 @@ SCIP_RETCODE separateHeur(
     * @todo later: filtering of edges which were already added
     */
    /* graph.m = nbinvars*(2*nbinvars-1); */ /* = 2*nbinvars*(2*nbinvars-1)/2 */
-   graph.m = INT_MAX;
+   graph.m = UINT_MAX;
 
    /* set sizes for graph memory storage */
    graph.sizeForward = 100*graph.n;
@@ -3071,7 +3081,7 @@ SCIP_RETCODE addGLSBinImpls(
    /* add all implications to the graph */
    for( m = 0; m < nbinimpls; ++m )
    {
-      SCIP_Real tmp;
+      int tmp;
 
       assert( implvars != NULL && impltypes != NULL && implbounds != NULL ); /* for lint */
       assert(SCIPvarGetType(implvars[m]) == SCIP_VARTYPE_BINARY);
@@ -3093,8 +3103,8 @@ SCIP_RETCODE addGLSBinImpls(
          {
             assert(implbounds[m] == 0.0);
 
-            tmp = SCIPfeasCeil(scip, sepadata->scale * ( 1 - vals[varsidx] - vals[neighindex] ));
-            graph->weight[*narcs] = (unsigned int) MAX(0.0, tmp);
+            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * ( 1 - vals[varsidx] - vals[neighindex] ));
+            graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
             graph->head[*narcs] = neighindex + 2 * nbinvars;
          }
          /* implication to y=1 (I->IV) */
@@ -3102,8 +3112,8 @@ SCIP_RETCODE addGLSBinImpls(
          {
             assert(impltypes[m] == SCIP_BOUNDTYPE_LOWER && implbounds[m] == 1.0 );
 
-            tmp = SCIPfeasCeil(scip, sepadata->scale * ( 1 - vals[varsidx] - (1 - vals[neighindex]) ));
-            graph->weight[*narcs] = (unsigned int) MAX(0.0, tmp);
+            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * ( 1 - vals[varsidx] - (1 - vals[neighindex]) ));
+            graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
             graph->head[*narcs] = neighindex + 3 * nbinvars;
          }
       }
@@ -3114,8 +3124,8 @@ SCIP_RETCODE addGLSBinImpls(
          {
             assert(implbounds[m] == 0.0);
 
-            tmp = SCIPfeasCeil(scip, sepadata->scale * ( 1 - (1 - vals[varsidx]) - vals[neighindex] ));
-            graph->weight[*narcs] = (unsigned int) MAX(0.0, tmp);
+            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * ( 1 - (1 - vals[varsidx]) - vals[neighindex] ));
+            graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
             graph->head[*narcs] = neighindex + 2 * nbinvars;
          }
          /* implication to y=1 (II->IV) */
@@ -3123,8 +3133,8 @@ SCIP_RETCODE addGLSBinImpls(
          {
             assert(impltypes[m] == SCIP_BOUNDTYPE_LOWER && implbounds[m] == 1.0 );
 
-            tmp = SCIPfeasCeil(scip, sepadata->scale * (1 - (1 - vals[varsidx]) - (1 - vals[neighindex]) ));
-            graph->weight[*narcs] = (unsigned int) MAX(0.0, tmp);
+            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - (1 - vals[varsidx]) - (1 - vals[neighindex]) ));
+            graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
             graph->head[*narcs] = neighindex + 3 * nbinvars;
          }
       }
@@ -3215,7 +3225,7 @@ SCIP_RETCODE addGLSCliques(
       /* add arcs for all fractional variables in clique */
       for( m = 0; m < ncliquevars; ++m )
       {
-         SCIP_Real tmp;
+         int tmp;
 
          assert( cliquevars != NULL && cliquevals != NULL ); /* for lint */
          neighbor = cliquevars[m];
@@ -3238,15 +3248,15 @@ SCIP_RETCODE addGLSCliques(
             /* implication to y=0 (I->III) */
             if( cliquevals[m] )
             {
-               tmp = SCIPfeasCeil(scip, sepadata->scale * (1 - vals[varsidx] - vals[neighindex] ));
-               graph->weight[*narcs] = (unsigned int) MAX(0.0, tmp);
+               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - vals[varsidx] - vals[neighindex] ));
+               graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
                graph->head[*narcs] = neighindex + 2 * nbinvars;
             }
             /* implication to y=1 (I->IV) (cliquevals[m] == FALSE) */
             else
             {
-               tmp = SCIPfeasCeil(scip, sepadata->scale * (1 - vals[varsidx] - (1 - vals[neighindex]) ));
-               graph->weight[*narcs] = (unsigned int) MAX(0.0, tmp);
+               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - vals[varsidx] - (1 - vals[neighindex]) ));
+               graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
                graph->head[*narcs] = neighindex + 3 * nbinvars;
             }
          }
@@ -3256,15 +3266,15 @@ SCIP_RETCODE addGLSCliques(
             /* implication to y=0 (II->III) */
             if( cliquevals[m] )
             {
-               tmp = SCIPfeasCeil(scip, sepadata->scale * (1 - (1 - vals[varsidx]) - vals[neighindex] ));
-               graph->weight[*narcs] = (unsigned int) MAX(0.0, tmp);
+               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - (1 - vals[varsidx]) - vals[neighindex] ));
+               graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
                graph->head[*narcs] = neighindex + 2 * nbinvars;
             }
             /* implication to y=1 (II->IV) (cliquevals[m] == FALSE) */
             else
             {
-               tmp = SCIPfeasCeil(scip, sepadata->scale * (1 - (1 - vals[varsidx]) - (1-vals[neighindex]) )) ;
-               graph->weight[*narcs] = (unsigned int) MAX(0.0, tmp);
+               tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1 - (1 - vals[varsidx]) - (1-vals[neighindex]) )) ;
+               graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
                graph->head[*narcs] = neighindex + 3 * nbinvars;
             }
          }
@@ -3482,7 +3492,7 @@ SCIP_RETCODE separateGLS(
    /* the implication graph is redundant and therefore more implications and clique arcs may occur than should be possible
     * @todo later: filtering of edges which were already added,  maxarcs should be graph.arcs rather than INT_MAX;
     */
-   maxarcs = INT_MAX;
+   maxarcs = UINT_MAX;
 
    /* allocate memory for Dijkstra graph arrays */
    arraysize = 100 * graph.nodes;
