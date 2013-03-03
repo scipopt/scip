@@ -784,7 +784,7 @@ else
 endif
 
 .PHONY: splint
-splint:		$(SCIPLIBSRC) $(LPILIBSRC) $(SRCDIR)/scip/*.h
+splint:		$(SCIPLIBSRC) $(LPILIBSRC)
 		-rm -f splint.out
 ifeq ($(FILES),)
 		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS)  $(filter %.c %.h,$^) &>> splint.out;'
