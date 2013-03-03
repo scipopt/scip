@@ -600,7 +600,7 @@ SCIP_RETCODE execRelpscost(
          if( propagate )
          {
             /* apply strong branching */
-            SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, branchcands[c], branchcandssol[c], lpobjval, inititer,
+            SCIP_CALL( SCIPgetVarStrongbranchWithPropagation(scip, branchcands[c], branchcandssol[c], lpobjval, inititer,
                   branchruledata->maxproprounds, &down, &up, &downvalid, &upvalid, &downinf, &upinf,
                   &downconflict, &upconflict, &lperror, newlbs, newubs) );
          }

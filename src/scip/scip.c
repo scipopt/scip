@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_DEBUG
 /**@file   scip.c
  * @brief  SCIP callable library
  * @author Tobias Achterberg
@@ -15040,7 +15040,7 @@ SCIP_RETCODE SCIPendStrongbranch(
    SCIP_CALL( checkStage(scip, "SCIPendStrongbranch", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* depending on whether the strong branching mode was started with propagation enabled or not, we end the strong
-    * branching probing mode or the LP strong branching mode*/
+    * branching probing mode or the LP strong branching mode */
    if( SCIPtreeProbing(scip->tree) )
    {
       SCIP_NODE* node;
@@ -15086,6 +15086,7 @@ SCIP_RETCODE SCIPendStrongbranch(
 
       SCIP_CALL( SCIPendProbing(scip) );
 
+      /* apply the collected boun changes */
       for( i = 0; i < nbnds; ++i )
       {
          if( boundtypes[i] == SCIP_BOUNDTYPE_LOWER )
@@ -15271,7 +15272,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    return SCIP_OKAY;
 }
 
-/** gets strong branching information on column variable with fractional value
+/** gets strong branching information with previous propagation on column variable
  *
  *  Before calling this method, the strong branching mode must have been activated by calling SCIPstartStrongbranch();
  *  after strong branching was done for all candidate variables, the strong branching mode must be ended by
@@ -15279,8 +15280,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
  *  enabled in the SCIPstartStrongbranch() call.
  *
  *  Before solving the strong branching LP, domain propagation can be performed. The number of propagation rounds
- *  can be specified by the parameter @p maxproprounds; if it is not set to zero, propagation has to be enabled
- *  in the call of SCIPstartStrongbranch().
+ *  can be specified by the parameter @p maxproprounds.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -15289,7 +15289,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
+SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get strong branching values for */
    SCIP_Real             solval,             /**< value of the variable in the current LP solution */
@@ -15336,7 +15336,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    assert(newubs != NULL);
    assert(SCIPinProbing(scip));
 
-   SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchWithPropagationFrac", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchWithPropagation", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether propagation should be performed */
    propagate = (maxproprounds != 0);
@@ -15390,8 +15390,11 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    oldnconflicts = SCIPconflictGetNConflicts(scip->conflict);
    oldniters = scip->stat->ndivinglpiterations;
 
-   newlb = SCIPfeasFloor(scip, solval + 1);
-   newub = SCIPfeasCeil(scip, solval - 1);
+   newlb = SCIPfeasFloor(scip, solval + 1.0);
+   newub = SCIPfeasCeil(scip, solval - 1.0);
+
+   SCIPdebugMessage("strong branching on var <%s>: solval=%g, lb=%g, ub=%g\n", SCIPvarGetName(var), solval,
+      SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
    /* the up branch is infeasible due to the branching bound change; since this means that solval is not within the
     * bounds, this should only happen if previous strong branching calls on other variables detected bound changes which
@@ -15448,13 +15451,12 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
    /* start timing */
    SCIPclockStart(scip->stat->strongbranchtime, scip->set);
 
-   SCIPdebugMessage("strong branching on var <%s>: solval=%g, lb=%g, ub=%g\n", SCIPvarGetName(var), solval,
-      SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-
    /* We now do strong branching by creating the two potential child nodes as probing nodes and solving them one after
     * the other. We will stop when the first child is detected infeasible, saving the effort we would need for the
     * second child. Since empirically, the up child tends to be infeasible more often, we do strongbranching first on
     * the up branch.
+    *
+    * @todo: decide the branch to look at first based on the cutoffs in previous calls
     */
 
    /* create a new probing node for the up child and apply the new lower bound for the variable */
@@ -15511,6 +15513,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
       case SCIP_LPSOLSTAT_TIMELIMIT:
       {
          /* use LP value as estimate */
+         /* @todo: set valid pointer according to dual feasibility of the LP solution */
          SCIP_LPI* lpi;
          SCIP_Real objval;
          SCIP_Real looseobjval;
@@ -15612,6 +15615,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
       }
    }
 
+   /* if propagation did not already detect infeasibility, solve the probing LP */
    if( !cutoff )
    {
       SCIP_CALL( SCIPsolveProbingLP(scip, itlim, lperror) );
@@ -15639,6 +15643,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
       case SCIP_LPSOLSTAT_TIMELIMIT:
       {
          /* use LP value as estimate */
+         /* @todo: set valid pointer according to dual feasibility of the LP solution */
          SCIP_LPI* lpi;
          SCIP_Real objval;
          SCIP_Real looseobjval;

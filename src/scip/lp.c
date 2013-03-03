@@ -15128,7 +15128,7 @@ SCIP_RETCODE SCIPlpGetSol(
       *dualfeasible = TRUE;
 
    /* check if the values are already calculated */
-   if( lp->validsollp == stat->lpcount)
+   if( lp->validsollp == stat->lpcount )
       return SCIP_OKAY;
    lp->validsollp = stat->lpcount;
 

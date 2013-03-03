@@ -237,7 +237,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
             if( propagate )
             {
                /* apply strong branching */
-               SCIP_CALL( SCIPgetVarStrongbranchWithPropagationFrac(scip, lpcands[c], lpcandssol[c], lpobjval, INT_MAX,
+               SCIP_CALL( SCIPgetVarStrongbranchWithPropagation(scip, lpcands[c], lpcandssol[c], lpobjval, INT_MAX,
                      branchruledata->maxproprounds, &down, &up, &downvalid, &upvalid, &downinf, &upinf,
                      &downconflict, &upconflict, &lperror, newlbs, newubs) );
 

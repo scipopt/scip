@@ -6787,7 +6787,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
                                               *   solving process should be stopped (e.g., due to a time limit) */
    );
 
-/** gets strong branching information on column variable with fractional value
+/** gets strong branching information with previous propagation on column variable
  *
  *  Before calling this method, the strong branching mode must have been activated by calling SCIPstartStrongbranch();
  *  after strong branching was done for all candidate variables, the strong branching mode must be ended by
@@ -6795,8 +6795,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
  *  enabled in the SCIPstartStrongbranch() call.
  *
  *  Before solving the strong branching LP, domain propagation can be performed. The number of propagation rounds
- *  can be specified by the parameter @p maxproprounds; if it is not set to zero, propagation has to be enabled
- *  in the call of SCIPstartStrongbranch().
+ *  can be specified by the parameter @p maxproprounds.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6806,7 +6805,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
-SCIP_RETCODE SCIPgetVarStrongbranchWithPropagationFrac(
+SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get strong branching values for */
    SCIP_Real             solval,             /**< value of the variable in the current LP solution */
