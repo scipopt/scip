@@ -4572,7 +4572,10 @@ int SCIPsnprintf(
    ...                                       /**< further parameters */
    );
 
-/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str */
+/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
 EXTERN
 SCIP_Bool SCIPstrToIntValue(
    const char*           str,                /**< string to search */
@@ -4580,7 +4583,10 @@ SCIP_Bool SCIPstrToIntValue(
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 
-/** extract the next token as a double value if it is one; in case a value is parsed the endptr is set to @p str */
+/** extract the next token as a double value if it is one; in case a value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
 EXTERN
 SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
