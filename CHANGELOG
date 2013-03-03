@@ -92,6 +92,7 @@ performance improvements:
 
 features:
 - added delayed cutpool which only get separated if the sepastore is empty after a separation round
+- added possibility to run clang compiler
 
 interface:
 - fixed spelling in the method name SCIPgmlWriteClosing()
