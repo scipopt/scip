@@ -3099,7 +3099,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr);
+   assert(conshdlrdata->eventhdlr != NULL);
 
    /* add nlrow representation to NLP, if NLP has been enabled */
    if( SCIPisNLPConstructed(scip) )
@@ -3154,7 +3154,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr);
+   assert(conshdlrdata->eventhdlr != NULL);
 
    if( conshdlrdata->newsoleventfilterpos >= 0 )
    {

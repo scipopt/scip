@@ -2231,7 +2231,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
       if( set->conf_repropagate && repropdepth < cutoffdepth && repropdepth < tree->pathlen )
       {
          assert(0 <= repropdepth && repropdepth < tree->pathlen);
-         assert(tree->path[repropdepth]->depth == repropdepth);
+         assert((int) tree->path[repropdepth]->depth == repropdepth);
 
          /* if the conflict constraint of smallest repropagation depth was not yet added, insert it now */
          if( repropconflictset != NULL )
@@ -3003,7 +3003,7 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
    assert(SCIPbdchgidxGetPos(&bdchginfo->bdchgidx) >= 0);
 
    /* get the position of the bound change information within the bound change array of the variable */
-   nbdchgs = bdchginfo->pos;
+   nbdchgs = (int) bdchginfo->pos;
    assert(nbdchgs >= 0);
 
    /* if the relaxed bound should be ignored, set the relaxed bound to the bound given by the bdchgidx; that ensures
@@ -5999,8 +5999,55 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
+   SCIP_LPSOLVALS storedsolvals;
+   SCIP_COLSOLVALS* storedcolsolvals;
+   SCIP_ROWSOLVALS* storedrowsolvals;
+   int c;
+   int r;
+
    /* LP conflict analysis is only valid, if all variables are known */
-   assert(SCIPprobAllColsInLP(prob, set, lp));
+   assert( SCIPprobAllColsInLP(prob, set, lp) );
+   assert( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT );
+
+   /* save status */
+   storedsolvals.lpsolstat = lp->lpsolstat;
+   storedsolvals.lpobjval = lp->lpobjval;
+   storedsolvals.primalfeasible = lp->primalfeasible;
+   storedsolvals.dualfeasible = lp->dualfeasible;
+   storedsolvals.solisbasic = lp->solisbasic;
+   storedsolvals.lpissolved = lp->solved;
+
+   /* store solution values */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &storedcolsolvals, lp->ncols) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &storedrowsolvals, lp->nrows) );
+   for (c = 0; c < lp->ncols; ++c)
+   {
+      SCIP_COL* col;
+
+      col = lp->cols[c];
+      assert( col != NULL );
+
+      storedcolsolvals[c].primsol = col->primsol;
+      storedcolsolvals[c].redcost = col->redcost;
+      storedcolsolvals[c].basisstatus = col->basisstatus; /*lint !e641*/
+   }
+   for (r = 0; r < lp->nrows; ++r)
+   {
+      SCIP_ROW* row;
+
+      row = lp->rows[r];
+      assert( row != NULL );
+
+      if ( lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE )
+         storedrowsolvals[r].dualsol = row->dualfarkas;
+      else
+      {
+         assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT );
+         storedrowsolvals[r].dualsol = row->dualsol;
+      }
+      storedrowsolvals[r].activity = row->activity;
+      storedrowsolvals[r].basisstatus = row->basisstatus; /*lint !e641*/
+   }
 
    /* check, if the LP was infeasible or bound exceeding */
    if( SCIPlpiIsPrimalInfeasible(SCIPlpGetLPI(lp)) )
@@ -6011,6 +6058,51 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    {
       SCIP_CALL( conflictAnalyzeBoundexceedingLP(conflict, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, success) );
    }
+
+   /* possibly restore solution values */
+   if ( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED )
+   {
+      if ( ! lp->flushed )
+         SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+
+      /* restore status */
+      lp->lpsolstat = storedsolvals.lpsolstat;
+      lp->lpobjval = storedsolvals.lpobjval;
+      lp->primalfeasible = storedsolvals.primalfeasible;
+      lp->dualfeasible = storedsolvals.dualfeasible;
+      lp->solisbasic = storedsolvals.solisbasic;
+      lp->solved = storedsolvals.lpissolved;
+
+      for (c = 0; c < lp->ncols; ++c)
+      {
+         SCIP_COL* col;
+
+         col = lp->cols[c];
+         assert( col != NULL );
+         col->primsol = storedcolsolvals[c].primsol;
+         col->redcost = storedcolsolvals[c].redcost;
+         col->basisstatus = storedcolsolvals[c].basisstatus; /*lint !e641*/
+      }
+      for (r = 0; r < lp->nrows; ++r)
+      {
+         SCIP_ROW* row;
+
+         row = lp->rows[r];
+         assert( row != NULL );
+
+         if ( lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE )
+            row->dualfarkas = storedrowsolvals[r].dualsol;
+         else
+         {
+            assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT );
+            row->dualsol = storedrowsolvals[r].dualsol;
+         }
+         row->activity = storedrowsolvals[r].activity;
+         row->basisstatus = storedrowsolvals[r].basisstatus; /*lint !e641*/
+      }
+   }
+   SCIPsetFreeBufferArray(set, &storedrowsolvals);
+   SCIPsetFreeBufferArray(set, &storedcolsolvals);
 
    return SCIP_OKAY;
 }

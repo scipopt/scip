@@ -27,6 +27,7 @@
 
 #include "scip/def.h"
 #include "scip/type_misc.h"
+#include "scip/type_paramset.h"
 
 #ifdef __cplusplus
 extern "C" {

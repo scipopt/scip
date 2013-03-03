@@ -91,7 +91,7 @@ SCIP_RETCODE readBounds(
       int nread;
 
       /* get next line */
-      if( SCIPfgets(buffer, sizeof(buffer), file) == NULL )
+      if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
          break;
       lineno++;
 

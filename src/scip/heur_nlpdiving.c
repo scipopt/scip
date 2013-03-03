@@ -1596,7 +1596,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    assert(heurdata != NULL);
 
    /* do not call heuristic, if it barely succeded */
-   if( (SCIPheurGetNSolsFound(heur)+1) / (SCIP_Real)(SCIPheurGetNCalls(heur)+1) < heurdata->minsuccquot )
+   if( (SCIPheurGetNSolsFound(heur) + 1.0) / (SCIP_Real)(SCIPheurGetNCalls(heur) + 1.0) < heurdata->minsuccquot )
       return SCIP_OKAY;
 
    *result = SCIP_DELAYED;
@@ -1628,7 +1628,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
    /* allow at least a bit more than the so far average number of NLP iterations per dive */
    avgnnlpiterations = (int)(heurdata->nnlpiterations / MAX(ncalls, 1.0));
-   maxnnlpiterations = (int)MAX(maxnnlpiterations, heurdata->nnlpiterations + 1.2*avgnnlpiterations);
+   maxnnlpiterations = (int)MAX((SCIP_Real) maxnnlpiterations, (SCIP_Real) heurdata->nnlpiterations + 1.2*avgnnlpiterations);
 
    /* don't try to dive, if there are no unfixed discrete variables */
    SCIP_CALL( SCIPgetPseudoBranchCands(scip, NULL, &npseudocands, NULL) );

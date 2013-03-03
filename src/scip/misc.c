@@ -7167,7 +7167,10 @@ int SCIPsnprintf(
    return n;
 }
 
-/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str */
+/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
 SCIP_Bool SCIPstrToIntValue(
    const char*           str,                /**< string to search */
    int*                  value,              /**< pointer to store the parsed value */
@@ -7177,6 +7180,9 @@ SCIP_Bool SCIPstrToIntValue(
    assert(str != NULL);
    assert(value != NULL);
    assert(endptr != NULL);
+
+   /* init errno to detect possible errors */
+   errno = 0;
 
    *value = strtol(str, endptr, 10);
 
@@ -7192,7 +7198,10 @@ SCIP_Bool SCIPstrToIntValue(
    return FALSE;
 }
 
-/** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to @p str */
+/** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
 SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
@@ -7202,6 +7211,9 @@ SCIP_Bool SCIPstrToRealValue(
    assert(str != NULL);
    assert(value != NULL);
    assert(endptr != NULL);
+
+   /* init errno to detect possible errors */
+   errno = 0;
 
    *value = strtod(str, endptr);
 

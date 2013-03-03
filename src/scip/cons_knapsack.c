@@ -1132,7 +1132,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          SCIP_Longint i;
 
          /* if all items would fit we had handled this case before */
-         assert(nmyitems > capacity);
+         assert((SCIP_Longint) nmyitems > capacity);
 
          /* take the first best items into the solution */
          for( i = capacity - 1; i >= 0; --i )
@@ -1151,7 +1151,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
             assert(nonsolitems != NULL);
 
             /* the rest are not in the solution */
-            for( j = nmyitems - 1; j >= capacity; --j )
+            for( j = nmyitems - 1; (SCIP_Longint) j >= capacity; --j )
             {
                nonsolitems[*nnonsolitems] = myitems[j];
                ++(*nnonsolitems);
@@ -1219,7 +1219,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nmyitems) );
    for( j = nmyitems - 1; j >= 0; --j )
-      tempsort[j] = myprofits[j]/myweights[j];
+      tempsort[j] = myprofits[j]/((SCIP_Real) myweights[j]);
 
    SCIPsortDownRealLongRealInt(tempsort, myweights, myprofits, myitems, nmyitems);
 
@@ -1366,7 +1366,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          if( d < allcurrminweight[j] )
          {
             /* we cannot have exceeded our capacity */
-            assert(d >= -minweight);
+            assert((SCIP_Longint) d >= -minweight);
             break;
          }
          /* collect solution items, first condition means that no next item can fit anymore, but this does */
@@ -1470,7 +1470,7 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
    for( j = nitems - 1; j >= 0; --j )
    {
-      tempsort[j] = profits[j]/weights[j];
+      tempsort[j] = profits[j]/((SCIP_Real) weights[j]);
    }
    SCIPsortDownRealLongRealInt(tempsort, weights, profits, items, nitems);
 
@@ -5267,9 +5267,9 @@ SCIP_RETCODE makeCoverMinimal(
       for( j = 0; j < *ncovervars; j++ )
       {
          SCIP_CALL( SCIPallocBlockMemory(scip, &(sortkeypairs[j])) ); /*lint !e866 */
-         
-         sortkeypairs[j]->key1 = (solvals[covervars[j]] - 1.0) / weights[covervars[j]]; 
-         sortkeypairs[j]->key2 = (SCIP_Real) (-weights[covervars[j]]); 
+
+         sortkeypairs[j]->key1 = (solvals[covervars[j]] - 1.0) / ((SCIP_Real) weights[covervars[j]]);
+         sortkeypairs[j]->key2 = (SCIP_Real) (-weights[covervars[j]]);
       }
    }
    SCIPsortPtrInt((void**)sortkeypairs, covervars, compSortkeypairs, *ncovervars);
@@ -5410,7 +5410,7 @@ SCIP_RETCODE getFeasibleSet(
    {
       for( j = 0; j < *ncovervars; j++ )
       {
-         sortkeys[j] = (solvals[covervars[j]] - 1.0) / weights[covervars[j]];
+         sortkeys[j] = (solvals[covervars[j]] - 1.0) / ((SCIP_Real) weights[covervars[j]]);
          assert(SCIPisFeasLE(scip, sortkeys[j], 0.0));
       }
    }

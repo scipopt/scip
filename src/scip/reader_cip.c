@@ -195,20 +195,20 @@ SCIP_RETCODE getStatistics(
 
       if( name == NULL )
       {
-         SCIPwarningMessage(scip, "did not find problem name (line: %d)\n", cipinput->linenumber);
+         SCIPwarningMessage(scip, "did not find problem name (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
          return SCIP_OKAY;  /* no error, might work with empty problem name */
       }
 
       /* skip ':' */
       ++name;
 
-      /* remove tabs new line form string */
+      /* make sure that we terminate the string at comments ('#') or newline ('\r', '\n')*/
       if( NULL != (s = strpbrk(name, "#\r\n")) )
          *s = '\0';
 
-      /* remove white space in front of the name */
-      while(isspace((unsigned char)*name))
-         name++;
+      /* remove white space (tabs, ' ') in front of the name */
+      while( isspace((unsigned char)* name) )
+         ++name;
 
       /* set problem name */
       SCIP_CALL( SCIPsetProbName(scip, name) );
@@ -258,7 +258,7 @@ SCIP_RETCODE getObjective(
 
       if( name == NULL )
       {
-         SCIPwarningMessage(scip, "did not find objective sense (line: %d)\n", cipinput->linenumber);
+         SCIPwarningMessage(scip, "did not find objective sense (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
          return SCIP_OKAY; /* no error - might work with default */
       }
 
@@ -266,8 +266,8 @@ SCIP_RETCODE getObjective(
       ++name;
 
       /* remove white space in front of the name */
-      while(isspace((unsigned char)*name))
-         name++;
+      while( isspace((unsigned char)* name) )
+         ++name;
 
       if( strncmp(name, "minimize", 3) == 0 )
          objsense = SCIP_OBJSENSE_MINIMIZE;
@@ -275,7 +275,7 @@ SCIP_RETCODE getObjective(
          objsense = SCIP_OBJSENSE_MAXIMIZE;
       else
       {
-         SCIPwarningMessage(scip, "unknown objective sense '%s' (line: %d)\n", name, cipinput->linenumber);
+         SCIPwarningMessage(scip, "unknown objective sense '%s' (line: %d):\n%s\n", name, cipinput->linenumber, cipinput->strbuf);
          return SCIP_OKAY; /* no error - might work with default */
       }
 

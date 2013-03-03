@@ -312,7 +312,7 @@ SCIP_RETCODE sortVariables(
 	 }
       }
       else
-         scores[i] = INT_MIN;
+         scores[i] = -SCIPinfinity(scip);
    }
 
    SCIPsortDownRealPtr(scores, (void**) sortedvars, nsortedvars);

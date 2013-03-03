@@ -10718,7 +10718,7 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
       break;
 
    case SCIP_STAGE_SOLVING:
-      SCIPupdateNodeLowerbound(scip, SCIPtreeGetCurrentNode(scip->tree), SCIPprobInternObjval(scip->transprob, scip->set, newbound));
+      SCIP_CALL( SCIPupdateNodeLowerbound(scip, SCIPtreeGetCurrentNode(scip->tree), SCIPprobInternObjval(scip->transprob, scip->set, newbound)) );
       break;
 
    default:
@@ -10761,7 +10761,7 @@ SCIP_RETCODE SCIPupdateLocalLowerbound(
       break;
 
    case SCIP_STAGE_SOLVING:
-      SCIPupdateNodeLowerbound(scip, SCIPtreeGetCurrentNode(scip->tree), newbound);
+      SCIP_CALL( SCIPupdateNodeLowerbound(scip, SCIPtreeGetCurrentNode(scip->tree), newbound) );
       break;
 
    default:
@@ -10790,7 +10790,7 @@ SCIP_RETCODE SCIPupdateNodeDualbound(
 {
    SCIP_CALL( checkStage(scip, "SCIPupdateNodeDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPupdateNodeLowerbound(scip, node, SCIPprobInternObjval(scip->transprob, scip->set, newbound));
+   SCIP_CALL( SCIPupdateNodeLowerbound(scip, node, SCIPprobInternObjval(scip->transprob, scip->set, newbound)) );
 
    return SCIP_OKAY;
 }
@@ -12386,7 +12386,7 @@ SCIP_RETCODE SCIPpresolve(
    if( scip->set->stage == SCIP_STAGE_SOLVED )
    {
       /* display most relevant statistics */
-      displayRelevantStats(scip);
+      SCIP_CALL( displayRelevantStats(scip) );
    }
 
    return SCIP_OKAY;
@@ -12539,7 +12539,7 @@ SCIP_RETCODE SCIPsolve(
    if( !statsprinted )
    {
       /* display most relevant statistics */
-      displayRelevantStats(scip);
+      SCIP_CALL( displayRelevantStats(scip) );
    }
 
    return SCIP_OKAY;
@@ -17424,7 +17424,7 @@ SCIP_Real SCIPcomputeVarLbGlobal(
 {
    assert(var != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPcomputeVarLbGlobal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPcomputeVarLbGlobal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
       return SCIPvarGetMultaggrLbGlobal(var, scip->set);
@@ -17445,7 +17445,7 @@ SCIP_Real SCIPcomputeVarUbGlobal(
 {
    assert(var != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPcomputeVarUbGlobal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPcomputeVarUbGlobal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
       return SCIPvarGetMultaggrUbGlobal(var, scip->set);
@@ -17466,7 +17466,7 @@ SCIP_Real SCIPcomputeVarLbLocal(
 {
    assert(var != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPcomputeVarLbLocal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPcomputeVarLbLocal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
       return SCIPvarGetMultaggrLbLocal(var, scip->set);
@@ -17487,7 +17487,7 @@ SCIP_Real SCIPcomputeVarUbLocal(
 {
    assert(var != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPcomputeVarUbLocal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPcomputeVarUbLocal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
       return SCIPvarGetMultaggrUbLocal(var, scip->set);
@@ -36063,7 +36063,7 @@ SCIP_Real SCIPgetHugeValue(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPgetHugeValue", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetHugeValue", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return SCIPsetGetHugeValue(scip->set);
 }
