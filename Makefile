@@ -97,6 +97,10 @@ LIBBUILD	=	$(AR)
 LIBBUILD_o	=	$(AR_o)
 LIBBUILDFLAGS	=       $(ARFLAGS)
 LINT		=	flexelint
+SPLINT		=       splint
+#SPLINTFLAGS	=	-UNDEBUG -UWITH_READLINE -UROUNDING_FE -UWITH_GMP -UWITH_ZLIB -preproc -formatcode +skip-sys-headers -weak +relaxtypes
+SPLINTFLAGS	=	-UNDEBUG -UWITH_READLINE -UROUNDING_FE -UWITH_GMP -UWITH_ZLIB -which-lib -warn-posix-headers +skip-sys-headers -preproc -formatcode -weak \
+			-redef +export-header +export-local +decl-undef +relaxtypes
 DOXY		=	doxygen
 CPLEX		=	cplex
 CBC		=	cbc
@@ -777,6 +781,15 @@ else
 			$(LINT) lint/$(MAINSHORTNAME).lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
+endif
+
+.PHONY: splint
+splint:		$(SCIPLIBSRC) $(LPILIBSRC) $(SRCDIR)/scip/*.h
+		-rm -f splint.out
+ifeq ($(FILES),)
+		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS)  $(filter %.c %.h,$^) &>> splint.out;'
+else
+		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(FILES %.c %.h,$^) &>> splint.out;'
 endif
 
 .PHONY: doc
