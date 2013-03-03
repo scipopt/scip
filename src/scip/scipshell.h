@@ -23,6 +23,7 @@
 #ifndef __SCIP_SCIPSHELL_H__
 #define __SCIP_SCIPSHELL_H__
 
+#include "scip/def.h"
 #include "scip/type_retcode.h"
 
 #ifdef __cplusplus
