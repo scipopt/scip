@@ -1798,7 +1798,7 @@ SCIP_RETCODE detectImpliedBounds(
    /* memory for the estimates for binary implications used for sorting */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &nbinimpls, nbdchginfos) );
 
-   /* check if the boolean reprensentation of boundtypes matches the 'standard' definition */
+   /* check if the boolean representation of boundtypes matches the 'standard' definition */
    assert(SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e641*/
    assert(SCIP_BOUNDTYPE_UPPER == TRUE); /*lint !e641*/
 
@@ -1888,7 +1888,7 @@ SCIP_RETCODE detectImpliedBounds(
 #ifdef SCIP_DEBUG
       if( *nbdchgs > 0 )
       {
-         SCIPdebugMessage("conflict set (%p) led to %d global bound reductions\n", conflictset, nbdchgs);
+         SCIPdebugMessage("conflict set (%p) led to %d global bound reductions\n", (void*) conflictset, *nbdchgs);
       }
 #endif
 
@@ -1933,6 +1933,8 @@ SCIP_RETCODE detectImpliedBounds(
          SCIPdebugMessage("[");
          for( v = 0; v < nbdchginfos; ++v )
          {
+            int confidx;
+
             var = SCIPbdchginfoGetVar(bdchginfos[v]);;
 
             confidx = SCIPvarGetProbindex(var);
@@ -1942,7 +1944,7 @@ SCIP_RETCODE detectImpliedBounds(
                confidx += nvars;
 
             /* if conflict variable was marked to be redundant remove it */
-            if( isconflictvar[confidx] > 0 )
+            if( redundants[confidx] > 0 )
             {
                SCIPdebugPrintf("%s %s %g", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfos[v])), (!boundtypes[v]) ? ">=" : "<=", bounds[v]);
                if( v < nbdchginfos - 1 )
