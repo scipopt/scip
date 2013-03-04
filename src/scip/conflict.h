@@ -260,24 +260,6 @@ SCIP_Real SCIPconflictGetVarUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
- *  global lower bound
- */
-extern
-SCIP_Real SCIPconflictGetVarRelaxedLb(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
-/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
- *  the global upper bound
- */
-extern
-SCIP_Real SCIPconflictGetVarRelaxedUb(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
 /** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound() and
  *  SCIPconflictAddRelaxedBound(), and on success, calls the conflict handlers to create a conflict constraint out of
  *  the resulting conflict set; updates statistics for propagation conflict analysis
