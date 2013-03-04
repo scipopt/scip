@@ -26,6 +26,7 @@ performance improvements:
 
 interface:
 - allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
+- remove problematic function cons_indicator:SCIPsetSlackVarIndicator()
 
 
 SCIP version 3.0.1
