@@ -32,6 +32,7 @@ if ( $narg < 1 || $ARGV[0] eq "-h" )
    printf("-t: output if tabs are present.\n");
    printf("-o: only output if tabs are present.\n");
    printf("-b: output possible positions of badly placed brackets.\n");
+   printf("-n: do not warn about missing newlines in debug messages.\n");
    exit(1);
 }
 
@@ -40,6 +41,7 @@ my $checktabs = 0;
 my $checkbrackets = 0;
 my $checkindent = 1;
 my $checkothers = 1;
+my $checkdebug = 1;
 
 # parse command line arguments (including switches and files)
 for (my $i = 0; $i < $narg; ++$i)
@@ -64,6 +66,13 @@ for (my $i = 0; $i < $narg; ++$i)
       $checktabs = 1;
       $checkbrackets = 0;
       $checkindent = 0;
+      next;
+   }
+
+   # check for debug message
+   if ( $ARGV[$i] eq "-n" )
+   {
+      $checkdebug = 0;
       next;
    }
 
@@ -259,7 +268,7 @@ for (my $i = 0; $i < $narg; ++$i)
 	 }
 
 	 # check for SCIPdebugMessage without "\n"
-	 if ( $_ =~ /SCIPdebugMessage/ )
+	 if ( $checkdebug == 1 && $_ =~ /SCIPdebugMessage/ )
 	 {
             my $debpos = index $_, "SCIPdebugMessage";
 	    my $enddebpos = index $_, "\",", $debpos + 18;
