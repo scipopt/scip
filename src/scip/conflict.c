@@ -5551,9 +5551,6 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    /* possibly restore solution values */
    if ( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED )
    {
-      if ( ! lp->flushed )
-         SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
-
       /* restore status */
       lp->lpsolstat = storedsolvals.lpsolstat;
       lp->lpobjval = storedsolvals.lpobjval;
