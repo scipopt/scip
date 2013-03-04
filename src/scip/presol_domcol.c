@@ -1925,11 +1925,9 @@ SCIP_RETCODE detectParallelCols(
 static
 SCIP_RETCODE predBndStr(
    SCIP*                 scip,               /**< SCIP main data structure */
-   CONSTRAINTMATRIX*     matrix,             /**< constraint matrix structure */
    SCIP_VAR*             dominatingvar,      /**< dominating variable */
    int                   dominatingidx,      /**< column index of the dominating variable */
    SCIP_Real             dominatingub,       /**< predicted upper bound of the dominating variable */
-   SCIP_Real             dominatingwclb,     /**< predicted worst case lower bound of the dominating variable */
    SCIP_Real             dominatinglb,       /**< predicted lower bound of the dominating variable */
    SCIP_Real             dominatingwcub,     /**< predicted worst case upper bound of the dominating variable */
    SCIP_VAR*             dominatedvar,       /**< dominated variable */
@@ -1937,7 +1935,6 @@ SCIP_RETCODE predBndStr(
    SCIP_Real             dominatedub,        /**< predicted upper bound of the dominated variable */
    SCIP_Real             dominatedwclb,      /**< predicted worst case lower bound of the dominated variable */
    SCIP_Real             dominatedlb,        /**< predicted lower bound of the dominated variable */
-   SCIP_Real             dominatedwcub,      /**< predicted worst case upper bound of the dominated variable */
    FIXINGDIRECTION*      varstofix,          /**< array holding fixing information */
    int*                  nchgbds             /**< count number of bound changes */
    )
@@ -2585,12 +2582,12 @@ SCIP_RETCODE findDominancePairs(
                   matrix->vars[col2], col2,
                   varstofix, onlybinvars, onlyoneone, npossiblefixings) );
 
-            SCIP_CALL( predBndStr(scip, matrix, matrix->vars[col1], col1,
-                  tmpupperbounddominatingcol1, tmpwclowerbounddominatingcol1,
+            SCIP_CALL( predBndStr(scip, matrix->vars[col1], col1,
+                  tmpupperbounddominatingcol1,
                   tmplowerbounddominatingcol1, tmpwcupperbounddominatingcol1,
                   matrix->vars[col2], col2,
                   tmpupperbounddominatedcol1, tmpwclowerbounddominatedcol1,
-                  tmplowerbounddominatedcol1, tmpwcupperbounddominatedcol1,
+                  tmplowerbounddominatedcol1,
                   varstofix, nchgbds) );
          }
          else if( col2domcol1 )
@@ -2601,12 +2598,12 @@ SCIP_RETCODE findDominancePairs(
                   matrix->vars[col1], col1,
                   varstofix, onlybinvars, onlyoneone, npossiblefixings) );
 
-            SCIP_CALL( predBndStr(scip, matrix, matrix->vars[col2], col2,
-                  tmpupperbounddominatingcol2, tmpwclowerbounddominatingcol2,
+            SCIP_CALL( predBndStr(scip, matrix->vars[col2], col2,
+                  tmpupperbounddominatingcol2,
                   tmplowerbounddominatingcol2, tmpwcupperbounddominatingcol2,
                   matrix->vars[col1], col1,
                   tmpupperbounddominatedcol2, tmpwclowerbounddominatedcol2,
-                  tmplowerbounddominatedcol2, tmpwcupperbounddominatedcol2,
+                  tmplowerbounddominatedcol2,
                   varstofix, nchgbds) );
          }
       }

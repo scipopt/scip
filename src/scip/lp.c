@@ -15427,7 +15427,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
       lpirows[r]->dualsol = SCIP_INVALID;
       lpirows[r]->activity = 0.0;
       lpirows[r]->validactivitylp = -1L;
-      lpirows[r]->basisstatus = SCIP_BASESTAT_BASIC;
+      lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
    }
 
    /* set columns as invalid */
@@ -16264,7 +16264,7 @@ SCIP_RETCODE SCIPlpStartDive(
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
          SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, NULL, NULL) );
          assert(lp->validsollp == stat->lpcount);
-      break;
+         break;
       case SCIP_LPSOLSTAT_OBJLIMIT:
       case SCIP_LPSOLSTAT_ITERLIMIT:
       case SCIP_LPSOLSTAT_TIMELIMIT:
@@ -16274,6 +16274,8 @@ SCIP_RETCODE SCIPlpStartDive(
       case SCIP_LPSOLSTAT_INFEASIBLE:
          SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat) );
          break;
+      case SCIP_LPSOLSTAT_NOTSOLVED:
+      case SCIP_LPSOLSTAT_ERROR:
       default:
          store = FALSE;
       }

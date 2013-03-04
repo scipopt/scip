@@ -1694,7 +1694,7 @@ SCIP_RETCODE separateCons(
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
-            assert( SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), j-1) );
+            assert( SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real)(j-1)) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
             ++ngen;
 

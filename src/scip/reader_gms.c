@@ -1420,7 +1420,7 @@ SCIP_RETCODE printExpr(
 
       case SCIP_EXPR_ABS:
       case SCIP_EXPR_SIGN:
-         *nsmooth = TRUE;
+         *nsmooth = TRUE; /*lint -fallthrough*/
       case SCIP_EXPR_SQUARE:
       case SCIP_EXPR_SQRT:
       case SCIP_EXPR_EXP:

@@ -2429,9 +2429,9 @@ SCIP_RETCODE respropCumulativeCondition(
       break;
 
    default:
-      SCIPerrorMessage("invalid inference information %d\n", inferinfo);
+      SCIPerrorMessage("invalid inference information %d\n", inferInfoGetProprule(inferinfo));
       SCIPABORT();
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
    (*result) = SCIP_SUCCESS;
