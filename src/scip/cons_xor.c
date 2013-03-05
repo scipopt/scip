@@ -76,10 +76,10 @@
 /** constraint data for xor constraints */
 struct SCIP_ConsData
 {
-   SCIP_VAR**            vars;               /**< variables (including resultant) in the xor operation */
+   SCIP_VAR**            vars;               /**< variables in the xor operation */
    SCIP_VAR*             intvar;             /**< internal variable for LP relaxation */
    SCIP_ROW*             rows[NROWS];        /**< rows for linear relaxation of xor constraint */
-   int                   nvars;              /**< number of variables (including resultant) in xor operation */
+   int                   nvars;              /**< number of variables in xor operation */
    int                   varssize;           /**< size of vars array */
    int                   watchedvar1;        /**< position of first watched operator variable */
    int                   watchedvar2;        /**< position of second watched operator variable */
@@ -288,8 +288,6 @@ SCIP_RETCODE consdataCreate(
    assert(nvars == 0 || vars != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
-
-   /* store the resultant variable as first variable in the array */
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
 
    (*consdata)->rhs = rhs;
@@ -875,7 +873,7 @@ SCIP_RETCODE createRelaxation(
    assert(consdata != NULL);
    assert(consdata->rows[0] == NULL);
 
-   if( SCIPconsIsModifiable(cons) || consdata->nvars != 3 )  /* resultant is member of vars array */
+   if( SCIPconsIsModifiable(cons) || consdata->nvars != 3 )
    {
       SCIP_Real rhsval;
 
@@ -895,7 +893,7 @@ SCIP_RETCODE createRelaxation(
          SCIP_CALL( lockRounding(scip, cons, consdata->intvar) );
       }
 
-      /* create LP row (resultant variable is also stored in vars array) */
+      /* create LP row */
       rhsval = (consdata->rhs ? 1.0 : 0.0);
       SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[0], SCIPconsGetHdlr(cons), SCIPconsGetName(cons), rhsval, rhsval,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
@@ -1043,7 +1041,7 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
-      /* check, if all variables (including resultant) and the rhs sum up to an even value */
+      /* check, if all variables and the rhs sum up to an even value */
       odd = consdata->rhs;
       for( i = 0; i < consdata->nvars; ++i )
       {
@@ -2532,7 +2530,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
       }
    }
 
-   /* process pairs of constraints: check them for equal operands in order to aggregate resultants;
+   /* process pairs of constraints: check them for equal operands;
     * only apply this expensive procedure, if the single constraint preprocessing did not find any reductions
     * (otherwise, we delay the presolving to be called again next time)
     */
