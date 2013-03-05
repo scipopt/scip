@@ -107,7 +107,10 @@ struct SCIP_ConshdlrData
 
 enum Proprule
 {
+   PROPRULE_0,                          /**< all variables are fixed => fix integral variable */
    PROPRULE_1,                          /**< all except one variable fixed  =>  fix remaining variable */
+   PROPRULE_INTLB,                      /**< propagation according to lower bound of integral variable */
+   PROPRULE_INTUB,                      /**< propagation according to upper bound of integral variable */
    PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
 };
 typedef enum Proprule PROPRULE;
@@ -374,15 +377,11 @@ SCIP_RETCODE consdataFree(
    /* release internal variable */
    if( (*consdata)->intvar != NULL )
    {
-      /* if internal variable is not defined anymore by any checked constraint, delete it from the problem;
-       * otherwise, it could be fixed to a wrong value in dual presolving
-       */
-      if( SCIPvarMayRoundDown((*consdata)->intvar) && SCIPvarMayRoundUp((*consdata)->intvar) && (*consdata)->deleteintvar )
-      {
-         SCIP_Bool deleted;
+      /* if the constraint is deleted and the integral variable is present, it should be fixed */
+      assert( SCIPisEQ(scip, SCIPvarGetLbGlobal((*consdata)->intvar), SCIPvarGetLbGlobal((*consdata)->intvar)) );
 
-         SCIP_CALL( SCIPdelVar(scip, (*consdata)->intvar, &deleted) );
-      }
+      /* We do not delete the integral variable, but leave the handling to SCIP, because it might happen that the
+         integral variable is stored in some basis information somewhere. */
       SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->intvar) );
    }
 
@@ -970,6 +969,8 @@ SCIP_RETCODE addRelaxation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   SCIPdebugMessage("Add relaxation of xor constraint <%s>\n", SCIPconsGetName(cons));
+
    if( consdata->rows[0] == NULL )
    {
       SCIP_CALL( createRelaxation(scip, cons) );
@@ -1109,29 +1110,137 @@ SCIP_RETCODE separateCons(
    return SCIP_OKAY;
 }
 
+/** for each variable in the xor constraint, add it to conflict set; for integral variable add corresponding bound */
+static
+SCIP_RETCODE addConflictBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
+   SCIP_VAR*             infervar,           /**< variable that was deduced, or NULL (not equal to integral variable) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   PROPRULE              proprule            /**< propagation rule */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+
+   assert( cons != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   vars = consdata->vars;
+   nvars = consdata->nvars;
+
+   switch( proprule )
+   {
+   case PROPRULE_0:
+      assert( infervar == NULL || infervar == consdata->intvar );
+
+      /* the integral variable was fixed, because all variables were fixed */
+      for (i = 0; i < nvars; ++i)
+      {
+         assert( SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE), SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE)) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
+      }
+      break;
+
+   case PROPRULE_1:
+      /* the variable was inferred, because all other variables were fixed */
+      for (i = 0; i < nvars; ++i)
+      {
+         /* add variables that were fixed to 1 before */
+         if ( SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5 )
+         {
+            assert( SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE) > 0.5 );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
+         }
+         /* add variables that were fixed to 0 */
+         else if ( SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5 )
+         {
+            assert( SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE) < 0.5 );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
+         }
+         else
+         {
+            /* check changed variable (changed variable is 0 or 1 afterwards) */
+            assert( vars[i] == infervar );
+         }
+      }
+      break;
+
+   case PROPRULE_INTLB:
+      assert( consdata->intvar != NULL );
+
+      /* the variable was fixed, because of the lower bound of the integral variable and the other fixed variables */
+      SCIP_CALL( SCIPaddConflictLb(scip, consdata->intvar, NULL) );
+      for (i = 0; i < nvars; ++i)
+      {
+         /* add variables that were fixed to 1 before (changed variables are 1 afterwards) */
+         if ( SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5 )
+         {
+            assert( SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE) > 0.5 );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
+         }
+         /* add variables that were fixed to 0 */
+         if ( SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5 )
+         {
+            assert( SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE) < 0.5 );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
+         }
+      }
+      break;
+
+   case PROPRULE_INTUB:
+      assert( consdata->intvar != NULL );
+
+      /* the variable was fixed, because of upper bound of the integral variable and the other fixed variables */
+      SCIP_CALL( SCIPaddConflictUb(scip, consdata->intvar, NULL) );
+      for (i = 0; i < nvars; ++i)
+      {
+         /* add variables that were fixed to 1 */
+         if ( SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5 )
+         {
+            assert( SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE) > 0.5 );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
+         }
+         /* add variables that were fixed to 0 before (changed variables are 0 afterwards) */
+         if ( SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5 )
+         {
+            assert( SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE) < 0.5 );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
+         }
+      }
+      break;
+
+   case PROPRULE_INVALID:
+   default:
+      SCIPerrorMessage("invalid inference information %d in xor constraint <%s>\n", proprule, SCIPconsGetName(cons));
+      SCIPABORT();
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** analyzes conflicting assignment on given constraint, and adds conflict constraint to problem */
 static
 SCIP_RETCODE analyzeConflict(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< xor constraint that detected the conflict */
+   SCIP_CONS*            cons,               /**< xor constraint that detected the conflict */
+   SCIP_VAR*             infervar,           /**< variable that was deduced, or NULL (not equal to integral variable) */
+   PROPRULE              proprule            /**< propagation rule */
    )
 {
-   SCIP_CONSDATA* consdata;
-   int v;
-
    /* conflict analysis can only be applied in solving stage and if it is applicable */
    if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
-   }
+
+   /* add bound changes */
+   SCIP_CALL( addConflictBounds(scip, cons, infervar, NULL, proprule) );
 
    /* analyze the conflict */
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -1139,8 +1248,11 @@ SCIP_RETCODE analyzeConflict(
    return SCIP_OKAY;
 }
 
-/** propagates constraint with the following rule:
- *   (1) all except one variable fixed  =>  fix remaining variable
+/** propagates constraint with the following rules:
+ *   (0) all variables are fixed => can fix integral variable
+ *   (1) all except one variable fixed  =>  fix remaining variable and integral variable
+ *   (2) depending on the lower bound of the integral variable one can fix variables to 1
+ *   (3) depending on the upper bound of the integral variable one can fix variables to 0
  */
 static
 SCIP_RETCODE propagateCons(
@@ -1153,13 +1265,15 @@ SCIP_RETCODE propagateCons(
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
-   int nvars;
-   int watchedvar1;
-   int watchedvar2;
-   int i;
    SCIP_Bool infeasible;
    SCIP_Bool tightened;
    SCIP_Bool odd;
+   int nvars;
+   int nfixedones;
+   int nfixedzeros;
+   int watchedvar1;
+   int watchedvar2;
+   int i;
 
    assert(cutoff != NULL);
    assert(nfixedvars != NULL);
@@ -1213,12 +1327,17 @@ SCIP_RETCODE propagateCons(
 
    /* if the watched variables are invalid (fixed), find new ones if existing; count the parity */
    odd = consdata->rhs;
+   nfixedones = 0;
+   nfixedzeros = 0;
    if( watchedvar2 == -1 )
    {
       for( i = 0; i < nvars; ++i )
       {
          if( SCIPvarGetLbLocal(vars[i]) > 0.5 )
+         {
             odd = !odd;
+            ++nfixedones;
+         }
          else if( SCIPvarGetUbLocal(vars[i]) > 0.5 )
          {
             if( watchedvar1 == -1 )
@@ -1232,6 +1351,8 @@ SCIP_RETCODE propagateCons(
                break;
             }
          }
+         else if ( SCIPvarGetUbLocal(vars[i]) < 0.5 )
+            ++nfixedzeros;
       }
    }
    assert(watchedvar1 != -1 || watchedvar2 == -1);
@@ -1240,16 +1361,67 @@ SCIP_RETCODE propagateCons(
    if( watchedvar1 == -1 )
    {
       assert(watchedvar2 == -1);
-      
-      SCIPdebugMessage("constraint <%s>: all vars fixed -> constraint is %s\n",
-         SCIPconsGetName(cons), odd ? "infeasible" : "feasible");
+
       if( odd )
       {
-         /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
-         SCIP_CALL( analyzeConflict(scip, cons) );
+         SCIPdebugMessage("constraint <%s>: all vars fixed, constraint is infeasible\n", SCIPconsGetName(cons));
 
-         *cutoff = TRUE;
+         /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
+         SCIP_CALL( analyzeConflict(scip, cons, NULL, PROPRULE_0) );
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         *cutoff = TRUE;
+      }
+      else
+      {
+         /* fix integral variable if present */
+         if ( consdata->intvar != NULL )
+         {
+            int fixval;
+
+            assert( ! *cutoff );
+            assert( (nfixedones - consdata->rhs) % 2 == 0 );
+            fixval = (nfixedones - consdata->rhs)/2;
+            SCIPdebugMessage("fix integral variable <%s> to %d\n", SCIPvarGetName(consdata->intvar), fixval);
+
+            /* check whether value to fix is outside bounds */
+            if ( fixval + 0.5 < SCIPvarGetLbLocal(consdata->intvar) )
+            {
+               /* cannot fix auxiliary variable (maybe it has been branched on): we are infeasible */
+               SCIPdebugMessage("node infeasible: activity is %d, bounds of integral variable are [%g,%g]\n",
+                  fixval, SCIPvarGetLbLocal(consdata->intvar), SCIPvarGetUbLocal(consdata->intvar));
+               SCIP_CALL( analyzeConflict(scip, cons, NULL, PROPRULE_INTLB) );
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+               *cutoff = TRUE;
+            }
+            else if ( fixval - 0.5 > SCIPvarGetUbLocal(consdata->intvar) )
+            {
+               /* cannot fix auxiliary variable (maybe it has been branched on): we are infeasible */
+               SCIPdebugMessage("node infeasible: activity is %d, bounds of integral variable are [%g,%g]\n",
+                  fixval, SCIPvarGetLbLocal(consdata->intvar), SCIPvarGetUbLocal(consdata->intvar));
+               SCIP_CALL( analyzeConflict(scip, cons, NULL, PROPRULE_INTUB) );
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+               *cutoff = TRUE;
+            }
+            else
+            {
+               if ( ! SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->intvar), (SCIP_Real) fixval) )
+               {
+                  SCIP_CALL( SCIPinferVarLbCons(scip, consdata->intvar, fixval, cons, (int)PROPRULE_0, FALSE, &infeasible, &tightened) );
+                  assert( tightened );
+                  assert( ! infeasible );
+               }
+
+               if ( ! *cutoff && ! SCIPisEQ(scip, SCIPvarGetUbLocal(consdata->intvar), (SCIP_Real) fixval) )
+               {
+                  SCIP_CALL( SCIPinferVarUbCons(scip, consdata->intvar, fixval, cons, (int)PROPRULE_0, FALSE, &infeasible, &tightened) );
+                  assert( tightened );
+                  assert( ! infeasible );
+               }
+               ++(*nfixedvars);
+            }
+         }
+         else
+            SCIPdebugMessage("constraint <%s>: all vars fixed, constraint is feasible\n", SCIPconsGetName(cons));
       }
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
 
@@ -1260,17 +1432,143 @@ SCIP_RETCODE propagateCons(
    if( watchedvar2 == -1 )
    {
       assert(watchedvar1 != -1);
-      
+
       SCIPdebugMessage("constraint <%s>: only one unfixed variable -> fix <%s> to %u\n",
          SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), odd);
       SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], odd, cons, (int)PROPRULE_1, &infeasible, &tightened) );
       assert(!infeasible);
       assert(tightened);
       (*nfixedvars)++;
+
+      /* fix integral variable if present */
+      if ( consdata->intvar != NULL )
+      {
+         int fixval;
+
+         /* if variable has been fixed to 1, adjust number of fixed variables */
+         if ( odd )
+            ++nfixedones;
+         assert( (nfixedones - consdata->rhs) % 2 == 0 );
+         fixval = (nfixedones - consdata->rhs)/2;
+         SCIPdebugMessage("should fix integral variable <%s> to %d\n", SCIPvarGetName(consdata->intvar), fixval);
+
+         /* check whether value to fix is outside bounds */
+         if ( fixval + 0.5 < SCIPvarGetLbLocal(consdata->intvar) )
+         {
+            /* cannot fix auxiliary variable (maybe it has been branched on): we are infeasible */
+            SCIPdebugMessage("node infeasible: activity is %d, bounds of integral variable are [%g,%g]\n",
+               fixval, SCIPvarGetLbLocal(consdata->intvar), SCIPvarGetUbLocal(consdata->intvar));
+            SCIP_CALL( analyzeConflict(scip, cons, NULL, PROPRULE_INTLB) );
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+            *cutoff = TRUE;
+         }
+         else if ( fixval - 0.5 > SCIPvarGetUbLocal(consdata->intvar) )
+         {
+            /* cannot fix auxiliary variable (maybe it has been branched on): we are infeasible */
+            SCIPdebugMessage("node infeasible: activity is %d, bounds of integral variable are [%g,%g]\n",
+               fixval, SCIPvarGetLbLocal(consdata->intvar), SCIPvarGetUbLocal(consdata->intvar));
+            SCIP_CALL( analyzeConflict(scip, cons, NULL, PROPRULE_INTUB) );
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+            *cutoff = TRUE;
+         }
+         else
+         {
+            if ( ! SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->intvar), (SCIP_Real) fixval) )
+            {
+               SCIP_CALL( SCIPinferVarLbCons(scip, consdata->intvar, fixval, cons, (int)PROPRULE_1, FALSE, &infeasible, &tightened) );
+               assert( tightened );
+               assert( ! infeasible );
+            }
+
+            if ( ! *cutoff && ! SCIPisEQ(scip, SCIPvarGetUbLocal(consdata->intvar), (SCIP_Real) fixval) )
+            {
+               SCIP_CALL( SCIPinferVarUbCons(scip, consdata->intvar, fixval, cons, (int)PROPRULE_1, FALSE, &infeasible, &tightened) );
+               assert( tightened );
+               assert( ! infeasible );
+            }
+            ++(*nfixedvars);
+         }
+      }
+
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
 
       return SCIP_OKAY;
+   }
+
+   /* propagate w.r.t. integral variable */
+   if ( consdata->intvar != NULL )
+   {
+      int nonesmin;
+      int nonesmax;
+
+      assert( nfixedones + nfixedzeros < nvars );
+
+      assert( SCIPisIntegral(scip, SCIPvarGetLbLocal(consdata->intvar)) );
+      assert( SCIPisIntegral(scip, SCIPvarGetUbLocal(consdata->intvar)) );
+
+      nonesmin = 2 * (int) SCIPvarGetLbLocal(consdata->intvar) + consdata->rhs;
+      nonesmax = 2 * (int) SCIPvarGetUbLocal(consdata->intvar) + consdata->rhs;
+
+      /* the number of possible variables that can get value 1 is less than the minimum bound */
+      if ( nvars - nfixedzeros < nonesmin )
+      {
+         SCIPdebugMessage("constraint <%s>: at most %d variables can take value 1, but there should be at least %d.\n", SCIPconsGetName(cons), nvars - nfixedones, nonesmin);
+         SCIP_CALL( analyzeConflict(scip, cons, NULL, PROPRULE_INTLB) );
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         *cutoff = TRUE;
+         return SCIP_OKAY;
+      }
+
+      /* the number of variables that are fixed to 1 is larger than the maximum bound */
+      if ( nfixedones > nonesmax )
+      {
+         SCIPdebugMessage("constraint <%s>: at least %d variables are fixed to 1, but there should be at most %d.\n", SCIPconsGetName(cons), nfixedones, nonesmax);
+         SCIP_CALL( analyzeConflict(scip, cons, NULL, PROPRULE_INTUB) );
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         *cutoff = TRUE;
+         return SCIP_OKAY;
+      }
+
+      /* the number of variables that are free or fixed to 1 is exactly the minimum required -> fix free variables to 1 */
+      if ( nvars - nfixedzeros == nonesmin )
+      {
+         SCIPdebugMessage("constraint <%s>: fix %d free variables to 1 to reach lower bound of %d\n", SCIPconsGetName(cons), nvars - nfixedzeros - nfixedones, nonesmin);
+         for (i = 0; i < nvars; ++i)
+         {
+            if ( SCIPvarGetLbLocal(vars[i]) < 0.5 && SCIPvarGetUbLocal(vars[i]) > 0.5 )
+            {
+               SCIP_CALL( SCIPinferBinvarCons(scip, vars[i], TRUE, cons, (int)PROPRULE_INTLB, &infeasible, &tightened) );
+               assert( !infeasible );
+               assert( tightened );
+               ++(*nfixedvars);
+            }
+         }
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+
+         return SCIP_OKAY;
+      }
+
+      /* the number of variables that are fixed to 1 is exactly the maximum required -> fix free variables to 0 */
+      if ( nfixedones == nonesmax )
+      {
+         SCIPdebugMessage("constraint <%s>: fix %d free variables to 0 to guarantee upper bound of %d\n", SCIPconsGetName(cons), nvars - nfixedzeros - nfixedones, nonesmax);
+         for (i = 0; i < nvars; ++i)
+         {
+            if ( SCIPvarGetLbLocal(vars[i]) < 0.5 && SCIPvarGetUbLocal(vars[i]) > 0.5 )
+            {
+               SCIP_CALL( SCIPinferBinvarCons(scip, vars[i], FALSE, cons, (int)PROPRULE_INTUB, &infeasible, &tightened) );
+               assert(!infeasible);
+               assert(tightened);
+               ++(*nfixedvars);
+            }
+         }
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+
+         return SCIP_OKAY;
+      }
    }
 
    /* switch to the new watched variables */
@@ -1283,8 +1581,11 @@ SCIP_RETCODE propagateCons(
 }
 
 /** resolves a conflict on the given variable by supplying the variables needed for applying the corresponding
- *  propagation rule (see propagateCons()):
- *   (1) all except one variable fixed  =>  fix remaining variable
+ *  propagation rules (see propagateCons()):
+ *   (0) all variables are fixed => can fix integral variable
+ *   (1) all except one variable fixed  =>  fix remaining variable and integral variable
+ *   (2) depending on the lower bound of the integral variable one can fix variables to 1
+ *   (3) depending on the upper bound of the integral variable one can fix variables to 0
  */
 static
 SCIP_RETCODE resolvePropagation(
@@ -1299,39 +1600,18 @@ SCIP_RETCODE resolvePropagation(
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
    int nvars;
-   int i;
 
    assert(result != NULL);
+   *result = SCIP_DIDNOTFIND;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    vars = consdata->vars;
    nvars = consdata->nvars;
 
-   switch( proprule )
-   {
-   case PROPRULE_1:
-      /* the variable was infered, because all other variables were fixed */
-      for( i = 0; i < nvars; ++i )
-      {
-         if( vars[i] != infervar )
-         {
-            assert(SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE), 
-                  SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE)));
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
-         }
-         else
-            assert(SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE), 
-                  SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE)));
-      }
-      *result = SCIP_SUCCESS;
-      break;
-
-   case PROPRULE_INVALID:
-   default:
-      SCIPerrorMessage("invalid inference information %d in xor constraint <%s>\n", proprule, SCIPconsGetName(cons));
-      return SCIP_INVALIDDATA;
-   }
+   SCIPdebugMessage("resolving fixations according to rule %d\n", (int) proprule);
+   SCIP_CALL( addConflictBounds(scip, cons, infervar, bdchgidx, proprule) );
+   *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
@@ -1544,7 +1824,8 @@ SCIP_RETCODE preprocessConstraintPairs(
       if( !cons0changed && !consdata1->changed )
          continue;
 
-      assert(consdata1->nvars >= 1);
+      if ( consdata1->nvars < 1 )
+         continue;
 
       /* sort cons1 */
       consdataSort(consdata1);
@@ -1679,9 +1960,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugPrintCons(scip, cons0, NULL);
             SCIPdebugPrintCons(scip, cons1, NULL);
             SCIP_CALL( SCIPfixVar(scip, singlevar0, parity ? 1.0 : 0.0, &infeasible, &fixed) );
-            assert(infeasible || fixed);
             *cutoff = *cutoff || infeasible;
-            (*nfixedvars)++;
+            if ( fixed )
+               (*nfixedvars)++;
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
          }
@@ -2398,6 +2679,8 @@ SCIP_DECL_CONSCOPY(consCopyXor)
       {
 	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &targetintvar, varmap, consmap, global, valid) );
 	 assert(!(*valid) || targetintvar != NULL);
+
+         SCIPdebugMessage("Copied integral variable <%s> (bounds: [%g,%g])\n", SCIPvarGetName(targetintvar), SCIPvarGetLbGlobal(targetintvar), SCIPvarGetUbGlobal(targetintvar));
       }
 
       if( *valid )
@@ -2425,6 +2708,8 @@ SCIP_DECL_CONSCOPY(consCopyXor)
    {
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &targetintvar, varmap, consmap, global, valid) );
       assert(!(*valid) || targetintvar != NULL);
+
+      SCIPdebugMessage("Copied integral variable <%s> (bounds: [%g,%g])\n", SCIPvarGetName(targetintvar), SCIPvarGetLbGlobal(targetintvar), SCIPvarGetUbGlobal(targetintvar));
    }
 
    /* only create the target constraints, if all variables could be copied */
