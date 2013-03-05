@@ -565,6 +565,47 @@ SCIP_RETCODE SCIPcopyProb(
    const char*           name                /**< problem name */
    );
 
+/** create a problem by copying the original problem data of the source SCIP
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @post After calling this method targetscip reaches one of the following stages depending on if and when the solution
+ *        process was interrupted:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyOrigProb(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL  */
+   const char*           name                /**< problem name of target */
+   );
+
 /** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
  *  it is just returned as target variable; elsewise a new variable will be created and added to the target SCIP; this
  *  created variable is added to the variable hash map and returned as target variable
@@ -655,6 +696,48 @@ SCIP_RETCODE SCIPcopyVars(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global              /**< should global or local bounds be used? */
+   );
+
+/** copies all original variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
+ *  variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed and aggregated
+ *  variables do not get copied
+ *
+ *  @note the variables are added to the target-SCIP but not captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyOrigVars(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables to the corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap             /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
    );
 
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
@@ -778,6 +861,56 @@ SCIP_RETCODE SCIPcopyConss(
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? 
+                                              *   If TRUE, the modifiable flag of constraints will be copied. */
+   SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
+   );
+
+/** copies all original constraints from the source-SCIP and adds these to the target-SCIP; for mapping the
+ *  variables between the source and the target SCIP a hash map can be given; if the variable hash
+ *  map is NULL or necessary variable mapping is missing, the required variables are created in the
+ *  target-SCIP and added to the hash map, if not NULL; all variables which are created are added to
+ *  the target-SCIP but not (user) captured; if the constraint hash map is not NULL the mapping
+ *  between the constraints of the source and target-SCIP is stored
+ *
+ *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP. (If you mix
+ *        SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add explicitly and what is already
+ *        added.) You can check whether a constraint is added by calling SCIPconsIsAdded().
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyOrigConss(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to the corresponding
+                                              *   variables of the target SCIP, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance?
                                               *   If TRUE, the modifiable flag of constraints will be copied. */
    SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
    );
@@ -969,6 +1102,60 @@ SCIP_RETCODE SCIPcopy(
                                               *   target constraints, or NULL */
    const char*           suffix,             /**< suffix which will be added to the names of the source SCIP */
    SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   );
+
+/** copies source SCIP original problem to target SCIP; the copying process is done in the following order:
+ *  1) copy the plugins
+ *  2) copy the settings
+ *  3) create problem data in target-SCIP and copy the original problem data of the source-SCIP
+ *  4) copy all original variables
+ *  5) copy all original constraints
+ *
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyOrig(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< suffix which will be added to the names of the target SCIP, might be empty */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when

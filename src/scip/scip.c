@@ -1434,7 +1434,89 @@ SCIP_RETCODE SCIPcopyPlugins(
    return SCIP_OKAY;
 }
 
-/** create a problem by copying the problem data of the source SCIP 
+/** create a problem by copying the problem data of the source SCIP */
+static
+SCIP_RETCODE copyProb(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL  */
+   SCIP_Bool             original,           /**< should the original problem be copied? */
+   SCIP_Bool             global,             /**< create a global or a local copy? (set to TRUE for original copy) */
+   const char*           name                /**< problem name of target */
+   )
+{
+   SCIP_PROB* sourceprob;
+   SCIP_HASHMAP* localvarmap;
+   SCIP_HASHMAP* localconsmap;
+   SCIP_Bool uselocalvarmap;
+   SCIP_Bool uselocalconsmap;
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(!original || global);
+
+   /* free old problem */
+   SCIP_CALL( SCIPfreeProb(targetscip) );
+   assert(targetscip->set->stage == SCIP_STAGE_INIT);
+
+   uselocalvarmap = (varmap == NULL);
+   uselocalconsmap = (consmap == NULL);
+
+   if( uselocalvarmap )
+   {
+      /* create the variable mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+   }
+   else
+      localvarmap = varmap;
+
+   if( uselocalconsmap )
+   {
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+   }
+   else
+      localconsmap = consmap;
+
+   /* switch stage to PROBLEM */
+   targetscip->set->stage = SCIP_STAGE_PROBLEM;
+
+   if( !original && SCIPisTransformed(sourcescip) )
+      sourceprob = sourcescip->transprob;
+   else
+      sourceprob = sourcescip->origprob;
+
+   /* create the statistics data structure */
+   SCIP_CALL( SCIPstatCreate(&targetscip->stat, targetscip->mem->probmem, targetscip->set, targetscip->messagehdlr) );
+   targetscip->stat->subscipdepth = sourcescip->stat->subscipdepth + 1;
+
+   /* create the problem by copying the source problem */
+   SCIP_CALL( SCIPprobCopy(&targetscip->origprob, targetscip->mem->probmem, targetscip->set, name, sourcescip, sourceprob, localvarmap, localconsmap, global) );
+
+   /* creating the solution candidates storage */
+   /**@todo copy solution of source SCIP as candidates for the target SCIP */
+   SCIP_CALL( SCIPprimalCreate(&targetscip->origprimal) );
+
+   if( uselocalvarmap )
+   {
+      /* free hash map */
+      SCIPhashmapFree(&localvarmap);
+   }
+
+   if( uselocalconsmap )
+   {
+      /* free hash map */
+      SCIPhashmapFree(&localconsmap);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** create a problem by copying the problem data of the source SCIP
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
@@ -1475,12 +1557,6 @@ SCIP_RETCODE SCIPcopyProb(
    const char*           name                /**< problem name of target */
    )
 {
-   SCIP_PROB* sourceprob;
-   SCIP_HASHMAP* localvarmap;
-   SCIP_HASHMAP* localconsmap;
-   SCIP_Bool uselocalvarmap;
-   SCIP_Bool uselocalconsmap;
-
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
 
@@ -1488,59 +1564,59 @@ SCIP_RETCODE SCIPcopyProb(
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyProb", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyProb", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
-   /* free old problem */
-   SCIP_CALL( SCIPfreeProb(targetscip) );
-   assert(targetscip->set->stage == SCIP_STAGE_INIT);
+   SCIP_CALL( copyProb(sourcescip, targetscip, varmap, consmap, FALSE, global, name) );
 
-   uselocalvarmap = (varmap == NULL);
-   uselocalconsmap = (consmap == NULL);
+   return SCIP_OKAY;
+}
 
-   if( uselocalvarmap )
-   {
-      /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
-   }
-   else
-      localvarmap = varmap;
+/** create a problem by copying the original problem data of the source SCIP
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @post After calling this method targetscip reaches one of the following stages depending on if and when the solution
+ *        process was interrupted:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcopyOrigProb(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL  */
+   const char*           name                /**< problem name of target */
+   )
+{
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
 
-   if( uselocalconsmap )
-   {
-      /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
-   }
-   else
-      localconsmap = consmap;
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyOrigProb", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyOrigProb", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
-   /* switch stage to PROBLEM */
-   targetscip->set->stage = SCIP_STAGE_PROBLEM;
-
-   if( SCIPisTransformed(sourcescip) )
-      sourceprob = sourcescip->transprob;
-   else
-      sourceprob = sourcescip->origprob;
-
-   /* create the statistics data structure */
-   SCIP_CALL( SCIPstatCreate(&targetscip->stat, targetscip->mem->probmem, targetscip->set, targetscip->messagehdlr) );
-   targetscip->stat->subscipdepth = sourcescip->stat->subscipdepth + 1;
-
-   /* create the problem by copying the source problem */
-   SCIP_CALL( SCIPprobCopy(&targetscip->origprob, targetscip->mem->probmem, targetscip->set, name, sourcescip, sourceprob, localvarmap, localconsmap, global) );
-
-   /* creating the solution candidates storage */
-   /**@todo copy solution of source SCIP as candidates for the target SCIP */
-   SCIP_CALL( SCIPprimalCreate(&targetscip->origprimal) );
-
-   if( uselocalvarmap )
-   {
-      /* free hash map */
-      SCIPhashmapFree(&localvarmap);
-   }
-
-   if( uselocalconsmap )
-   {
-      /* free hash map */
-      SCIPhashmapFree(&localconsmap);
-   }
+   SCIP_CALL( copyProb(sourcescip, targetscip, varmap, consmap, TRUE, TRUE, name) );
 
    return SCIP_OKAY;
 }
@@ -1599,13 +1675,14 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_Bool uselocalvarmap;
    SCIP_Bool uselocalconsmap;
 
-   /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
+   assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(sourcevar != NULL);
    assert(targetvar != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
@@ -1648,11 +1725,14 @@ SCIP_RETCODE SCIPgetVarCopy(
    }
    else
       localconsmap = consmap;
-   
+
    /* if variable does not exists yet in target SCIP, create it */
    switch( SCIPvarGetStatus(sourcevar) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
+      SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat,
+            sourcescip, sourcevar, localvarmap, localconsmap, global) );
+      break;
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
@@ -1799,46 +1879,20 @@ SCIP_RETCODE SCIPgetVarCopy(
    return SCIP_OKAY;
 }
 
-/** copies all active variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
- *  variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed and aggregated
- *  variables do not get copied
- *
- *  @note the variables are added to the target-SCIP but not captured
- *
- *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
- *  @note Do not change the source SCIP environment during the copying process
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if sourcescip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *
- *  @pre This method can be called if targetscip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *
- *  @note sourcescip stage does not get changed
- *
- *  @note targetscip stage does not get changed
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+/** copies all original or active variables from source-SCIP and adds these variable to the target-SCIP; the mapping
+ *  between these variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed
+ *  and aggregated variables do not get copied
  */
-SCIP_RETCODE SCIPcopyVars(
+static
+SCIP_RETCODE copyVars(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables to the corresponding
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
-   SCIP_Bool             global              /**< should global or local bounds be used? */
+   SCIP_Bool             original,           /**< should original variables be copied? */
+   SCIP_Bool             global              /**< should global or local bounds be used? (for original=FALSE) */
    )
 {
    SCIP_VAR** sourcevars;
@@ -1852,12 +1906,16 @@ SCIP_RETCODE SCIPcopyVars(
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
 
-   /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPcopyVars", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-   /* get active variables of the source SCIP */
-   SCIP_CALL( SCIPgetVarsData(sourcescip, &sourcevars, &nsourcevars, NULL, NULL, NULL, NULL) );
+   if( original )
+   {
+      /* get original variables of the source SCIP */
+      SCIP_CALL( SCIPgetOrigVarsData(sourcescip, &sourcevars, &nsourcevars, NULL, NULL, NULL, NULL) );
+   }
+   else
+   {
+      /* get active variables of the source SCIP */
+      SCIP_CALL( SCIPgetVarsData(sourcescip, &sourcevars, &nsourcevars, NULL, NULL, NULL, NULL) );
+   }
 
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
@@ -1892,6 +1950,14 @@ SCIP_RETCODE SCIPcopyVars(
 
    /* integer variables that are fixed to zero or one or have bounds [0,1] will be converted to binaries */
 #ifndef NDEBUG
+   if( original )
+   {
+      assert(SCIPgetNOrigBinVars(sourcescip) == SCIPgetNOrigBinVars(targetscip));
+      assert(SCIPgetNOrigIntVars(sourcescip) == SCIPgetNOrigIntVars(targetscip));
+      assert(SCIPgetNOrigImplVars(sourcescip) == SCIPgetNOrigImplVars(targetscip));
+      assert(SCIPgetNOrigContVars(sourcescip) == SCIPgetNOrigContVars(targetscip));
+   }
+   else
    {
       SCIP_VAR** fixedvars;
       int nfixedvars;
@@ -1951,6 +2017,113 @@ SCIP_RETCODE SCIPcopyVars(
       /* free hash map */
       SCIPhashmapFree(&localconsmap);
    }
+
+   return SCIP_OKAY;
+}
+
+/** copies all active variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
+ *  variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed and aggregated
+ *  variables do not get copied
+ *
+ *  @note the variables are added to the target-SCIP but not captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcopyVars(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables to the corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global              /**< should global or local bounds be used? */
+   )
+{
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyVars", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( copyVars(sourcescip, targetscip, varmap, consmap, FALSE, global) );
+
+   return SCIP_OKAY;
+}
+
+/** copies all original variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
+ *  variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed and aggregated
+ *  variables do not get copied
+ *
+ *  @note the variables are added to the target-SCIP but not captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcopyOrigVars(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables to the corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap             /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   )
+{
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyOrigVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyOrigVars", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( copyVars(sourcescip, targetscip, varmap, consmap, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -2267,6 +2440,155 @@ SCIP_RETCODE SCIPcopyConss(
             *valid = FALSE;
             SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(sourceconss[c]));
          }
+      }
+   }
+
+   if( uselocalvarmap )
+   {
+      /* free hash map */
+      SCIPhashmapFree(&localvarmap);
+   }
+
+   if( uselocalconsmap )
+   {
+      /* free hash map */
+      SCIPhashmapFree(&localconsmap);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** copies all original constraints from the source-SCIP and adds these to the target-SCIP; for mapping the
+ *  variables between the source and the target SCIP a hash map can be given; if the variable hash
+ *  map is NULL or necessary variable mapping is missing, the required variables are created in the
+ *  target-SCIP and added to the hash map, if not NULL; all variables which are created are added to
+ *  the target-SCIP but not (user) captured; if the constraint hash map is not NULL the mapping
+ *  between the constraints of the source and target-SCIP is stored
+ *
+ *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP. (If you mix
+ *        SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add explicitly and what is already
+ *        added.) You can check whether a constraint is added by calling SCIPconsIsAdded().
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcopyOrigConss(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to the corresponding
+                                              *   variables of the target SCIP, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance?
+                                              *   If TRUE, the modifiable flag of constraints will be copied. */
+   SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
+   )
+{
+   SCIP_CONS** sourceconss;
+   SCIP_HASHMAP* localvarmap;
+   SCIP_HASHMAP* localconsmap;
+   SCIP_Bool uselocalvarmap;
+   SCIP_Bool uselocalconsmap;
+   int nsourceconss;
+   int c;
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(valid      != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyOrigConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyOrigConss", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check if we locally need to create a variable or constraint hash map */
+   uselocalvarmap = (varmap == NULL);
+   uselocalconsmap = (consmap == NULL);
+
+   if( uselocalvarmap )
+   {
+      /* create the variable mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+   }
+   else
+      localvarmap = varmap;
+
+   if( uselocalconsmap )
+   {
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+   }
+   else
+      localconsmap = consmap;
+
+   sourceconss = SCIPgetOrigConss(sourcescip);
+   nsourceconss = SCIPgetNOrigConss(sourcescip);
+
+   *valid = TRUE;
+
+   SCIPdebugMessage("Attempting to copy %d original constraints\n", nsourceconss);
+
+   /* copy constraints: loop through all (source) constraint handlers */
+   for( c = 0; c < nsourceconss; ++c )
+   {
+      SCIP_CONS* targetcons;
+      SCIP_Bool success;
+
+      /* constraint handlers have to explicitly set the success pointer to TRUE */
+      success = FALSE;
+
+      /* all constraints have to be active */
+      assert(sourceconss[c] != NULL);
+      assert(SCIPconsIsOriginal(sourceconss[c]));
+
+      /* use the copy constructor of the constraint handler and creates and captures the constraint if possible */
+      targetcons = NULL;
+      SCIP_CALL( SCIPgetConsCopy(sourcescip, targetscip, sourceconss[c], &targetcons, SCIPconsGetHdlr(sourceconss[c]), localvarmap, localconsmap, NULL,
+            SCIPconsIsInitial(sourceconss[c]), SCIPconsIsSeparated(sourceconss[c]),
+            SCIPconsIsEnforced(sourceconss[c]), SCIPconsIsChecked(sourceconss[c]),
+            SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsModifiable(sourceconss[c]),
+            SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), FALSE, TRUE, &success) );
+
+      /* add the copied constraint to target SCIP if the copying process was valid */
+      if( success )
+      {
+         assert(targetcons != NULL);
+
+         if( !enablepricing )
+            SCIPconsSetModifiable(targetcons, FALSE);
+
+         /* add constraint to target SCIP */
+         SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
+
+         /* release constraint once for the creation capture */
+         SCIP_CALL( SCIPreleaseCons(targetscip, &targetcons) );
+      }
+      else
+      {
+         *valid = FALSE;
+         SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(sourceconss[c]));
       }
    }
 
@@ -2622,14 +2944,169 @@ SCIP_RETCODE SCIPcopy(
    /* copy all settings */
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
 
-   /* create problem in the target SCIP and copying the source problem data */
+   /* create problem in the target SCIP and copying the source original problem data */
    SCIP_CALL( SCIPcopyProb(sourcescip, targetscip, localvarmap, localconsmap, global, name) );
 
-   /* copy all active variables */
+   /* copy all original variables */
    SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, localvarmap, localconsmap, global) );
 
-   /* copy all constraints */
+   /* copy all original constraints */
    SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, localvarmap, localconsmap, global, enablepricing, &consscopyvalid) );
+   (*valid) = *valid && consscopyvalid;
+
+   SCIPdebugMessage("Copying constraints was%s valid.\n", consscopyvalid ? "" : " not");
+
+   if( uselocalvarmap )
+   {
+      /* free hash map */
+      SCIPhashmapFree(&localvarmap);
+   }
+
+   if( uselocalconsmap )
+   {
+      /* free hash map */
+      SCIPhashmapFree(&localconsmap);
+   }
+
+   /* stop time measuring */
+   SCIPclockStop(sourcescip->stat->copyclock, sourcescip->set);
+
+   /* get time after copying procedure */
+   copytime = SCIPclockGetTime(sourcescip->stat->copyclock) - startcopytime;
+
+   if( copytime > sourcescip->stat->maxcopytime )
+      sourcescip->stat->maxcopytime = copytime;
+   if( copytime < sourcescip->stat->mincopytime )
+      sourcescip->stat->mincopytime = copytime;
+
+   /* increase copy counter */
+   ++(sourcescip->stat->ncopies);
+
+   return SCIP_OKAY;
+}
+
+
+/** copies source SCIP original problem to target SCIP; the copying process is done in the following order:
+ *  1) copy the plugins
+ *  2) copy the settings
+ *  3) create problem data in target-SCIP and copy the original problem data of the source-SCIP
+ *  4) copy all original variables
+ *  5) copy all original constraints
+ *
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcopyOrig(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< suffix which will be added to the names of the target SCIP, might be empty */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   )
+{
+   SCIP_HASHMAP* localvarmap;
+   SCIP_HASHMAP* localconsmap;
+   SCIP_Real startcopytime;
+   SCIP_Real copytime;
+   SCIP_Bool uselocalvarmap;
+   SCIP_Bool uselocalconsmap;
+   SCIP_Bool consscopyvalid;
+   char name[SCIP_MAXSTRLEN];
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(suffix != NULL);
+   assert(valid != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyOrig", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+
+   /* get time before start of copy procedure */
+   startcopytime = SCIPclockGetTime(sourcescip->stat->copyclock);
+
+   /* start time measuring */
+   SCIPclockStart(sourcescip->stat->copyclock, sourcescip->set);
+
+   /* in case there are active pricers and pricing is disabled the target SCIP will not be a valid copy of the source
+    * SCIP
+    */
+   (*valid) = enablepricing || (SCIPgetNActivePricers(sourcescip) == 0);
+
+   /* copy all plugins */
+   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, valid) );
+
+   SCIPdebugMessage("Copying plugins was%s valid.\n", *valid ? "" : " not");
+
+   uselocalvarmap = (varmap == NULL);
+   uselocalconsmap = (consmap == NULL);
+
+   if( uselocalvarmap )
+   {
+      /* create the variable mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+   }
+   else
+      localvarmap = varmap;
+
+   if( uselocalconsmap )
+   {
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+   }
+   else
+      localconsmap = consmap;
+
+   /* construct name for the target SCIP using the source problem name and the given suffix string */
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
+
+   /* copy all settings */
+   SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
+
+   /* create problem in the target SCIP and copying the source problem data */
+   SCIP_CALL( SCIPcopyOrigProb(sourcescip, targetscip, localvarmap, localconsmap, name) );
+
+   /* copy all active variables */
+   SCIP_CALL( SCIPcopyOrigVars(sourcescip, targetscip, localvarmap, localconsmap) );
+
+   /* copy all constraints */
+   SCIP_CALL( SCIPcopyOrigConss(sourcescip, targetscip, localvarmap, localconsmap, enablepricing, &consscopyvalid) );
    (*valid) = *valid && consscopyvalid;
 
    SCIPdebugMessage("Copying constraints was%s valid.\n", consscopyvalid ? "" : " not");

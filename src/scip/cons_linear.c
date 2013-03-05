@@ -12738,8 +12738,9 @@ SCIP_RETCODE SCIPcopyConsLinear(
    constant = 0.0;
    
    /* transform source variable to active variables of the source SCIP since only these can be mapped to variables of
-    * the target SCIP */
-   if( SCIPisTransformed(sourcescip) )
+    * the target SCIP
+    */
+   if( !SCIPvarIsOriginal(vars[0]) )
    {
       SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, nvars, &constant, &requiredsize, TRUE) );
       
@@ -12756,7 +12757,9 @@ SCIP_RETCODE SCIPcopyConsLinear(
    {
       for( v = 0; v < nvars; ++v )
       {
+         assert(SCIPvarIsOriginal(vars[v]));
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &coefs[v], &constant) );
+         assert(vars[v] != NULL);
       }
    }
    
