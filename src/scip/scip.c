@@ -8928,9 +8928,6 @@ SCIP_RETCODE SCIPaddPricedVar(
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_RETCODE SCIPdelVar(
@@ -8960,9 +8957,6 @@ SCIP_RETCODE SCIPdelVar(
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_PRESOLVED:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_EXITSOLVE:
       /* check variable's status */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
       {
@@ -8973,19 +8967,6 @@ SCIP_RETCODE SCIPdelVar(
       {
          SCIPerrorMessage("cannot remove fixed or aggregated variables from transformed problem\n");
          return SCIP_INVALIDDATA;
-      }
-
-      /* fix the variable to 0, first */
-      assert(!SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(var)));
-      assert(!SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(var)));
-
-      if ( !SCIPisFeasZero(scip, SCIPvarGetLbGlobal(var)) )
-      {
-         SCIP_CALL( SCIPchgVarLbGlobal(scip, var, 0.0));
-      }
-      if ( !SCIPisFeasZero(scip, SCIPvarGetUbGlobal(var)) )
-      {
-         SCIP_CALL( SCIPchgVarUbGlobal(scip, var, 0.0));
       }
 
       SCIP_CALL( SCIPprobDelVar(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, var, deleted) );
