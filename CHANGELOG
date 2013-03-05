@@ -36,6 +36,8 @@ features:
 - the XOR constraint handler can add two extended formulations (flow/asymmetric, parameter addextendedform)
 - added the possibility to copy the original problem via SCIPcopyOrig()
 - SCIPgetVarCopy() will now copy the original bounds when called for an original variable
+- added method SCIPcreateSolCopyRemoveInfiniteFixings() which creates a copy of a solution, thereby trying to reduce
+  the solution value of variables which were fixed to infinite to the smallest feasible value
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor

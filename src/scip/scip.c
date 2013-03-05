@@ -29150,6 +29150,206 @@ SCIP_RETCODE SCIPcreateSolCopy(
    return SCIP_OKAY;
 }
 
+/** creates a copy of a primal solution, thereby replacing infinite fixings of variables by finite values;
+ *  the copy is always defined in the original variable space
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPcreateSolCopyRemoveInfiniteFixings(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_SOL*             sourcesol,          /**< primal CIP solution to copy */
+   SCIP_Bool*            success             /**< could infinite fixings be removed? */
+   )
+{
+   SCIP_VAR** fixedvars;
+   SCIP_VAR** origvars;
+   SCIP_Real* solvals;
+   SCIP_VAR* var;
+   int nfixedvars;
+   int norigvars;
+   int v;
+
+   SCIP_CALL( checkStage(scip, "SCIPcreateSolCopyRemoveInfiniteFixings", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(sourcesol != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   fixedvars = SCIPgetFixedVars(scip);
+   nfixedvars = SCIPgetNFixedVars(scip);
+
+   /* get original variables and their values in the optimal solution */
+   SCIP_CALL( SCIPgetOrigVarsData(scip, &origvars, &norigvars, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solvals, norigvars) );
+   SCIP_CALL( SCIPgetSolVals(scip, sourcesol, norigvars, origvars, solvals) );
+
+   /* check whether there are variables fixed to an infinite value */
+   for( v = 0; v < nfixedvars; ++v )
+   {
+      var = fixedvars[v];
+
+      /* skip (multi-)aggregated variables */
+      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
+         continue;
+
+      assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)));
+
+      if( (SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
+      {
+         SCIPdebugMessage("var <%s> is fixed to infinite value %g\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var));
+         break;
+      }
+   }
+
+   /* there were variables fixed to infinite values */
+   if( v < nfixedvars )
+   {
+      SCIP_HASHMAP* varmap;
+      SCIP* subscip;
+      SCIP_VAR* varcopy;
+      SCIP_Real fixval;
+      SCIP_Bool valid;
+      SCIP_SOL* bestsol;
+
+      /* create sub-SCIP */
+      SCIP_CALL( SCIPcreate(&subscip) );
+
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
+
+      /* copy the original problem to the sub-SCIP */
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * norigvars)) );
+      SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, TRUE, &valid) );
+
+      /* in the sub-SCIP, we try to minimize the absolute values of all variables with infinite values in the solution
+       * and fix all other variables to the value they have in the solution
+       */
+      for( v = 0; v < norigvars; ++v )
+      {
+         varcopy = SCIPhashmapGetImage(varmap, (void*)origvars[v]);
+         assert(varcopy != NULL);
+         assert(SCIPisFeasGE(scip, solvals[v], SCIPvarGetLbLocal(varcopy)));
+         assert(SCIPisFeasLE(scip, solvals[v], SCIPvarGetUbLocal(varcopy)));
+
+         fixval = solvals[v];
+
+         if( SCIPisInfinity(scip, fixval) || SCIPisInfinity(scip, -fixval) )
+         {
+            /* If a variable with a finite finite lower bound was set to +infinity, we just change its objective to 1.0
+             * to minimize its value; if a variable with a finite finite upper bound was set to -infinity, we just
+             * change its objective to -1.0 to maximize its value; if a variable is free, we split the variable into
+             * positive and negative part by creating two new non-negative variables and one constraint linking those
+             * variables.
+             */
+            if( SCIPisInfinity(scip, fixval) && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(varcopy)) )
+            {
+               SCIP_CALL( SCIPchgVarObj(subscip, varcopy, 1.0) );
+            }
+            else if( SCIPisInfinity(scip, -fixval) && !SCIPisInfinity(scip, SCIPvarGetUbLocal(varcopy)) )
+            {
+               SCIP_CALL( SCIPchgVarObj(subscip, varcopy, -1.0) );
+            }
+            else
+            {
+               char name[SCIP_MAXSTRLEN];
+               SCIP_VAR* posvar;
+               SCIP_VAR* negvar;
+               SCIP_CONS* linkcons;
+
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPvarGetName(varcopy), "pos");
+               SCIP_CALL( SCIPcreateVar(subscip, &posvar, name, 0.0, SCIPinfinity(scip), 1.0,
+                     SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPaddVar(subscip, posvar) );
+
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPvarGetName(varcopy), "neg");
+               SCIP_CALL( SCIPcreateVar(subscip, &negvar, name, 0.0, SCIPinfinity(scip), 1.0,
+                     SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPaddVar(subscip, negvar) );
+
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPvarGetName(varcopy), "linkcons");
+               SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &linkcons, name, 0, NULL, NULL, 0.0, 0.0 ) );
+               SCIP_CALL( SCIPaddCoefLinear(subscip, linkcons, varcopy, 1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(subscip, linkcons, posvar, -1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(subscip, linkcons, negvar, 1.0) );
+               SCIP_CALL( SCIPaddCons(subscip, linkcons) );
+
+               SCIP_CALL( SCIPreleaseCons(subscip, &linkcons) );
+               SCIP_CALL( SCIPreleaseVar(subscip, &posvar) );
+               SCIP_CALL( SCIPreleaseVar(subscip, &negvar) );
+
+               SCIP_CALL( SCIPchgVarObj(subscip, varcopy, 0.0) );
+            }
+         }
+         else
+         {
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
+
+            /* fix variable to its value in the solution */
+            SCIP_CALL( SCIPfixVar(subscip, varcopy, fixval, &infeasible, &fixed) );
+            assert(!infeasible);
+         }
+      }
+
+      SCIP_CALL( SCIPsolve(subscip) );
+
+      bestsol = SCIPgetBestSol(subscip);
+
+      /* cahnge the stored solution values for variables fixed to infinite values */
+      for( v = 0; v < norigvars; ++v )
+      {
+         varcopy = SCIPhashmapGetImage(varmap, (void*)origvars[v]);
+         assert(varcopy != NULL);
+
+         if( (SCIPisInfinity(scip, solvals[v]) || SCIPisInfinity(scip, -solvals[v])) )
+         {
+            solvals[v] = SCIPgetSolVal(subscip, bestsol, varcopy);
+         }
+      }
+
+      /* free sub-SCIP */
+      SCIP_CALL( SCIPfree(&subscip) );
+      SCIPhashmapFree(&varmap);
+   }
+
+   /* create original solution and set the solution values */
+   SCIP_CALL( SCIPcreateOrigSol(scip, sol, NULL) );
+   for( v = 0; v < norigvars; ++v )
+   {
+      SCIP_CALL( SCIPsetSolVal(scip, *sol, origvars[v], solvals[v]) );
+   }
+
+   /* the solution of the sub-SCIP should have the same objective value */
+   if( SCIPisEQ(scip, SCIPgetSolOrigObj(scip, *sol), SCIPgetSolOrigObj(scip, sourcesol)) )
+   {
+      *success = TRUE;
+   }
+   else
+   {
+      SCIP_CALL( SCIPfreeSol(scip, sol) );
+   }
+
+   SCIPfreeBufferArray(scip, &solvals);
+
+   return SCIP_OKAY;
+}
+
 /** frees primal CIP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
