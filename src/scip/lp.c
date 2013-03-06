@@ -388,7 +388,13 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->solisbasic = storedsolvals->solisbasic;
 
       /* solution values are stored only for LPs solved to optimality or unboundedness */
-      assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY || lp->validsollp == -1);
+      assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||
+         lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY ||
+         lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
+         lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT ||
+         lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT ||
+         lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE ||
+         lp->validsollp == -1);
    }
    /* no values available, mark LP as unsolved */
    else
