@@ -5315,7 +5315,9 @@ $(LIBOBJDIR)/scip/interrupt.o: src/scip/interrupt.c src/scip/def.h src/scip/type
  src/scip/type_interrupt.h
 $(LIBOBJDIR)/scip/intervalarith.o: src/scip/intervalarith.c src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
- src/scip/struct_message.h src/scip/intervalarith.h
+ src/scip/struct_message.h src/scip/intervalarith.h src/scip/misc.h \
+ src/blockmemshell/memory.h src/scip/type_set.h src/scip/type_misc.h \
+ src/scip/pub_misc.h src/scip/type_var.h src/scip/struct_misc.h
 $(LIBOBJDIR)/scip/lp.o: src/scip/lp.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/set.h src/blockmemshell/memory.h src/scip/buffer.h \
