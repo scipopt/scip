@@ -2363,7 +2363,7 @@ SCIP_RETCODE SCIPparamsetRead(
    /* read the parameters from the file */
    lineno = 0;
    retcode = SCIP_OKAY;
-   while( fgets(line, sizeof(line), file) != NULL && retcode == SCIP_OKAY )
+   while( fgets(line, (int) sizeof(line), file) != NULL && retcode == SCIP_OKAY )
    {
       lineno++;
       retcode = paramsetParse(paramset, set, messagehdlr, line);
