@@ -305,7 +305,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolProximity)
 
       SCIPfreeBlockMemoryArray(scip, &heurdata->subvars, heurdata->nsubvars);
       SCIPhashmapFree(&heurdata->varmapfw);
-      SCIPfree(&heurdata->subscip);
+      SCIP_CALL( SCIPfree(&heurdata->subscip) );
 
       heurdata->subscip = NULL;
       heurdata->varmapfw = NULL;
@@ -794,7 +794,7 @@ SCIP_RETCODE SCIPincludeHeurProximity(
          &heurdata->maxlpiters, TRUE, DEFAULT_MAXLPITERS, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/minlpiters", "minimum number of LP iterations performed in "
-         "subproblem", &heurdata->minlpiters, TRUE, DEFAULT_MINLPITERS, 0ll, SCIP_LONGINT_MAX, NULL, NULL) );
+         "subproblem", &heurdata->minlpiters, TRUE, DEFAULT_MINLPITERS, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
          "factor by which proximity should at least improve the incumbent",
