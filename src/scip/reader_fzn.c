@@ -419,7 +419,7 @@ SCIP_Bool getNextLine(
       do
       {
          fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
-         (void)SCIPfgets(fzninput->linebuf, sizeof(fzninput->linebuf), fzninput->file);
+         (void)SCIPfgets(fzninput->linebuf, (int) sizeof(fzninput->linebuf), fzninput->file);
       }
       while( fzninput->linebuf[FZN_BUFFERLEN-2] != '\0' );
 
@@ -440,7 +440,7 @@ SCIP_Bool getNextLine(
    else
       fzninput->linepos += FZN_BUFFERLEN - 2;
 
-   if( SCIPfgets(fzninput->linebuf, sizeof(fzninput->linebuf), fzninput->file) == NULL )
+   if( SCIPfgets(fzninput->linebuf, (int) sizeof(fzninput->linebuf), fzninput->file) == NULL )
       return FALSE;
 
    fzninput->bufpos = 0;

@@ -161,7 +161,7 @@ SCIP_RETCODE readCnf(
    linecount = 0;
 
    /* read header */
-   SCIP_CALL( readCnfLine(scip, file, line, sizeof(line), &linecount) );
+   SCIP_CALL( readCnfLine(scip, file, line, (int) sizeof(line), &linecount) );
    if( *line != 'p' )
    {
       readError(scip, linecount, "problem declaration line expected");
@@ -218,7 +218,7 @@ SCIP_RETCODE readCnf(
    clauselen = 0;
    do
    {
-      retcode = readCnfLine(scip, file, line, sizeof(line), &linecount);
+      retcode = readCnfLine(scip, file, line, (int) sizeof(line), &linecount);
       if( retcode != SCIP_OKAY )
          goto TERMINATE;
 

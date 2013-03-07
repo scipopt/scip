@@ -92,7 +92,7 @@ SCIP_RETCODE readSol(
       int nread;
 
       /* get next line */
-      if( SCIPfgets(buffer, sizeof(buffer), file) == NULL )
+      if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
          break;
       lineno++;
 
@@ -420,7 +420,7 @@ SCIP_DECL_READERREAD(readerReadSol)
    }
 
    /* get next line */
-   if( SCIPfgets(buffer, sizeof(buffer), file) == NULL )
+   if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
    {
       SCIPerrorMessage("cannot parse file.\n");
       return SCIP_READERROR;

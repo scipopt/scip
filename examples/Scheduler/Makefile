@@ -129,6 +129,7 @@ test:		$(CHECKDIR)
 .PHONY: clean
 clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
+		@-rm -f $(LASTSETTINGS)
 		@-(rm -f $(OBJDIR)/*.o && rmdir $(OBJDIR));
 		@echo "-> remove main objective files"
 endif

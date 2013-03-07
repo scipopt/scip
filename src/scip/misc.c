@@ -7167,16 +7167,22 @@ int SCIPsnprintf(
    return n;
 }
 
-/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to str */
+/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
 SCIP_Bool SCIPstrToIntValue(
    const char*           str,                /**< string to search */
    int*                  value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
    assert(str != NULL);
    assert(value != NULL);
    assert(endptr != NULL);
+
+   /* init errno to detect possible errors */
+   errno = 0;
 
    *value = strtol(str, endptr, 10);
 
@@ -7192,16 +7198,22 @@ SCIP_Bool SCIPstrToIntValue(
    return FALSE;
 }
 
-/** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to str */
+/** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
 SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
    assert(str != NULL);
    assert(value != NULL);
    assert(endptr != NULL);
+
+   /* init errno to detect possible errors */
+   errno = 0;
 
    *value = strtod(str, endptr);
 
@@ -7218,7 +7230,7 @@ SCIP_Bool SCIPstrToRealValue(
 }
 
 /** copies the first size characters between a start and end character of str into token, if no error occured endptr
- *  will point to the position after the read part, otherwise it will point to NULL
+ *  will point to the position after the read part, otherwise it will point to @p str
  */
 void SCIPstrCopySection(
    const char*           str,                /**< string to search */
@@ -7226,8 +7238,7 @@ void SCIPstrCopySection(
    char                  endchar,            /**< character which defines the ending */
    char*                 token,              /**< string to store the copy */
    int                   size,               /**< size of the token char array */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed,
-                                              *   otherwise str */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
    const char* copystr;

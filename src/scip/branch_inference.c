@@ -431,7 +431,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
 }
 
 
-/** branching execution method for not completely fixed pseudo solutions */
+/** branching execution method for external candidates */
 static
 SCIP_DECL_BRANCHEXECEXT(branchExecextInference)
 {  /*lint --e{715}*/
@@ -440,7 +440,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextInference)
    SCIP_Real* candsols;
    int ncands;
 
-   SCIPdebugMessage("Execps method of inference branching\n");
+   SCIPdebugMessage("Execext method of inference branching\n");
 
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);

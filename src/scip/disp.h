@@ -32,6 +32,7 @@
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_disp.h"
+#include "scip/type_paramset.h"
 #include "scip/pub_disp.h"
 
 #ifdef __cplusplus

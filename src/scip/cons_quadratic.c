@@ -12127,7 +12127,7 @@ SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
    nquadelems = consdata->nbilinterms;
    for( j = 0; j < consdata->nquadvars; ++j )
    {
-      if( consdata->quadvarterms[j].sqrcoef )
+      if( consdata->quadvarterms[j].sqrcoef != 0.0 )
          ++nquadelems;
       if( consdata->quadvarterms[j].lincoef != 0.0 )
          ++nlininds;

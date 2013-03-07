@@ -35,7 +35,7 @@
 enum ConsType
 {
    DIFFER = 0,                               /**< constraint representing the branching decision differ(i,j) */
-   SAME   = 1,                               /**< constraint representing the branching decision same(i,j) */
+   SAME   = 1                                /**< constraint representing the branching decision same(i,j) */
 };
 typedef enum ConsType CONSTYPE;
 

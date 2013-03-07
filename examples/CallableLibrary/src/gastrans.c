@@ -238,8 +238,18 @@ SCIP_RETCODE setupProblem(
     */
    for( i = 0; i < narcs; ++i )
    {
-      SCIP_VAR* vars[3]  = { pressurediff[i], pressure[arcdata[i].node1], pressure[arcdata[i].node2] };
+      SCIP_VAR* vars[3];
       SCIP_Real coefs[3] = { 1.0, -1.0, 1.0 };
+
+      assert(pressurediff[i] != NULL);
+      assert(arcdata[i].node1 >= 0 && arcdata[i].node1 < nnodes);
+      assert(arcdata[i].node2 >= 0 && arcdata[i].node2 < nnodes);
+      assert(pressure[arcdata[i].node1] != NULL);
+      assert(pressure[arcdata[i].node2] != NULL);
+
+      vars[0] = pressurediff[i];
+      vars[1] = pressure[arcdata[i].node1];
+      vars[2] = pressure[arcdata[i].node2];
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pressurediff_%s_%s", nodedata[arcdata[i].node1].name, nodedata[arcdata[i].node2].name);
       SCIP_CALL( SCIPcreateConsBasicLinear(scip, &pressurediffcons[i], name, 3, vars, coefs, 0.0, 0.0) );

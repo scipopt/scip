@@ -20,6 +20,7 @@
  * This presolver looks for dominance relations between variable pairs.
  * From a dominance relation and certain bound/clique-constellations
  * variable fixings mostly at the lower bound of the dominated variable can be derived.
+ * Additionally it is possible to improve bounds by predictive bound strengthening.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

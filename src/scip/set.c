@@ -5149,7 +5149,7 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
 
    assert(set != NULL);
 
-   quotient = ABS(oldvalue) / MAX(ABS(newvalue), 1.0);
+   quotient = ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon);
 
    return quotient >= set->num_recompfac;
 }

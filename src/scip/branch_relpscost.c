@@ -493,7 +493,7 @@ SCIP_RETCODE execRelpscost(
       bestsbdomainscore = -SCIPinfinity(scip);
       lookahead = 0.0;
       for( i = 0; i < ninitcands && lookahead < maxlookahead
-              && (i < maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations); ++i )
+              && (i < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations); ++i )
       {
          SCIP_Real down;
          SCIP_Real up;

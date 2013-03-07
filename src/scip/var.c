@@ -2091,7 +2091,9 @@ SCIP_RETCODE SCIPvarCopy(
 {
    SCIP_VARDATA* targetdata;
    SCIP_RESULT result;
-   
+   SCIP_Real lb;
+   SCIP_Real ub;
+
    assert(set != NULL);
    assert(blkmem != NULL);
    assert(stat != NULL);
@@ -2109,11 +2111,20 @@ SCIP_RETCODE SCIPvarCopy(
    result = SCIP_DIDNOTRUN;
    targetdata = NULL;
 
+   if( SCIPvarGetStatus(sourcevar) == SCIP_VARSTATUS_ORIGINAL )
+   {
+      lb = SCIPvarGetLbOriginal(sourcevar);
+      ub = SCIPvarGetUbOriginal(sourcevar);
+   }
+   else
+   {
+      lb = global ? SCIPvarGetLbGlobal(sourcevar) : SCIPvarGetLbLocal(sourcevar);
+      ub = global ? SCIPvarGetUbGlobal(sourcevar) : SCIPvarGetUbLocal(sourcevar);
+   }
+
    /* creates and captures the variable in the target SCIP and initialize callback methods and variable data to NULL */
    SCIP_CALL( SCIPvarCreateOriginal(var, blkmem, set, stat, SCIPvarGetName(sourcevar), 
-         global ? SCIPvarGetLbGlobal(sourcevar) : SCIPvarGetLbLocal(sourcevar),
-         global ? SCIPvarGetUbGlobal(sourcevar) : SCIPvarGetUbLocal(sourcevar), 
-         SCIPvarGetObj(sourcevar), SCIPvarGetType(sourcevar),
+         lb, ub, SCIPvarGetObj(sourcevar), SCIPvarGetType(sourcevar),
          SCIPvarIsInitial(sourcevar), SCIPvarIsRemovable(sourcevar), 
          NULL, NULL, NULL, NULL, NULL) );
    assert(*var != NULL);
@@ -2168,12 +2179,12 @@ SCIP_RETCODE parseValue(
    if( strncmp(str, "+inf", 4) == 0 )
    {
       *value = SCIPsetInfinity(set);
-      (*endptr) += 4;
+      (*endptr) = (char*)str + 4;
    }
    else if( strncmp(str, "-inf", 4) == 0 )
    {
       *value = -SCIPsetInfinity(set);
-      (*endptr) += 4;
+      (*endptr) = (char*)str + 4;
    }
    else
    {
@@ -2192,25 +2203,37 @@ SCIP_RETCODE parseBounds(
    char*                 type,               /**< bound type (global, local, or lazy) */
    SCIP_Real*            lb,                 /**< pointer to store the lower bound */
    SCIP_Real*            ub,                 /**< pointer to store the upper bound */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed (or NULL if an error occured) */
    )
 {
    char token[SCIP_MAXSTRLEN];
 
+   SCIPdebugMessage("parsing bounds: '%s'\n", str);
+
    /* get bound type */
    SCIPstrCopySection(str, ' ', ' ', type, SCIP_MAXSTRLEN, endptr);
+   if ( strncmp(type, "original", 8) != 0 && strncmp(type, "global", 6) != 0 && strncmp(type, "local", 5) != 0 && strncmp(type, "lazy", 4) != 0 )
+   {
+      SCIPdebugMessage("unkown bound type <%s>\n", type);
+      *endptr = NULL;
+      return SCIP_OKAY;
+   }
+
    SCIPdebugMessage("parsed bound type <%s>\n", type);
 
    /* get lower bound */
    SCIPstrCopySection(str, '[', ',', token, SCIP_MAXSTRLEN, endptr);
    str = *endptr;
-
    SCIP_CALL( parseValue(set, token, lb, endptr) );
-
-   SCIPdebugMessage("str <%s>\n", str);
 
    /* get upper bound */
    SCIP_CALL( parseValue(set, str, ub, endptr) );
+
+   SCIPdebugMessage("parsed bounds: [%g,%g]\n", *lb, *ub);
+
+   /* skip end of bounds */
+   while ( **endptr != '\0' && (**endptr == ']' || **endptr == ',') )
+      ++(*endptr);
 
    return SCIP_OKAY;
 }
@@ -2229,13 +2252,14 @@ SCIP_RETCODE varParse(
    SCIP_Real*            lazylb,             /**< pointer to store if the lower bound is lazy */
    SCIP_Real*            lazyub,             /**< pointer to store if the upper bound is lazy */
    SCIP_Bool             local,              /**< should the local bound be applied */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
    SCIP_Real parsedlb;
    SCIP_Real parsedub;
    char token[SCIP_MAXSTRLEN];
-   char* endptr;
+   char* strptr;
    int i;
 
    assert(lb != NULL);
@@ -2244,13 +2268,14 @@ SCIP_RETCODE varParse(
    assert(vartype != NULL);
    assert(lazylb != NULL);
    assert(lazyub != NULL);
+   assert(endptr != NULL);
    assert(success != NULL);
 
    (*success) = TRUE;
 
    /* copy variable type */
-   SCIPstrCopySection(str, '[', ']', token, SCIP_MAXSTRLEN, &endptr);
-   assert(str != endptr);
+   SCIPstrCopySection(str, '[', ']', token, SCIP_MAXSTRLEN, endptr);
+   assert(str != *endptr);
    SCIPdebugMessage("parsed variable type <%s>\n", token);
 
    /* get variable type */
@@ -2270,44 +2295,47 @@ SCIP_RETCODE varParse(
    }
 
    /* move string pointer behind variable type */
-   str = endptr;
+   str = *endptr;
 
    /* get variable name */
-   SCIPstrCopySection(str, '<', '>', name, SCIP_MAXSTRLEN, &endptr);
+   SCIPstrCopySection(str, '<', '>', name, SCIP_MAXSTRLEN, endptr);
    assert(endptr != NULL);
    SCIPdebugMessage("parsed variable name <%s>\n", name);
 
    /* move string pointer behind variable name */
-   str = endptr;
+   str = *endptr;
 
    /* cut out objective coefficient */
-   SCIPstrCopySection(str, '=', ',', token, SCIP_MAXSTRLEN, &endptr);
+   SCIPstrCopySection(str, '=', ',', token, SCIP_MAXSTRLEN, endptr);
 
    /* move string pointer behind objective coefficient */
-   str = endptr;
+   str = *endptr;
 
    /* get objective coefficient */
-   if( !SCIPstrToRealValue(token,  obj, &endptr) )
+   if( !SCIPstrToRealValue(token, obj, endptr) )
       return SCIP_READERROR;
 
    SCIPdebugMessage("parsed objective coefficient <%g>\n", *obj);
 
    /* parse global/original bounds */
-   SCIP_CALL( parseBounds(set, str, token, lb, ub, &endptr) );
+   SCIP_CALL( parseBounds(set, str, token, lb, ub, endptr) );
    assert(strncmp(token, "global", 6) == 0 || strncmp(token, "original", 8) == 0);
 
    /* initialize the lazy bound */
    *lazylb = -SCIPsetInfinity(set);
    *lazyub =  SCIPsetInfinity(set);
 
-   /* parse optional local and lazy bounds */
-   for( i = 0; i < 2; ++i )
-   {
-      /* parse global bounds */
-      SCIP_CALL( parseBounds(set, str, token, &parsedlb, &parsedub, &endptr) );
+   /* store pointer */
+   strptr = *endptr;
 
-      if( str != endptr )
-         break;
+   /* possibly parse optional local and lazy bounds */
+   for( i = 0; i < 2 && *endptr != NULL && **endptr != '\0'; ++i )
+   {
+      /* start after previous bounds */
+      strptr = *endptr;
+
+      /* parse global bounds */
+      SCIP_CALL( parseBounds(set, strptr, token, &parsedlb, &parsedub, endptr) );
 
       if( strncmp(token, "local", 5) == 0 && local )
       {
@@ -2320,6 +2348,10 @@ SCIP_RETCODE varParse(
          *lazyub = parsedub;
       }
    }
+
+   /* restore pointer */
+   if ( *endptr == NULL )
+      *endptr = strptr;
 
    /* check bounds for binary variables */
    if ( (*vartype) == SCIP_VARTYPE_BINARY )
@@ -2341,8 +2373,8 @@ SCIP_RETCODE varParse(
 }
 
 /** parses variable information (in cip format) out of a string; if the parsing process was successful an original
- *  problem variable is creates and captures; an integer variable with bounds zero and one is automatically converted
- *  into a binary variable
+ *  variable is created and captured; if variable is of integral type, fractional bounds are automatically rounded; an
+ *  integer variable with bounds zero and one is automatically converted into a binary variable
  */
 SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_VAR**            var,                /**< pointer to variable data */
@@ -2358,6 +2390,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
@@ -2372,9 +2405,11 @@ SCIP_RETCODE SCIPvarParseOriginal(
    assert(var != NULL);
    assert(blkmem != NULL);
    assert(stat != NULL);
+   assert(endptr != NULL);
+   assert(success != NULL);
 
    /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, success) );
+   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, endptr, success) );
 
    if( *success )
    {
@@ -2401,8 +2436,9 @@ SCIP_RETCODE SCIPvarParseOriginal(
 }
 
 /** parses variable information (in cip format) out of a string; if the parsing process was successful a loose variable
- *  belonging to the transformed problem is creates and captures; an integer variable with bounds zero and one is
- *  automatically converted into a binary variable
+ *  belonging to the transformed problem is created and captured; if variable is of integral type, fractional bounds are
+ *  automatically rounded; an integer variable with bounds zero and one is automatically converted into a binary
+ *  variable
  */
 SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_VAR**            var,                /**< pointer to variable data */
@@ -2418,6 +2454,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
@@ -2429,12 +2466,13 @@ SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_Real lazylb;
    SCIP_Real lazyub;
 
-
    assert(var != NULL);
    assert(blkmem != NULL);
+   assert(endptr != NULL);
+   assert(success != NULL);
 
    /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, success) );
+   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, endptr, success) );
 
    if( *success )
    {
@@ -3507,19 +3545,19 @@ SCIP_RETCODE SCIPvarFix(
    *infeasible = FALSE;
    *fixed = FALSE;
 
-   if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(set, fixedval))
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+   {
+      *infeasible = !SCIPsetIsFeasEQ(set, fixedval, var->locdom.lb);
+      SCIPdebugMessage(" -> variable already fixed to %g (fixedval=%g): infeasible=%u\n",
+         var->locdom.lb, fixedval, *infeasible);
+      return SCIP_OKAY;
+   }
+   else if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(set, fixedval))
       || SCIPsetIsFeasLT(set, fixedval, var->locdom.lb)
       || SCIPsetIsFeasGT(set, fixedval, var->locdom.ub) )
    {
       SCIPdebugMessage(" -> fixing infeasible: locdom=[%g,%g], fixedval=%g\n", var->locdom.lb, var->locdom.ub, fixedval);
       *infeasible = TRUE;
-      return SCIP_OKAY;
-   }
-   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
-   {
-      *infeasible = !SCIPsetIsFeasEQ(set, fixedval, var->locdom.lb);
-      SCIPdebugMessage(" -> variable already fixed to %g (fixedval=%g): infeasible=%u\n", 
-         var->locdom.lb, fixedval, *infeasible);
       return SCIP_OKAY;
    }
 

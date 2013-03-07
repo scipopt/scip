@@ -5508,7 +5508,7 @@ SCIP_RETCODE SCIPconsParse(
    SCIPdebugMessage("constraint handler name <%s>\n", conshdlrname);
 
    /* scan constraint name */
-   SCIPstrCopySection(str, '<', '>', consname, SCIP_MAXSTRLEN, &saveptr);
+   SCIPstrCopySection(saveptr, '<', '>', consname, SCIP_MAXSTRLEN, &saveptr);
    assert(saveptr != NULL);
    SCIPdebugMessage("constraint name <%s>\n", consname);
 
