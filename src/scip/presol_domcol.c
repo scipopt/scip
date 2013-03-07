@@ -56,6 +56,7 @@
 #define PRESOL_DELAY                TRUE     /**< should presolver be delayed, if other presolvers found reductions? */
 
 #define DEFAULT_MAXPAIRS         1000000     /**< maximal number of pair comparisons for at least one variable fixing */
+#define DEFAULT_PREDBNDSTR         FALSE     /**< should predictive bound strengthening be applied? */
 
 /*
  * Data structures
@@ -65,6 +66,7 @@
 struct SCIP_PresolData
 {
    int                   maxpairs;           /**< maximal number of pair comparisons for at least one variable fixing */
+   SCIP_Bool             predbndstr;         /**< flag indicating if predictive bound strengthening should be applied */
 };
 
 /** type of fixing direction */
@@ -2582,13 +2584,16 @@ SCIP_RETCODE findDominancePairs(
                   matrix->vars[col2], col2,
                   varstofix, onlybinvars, onlyoneone, npossiblefixings) );
 
-            SCIP_CALL( predBndStr(scip, matrix->vars[col1], col1,
-                  tmpupperbounddominatingcol1,
-                  tmplowerbounddominatingcol1, tmpwcupperbounddominatingcol1,
-                  matrix->vars[col2], col2,
-                  tmpupperbounddominatedcol1, tmpwclowerbounddominatedcol1,
-                  tmplowerbounddominatedcol1,
-                  varstofix, nchgbds) );
+            if( presoldata->predbndstr )
+            {
+               SCIP_CALL( predBndStr(scip, matrix->vars[col1], col1,
+                     tmpupperbounddominatingcol1,
+                     tmplowerbounddominatingcol1, tmpwcupperbounddominatingcol1,
+                     matrix->vars[col2], col2,
+                     tmpupperbounddominatedcol1, tmpwclowerbounddominatedcol1,
+                     tmplowerbounddominatedcol1,
+                     varstofix, nchgbds) );
+            }
          }
          else if( col2domcol1 )
          {
@@ -2598,13 +2603,16 @@ SCIP_RETCODE findDominancePairs(
                   matrix->vars[col1], col1,
                   varstofix, onlybinvars, onlyoneone, npossiblefixings) );
 
-            SCIP_CALL( predBndStr(scip, matrix->vars[col2], col2,
-                  tmpupperbounddominatingcol2,
-                  tmplowerbounddominatingcol2, tmpwcupperbounddominatingcol2,
-                  matrix->vars[col1], col1,
-                  tmpupperbounddominatedcol2, tmpwclowerbounddominatedcol2,
-                  tmplowerbounddominatedcol2,
-                  varstofix, nchgbds) );
+            if( presoldata->predbndstr )
+            {
+               SCIP_CALL( predBndStr(scip, matrix->vars[col2], col2,
+                     tmpupperbounddominatingcol2,
+                     tmplowerbounddominatingcol2, tmpwcupperbounddominatingcol2,
+                     matrix->vars[col1], col1,
+                     tmpupperbounddominatedcol2, tmpwclowerbounddominatedcol2,
+                     tmplowerbounddominatedcol2,
+                     varstofix, nchgbds) );
+            }
          }
       }
    }
@@ -3345,6 +3353,11 @@ SCIP_RETCODE SCIPincludePresolDomcol(
          "presolving/domcol/maxpairs",
          "maximal number of pair comparisons for at least one variable fixing",
          &presoldata->maxpairs, FALSE, DEFAULT_MAXPAIRS, 10, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/domcol/predbndstr",
+         "should predictive bound strengthening be applied?",
+         &presoldata->predbndstr, FALSE, DEFAULT_PREDBNDSTR, NULL, NULL) );
 
    return SCIP_OKAY;
 }
