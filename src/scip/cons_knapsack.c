@@ -2463,7 +2463,7 @@ SCIP_RETCODE getCover(
       for( j = 0; j < nitems; j++ )
       {
          transprofits[j] *= weights[items[j]];
-         assert(SCIPisFeasGT(scip, transprofits[j], 0.0));
+         assert(SCIPisFeasPositive(scip, transprofits[j]));
       }
    }
 

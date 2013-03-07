@@ -9445,9 +9445,6 @@ SCIP_RETCODE SCIPaddPricedVar(
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_RETCODE SCIPdelVar(
@@ -9477,9 +9474,6 @@ SCIP_RETCODE SCIPdelVar(
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_PRESOLVED:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_EXITSOLVE:
       /* check variable's status */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
       {
@@ -9490,19 +9484,6 @@ SCIP_RETCODE SCIPdelVar(
       {
          SCIPerrorMessage("cannot remove fixed or aggregated variables from transformed problem\n");
          return SCIP_INVALIDDATA;
-      }
-
-      /* fix the variable to 0, first */
-      assert(!SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(var)));
-      assert(!SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(var)));
-
-      if ( !SCIPisFeasZero(scip, SCIPvarGetLbGlobal(var)) )
-      {
-         SCIP_CALL( SCIPchgVarLbGlobal(scip, var, 0.0));
-      }
-      if ( !SCIPisFeasZero(scip, SCIPvarGetUbGlobal(var)) )
-      {
-         SCIP_CALL( SCIPchgVarUbGlobal(scip, var, 0.0));
       }
 
       SCIP_CALL( SCIPprobDelVar(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, var, deleted) );
@@ -20479,9 +20460,9 @@ SCIP_RETCODE SCIPinitConflictAnalysis(
 /** adds lower bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictLb() should be called for each lower bound
- *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      that led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictLb() should be called
- *      for each lower bound, whose current assignment lead to the deduction of the given conflict bound.
+ *      for each lower bound, whose current assignment led to the deduction of the given conflict bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -20511,9 +20492,9 @@ SCIP_RETCODE SCIPaddConflictLb(
  *  to explain a certain bound change;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedLb() should be called for each (relaxed) lower bound
- *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      that led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelexedLb() should be called
- *      for each (relaxed) lower bound, whose current assignment lead to the deduction of the given conflict bound.
+ *      for each (relaxed) lower bound, whose current assignment led to the deduction of the given conflict bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -20542,9 +20523,9 @@ SCIP_RETCODE SCIPaddConflictRelaxedLb(
 /** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictUb() should be called for each upper bound that
- *      lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictUb() should be called for
- *      each upper bound, whose current assignment lead to the deduction of the given conflict bound.
+ *      each upper bound, whose current assignment led to the deduction of the given conflict bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -20574,9 +20555,9 @@ SCIP_RETCODE SCIPaddConflictUb(
  *  to explain a certain bound change;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedUb() should be called for each (relaxed) upper
- *      bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      bound that led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelaxedUb() should be
- *      called for each (relaxed) upper bound, whose current assignment lead to the deduction of the given conflict
+ *      called for each (relaxed) upper bound, whose current assignment led to the deduction of the given conflict
  *      bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -20606,9 +20587,9 @@ SCIP_RETCODE SCIPaddConflictRelaxedUb(
 /** adds lower or upper bound of variable at the time of the given bound change index to the conflict analysis' candidate
  *  storage; this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictBd() should be called for each bound
- *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      that led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictBd() should be called
- *      for each bound, whose current assignment lead to the deduction of the given conflict bound.
+ *      for each bound, whose current assignment led to the deduction of the given conflict bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -20639,9 +20620,9 @@ SCIP_RETCODE SCIPaddConflictBd(
  *  which would be enough to explain a certain bound change;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedBd() should be called for each (relaxed)
- *      bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      bound that led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelaxedBd() should be
- *      called for each (relaxed) bound, whose current assignment lead to the deduction of the given conflict bound.
+ *      called for each (relaxed) bound, whose current assignment led to the deduction of the given conflict bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -20671,9 +20652,9 @@ SCIP_RETCODE SCIPaddConflictRelaxedBd(
 /** adds changed bound of fixed binary variable to the conflict analysis' candidate storage;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictBinvar() should be called for each fixed binary
- *      variable that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      variable that led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictBinvar() should be called
- *      for each binary variable, whose current fixing lead to the deduction of the given conflict bound.
+ *      for each binary variable, whose current fixing led to the deduction of the given conflict bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
