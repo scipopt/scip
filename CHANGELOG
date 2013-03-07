@@ -16,6 +16,7 @@ fixed bugs:
 - fixed problem that diving did not save status for infeasible LPs
 - fixed several bugs in propagation of cons_xor: need to take integral variables into account
 - fixed several asserts in cons_xor presolving
+- fixed fieldtypes in sorting template
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
