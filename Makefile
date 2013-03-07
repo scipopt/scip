@@ -321,6 +321,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_objpscostdiving.o \
 			scip/heur_octane.o \
 			scip/heur_oneopt.o \
+			scip/heur_proximity.o \
 			scip/heur_pscostdiving.o \
 			scip/heur_rens.o \
 			scip/heur_rins.o \
