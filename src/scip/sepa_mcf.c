@@ -263,13 +263,13 @@ typedef struct nodepartition NODEPARTITION;
  * Local methods
  */
 
-#define LHSPOSSIBLE     1                    /**< we may use the constraint as lhs <= a*x */
-#define RHSPOSSIBLE     2                    /**< we may use the constraint as a*x <= rhs */
-#define LHSASSIGNED     4                    /**< we have chosen to use the constraint as lhs <= a*x */
-#define RHSASSIGNED     8                    /**< we have chosen to use the constraint as a*x <= rhs */
-#define INVERTED       16                    /**< we need to invert the row */
-#define DISCARDED      32                    /**< we have chosen to not use the constraint */
-#define UNDIRECTED     64                    /**< the capacity candidate has two flow variables for a commodity */
+#define LHSPOSSIBLE     1u                   /**< we may use the constraint as lhs <= a*x */
+#define RHSPOSSIBLE     2u                   /**< we may use the constraint as a*x <= rhs */
+#define LHSASSIGNED     4u                   /**< we have chosen to use the constraint as lhs <= a*x */
+#define RHSASSIGNED     8u                   /**< we have chosen to use the constraint as a*x <= rhs */
+#define INVERTED       16u                   /**< we need to invert the row */
+#define DISCARDED      32u                   /**< we have chosen to not use the constraint */
+#define UNDIRECTED     64u                   /**< the capacity candidate has two flow variables for a commodity */
 
 
 /** creates an empty MCF network data structure */
