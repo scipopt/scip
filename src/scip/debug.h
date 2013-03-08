@@ -158,6 +158,33 @@ SCIP_RETCODE SCIPdebugGetSolVal(
    SCIP_Real*            val                 /**< buffer to store solution value */
    );
 
+/** check whether the debugging solution is valid in the current node */
+extern
+SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            isvalidinsubtree    /**< pointer to store whether the solution is valid in the current
+                                              *   subtree
+                                              */
+   );
+
+/** enabling solution debugging mechanism */
+extern
+void SCIPdebugSolEnable(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** disabling solution debugging mechanism */
+extern
+void SCIPdebugSolDisable(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** check if solution debugging mechanism is enabled */
+extern
+SCIP_Bool SCIPdebugSolIsEnabled(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 #else
 
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
@@ -173,6 +200,10 @@ SCIP_RETCODE SCIPdebugGetSolVal(
 #define SCIPdebugIncludeProp(scip) SCIP_OKAY
 #define SCIPdebugAddSolVal(scip,var,val) SCIP_OKAY
 #define SCIPdebugGetSolVal(scip,var,val) SCIP_OKAY
+#define SCIPdebugSolIsValidInSubtree(scip,isvalidinsubtree) SCIP_OKAY
+#define SCIPdebugSolEnable(scip) /**/
+#define SCIPdebugSolDisable(scip) /**/
+#define SCIPdebugSolIsEnabled(scip) FALSE
 #endif
 
 

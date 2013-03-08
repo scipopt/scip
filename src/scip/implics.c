@@ -31,7 +31,6 @@
 #include "scip/implics.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-
 #include "scip/debug.h"
 
 #ifndef NDEBUG
