@@ -2496,7 +2496,7 @@ SCIP_DECL_CONSCHECK(consCheckXor)
 
             for( v = 0; v < consdata->nvars; ++v )
             {
-               if( SCIPgetSolVal(scip, sol, consdata->vars[i]) > 0.5 )
+               if( SCIPgetSolVal(scip, sol, consdata->vars[v]) > 0.5 )
                   sum++;
             }
             SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE\n", sum );
