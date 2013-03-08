@@ -5267,7 +5267,7 @@ $(LIBOBJDIR)/scip/implics.o: src/scip/implics.c src/scip/def.h src/scip/type_ret
  src/scip/var.h src/scip/type_prob.h src/scip/pub_var.h \
  src/scip/type_implics.h src/scip/struct_var.h src/scip/implics.h \
  src/scip/pub_implics.h src/scip/struct_implics.h src/scip/history.h \
- src/scip/struct_history.h
+ src/scip/struct_history.h src/scip/debug.h
 $(LIBOBJDIR)/scip/interrupt.o: src/scip/interrupt.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/blockmemshell/memory.h src/scip/interrupt.h \

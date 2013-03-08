@@ -25,6 +25,7 @@ features:
 - reading erroneous CIP files can now output some indication of syntax errors
 - can now run splint on core files
 - cons_xor now uses the integral variable in propagation
+- allowed to switch on/off the solution debugging
 
 performance improvements:
 - improved SCIPlpiAdd{Cols,Rows}() in SoPlex LPi

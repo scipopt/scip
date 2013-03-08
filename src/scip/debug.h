@@ -112,6 +112,15 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    SCIP_Real             implbound           /**< bound b    in implication y <= b or y >= b */
    );
 
+/** check whether given clique is valid for the debugging solution */
+extern
+SCIP_RETCODE SCIPdebugCheckClique(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< binary variables in the clique: at most one can be set to the given value */
+   SCIP_Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
+   int                   nvars               /**< number of variables in the clique */
+   );
+
 /** checks whether given conflict is valid for the debugging solution */
 extern
 SCIP_RETCODE SCIPdebugCheckConflict(
@@ -149,6 +158,33 @@ SCIP_RETCODE SCIPdebugGetSolVal(
    SCIP_Real*            val                 /**< buffer to store solution value */
    );
 
+/** check whether the debugging solution is valid in the current node */
+extern
+SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            isvalidinsubtree    /**< pointer to store whether the solution is valid in the current
+                                              *   subtree
+                                              */
+   );
+
+/** enabling solution debugging mechanism */
+extern
+void SCIPdebugSolEnable(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** disabling solution debugging mechanism */
+extern
+void SCIPdebugSolDisable(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** check if solution debugging mechanism is enabled */
+extern
+SCIP_Bool SCIPdebugSolIsEnabled(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 #else
 
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
@@ -159,10 +195,15 @@ SCIP_RETCODE SCIPdebugGetSolVal(
 #define SCIPdebugRemoveNode(blkmem,set,node) SCIP_OKAY
 #define SCIPdebugCheckVbound(set,var,vbtype,vbvar,vbcoef,vbconstant) SCIP_OKAY
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
+#define SCIPdebugCheckClique(set,vars,values,nvars) SCIP_OKAY
 #define SCIPdebugCheckConflict(blkmem,set,node,bdchginfos,relaxedbds,nliterals) SCIP_OKAY
 #define SCIPdebugIncludeProp(scip) SCIP_OKAY
 #define SCIPdebugAddSolVal(scip,var,val) SCIP_OKAY
 #define SCIPdebugGetSolVal(scip,var,val) SCIP_OKAY
+#define SCIPdebugSolIsValidInSubtree(scip,isvalidinsubtree) SCIP_OKAY
+#define SCIPdebugSolEnable(scip) /**/
+#define SCIPdebugSolDisable(scip) /**/
+#define SCIPdebugSolIsEnabled(scip) FALSE
 #endif
 
 
