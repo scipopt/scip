@@ -5450,8 +5450,7 @@ SCIP_RETCODE checkCons(
          /* check whether violation is random noise */
          if( (consdata->lhs - activity) <= (1e-15 * maxabs) )
          {
-            printf("  lhs violated due to random noise: maxabs=%.15g\n", maxabs);
-            SCIPdebugMessage("  violated due to random noise: maxabs=%.15g\n", maxabs);
+            SCIPdebugMessage("  lhs violated due to random noise: maxabs=%.15g\n", maxabs);
             SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) );
 
             /* only increase constraint age if we are in enforcement */
@@ -5465,7 +5464,6 @@ SCIP_RETCODE checkCons(
          {
             if( (consdata->lhs - activity) <= (SCIPfeastol(scip) * maxabs) )
             {
-               printf("  lhs violated absolutely, but feasible when using relative tolerance w.r.t. maximum absolute value (%.15g)\n", maxabs);
                SCIPdebugMessage("  lhs violated absolutely, but feasible when using relative tolerance w.r.t. maximum absolute value (%.15g)\n", maxabs);
                SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) );
 
@@ -5504,7 +5502,6 @@ SCIP_RETCODE checkCons(
          /* check whether violation is random noise */
          if( (activity - consdata->rhs) <= (1e-15 * maxabs) )
          {
-            printf("  rhs violated due to random noise: maxabs=%.15g\n", maxabs);
             SCIPdebugMessage("  rhs violated due to random noise: maxabs=%.15g\n", maxabs);
             SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) );
 
@@ -5519,7 +5516,6 @@ SCIP_RETCODE checkCons(
          {
             if( (activity - consdata->rhs) <= (SCIPfeastol(scip) * maxabs) )
             {
-               printf("  rhs violated absolutely, but feasible when using relative tolerance w.r.t. maximum absolute value (%.15g)\n", maxabs);
                SCIPdebugMessage("  rhs violated absolutely, but feasible when using relative tolerance w.r.t. maximum absolute value (%.15g)\n", maxabs);
                SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) );
 
