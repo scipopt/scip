@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* #define SCIP_DEBUG */
 
 /**@file   heur_proximity.c
  * @brief  improvement heuristic which uses an auxiliary objective instead of the original objective function which
@@ -49,6 +48,7 @@
 /* todo refine these values */
 #define DEFAULT_MAXNODES      10000LL    /* maximum number of nodes to regard in the subproblem                        */
 #define DEFAULT_MINIMPROVE    0.25       /* factor by which proximity should at least improve the incumbent            */
+#define DEFAULT_MINGAP        0.01       /* minimum primal-dual gap for which the heuristic is executed                */
 #define DEFAULT_MINNODES      1LL        /* minimum number of nodes to regard in the subproblem                        */
 #define DEFAULT_MINLPITERS    200LL      /* minimum number of LP iterations to perform in one sub-mip                  */
 #define DEFAULT_MAXLPITERS    100000LL   /* maximum number of LP iterations to be performed in the subproblem          */
@@ -68,6 +68,7 @@ struct SCIP_HeurData
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes          */
    SCIP_Longint          usednodes;          /**< nodes already used by proximity in earlier calls                    */
    SCIP_Real             minimprove;         /**< factor by which proximity should at least improve the incumbent     */
+   SCIP_Real             mingap;             /**< minimum primal-dual gap for which the heuristic is executed         */
    SCIP*                 subscip;            /**< the subscip used by the heuristic                                   */
    SCIP_HASHMAP*         varmapfw;           /**< map between scip variables and subscip variables                    */
    SCIP_VAR**            subvars;            /**< variables in subscip                                                */
@@ -491,13 +492,13 @@ SCIP_RETCODE SCIPapplyProximity(
    /* use knowledge about integrality of objective to round up lower bound */
    if( SCIPisObjIntegral(scip) )
    {
-	   assert(SCIPisFeasIntegral(scip, bestobj));
-	   SCIPdebugMessage(" Rounding up lower bound: %f --> %f \n", lowerbound, SCIPceil(scip, lowerbound));
-	   lowerbound = SCIPfeasCeil(scip, lowerbound);
+      assert(SCIPisFeasIntegral(scip, bestobj));
+      SCIPdebugMessage(" Rounding up lower bound: %f --> %f \n", lowerbound, SCIPceil(scip, lowerbound));
+      lowerbound = SCIPfeasCeil(scip, lowerbound);
    }
 
    /* do not trigger heuristic if primal and dual bound are already close together */
-   if( SCIPisFeasEQ(scip, bestobj, lowerbound) || SCIPgetGap(scip) < 0.01 )
+   if( SCIPisFeasEQ(scip, bestobj, lowerbound) || SCIPgetGap(scip) <= heurdata->mingap )
       return SCIP_OKAY;
 
    /* check whether there is enough time and memory left */
@@ -799,6 +800,10 @@ SCIP_RETCODE SCIPincludeHeurProximity(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
          "factor by which proximity should at least improve the incumbent",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/mingap",
+         "minimum primal-dual gap for which the heuristic is executed",
+         &heurdata->mingap, TRUE, DEFAULT_MINGAP, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    return SCIP_OKAY;
 }
