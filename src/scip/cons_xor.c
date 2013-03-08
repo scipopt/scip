@@ -1656,12 +1656,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
-   SCIP_CONSDATA* consdata;
-
    assert(result != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
 
    SCIPdebugMessage("resolving fixations according to rule %d\n", (int) proprule);
 
