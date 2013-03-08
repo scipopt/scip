@@ -338,7 +338,7 @@ endif
 
 ifeq ($(IPOPT),true)
 LINKER		=	CPP
-FLAGS		+=	-I$(SCIPREALPATH)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
+FLAGS		+=	-I$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
 # for Ipopt >= 3.9.0, all linker flags are in share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt
 # for Ipopt < 3.9.0, we need to link against libipopt from the lib directory, plus the additional flags given in share/doc/coin/Ipopt/ipopt_addlibs_cpp.txt
 # finally, if no ipopt_addlibs_cpp.txt is present in the ipopt installation but a user put one into SCIP's libdir, take this one

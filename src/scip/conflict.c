@@ -193,6 +193,7 @@ void confgraphWriteEdge(
 /** creates a file to output the current conflict graph into; adds the conflict vertex to the graph */
 static
 void confgraphCreate(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
@@ -202,7 +203,7 @@ void confgraphCreate(
    assert(confgraphfile == NULL);
 
    (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%p%d.gml", conflict, conflict->count);
-   printf("storing conflict graph in file <%s>\n", fname);
+   SCIPinfoMessage(set->scip, NULL, "storing conflict graph in file <%s>\n", fname);
 
    confgraphfile = fopen(fname, "w");
 
@@ -2575,7 +2576,7 @@ SCIP_RETCODE SCIPconflictInit(
 
 #ifdef SCIP_CONFGRAPH
    confgraphFree();
-   confgraphCreate(conflict);
+   confgraphCreate(set, conflict);
 #endif
 
    return SCIP_OKAY;
@@ -6064,9 +6065,6 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    /* possibly restore solution values */
    if ( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED )
    {
-      if ( ! lp->flushed )
-         SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
-
       /* restore status */
       lp->lpsolstat = storedsolvals.lpsolstat;
       lp->lpobjval = storedsolvals.lpobjval;

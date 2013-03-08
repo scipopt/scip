@@ -193,14 +193,6 @@ void SCIPmessageVFPrintInfo(
    va_list               ap                  /**< variable argument list */
    );
 
-/** prints the header with source file location for an error message */
-EXTERN
-void SCIPmessagePrintWarningHeader(
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           sourcefile,         /**< name of the source file that called the function */
-   int                   sourceline          /**< line in the source file where the function was called */
-   );
-
 /** prints a warning message, acting like the printf() command */
 EXTERN
 void SCIPmessagePrintWarning(
