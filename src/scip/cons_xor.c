@@ -2169,6 +2169,7 @@ SCIP_RETCODE propagateCons(
       /* new lower bound is better */
       if( newlb > SCIPvarGetLbLocal(consdata->intvar) + 0.5 )
       {
+         SCIPdebugMessage("constraint <%s>: propagated lower bound of integral variable <%s> to %g\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->intvar), newlb);
          SCIP_CALL( SCIPinferVarLbCons(scip, consdata->intvar, newlb, cons, (int)PROPRULE_INTUB, TRUE, &infeasible, &tightened) );
          assert(tightened);
          assert(!infeasible);
@@ -2181,6 +2182,7 @@ SCIP_RETCODE propagateCons(
       /* new upper bound is better */
       if( newub < SCIPvarGetUbLocal(consdata->intvar) - 0.5 )
       {
+         SCIPdebugMessage("constraint <%s>: propagated upper bound of integral variable <%s> to %g\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->intvar), newub);
          SCIP_CALL( SCIPinferVarUbCons(scip, consdata->intvar, newub, cons, (int)PROPRULE_INTLB, TRUE, &infeasible, &tightened) );
          assert(tightened);
          assert(!infeasible);
@@ -2259,12 +2261,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
-   SCIP_CONSDATA* consdata;
-
    assert(result != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
 
    SCIPdebugMessage("resolving fixations according to rule %d\n", (int) proprule);
 
@@ -3448,7 +3445,9 @@ SCIP_DECL_CONSCOPY(consCopyXor)
 	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &targetintvar, varmap, consmap, global, valid) );
 	 assert(!(*valid) || targetintvar != NULL);
 
-         SCIPdebugMessage("Copied integral variable <%s> (bounds: [%g,%g])\n", SCIPvarGetName(targetintvar), SCIPvarGetLbGlobal(targetintvar), SCIPvarGetUbGlobal(targetintvar));
+         SCIPdebugMessage("Copied integral variable <%s> (bounds: [%g,%g])\n", SCIPvarGetName(targetintvar),
+            global ? SCIPvarGetLbGlobal(intvar) : SCIPvarGetLbLocal(intvar),
+            global ? SCIPvarGetUbGlobal(intvar) : SCIPvarGetUbLocal(intvar));
       }
 
       if( *valid )
@@ -3477,7 +3476,9 @@ SCIP_DECL_CONSCOPY(consCopyXor)
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &targetintvar, varmap, consmap, global, valid) );
       assert(!(*valid) || targetintvar != NULL);
 
-      SCIPdebugMessage("Copied integral variable <%s> (bounds: [%g,%g])\n", SCIPvarGetName(targetintvar), SCIPvarGetLbGlobal(targetintvar), SCIPvarGetUbGlobal(targetintvar));
+      SCIPdebugMessage("Copied integral variable <%s> (bounds: [%g,%g])\n", SCIPvarGetName(targetintvar),
+         global ? SCIPvarGetLbGlobal(intvar) : SCIPvarGetLbLocal(intvar),
+         global ? SCIPvarGetUbGlobal(intvar) : SCIPvarGetUbLocal(intvar));
    }
 
    /* only create the target constraints, if all variables could be copied */

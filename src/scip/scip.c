@@ -12731,6 +12731,9 @@ SCIP_RETCODE SCIPpresolve(
    if( scip->set->misc_catchctrlc )
       SCIPinterruptCapture(scip->interrupt);
 
+   /* reset the user interrupt flag */
+   scip->stat->userinterrupt = FALSE;
+
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -12897,6 +12900,9 @@ SCIP_RETCODE SCIPsolve(
    /* capture the CTRL-C interrupt */
    if( scip->set->misc_catchctrlc )
       SCIPinterruptCapture(scip->interrupt);
+
+   /* reset the user interrupt flag */
+   scip->stat->userinterrupt = FALSE;
 
    /* automatic restarting loop */
    restart = scip->stat->userrestart;
