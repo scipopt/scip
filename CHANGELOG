@@ -17,6 +17,7 @@ fixed bugs:
 - fixed several bugs in propagation of cons_xor: need to take integral variables into account
 - fixed several asserts in cons_xor presolving
 - fixed fieldtypes in sorting template
+- fixed bug concerning the userinterrupt flag, which was not reset
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
