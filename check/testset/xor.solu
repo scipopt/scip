@@ -10,22 +10,22 @@
 =opt= ldpc#30#60#10                     8
 =opt= ldpc#30#60#15                     8
 =opt= ldpc#30#60#20                     6
-=opt= ldpc#30#60#25                     8
-=opt= ldpc#30#60#30                     6
-=opt= ldpc#30#60#35                     8
-=opt= ldpc#30#60#40                     8
-=best= ldpc#30#60#45                     9
-=opt= ldpc#30#60#50                     7
-=unkn= ldpc#30#60#55     
+=best= ldpc#30#60#25                     8
+=best= ldpc#30#60#30                     6
+=best= ldpc#30#60#35                     8
+=best= ldpc#30#60#40                     8
+=best= ldpc#30#60#45                    10
+=best= ldpc#30#60#50                     8
+=best= ldpc#30#60#55                     9
 =opt= ldpc#30#60#5                     10
 =inf= ldpc#40#20#10     
 =unkn= ldpc#40#40#10     
-=unkn= ldpc#40#40#20     
-=unkn= ldpc#40#40#30     
+=best= ldpc#40#40#20                    21
+=best= ldpc#40#40#30                    19
 =inf= ldpc#40#40#5      
-=opt= ldpc#40#60#10                    12
-=best= ldpc#40#80#20                    15
-=unkn= ldpc#40#80#30     
-=unkn= ldpc#40#80#40     
-=unkn= ldpc#40#80#50     
-=unkn= ldpc#40#80#60     
+=best= ldpc#40#60#10                    12
+=best= ldpc#40#80#20                    12
+=best= ldpc#40#80#30                    11
+=best= ldpc#40#80#40                    12
+=best= ldpc#40#80#50                    12
+=best= ldpc#40#80#60                    14
