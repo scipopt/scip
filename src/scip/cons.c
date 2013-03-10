@@ -23,6 +23,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "scip/def.h"
 #include "scip/set.h"
@@ -5254,7 +5255,8 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
  */
 
 /** creates and captures a constraint, and inserts it into the conss array of its constraint handler
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *
+ *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
@@ -5395,7 +5397,8 @@ SCIP_RETCODE SCIPconsCreate(
 /** copies source constraint of source SCIP into the target constraint for the target SCIP, using the variable map for
  *  mapping the variables of the source SCIP to the variables of the target SCIP; if the copying process was successful
  *  a constraint is created and captured;
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *
+ *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
@@ -5455,7 +5458,8 @@ SCIP_RETCODE SCIPconsCopy(
 
 /** parses constraint information (in cip format) out of a string; if the parsing process was successful a constraint is
  *  created, captured, and inserted into the conss array of its constraint handler.
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution
+ *
+ *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
@@ -5494,55 +5498,72 @@ SCIP_RETCODE SCIPconsParse(
    SCIP_CONSHDLR* conshdlr;
    char conshdlrname[SCIP_MAXSTRLEN];
    char consname[SCIP_MAXSTRLEN];
-   char* saveptr;
+   char* endptr;
 
    assert(cons != NULL);
    assert(set != NULL);
 
    (*success) = FALSE;
 
-   /* scan constant handler name */
+   /* scan constraint handler name */
    assert(str != NULL);
-   SCIPstrCopySection(str, '[', ']', conshdlrname, SCIP_MAXSTRLEN, &saveptr);
-   assert(saveptr != NULL);
+   SCIPstrCopySection(str, '[', ']', conshdlrname, SCIP_MAXSTRLEN, &endptr);
+   if ( endptr == NULL || endptr == str )
+   {
+      SCIPmessagePrintWarning(messagehdlr, "Syntax error: Could not find constraint handler name.\n");
+      return SCIP_OKAY;
+   }
+   assert(endptr != NULL);
    SCIPdebugMessage("constraint handler name <%s>\n", conshdlrname);
 
    /* scan constraint name */
-   SCIPstrCopySection(saveptr, '<', '>', consname, SCIP_MAXSTRLEN, &saveptr);
-   assert(saveptr != NULL);
+   SCIPstrCopySection(endptr, '<', '>', consname, SCIP_MAXSTRLEN, &endptr);
+   if ( endptr == NULL || endptr == str )
+   {
+      SCIPmessagePrintWarning(messagehdlr, "Syntax error: Could not find constraint name.\n");
+      return SCIP_OKAY;
+   }
+   assert(endptr != NULL);
    SCIPdebugMessage("constraint name <%s>\n", consname);
 
-   str = saveptr;
+   str = endptr;
+
+   /* skip white space */
+   while ( isspace((unsigned char)* str) )
+      ++str;
+
+   /* check for colon */
+   if( *str != ':' )
+   {
+      SCIPmessagePrintWarning(messagehdlr, "Syntax error: Could not find colon ':' after constraint name.\n");
+      return SCIP_OKAY;
+   }
 
    /* skip colon */
-   if( *str != ':' )
-      return SCIP_OKAY;
+   ++str;
 
-   str++;
-
-   /* skip space */
-   if( *str != ' ')
-      return SCIP_OKAY;
-
-   str++;
+   /* skip white space */
+   while ( isspace((unsigned char)* str) )
+      ++str;
 
    /* check if a constraint handler with parsed name exists */
    conshdlr = SCIPsetFindConshdlr(set, conshdlrname);
 
-   if( conshdlr != NULL && conshdlr->consparse != NULL )
+   if( conshdlr == NULL )
    {
-      SCIP_CALL( conshdlr->consparse(set->scip, conshdlr, cons, consname, str,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
+      SCIPmessagePrintWarning(messagehdlr, "constraint handler <%s> doesn't exist in SCIP data structure\n", conshdlrname);
    }
    else
    {
-      if( conshdlr == NULL )
+      assert( conshdlr != NULL );
+      if ( conshdlr->consparse == NULL )
       {
-         SCIPmessagePrintWarning(messagehdlr, "constraint handler <%s> doesn't exist in SCIP data structure\n", conshdlrname);
+         SCIPmessagePrintWarning(messagehdlr, "constraint handler <%s> does not support parsing constraints\n", conshdlrname);
       }
-      else if( conshdlr->consparse == NULL )
+      else
       {
-         SCIPmessagePrintWarning(messagehdlr, "constraint handler <%s> doesn't support parsing constraints\n", conshdlrname);
+         SCIP_CALL( conshdlr->consparse(set->scip, conshdlr, cons, consname, str,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
       }
    }
 
