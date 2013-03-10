@@ -655,11 +655,35 @@ SCIP_DECL_READERREAD(readerReadCip)
    return SCIP_OKAY;
 }
 
+/** hash key retrieval function for variables */
+static
+SCIP_DECL_HASHGETKEY(hashGetKeyVar)
+{  /*lint --e{715}*/
+   return elem;
+}
+
+/** returns TRUE iff the indices of both variables are equal */
+static
+SCIP_DECL_HASHKEYEQ(hashKeyEqVar)
+{  /*lint --e{715}*/
+   if( key1 == key2 )
+      return TRUE;
+   return FALSE;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(hashKeyValVar)
+{  /*lint --e{715}*/
+   assert( SCIPvarGetIndex((SCIP_VAR*) key) >= 0 );
+   return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
+}
 
 /** problem writing method of reader */
 static
 SCIP_DECL_READERWRITE(readerWriteCip)
 {  /*lint --e{715}*/
+   SCIP_HASHTABLE* varhash = NULL;
    int i;
 
    SCIPinfoMessage(scip, file, "STATISTICS\n");
@@ -675,21 +699,141 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    if( !SCIPisEQ(scip, objscale, 1.0) )
       SCIPinfoMessage(scip, file, "  Scale            : %.15g\n", objscale);
 
-   if( nvars > 0 )
+   if ( nfixedvars > 0 )
+   {
+      /* set up hash table for variables that have been written property (used for writing out fixed vars in the right order) */
+      SCIP_CALL( SCIPhashtableCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * (nvars + nfixedvars)), hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   }
+
+   if ( nvars + nfixedvars > 0 )
    {
       SCIPinfoMessage(scip, file, "VARIABLES\n");
+   }
+
+   if( nvars > 0 )
+   {
       for( i = 0; i < nvars; ++i )
       {
-         SCIP_CALL( SCIPprintVar(scip, vars[i], file) );
+         SCIP_VAR* var;
+
+         var = vars[i];
+         assert( var != NULL );
+         SCIP_CALL( SCIPprintVar(scip, var, file) );
+         if ( varhash != NULL )
+         {
+            /* add free variable to hashtable */
+            if ( ! SCIPhashtableExists(varhash, (void*) var) )
+            {
+               SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+            }
+         }
       }
    }
 
    if( nfixedvars > 0 )
    {
+      int nwritten = 0;
+
       SCIPinfoMessage(scip, file, "FIXED\n");
-      for( i = 0; i < nfixedvars; ++i )
+
+      /* loop through variables until each has been written after the variables that depend on have been written; this
+       * requires several runs over the variables, but the depth (= number of loops) is usually small. */
+      while ( nwritten < nfixedvars )
       {
-         SCIP_CALL( SCIPprintVar(scip, fixedvars[i], file) );
+         SCIPdebugMessage("written %d of %d fixed variables.\n", nwritten, nfixedvars);
+         for (i = 0; i < nfixedvars; ++i)
+         {
+            SCIP_VAR* var;
+            SCIP_VAR* tmpvar;
+
+            var = fixedvars[i];
+            assert( var != NULL );
+
+            /* skip variables already written */
+            if ( SCIPhashtableExists(varhash, (void*) var) )
+               continue;
+
+            switch ( SCIPvarGetStatus(var) )
+            {
+            case SCIP_VARSTATUS_FIXED:
+
+               /* fixed variables can simply be output and added to the hashtable */
+               SCIP_CALL( SCIPprintVar(scip, var, file) );
+               assert( ! SCIPhashtableExists(varhash, (void*) var) );
+               SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+               ++nwritten;
+
+               break;
+
+            case SCIP_VARSTATUS_NEGATED:
+
+               tmpvar = SCIPvarGetNegationVar(var);
+               assert( tmpvar != NULL );
+               assert( var == SCIPvarGetNegationVar(tmpvar) );
+
+               /* if the negated variable has been written, we can write the current variable */
+               if ( SCIPhashtableExists(varhash, (void*) tmpvar) )
+               {
+                  SCIP_CALL( SCIPprintVar(scip, var, file) );
+                  assert( ! SCIPhashtableExists(varhash, (void*) var) );
+                  SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+                  ++nwritten;
+               }
+               break;
+
+            case SCIP_VARSTATUS_AGGREGATED:
+
+               tmpvar = SCIPvarGetAggrVar(var);
+               assert( tmpvar != NULL );
+
+               /* if the aggregating variable has been written, we can write the current variable */
+               if ( SCIPhashtableExists(varhash, (void*) tmpvar) )
+               {
+                  SCIP_CALL( SCIPprintVar(scip, var, file) );
+                  assert( ! SCIPhashtableExists(varhash, (void*) var) );
+                  SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+                  ++nwritten;
+               }
+               break;
+
+            case SCIP_VARSTATUS_MULTAGGR:
+            {
+               SCIP_VAR** aggrvars;
+               int naggrvars;
+               int j;
+
+               /* get the active representation */
+               SCIP_CALL( SCIPflattenVarAggregationGraph(scip, var) );
+
+               naggrvars = SCIPvarGetMultaggrNVars(var);
+               aggrvars = SCIPvarGetMultaggrVars(var);
+               assert( aggrvars != NULL );
+
+               for (j = 0; j < naggrvars; ++j)
+               {
+                  if ( ! SCIPhashtableExists(varhash, (void*) aggrvars[j]) )
+                     break;
+               }
+
+               /* if all multi-aggregating variables have been written, we can write the current variable */
+               if ( j >= naggrvars )
+               {
+                  SCIP_CALL( SCIPprintVar(scip, var, file) );
+                  assert( ! SCIPhashtableExists(varhash, (void*) var) );
+                  SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+                  ++nwritten;
+               }
+               break;
+            }
+
+            case SCIP_VARSTATUS_ORIGINAL:
+            case SCIP_VARSTATUS_LOOSE:
+            case SCIP_VARSTATUS_COLUMN:
+               SCIPerrorMessage("Only fixed variables are allowed to be present in fixedvars list.\n");
+               SCIPABORT();
+               return SCIP_ERROR;
+            }
+         }
       }
    }
 
@@ -706,10 +850,11 @@ SCIP_DECL_READERWRITE(readerWriteCip)
          SCIPinfoMessage(scip, file, ";\n");
       }
    }
+   SCIPinfoMessage(scip, file, "END\n");
 
    *result = SCIP_SUCCESS;
+   SCIPhashtableFree(&varhash);
 
-   SCIPinfoMessage(scip, file, "END\n");
    return SCIP_OKAY;
 }
 
