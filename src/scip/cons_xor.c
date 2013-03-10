@@ -961,11 +961,11 @@ SCIP_RETCODE addExtendedFlowFormulation(
       if ( i == 0 )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_nn", SCIPconsGetName(cons), i);
-         SCIP_CALL( SCIPcreateVar(scip, &varnn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVar(scip, &varnn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, varnn) );
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ns", SCIPconsGetName(cons), i);
-         SCIP_CALL( SCIPcreateVar(scip, &varns, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVar(scip, &varns, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, varns) );
 
          /* need to lock variables, because we aggregate them */
@@ -986,11 +986,11 @@ SCIP_RETCODE addExtendedFlowFormulation(
             {
                /* if the rhs is 1 (true) the flow goes to the bottom level */
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ns", SCIPconsGetName(cons), i);
-               SCIP_CALL( SCIPcreateVar(scip, &varns, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPcreateVar(scip, &varns, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, varns) );
 
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ss", SCIPconsGetName(cons), i);
-               SCIP_CALL( SCIPcreateVar(scip, &varss, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPcreateVar(scip, &varss, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, varss) );
 
                /* need to lock variables, because we aggregate them */
@@ -1007,11 +1007,11 @@ SCIP_RETCODE addExtendedFlowFormulation(
             {
                /* if the rhs is 0 (false) the flow stays on the top level */
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_nn", SCIPconsGetName(cons), i);
-               SCIP_CALL( SCIPcreateVar(scip, &varnn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPcreateVar(scip, &varnn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, varnn) );
 
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_sn", SCIPconsGetName(cons), i);
-               SCIP_CALL( SCIPcreateVar(scip, &varsn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPcreateVar(scip, &varsn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, varsn) );
 
                /* need to lock variables, because we aggregate them */
@@ -1029,19 +1029,19 @@ SCIP_RETCODE addExtendedFlowFormulation(
          {
             /* add the four flow variables */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_nn", SCIPconsGetName(cons), i);
-            SCIP_CALL( SCIPcreateVar(scip, &varnn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVar(scip, &varnn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, varnn) );
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ns", SCIPconsGetName(cons), i);
-            SCIP_CALL( SCIPcreateVar(scip, &varns, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVar(scip, &varns, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, varns) );
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_sn", SCIPconsGetName(cons), i);
-            SCIP_CALL( SCIPcreateVar(scip, &varsn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVar(scip, &varsn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, varsn) );
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ss", SCIPconsGetName(cons), i);
-            SCIP_CALL( SCIPcreateVar(scip, &varss, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVar(scip, &varss, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, varss) );
 
             SCIP_CALL( SCIPlockVarCons(scip, varnn, cons, TRUE, TRUE) );
@@ -1067,10 +1067,9 @@ SCIP_RETCODE addExtendedFlowFormulation(
 
             assert( cnt >= 2 );
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_couple", SCIPconsGetName(cons));
+            /* not initial, separate, do not enforce, do not check, propagate, not local, not modifiable, dynamic, removable, not sticking */
             SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, cnt, vars, vals, 0.0, 0.0,
-                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
-                  SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
-                  SCIPconsIsRemovable(cons), FALSE) );
+                  FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
             SCIP_CALL( SCIPaddCons(scip, newcons) );
             SCIPdebugPrintCons(scip, newcons, NULL);
             SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -1106,10 +1105,9 @@ SCIP_RETCODE addExtendedFlowFormulation(
 
          assert( cnt >= 2 );
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_south", SCIPconsGetName(cons));
+         /* not initial, separate, do not enforce, do not check, propagate, not local, not modifiable, dynamic, removable, not sticking */
          SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, cnt, vars, vals, 0.0, 0.0,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
-               SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
-               SCIPconsIsRemovable(cons), FALSE) );
+               FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugPrintCons(scip, newcons, NULL);
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -1149,10 +1147,10 @@ SCIP_RETCODE addExtendedFlowFormulation(
          rhs = -1.0;
       else
          rhs = 0.0;
+
+      /* not initial, separate, do not enforce, do not check, propagate, not local, not modifiable, dynamic, removable, not sticking */
       SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, cnt, vars, vals, rhs, rhs,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
-            SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
-            SCIPconsIsRemovable(cons), FALSE) );
+            FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, newcons) );
       SCIPdebugPrintCons(scip, newcons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -1274,7 +1272,7 @@ SCIP_RETCODE addExtendedAsymmetricFormulation(
 
       /* create variable */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "p_%s_%d", SCIPconsGetName(cons), i);
-      SCIP_CALL( SCIPcreateVar(scip, &artvar, name, lb, ub, 0.0, SCIP_VARTYPE_BINARY, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVar(scip, &artvar, name, lb, ub, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, artvar) );
       SCIP_CALL( SCIPlockVarCons(scip, artvar, cons, TRUE, TRUE) );
 
@@ -1300,10 +1298,9 @@ SCIP_RETCODE addExtendedAsymmetricFormulation(
          vals[2] = -1.0;
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_1", SCIPconsGetName(cons), i);
+         /* not initial, separate, do not enforce, do not check, propagate, not local, not modifiable, dynamic, removable, not sticking */
          SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, 3, vars, vals, -SCIPinfinity(scip), 0.0,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
-               SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
-               SCIPconsIsRemovable(cons), FALSE) );
+               FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugPrintCons(scip, newcons, NULL);
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -1318,10 +1315,9 @@ SCIP_RETCODE addExtendedAsymmetricFormulation(
          vals[2] = 1.0;
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_2", SCIPconsGetName(cons), i);
+         /* not initial, separate, do not enforce, do not check, propagate, not local, not modifiable, dynamic, removable, not sticking */
          SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, 3, vars, vals, -SCIPinfinity(scip), 2.0,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
-               SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
-               SCIPconsIsRemovable(cons), FALSE) );
+               FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugPrintCons(scip, newcons, NULL);
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -1336,10 +1332,9 @@ SCIP_RETCODE addExtendedAsymmetricFormulation(
          vals[2] = -1.0;
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_3", SCIPconsGetName(cons), i);
+         /* not initial, separate, do not enforce, do not check, propagate, not local, not modifiable, dynamic, removable, not sticking */
          SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, 3, vars, vals, -SCIPinfinity(scip), 0.0,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
-               SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
-               SCIPconsIsRemovable(cons), FALSE) );
+               FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugPrintCons(scip, newcons, NULL);
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -1354,10 +1349,9 @@ SCIP_RETCODE addExtendedAsymmetricFormulation(
          vals[2] = 1.0;
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_4", SCIPconsGetName(cons), i);
+         /* not initial, separate, do not enforce, do not check, propagate, not local, not modifiable, dynamic, removable, not sticking */
          SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, 3, vars, vals, -SCIPinfinity(scip), 0.0,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), FALSE, FALSE,
-               SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
-               SCIPconsIsRemovable(cons), FALSE) );
+               FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugPrintCons(scip, newcons, NULL);
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -1724,6 +1718,7 @@ SCIP_RETCODE separateCons(
  */
 static
 int Gauss(
+   SCIP*                 scip,               /**< SCIP data structure */
    int                   m,                  /**< number of rows */
    int                   n,                  /**< number of columns */
    int*                  p,                  /**< row permutation */
@@ -1798,6 +1793,13 @@ int Gauss(
                A[pk][j] = A[pk][j] ^ A[pi][j];
             b[pk] = b[pk] ^ b[pi];
          }
+      }
+
+      /* check stopped */
+      if ( i % 1000 == 0 )
+      {
+         if ( SCIPisStopped(scip) )
+            return -1;
       }
    }
 
@@ -1971,107 +1973,118 @@ SCIP_RETCODE propagateGauss(
    SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-   rank = Gauss(nconssmat, nvarsmat, p, s, A, b);
-   assert( rank <= nconssmat && rank <= nvarsmat );
+   rank = -1;
+   if ( ! SCIPisStopped(scip) )
+   {
+      rank = Gauss(scip, nconssmat, nvarsmat, p, s, A, b);
+      assert( rank <= nconssmat && rank <= nvarsmat );
+   }
 
+   if ( rank >= 0 )
+   {
 #ifdef SCIP_OUTPUT
-   SCIPinfoMessage(scip, NULL, "Matrix after Gauss (rank: %d):\n", rank);
-   for (i = 0; i < nconssmat; ++i)
-   {
-      for (j = 0; j < nvarsmat; ++j)
-         SCIPinfoMessage(scip, NULL, "%d ", A[p[i]][j]);
-      SCIPinfoMessage(scip, NULL, " = %d\n", b[p[i]]);
-   }
-   SCIPinfoMessage(scip, NULL, "\n");
-#endif
-
-   /* check whether system is feasible */
-   for (i = rank; i < nconssmat; ++i)
-   {
-      if ( b[p[i]] != 0 )
-         break;
-   }
-   if ( i >= nconssmat )
-   {
-      SCIP_HEUR* heurtrysol;
-
-      SCIPdebugMessage("Found solution.\n");
-
-      /* try solution */
-      heurtrysol = SCIPfindHeur(scip, "trysol");
-
-      if ( heurtrysol != NULL )
+      SCIPinfoMessage(scip, NULL, "Matrix after Gauss (rank: %d):\n", rank);
+      for (i = 0; i < nconssmat; ++i)
       {
-         SCIP_Bool success;
-         SCIP_SOL* sol;
-         SCIP_VAR** vars;
-         Type* x;
-
-         /* construct solution */
-         SCIP_CALL( SCIPallocBufferArray(scip, &x, nvarsmat) );
-         solveRowEcholon(nconssmat, nvarsmat, rank, p, s, A, b, x);
-
-#ifdef SCIP_OUTPUT
-         SCIPinfoMessage(scip, NULL, "Solution:\n");
          for (j = 0; j < nvarsmat; ++j)
-            SCIPinfoMessage(scip, NULL, "%d ", x[j]);
-         SCIPinfoMessage(scip, NULL, "\n");
+            SCIPinfoMessage(scip, NULL, "%d ", A[p[i]][j]);
+         SCIPinfoMessage(scip, NULL, " = %d\n", b[p[i]]);
+      }
+      SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-         /* create solution */
-         SCIP_CALL( SCIPcreateSol(scip, &sol, heurtrysol) );
-
-         /* transfer solution */
-         for (j = 0; j < nvarsmat; ++j)
-         {
-            if ( x[j] != 0 )
-               SCIP_CALL( SCIPsetSolVal(scip, sol, backvar[j], 1) );
-         }
-         SCIPfreeBufferArray(scip, &x);
-
-         /* add variables fixed to 1 */
-         vars = SCIPgetVars(scip);
-         for (j = 0; j < nvars; ++j)
-         {
-            if ( SCIPcomputeVarLbLocal(scip, vars[j]) > 0.5 )
-               SCIP_CALL( SCIPsetSolVal(scip, sol, vars[j], 1) );
-         }
-
-         /* correct integral variables if necessary */
-         for (i = 0; i < nconss; ++i)
-         {
-            consdata = SCIPconsGetData(conss[i]);
-            assert(consdata != NULL);
-
-            if ( consdata->intvar != NULL )
-            {
-               SCIP_Real val;
-               int nones = 0;
-
-               for (j = 0; j < consdata->nvars; ++j)
-               {
-                  if ( SCIPgetSolVal(scip, sol, consdata->vars[j]) > 0.5 )
-                     ++nones;
-               }
-               assert( (nones - consdata->rhs) % 2 == 0 );
-               val = (SCIP_Real) (nones - consdata->rhs)/2;
-               if ( SCIPisGE(scip, val, SCIPvarGetLbGlobal(consdata->intvar)) && SCIPisLE(scip, val, SCIPvarGetUbGlobal(consdata->intvar)) )
-                  SCIP_CALL( SCIPsetSolVal(scip, sol, consdata->intvar, val) );
-            }
-         }
-
-         SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
-
-         /* check feasibility of new solution and pass it to trysol heuristic */
-         SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &success) );
-         assert( sol == NULL );
-         SCIPdebugMessage("Creating solution was%s successful.\n", success ? "" : " not");
+      /* check whether system is feasible */
+      for (i = rank; i < nconssmat; ++i)
+      {
+         if ( b[p[i]] != 0 )
+            break;
       }
-   }
-   else
-   {
-      *result = SCIP_CUTOFF;
-      SCIPdebugMessage("System not feasible.\n");
+      if ( i >= nconssmat )
+      {
+         SCIP_HEUR* heurtrysol;
+
+         SCIPdebugMessage("Found solution.\n");
+
+         /* try solution */
+         heurtrysol = SCIPfindHeur(scip, "trysol");
+
+         if ( heurtrysol != NULL )
+         {
+            SCIP_Bool success;
+            SCIP_SOL* sol;
+            SCIP_VAR** vars;
+            Type* x;
+
+            /* construct solution */
+            SCIP_CALL( SCIPallocBufferArray(scip, &x, nvarsmat) );
+            solveRowEcholon(nconssmat, nvarsmat, rank, p, s, A, b, x);
+
+#ifdef SCIP_OUTPUT
+            SCIPinfoMessage(scip, NULL, "Solution:\n");
+            for (j = 0; j < nvarsmat; ++j)
+               SCIPinfoMessage(scip, NULL, "%d ", x[j]);
+            SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+            /* create solution */
+            SCIP_CALL( SCIPcreateSol(scip, &sol, heurtrysol) );
+
+            /* transfer solution */
+            for (j = 0; j < nvarsmat; ++j)
+            {
+               if ( x[j] != 0 )
+                  SCIP_CALL( SCIPsetSolVal(scip, sol, backvar[j], 1) );
+            }
+            SCIPfreeBufferArray(scip, &x);
+
+            /* add variables fixed to 1 */
+            vars = SCIPgetVars(scip);
+            for (j = 0; j < nvars; ++j)
+            {
+               if ( SCIPcomputeVarLbLocal(scip, vars[j]) > 0.5 )
+                  SCIP_CALL( SCIPsetSolVal(scip, sol, vars[j], 1) );
+            }
+
+            /* correct integral variables if necessary */
+            for (i = 0; i < nconss; ++i)
+            {
+               consdata = SCIPconsGetData(conss[i]);
+               assert(consdata != NULL);
+
+               if ( consdata->intvar != NULL )
+               {
+                  SCIP_Real val;
+                  int nones = 0;
+
+                  for (j = 0; j < consdata->nvars; ++j)
+                  {
+                     if ( SCIPgetSolVal(scip, sol, consdata->vars[j]) > 0.5 )
+                        ++nones;
+                  }
+                  assert( (nones - consdata->rhs) % 2 == 0 );
+                  val = (SCIP_Real) (nones - consdata->rhs)/2;
+                  if ( SCIPisGE(scip, val, SCIPvarGetLbGlobal(consdata->intvar)) && SCIPisLE(scip, val, SCIPvarGetUbGlobal(consdata->intvar)) )
+                     SCIP_CALL( SCIPsetSolVal(scip, sol, consdata->intvar, val) );
+               }
+            }
+
+            SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
+#ifndef NDEBUG
+            SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, TRUE, &success) );
+            assert( success );
+#endif
+
+            /* check feasibility of new solution and pass it to trysol heuristic */
+            SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &success) );
+            assert( sol == NULL );
+            SCIPdebugMessage("Creating solution was%s successful.\n", success ? "" : " not");
+         }
+      }
+      else
+      {
+         *result = SCIP_CUTOFF;
+         SCIPdebugMessage("System not feasible.\n");
+      }
    }
 
    /* free storage */
