@@ -5451,7 +5451,7 @@ SCIP_RETCODE checkCons(
          if( (consdata->lhs - activity) <= (1e-15 * maxabs) )
          {
             SCIPdebugMessage("  lhs violated due to random noise: maxabs=%.15g\n", maxabs);
-            SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) );
+            SCIPdebug( SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) ) );
 
             /* only increase constraint age if we are in enforcement */
             if( sol == NULL )
@@ -5465,7 +5465,7 @@ SCIP_RETCODE checkCons(
             if( (consdata->lhs - activity) <= (SCIPfeastol(scip) * maxabs) )
             {
                SCIPdebugMessage("  lhs violated absolutely, but feasible when using relative tolerance w.r.t. maximum absolute value (%.15g)\n", maxabs);
-               SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) );
+               SCIPdebug( SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) ) );
 
                /* only increase constraint age if we are in enforcement */
                if( sol == NULL )
@@ -5503,7 +5503,7 @@ SCIP_RETCODE checkCons(
          if( (activity - consdata->rhs) <= (1e-15 * maxabs) )
          {
             SCIPdebugMessage("  rhs violated due to random noise: maxabs=%.15g\n", maxabs);
-            SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) );
+            SCIPdebug( SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) ) );
 
             /* only increase constraint age if we are in enforcement */
             if( sol == NULL )
@@ -5517,7 +5517,7 @@ SCIP_RETCODE checkCons(
             if( (activity - consdata->rhs) <= (SCIPfeastol(scip) * maxabs) )
             {
                SCIPdebugMessage("  rhs violated absolutely, but feasible when using relative tolerance w.r.t. maximum absolute value (%.15g)\n", maxabs);
-               SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) );
+               SCIPdebug( SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) ) );
 
                /* only increase constraint age if we are in enforcement */
                if( sol == NULL )
