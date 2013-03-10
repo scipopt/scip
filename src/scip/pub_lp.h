@@ -158,7 +158,8 @@ int SCIPcolGetNNonz(
    );
 
 /** get number of nonzero entries in column vector, that correspond to rows currently in the SCIP_LP;
- *  Warning! This method is only applicable on columns, that are completely linked to their rows (e.g. a column
+ *
+ *  @warning This method is only applicable on columns, that are completely linked to their rows (e.g. a column
  *  that is in the current LP and the LP was solved, or a column that was in a solved LP and didn't change afterwards
  */
 EXTERN
@@ -299,7 +300,8 @@ int SCIProwGetNNonz(
    );
 
 /** get number of nonzero entries in row vector, that correspond to columns currently in the SCIP_LP;
- *  Warning! This method is only applicable on rows, that are completely linked to their columns (e.g. a row
+ *
+ *  @warning This method is only applicable on rows, that are completely linked to their columns (e.g. a row
  *  that is in the current LP and the LP was solved, or a row that was in a solved LP and didn't change afterwards
  */
 EXTERN
