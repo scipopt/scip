@@ -157,12 +157,23 @@ SCIP_RETCODE getStart(
    CIPINPUT*             cipinput            /**< CIP parsing data */
    )
 {
-   if( strncmp(cipinput->strbuf, "STATISTICS", 9) == 0 )
+   char* buf;
+
+   buf = cipinput->strbuf;
+
+   if( strncmp(buf, "STATISTICS", 9) == 0 )
    {
       cipinput->section = CIP_STATISTIC;
       return SCIP_OKAY;
    }
-   
+
+   if( strncmp(buf, "VARIABLES", 8) == 0 || strncmp(buf, "FIXED", 5) == 0 || strncmp(buf, "CONSTRAINTS", 11) == 0 || strncmp(buf, "OBJECTIVE", 9) == 0 )
+   {
+      SCIPerrorMessage("Syntax Error: File has to start with 'STATISTICS' section.\n");
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
+   }
+
    return SCIP_OKAY;
 }
 
@@ -250,7 +261,11 @@ SCIP_RETCODE getObjective(
 
    SCIPdebugMessage("parse objective information\n");
 
-   if( strncmp(buf, "  Sense", 7) == 0 )
+   /* remove white space */
+   while ( isspace((unsigned char)* buf) )
+      ++buf;
+
+   if( strncasecmp(buf, "Sense", 5) == 0 )
    {
       SCIP_OBJSENSE objsense;
 
@@ -269,9 +284,9 @@ SCIP_RETCODE getObjective(
       while( isspace((unsigned char)* name) )
          ++name;
 
-      if( strncmp(name, "minimize", 3) == 0 )
+      if( strncasecmp(name, "minimize", 3) == 0 )
          objsense = SCIP_OBJSENSE_MINIMIZE;
-      else if( strncmp(name, "maximize", 3) == 0 )
+      else if( strncasecmp(name, "maximize", 3) == 0 )
          objsense = SCIP_OBJSENSE_MAXIMIZE;
       else
       {
@@ -283,8 +298,9 @@ SCIP_RETCODE getObjective(
       SCIP_CALL( SCIPsetObjsense(scip, objsense) );
       SCIPdebugMessage("objective sense <%s>\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
    }
-   else if( strncmp(buf, "  Offset", 7) == 0 )
+   else if( strncasecmp(buf, "Offset", 6) == 0 )
    {
+      SCIP_Real off = 0;
       char* endptr;
 
       name = strchr(buf, ':');
@@ -300,12 +316,22 @@ SCIP_RETCODE getObjective(
 
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
-         name++;
+         ++name;
 
-      *objoffset += strtod(name, &endptr);
+      if ( SCIPstrToRealValue(name, &off, &endptr) )
+      {
+         *objoffset += off;
+         SCIPdebugMessage("offset <%g> (total: %g)\n", off, *objoffset);
+      }
+      else
+      {
+         SCIPwarningMessage(scip, "could not parse offset (line: %d)\n%s\n", cipinput->linenumber, cipinput->strbuf);
+         return SCIP_OKAY;
+      }
    }
-   else if( strncmp(buf, "  Scale", 7) == 0 )
+   else if( strncasecmp(buf, "Scale", 5) == 0 )
    {
+      SCIP_Real scale = 1.0;
       char* endptr;
 
       name = strchr(buf, ':');
@@ -321,9 +347,18 @@ SCIP_RETCODE getObjective(
 
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
-         name++;
+         ++name;
 
-      *objscale *= strtod(name, &endptr);
+      if ( SCIPstrToRealValue(name, &scale, &endptr) )
+      {
+         *objscale *= scale;
+         SCIPdebugMessage("objscale <%g> (total: %g)\n", scale, *objscale);
+      }
+      else
+      {
+         SCIPwarningMessage(scip, "could not parse objective scale (line: %d)\n%s\n", cipinput->linenumber, cipinput->strbuf);
+         return SCIP_OKAY;
+      }
    }
 
    return SCIP_OKAY;
