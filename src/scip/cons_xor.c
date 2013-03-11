@@ -2075,7 +2075,7 @@ SCIP_RETCODE propagateGauss(
 #endif
 
             /* check feasibility of new solution and pass it to trysol heuristic */
-            SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, &success) );
             assert( sol == NULL );
             SCIPdebugMessage("Creating solution was%s successful.\n", success ? "" : " not");
          }
