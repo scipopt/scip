@@ -6278,13 +6278,13 @@ SCIP_Longint SCIPcalcGreComDiv(
 
    assert(val1 > 0);
    assert(val2 > 0);
-   
+
    t = 0;
    /* if val1 is even, divide it by 2 */
    while( !(val1 & 1) )
    {
       val1 >>= 1; /*lint !e704*/
-      
+
       /* if val2 is even too, divide it by 2 and increase t(=number of e) */
       if( !(val2 & 1) )
       {
@@ -6297,36 +6297,50 @@ SCIP_Longint SCIPcalcGreComDiv(
          /* while val1 is even, divide it by 2 */
          while( !(val1 & 1) )
             val1 >>= 1; /*lint !e704*/
-         
+
          break;
       }
    }
    /* while val2 is even, divide it by 2 */
    while( !(val2 & 1) )
       val2 >>= 1; /*lint !e704*/
-   
+
    /* val1 and val 2 are odd */
    while( val1 != val2 )
    {
       if( val1 > val2 )
       {
-         val1 -= val2;
-         /* val1 is now even, divide it by 2  */
-         do 
-         {
+         /* if ((val1 xor val2) and 2) = 2, then gcd(val1, val2) = gcd((val1 + val2)/4, val2),
+          * and otherwise                        gcd(val1, val2) = gcd((val1 − val2)/4, val2)
+          */
+         if( ((val1 ^ val2) & 2) == 2 )
+            val1 += val2;
+         else
+            val1 -= val2;
+
+         assert((val1 & 3) == 0);
+         val1 >>= 2;   /*lint !e704*/
+
+         /* if val1 is still even, divide it by 2  */
+         while( !(val1 & 1) )
             val1 >>= 1;   /*lint !e704*/
-         }
-         while( !(val1 & 1) );
       }
-      else 
+      else
       {
-         val2 -= val1;
-         /* val2 is now even, divide it by 2  */
-         do 
-         {
-            val2 >>= 1;  /*lint !e704*/
-         }
-         while( !(val2 & 1) );
+         /* if ((val2 xor val1) and 2) = 2, then gcd(val2, val1) = gcd((val2 + val1)/4, val1),
+          * and otherwise                        gcd(val2, val1) = gcd((val2 − val1)/4, val1)
+          */
+         if( ((val2 ^ val1) & 2) == 2 )
+            val2 += val1;
+         else
+            val2 -= val1;
+
+         assert((val2 & 3) == 0);
+         val2 >>= 2;   /*lint !e704*/
+
+         /* if val2 is still even, divide it by 2  */
+         while( !(val2 & 1) )
+            val2 >>= 1;   /*lint !e704*/
       }
    }
 
@@ -6345,7 +6359,7 @@ SCIP_Longint SCIPcalcSmaComMul(
    assert(val2 > 0);
 
    gcd = SCIPcalcGreComDiv(val1, val2);
-   
+
    return val1/gcd * val2;
 }
 
