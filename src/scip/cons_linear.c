@@ -5805,7 +5805,7 @@ SCIP_RETCODE extractCliques(
          assert(consdata->validglbminact || consdata->validglbmaxact);
 
          /* sort coefficients non-increasing to be faster in the clique search */
-         SCIPsortDownRealPtr(binvarvals, (void*) binvars, nposbinvars + nnegbinvars);
+         SCIPsortDownRealPtr(binvarvals, (void**) binvars, nposbinvars + nnegbinvars);
 
          /* case a) */
          if( finiterhs && finitenegminact && nposbinvars >= 2 )
