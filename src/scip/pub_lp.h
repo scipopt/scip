@@ -472,7 +472,7 @@ SCIP_Bool SCIProwIsInLP(
 #define SCIProwGetRhs(row)              (row)->rhs
 #define SCIProwGetDualsol(row)          ((row)->lppos >= 0 ? (row)->dualsol : 0.0)
 #define SCIProwGetDualfarkas(row)       ((row)->lppos >= 0 ? (row)->dualfarkas : 0.0)
-#define SCIProwGetBasisStatus(row)      (row)->basisstatus
+#define SCIProwGetBasisStatus(row)      ((SCIP_BASESTAT) (row)->basisstatus)
 #define SCIProwGetName(row)             (row)->name
 #define SCIProwGetIndex(row)            (row)->index
 #define SCIProwGetAge(row)              (row)->age
