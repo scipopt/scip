@@ -29229,7 +29229,7 @@ SCIP_RETCODE SCIPcreateSolCopyRemoveInfiniteFixings(
        */
       for( v = 0; v < norigvars; ++v )
       {
-         varcopy = SCIPhashmapGetImage(varmap, (void*)origvars[v]);
+         varcopy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, (void*)origvars[v]);
          assert(varcopy != NULL);
          assert(SCIPisFeasGE(scip, solvals[v], SCIPvarGetLbLocal(varcopy)));
          assert(SCIPisFeasLE(scip, solvals[v], SCIPvarGetUbLocal(varcopy)));
@@ -29298,10 +29298,10 @@ SCIP_RETCODE SCIPcreateSolCopyRemoveInfiniteFixings(
 
       bestsol = SCIPgetBestSol(subscip);
 
-      /* cahnge the stored solution values for variables fixed to infinite values */
+      /* change the stored solution values for variables fixed to infinite values */
       for( v = 0; v < norigvars; ++v )
       {
-         varcopy = SCIPhashmapGetImage(varmap, (void*)origvars[v]);
+         varcopy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, (void*)origvars[v]);
          assert(varcopy != NULL);
 
          if( (SCIPisInfinity(scip, solvals[v]) || SCIPisInfinity(scip, -solvals[v])) )
