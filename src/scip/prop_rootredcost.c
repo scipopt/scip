@@ -281,6 +281,7 @@ SCIP_RETCODE propdataInit(
    propdata->nredcostvars = nredcostvars;
    propdata->nredcostbinvars = nredcostbinvars;
    propdata->glbfirstnonfixed = 0;
+   propdata->lastcutoffbound = SCIPinfinity(scip);
    propdata->initialized = TRUE;
 
    return SCIP_OKAY;
@@ -567,7 +568,6 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
 
    /* get current cutoff bound */
    cutoffbound = SCIPgetCutoffbound(scip);
-   assert(cutoffbound <= propdata->lastcutoffbound);
 
    /* reduced cost strengthening can only be applied, if we have a finite upper bound on the LP value */
    if( SCIPisInfinity(scip, cutoffbound) )
@@ -575,6 +575,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
 
    /* initialize propagator data structure */
    SCIP_CALL( propdataInit(scip, propdata) );
+   assert(cutoffbound <= propdata->lastcutoffbound);
 
    if( cutoffbound == propdata->lastcutoffbound ) /*lint !e777*/
       return SCIP_OKAY;
