@@ -675,9 +675,9 @@ void propdataReset(
    propdata->maxpseudoobjactinf = 0;
    propdata->lastvarnum = -1;
    propdata->glbpropagated = FALSE;
-   propdata->cutoffbound = SCIPinfinity(scip);
-   propdata->lastlowerbound = -SCIPinfinity(scip);
-   propdata->glbpseudoobjval = -SCIPinfinity(scip);
+   propdata->cutoffbound = SCIP_INVALID;
+   propdata->lastlowerbound = -SCIP_INVALID;
+   propdata->glbpseudoobjval = -SCIP_INVALID;
    propdata->glbfirstnonfixed = 0;
    propdata->maxactfirstnonfixed = 0;
    propdata->firstnonfixed = 0;
@@ -1624,6 +1624,10 @@ SCIP_RETCODE propdataInit(
    propdata->maxactfirstnonfixed = 0;
    propdata->firstnonfixed = 0;
    propdata->nnewvars = 0;
+   propdata->cutoffbound = SCIPinfinity(scip);
+   propdata->lastlowerbound = -SCIPinfinity(scip);
+   propdata->glbpseudoobjval = -SCIPinfinity(scip);
+
    propdata->initialized = TRUE;
 
    /* due to scaling after presolving we need to update the global pseudoactivity and the cutoffbound */
