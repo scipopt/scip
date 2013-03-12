@@ -104,6 +104,10 @@ heuristics/rins/freq = 20
 # [type: int, range: [-1,1000], default: 10]
 heuristics/shiftandpropagate/nproprounds = -1
 
+# Should heuristic only be executed if no primal solution was found, yet?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/shiftandpropagate/onlywithoutsol = FALSE
+
 # frequency for calling primal heuristic <shifting> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/shifting/freq = 5
