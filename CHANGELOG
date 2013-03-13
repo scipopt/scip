@@ -131,6 +131,7 @@ fixed bugs:
 - fixed several asserts in cons_xor presolving
 - fixed fieldtypes in sorting template
 - fixed bug concerning the userinterrupt flag, which was not reset
+- fixed potential performance issue with tree depth always assumed to be zero when propagating in probing mode
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
