@@ -96,6 +96,11 @@ parameters:
 - new parameter "reading/(READER)/initialconss" that determines whether model constraints are initial
 - new parameter "constraints/xor/addextendedform" to add an extended formulation in XOR-constraints
 - new parameter "constraints/xor/addflowextended" to add use the extended flow formulation in XOR-constraints
+- new possible values for parameter "heuristics/shiftandpropagate/sortkey" for sorting variables w.r.t. their norm,
+  default changed from 'u' to 'v', which means sorting downwards by violations
+- new parameter "heuristics/shiftandpropagate/collectstats" which decides whether variable statistics are collected
+- new parameters "heuristics/shiftandpropagate/preferbinaries" and "heuristics/shiftandpropagate/stopafterfeasible",
+  which decide whether binaries should be shifted first and the shifting should be stopped when no violations are left
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
