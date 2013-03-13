@@ -71,7 +71,8 @@
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
-
+#define MAXXORCONSSSYSTEM          1000 /**< maximal number of active constraints for which checking the system over GF2 is performed */
+#define MAXXORVARSSYSTEM           1000 /**< maximal number of variables in xor constraints for which checking the system over GF2 is performed */
 
 #define NROWS 4
 
@@ -80,7 +81,7 @@
  * Data structures
  */
 
-/** type used for matrix entries in function propagateGauss() */
+/** type used for matrix entries in function checkGauss() */
 typedef unsigned short Type;
 
 /** constraint data for xor constraints */
@@ -1713,44 +1714,56 @@ SCIP_RETCODE separateCons(
    return SCIP_OKAY;
 }
 
-/** Transform matrix into row echolon form via the Gauss algorithm with row pivoting over GF2
- *  @returns the rank of A
+/** Transform linear system \f$A x = b\f$ into row echolon form via the Gauss algorithm with row pivoting over GF2
+ *  @returns the rank of @p A
+ *
+ *  Here, \f$A \in R^{m \times n},\; b \in R^m\f$. On exit, the vector @p p contains a permutation of the row indices
+ *  used for pivoting and the function returns the rank @p r of @p A. For each row @p i = 1, \dots, @p r, the entry @p
+ *  s[i] contains the column index of the first nonzero in row @p i.
  */
 static
-int Gauss(
+int computeRowEcholonGF2(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   m,                  /**< number of rows */
    int                   n,                  /**< number of columns */
    int*                  p,                  /**< row permutation */
-   int*                  s,                  /**< steps */
+   int*                  s,                  /**< steps indicators of the row echolon form */
    Type**                A,                  /**< matrix */
    Type*                 b                   /**< rhs */
    )
 {
+   int pi;
    int i;
    int j;
    int k;
 
    assert( A != NULL );
    assert( b != NULL );
+   assert( p != NULL );
+   assert( s != NULL );
 
-   /* init permutation */
+   /* init permutation and step indicators */
    for (i = 0; i < m; ++i)
    {
       p[i] = i;
       s[i] = i;
    }
 
-   /* go through rows */
+   /* loop through possible steps in echolon form (stop at min {n, m}) */
    for (i = 0; i < m && i < n; ++i)
    {
-      int pi;
-
-      /* find pivot row (i.e. first nonzero entry) */
-      j = i;
       assert( s[i] == i );
+
+      /* init starting column */
+      if ( i == 0 )
+         j = 1;
+      else
+         j = s[i-1] + 1;
+
+      /* find pivot row (i.e., first nonzero entry), if all entries in current row are 0 we search the next column */
       do
       {
+         /* search in current column j */
          k = i;
          while ( k < m && A[p[k]][j] == 0 )
             ++k;
@@ -1759,21 +1772,24 @@ int Gauss(
          if ( k < m )
             break;
 
+         /* otherwise search next column */
          ++j;
       }
       while ( j < n );
 
-      /* check rank */
+      /* if not pivot entry was found (checked all columns), the rank of A is equal to the current index i; in this case
+       * all entries in and below row i are 0 */
       if ( j >= n )
          return i;
 
+      /* at this place: we have found a pivot entry (p[k], j) */
       assert( k < m );
 
-      /* store step */
+      /* store step index */
       s[i] = j;
-      assert( A[p[k]][s[i]] != 0 );
+      assert( A[p[k]][j] != 0 );
 
-      /* swap rows */
+      /* swap row indices */
       if ( k != i )
       {
          int h = p[i];
@@ -1787,6 +1803,7 @@ int Gauss(
       for (k = i+1; k < m; ++k)
       {
          int pk = p[k];
+         /* if entry in leading column is nonzero (otherwise we already have a 0) */
          if ( A[pk][s[i]] != 0 )
          {
             for (j = s[i]; j < n; ++j)
@@ -1795,30 +1812,34 @@ int Gauss(
          }
       }
 
-      /* check stopped */
-      if ( i % 1000 == 0 )
+      /* check stopped (only every 100 rows in order to save time */
+      if ( i % 100 == 99 )
       {
          if ( SCIPisStopped(scip) )
             return -1;
       }
    }
 
+   /* at this point we have treated all rows in which a step can occur; the rank is the minimum of the number of rows or
+    * columns min {n,m}. */
    if ( n <= m )
       return n;
    return m;
 }
 
-/** Construct solution from matrix in row echolon form over GF2 */
+/** Construct solution from matrix in row echolon form over GF2
+ *
+ *  Compute solution of \f$A x = b\f$, which is already in row echolon form (@see computeRowEcholonGF2()) */
 static
-void solveRowEcholon(
+void solveRowEcholonGF2(
    int                   m,                  /**< number of rows */
    int                   n,                  /**< number of columns */
    int                   r,                  /**< rank of matrix */
    int*                  p,                  /**< row permutation */
-   int*                  s,                  /**< steps */
+   int*                  s,                  /**< steps indicators of the row echolon form */
    Type**                A,                  /**< matrix */
    Type*                 b,                  /**< rhs */
-   Type*                 x                   /**< solution vector */
+   Type*                 x                   /**< solution vector on exit */
    )
 {
    int i;
@@ -1826,18 +1847,26 @@ void solveRowEcholon(
 
    assert( A != NULL );
    assert( b != NULL );
+   assert( s != NULL );
+   assert( p != NULL );
    assert( x != NULL );
    assert( r <= m && r <= n );
 
+   /* init solution vector to 0 */
    for (k = 0; k < n; ++k)
       x[k] = 0;
 
+   /* init last entry */
    x[s[r-1]] = b[p[r-1]];
+
+   /* loop backwards through solution vector */
    for (i = r-2; i >= 0; --i)
    {
       int val;
 
       assert( i <= s[i] && s[i] <= n );
+
+      /* init val with rhs and then add the contributions of the components of x already computed */
       val = b[p[i]];
       for (k = i+1; k < r; ++k)
       {
@@ -1845,28 +1874,49 @@ void solveRowEcholon(
          if ( A[p[i]][s[k]] != 0 )
             val = val ^ x[s[k]];
       }
+
+      /* store solution */
       x[s[i]] = val;
    }
 }
 
-/** solve equation system over GF 2 by Gauss algorithm and create solution out of it */
+/** solve equation system over GF 2 by Gauss algorithm and create solution out of it or return cutoff
+ *
+ *  Collect all information in xor constraints into a linear system over GF2. Then solve the system by computing a row
+ *  echolon form. If the system is infeasible, the current node is infeasible. Otherwise, we can compute a solution for
+ *  the xor constraints given. We check whether this gives a solution for the whole problem.
+ *
+ *  We sort the columns with respect to the product of the objective coefficients and 1 minus the current LP solution
+ *  value. The idea is that columns that are likely to provide the steps in the row echolon form should appear towards
+ *  the front of the matrix. The smaller the product, the more it makes sense to set the variable to 1 (because the
+ *  solution value is already close to 1 and the objective function is small).
+ *
+ *  Note that this function is called from propagation where usually no solution is available. However, the solution is
+ *  only used for sorting the columns. Thus, the procedure stays correct even with nonsense solutions.
+ */
 static
-SCIP_RETCODE propagateGauss(
+SCIP_RETCODE checkSystemGF2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< xor constraints */
    int                   nconss,             /**< number of xor constraints */
-   SCIP_RESULT*          result              /**< result of propagation (possibly cutoff) */
+   SCIP_SOL*             currentsol,         /**< current solution (maybe NULL) */
+   SCIP_RESULT*          result              /**< result of propagation (possibly cutoff, no change if primal solution has been tried) */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_HASHMAP* varhash;
-   SCIP_VAR** backvar;
+   SCIP_Bool* xoractive;
+   SCIP_Real* xorvals;
+   SCIP_VAR** xorvars;
    Type** A;
    Type* b;
    int* s;
    int* p;
-   int nvarsmat = 0;
+   int* xoridx;
+   int* xorbackidx;
+   int nconssactive = 0;
    int nconssmat = 0;
+   int nvarsmat = 0;
    int nvars;
    int rank;
    int i;
@@ -1876,28 +1926,30 @@ SCIP_RETCODE propagateGauss(
    assert( conss != NULL );
    assert( result != NULL );
 
-   SCIPdebugMessage("Checking feasibility via Gauss.\n");
+   if ( *result == SCIP_CUTOFF )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("Checking feasibility via the linear equation system over GF2 using Gauss.\n");
 
    nvars = SCIPgetNVars(scip);
 
    /* set up hash map from variable to column index */
    SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * nvars)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &xoractive, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &xorvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &xoridx, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &xorvals, nvars) );
 
-   /* init matrix and rhs */
-   SCIP_CALL( SCIPallocBufferArray(scip, &b, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &A, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &backvar, nvars) );
+   /* collect variables */
    for (i = 0; i < nconss; ++i)
    {
       int cnt = 0;
 
+      xoractive[i] = FALSE;
+
       assert( conss[i] != NULL );
       consdata = SCIPconsGetData(conss[i]);
       assert( consdata != NULL );
-
-      /* skip empty constraints */
-      if ( consdata->nvars == 0 )
-         continue;
 
       /* count nonfixed variables in constraint */
       for (j = 0; j < consdata->nvars; ++j)
@@ -1906,14 +1958,98 @@ SCIP_RETCODE propagateGauss(
 
          var = consdata->vars[j];
          assert( var != NULL );
+         assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
 
+         /* consider nonfixed variables */
          if ( SCIPcomputeVarLbLocal(scip, var) < 0.5 && SCIPcomputeVarUbLocal(scip, var) > 0.5 )
+         {
+            if ( ! SCIPhashmapExists(varhash, var) )
+            {
+               /* add variable in map */
+               SCIP_CALL( SCIPhashmapInsert(varhash, var, (void*) (size_t) nvarsmat) );
+               assert( nvarsmat == (int) (size_t) SCIPhashmapGetImage(varhash, var) );
+               xorvals[nvarsmat] = SCIPvarGetObj(var) * (1.0 - SCIPgetSolVal(scip, currentsol, var));
+               xorvars[nvarsmat++] = var;
+            }
             ++cnt;
+         }
       }
 
-      /* if all variables in constraint are fixed, consider next */
-      if ( cnt == 0 )
+      if ( cnt > 0 )
+      {
+         xoractive[i] = TRUE;
+         ++nconssactive;
+      }
+#if 0
+      /* The following can save time, if there are constraints with all variables fixed that are infeasible; this
+       * should, however, be detected somewhere else, e.g., in propagateCons(). */
+      else
+      {
+         /* all variables are fixed - check whether constraint is feasible (could be that the constraint is not propagated) */
+         assert( cnt == 0 );
+         for (j = 0; j < consdata->nvars; ++j)
+         {
+            /* count variables fixed to 1 */
+            if ( SCIPcomputeVarLbLocal(scip, consdata->vars[j]) > 0.5 )
+               ++cnt;
+            else
+               assert( SCIPcomputeVarUbLocal(scip, consdata->vars[j]) < 0.5 );
+         }
+         if ( ( cnt - consdata->rhs ) % 2 != 0 )
+         {
+            SCIPdebugMessage("constraint <%s> with all variables fixed is violated.\n", SCIPconsGetName(conss[i]));
+            *result = SCIP_CUTOFF;
+            break;
+         }
+      }
+#endif
+   }
+   assert( nvarsmat <= nvars );
+   assert( nconssactive <= nconss );
+
+   if ( nconssactive > MAXXORCONSSSYSTEM || nvarsmat > MAXXORVARSSYSTEM || *result == SCIP_CUTOFF )
+   {
+      SCIPdebugMessage("Skip checking the xor system over GF2 (%d conss, %d vars).\n", nconssactive, nvarsmat);
+      SCIPfreeBufferArray(scip, &xorvals);
+      SCIPfreeBufferArray(scip, &xoridx);
+      SCIPfreeBufferArray(scip, &xorvars);
+      SCIPfreeBufferArray(scip, &xoractive);
+      SCIPhashmapFree(&varhash);
+      return SCIP_OKAY;
+   }
+
+   /* init index */
+   for (j = 0; j < nvarsmat; ++j)
+      xoridx[j] = j;
+
+   /* Sort variables non-decreasingly with respect to product of objective and 1 minus the current solution value: the
+    * smaller the value the better it would be to set the variable to 1. This is more likely if the variable appears
+    * towards the front of the matrix, because only the entries on the steps in the row echolon form will have the
+    * chance to be nonzero.
+    */
+   SCIPsortRealIntPtr(xorvals, xoridx, (void**) xorvars, nvarsmat);
+   SCIPfreeBufferArray(scip, &xorvals);
+
+   /* build back index */
+   SCIP_CALL( SCIPallocBufferArray(scip, &xorbackidx, nvarsmat) );
+   for (j = 0; j < nvarsmat; ++j)
+   {
+      assert( 0 <= xoridx[j] && xoridx[j] < nvarsmat );
+      xorbackidx[xoridx[j]] = j;
+   }
+
+   /* init matrix and rhs */
+   SCIP_CALL( SCIPallocBufferArray(scip, &b, nconssactive) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &A, nconssactive) );
+   for (i = 0; i < nconss; ++i)
+   {
+      if ( ! xoractive[i] )
          continue;
+
+      assert( conss[i] != NULL );
+      consdata = SCIPconsGetData(conss[i]);
+      assert( consdata != NULL );
+      assert( consdata->nvars > 0 );
 
       SCIP_CALL( SCIPallocBufferArray(scip, &(A[nconssmat]), nvars) );
       BMSclearMemoryArray(A[nconssmat], nvars);
@@ -1930,33 +2066,26 @@ SCIP_RETCODE propagateGauss(
 
          if ( SCIPcomputeVarLbLocal(scip, var) > 0.5 )
          {
+            /* variable is fixed to 1, invert rhs */
             b[nconssmat] = ! b[nconssmat];
+            assert( ! SCIPhashmapExists(varhash, var) );
          }
          else
          {
             if ( SCIPcomputeVarUbLocal(scip, var) > 0.5 )
             {
-               if ( ! SCIPhashmapExists(varhash, var) )
-               {
-                  /* add variable in map */
-                  SCIP_CALL( SCIPhashmapInsert(varhash, var, (void*) (size_t) nvarsmat) );
-                  assert( nvarsmat == (int) (size_t) SCIPhashmapGetImage(varhash, var) );
-                  A[nconssmat][nvarsmat] = 1;
-                  backvar[nvarsmat++] = var;
-               }
-               else
-               {
-                  idx = (int) (size_t) SCIPhashmapGetImage(varhash, var);
-                  assert( idx < nvars );
-                  A[nconssmat][idx] = 1;
-               }
+               assert( SCIPhashmapExists(varhash, var) );
+               idx = (int) (size_t) SCIPhashmapGetImage(varhash, var);
+               assert( idx < nvarsmat );
+               assert( 0 <= xorbackidx[idx] && xorbackidx[idx] < nvarsmat );
+               A[nconssmat][xorbackidx[idx]] = 1;
             }
          }
       }
-
       ++nconssmat;
    }
-   SCIPdebugMessage("Found %d variables in %d nonempty xor constraints.\n", nvarsmat, nconssmat);
+   SCIPdebugMessage("Found %d non-fixed variables in %d nonempty xor constraints.\n", nvarsmat, nconssmat);
+   assert( nconssmat == nconssactive );
 
    /* perform Gauss algorithm */
    SCIP_CALL( SCIPallocBufferArray(scip, &p, nconssmat) );
@@ -1976,10 +2105,11 @@ SCIP_RETCODE propagateGauss(
    rank = -1;
    if ( ! SCIPisStopped(scip) )
    {
-      rank = Gauss(scip, nconssmat, nvarsmat, p, s, A, b);
+      rank = computeRowEcholonGF2(scip, nconssmat, nvarsmat, p, s, A, b);
       assert( rank <= nconssmat && rank <= nvarsmat );
    }
 
+   /* rank is < 0 if the solution process has been stopped */
    if ( rank >= 0 )
    {
 #ifdef SCIP_OUTPUT
@@ -1999,6 +2129,7 @@ SCIP_RETCODE propagateGauss(
          if ( b[p[i]] != 0 )
             break;
       }
+      /* did not find nonzero entry in b -> equation system is feasible */
       if ( i >= nconssmat )
       {
          SCIP_HEUR* heurtrysol;
@@ -2011,13 +2142,13 @@ SCIP_RETCODE propagateGauss(
          if ( heurtrysol != NULL )
          {
             SCIP_Bool success;
-            SCIP_SOL* sol;
             SCIP_VAR** vars;
+            SCIP_SOL* sol;
             Type* x;
 
             /* construct solution */
             SCIP_CALL( SCIPallocBufferArray(scip, &x, nvarsmat) );
-            solveRowEcholon(nconssmat, nvarsmat, rank, p, s, A, b, x);
+            solveRowEcholonGF2(nconssmat, nvarsmat, rank, p, s, A, b, x);
 
 #ifdef SCIP_OUTPUT
             SCIPinfoMessage(scip, NULL, "Solution:\n");
@@ -2033,16 +2164,23 @@ SCIP_RETCODE propagateGauss(
             for (j = 0; j < nvarsmat; ++j)
             {
                if ( x[j] != 0 )
-                  SCIP_CALL( SCIPsetSolVal(scip, sol, backvar[j], 1) );
+               {
+                  assert( (int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j]) < nvars );
+                  assert( xorbackidx[(int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j])] == j );
+                  SCIP_CALL( SCIPsetSolVal(scip, sol, xorvars[j], 1) );
+               }
             }
             SCIPfreeBufferArray(scip, &x);
 
-            /* add variables fixed to 1 */
+            /* add *all* variables fixed to 1 */
             vars = SCIPgetVars(scip);
             for (j = 0; j < nvars; ++j)
             {
                if ( SCIPcomputeVarLbLocal(scip, vars[j]) > 0.5 )
+               {
                   SCIP_CALL( SCIPsetSolVal(scip, sol, vars[j], 1) );
+                  SCIPdebugMessage("Added fixed variable <%s>.\n", SCIPvarGetName(vars[j]));
+               }
             }
 
             /* correct integral variables if necessary */
@@ -2051,7 +2189,7 @@ SCIP_RETCODE propagateGauss(
                consdata = SCIPconsGetData(conss[i]);
                assert(consdata != NULL);
 
-               if ( consdata->intvar != NULL )
+               if ( xoractive[i] && consdata->intvar != NULL )
                {
                   SCIP_Real val;
                   int nones = 0;
@@ -2061,22 +2199,23 @@ SCIP_RETCODE propagateGauss(
                      if ( SCIPgetSolVal(scip, sol, consdata->vars[j]) > 0.5 )
                         ++nones;
                   }
-                  assert( (nones - consdata->rhs) % 2 == 0 );
-                  val = (SCIP_Real) (nones - consdata->rhs)/2;
-                  if ( SCIPisGE(scip, val, SCIPvarGetLbGlobal(consdata->intvar)) && SCIPisLE(scip, val, SCIPvarGetUbGlobal(consdata->intvar)) )
-                     SCIP_CALL( SCIPsetSolVal(scip, sol, consdata->intvar, val) );
+                  assert( nones % 2 == (int) consdata->rhs );
+                  if ( (unsigned int) nones != consdata->rhs )
+                  {
+                     val = (SCIP_Real) (nones - consdata->rhs)/2;
+                     if ( SCIPisGE(scip, val, SCIPvarGetLbGlobal(consdata->intvar)) && SCIPisLE(scip, val, SCIPvarGetUbGlobal(consdata->intvar)) )
+                     {
+                        SCIP_CALL( SCIPsetSolVal(scip, sol, consdata->intvar, val) );
+                     }
+                  }
                }
             }
-
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
-#ifndef NDEBUG
-            SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, TRUE, &success) );
-            assert( success );
-#endif
 
             /* check feasibility of new solution and pass it to trysol heuristic */
             SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, &success) );
             assert( sol == NULL );
+            /* the solution might not be feasible, because of additional constraints */
             SCIPdebugMessage("Creating solution was%s successful.\n", success ? "" : " not");
          }
       }
@@ -2090,6 +2229,7 @@ SCIP_RETCODE propagateGauss(
    /* free storage */
    SCIPfreeBufferArray(scip, &s);
    SCIPfreeBufferArray(scip, &p);
+   SCIPfreeBufferArray(scip, &xorbackidx);
    j = 0;
    for (i = 0; i < nconss; ++i)
    {
@@ -2101,9 +2241,11 @@ SCIP_RETCODE propagateGauss(
 
       SCIPfreeBufferArray(scip, &(A[j++]));
    }
-   SCIPfreeBufferArray(scip, &backvar);
    SCIPfreeBufferArray(scip, &A);
    SCIPfreeBufferArray(scip, &b);
+   SCIPfreeBufferArray(scip, &xoridx);
+   SCIPfreeBufferArray(scip, &xorvars);
+   SCIPfreeBufferArray(scip, &xoractive);
    SCIPhashmapFree(&varhash);
 
    return SCIP_OKAY;
@@ -3554,6 +3696,7 @@ SCIP_DECL_CONSPROP(consPropXor)
       *result = SCIP_REDUCEDDOM;
    else
    {
+      *result = SCIP_DIDNOTFIND;
       if ( ! SCIPinProbing(scip) )
       {
          int depth;
@@ -3563,11 +3706,11 @@ SCIP_DECL_CONSPROP(consPropXor)
          freq = conshdlrdata->gausspropfreq;
          if ( (depth == 0 && freq == 0) || (freq > 0 && depth % freq == 0) )
          {
-            SCIP_CALL( propagateGauss(scip, conss, nconss, result) );
+            /* take usefull constraints only - might improve success rate to take all */
+            SCIP_CALL( checkSystemGF2(scip, conss, nusefulconss, NULL, result) );
          }
       }
 
-      *result = SCIP_DIDNOTFIND;
    }
 
    return SCIP_OKAY;
