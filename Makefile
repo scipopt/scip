@@ -136,10 +136,10 @@ endif
 LPSOPTIONS	+=	clp
 ifeq ($(LPS),clp)
 LINKER		=	CPP
-FLAGS		+=	-I$(CLPDIR)/include/coin
+FLAGS		+=	-I$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
-SOFTLINKS	+=	$(CLPDIR)
+SOFTLINKS	+=	$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 LPIINSTMSG	=	"  -> \"clp.*\" is a directory containing the Clp installation, i.e., \"clp.*/include/coin/ClpModel.hpp\" should exist.\n"
 endif
 
@@ -321,6 +321,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_objpscostdiving.o \
 			scip/heur_octane.o \
 			scip/heur_oneopt.o \
+			scip/heur_proximity.o \
 			scip/heur_pscostdiving.o \
 			scip/heur_rens.o \
 			scip/heur_rins.o \
@@ -549,6 +550,15 @@ else
 			$(LINT) lint/$(MAINSHORTNAME).lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
+endif
+
+.PHONY: splint
+splint:		$(SCIPLIBSRC) $(LPILIBSRC)
+		-rm -f splint.out
+ifeq ($(FILES),)
+		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$^) &>> splint.out;'
+else
+		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$(FILES)) &>> splint.out;'
 endif
 
 .PHONY: doc

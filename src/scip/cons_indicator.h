@@ -217,14 +217,6 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
    SCIP_CONS*            cons                /**< indicator constraint */
    );
 
-/** sets slack variable corresponding to indicator constraint */
-EXTERN
-SCIP_RETCODE SCIPsetSlackVarIndicator(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< indicator constraint */
-   SCIP_VAR*             slackvar            /**< slack variable */
-   );
-
 /** checks whether indicator constraint is violated w.r.t. sol */
 EXTERN
 SCIP_Bool SCIPisViolatedIndicator(

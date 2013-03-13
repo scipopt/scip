@@ -31,7 +31,6 @@
 #include "scip/implics.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-
 #include "scip/debug.h"
 
 #ifndef NDEBUG
@@ -1361,7 +1360,7 @@ int cliquesSearchClique(
    SCIP_CLIQUE*          clique              /**< clique to search for */
    )
 {
-   int cliqueid;
+   unsigned int cliqueid;
    int left;
    int right;
 
@@ -1369,18 +1368,16 @@ int cliquesSearchClique(
    assert(clique != NULL);
 
    cliqueid = clique->id;
-   assert(cliqueid >= 0);
    left = -1;
    right = ncliques;
    while( left < right-1 )
    {
+      unsigned int id;
       int middle;
-      int id;
 
       assert(cliques != NULL);
       middle = (left+right)/2;
       id = cliques[middle]->id;
-      assert(id >= 0);
       if( cliqueid < id )
          right = middle;
       else if( cliqueid > id )
@@ -2149,7 +2146,7 @@ int SCIPcliqueGetId(
 {
    assert(clique != NULL);
 
-   return clique->id;
+   return (int) clique->id;
 }
    
 /** returns the number of cliques stored in the clique list */

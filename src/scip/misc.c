@@ -3357,7 +3357,7 @@ void SCIPsort(
    /* create identity permutation */
    for( pos = 0; pos < len; ++pos )
       perm[pos] = pos;
-   
+
    SCIPsortInd(perm, indcomp, dataptr, len);
 }
 
@@ -3443,19 +3443,20 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
-/* SCIPsortPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
-#define SORTTPL_NAMEEXT     PtrPtrIntInt
+/* SCIPsortPtrRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrRealIntInt
 #define SORTTPL_KEYTYPE     void*
-#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c" /*lint !e451*/
 
-/* SCIPsortPtrRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
-#define SORTTPL_NAMEEXT     PtrRealIntInt
+
+/* SCIPsortPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrIntInt
 #define SORTTPL_KEYTYPE     void*
-#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_PTRCOMP
@@ -3498,6 +3499,7 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     SCIP_Real
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealBoolPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -3505,25 +3507,20 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
 
-/* SCIPsortRealPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
-#define SORTTPL_NAMEEXT     RealPtrPtrInt
-#define SORTTPL_KEYTYPE     SCIP_Real
-#define SORTTPL_FIELD1TYPE  void*
-#define SORTTPL_FIELD2TYPE  void*
-#define SORTTPL_FIELD3TYPE  int
-#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealInt
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  int
 #include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortRealIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealIntLong
@@ -3532,6 +3529,7 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  SCIP_Longint
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortRealIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealIntPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -3539,12 +3537,14 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortRealLongRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealLongRealInt
@@ -3562,6 +3562,7 @@ void SCIPsort(
 #define SORTTPL_FIELD3TYPE  int
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortRealRealRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealRealInt
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -3569,6 +3570,7 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
 #include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortRealRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealRealPtr
@@ -3578,6 +3580,16 @@ void SCIPsort(
 #define SORTTPL_FIELD3TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
+/* SCIPsortRealPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealPtrPtrInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortRealRealRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealRealBoolPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -3586,6 +3598,7 @@ void SCIPsort(
 #define SORTTPL_FIELD3TYPE  SCIP_Bool
 #define SORTTPL_FIELD4TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     Int
@@ -3899,6 +3912,28 @@ void SCIPsortDown(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortDownPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrPtrIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortPtrPtrRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrPtrRealInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortDownPtrPtrLongInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownPtrPtrLongInt
 #define SORTTPL_KEYTYPE     void*
@@ -3928,12 +3963,15 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortDownRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealBoolPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  SCIP_Bool
 #define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortDownRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealPtr
@@ -4027,6 +4065,16 @@ void SCIPsortDown(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortDownRealPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealPtrPtrInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortDownRealRealRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealRealRealBoolPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -4052,6 +4100,7 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortDownIntIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownIntIntReal
 #define SORTTPL_KEYTYPE     int
@@ -4059,6 +4108,15 @@ void SCIPsortDown(
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortDownIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownIntPtr
@@ -6220,13 +6278,13 @@ SCIP_Longint SCIPcalcGreComDiv(
 
    assert(val1 > 0);
    assert(val2 > 0);
-   
+
    t = 0;
    /* if val1 is even, divide it by 2 */
    while( !(val1 & 1) )
    {
       val1 >>= 1; /*lint !e704*/
-      
+
       /* if val2 is even too, divide it by 2 and increase t(=number of e) */
       if( !(val2 & 1) )
       {
@@ -6239,36 +6297,50 @@ SCIP_Longint SCIPcalcGreComDiv(
          /* while val1 is even, divide it by 2 */
          while( !(val1 & 1) )
             val1 >>= 1; /*lint !e704*/
-         
+
          break;
       }
    }
    /* while val2 is even, divide it by 2 */
    while( !(val2 & 1) )
       val2 >>= 1; /*lint !e704*/
-   
+
    /* val1 and val 2 are odd */
    while( val1 != val2 )
    {
       if( val1 > val2 )
       {
-         val1 -= val2;
-         /* val1 is now even, divide it by 2  */
-         do 
-         {
+         /* if ((val1 xor val2) and 2) = 2, then gcd(val1, val2) = gcd((val1 + val2)/4, val2),
+          * and otherwise                        gcd(val1, val2) = gcd((val1 − val2)/4, val2)
+          */
+         if( ((val1 ^ val2) & 2) == 2 )
+            val1 += val2;
+         else
+            val1 -= val2;
+
+         assert((val1 & 3) == 0);
+         val1 >>= 2;   /*lint !e704*/
+
+         /* if val1 is still even, divide it by 2  */
+         while( !(val1 & 1) )
             val1 >>= 1;   /*lint !e704*/
-         }
-         while( !(val1 & 1) );
       }
-      else 
+      else
       {
-         val2 -= val1;
-         /* val2 is now even, divide it by 2  */
-         do 
-         {
-            val2 >>= 1;  /*lint !e704*/
-         }
-         while( !(val2 & 1) );
+         /* if ((val2 xor val1) and 2) = 2, then gcd(val2, val1) = gcd((val2 + val1)/4, val1),
+          * and otherwise                        gcd(val2, val1) = gcd((val2 − val1)/4, val1)
+          */
+         if( ((val2 ^ val1) & 2) == 2 )
+            val2 += val1;
+         else
+            val2 -= val1;
+
+         assert((val2 & 3) == 0);
+         val2 >>= 2;   /*lint !e704*/
+
+         /* if val2 is still even, divide it by 2  */
+         while( !(val2 & 1) )
+            val2 >>= 1;   /*lint !e704*/
       }
    }
 
@@ -6287,7 +6359,7 @@ SCIP_Longint SCIPcalcSmaComMul(
    assert(val2 > 0);
 
    gcd = SCIPcalcGreComDiv(val1, val2);
-   
+
    return val1/gcd * val2;
 }
 
@@ -7167,16 +7239,22 @@ int SCIPsnprintf(
    return n;
 }
 
-/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to str */
+/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
 SCIP_Bool SCIPstrToIntValue(
    const char*           str,                /**< string to search */
    int*                  value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
    assert(str != NULL);
    assert(value != NULL);
    assert(endptr != NULL);
+
+   /* init errno to detect possible errors */
+   errno = 0;
 
    *value = strtol(str, endptr, 10);
 
@@ -7192,16 +7270,22 @@ SCIP_Bool SCIPstrToIntValue(
    return FALSE;
 }
 
-/** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to str */
+/** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
 SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
    assert(str != NULL);
    assert(value != NULL);
    assert(endptr != NULL);
+
+   /* init errno to detect possible errors */
+   errno = 0;
 
    *value = strtod(str, endptr);
 
@@ -7218,7 +7302,7 @@ SCIP_Bool SCIPstrToRealValue(
 }
 
 /** copies the first size characters between a start and end character of str into token, if no error occured endptr
- *  will point to the position after the read part, otherwise it will point to NULL
+ *  will point to the position after the read part, otherwise it will point to @p str
  */
 void SCIPstrCopySection(
    const char*           str,                /**< string to search */
@@ -7226,8 +7310,7 @@ void SCIPstrCopySection(
    char                  endchar,            /**< character which defines the ending */
    char*                 token,              /**< string to store the copy */
    int                   size,               /**< size of the token char array */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed,
-                                              *   otherwise str */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
    const char* copystr;

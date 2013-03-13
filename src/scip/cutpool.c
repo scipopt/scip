@@ -245,7 +245,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    maxval = SCIProwGetMaxval(row, set);
    assert(row->nummaxval > 0);
    
-   if( maxval > INT_MAX )
+   if( maxval > (SCIP_Real) INT_MAX )
       maxabsval = 0;
    else if( maxval < 1.0 )
       maxabsval = (int) (10000*maxval);

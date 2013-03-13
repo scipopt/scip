@@ -210,24 +210,6 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
    );
 
-/** solves knapsack problem with dynamic programming;
- *  if needed, one can provide arrays to store all selected items and all not selected items
- */
-EXTERN
-SCIP_RETCODE SCIPsolveKnapsack(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   nitems,             /**< number of available items */
-   SCIP_Longint*         weights,            /**< item weights */
-   SCIP_Real*            profits,            /**< item profits */
-   SCIP_Longint          capacity,           /**< capacity of knapsack */
-   int*                  items,              /**< item numbers, or NULL */
-   int*                  solitems,           /**< array to store items in solution, or NULL */
-   int*                  nonsolitems,        /**< array to store items not in solution, or NULL */
-   int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
-   int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
-   SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
-   );
-
 /** separates lifted valid inequalities for given knapsack problem */
 SCIP_RETCODE SCIPseparateKnapsackCuts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -239,44 +221,6 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    SCIP_Longint          capacity,           /**< capacity of knapsack */
    SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
    SCIP_Bool             usegubs,            /**< should GUB information be used for separation? */
-   int*                  ncuts               /**< pointer to add up the number of found cuts */
-   );
-
-/** lifts given cardinality inequality sum(j in C1) x_j <= |C1| to a valid inequality of the full dimensional knapsack
- *  polytope by using uplifting for all variables not in the cover and downlifting for all variables in the cover that
- *  are fixed to one (C2)
- */
-EXTERN
-SCIP_RETCODE SCIPliftKnapsackCover(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
-   int                   nvars,              /**< number of variables in knapsack constraint */
-   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
-   SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_Real*            solvals,            /**< solution values of all problem variables */
-   int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
-   int*                  noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
-   int                   ncovervars,         /**< number of cover variables */
-   int                   ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
-   int                   ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
-   int                   nnoncovervars,      /**< number of noncover variables */
-   int*                  liftcoefs,          /**< pointer to store lifting coefficient of variables in knapsack constraint */
-   int*                  liftrhs,            /**< pointer to store right hand side of the lifted cover inequality */
-   SCIP_Real*            liftlpval           /**< pointer to store LP solution value of lifted variables */
-   );
-
-/** separates lifted cover inequalities for given knapsack problem */
-EXTERN
-SCIP_RETCODE SCIPseparateKnapsackCover(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< originating constraint of the knapsack problem, or NULL */
-   SCIP_SEPA*            sepa,               /**< originating separator of the knapsack problem, or NULL */
-   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
-   int                   nvars,              /**< number of variables in knapsack constraint */
-   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
-   SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
-   int                   maxnumcardlift,     /**< maximal number of cardinality inequalities lifted per sepa round (-1: unlimited) */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
 

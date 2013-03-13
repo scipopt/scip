@@ -1370,7 +1370,7 @@ SCIP_RETCODE printExpr(
           * but if reading/gmsreader/signpower is TRUE, then we print as signpower(x,y), unless y is odd integer
           */
          exponent = SCIPexprGetSignPowerExponent(expr);
-         nisoddint = ((int)exponent == exponent) && (((int)exponent)%2 == 1);
+         nisoddint = (((SCIP_Real)((int)exponent)) == exponent) && (((int)exponent)%2 == 1);
 
          if( !nisoddint )
          {
@@ -1420,7 +1420,7 @@ SCIP_RETCODE printExpr(
 
       case SCIP_EXPR_ABS:
       case SCIP_EXPR_SIGN:
-         *nsmooth = TRUE;
+         *nsmooth = TRUE; /*lint -fallthrough*/
       case SCIP_EXPR_SQUARE:
       case SCIP_EXPR_SQRT:
       case SCIP_EXPR_EXP:
@@ -1618,7 +1618,7 @@ SCIP_RETCODE printExpr(
                   SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[SCIPexprGetMonomialChildIndices(monomdata)[j]], exprvars) );
                   appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
                }
-               else if( (int)exponent == exponent )
+               else if( ((SCIP_Real)((int)exponent)) == exponent )
                {
                   appendLineWithIndent(scip, file, linebuffer, linecnt, "power(");
                   SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[SCIPexprGetMonomialChildIndices(monomdata)[j]], exprvars) );

@@ -923,7 +923,7 @@ int SCIPdialogFindEntry(
    /* check entryname w.r.t. available dialog options */
    subdialogs = SCIPdialogGetSubdialogs(dialog);
    nsubdialogs = SCIPdialogGetNSubdialogs(dialog);
-   namelen = strlen(entryname);
+   namelen = (unsigned int) strlen(entryname);
    nfound = 0;
    for( i = 0; i < nsubdialogs; ++i )
    {
@@ -934,7 +934,7 @@ int SCIPdialogFindEntry(
          nfound++;
 
          /* if entryname exactly matches the sub-dialog's name, use this sub-dialog */
-         if( namelen == strlen(SCIPdialogGetName(subdialogs[i])) )
+         if( namelen == (unsigned int) strlen(SCIPdialogGetName(subdialogs[i])) )
             return 1;
       }
    }
@@ -1031,7 +1031,7 @@ SCIP_RETCODE SCIPdialogDisplayCompletions(
    /* check entryname w.r.t. available dialog options */
    subdialogs = SCIPdialogGetSubdialogs(dialog);
    nsubdialogs = SCIPdialogGetNSubdialogs(dialog);
-   namelen = strlen(entryname);
+   namelen = (unsigned int) strlen(entryname);
    for( i = 0; i < nsubdialogs; ++i )
    {
       /* check, if the beginning of the sub-dialog's name matches entryname */

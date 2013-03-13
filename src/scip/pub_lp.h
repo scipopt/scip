@@ -36,6 +36,7 @@
 #include "scip/type_var.h"
 #include "scip/type_sol.h"
 #include "scip/type_sepa.h"
+#include "scip/type_misc.h"
 
 #ifdef NDEBUG
 #include "scip/struct_lp.h"

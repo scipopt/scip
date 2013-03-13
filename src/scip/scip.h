@@ -565,6 +565,47 @@ SCIP_RETCODE SCIPcopyProb(
    const char*           name                /**< problem name */
    );
 
+/** create a problem by copying the original problem data of the source SCIP
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @post After calling this method targetscip reaches one of the following stages depending on if and when the solution
+ *        process was interrupted:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyOrigProb(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL  */
+   const char*           name                /**< problem name of target */
+   );
+
 /** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
  *  it is just returned as target variable; elsewise a new variable will be created and added to the target SCIP; this
  *  created variable is added to the variable hash map and returned as target variable
@@ -655,6 +696,48 @@ SCIP_RETCODE SCIPcopyVars(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global              /**< should global or local bounds be used? */
+   );
+
+/** copies all original variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
+ *  variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed and aggregated
+ *  variables do not get copied
+ *
+ *  @note the variables are added to the target-SCIP but not captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyOrigVars(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables to the corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap             /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
    );
 
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
@@ -778,6 +861,56 @@ SCIP_RETCODE SCIPcopyConss(
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? 
+                                              *   If TRUE, the modifiable flag of constraints will be copied. */
+   SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
+   );
+
+/** copies all original constraints from the source-SCIP and adds these to the target-SCIP; for mapping the
+ *  variables between the source and the target SCIP a hash map can be given; if the variable hash
+ *  map is NULL or necessary variable mapping is missing, the required variables are created in the
+ *  target-SCIP and added to the hash map, if not NULL; all variables which are created are added to
+ *  the target-SCIP but not (user) captured; if the constraint hash map is not NULL the mapping
+ *  between the constraints of the source and target-SCIP is stored
+ *
+ *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP. (If you mix
+ *        SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add explicitly and what is already
+ *        added.) You can check whether a constraint is added by calling SCIPconsIsAdded().
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyOrigConss(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to the corresponding
+                                              *   variables of the target SCIP, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance?
                                               *   If TRUE, the modifiable flag of constraints will be copied. */
    SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
    );
@@ -969,6 +1102,60 @@ SCIP_RETCODE SCIPcopy(
                                               *   target constraints, or NULL */
    const char*           suffix,             /**< suffix which will be added to the names of the source SCIP */
    SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   );
+
+/** copies source SCIP original problem to target SCIP; the copying process is done in the following order:
+ *  1) copy the plugins
+ *  2) copy the settings
+ *  3) create problem data in target-SCIP and copy the original problem data of the source-SCIP
+ *  4) copy all original variables
+ *  5) copy all original constraints
+ *
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyOrig(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< suffix which will be added to the names of the target SCIP, might be empty */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
@@ -8993,9 +9180,9 @@ SCIP_RETCODE SCIPinitConflictAnalysis(
 /** adds lower bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictLb() should be called for each lower bound
- *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      that led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictLb() should be called
- *      for each lower bound, whose current assignment lead to the deduction of the given conflict bound.
+ *      for each lower bound, whose current assignment led to the deduction of the given conflict bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -9019,9 +9206,9 @@ SCIP_RETCODE SCIPaddConflictLb(
  *  to explain a certain bound change;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedLb() should be called for each (relaxed) lower bound
- *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      that led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelexedLb() should be called
- *      for each (relaxed) lower bound, whose current assignment lead to the deduction of the given conflict bound.
+ *      for each (relaxed) lower bound, whose current assignment led to the deduction of the given conflict bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -9044,9 +9231,9 @@ SCIP_RETCODE SCIPaddConflictRelaxedLb(
 /** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictUb() should be called for each upper bound that
- *      lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictUb() should be called for
- *      each upper bound, whose current assignment lead to the deduction of the given conflict bound.
+ *      each upper bound, whose current assignment led to the deduction of the given conflict bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -9070,9 +9257,9 @@ SCIP_RETCODE SCIPaddConflictUb(
  *  to explain a certain bound change;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedUb() should be called for each (relaxed) upper
- *      bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      bound that led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelaxedUb() should be
- *      called for each (relaxed) upper bound, whose current assignment lead to the deduction of the given conflict
+ *      called for each (relaxed) upper bound, whose current assignment led to the deduction of the given conflict
  *      bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -9096,9 +9283,9 @@ SCIP_RETCODE SCIPaddConflictRelaxedUb(
 /** adds lower or upper bound of variable at the time of the given bound change index to the conflict analysis' candidate
  *  storage; this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictBd() should be called for each bound
- *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      that led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictBd() should be called
- *      for each bound, whose current assignment lead to the deduction of the given conflict bound.
+ *      for each bound, whose current assignment led to the deduction of the given conflict bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -9123,9 +9310,9 @@ SCIP_RETCODE SCIPaddConflictBd(
  *  which would be enough to explain a certain bound change;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedBd() should be called for each (relaxed)
- *      bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      bound that led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelaxedBd() should be
- *      called for each (relaxed) bound, whose current assignment lead to the deduction of the given conflict bound.
+ *      called for each (relaxed) bound, whose current assignment led to the deduction of the given conflict bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -9149,9 +9336,9 @@ SCIP_RETCODE SCIPaddConflictRelaxedBd(
 /** adds changed bound of fixed binary variable to the conflict analysis' candidate storage;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictBinvar() should be called for each fixed binary
- *      variable that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *      variable that led to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictBinvar() should be called
- *      for each binary variable, whose current fixing lead to the deduction of the given conflict bound.
+ *      for each binary variable, whose current fixing led to the deduction of the given conflict bound.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -14573,6 +14760,32 @@ SCIP_RETCODE SCIPcreateSolCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
    SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
+   );
+
+/** creates a copy of a primal solution, thereby replacing infinite fixings of variables by finite values;
+ *  the copy is always defined in the original variable space
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateSolCopyRemoveInfiniteFixings(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_SOL*             sourcesol,          /**< primal CIP solution to copy */
+   SCIP_Bool*            success             /**< could infinite fixings be removed? */
    );
 
 /** frees primal CIP solution

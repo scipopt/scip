@@ -177,7 +177,7 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
 
 #define SCIPnodeGetType(node)           ((SCIP_NODETYPE)(node)->nodetype)
 #define SCIPnodeGetNumber(node)         ((node)->number)
-#define SCIPnodeGetDepth(node)          ((node)->depth)
+#define SCIPnodeGetDepth(node)          ((int) (node)->depth)
 #define SCIPnodeGetLowerbound(node)     ((node)->lowerbound)
 #define SCIPnodeGetEstimate(node)       ((node)->estimate)
 #define SCIPnodeGetDomchg(node)         ((node)->domchg)

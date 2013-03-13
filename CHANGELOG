@@ -34,6 +34,11 @@ features:
 - the statistics now include the value of the first LP solved at the root node (without cuts)
 - all readers now take the global parameters "reading/dynamic{conss|cols|rows}" and "reading/initialconss" into account.
 - the XOR constraint handler can add two extended formulations (flow/asymmetric, parameter addextendedform)
+- added the possibility to copy the original problem via SCIPcopyOrig()
+- SCIPgetVarCopy() will now copy the original bounds when called for an original variable
+- added method SCIPcreateSolCopyRemoveInfiniteFixings() which creates a copy of a solution, thereby trying to reduce
+  the solution value of variables which were fixed to infinite to the smallest feasible value
+- added propagation method to cons_xor relying on Gaussian elimination, which can also produce feasible solutions
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -68,6 +73,8 @@ interface
   (those where listed in the "Solutions" section before, named "Root Dual Bound" and "Root Iterations")
 - new method SCIPstoreSolutionGap() in scip.c, to store the gap when the first and last solution is found
 - methods SCIPparseVar(), SCIPvarParseOriginal(), and SCIPvarParseTransformed() now return the end of the parsed string
+- new methods SCIPcopyOrig(), SCIPcopyOrigProb(), SCIPcopyOrigVars(), and SCIPcopyOrigConss() which allow to copy the
+  complete original problem, the problem data, variables, and constraint, respectively
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
@@ -89,6 +96,11 @@ parameters:
 - new parameter "reading/(READER)/initialconss" that determines whether model constraints are initial
 - new parameter "constraints/xor/addextendedform" to add an extended formulation in XOR-constraints
 - new parameter "constraints/xor/addflowextended" to add use the extended flow formulation in XOR-constraints
+- new possible values for parameter "heuristics/shiftandpropagate/sortkey" for sorting variables w.r.t. their norm,
+  default changed from 'u' to 'v', which means sorting downwards by violations
+- new parameter "heuristics/shiftandpropagate/collectstats" which decides whether variable statistics are collected
+- new parameters "heuristics/shiftandpropagate/preferbinaries" and "heuristics/shiftandpropagate/stopafterfeasible",
+  which decide whether binaries should be shifted first and the shifting should be stopped when no violations are left
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
@@ -114,17 +126,26 @@ fixed bugs:
 - fixed bug in cons_xor.c calling method on null pointer row
 - fixed bug in cons_abspower.c handling infinity values in propagation
 - fixed bug in parsing bounds from CIP-files
+- fixed problem that diving did not save status for infeasible LPs
+- fixed several bugs in propagation of cons_xor: need to take integral variables into account
+- fixed several asserts in cons_xor presolving
+- fixed fieldtypes in sorting template
+- fixed bug concerning the userinterrupt flag, which was not reset
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
 - updated Mosek interface to compile with Mosek 7, too
 - reading erroneous CIP files can now output some indication of syntax errors
+- can now run splint on core files
+- cons_xor now uses the integral variable in propagation
+- allowed to switch on/off the solution debugging
 
 performance improvements:
 - improved SCIPlpiAdd{Cols,Rows}() in SoPlex LPi
 
 interface:
 - allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
+- remove problematic function cons_indicator:SCIPsetSlackVarIndicator()
 
 
 SCIP version 3.0.1
@@ -192,6 +213,7 @@ performance improvements:
 features:
 - added delayed cutpool which only gets separated if the sepastore is empty after a separation round
 - sepa_cgmip can now take the objective row into account
+- added possibility to run clang compiler
 
 interface:
 - fixed spelling in the method name SCIPgmlWriteClosing()

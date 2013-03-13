@@ -47,6 +47,8 @@
 #define DEFAULT_SORTKEY            'v'  /**< the default key for variable sorting */
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
 #define DEFAULT_COLLECTSTATS     TRUE   /**< should variable statistics be collected during probing? */
+#define DEFAULT_STOPAFTERFEASIBLE TRUE   /**< Should the heuristic stop calculating optimal shift values when no more rows are violated? */
+#define DEFAULT_PREFERBINARIES   FALSE   /**< Should binary variables be shifted first? */
 #define SORTKEYS                 "nrtuv"/**< options sorting key: (n)orms down, norms (u)p, (v)iolated rows decreasing,
                                         viola(t)ed rows increasing, or (r)andom */
 
@@ -75,6 +77,9 @@ struct SCIP_HeurData
    char                  sortkey;            /**< the key by which variables are sorted */
    SCIP_Bool             sortvars;           /**< should variables be processed in sorted order? */
    SCIP_Bool             collectstats;       /**< should variable statistics be collected during probing? */
+   SCIP_Bool             stopafterfeasible;  /**< Should the heuristic stop calculating optimal shift values when no
+                                              *   more rows are violated? */
+   SCIP_Bool             preferbinaries;     /**< Should binary variables be shifted first? */
 
    SCIPstatistic(
       SCIP_LPSOLSTAT     lpsolstat;          /**< the probing status after probing */
@@ -1566,31 +1571,81 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       {
          case 'n':
             /* variable ordering w.r.t. column norms nonincreasing */
-            SCIPsortDownRealInt(colnorms, permutation, ndiscvars);
+            if( heurdata->preferbinaries )
+            {
+               if( nbinvars > 0 )
+                  SCIPsortDownRealInt(colnorms, permutation, nbinvars);
+               if( nbinvars < ndiscvars )
+                  SCIPsortDownRealInt(&colnorms[nbinvars], &permutation[nbinvars], ndiscvars - nbinvars);
+            }
+            else
+            {
+               SCIPsortDownRealInt(colnorms, permutation, ndiscvars);
+            }
             SCIPdebugMessage("Variables sorted down w.r.t their normalized columns!\n");
             break;
          case 'u':
             /* variable ordering w.r.t. column norms nondecreasing */
-            SCIPsortRealInt(colnorms, permutation, ndiscvars);
+            if( heurdata->preferbinaries )
+            {
+               if( nbinvars > 0 )
+                  SCIPsortRealInt(colnorms, permutation, nbinvars);
+               if( nbinvars < ndiscvars )
+                  SCIPsortRealInt(&colnorms[nbinvars], &permutation[nbinvars], ndiscvars - nbinvars);
+            }
+            else
+            {
+               SCIPsortRealInt(colnorms, permutation, ndiscvars);
+            }
             SCIPdebugMessage("Variables sorted w.r.t their normalized columns!\n");
             break;
          case 'v':
             /* variable ordering w.r.t. nonincreasing number of violated rows */
             assert(violatedvarrows != NULL);
-            SCIPsortDownIntInt(violatedvarrows, permutation, ndiscvars);
+            if( heurdata->preferbinaries )
+            {
+               if( nbinvars > 0 )
+                  SCIPsortDownIntInt(violatedvarrows, permutation, nbinvars);
+               if( nbinvars < ndiscvars )
+                  SCIPsortDownIntInt(&violatedvarrows[nbinvars], &permutation[nbinvars], ndiscvars - nbinvars);
+            }
+            else
+            {
+               SCIPsortDownIntInt(violatedvarrows, permutation, ndiscvars);
+            }
 
             SCIPdebugMessage("Variables sorted down w.r.t their number of currently infeasible rows!\n");
             break;
          case 't':
             /* variable ordering w.r.t. nondecreasing number of violated rows */
             assert(violatedvarrows != NULL);
-            SCIPsortIntInt(violatedvarrows, permutation, ndiscvars);
+            if( heurdata->preferbinaries )
+            {
+               if( nbinvars > 0 )
+                  SCIPsortIntInt(violatedvarrows, permutation, nbinvars);
+               if( nbinvars < ndiscvars )
+                  SCIPsortIntInt(&violatedvarrows[nbinvars], &permutation[nbinvars], ndiscvars - nbinvars);
+            }
+            else
+            {
+               SCIPsortIntInt(violatedvarrows, permutation, ndiscvars);
+            }
 
             SCIPdebugMessage("Variables sorted (upwards) w.r.t their number of currently infeasible rows!\n");
             break;
          case 'r':
             /* random sorting */
-            SCIPpermuteIntArray(permutation, 0, ndiscvars - 1, &heurdata->randseed);
+            if( heurdata->preferbinaries )
+            {
+               if( nbinvars > 0 )
+                  SCIPpermuteIntArray(permutation, 0, nbinvars - 1, &heurdata->randseed);
+               if( nbinvars < ndiscvars )
+                  SCIPpermuteIntArray(&permutation[nbinvars], nbinvars - 1, ndiscvars - nbinvars - 1, &heurdata->randseed);
+            }
+            else
+            {
+               SCIPpermuteIntArray(permutation, 0, ndiscvars - 1, &heurdata->randseed);
+            }
             SCIPdebugMessage("Variables permuted randomly!\n");
             break;
          default:
@@ -1681,7 +1736,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       }
 
       /* only apply the computationally expensive best shift selection, if there is a violated row left */
-      if( nviolatedrows > 0 )
+      if( !heurdata->stopafterfeasible || nviolatedrows > 0 )
       {
          /* compute optimal shift value for variable */
          SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, 1, rowweights, steps, violationchange,
@@ -2095,11 +2150,15 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          &heurdata->onlywithoutsol, TRUE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/cutoffbreaker", "The number of cutoffs before heuristic stops",
          &heurdata->cutoffbreaker, TRUE, DEFAULT_CUTOFFBREAKER, -1, 1000000, NULL, NULL) );
-   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/sortkey", "the key for variable sorting: (n)orms down, norms (up), (v)iolations down, viola(t)ions up, or (r)andom",
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/sortkey", "the key for variable sorting: (n)orms down, norms (u)p, (v)iolations down, viola(t)ions up, or (r)andom",
          &heurdata->sortkey, TRUE, DEFAULT_SORTKEY, SORTKEYS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/sortvars", "Should variables be sorted for the heuristic?",
          &heurdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL));
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/collectstats", "should variable statistics be collected during probing?",
          &heurdata->collectstats, TRUE, DEFAULT_COLLECTSTATS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/stopafterfeasible", "Should the heuristic stop calculating optimal shift values when no more rows are violated?",
+         &heurdata->stopafterfeasible, TRUE, DEFAULT_STOPAFTERFEASIBLE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/preferbinaries", "Should binary variables be shifted first?",
+         &heurdata->preferbinaries, TRUE, DEFAULT_PREFERBINARIES, NULL, NULL) );
    return SCIP_OKAY;
 }

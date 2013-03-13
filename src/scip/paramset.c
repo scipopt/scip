@@ -218,7 +218,7 @@ SCIP_RETCODE paramCheckString(
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   for( i = 0; i < strlen(value); ++i )
+   for( i = 0; i < (unsigned int) strlen(value); ++i )
    {
       if( value[i] == '\b' || value[i] == '\f' || value[i] == '\n' || value[i] == '\r' || value[i] == '\v' )
       {
@@ -1333,7 +1333,7 @@ SCIP_RETCODE paramParseString(
    assert(valuestr != NULL);
 
    /* check for quotes */
-   len = strlen(valuestr);
+   len = (unsigned int) strlen(valuestr);
    if( len <= 1 || valuestr[0] != '"' || valuestr[len-1] != '"' )
    {
       SCIPerrorMessage("invalid parameter value <%s> for string parameter <%s> (string has to be in double quotes)\n",
@@ -2363,7 +2363,7 @@ SCIP_RETCODE SCIPparamsetRead(
    /* read the parameters from the file */
    lineno = 0;
    retcode = SCIP_OKAY;
-   while( fgets(line, sizeof(line), file) != NULL && retcode == SCIP_OKAY )
+   while( fgets(line, (int) sizeof(line), file) != NULL && retcode == SCIP_OKAY )
    {
       lineno++;
       retcode = paramsetParse(paramset, set, messagehdlr, line);

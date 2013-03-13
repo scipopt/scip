@@ -1603,6 +1603,8 @@ SCIP_Real SCIPsetGetHugeValue(
 #define SCIPsetIsSumRelLE(set, val1, val2) ( !EPSP(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsSumRelGT(set, val1, val2) ( EPSP(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsSumRelGE(set, val1, val2) ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
+#define SCIPsetIsUpdateUnreliable(set, newvalue, oldvalue) \
+   ( (ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon)) >= set->num_recompfac )
 #define SCIPsetIsHugeValue(set, val) ( (val) >= (set)->num_hugeval )
 #define SCIPsetGetHugeValue(set) ( (set)->num_hugeval )
 
@@ -1623,7 +1625,7 @@ SCIP_Real SCIPsetGetHugeValue(
 #define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
 #endif
 #define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
-#define SCIPsetAllocBuffer(set,ptr)             ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), sizeof(**(ptr))) )
+#define SCIPsetAllocBuffer(set,ptr)             ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), (int) sizeof(**(ptr))) )
 #define SCIPsetAllocBufferSize(set,ptr,size)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), size) )
 #define SCIPsetDuplicateBufferSize(set,ptr,source,size)                 \
    ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, size) )

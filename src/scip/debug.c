@@ -51,6 +51,7 @@ static SCIP_Bool falseptr = FALSE;
 static SCIP_Bool trueptr = TRUE;
 static SCIP_Bool solisachieved = FALSE;      /**< means if current best solution is better than the given debug solution */
 static SCIP_Real debugsolval = 0.0;          /**< objective value for debug solution */
+static SCIP_Bool debugsoldisabled = FALSE;   /**< flag indicating if debugging of solution was disabled or not */
 
 /** reads solution from given file into given arrays */
 static
@@ -487,6 +488,10 @@ SCIP_RETCODE SCIPdebugCheckRow(
    assert(set != NULL);
    assert(row != NULL);
 
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( debugsoldisabled )
+      return SCIP_OKAY;
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
@@ -578,6 +583,10 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
    assert(set != NULL);
    assert(var != NULL);
 
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( debugsoldisabled )
+      return SCIP_OKAY;
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
@@ -611,6 +620,10 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
 
    assert(set != NULL);
    assert(var != NULL);
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( debugsoldisabled )
+      return SCIP_OKAY;
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
@@ -651,6 +664,10 @@ SCIP_RETCODE SCIPdebugCheckInference(
    assert(blkmem != NULL);
    assert(node != NULL);
    assert(var != NULL);
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( debugsoldisabled )
+      return SCIP_OKAY;
 
    /* in case we are in probing or diving we have to avoid checking the solution */
    if( SCIPlpDiving(set->scip->lp) || SCIPtreeProbing(set->scip->tree) )
@@ -700,6 +717,10 @@ SCIP_RETCODE SCIPdebugRemoveNode(
    assert(set != NULL);
    assert(blkmem != NULL);
    assert(node != NULL);
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( debugsoldisabled )
+      return SCIP_OKAY;
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
@@ -752,6 +773,10 @@ SCIP_RETCODE SCIPdebugCheckVbound(
    assert(set != NULL);
    assert(var != NULL);
 
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( debugsoldisabled )
+      return SCIP_OKAY;
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
@@ -796,6 +821,10 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    assert(set != NULL);
    assert(var != NULL);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( debugsoldisabled )
+      return SCIP_OKAY;
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
@@ -857,6 +886,10 @@ SCIP_RETCODE SCIPdebugCheckClique(
 
    assert(set != NULL);
    assert(vars != NULL);
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( debugsoldisabled )
+      return SCIP_OKAY;
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
@@ -930,6 +963,10 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    assert(node != NULL);
    assert(nbdchginfos == 0 || bdchginfos != NULL);
 
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( debugsoldisabled )
+      return SCIP_OKAY;
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
@@ -1001,6 +1038,64 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    return SCIP_OKAY; /*lint !e527*/
 }
 
+
+/** check whether the debugging solution is valid in the current node */
+SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            isvalidinsubtree    /**< pointer to store whether the solution is valid in the current
+                                              *   subtree
+                                              */
+   )
+{
+   SCIP_Bool solcontained;
+
+   *isvalidinsubtree = FALSE;
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( debugsoldisabled )
+      return SCIP_OKAY;
+
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isSolutionInMip(scip->set) )
+      return SCIP_OKAY;
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(scip->set) )
+      return SCIP_OKAY;
+
+   /* check whether the debugging solution is contained in the local subproblem */
+   SCIP_CALL( isSolutionInNode(SCIPblkmem(scip), scip->set, SCIPgetCurrentNode(scip), &solcontained) );
+
+   if( solcontained )
+      *isvalidinsubtree = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
+/** enabling solution debugging mechanism */
+void SCIPdebugSolEnable(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   debugsoldisabled = FALSE;
+}
+
+/** disabling solution debugging mechanism */
+void SCIPdebugSolDisable(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   debugsoldisabled = TRUE;
+}
+
+/** check if solution debugging mechanism is enabled */
+SCIP_Bool SCIPdebugSolIsEnabled(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   return (!debugsoldisabled);
+}
 
 /** propagator to force finding the debugging solution */
 static

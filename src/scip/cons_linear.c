@@ -314,7 +314,7 @@ int inferInfoGetProprule(
    INFERINFO             inferinfo           /**< inference information to convert */
    )
 {
-   return inferinfo.val.asbits.proprule;
+   return (int) inferinfo.val.asbits.proprule;
 }
 
 /** returns the position stored in the inference information */
@@ -323,7 +323,7 @@ int inferInfoGetPos(
    INFERINFO             inferinfo           /**< inference information to convert */
    )
 {
-   return inferinfo.val.asbits.pos;
+   return (int) inferinfo.val.asbits.pos;
 }
 
 /** constructs an inference information out of a propagation rule and a position number */
@@ -334,9 +334,10 @@ INFERINFO getInferInfo(
    )
 {
    INFERINFO inferinfo;
+   assert( pos >= 0 );
 
-   inferinfo.val.asbits.proprule = proprule; /*lint !e641*/
-   inferinfo.val.asbits.pos = pos; /*lint !e732*/
+   inferinfo.val.asbits.proprule = (unsigned int) proprule; /*lint !e641*/
+   inferinfo.val.asbits.pos = (unsigned int) pos; /*lint !e732*/
 
    return inferinfo;
 }
@@ -5804,7 +5805,7 @@ SCIP_RETCODE extractCliques(
          assert(consdata->validglbminact || consdata->validglbmaxact);
 
          /* sort coefficients non-increasing to be faster in the clique search */
-         SCIPsortDownRealPtr(binvarvals, (void*) binvars, nposbinvars + nnegbinvars);
+         SCIPsortDownRealPtr(binvarvals, (void**) binvars, nposbinvars + nnegbinvars);
 
          /* case a) */
          if( finiterhs && finitenegminact && nposbinvars >= 2 )
@@ -8966,7 +8967,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 
    maxabsrealval = consdataGetMaxAbsval(consdata);
    /* hash value depends on vectors of variable indices */
-   if( maxabsrealval > INT_MAX )
+   if( maxabsrealval > (SCIP_Real) INT_MAX )
       maxabsval = 0;
    else if( maxabsrealval < 1.0 )
       maxabsval = (int) (MULTIPLIER * maxabsrealval);
@@ -12737,8 +12738,9 @@ SCIP_RETCODE SCIPcopyConsLinear(
    constant = 0.0;
    
    /* transform source variable to active variables of the source SCIP since only these can be mapped to variables of
-    * the target SCIP */
-   if( SCIPisTransformed(sourcescip) )
+    * the target SCIP
+    */
+   if( !SCIPvarIsOriginal(vars[0]) )
    {
       SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, nvars, &constant, &requiredsize, TRUE) );
       
@@ -12755,7 +12757,9 @@ SCIP_RETCODE SCIPcopyConsLinear(
    {
       for( v = 0; v < nvars; ++v )
       {
+         assert(SCIPvarIsOriginal(vars[v]));
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &coefs[v], &constant) );
+         assert(vars[v] != NULL);
       }
    }
    

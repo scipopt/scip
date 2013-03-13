@@ -6484,7 +6484,7 @@ int SCIPnodeGetDepth(
 {
    assert(node != NULL);
 
-   return node->depth;
+   return (int) node->depth;
 }
 
 /** gets the lower bound of the node */

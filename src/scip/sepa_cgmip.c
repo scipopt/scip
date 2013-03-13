@@ -3648,29 +3648,29 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
       separate = FALSE;
       firstlptime = SCIPgetFirstLPTime(scip);
 
-      if ( nrows <= 136.00 && firstlptime <= 0.05 && ncols <= 143.00 )
+      if ( nrows <= 136 && firstlptime <= 0.05 && ncols <= 143 )
          separate = TRUE;
-      else if ( nrows <= 136.00 && 0.05 < firstlptime && firstlptime <= 0.15 && ncols <= 143.00 )
+      else if ( nrows <= 136 && 0.05 < firstlptime && firstlptime <= 0.15 && ncols <= 143 )
          separate = TRUE;
-      else if ( 136 < nrows && nrows <= 332.50 && ncols <= 143.00 )
+      else if ( 136 < nrows && nrows <= 332 && ncols <= 143 )
          separate = TRUE;
-      else if ( 136 < nrows && nrows <= 332.50 && 654.5 < ncols && ncols <= 1290.50 )
+      else if ( 136 < nrows && nrows <= 332 && 655 < ncols && ncols <= 1290 )
          separate = TRUE;
-      else if ( 332.5 < nrows && nrows <= 874.50 && 0.15 < firstlptime && firstlptime <= 0.25 && 2613.5 < ncols && ncols <= 5141.00 )
+      else if ( 333 < nrows && nrows <= 874 && 0.15 < firstlptime && firstlptime <= 0.25 && 2614 < ncols && ncols <= 5141 )
          separate = TRUE;
-      else if ( 874.5 < nrows && nrows <= 1676.00 && firstlptime <= 0.05 && 143 < ncols && ncols <= 265.50 )
+      else if ( 875 < nrows && nrows <= 1676 && firstlptime <= 0.05 && 143 < ncols && ncols <= 265 )
          separate = TRUE;
-      else if ( 874.5 < nrows && nrows <= 1676 && firstlptime <= 0.05 && 265 < ncols && ncols <= 654.50 )
+      else if ( 875 < nrows && nrows <= 1676 && firstlptime <= 0.05 && 265 < ncols && ncols <= 654 )
          separate = TRUE;
-      else if ( 874.5 < nrows && nrows <= 1676.00 && 0.05 < firstlptime && firstlptime <= 0.15 )
+      else if ( 875 < nrows && nrows <= 1676 && 0.05 < firstlptime && firstlptime <= 0.15 )
          separate = TRUE;
-      else if ( 874.5 < nrows && nrows <= 1676.00 &&  0.15 < firstlptime && firstlptime <= 0.25 && 1290.50 < ncols && ncols <= 2613.50 )
+      else if ( 875 < nrows && nrows <= 1676 &&  0.15 < firstlptime && firstlptime <= 0.25 && 1291 < ncols && ncols <= 2613 )
          separate = TRUE;
-      else if ( nrows > 8145.50 && 0.75 < firstlptime && firstlptime <= 6.25 && 654.5 < ncols && ncols <= 1290.50 )
+      else if ( nrows > 8146 && 0.75 < firstlptime && firstlptime <= 6.25 && 655 < ncols && ncols <= 1290 )
          separate = TRUE;
-      else if ( nrows > 8145.50 && 0.75 < firstlptime && firstlptime <= 6.25 && 1290.5 < ncols && ncols <= 2613.50 )
+      else if ( nrows > 8146 && 0.75 < firstlptime && firstlptime <= 6.25 && 1291 < ncols && ncols <= 2613 )
          separate = TRUE;
-      else if ( nrows > 8145.50 && firstlptime > 6.25 )
+      else if ( nrows > 8146 && firstlptime > 6.25 )
          separate = TRUE;
 
       if ( ! separate )

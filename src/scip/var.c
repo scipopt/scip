@@ -2091,7 +2091,9 @@ SCIP_RETCODE SCIPvarCopy(
 {
    SCIP_VARDATA* targetdata;
    SCIP_RESULT result;
-   
+   SCIP_Real lb;
+   SCIP_Real ub;
+
    assert(set != NULL);
    assert(blkmem != NULL);
    assert(stat != NULL);
@@ -2109,11 +2111,20 @@ SCIP_RETCODE SCIPvarCopy(
    result = SCIP_DIDNOTRUN;
    targetdata = NULL;
 
+   if( SCIPvarGetStatus(sourcevar) == SCIP_VARSTATUS_ORIGINAL )
+   {
+      lb = SCIPvarGetLbOriginal(sourcevar);
+      ub = SCIPvarGetUbOriginal(sourcevar);
+   }
+   else
+   {
+      lb = global ? SCIPvarGetLbGlobal(sourcevar) : SCIPvarGetLbLocal(sourcevar);
+      ub = global ? SCIPvarGetUbGlobal(sourcevar) : SCIPvarGetUbLocal(sourcevar);
+   }
+
    /* creates and captures the variable in the target SCIP and initialize callback methods and variable data to NULL */
    SCIP_CALL( SCIPvarCreateOriginal(var, blkmem, set, stat, SCIPvarGetName(sourcevar), 
-         global ? SCIPvarGetLbGlobal(sourcevar) : SCIPvarGetLbLocal(sourcevar),
-         global ? SCIPvarGetUbGlobal(sourcevar) : SCIPvarGetUbLocal(sourcevar), 
-         SCIPvarGetObj(sourcevar), SCIPvarGetType(sourcevar),
+         lb, ub, SCIPvarGetObj(sourcevar), SCIPvarGetType(sourcevar),
          SCIPvarIsInitial(sourcevar), SCIPvarIsRemovable(sourcevar), 
          NULL, NULL, NULL, NULL, NULL) );
    assert(*var != NULL);
@@ -2168,12 +2179,12 @@ SCIP_RETCODE parseValue(
    if( strncmp(str, "+inf", 4) == 0 )
    {
       *value = SCIPsetInfinity(set);
-      (*endptr) += 4;
+      (*endptr) = (char*)str + 4;
    }
    else if( strncmp(str, "-inf", 4) == 0 )
    {
       *value = -SCIPsetInfinity(set);
-      (*endptr) += 4;
+      (*endptr) = (char*)str + 4;
    }
    else
    {
@@ -3534,19 +3545,19 @@ SCIP_RETCODE SCIPvarFix(
    *infeasible = FALSE;
    *fixed = FALSE;
 
-   if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(set, fixedval))
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+   {
+      *infeasible = !SCIPsetIsFeasEQ(set, fixedval, var->locdom.lb);
+      SCIPdebugMessage(" -> variable already fixed to %g (fixedval=%g): infeasible=%u\n",
+         var->locdom.lb, fixedval, *infeasible);
+      return SCIP_OKAY;
+   }
+   else if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(set, fixedval))
       || SCIPsetIsFeasLT(set, fixedval, var->locdom.lb)
       || SCIPsetIsFeasGT(set, fixedval, var->locdom.ub) )
    {
       SCIPdebugMessage(" -> fixing infeasible: locdom=[%g,%g], fixedval=%g\n", var->locdom.lb, var->locdom.ub, fixedval);
       *infeasible = TRUE;
-      return SCIP_OKAY;
-   }
-   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
-   {
-      *infeasible = !SCIPsetIsFeasEQ(set, fixedval, var->locdom.lb);
-      SCIPdebugMessage(" -> variable already fixed to %g (fixedval=%g): infeasible=%u\n", 
-         var->locdom.lb, fixedval, *infeasible);
       return SCIP_OKAY;
    }
 
