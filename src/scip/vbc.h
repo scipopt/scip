@@ -72,6 +72,14 @@ SCIP_RETCODE SCIPvbcNewChild(
    SCIP_NODE*            node                /**< new node, that was created */
    );
 
+/** updates a node entry in the VBC output file */
+extern
+SCIP_RETCODE SCIPvbcUpdateChild(
+   SCIP_VBC*             vbc,                /**< VBC information */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_NODE*            node                /**< new node, that was created */
+   );
+
 /** changes the color of the node to the color of solved nodes */
 extern
 void SCIPvbcSolvedNode(
