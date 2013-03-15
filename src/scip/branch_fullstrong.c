@@ -129,6 +129,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_BRANCHRULE* branchrule;
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_Longint reevalage;
+   SCIP_Longint nodenum;
    SCIP_Real down;
    SCIP_Real up;
    SCIP_Real downgain;
@@ -150,7 +151,6 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_Bool bothgains;
 
    int nsbcalls;
-   int nodenum;
    int i;
    int c;
 
@@ -412,8 +412,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
       assert(branchruledata->skipup == NULL);
 
-      SCIPallocMemoryArray(scip, &branchruledata->skipdown, nvars);
-      SCIPallocMemoryArray(scip, &branchruledata->skipup, nvars);
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipdown, nvars) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipup, nvars) );
       BMSclearMemoryArray(branchruledata->skipdown, nvars);
       BMSclearMemoryArray(branchruledata->skipup, nvars);
    }

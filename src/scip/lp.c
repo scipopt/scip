@@ -3853,6 +3853,9 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
          col->sbitlim = itlim;
          col->nsbcalls++;
 
+         sbdown = lp->lpobjval;
+         sbup = lp->lpobjval;
+
          if( integral )
             retcode = SCIPlpiStrongbranchInt(lp->lpi, col->lpipos, col->primsol, itlim, down  == NULL ? NULL : &sbdown, up  == NULL ? NULL : &sbup, &sbdownvalid, &sbupvalid, &iter);
          else
@@ -3861,10 +3864,6 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
             retcode = SCIPlpiStrongbranchFrac(lp->lpi, col->lpipos, col->primsol, itlim, down == NULL ? NULL : &sbdown, up == NULL ? NULL :  &sbup, &sbdownvalid, &sbupvalid, &iter);
          }
 
-	 if( down == NULL )
-	    sbdown = lp->lpobjval;
-	 if( up == NULL )
-	    sbup = lp->lpobjval;
 
          /* check return code for errors */
          if( retcode == SCIP_LPERROR )
@@ -7992,7 +7991,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->storedsolvals = NULL;
 
    /* allocate arrays for diving */
-   allocDiveChgSideArrays(*lp, DIVESTACKINITSIZE);
+   SCIP_CALL( allocDiveChgSideArrays(*lp, DIVESTACKINITSIZE) );
 
    /* set default parameters in LP solver */
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim, &success) );
@@ -16583,7 +16582,9 @@ SCIP_RETCODE SCIPlpRecordOldRowSideDive(
    assert(row != NULL);
 
    if( lp->ndivechgsides == lp->divechgsidessize )
-      reallocDiveChgSideArrays(lp, lp->divechgsidessize + 1, DIVESTACKGROWFACT);
+   {
+      SCIP_CALL( reallocDiveChgSideArrays(lp, lp->divechgsidessize + 1, DIVESTACKGROWFACT) );
+   }
    assert(lp->ndivechgsides < lp->divechgsidessize);
 
    lp->divechgsides[lp->ndivechgsides] = (sidetype == SCIP_SIDETYPE_LEFT) ? row->lhs : row->rhs;

@@ -180,38 +180,42 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
    SCIPdebugMessage("Execlp method of "BRANCHRULE_NAME" branching\n");
 
-   /* get branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   assert(branchruledata != NULL);
-
-   if( branchruledata->skipdown == NULL )
-   {
-      assert(branchruledata->skipup == NULL);
-
-      SCIPallocMemoryArray(scip, &branchruledata->skipdown, SCIPgetNVars(scip));
-      SCIPallocMemoryArray(scip, &branchruledata->skipup, SCIPgetNVars(scip));
-   }
-
-   /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, &npriolpcands) );
-   nlpcands = SCIPgetNLPBranchCands(scip);
-   assert(nlpcands > 0);
-
-   /* reset skipping arrays to zero */
-   BMSclearMemoryArray(branchruledata->skipdown, nlpcands);
-   BMSclearMemoryArray(branchruledata->skipup, nlpcands);
-
    /* get problem variables and LP row data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    ndiscvars = SCIPgetNBinVars(scip)+SCIPgetNIntVars(scip);
    nlprows = SCIPgetNLPRows(scip);
    lprows = SCIPgetLPRows(scip);
 
+   /* get branching candidates */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, &npriolpcands) );
+   nlpcands = SCIPgetNLPBranchCands(scip);
+   assert(nlpcands > 0);
+
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   /* allocate skipping arrays on first call */
+   if( branchruledata->skipdown == NULL )
+   {
+      assert(branchruledata->skipup == NULL);
+
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipdown, nvars) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipup, nvars) );
+   }
+
+   /* reset skipping arrays to zero */
+   BMSclearMemoryArray(branchruledata->skipdown, nlpcands);
+   BMSclearMemoryArray(branchruledata->skipup, nlpcands);
+
+   /* allocate required data structures */
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandsmin, nlpcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandsmax, nlpcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandscopy, nlpcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandsfraccopy, nlpcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandssolcopy, nlpcands) );
+   newlpcandsmin = NULL;
+   newlpcandsmax = NULL;
    if( branchruledata->useunion && SCIPgetDepth(scip) < branchruledata->maxdepthunion && !branchruledata->onlyF2)
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &newlpcandsmin, ndiscvars) );
@@ -277,6 +281,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       {
          SCIP_Real solval;
          solval = SCIPgetSolVal(scip, NULL, vars[i]);
+
+         assert(newlpcandsmin != NULL);
+         assert(newlpcandsmax != NULL);
+
          newlpcandsmin[i] = solval;
          newlpcandsmax[i] = solval;
       }
@@ -369,6 +377,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          {
             SCIP_Real solval;
             solval = SCIPgetSolVal(scip, NULL, vars[i]);
+
+            assert(newlpcandsmin != NULL);
+            assert(newlpcandsmax != NULL);
+
             newlpcandsmin[i] = MIN(newlpcandsmin[i], solval);
             newlpcandsmax[i] = MAX(newlpcandsmax[i], solval);
          }
@@ -506,6 +518,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
             if( !SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, vars[i])) )
                continue;
 
+            assert(newlpcandsmin != NULL);
+            assert(newlpcandsmax != NULL);
+
             if( SCIPisFeasIntegral(scip, newlpcandsmin[i]) != SCIPisFeasIntegral(scip, newlpcandsmax[i]) )
             {
                newlpcands[counter] = vars[i];
@@ -530,14 +545,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
             SCIP_Bool newdownvalid;
             SCIP_Bool newupvalid;
             SCIP_Real newbound;
-            int lastcand;
 
             branchruledata->ntriedunions++;
-            lastcand = 0;
             newscore = -SCIPinfinity(scip);
             SCIP_CALL( SCIPselectVarPseudoStrongBranching(scip, newlpcands, branchruledata->skipdown, branchruledata->skipup, counter, counter,
-                  &lastcand, allowaddcons,
-                  &newcand, &newdown, &newup, &newscore, &newdownvalid, &newupvalid, &newbound, result) );
+                  allowaddcons, &newcand, &newdown, &newup, &newscore, &newdownvalid, &newupvalid, &newbound, result) );
 
             if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM || *result == SCIP_CONSADDED  )
             {

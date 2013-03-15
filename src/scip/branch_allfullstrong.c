@@ -109,8 +109,8 @@ SCIP_RETCODE branch(
 
       assert(branchruledata->skipup == NULL);
 
-      SCIPallocMemoryArray(scip, &branchruledata->skipdown, nvars);
-      SCIPallocMemoryArray(scip, &branchruledata->skipup, nvars);
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipdown, nvars) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipup, nvars) );
       BMSclearMemoryArray(branchruledata->skipdown, nvars);
       BMSclearMemoryArray(branchruledata->skipup, nvars);
    }
@@ -121,8 +121,7 @@ SCIP_RETCODE branch(
    assert(npriopseudocands > 0);
 
    SCIP_CALL( SCIPselectVarPseudoStrongBranching(scip, pseudocands, branchruledata->skipdown, branchruledata->skipup, npseudocands, npriopseudocands,
-      &branchruledata->lastcand, allowaddcons,
-      &bestpseudocand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
+      allowaddcons, &bestpseudocand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
@@ -273,7 +272,6 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    SCIP_Bool*            skipup,             /**< should up branchings be skipped? */
    int                   npseudocands,       /**< number of branching candidates                      */
    int                   npriopseudocands,   /**< number of priority branching candidates             */
-   int*                  start,              /**< starting index in lpcands                           */
    SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
    int*                  bestpseudocand,     /**< best candidate for branching                        */
    SCIP_Real*            bestdown,           /**< objective value of the down branch for bestcand     */
