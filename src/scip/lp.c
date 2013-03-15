@@ -8032,6 +8032,7 @@ SCIP_RETCODE SCIPlpFree(
    BMSfreeMemoryArrayNull(&(*lp)->lpicols);
    BMSfreeMemoryArrayNull(&(*lp)->lpirows);
    BMSfreeMemoryArrayNull(&(*lp)->chgcols);
+   BMSfreeMemoryArrayNull(&(*lp)->chgrows);
    BMSfreeMemoryArrayNull(&(*lp)->lazycols);
    BMSfreeMemoryArrayNull(&(*lp)->cols);
    BMSfreeMemoryArrayNull(&(*lp)->rows);
