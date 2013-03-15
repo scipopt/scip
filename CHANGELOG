@@ -39,6 +39,7 @@ features:
 - added method SCIPcreateSolCopyRemoveInfiniteFixings() which creates a copy of a solution, thereby trying to reduce
   the solution value of variables which were fixed to infinite to the smallest feasible value
 - added propagation method to cons_xor relying on Gaussian elimination, which can also produce feasible solutions
+- new branching rule "cloud branching" that considers several alternative LP optima
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor

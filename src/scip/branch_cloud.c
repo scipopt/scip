@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_STATISTIC
 
 /**@file   branch_cloud.c
  * @brief  cloud branching rule
@@ -73,32 +72,8 @@ struct SCIP_BranchruleData
 };
 
 /*
- * Local methods
- */
-
-/* put your local methods here, and declare them static */
-
-
-/*
  * Callback methods of branching rule
  */
-
-/* TODO: Implement all necessary branching rule methods. The methods with an #if 0 ... #else #define ... are optional */
-
-
-/** copy method for branchrule plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_BRANCHCOPY(branchCopyCloud)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of cloud branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define branchCopyCloud NULL
-#endif
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
@@ -154,52 +129,6 @@ SCIP_DECL_BRANCHINIT(branchInitCloud)
 
    return SCIP_OKAY;
 }
-
-
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_BRANCHEXIT(branchExitCloud)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of cloud branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define branchExitCloud NULL
-#endif
-
-
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#if 0
-static
-SCIP_DECL_BRANCHINITSOL(branchInitsolCloud)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of cloud branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define branchInitsolCloud NULL
-#endif
-
-
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#if 0
-static
-SCIP_DECL_BRANCHEXITSOL(branchExitsolCloud)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of cloud branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define branchExitsolCloud NULL
-#endif
-
 
 /** branching execution method for fractional LP solutions */
 static
@@ -308,13 +237,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
       if( !SCIPisFeasZero(scip, SCIPgetVarRedcost(scip, vars[i])) )
       {
-         /* printf("var: %s [%g,%g] : redcost %g solval %g\n",SCIPvarGetName(vars[i]), SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]),SCIPgetVarRedcost(scip, vars[i]), solval ); */
          SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], solval) );
          SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], solval) );
       }
       else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_INTEGER && !SCIPisIntegral(scip, solval) )
       {
-         /* printf("var: %s [%g,%g] : redcost %g solval %g\n",SCIPvarGetName(vars[i]), SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]),SCIPgetVarRedcost(scip, vars[i]), solval ); */
          SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPfloor(scip, solval)) );
          SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPceil(scip, solval)) );
       }
@@ -331,12 +258,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       {
          if( dualsol > 0 && SCIPisFeasEQ(scip,SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
          {
-            /* printf("row %s lhs: %g = activity: %g   rhs: %g dualsol: %g \n", SCIProwGetName(lprows[i]),SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i]),SCIProwGetRhs(lprows[i]), dualsol); */
             SCIP_CALL( SCIPchgRowRhsDive(scip, lprows[i], SCIProwGetLhs(lprows[i])) );
          }
          else if( dualsol < 0 && SCIPisFeasEQ(scip,SCIProwGetRhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
          {
-            /* printf("row %s lhs: %g   activity: %g = rhs: %g dualsol: %g \n", SCIProwGetName(lprows[i]),SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i]),SCIProwGetRhs(lprows[i]), dualsol); */
             SCIP_CALL( SCIPchgRowLhsDive(scip, lprows[i], SCIProwGetRhs(lprows[i])) );
          }
       }
@@ -530,7 +455,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    if( branchruledata->onlyF2 )
       counter = MAX(counter,1);
 
-   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, branchruledata->skipdown, branchruledata->skipup, counter, counter, /* replace second counter ??????????? */
+   /* the second counter should maybe be replaced at some point */
+   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, branchruledata->skipdown, branchruledata->skipup, counter, counter,
          ncomplete, &branchruledata->lastcand, allowaddcons,
          &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
@@ -546,7 +472,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    }
 
    /* perform the branching */
-   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED && counter > 0 ) /* ??????? */
+   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED && counter > 0 )
    {
       SCIP_NODE* downchild;
       SCIP_NODE* upchild;
@@ -609,11 +535,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
             branchruledata->ntriedunions++;
             lastcand = 0;
             newscore = -SCIPinfinity(scip);
-            SCIP_CALL( SCIPselectVarPseudoStrongBranching(scip, newlpcands, branchruledata->skipdown, branchruledata->skipup, counter, counter, /* replace second counter ??????????? */
+            SCIP_CALL( SCIPselectVarPseudoStrongBranching(scip, newlpcands, branchruledata->skipdown, branchruledata->skipup, counter, counter,
                   &lastcand, allowaddcons,
                   &newcand, &newdown, &newup, &newscore, &newdownvalid, &newupvalid, &newbound, result) );
 
-            if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM || *result == SCIP_CONSADDED  ) /* ??????? */
+            if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM || *result == SCIP_CONSADDED  )
             {
                SCIPfreeBufferArray(scip, &newlpcands);
                goto TERMINATE;
@@ -696,37 +622,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    return SCIP_OKAY;
 }
 
-
-/** branching execution method for external candidates */
-#if 0
-static
-SCIP_DECL_BRANCHEXECEXT(branchExecextCloud)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of cloud branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define branchExecextCloud NULL
-#endif
-
-
-/** branching execution method for not completely fixed pseudo solutions */
-#if 0
-static
-SCIP_DECL_BRANCHEXECPS(branchExecpsCloud)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of cloud branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define branchExecpsCloud NULL
-#endif
-
-
 /*
  * branching rule specific interface methods
  */
@@ -752,16 +647,10 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
 
    assert(branchrule != NULL);
 
-   /* set non fundamental callbacks via setter functions */
-   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyCloud) );
+   /* set non-fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeCloud) );
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitCloud) );
-   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitCloud) );
-   SCIP_CALL( SCIPsetBranchruleInitsol(scip, branchrule, branchInitsolCloud) );
-   SCIP_CALL( SCIPsetBranchruleExitsol(scip, branchrule, branchExitsolCloud) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpCloud) );
-   SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextCloud) );
-   SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsCloud) );
 
    /* add cloud branching rule parameters */
 
