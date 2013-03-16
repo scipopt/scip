@@ -116,7 +116,6 @@ core:
   a copy of the string to be output anymore, which makes the code much simpler (and also faster); it is passed a
   function pointer to the output function and uses it to directly output the (buffered) messages
 
-<<<<<<< HEAD
 
 SCIP version 3.0.2
 ==================
@@ -157,8 +156,6 @@ interface:
 - remove problematic function cons_indicator:SCIPsetSlackVarIndicator()
 
 
-=======
->>>>>>> added missing CHANGELOG entries
 SCIP version 3.0.1
 ==================
 
