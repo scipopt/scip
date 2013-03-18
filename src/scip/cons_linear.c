@@ -5626,17 +5626,15 @@ SCIP_RETCODE propagateCons(
  *
  *  The following clique extraction mechanism are implemeneted
  *
- *  1. if the linear constraint represents a set-packing or set-partitioning constraint, the whole constraint is added
- *     as clique, (this part is done at the end of the method)
+ *  1. collect binary variables and sort them in non increasing order, then
  *
- *  2. collect binary variables and sort them in non incresing order, then
- *
- *     a) if the constraint has a finite right hand side and the negative infinity couters for the minactivity are zero
- *        then add the variables as a clique for which all successive pairs of coefficients the following condition
+ *     a) if the constraint has a finite right hand side and the negative infinity counters for the minactivity are zero
+ *        then add the variables as a clique for which all successive pairs of coefficients fullfill the following
+ *        condition
  *
  *            minactivity + vals[i] + vals[i+1] > rhs
  *
- *        is fullfill and also add the binary to binary implication also for non-successive variables for which the same argument
+ *        and also add the binary to binary implication also for non-successive variables for which the same argument
  *        holds
  *
  *            minactivity + vals[i] + vals[j] > rhs
@@ -5644,12 +5642,13 @@ SCIP_RETCODE propagateCons(
  *        e.g. 5.3 x1 + 3.6 x2 + 3.3 x3 + 2.1 x4 <= 5.5 (all x are binary) would lead to the clique (x1, x2, x3) and the
  *             binary to binary implications x1 = 1 => x4 = 0 and x2 = 1 => x4 = 0
  *
- *     b) if the constraint has a finite left hand side and the positive infinity couters for the maxactivity are zero
- *        then add the variables as a clique for which all successive pairs of coefficients the follwoing condition
+ *     b) if the constraint has a finite left hand side and the positive infinity counters for the maxactivity are zero
+ *        then add the variables as a clique for which all successive pairs of coefficients fullfill the follwoing
+ *        condition
  *
  *            maxactivity + vals[i] + vals[i-1] < lhs
  *
- *        is fullfill and also add the binary to binary implication also for non-successive variables for which the same argument
+ *        and also add the binary to binary implication also for non-successive variables for which the same argument
  *        holds
  *
  *            maxactivity + vals[i] + vals[j] < lhs
@@ -5657,29 +5656,35 @@ SCIP_RETCODE propagateCons(
  *        e.g. you could multiply the above example by -1
  *
  *     c) the constraint has a finite right hand side and a finite minactivity then add the variables as a negated
- *        clique(clique on the negated variables) for which all successive pairs of cofficients the following condition
+ *        clique(clique on the negated variables) for which all successive pairs of coefficients fullfill the following
+ *        condition
  *
  *            minactivity - vals[i] - vals[i-1] > rhs
  *
- *        is fullfilled; and also add the binary to binary implication also for non-successive variables for which the
+ *        and also add the binary to binary implication also for non-successive variables for which the
  *        same argument holds
  *
  *            minactivity - vals[i] - vals[j] > rhs
  *
- *        e.g. -4 x1 -3 x2 - 2 x4 + 2 x4 <= -4 would lead to the (negated) clique (~x1, ~x2) and the binary to binary
+ *        e.g. -4 x1 -3 x2 - 2 x3 + 2 x4 <= -4 would lead to the (negated) clique (~x1, ~x2) and the binary to binary
  *             implication x1 = 0 => x3 = 1
  *
  *     d) the constraint has a finite left hand side and a finite maxactivity then add the variables as a negated
- *        clique(clique on the negated variables) for which all successive pairs of cofficients the following condition
+ *        clique(clique on the negated variables) for which all successive pairs of coefficients fullfill the following
+ *        condition
  *
  *            maxactivity - vals[i] - vals[i+1] < lhs
  *
- *        is fullfilled; and also add the binary to binary implication also for non-successive variables for which the
- *        same argument holds
+ *        and also add the binary to binary implication also for non-successive variables for which the same argument
+ *        holds
  *
  *            maxactivity - vals[i] - vals[j] < lhs
  *
- *        e.g. ou could multiply the above example by -1
+ *        e.g. you could multiply the above example by -1
+ *
+ *  2. if the linear constraint represents a set-packing or set-partitioning constraint, the whole constraint is added
+ *     as clique, (this part is done at the end of the method)
+ *
  */
 static
 SCIP_RETCODE extractCliques(
@@ -5715,7 +5720,7 @@ SCIP_RETCODE extractCliques(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* check if we already added the cliques of the constraints */
+   /* check if we already added the cliques of this constraint */
    if( consdata->cliquesadded )
       return SCIP_OKAY;
 
@@ -5957,7 +5962,7 @@ SCIP_RETCODE extractCliques(
             j = i - 1;
             minact = consdata->glbminactivity;
 
-#if 0 /* assertion should only holds when constraints was fully propagated and boundstightened */
+#if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check if the variable should not have already been fixed to one */
             assert(!SCIPisFeasGT(scip, minact - binvarvals[i], threshold));
 #endif
@@ -6036,7 +6041,7 @@ SCIP_RETCODE extractCliques(
             j = i + 1;
             maxact = consdata->glbmaxactivity;
 
-#if 0 /* assertion should only holds when constraints was fully propagated and boundstightened */
+#if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check if the variable should not have already been fixed to one */
             assert(!SCIPisFeasLT(scip, maxact - binvarvals[i], threshold));
 #endif
@@ -6106,7 +6111,7 @@ SCIP_RETCODE extractCliques(
          return SCIP_OKAY;
    }
 
-   /* 2. we only check whether the constraint is a set packing / partitioning constraint */
+   /* 2. we only check if the constraint is a set packing / partitioning constraint */
 
    /* check if all variables are binary, if the coefficients are +1 or -1, and if the right hand side is equal
     * to 1 - number of negative coefficients, or if the left hand side is equal to number of positive coefficients - 1
