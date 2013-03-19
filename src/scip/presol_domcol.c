@@ -57,6 +57,7 @@
 
 #define DEFAULT_MAXPAIRS         1000000     /**< maximal number of pair comparisons for at least one variable fixing */
 #define DEFAULT_PREDBNDSTR         FALSE     /**< should predictive bound strengthening be applied? */
+#define DEFAULT_SINGCOLSTUFF        TRUE     /**< should singleton columns stuffing be applied? */
 
 /*
  * Data structures
@@ -67,6 +68,7 @@ struct SCIP_PresolData
 {
    int                   maxpairs;           /**< maximal number of pair comparisons for at least one variable fixing */
    SCIP_Bool             predbndstr;         /**< flag indicating if predictive bound strengthening should be applied */
+   SCIP_Bool             singcolstuffing;    /**< flag indicating if singleton columns stuffing should be applied */
 };
 
 /** type of fixing direction */
@@ -3015,7 +3017,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       /* before doing dominated column presolving we stuff singleton continuous columns.
        * this sometimes helps to do a more effective predictive bound analysis.
        */
-      SCIP_CALL( singletonColumnStuffing(scip, matrix, varsprocessed, varstofix, &npossiblefixings) );
+      if( presoldata->singcolstuffing )
+      {
+         SCIP_CALL( singletonColumnStuffing(scip, matrix, varsprocessed, varstofix, &npossiblefixings) );
+      }
 
       /* 1.stage: we search for dominance relations only within parallel columns
        *          concerning equalities and ranged rows
@@ -3358,6 +3363,11 @@ SCIP_RETCODE SCIPincludePresolDomcol(
          "presolving/domcol/predbndstr",
          "should predictive bound strengthening be applied?",
          &presoldata->predbndstr, FALSE, DEFAULT_PREDBNDSTR, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/domcol/singcolstuffing",
+         "should singleton columns stuffing be applied?",
+         &presoldata->singcolstuffing, FALSE, DEFAULT_SINGCOLSTUFF, NULL, NULL) );
 
    return SCIP_OKAY;
 }
