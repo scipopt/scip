@@ -926,8 +926,10 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    }
    SCIPinfoMessage(scip, file, "END\n");
 
+   if ( nfixedvars > 0 )
+      SCIPhashtableFree(&varhash);
+
    *result = SCIP_SUCCESS;
-   SCIPhashtableFree(&varhash);
 
    return SCIP_OKAY;
 }
