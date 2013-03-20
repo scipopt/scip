@@ -53,6 +53,8 @@
 #define DEFAULT_MINLPITERS    200LL      /* minimum number of LP iterations to perform in one sub-mip                  */
 #define DEFAULT_MAXLPITERS    100000LL   /* maximum number of LP iterations to be performed in the subproblem          */
 #define DEFAULT_NODESOFS      50LL       /* number of nodes added to the contingent of the total nodes                 */
+#define DEFAULT_WAITINGNODES  100LL      /* default waiting nodes since last incumbent before heuristic is executed    */
+#define DEFAULT_NODESQUOT     0.1        /* default quotient of sub-MIP nodes with respect to number of processed nodes*/
 /*
  * Data structures
  */
@@ -67,8 +69,10 @@ struct SCIP_HeurData
    SCIP_Longint          minlpiters;         /**< minimum number of LP iterations to perform in one sub-mip           */
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes          */
    SCIP_Longint          usednodes;          /**< nodes already used by proximity in earlier calls                    */
+   SCIP_Longint          waitingnodes;       /**< waiting nodes since last incumbent before heuristic is executed     */
    SCIP_Real             minimprove;         /**< factor by which proximity should at least improve the incumbent     */
    SCIP_Real             mingap;             /**< minimum primal-dual gap for which the heuristic is executed         */
+   SCIP_Real             nodesquot;          /**< quotient of sub-MIP nodes with respect to number of processed nodes */
    SCIP*                 subscip;            /**< the subscip used by the heuristic                                   */
    SCIP_HASHMAP*         varmapfw;           /**< map between scip variables and subscip variables                    */
    SCIP_VAR**            subvars;            /**< variables in subscip                                                */
@@ -339,7 +343,10 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    /* todo set node limit depending on the variable number */
-   nnodes = (SCIP_Longint)SCIPgetNLPBranchCands(scip);
+   if( SCIPgetNNodes(scip) <= 1 )
+      nnodes = (SCIP_Longint)SCIPgetNLPBranchCands(scip);
+   else
+      nnodes = (SCIP_Longint) (heurdata->nodesquot * SCIPgetNNodes(scip));
    nnodes += heurdata->nodesofs;
 
    /* determine the node and LP iteration limit for the solve of the sub-SCIP */
@@ -400,8 +407,6 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    /* reset result pointer if solution has been found in previous iteration */
    if( foundsol )
       *result = SCIP_FOUNDSOL;
-
-   SCIPstatisticMessage(" Proximity search restarts: %d. \n", nrestarts);
 
    return SCIP_OKAY;
 }
@@ -484,6 +489,10 @@ SCIP_RETCODE SCIPapplyProximity(
    solidx = SCIPsolGetIndex(incumbent);
 
    if( heurdata->lastsolidx == solidx )
+      return SCIP_OKAY;
+
+   /* waitingnodes parameter defines the minimum number of nodes to wait before a new incumbent is processed */
+   if( SCIPgetNNodes(scip) > 1 && SCIPgetNNodes(scip) - SCIPsolGetNodenum(incumbent) < heurdata->waitingnodes )
       return SCIP_OKAY;
 
    bestobj = SCIPgetSolTransObj(scip, incumbent);
@@ -671,9 +680,9 @@ SCIP_RETCODE SCIPapplyProximity(
    SCIP_CALL( SCIPtransformProb(subscip) );
    SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
-   SCIPstatisticMessage("solving subproblem: "
+   SCIPstatisticMessage("solving subproblem at Node: %"SCIP_LONGINT_FORMAT" "
          "nnodes: %"SCIP_LONGINT_FORMAT" "
-         "iterlim: %"SCIP_LONGINT_FORMAT"\n", nnodes, iterlim);
+         "iterlim: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNNodes(scip), nnodes, iterlim);
 
    /* solve the subproblem with all previously adjusted parameters */
    retcode = SCIPsolve(subscip);
@@ -797,9 +806,16 @@ SCIP_RETCODE SCIPincludeHeurProximity(
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/minlpiters", "minimum number of LP iterations performed in "
          "subproblem", &heurdata->minlpiters, TRUE, DEFAULT_MINLPITERS, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/waitingnodes",
+          "waiting nodes since last incumbent before heuristic is executed", &heurdata->waitingnodes, TRUE, DEFAULT_WAITINGNODES,
+          0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
          "factor by which proximity should at least improve the incumbent",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nodesquot", "sub-MIP node limit w.r.t number of original nodes",
+         &heurdata->nodesquot, TRUE, DEFAULT_NODESQUOT, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/mingap",
          "minimum primal-dual gap for which the heuristic is executed",
