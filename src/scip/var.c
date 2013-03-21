@@ -12761,6 +12761,9 @@ SCIP_RETCODE SCIPvarAddToRow(
 
    SCIPdebugMessage("adding coefficient %g<%s> to row <%s>\n", val, var->name, row->name);
 
+   if ( SCIPsetIsZero(set, val) )
+      return SCIP_OKAY;
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
