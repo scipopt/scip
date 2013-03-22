@@ -20,6 +20,7 @@ fixed bugs:
 - fixed bug concerning the userinterrupt flag, which was not reset
 - fixed potential performance issue with tree depth always assumed to be zero when propagating in probing mode
 - fixed memory leak in lp.c (probably never occurred so far since array was not used)
+- fixed bug in reader_gms.c w.r.t. writing nonlinear expressions with polynomials with constants
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
