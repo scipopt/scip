@@ -125,7 +125,10 @@ SCIP_DECL_BRANCHINIT(branchInitCloud)
    branchruledata->ncloudpoints = 0;
    branchruledata->nsavedlps = 0;
 
-   SCIP_CALL( SCIPcreateClock(scip, &(branchruledata->cloudclock)) );
+   if( branchruledata->cloudclock != NULL)
+   {
+      SCIPresetClock(scip, branchruledata->cloudclock);
+   }
 
    return SCIP_OKAY;
 }
@@ -651,6 +654,7 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
    branchruledata->lastcand = 0;
    branchruledata->skipup = NULL;
    branchruledata->skipdown = NULL;
+   SCIP_CALL( SCIPcreateClock(scip, &(branchruledata->cloudclock)) );
 
    /* include branching rule */
    branchrule = NULL;
