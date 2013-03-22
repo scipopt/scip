@@ -2934,6 +2934,10 @@ SCIP_RETCODE enforceConstraints(
          *infeasible = TRUE;
          *branched = TRUE;
          resolved = TRUE;
+
+         /* increase the number of interal nodes */
+         stat->ninternalnodes++;
+         stat->ntotalinternalnodes++;
          break;
 
       case SCIP_SOLVELP:
@@ -3733,6 +3737,10 @@ SCIP_RETCODE solveNode(
             assert(tree->nchildren >= 1);
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             branched = TRUE;
+
+            /* increase the number of interal nodes */
+            stat->ninternalnodes++;
+            stat->ntotalinternalnodes++;
             break;
          case SCIP_DIDNOTFIND: /*lint -fallthrough*/
          case SCIP_DIDNOTRUN:
