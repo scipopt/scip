@@ -1900,6 +1900,8 @@ SCIP_RETCODE SCIPpriceLoop(
             || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
           || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT );
 
+      /* if the lower bound is already higher than the cutoff bound, we can stop pricing */
+      mustprice = mustprice && SCIPsetIsLT(set, *lowerbound, primal->cutoffbound);
    }
    assert(lp->flushed);
    assert(lp->solved || *lperror);
