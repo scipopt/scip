@@ -2770,13 +2770,9 @@ SCIP_RETCODE singletonColumnStuffing(
                   {
                      if( SCIPisGE(scip, value, matrix->lhs[row] - constant1 + boundoffset) )
                      {
-                        constant1 += value;
                         varstofix[idx] = FIXATUB;
                         varsprocessed[idx] = TRUE;
                         (*npossiblefixings)++;
-
-                        if( colnozerolb[k] )
-                           constant1 -= boundoffset;
                      }
                      else if( SCIPisGE(scip, matrix->lhs[row], constant2) )
                      {
@@ -2784,13 +2780,14 @@ SCIP_RETCODE singletonColumnStuffing(
                         varsprocessed[idx] = TRUE;
                         (*npossiblefixings)++;
                      }
-                     else
-                     {
-                        constant2 += value;
 
-                        if( colnozerolb[k] )
-                           constant2 -= boundoffset;
-                     }
+                     constant1 += value;
+                     if( colnozerolb[k] )
+                        constant1 -= boundoffset;
+
+                     constant2 += value;
+                     if( colnozerolb[k] )
+                        constant2 -= boundoffset;
                   }
                }
             }
@@ -2889,13 +2886,9 @@ SCIP_RETCODE singletonColumnStuffing(
                   {
                      if( SCIPisLE(scip, value, matrix->lhs[row] - constant1 + boundoffset) )
                      {
-                        constant1 += value;
                         varstofix[idx] = FIXATUB;
                         varsprocessed[idx] = TRUE;
                         (*npossiblefixings)++;
-
-                        if( colnozerolb[k] )
-                           constant1 -= boundoffset;
                      }
                      else if( SCIPisLE(scip, matrix->lhs[row], constant2) )
                      {
@@ -2903,13 +2896,14 @@ SCIP_RETCODE singletonColumnStuffing(
                         varsprocessed[idx] = TRUE;
                         (*npossiblefixings)++;
                      }
-                     else
-                     {
-                        constant2 += value;
 
-                        if( colnozerolb[k] )
-                           constant2 -= boundoffset;
-                     }
+                     constant1 += value;
+                     if( colnozerolb[k] )
+                        constant1 -= boundoffset;
+
+                     constant2 += value;
+                     if( colnozerolb[k] )
+                        constant2 -= boundoffset;
                   }
                }
             }
