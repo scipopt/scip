@@ -101,6 +101,49 @@ SCIP_RETCODE getActiveVariables(
    return SCIP_OKAY;
 }
 
+/** transforms given variables to the corresponding active variables */
+static
+SCIP_RETCODE getActiveVariables2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< vars array to get active variables for */
+   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   int requiredsize;
+   int v;
+
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(nvars != NULL);
+
+   if( transformed )
+   {
+      SCIP_CALL( SCIPgetActiveVars(scip, vars, nvars, *nvars, &requiredsize) );
+
+      if( requiredsize > *nvars )
+      {
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
+
+         SCIP_CALL( SCIPgetActiveVars(scip, vars, nvars, requiredsize, &requiredsize) );
+         assert(requiredsize <= *nvars);
+      }
+   }
+   else
+   {
+      SCIP_Real scalar;
+      SCIP_Real constant;
+      for( v = 0; v < *nvars; ++v )
+      {
+         scalar = 1.0;
+         constant = 0.0;
+         SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalar, &constant) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** clears the given line buffer */
 static
 void clearLine(
@@ -559,13 +602,39 @@ SCIP_RETCODE SCIPwritePbm(
       }
       else
       {
-         SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
-         SCIPinfoMessage(scip, file, "\\ ");
-         SCIP_CALL( SCIPprintCons(scip, cons, file) );
+         SCIP_Bool success;
+
+         consvars = NULL;
+         SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &success) );
+
+         if( success )
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
+
+            SCIP_CALL( SCIPgetConsVars(scip, cons, consvars, nconsvars, &success) );
+         }
+
+         if( success )
+         {
+            /* retransform given variables to active variables */
+            SCIP_CALL( getActiveVariables2(scip, consvars, &nconsvars, transformed) );
+
+            printRow(scip, readerdata, consvars, c, nconsvars, submatrixsize, scaledimage);
+         }
+         else
+         {
+            SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
+            SCIPinfoMessage(scip, file, "\\ ");
+            SCIP_CALL( SCIPprintCons(scip, cons, file) );
+         }
+
+         SCIPfreeBufferArrayNull(scip, &consvars);
       }
    }
 
    drawScaledImage(scip, file, readerdata, scaledimage);
+
+   SCIPfreeBufferArray(scip, &scaledimage);
 
    *result = SCIP_SUCCESS;
 

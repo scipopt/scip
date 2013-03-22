@@ -8183,7 +8183,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
          nexprvars = SCIPexprtreeGetNVars(consdata->exprtrees[e]);
          assert(exprvars != NULL || nexprvars == 0);
 
-         if( cnt + nexprvars >= varssize )
+         if( cnt + nexprvars > varssize )
          {
             *success = FALSE;
             break;
