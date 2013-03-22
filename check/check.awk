@@ -912,6 +912,9 @@ BEGIN {
          } else if( status == "timeout" ) {
             modelstat = abs(pb) < infty ? 8 : 14;
             solverstat = 3;
+         } else if( status == "nodelimit" || status == "memlimit" || status == "sollimit" ) {
+            modelstat = abs(pb) < infty ? 8 : 14;
+            solverstat = 2;  # GAMS does not have a status for these limits, so let's report iteration limit
          } else if( status == "gaplimit" || status == "better" ) {
             modelstat = 8;
             solverstat = 1;
