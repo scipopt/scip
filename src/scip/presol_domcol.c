@@ -2683,7 +2683,7 @@ SCIP_RETCODE singletonColumnStuffing(
 
          if( matrix->isrhsinfinite[row] )
          {
-            /* singleton column pushing for >= relation */
+            /* case for >= relation: coeff<0 and obj<0 */
             fillcnt = 0;
             tryfixing = TRUE;
             constant1 = 0.0;
@@ -2799,7 +2799,7 @@ SCIP_RETCODE singletonColumnStuffing(
 
          if( matrix->isrhsinfinite[row] )
          {
-            /* singleton column pulling for >= relation */
+            /* case for >= relation: coeff>0 and obj>0 */
             fillcnt = 0;
             tryfixing = TRUE;
             constant1 = 0.0;
