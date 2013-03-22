@@ -32,20 +32,19 @@ extern "C" {
 #endif
 
 /** includes the pbm file reader into SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeReaderPbm(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /* writes picture of matrix structure to file */
-extern
+EXTERN
 SCIP_RETCODE SCIPwritePbm(
    SCIP*              scip,               /**< SCIP data structure */
    FILE*              file,               /**< output file, or NULL if standard output should be used */
    const char*        name,               /**< problem name */
    SCIP_READERDATA*   readerdata,         /**< information for reader */
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                nvars,              /**< number of mutable variables in the problem */
    SCIP_CONS**        conss,              /**< array with constraints of the problem */
    int                nconss,             /**< number of constraints in the problem */

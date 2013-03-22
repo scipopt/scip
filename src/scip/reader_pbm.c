@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -173,9 +173,10 @@ void flushBits(
    if( *bitcnt == 0 )
       return;
 
+   assert(bitbuffer != NULL);
    assert(*bitcnt > 0 && *bitcnt <= 8);
 
-   (*bitbuffer) = (*bitbuffer) << (8-*bitcnt); /*lint !e701 !e734*/
+   (*bitbuffer) <<= (8 - *bitcnt); /*lint !e701 !e734*/
 
    fputc(*bitbuffer, file);
 
@@ -184,18 +185,19 @@ void flushBits(
 }
 
 
-/** appends a bit to buffer and prints it to the give file stream if we've gathered a whole byte */
+/** appends a bit to buffer and prints it to the given file stream if we've gathered a whole byte */
 static
 void appendBit(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   unsigned char     	 bit,                /**< bit */
+   unsigned char     	 bit,                /**< bit to append */
    unsigned char*        bitcnt,             /**< counts bits until whole byte is gathered */
    unsigned char*        bitbuffer           /**< bit buffer */
    )
 {
    assert(scip != NULL);
    assert(*bitcnt < 8);
+   assert(bitbuffer != NULL);
 
    (*bitbuffer) = ((*bitbuffer)<<1)|(bit&1); /*lint !e734*/
    *bitcnt += 1;
@@ -279,7 +281,7 @@ void printRow(
       if( v != -1 )
       {
          x = v / submatrixsize;
-         scaledimage[y*readerdata->maxcols+x] += 1;
+         ++(scaledimage[y * readerdata->maxcols + x]);
       }
    }
 
@@ -423,7 +425,7 @@ SCIP_DECL_READERWRITE(readerWritePbm)
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
 
-   SCIP_CALL( SCIPwritePbm(scip, file, name, readerdata, transformed, vars, nvars, conss, nconss, result) );
+   SCIP_CALL( SCIPwritePbm(scip, file, name, readerdata, transformed, nvars, conss, nconss, result) );
 
    return SCIP_OKAY;
 }
@@ -467,13 +469,12 @@ SCIP_RETCODE SCIPwritePbm(
    const char*           name,               /**< problem name */
    SCIP_READERDATA*      readerdata,         /**< information for reader */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                   nvars,              /**< number of mutable variables in the problem */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
-{  /*lint --e{715}*/
+{
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS* cons;
    SCIP_VAR** consvars;
