@@ -42,6 +42,7 @@ features:
 - new branching rule "cloud branching" that considers several alternative LP optima
 - additional vbc output added: branching information is printed earlier and also for nodes which were cut off
 - added new statistic which distinguish between internal nodes and leaves which got processed
+- added reader_pbm, which writes the matrix structure in pbm format (possibly scaled to given size)
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor

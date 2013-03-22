@@ -137,6 +137,7 @@
 #include "scip/reader_osil.h"
 #include "scip/reader_pip.h"
 #include "scip/reader_ppm.h"
+#include "scip/reader_pbm.h"
 #include "scip/reader_rlp.h"
 #include "scip/reader_sol.h"
 #include "scip/reader_wbo.h"

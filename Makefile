@@ -375,6 +375,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_osil.o \
 			scip/reader_pip.o \
 			scip/reader_ppm.o \
+			scip/reader_pbm.o \
 			scip/reader_rlp.o \
 			scip/reader_sol.o \
 			scip/reader_wbo.o \
