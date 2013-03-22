@@ -69,6 +69,10 @@ struct SCIP_PresolData
    int                   maxpairs;           /**< maximal number of pair comparisons for at least one variable fixing */
    SCIP_Bool             predbndstr;         /**< flag indicating if predictive bound strengthening should be applied */
    SCIP_Bool             singcolstuffing;    /**< flag indicating if singleton columns stuffing should be applied */
+#ifdef DOMCOL_STATISTIC
+   int                   nfixingsstuffing;   /**< number of fixings done by singleton columns stuffing */
+   int                   nfixingsdomcol;     /**< number of fixings only from dominated columns */
+#endif
 };
 
 /** type of fixing direction */
@@ -2924,6 +2928,27 @@ SCIP_RETCODE singletonColumnStuffing(
  * Callback methods of presolver
  */
 
+#ifdef DOMCOL_STATISTIC
+/** presolving deinitialization method of presolver (called after presolving has been finished) */
+static
+SCIP_DECL_PRESOLEXITPRE(presolExitpreDomcol)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* presoldata;
+
+   /* free presolver data */
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   printf("### Stuffing: %d fixings ###\n",presoldata->nfixingsstuffing);
+   printf("### Domcol: %d fixings ###\n", presoldata->nfixingsdomcol);
+
+   presoldata->nfixingsstuffing = 0;
+   presoldata->nfixingsdomcol = 0;
+
+   return SCIP_OKAY;
+}
+#endif
+
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_PRESOLCOPY(presolCopyDomcol)
@@ -2984,6 +3009,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
    if( initialized )
    {
       int npossiblefixings;
+      int npossiblefixingsstuffing;
       SCIP_Longint ndomrelations;
       int v;
       int r;
@@ -3014,6 +3040,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       assert(SCIPgetNVars(scip) == matrix->ncols);
 
       npossiblefixings = 0;
+      npossiblefixingsstuffing = 0;
       ndomrelations = 0;
       nvars = matrix->ncols;
       nrows = matrix->nrows;
@@ -3049,7 +3076,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
        */
       if( presoldata->singcolstuffing )
       {
-         SCIP_CALL( singletonColumnStuffing(scip, matrix, varsprocessed, varstofix, &npossiblefixings) );
+         SCIP_CALL( singletonColumnStuffing(scip, matrix, varsprocessed, varstofix, &npossiblefixingsstuffing) );
+#ifdef DOMCOL_STATISTIC
+         presoldata->nfixingsstuffing += npossiblefixingsstuffing;
+#endif
       }
 
       /* 1.stage: we search for dominance relations only within parallel columns
@@ -3248,7 +3278,11 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
             break;
       }
 
-      if( npossiblefixings > 0 )
+#ifdef DOMCOL_STATISTIC
+      presoldata->nfixingsdomcol += npossiblefixings;
+#endif
+
+      if( (npossiblefixings + npossiblefixingsstuffing) > 0 )
       {
          int oldnfixedvars = *nfixedvars;
 
@@ -3383,6 +3417,12 @@ SCIP_RETCODE SCIPincludePresolDomcol(
          PRESOL_DELAY, presolExecDomcol, presoldata) );
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyDomcol) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeDomcol) );
+
+#ifdef DOMCOL_STATISTIC
+   presoldata->nfixingsstuffing = 0;
+   presoldata->nfixingsdomcol = 0;
+   SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreDomcol) );
+#endif
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/domcol/maxpairs",
