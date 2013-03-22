@@ -2641,7 +2641,8 @@ SCIP_RETCODE singletonColumnStuffing(
    int* rowend;
    int* colindices;
    int* colnozerolb;
-   SCIP_Real constant;
+   SCIP_Real constant1;
+   SCIP_Real constant2;
    SCIP_Real val;
    SCIP_Real value;
    SCIP_Real boundoffset;
@@ -2685,7 +2686,8 @@ SCIP_RETCODE singletonColumnStuffing(
             /* singleton column pushing for >= relation */
             fillcnt = 0;
             tryfixing = TRUE;
-            constant = 0.0;
+            constant1 = 0.0;
+            constant2 = 0.0;
 
             rowpnt = matrix->rowmatind + matrix->rowmatbeg[row];
             rowend = rowpnt + matrix->rowmatcnt[row];
@@ -2708,14 +2710,18 @@ SCIP_RETCODE singletonColumnStuffing(
                      {
                         if( SCIPisPositive(scip, SCIPvarGetLbGlobal(var)) )
                         {
-                           constant += val * SCIPvarGetLbGlobal(var);
+                           constant1 += val * SCIPvarGetLbGlobal(var);
+                           constant2 += val * SCIPvarGetLbGlobal(var);
                            colnozerolb[fillcnt] = 1;
                         }
 
-                        colratios[fillcnt] = SCIPvarGetObj(var) / val;
-                        colindices[fillcnt] = colidx;
-                        colcoeffs[fillcnt] = val;
-                        fillcnt++;
+                        if( SCIPisNegative(scip, SCIPvarGetObj(matrix->vars[colidx])) )
+                        {
+                           colratios[fillcnt] = SCIPvarGetObj(var) / val;
+                           colindices[fillcnt] = colidx;
+                           colcoeffs[fillcnt] = val;
+                           fillcnt++;
+                        }
                      }
                      else
                      {
@@ -2725,12 +2731,14 @@ SCIP_RETCODE singletonColumnStuffing(
                            tryfixing = FALSE;
                            break;
                         }
-                        constant += val * SCIPvarGetUbGlobal(var);
+                        constant1 += val * SCIPvarGetUbGlobal(var);
+                        constant2 += val * SCIPvarGetLbGlobal(var);
                      }
                   }
                   else if( SCIPisPositive(scip, val) )
                   {
-                     constant += val * SCIPvarGetLbGlobal(var);
+                     constant1 += val * SCIPvarGetLbGlobal(var);
+                     constant2 += val * SCIPvarGetUbGlobal(var);
                   }
                }
                else
@@ -2756,22 +2764,33 @@ SCIP_RETCODE singletonColumnStuffing(
                      boundoffset = colcoeffs[k] * SCIPvarGetLbGlobal(matrix->vars[idx]);
                   }
 
-                  if( matrix->colmatcnt[idx] == 1 &&
-                     SCIPvarGetType(matrix->vars[idx]) == SCIP_VARTYPE_CONTINUOUS &&
-                     SCIPisNegative(scip, SCIPvarGetObj(matrix->vars[idx])) )
+                  assert(SCIPisNegative(scip, SCIPvarGetObj(matrix->vars[idx])));
+
+                  if( matrix->colmatcnt[idx] == 1 && SCIPvarGetType(matrix->vars[idx]) == SCIP_VARTYPE_CONTINUOUS )
                   {
-                     if( SCIPisGE(scip, value, matrix->lhs[row] - constant + boundoffset) )
+                     if( SCIPisGE(scip, value, matrix->lhs[row] - constant1 + boundoffset) )
                      {
-                        constant += value;
+                        constant1 += value;
                         varstofix[idx] = FIXATUB;
                         varsprocessed[idx] = TRUE;
                         (*npossiblefixings)++;
 
                         if( colnozerolb[k] )
-                           constant -= boundoffset;
+                           constant1 -= boundoffset;
+                     }
+                     else if( SCIPisGE(scip, matrix->lhs[row], constant2) )
+                     {
+                        varstofix[idx] = FIXATLB;
+                        varsprocessed[idx] = TRUE;
+                        (*npossiblefixings)++;
                      }
                      else
-                        break;
+                     {
+                        constant2 += value;
+
+                        if( colnozerolb[k] )
+                           constant2 -= boundoffset;
+                     }
                   }
                }
             }
@@ -2783,7 +2802,8 @@ SCIP_RETCODE singletonColumnStuffing(
             /* singleton column pulling for >= relation */
             fillcnt = 0;
             tryfixing = TRUE;
-            constant = 0.0;
+            constant1 = 0.0;
+            constant2 = 0.0;
 
             rowpnt = matrix->rowmatind + matrix->rowmatbeg[row];
             rowend = rowpnt + matrix->rowmatcnt[row];
@@ -2802,19 +2822,22 @@ SCIP_RETCODE singletonColumnStuffing(
                   if( SCIPisPositive(scip, val) )
                   {
                      /* do we have a continuous singleton column */
-                     if( matrix->colmatcnt[colidx] == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
-                        && SCIPisPositive(scip, SCIPvarGetObj(var)) )
+                     if( matrix->colmatcnt[colidx] == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
                      {
                         if( SCIPisPositive(scip, SCIPvarGetLbGlobal(var)) )
                         {
-                           constant += val * SCIPvarGetLbGlobal(var);
+                           constant1 += val * SCIPvarGetLbGlobal(var);
+                           constant2 += val * SCIPvarGetLbGlobal(var);
                            colnozerolb[fillcnt] = 1;
                         }
 
-                        colratios[fillcnt] = SCIPvarGetObj(var) / val;
-                        colindices[fillcnt] = colidx;
-                        colcoeffs[fillcnt] = val;
-                        fillcnt++;
+                        if( SCIPisPositive(scip, SCIPvarGetObj(var)) )
+                        {
+                           colratios[fillcnt] = SCIPvarGetObj(var) / val;
+                           colindices[fillcnt] = colidx;
+                           colcoeffs[fillcnt] = val;
+                           fillcnt++;
+                        }
                      }
                      else
                      {
@@ -2826,13 +2849,15 @@ SCIP_RETCODE singletonColumnStuffing(
                            tryfixing = FALSE;
                            break;
                         }
-                        constant += val * SCIPvarGetUbGlobal(var);
+                        constant1 += val * SCIPvarGetUbGlobal(var);
+                        constant2 += val * SCIPvarGetLbGlobal(var);
                      }
                   }
                   else if( SCIPisNegative(scip, val) )
                   {
                      /* consider lower bound for negative coefficients */
-                     constant += val * SCIPvarGetLbGlobal(var);
+                     constant1 += val * SCIPvarGetLbGlobal(var);
+                     constant2 += val * SCIPvarGetUbGlobal(var);
                   }
                }
                else
@@ -2858,22 +2883,33 @@ SCIP_RETCODE singletonColumnStuffing(
                      boundoffset = colcoeffs[k] * SCIPvarGetLbGlobal(matrix->vars[idx]);
                   }
 
-                  if( matrix->colmatcnt[idx] == 1 &&
-                     SCIPvarGetType(matrix->vars[idx]) == SCIP_VARTYPE_CONTINUOUS &&
-                     SCIPisPositive(scip, SCIPvarGetObj(matrix->vars[idx])) )
+                  assert(SCIPisPositive(scip, SCIPvarGetObj(matrix->vars[idx])));
+
+                  if( matrix->colmatcnt[idx] == 1 && SCIPvarGetType(matrix->vars[idx]) == SCIP_VARTYPE_CONTINUOUS )
                   {
-                     if( SCIPisLE(scip, value, matrix->lhs[row] - constant + boundoffset) )
+                     if( SCIPisLE(scip, value, matrix->lhs[row] - constant1 + boundoffset) )
                      {
-                        constant += value;
+                        constant1 += value;
                         varstofix[idx] = FIXATUB;
                         varsprocessed[idx] = TRUE;
                         (*npossiblefixings)++;
 
                         if( colnozerolb[k] )
-                           constant -= boundoffset;
+                           constant1 -= boundoffset;
+                     }
+                     else if( SCIPisLE(scip, matrix->lhs[row], constant2) )
+                     {
+                        varstofix[idx] = FIXATLB;
+                        varsprocessed[idx] = TRUE;
+                        (*npossiblefixings)++;
                      }
                      else
-                        break;
+                     {
+                        constant2 += value;
+
+                        if( colnozerolb[k] )
+                           constant2 -= boundoffset;
+                     }
                   }
                }
             }
