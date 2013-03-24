@@ -411,7 +411,7 @@ BEGIN {
       timetobest = $11;
    }
 }
-/^Dual Bound         :/ { 
+/^  Dual Bound       :/ {
    if( $4 != "-" ) {
       db = $4;
       dbset = 1;
