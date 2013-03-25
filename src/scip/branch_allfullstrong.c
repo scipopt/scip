@@ -48,14 +48,10 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-#define DEFAULT_MAXPROPROUNDS       0        /**< maximum number of propagation rounds to be performed during strong branching
-                                              *   before solving the LP (-1: no limit, -2: parameter settings) */
 
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   int                   maxproprounds;      /**< maximum number of propagation rounds to be performed during strong branching
-                                              *   before solving the LP (-1: no limit, -2: parameter settings) */
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
 };
 
@@ -139,16 +135,12 @@ SCIP_RETCODE branch(
       SCIP_Bool upinf;
       SCIP_Bool downconflict;
       SCIP_Bool upconflict;
-      SCIP_Bool propagate;
       int nsbcalls;
       int i;
       int c;
 
-      /* check whether propagation should be performed */
-      propagate = (branchruledata->maxproprounds != 0);
-
       /* initialize strong branching */
-      SCIP_CALL( SCIPstartStrongbranch(scip, propagate) );
+      SCIP_CALL( SCIPstartStrongbranch(scip, FALSE) );
 
       /* search the full strong candidate:
        * cycle through the candidates, starting with the position evaluated in the last run
@@ -494,12 +486,6 @@ SCIP_RETCODE SCIPincludeBranchruleAllfullstrong(
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitAllfullstrong) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpAllfullstrong) );
    SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsAllfullstrong) );
-
-   /* allfullstrong branching rule parameters */
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "branching/allfullstrong/maxproprounds",
-         "maximum number of propagation rounds to be performed during strong branching before solving the LP (-1: no limit, -2: parameter settings)",
-         &branchruledata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -2, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
