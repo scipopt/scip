@@ -4198,12 +4198,9 @@ SCIP_RETCODE SCIPsolveCIP(
       }
       else if( !infeasible )
       {
-         SCIP_SOL* sol;
-         SCIP_Bool stored;
-
-         SCIP_CALL( SCIPsolCreateCurrentSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
-         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, lp,
-               eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+         /* node solution is feasible: add it to the solution store */
+         SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp,
+               eventqueue, eventfilter) );
       }
 
       /* compute number of successfully applied conflicts */
