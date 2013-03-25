@@ -905,7 +905,7 @@ SCIP_DECL_READERWRITE(readerWriteCip)
             case SCIP_VARSTATUS_COLUMN:
                SCIPerrorMessage("Only fixed variables are allowed to be present in fixedvars list.\n");
                SCIPABORT();
-               return SCIP_ERROR;
+               return SCIP_ERROR; /*lint !e527*/
             }
          }
       }

@@ -6343,6 +6343,7 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
    *result = SCIP_FEASIBLE;
 
    maxviol = 0.0;
+   viol = 0.0;
 
    dolinfeasshift = conshdlrdata->linfeasshift && (conshdlrdata->trysolheur != NULL) && SCIPgetStage(scip) > SCIP_STAGE_PROBLEM && SCIPgetStage(scip) < SCIP_STAGE_SOLVED;
    for( c = 0; c < nconss; ++c )

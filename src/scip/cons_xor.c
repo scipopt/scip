@@ -1862,7 +1862,7 @@ void solveRowEcholonGF2(
    /* loop backwards through solution vector */
    for (i = r-2; i >= 0; --i)
    {
-      int val;
+      Type val;
 
       assert( i <= s[i] && s[i] <= n );
 
@@ -2051,11 +2051,11 @@ SCIP_RETCODE checkSystemGF2(
       assert( consdata != NULL );
       assert( consdata->nvars > 0 );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &(A[nconssmat]), nvars) );
-      BMSclearMemoryArray(A[nconssmat], nvars);
+      SCIP_CALL( SCIPallocBufferArray(scip, &(A[nconssmat]), nvars) ); /*lint !e866*/
+      BMSclearMemoryArray(A[nconssmat], nvars); /*lint !e866*/
 
       /* correct rhs w.r.t. to fixed variables and count nonfixed variables in constraint */
-      b[nconssmat] = consdata->rhs;
+      b[nconssmat] = (Type) consdata->rhs;
       for (j = 0; j < consdata->nvars; ++j)
       {
          SCIP_VAR* var;
@@ -2167,7 +2167,7 @@ SCIP_RETCODE checkSystemGF2(
                {
                   assert( (int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j]) < nvars );
                   assert( xorbackidx[(int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j])] == j );
-                  SCIP_CALL( SCIPsetSolVal(scip, sol, xorvars[j], 1) );
+                  SCIP_CALL( SCIPsetSolVal(scip, sol, xorvars[j], 1.0) );
                }
             }
             SCIPfreeBufferArray(scip, &x);
@@ -2178,7 +2178,7 @@ SCIP_RETCODE checkSystemGF2(
             {
                if ( SCIPcomputeVarLbLocal(scip, vars[j]) > 0.5 )
                {
-                  SCIP_CALL( SCIPsetSolVal(scip, sol, vars[j], 1) );
+                  SCIP_CALL( SCIPsetSolVal(scip, sol, vars[j], 1.0) );
                   SCIPdebugMessage("Added fixed variable <%s>.\n", SCIPvarGetName(vars[j]));
                }
             }

@@ -127,7 +127,7 @@ SCIP_DECL_BRANCHINIT(branchInitCloud)
 
    if( branchruledata->cloudclock != NULL)
    {
-      SCIPresetClock(scip, branchruledata->cloudclock);
+      SCIP_CALL( SCIPresetClock(scip, branchruledata->cloudclock) );
    }
 
    return SCIP_OKAY;

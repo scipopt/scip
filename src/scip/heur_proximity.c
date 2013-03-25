@@ -330,7 +330,6 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    SCIP_HEURDATA* heurdata; /* heuristic's data                            */
    SCIP_Longint nnodes;     /* number of stalling nodes for the subproblem */
    SCIP_Longint nlpiters;   /* lp iteration limit for the subproblem       */
-   int  nrestarts;          /* number of restarts of the heuristic         */
    SCIP_Bool foundsol;
 
    assert(heur != NULL);
@@ -370,7 +369,6 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
       return SCIP_OKAY;
    }
 
-   nrestarts = -1;
    foundsol = FALSE;
 
    do
@@ -388,7 +386,6 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
 
       /* define and solve the proximity subproblem */
       SCIP_CALL( SCIPapplyProximity(scip, heur, result, heurdata->minimprove, nnodes, nlpiters, &nusednodes, &nusedlpiters) );
-      ++nrestarts;
 
       /* adjust node limit and LP iteration limit for future iterations */
       assert(nusednodes <= nnodes);

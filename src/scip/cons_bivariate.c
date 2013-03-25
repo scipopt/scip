@@ -1399,7 +1399,7 @@ void getAlphaBetaGammaDelta(
 }
 
 /** given a convex (concave, resp.) bivariate function, computes an over- (under-, resp.) estimating hyperplane
- * does not succeed if some variable is unbounded or both variables are fixed
+ *  does not succeed if some variable is unbounded or both variables are fixed
  */
 static
 SCIP_RETCODE generateEstimatingHyperplane(
@@ -1652,7 +1652,7 @@ SCIP_RETCODE generateOverestimatingHyperplaneCut(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real coefs[2];
-   SCIP_Real constant;
+   SCIP_Real constant = 0.0;
    SCIP_Bool success;
 
    assert(scip != NULL);
