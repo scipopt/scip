@@ -61,7 +61,7 @@
 
 /*
  * Data structures
- */
+  */
 
 /** control parameters */
 struct SCIP_PresolData
@@ -2823,7 +2823,8 @@ SCIP_RETCODE singletonColumnStuffing(
                   if( SCIPisPositive(scip, val) )
                   {
                      /* do we have a continuous singleton column */
-                     if( matrix->colmatcnt[colidx] == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+                     if( matrix->colmatcnt[colidx] == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS &&
+                        SCIPisPositive(scip, SCIPvarGetObj(var)) )
                      {
                         if( SCIPisPositive(scip, SCIPvarGetLbGlobal(var)) )
                         {
@@ -2832,13 +2833,10 @@ SCIP_RETCODE singletonColumnStuffing(
                            colnozerolb[fillcnt] = 1;
                         }
 
-                        if( SCIPisPositive(scip, SCIPvarGetObj(var)) )
-                        {
-                           colratios[fillcnt] = SCIPvarGetObj(var) / val;
-                           colindices[fillcnt] = colidx;
-                           colcoeffs[fillcnt] = val;
-                           fillcnt++;
-                        }
+                        colratios[fillcnt] = SCIPvarGetObj(var) / val;
+                        colindices[fillcnt] = colidx;
+                        colcoeffs[fillcnt] = val;
+                        fillcnt++;
                      }
                      else
                      {
