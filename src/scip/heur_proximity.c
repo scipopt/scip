@@ -55,6 +55,7 @@
 #define DEFAULT_NODESOFS      50LL       /* number of nodes added to the contingent of the total nodes                 */
 #define DEFAULT_WAITINGNODES  100LL      /* default waiting nodes since last incumbent before heuristic is executed    */
 #define DEFAULT_NODESQUOT     0.1        /* default quotient of sub-MIP nodes with respect to number of processed nodes*/
+
 /*
  * Data structures
  */
@@ -76,6 +77,7 @@ struct SCIP_HeurData
    SCIP*                 subscip;            /**< the subscip used by the heuristic                                   */
    SCIP_HASHMAP*         varmapfw;           /**< map between scip variables and subscip variables                    */
    SCIP_VAR**            subvars;            /**< variables in subscip                                                */
+   SCIP_CONS*            objcons;            /**< the objective cutoff constraint of the subproblem                   */
 
    int                   nsubvars;           /**< the number of subvars                                               */
    int                   lastsolidx;         /**< index of last solution on which the heuristic was processed         */
@@ -186,6 +188,9 @@ SCIP_RETCODE setupSubproblem(
       SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/fracdiving/freq", -1) );
    }
 
+   /* todo check if
+    * SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
+    * improves performance */
 
 #ifdef SCIP_DEBUG
    /* for debugging proximity, enable MIP output */
@@ -283,6 +288,7 @@ SCIP_DECL_HEURINIT(heurInitProximity)
    heurdata->subscip = NULL;
    heurdata->varmapfw = NULL;
    heurdata->subvars = NULL;
+   heurdata->objcons = NULL;
 
    heurdata->nsubvars = 0;
 
@@ -307,17 +313,21 @@ SCIP_DECL_HEUREXITSOL(heurExitsolProximity)
    {
       assert(heurdata->varmapfw != NULL);
       assert(heurdata->subvars != NULL);
+      assert(heurdata->objcons != NULL);
 
       SCIPfreeBlockMemoryArray(scip, &heurdata->subvars, heurdata->nsubvars);
       SCIPhashmapFree(&heurdata->varmapfw);
+      SCIP_CALL( SCIPreleaseCons(heurdata->subscip, &heurdata->objcons) );
       SCIP_CALL( SCIPfree(&heurdata->subscip) );
 
       heurdata->subscip = NULL;
       heurdata->varmapfw = NULL;
       heurdata->subvars = NULL;
+      heurdata->objcons = NULL;
    }
 
-   assert(heurdata->subscip == NULL && heurdata->varmapfw == NULL && heurdata->subvars == NULL);
+   assert(heurdata->subscip == NULL && heurdata->varmapfw == NULL
+         && heurdata->subvars == NULL && heurdata->objcons == NULL);
 
    return SCIP_OKAY;
 }
@@ -507,6 +517,23 @@ SCIP_RETCODE SCIPapplyProximity(
    if( SCIPisFeasEQ(scip, bestobj, lowerbound) || SCIPgetGap(scip) <= heurdata->mingap )
       return SCIP_OKAY;
 
+   /* calculate the minimum improvement for a heuristic solution in terms of the distance between incumbent objective
+    * and the lower bound
+    */
+   objcutoff = lowerbound + (1 - minimprove) * (bestobj - lowerbound);
+
+   /* use integrality of the objective function to round down (and thus strengthen) the objective cutoff */
+   if( SCIPisObjIntegral(scip) )
+	   objcutoff = SCIPfeasFloor(scip, objcutoff);
+
+   if( SCIPisFeasLT(scip, objcutoff, lowerbound) )
+      objcutoff = lowerbound;
+
+   /* exit execution if the right hand side of the objective constraint does not change (suggests that the heuristic
+    * was not successful in a previous iteration) */
+   if( heurdata->objcons != NULL && SCIPisFeasEQ(scip, SCIPgetRhsLinear(heurdata->subscip, heurdata->objcons), objcutoff) )
+      return SCIP_OKAY;
+
    /* check whether there is enough time and memory left */
    timelimit = 0.0;
    memorylimit = 0.0;
@@ -537,6 +564,7 @@ SCIP_RETCODE SCIPapplyProximity(
    if( heurdata->subscip == NULL )
    {
 	   assert(heurdata->varmapfw == NULL);
+	   assert(heurdata->objcons == NULL);
 
 	   /* initialize the subproblem */
 	   SCIP_CALL( SCIPcreate(&subscip) );
@@ -561,6 +589,57 @@ SCIP_RETCODE SCIPapplyProximity(
 
 	   /* set up parameters for the copied instance */
 	   SCIP_CALL( setupSubproblem(subscip) );
+
+	   /* create the objective constraint in the sub scip, first without variables and values which will be added later */
+	   SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &objcons, "objbound_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), SCIPinfinity(subscip)) );
+
+	   /* determine large value to set variable bounds to, safe-guard to avoid fixings to infinite values */
+	   large = SCIPinfinity(scip);
+	   if( !SCIPisInfinity(scip, 0.1 / SCIPfeastol(scip)) )
+	      large = 0.1 / SCIPfeastol(scip);
+	   inf = SCIPinfinity(subscip);
+
+
+	   /* get variable image and change objective to proximity function (Manhattan distance) in sub-SCIP */
+	   for( i = 0; i < nvars; i++ )
+	   {
+	      SCIP_Real adjustedbound;
+	      SCIP_Real lb;
+	      SCIP_Real ub;
+
+	      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+
+	      SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
+
+	      lb = SCIPvarGetLbGlobal(subvars[i]);
+	      ub = SCIPvarGetUbGlobal(subvars[i]);
+
+	      /* adjust infinite bounds in order to avoid that variables with non-zero objective
+	       * get fixed to infinite value in proximity subproblem
+	       */
+	      if( SCIPisInfinity(subscip, ub ) )
+	      {
+	         adjustedbound = MAX(large, lb+large);
+	         adjustedbound = MIN(adjustedbound, inf);
+	         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], adjustedbound) );
+	      }
+	      if( SCIPisInfinity(subscip, -lb ) )
+	      {
+	         adjustedbound = MIN(-large, ub-large);
+	         adjustedbound = MAX(adjustedbound, -inf);
+	         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], adjustedbound) );
+	      }
+
+	      /* add all nonzero objective coefficients to the objective constraint */
+	      if( !SCIPisFeasZero(subscip, SCIPvarGetObj(vars[i])) )
+	      {
+	         SCIP_CALL( SCIPaddCoefLinear(subscip, objcons, subvars[i], SCIPvarGetObj(vars[i])) );
+	      }
+	   }
+
+	   /* add objective constraint to the subscip */
+	   SCIP_CALL( SCIPaddCons(subscip, objcons) );
+
    }
    else
    {
@@ -569,97 +648,40 @@ SCIP_RETCODE SCIPapplyProximity(
        */
 	   assert(heurdata->varmapfw != NULL);
 	   assert(heurdata->subvars != NULL);
+	   assert(heurdata->objcons != NULL);
 
 	   subscip = heurdata->subscip;
 	   varmapfw = heurdata->varmapfw;
 	   subvars = heurdata->subvars;
+	   objcons = heurdata->objcons;
 
 	   eventhdlr = SCIPfindEventhdlr(subscip, EVENTHDLR_NAME);
 	   assert(eventhdlr != NULL);
    }
 
 
-   /* calculate the minimum improvement for a heuristic solution in terms of the distance between incumbent objective
-    * and the lower bound
-    */
-   objcutoff = lowerbound + (1 - minimprove) * (bestobj - lowerbound);
+   SCIPchgRhsLinear(subscip, objcons, objcutoff);
 
-   /* use integrality of the objective function to round down (and thus strengthen) the objective cutoff */
-   if( SCIPisObjIntegral(scip) )
-	   objcutoff = SCIPfeasFloor(scip, objcutoff);
-
-   if( SCIPisFeasLT(scip, objcutoff, lowerbound) )
-      objcutoff = lowerbound;
-
-   /* create the objective constraint in the sub scip, first without variables and values which will be added later */
-   SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &objcons, "objbound_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), objcutoff) );
-
-   /* determine large value to set variable bounds to, safe-guard to avoid fixings to infinite values */
-   large = SCIPinfinity(scip);
-   if( !SCIPisInfinity(scip, 0.1 / SCIPfeastol(scip)) )
-      large = 0.1 / SCIPfeastol(scip);
-   inf = SCIPinfinity(subscip);
-
-   /* get variable image and change objective to proximity function (Manhattan distance) in sub-SCIP */
-   for( i = 0; i < nvars; i++ )
+   for( i = 0; i < SCIPgetNBinVars(scip); ++i )
    {
-      SCIP_Real adjustedbound;
-      SCIP_Real lb;
-      SCIP_Real ub;
 
-      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-
+      SCIP_Real solval;
       /* objective coefficients are only set for binary variables of the problem */
-      if( SCIPvarIsBinary(vars[i]) )
+      assert(SCIPvarIsBinary(subvars[i]));
+
+      solval = SCIPgetSolVal(scip, incumbent, vars[i]);
+      assert(SCIPisFeasEQ(scip, solval, 1.0) || SCIPisFeasEQ(scip, solval, 0.0));
+
+      if( solval < 0.5 )
       {
-         SCIP_Real solval;
-
-         solval = SCIPgetSolVal(scip, incumbent, vars[i]);
-         assert(SCIPisFeasEQ(scip, solval, 1.0) || SCIPisFeasEQ(scip, solval, 0.0));
-
-         if( solval < 0.5 )
-         {
-            SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 1.0) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], -1.0) );
-         }
+         SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 1.0) );
       }
       else
       {
-         SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
+         SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], -1.0) );
       }
 
-      lb = SCIPvarGetLbGlobal(subvars[i]);
-      ub = SCIPvarGetUbGlobal(subvars[i]);
-
-      /* adjust infinite bounds in order to avoid that variables with non-zero objective
-       * get fixed to infinite value in proximity subproblem
-       */
-      if( SCIPisInfinity(subscip, ub ) )
-      {
-         adjustedbound = MAX(large, lb+large);
-         adjustedbound = MIN(adjustedbound, inf);
-         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], adjustedbound) );
-      }
-      if( SCIPisInfinity(subscip, -lb ) )
-      {
-         adjustedbound = MIN(-large, ub-large);
-         adjustedbound = MAX(adjustedbound, -inf);
-         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], adjustedbound) );
-      }
-
-      /* add all nonzero objective coefficients to the objective constraint */
-      if( !SCIPisFeasZero(subscip, SCIPvarGetObj(vars[i])) )
-      {
-         SCIP_CALL( SCIPaddCoefLinear(subscip, objcons, subvars[i], SCIPvarGetObj(vars[i])) );
-      }
    }
-
-   /* add objective constraint to the subscip */
-   SCIP_CALL( SCIPaddCons(subscip, objcons) );
-   SCIP_CALL( SCIPreleaseCons(subscip, &objcons) );
 
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
@@ -736,24 +758,11 @@ SCIP_RETCODE SCIPapplyProximity(
    SCIP_CALL( SCIPfreeTransform(subscip) );
 
    /* save subproblem in heuristic data for subsequent runs if it has been successful, otherwise free subproblem */
-   if( *result == SCIP_FOUNDSOL )
-   {
-	   heurdata->subscip = subscip;
-	   heurdata->varmapfw = varmapfw;
-	   heurdata->subvars = subvars;
-	   heurdata->nsubvars = nvars;
-   }
-   else
-   {
-	   SCIPfreeBlockMemoryArray(scip, &subvars, nvars);
-	   /* free hash map */
-	   SCIPhashmapFree(&varmapfw);
-	   SCIP_CALL( SCIPfree(&subscip) );
-
-	   heurdata->subscip = NULL;
-	   heurdata->varmapfw = NULL;
-	   heurdata->subvars = NULL;
-   }
+   heurdata->subscip = subscip;
+   heurdata->varmapfw = varmapfw;
+   heurdata->subvars = subvars;
+   heurdata->objcons = objcons;
+   heurdata->nsubvars = nvars;
 
    return SCIP_OKAY;
 }
