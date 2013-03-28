@@ -63,6 +63,7 @@ using CppAD::SCIPInterval;
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wunused-local-typedefs"
 #endif
 
 #include <cppad/cppad.hpp>
@@ -70,6 +71,7 @@ using CppAD::SCIPInterval;
 
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wshadow"
+#pragma GCC diagnostic warning "-Wunused-local-typedefs"
 #endif
 
 /* CppAD is not thread-safe by itself, but uses some static datastructures
