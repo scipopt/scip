@@ -13350,6 +13350,22 @@ SCIP_RETCODE SCIPseparateCutpool(
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    );
 
+/** separates cuts w.r.t. given solution from a cut pool
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPseparateSolCutpool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   );
+
 /** if not already existing, adds row to the delayed global cut pool
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
