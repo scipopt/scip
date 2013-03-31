@@ -5401,7 +5401,8 @@ static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
-   SCIP_SOL*             sol                 /**< primal CIP solution, NULL for current LP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -5424,7 +5425,7 @@ SCIP_RETCODE addRelaxation(
    {
       SCIPdebugMessage("adding relaxation of linear constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
    }
 
    return SCIP_OKAY;
@@ -5463,7 +5464,7 @@ SCIP_RETCODE separateCons(
    if( violated )
    {
       /* insert LP row as cut */
-      SCIP_CALL( addRelaxation(scip, cons, sol) );
+      SCIP_CALL( addRelaxation(scip, cons, sol, cutoff) );
       (*ncuts)++;
    }
    else if( !SCIPconsIsModifiable(cons) && separatecards )
@@ -10904,6 +10905,7 @@ SCIP_DECL_CONSTRANS(consTransLinear)
 static
 SCIP_DECL_CONSINITLP(consInitlpLinear)
 {  /*lint --e{715}*/
+   SCIP_Bool cutoff;
    int c;
 
    assert(scip != NULL);
@@ -10912,7 +10914,8 @@ SCIP_DECL_CONSINITLP(consInitlpLinear)
    for( c = 0; c < nconss; ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addRelaxation(scip, conss[c], NULL) );
+      SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
+      /* cannot use cutoff here, since initlp has no return value */
    }
 
    return SCIP_OKAY;
@@ -11053,6 +11056,7 @@ static
 SCIP_DECL_CONSENFOLP(consEnfolpLinear)
 {  /*lint --e{715}*/
    SCIP_Bool violated;
+   SCIP_Bool cutoff;
    int c;
 
    assert(scip != NULL);
@@ -11075,8 +11079,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
       if( violated )
       {
          /* insert LP row as cut */
-         SCIP_CALL( addRelaxation(scip, conss[c], NULL) );
-         *result = SCIP_SEPARATED;
+         SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+            *result = SCIP_SEPARATED;
       }
    }
 
@@ -11088,8 +11095,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
       if( violated )
       {
          /* insert LP row as cut */
-         SCIP_CALL( addRelaxation(scip, conss[c], NULL) );
-         *result = SCIP_SEPARATED;
+         SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+            *result = SCIP_SEPARATED;
       }
    }
 

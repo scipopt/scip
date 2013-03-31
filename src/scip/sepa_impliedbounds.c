@@ -72,6 +72,7 @@ SCIP_RETCODE addCut(
    if( SCIPisEfficacious(scip, activity - rhs) )
    {
       SCIP_ROW* cut;
+      SCIP_Bool infeasible;
       char cutname[SCIP_MAXSTRLEN];
 
       /* create cut */
@@ -90,7 +91,8 @@ SCIP_RETCODE addCut(
 #endif
 
       /* add cut */
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
+      assert( ! infeasible );
       SCIP_CALL( SCIPaddPoolCut(scip, cut) );
       (*ncuts)++;
 

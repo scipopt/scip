@@ -1470,9 +1470,12 @@ SCIP_DECL_CONSINITLP(consInitlpSOS2)
       /* put corresponding rows into LP */
       if ( consdata->row != NULL && ! SCIProwIsInLP(consdata->row) )
       {
+         SCIP_Bool infeasible;
+
          assert( ! SCIPisInfinity(scip, REALABS(SCIProwGetLhs(consdata->row))) || ! SCIPisInfinity(scip, REALABS(SCIProwGetRhs(consdata->row))) );
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL) ) );
       }
    }
@@ -1520,7 +1523,10 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS2)
       /* possibly add row to LP if it is useful */
       if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          ++nGen;
@@ -1573,7 +1579,10 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS2)
       /* possibly add row to LP if it is useful */
       if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, sol, row) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          ++nGen;

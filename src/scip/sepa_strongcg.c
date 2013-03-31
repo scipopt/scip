@@ -515,13 +515,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                   }
                   else
                   {
+                     SCIP_Bool infeasible;
+
                      SCIPdebugMessage(" -> found strong CG cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
                         cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                         SCIPgetCutEfficacy(scip, NULL, cut),
                         SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                         SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
                      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+                     assert( ! infeasible );
                      if( !cutislocal )
                      {
                         SCIP_CALL( SCIPaddPoolCut(scip, cut) );

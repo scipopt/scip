@@ -3721,7 +3721,10 @@ SCIP_RETCODE separatePoint(
          /* if cut is strong or it's weak but we are convex and desperate, then add */
          if( efficacy > minefficacy || (convexalways && convex && SCIPisFeasPositive(scip, efficacy)) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+            assert( ! infeasible );
             *success = TRUE;
             if( bestefficacy != NULL && efficacy > *bestefficacy )
                *bestefficacy = efficacy;
@@ -3822,9 +3825,12 @@ SCIP_RETCODE addLinearizationCuts(
 
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
          {
+            SCIP_Bool infeasible;
+
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, &infeasible) );
+            assert( ! infeasible );
          }
       }
 
@@ -5245,6 +5251,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSDATA*     consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool infeasible;
    SCIP_ROW*          row;
    int                c;
    SCIP_Real          xlb;
@@ -5283,7 +5290,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                {
                   if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                   {
-                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                     assert( ! infeasible );
 
                      if( conshdlrdata->conshdlrindicator != NULL && !SCIProwIsLocal(row) )
                      {
@@ -5301,7 +5309,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                  assert( ! infeasible );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5322,7 +5331,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                  assert( ! infeasible );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5347,7 +5357,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                {
                   if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                   {
-                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                     assert( ! infeasible );
 
                      if( conshdlrdata->conshdlrindicator != NULL && !SCIProwIsLocal(row) )
                      {
@@ -5365,7 +5376,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                  assert( ! infeasible );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5386,7 +5398,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                  assert( ! infeasible );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {

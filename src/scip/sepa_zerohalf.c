@@ -2981,17 +2981,19 @@ SCIP_RETCODE addZerohalfCutToLP(
    {
       return SCIP_OKAY;
    }
-          
+
    /* add cut (if no cutpool is used otherwise add it at the end of the separation main method)*/
    if( !sepadata->usezhcutpool )
    {
-      SCIP_CALL(SCIPaddCut(scip, NULL, cutdata->cut, sepadata->forcecutstolp));
+      SCIP_Bool infeasible;
+      SCIP_CALL(SCIPaddCut(scip, NULL, cutdata->cut, sepadata->forcecutstolp, &infeasible) );
+      assert( ! infeasible );
       if( !cutdata->islocal )
       {
          SCIP_CALL(SCIPaddPoolCut(scip, cutdata->cut));
       }
    }
-  
+
    cutdata->addedtolp = TRUE;
    (*nsepacuts)++;           
 
@@ -7174,14 +7176,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
          /* add cut to LP */
          if( hasminorthogonality && cutdatai->addedtolp )
-         {        
-            SCIP_CALL(SCIPaddCut(scip, NULL, cutdatai->cut, sepadata->forcecutstolp));
+         {
+            SCIP_Bool infeasible;
+
+            SCIP_CALL(SCIPaddCut(scip, NULL, cutdatai->cut, sepadata->forcecutstolp, &infeasible) );
+            assert( ! infeasible );
             if( !cutdatai->islocal )
             {
                SCIP_CALL(SCIPaddPoolCut(scip, cutdatai->cut));
             }
             cutdatai->addedtolp = TRUE;
-         }        
+         }
          else
          {
             cutdatai->addedtolp = FALSE;        
@@ -7223,9 +7228,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          while( ncutpool > 0 )
          {
             SCIP_Real bestscore;
-            int bestpos;
             SCIP_Real priotmp;
             SCIP_Real minorthotmp;
+            SCIP_Bool infeasible;
+            int bestpos;
             int sortidxtmp;
 
             assert(cutdatai->addedtolp);
@@ -7247,7 +7253,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
             cutdatai = zerohalfcuts[sortedzerohalfcuts[bestpos]];
 
             /* add best cut to LP */
-            SCIP_CALL(SCIPaddCut(scip, NULL, cutdatai->cut, sepadata->forcecutstolp));
+            SCIP_CALL(SCIPaddCut(scip, NULL, cutdatai->cut, sepadata->forcecutstolp), &infeasible);
+            assert( ! infeasible );
             if( !cutdatai->islocal )
             {
                SCIP_CALL(SCIPaddPoolCut(scip, cutdatai->cut));

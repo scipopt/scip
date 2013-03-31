@@ -1137,6 +1137,7 @@ SCIP_RETCODE newsolCliqueAddRow(
 {
    SCIP_VAR** vars;
    SCIP_ROW* cut;
+   SCIP_Bool infeasible;
    char cutname[SCIP_MAXSTRLEN];
    int i;
 
@@ -1166,7 +1167,8 @@ SCIP_RETCODE newsolCliqueAddRow(
 
    /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
-   SCIP_CALL( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );
+   SCIP_CALL( SCIPaddCut(scip, sepadata->sol, cut, FALSE, &infeasible) );
+   assert( ! infeasible );
    SCIP_CALL( SCIPaddPoolCut(scip, cut) );
 
    /* release the row */

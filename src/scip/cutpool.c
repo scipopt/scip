@@ -660,6 +660,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
 {
    SCIP_CUT* cut;
    SCIP_Bool found;
+   SCIP_Bool cutoff;
    int firstunproc;
    int oldncuts;
    int c;
@@ -708,6 +709,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    oldncuts = SCIPsepastoreGetNCuts(sepastore);
 
    /* process all unprocessed cuts in the pool */
+   cutoff = FALSE;
    for( c = firstunproc; c < cutpool->ncuts; ++c )
    {
       SCIP_Longint proclp;
@@ -738,16 +740,18 @@ SCIP_RETCODE SCIPcutpoolSeparate(
             if( !SCIProwIsModifiable(row) && SCIProwGetNNonz(row) == 1 )
             {
                /* insert bound change cut into separation store which will force that cut */
-               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, row, FALSE, root) );
-
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, row, FALSE, root, &cutoff) );
                SCIP_CALL( cutpoolDelCut(cutpool, blkmem, set, stat, lp, cut) );
+
+               if ( cutoff )
+                  break;
             }
             else if( (sol == NULL && SCIProwIsLPEfficacious(row, set, stat, lp, root)) || (sol != NULL && SCIProwIsSolEfficacious(row, set, stat, sol, root)) )
             {
                /* insert cut in separation storage */
                SCIPdebugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
                   SCIProwGetName(row), ( sol == NULL ) ? SCIProwGetLPFeasibility(row, set, stat, lp) : SCIProwGetSolFeasibility(row, set, stat, sol) );
-               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, row, FALSE, root) );
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, row, FALSE, root, &cutoff) );
 
                /* count cuts */
                if ( cutpoolisdelayed )
@@ -771,6 +775,9 @@ SCIP_RETCODE SCIPcutpoolSeparate(
 
                found = TRUE;
                cut->age = 0;
+
+               if ( cutoff )
+                  break;
             }
             else
             {
@@ -801,7 +808,9 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    /* stop timing */
    SCIPclockStop(cutpool->poolclock, set);
 
-   if( found )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( found )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;

@@ -1037,7 +1037,10 @@ SCIP_RETCODE generateOddCycleCut(
    /* not every odd cycle has to be violated due to incompleteness of the implication graph */
    if( SCIPisCutEfficacious(scip, sol, cut) )
    {
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
+      SCIP_Bool infeasible;
+
+      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
+      assert( ! infeasible );
       SCIP_CALL( SCIPaddPoolCut(scip, cut) );
       ++sepadata->ncuts;
       if ( nlifted > 0 )

@@ -2774,6 +2774,8 @@ SCIP_RETCODE createCGCutDirect(
                /* if cut is new */
                if ( k >= *nprevrows )
                {
+                  SCIP_Bool infeasible;
+
                   prevrows[*nprevrows] = cut;
                   ++(*nprevrows);
 
@@ -2783,7 +2785,8 @@ SCIP_RETCODE createCGCutDirect(
                      SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                      SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+                  assert( ! infeasible );
                   ++(*ngen);
                }
                else
@@ -3045,6 +3048,8 @@ SCIP_RETCODE createCGCutCMIR(
                   /* if cut is new */
                   if ( k >= *nprevrows )
                   {
+                     SCIP_Bool infeasible;
+
                      prevrows[*nprevrows] = cut;
                      ++(*nprevrows);
 
@@ -3056,7 +3061,8 @@ SCIP_RETCODE createCGCutCMIR(
 #ifdef SCIP_OUTPUT
                      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
 #endif
-                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+                     assert( ! infeasible );
                      ++(*ngen);
                   }
                   else
@@ -3262,6 +3268,8 @@ SCIP_RETCODE createCGCutStrongCG(
                   /* if cut is new */
                   if ( k >= *nprevrows )
                   {
+                     SCIP_Bool infeasible;
+
                      prevrows[*nprevrows] = cut;
                      ++(*nprevrows);
 
@@ -3273,7 +3281,8 @@ SCIP_RETCODE createCGCutStrongCG(
 #ifdef SCIP_OUTPUT
                      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
 #endif
-                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+                     assert( ! infeasible );
                      ++(*ngen);
                   }
                   else

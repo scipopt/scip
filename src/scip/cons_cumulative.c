@@ -6223,8 +6223,11 @@ SCIP_RETCODE addRelaxation(
    {
       if( !SCIProwIsInLP(consdata->demandrows[r]) )
       {
+         SCIP_Bool infeasible;
+
          assert(consdata->demandrows[r] != NULL);
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->demandrows[r], FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->demandrows[r], FALSE, &infeasible) );
+         assert( ! infeasible );
       }
    }
 
@@ -6273,7 +6276,10 @@ SCIP_RETCODE separateConsBinaryRepresentation(
 
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol,  consdata->demandrows[r], FALSE) );
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPaddCut(scip, sol,  consdata->demandrows[r], FALSE, &infeasible) );
+            assert( ! infeasible );
             ncuts++;
          }
       }
@@ -6350,11 +6356,14 @@ SCIP_RETCODE separateCoverCutsCons(
 
    if( SCIPisFeasNegative(scip, minfeasibility) )
    {
+      SCIP_Bool infeasible;
+
       SCIPdebugMessage("cumulative constraint <%s> separated 1 cover cut with feasibility %g\n",
          SCIPconsGetName(cons), minfeasibility);
 
       assert(row != NULL);
-      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+      assert( ! infeasible );
 
       /* if successful, reset age of constraint */
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -6387,11 +6396,14 @@ SCIP_RETCODE separateCoverCutsCons(
 
    if( SCIPisFeasNegative(scip, minfeasibility) )
    {
+      SCIP_Bool infeasible;
+
       SCIPdebugMessage("cumulative constraint <%s> separated 1 cover cut with feasibility %g\n",
          SCIPconsGetName(cons), minfeasibility);
 
       assert(row != NULL);
-      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+      assert( ! infeasible );
 
       /* if successful, reset age of constraint */
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -6416,6 +6428,7 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
 {
    SCIP_CONSDATA* consdata;
    char name[SCIP_MAXSTRLEN];
+   SCIP_Bool infeasible;
    int lhs; /* left hand side of constraint */
 
    SCIP_VAR** activevars;
@@ -6458,7 +6471,8 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
    SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
 
-   SCIP_CALL( SCIPaddCut(scip, sol, row, TRUE) );
+   SCIP_CALL( SCIPaddCut(scip, sol, row, TRUE, &infeasible) );
+   assert( ! infeasible );
 
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
 

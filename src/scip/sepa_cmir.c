@@ -247,12 +247,15 @@ SCIP_RETCODE addCut(
          /* if scaling was successful, add the cut */
          if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
          {
+            SCIP_Bool infeasible;
+
             SCIPdebugMessage(" -> found %s cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
                cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut),
                SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
-            SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
+            assert( ! infeasible );
             if( !cutislocal )
             {
                SCIP_CALL( SCIPaddPoolCut(scip, cut) );

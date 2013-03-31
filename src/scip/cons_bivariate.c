@@ -4277,8 +4277,11 @@ SCIP_RETCODE separatePoint(
          if( SCIPisGT(scip, efficacy, minefficacy) ||
             (convexalways && SCIPisGT(scip, efficacy, SCIPfeastol(scip)) && isConvexLocal(scip, conss[c], violside)) )
          {
+            SCIP_Bool infeasible;
+
             /* cut cuts off solution sufficiently */
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+            assert( ! infeasible );
 
             SCIPdebugMessage("added cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), MAX(consdata->lhsviol, consdata->rhsviol));
 
@@ -6116,13 +6119,17 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
             /* add to LP */
             if( row1 != NULL )
             {
-               SCIP_CALL( SCIPaddCut(scip, NULL, row1, FALSE /* forcecut */) );
+               SCIP_Bool infeasible;
+               SCIP_CALL( SCIPaddCut(scip, NULL, row1, FALSE /* forcecut */, &infeasible) );
+               assert( ! infeasible );
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row1, NULL) ) );
                SCIP_CALL( SCIPreleaseRow(scip, &row1) );
             }
             if( row2 != NULL )
             {
-               SCIP_CALL( SCIPaddCut(scip, NULL, row2, FALSE /* forcecut */) );
+               SCIP_Bool infeasible;
+               SCIP_CALL( SCIPaddCut(scip, NULL, row2, FALSE /* forcecut */, &infeasible) );
+               assert( ! infeasible );
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row2, NULL) ) );
                SCIP_CALL( SCIPreleaseRow(scip, &row2) );
             }

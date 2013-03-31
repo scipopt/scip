@@ -1180,6 +1180,7 @@ SCIP_RETCODE separatePoint(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
+   SCIP_Bool          infeasible;
    SCIP_Real          minefficacy;
    int                c;
    SCIP_ROW*          row;
@@ -1235,7 +1236,8 @@ SCIP_RETCODE separatePoint(
             continue;
 
          /* cut cuts off solution and efficient enough */
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );  /*lint !e613*/
          *success = TRUE;
          SCIPdebugMessage("added cut with efficacy %g\n", SCIPgetCutEfficacy(scip, sol, row));
@@ -1318,9 +1320,12 @@ SCIP_RETCODE addLinearizationCuts(
 
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
          {
+            SCIP_Bool infeasible;
+
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, &infeasible) );
+            assert( ! infeasible );
          }
       }
 

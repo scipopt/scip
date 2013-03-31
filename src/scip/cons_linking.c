@@ -1415,17 +1415,23 @@ SCIP_RETCODE addCuts(
    /* insert LP linking row as cut */
    if( !SCIProwIsInLP(consdata->row1) )
    {
+      SCIP_Bool infeasible;
+
       SCIPdebugMessage("adding linking row of constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row1, TRUE/*FALSE*/) );
+      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row1, TRUE/*FALSE*/, &infeasible) );
+      assert( ! infeasible );
    }
 
    /* insert LP set partitioning row as cut */
    if( !SCIProwIsInLP(consdata->row2) )
    {
+      SCIP_Bool infeasible;
+
       SCIPdebugMessage("adding set partitioning row of constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row2, TRUE/*FALSE*/) );
+      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row2, TRUE/*FALSE*/, &infeasible) );
+      assert( ! infeasible );
    }
-   
+
    return SCIP_OKAY;
 }
 

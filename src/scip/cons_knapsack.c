@@ -790,7 +790,8 @@ SCIP_RETCODE addRelaxation(
    )
 {
    SCIP_CONSDATA* consdata;
-   
+   SCIP_Bool infeasible;
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -806,7 +807,8 @@ SCIP_RETCODE addRelaxation(
       SCIPdebugMessage("adding relaxation of knapsack constraint <%s> (capacity %"SCIP_LONGINT_FORMAT"): ", 
          SCIPconsGetName(cons), consdata->capacity);
       SCIPdebug( SCIP_CALL(SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, &infeasible) );
+      assert( ! infeasible );
    }
 
    return SCIP_OKAY;
@@ -4915,11 +4917,14 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
       /* checks, if cut is violated enough */
       if( SCIPisCutEfficacious(scip, sol, row) )
       {
+         SCIP_Bool infeasible;
+
          if( cons != NULL )
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -5078,11 +5083,14 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
       /* checks, if cut is violated enough */
       if( SCIPisCutEfficacious(scip, sol, row) )
       {
+         SCIP_Bool infeasible;
+
          if( cons != NULL )
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -5185,15 +5193,17 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
          }
       }
       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-            
+
       /* checks, if cut is violated enough */
       if( SCIPisCutEfficacious(scip, sol, row) )
       {
+         SCIP_Bool infeasible;
          if( cons != NULL )
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );

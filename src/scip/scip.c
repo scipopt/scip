@@ -26522,7 +26522,8 @@ SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
-   SCIP_Bool             forcecut            /**< should the cut be forced to enter the LP? */
+   SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -26530,7 +26531,7 @@ SCIP_RETCODE SCIPaddCut(
    assert(SCIPtreeGetCurrentNode(scip->tree) != NULL);
 
    SCIP_CALL( SCIPsepastoreAddCut(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->eventfilter, scip->lp, sol, cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0)) );
+         scip->eventfilter, scip->lp, sol, cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0), infeasible) );
 
    return SCIP_OKAY;
 }

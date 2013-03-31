@@ -5828,10 +5828,13 @@ SCIP_RETCODE addCut(
    /* check efficacy */
    if( SCIPisCutEfficacious(scip, sol, cut) )
    {
+      SCIP_Bool infeasible;
+
       SCIPdebugMessage(" -> found MCF cut <%s>: rhs=%f, act=%f eff=%f rank=%d\n",
                        cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut));
       /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
+      assert( ! infeasible );
 
       if( !cutislocal )
       {

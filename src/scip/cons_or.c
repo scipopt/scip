@@ -737,7 +737,9 @@ SCIP_RETCODE addRelaxation(
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE) );
+         SCIP_Bool infeasible;
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE, &infeasible) );
+         assert( ! infeasible );
       }
    }
 
@@ -881,10 +883,13 @@ SCIP_RETCODE separateCons(
          feasibility = SCIPgetRowSolFeasibility(scip, consdata->rows[r], sol);
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE) );
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE, &infeasible) );
+            assert( ! infeasible );
             *separated = TRUE;
          }
-      }            
+      }
    }
 
    return SCIP_OKAY;

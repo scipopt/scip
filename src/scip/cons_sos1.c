@@ -1457,6 +1457,7 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
+      SCIP_Bool infeasible;
       SCIP_ROW* row;
 
       assert( conss != NULL );
@@ -1478,7 +1479,8 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
       {
          assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
       }
       row = consdata->rowlb;
@@ -1486,7 +1488,8 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
       {
          assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
       }
    }
@@ -1514,6 +1517,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
+      SCIP_Bool infeasible;
       SCIP_ROW* row;
 
       *result = SCIP_DIDNOTFIND;
@@ -1536,7 +1540,8 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
       {
          assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          ++nGen;
@@ -1546,7 +1551,8 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
       {
          assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          ++nGen;
@@ -1579,6 +1585,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
+      SCIP_Bool infeasible;
       SCIP_ROW* row;
 
       *result = SCIP_DIDNOTFIND;
@@ -1601,7 +1608,8 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
       {
          assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          ++nGen;
@@ -1611,7 +1619,8 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
       {
          assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          ++nGen;

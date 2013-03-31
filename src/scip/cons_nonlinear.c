@@ -5087,8 +5087,11 @@ SCIP_RETCODE separatePoint(
                )
             )
          {
+            SCIP_Bool infeasible;
+
             /* cut cuts off solution */
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */, &infeasible) );
+            assert( ! infeasible );
             *result = SCIP_SEPARATED;
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
             SCIPdebugMessage("add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), MAX(consdata->lhsviol, consdata->rhsviol));
@@ -5183,9 +5186,12 @@ SCIP_RETCODE addLinearizationCuts(
 
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
          {
+            SCIP_Bool infeasible;
+
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, &infeasible) );
+            assert( ! infeasible );
          }
       }
 
@@ -6831,12 +6837,15 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
       if( consdata->nexprtrees == 0 )
       {
+         SCIP_Bool infeasible;
+
          assert(consdata->exprgraphnode == NULL);
          /* if we are actually linear, add the constraint as row to the LP */
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613*/
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -6890,7 +6899,10 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
          if( row != NULL )
          {
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+            assert( ! infeasible );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
@@ -6902,7 +6914,10 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
          if( row != NULL )
          {
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+            assert( ! infeasible );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }

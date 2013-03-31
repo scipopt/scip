@@ -1483,6 +1483,7 @@ SCIP_RETCODE addRelaxation(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Bool infeasible;
    int r;
 
    consdata = SCIPconsGetData(cons);
@@ -1499,7 +1500,8 @@ SCIP_RETCODE addRelaxation(
    {
       if( consdata->rows[r] != NULL && !SCIProwIsInLP(consdata->rows[r]) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE, &infeasible) );
+         assert( ! infeasible );
       }
    }
 
@@ -1596,6 +1598,7 @@ SCIP_RETCODE separateCons(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Bool infeasible;
    SCIP_Real feasibility;
    int r;
 
@@ -1621,7 +1624,8 @@ SCIP_RETCODE separateCons(
          feasibility = SCIPgetRowSolFeasibility(scip, consdata->rows[r], sol);
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE, &infeasible) );
+            assert( ! infeasible );
             *separated = TRUE;
          }
       }
@@ -1693,7 +1697,8 @@ SCIP_RETCODE separateCons(
 
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+            assert( ! infeasible );
             assert( SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real)(j-1)) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
             ++ngen;

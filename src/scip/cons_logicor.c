@@ -1303,8 +1303,11 @@ SCIP_RETCODE addCut(
    /* insert LP row as cut */
    if( !SCIProwIsInLP(consdata->row) )
    {
+      SCIP_Bool infeasible;
+
       SCIPdebugMessage("adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, &infeasible) );
+      assert( ! infeasible );
    }
 
    return SCIP_OKAY;

@@ -86,6 +86,7 @@ interface
 - SCIPcalcMIR() takes an additional parameter sidetypes to determine which side of the rows to use (relevant for ranged rows)
 - New methods SCIPconshdlrIncNCutsFound(), SCIPsepaIncNCutsFound(), and SCIPsepaIncNCutsFoundAtNode() to increase the number of found cuts
 - added function SCIPseparateSolCutpool() to separate a cutpool w.r.t. a given solution
+- SCIPaddCut() has an additional parameter that determines whether the cut to be added is infeasible
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
@@ -120,6 +121,7 @@ core:
 - the main output routine of message.c (bufferMessage - now handleMessage) has been rewritten: it now does not need
   a copy of the string to be output anymore, which makes the code much simpler (and also faster); it is passed a
   function pointer to the output function and uses it to directly output the (buffered) messages
+- changed all calls to SCIPaddCut() to take infeasibility parameter
 
 
 SCIP version 3.0.2
