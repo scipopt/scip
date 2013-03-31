@@ -1718,7 +1718,7 @@ SCIP_RETCODE separateCons(
  *  @returns the rank of @p A
  *
  *  Here, \f$A \in R^{m \times n},\; b \in R^m\f$. On exit, the vector @p p contains a permutation of the row indices
- *  used for pivoting and the function returns the rank @p r of @p A. For each row @p i = 1, \dots, @p r, the entry @p
+ *  used for pivoting and the function returns the rank @p r of @p A. For each row \f$i = 1, \ldots, r\f$, the entry @p
  *  s[i] contains the column index of the first nonzero in row @p i.
  */
 static
