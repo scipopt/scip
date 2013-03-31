@@ -563,109 +563,106 @@ SCIP_RETCODE SCIPapplyProximity(
    /* create a subscip and copy the original scip instance into it */
    if( heurdata->subscip == NULL )
    {
-	   assert(heurdata->varmapfw == NULL);
-	   assert(heurdata->objcons == NULL);
+      assert(heurdata->varmapfw == NULL);
+      assert(heurdata->objcons == NULL);
 
-	   /* initialize the subproblem */
-	   SCIP_CALL( SCIPcreate(&subscip) );
+      /* initialize the subproblem */
+      SCIP_CALL( SCIPcreate(&subscip) );
 
-	   /* create the variable mapping hash map */
-	   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
-	   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &subvars, nvars) );
+      /* create the variable mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &subvars, nvars) );
 
-	   /* copy complete SCIP instance */
-	   valid = FALSE;
-	   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "proximity", TRUE, FALSE, TRUE, &valid) );
-	   SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+      /* copy complete SCIP instance */
+      valid = FALSE;
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "proximity", TRUE, FALSE, TRUE, &valid) );
+      SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
-	   /* create event handler for LP events */
-	   eventhdlr = NULL;
-	   SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecProximity, NULL) );
-	   if( eventhdlr == NULL )
-	   {
-	      SCIPerrorMessage("event handler for "HEUR_NAME" heuristic not found.\n");
-	      return SCIP_PLUGINNOTFOUND;
-	   }
+      /* create event handler for LP events */
+      eventhdlr = NULL;
+      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecProximity, NULL) );
+      if( eventhdlr == NULL )
+      {
+         SCIPerrorMessage("event handler for "HEUR_NAME" heuristic not found.\n");
+         return SCIP_PLUGINNOTFOUND;
+      }
 
-	   /* set up parameters for the copied instance */
-	   SCIP_CALL( setupSubproblem(subscip) );
+      /* set up parameters for the copied instance */
+      SCIP_CALL( setupSubproblem(subscip) );
 
-	   /* create the objective constraint in the sub scip, first without variables and values which will be added later */
-	   SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &objcons, "objbound_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), SCIPinfinity(subscip)) );
+      /* create the objective constraint in the sub scip, first without variables and values which will be added later */
+      SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &objcons, "objbound_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), SCIPinfinity(subscip)) );
 
-	   /* determine large value to set variable bounds to, safe-guard to avoid fixings to infinite values */
-	   large = SCIPinfinity(scip);
-	   if( !SCIPisInfinity(scip, 0.1 / SCIPfeastol(scip)) )
-	      large = 0.1 / SCIPfeastol(scip);
-	   inf = SCIPinfinity(subscip);
+      /* determine large value to set variable bounds to, safe-guard to avoid fixings to infinite values */
+      large = SCIPinfinity(scip);
+      if( !SCIPisInfinity(scip, 0.1 / SCIPfeastol(scip)) )
+         large = 0.1 / SCIPfeastol(scip);
+      inf = SCIPinfinity(subscip);
 
+      /* get variable image and change objective to proximity function (Manhattan distance) in sub-SCIP */
+      for( i = 0; i < nvars; i++ )
+      {
+         SCIP_Real adjustedbound;
+         SCIP_Real lb;
+         SCIP_Real ub;
 
-	   /* get variable image and change objective to proximity function (Manhattan distance) in sub-SCIP */
-	   for( i = 0; i < nvars; i++ )
-	   {
-	      SCIP_Real adjustedbound;
-	      SCIP_Real lb;
-	      SCIP_Real ub;
+         subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
-	      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+         SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
 
-	      SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
+         lb = SCIPvarGetLbGlobal(subvars[i]);
+         ub = SCIPvarGetUbGlobal(subvars[i]);
 
-	      lb = SCIPvarGetLbGlobal(subvars[i]);
-	      ub = SCIPvarGetUbGlobal(subvars[i]);
+         /* adjust infinite bounds in order to avoid that variables with non-zero objective
+          * get fixed to infinite value in proximity subproblem
+          */
+         if( SCIPisInfinity(subscip, ub ) )
+         {
+            adjustedbound = MAX(large, lb+large);
+            adjustedbound = MIN(adjustedbound, inf);
+            SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], adjustedbound) );
+         }
+         if( SCIPisInfinity(subscip, -lb ) )
+         {
+            adjustedbound = MIN(-large, ub-large);
+            adjustedbound = MAX(adjustedbound, -inf);
+            SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], adjustedbound) );
+         }
 
-	      /* adjust infinite bounds in order to avoid that variables with non-zero objective
-	       * get fixed to infinite value in proximity subproblem
-	       */
-	      if( SCIPisInfinity(subscip, ub ) )
-	      {
-	         adjustedbound = MAX(large, lb+large);
-	         adjustedbound = MIN(adjustedbound, inf);
-	         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], adjustedbound) );
-	      }
-	      if( SCIPisInfinity(subscip, -lb ) )
-	      {
-	         adjustedbound = MIN(-large, ub-large);
-	         adjustedbound = MAX(adjustedbound, -inf);
-	         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], adjustedbound) );
-	      }
+         /* add all nonzero objective coefficients to the objective constraint */
+         if( !SCIPisFeasZero(subscip, SCIPvarGetObj(vars[i])) )
+         {
+            SCIP_CALL( SCIPaddCoefLinear(subscip, objcons, subvars[i], SCIPvarGetObj(vars[i])) );
+         }
+      }
 
-	      /* add all nonzero objective coefficients to the objective constraint */
-	      if( !SCIPisFeasZero(subscip, SCIPvarGetObj(vars[i])) )
-	      {
-	         SCIP_CALL( SCIPaddCoefLinear(subscip, objcons, subvars[i], SCIPvarGetObj(vars[i])) );
-	      }
-	   }
-
-	   /* add objective constraint to the subscip */
-	   SCIP_CALL( SCIPaddCons(subscip, objcons) );
-
+      /* add objective constraint to the subscip */
+      SCIP_CALL( SCIPaddCons(subscip, objcons) );
    }
    else
    {
       /* the instance, event handler, hash map and variable array were already copied in a previous iteration
        * and stored in heuristic data
        */
-	   assert(heurdata->varmapfw != NULL);
-	   assert(heurdata->subvars != NULL);
-	   assert(heurdata->objcons != NULL);
+      assert(heurdata->varmapfw != NULL);
+      assert(heurdata->subvars != NULL);
+      assert(heurdata->objcons != NULL);
 
-	   subscip = heurdata->subscip;
-	   varmapfw = heurdata->varmapfw;
-	   subvars = heurdata->subvars;
-	   objcons = heurdata->objcons;
+      subscip = heurdata->subscip;
+      varmapfw = heurdata->varmapfw;
+      subvars = heurdata->subvars;
+      objcons = heurdata->objcons;
 
-	   eventhdlr = SCIPfindEventhdlr(subscip, EVENTHDLR_NAME);
-	   assert(eventhdlr != NULL);
+      eventhdlr = SCIPfindEventhdlr(subscip, EVENTHDLR_NAME);
+      assert(eventhdlr != NULL);
    }
 
-
-   SCIPchgRhsLinear(subscip, objcons, objcutoff);
+   SCIP_CALL( SCIPchgRhsLinear(subscip, objcons, objcutoff) );
 
    for( i = 0; i < SCIPgetNBinVars(scip); ++i )
    {
-
       SCIP_Real solval;
+
       /* objective coefficients are only set for binary variables of the problem */
       assert(SCIPvarIsBinary(subvars[i]));
 
@@ -680,7 +677,6 @@ SCIP_RETCODE SCIPapplyProximity(
       {
          SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], -1.0) );
       }
-
    }
 
    /* set limits for the subproblem */
