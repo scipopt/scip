@@ -652,7 +652,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
 
    /* For all basic columns belonging to integer variables, try to generate a gomory cut. */
    ncuts = 0;
-   for( i = 0; i < nrows && ncuts < maxsepacuts && ! SCIPisStopped(scip); ++i )
+   for( i = 0; i < nrows && ncuts < maxsepacuts && ! SCIPisStopped(scip) && *result != SCIP_CUTOFF; ++i )
    {
       SCIP_Bool tryrow;
       SCIP_Real primsol;
@@ -752,6 +752,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
                changes); the latter cuts will be handeled internally in sepastore. */
             if( SCIProwGetNNonz(cut) == 1 || SCIPisCutEfficacious(scip, NULL, cut) )
             {
+               SCIP_Bool infeasible;
+
                SCIPdebugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, eff=%f\n",
                   c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
                   cutact, cutrhs, SCIPgetCutEfficacy(scip, NULL, cut));
@@ -765,7 +767,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
                /* flush all changes before adding the cut */
                SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-               SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+               SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
 
                /* add global cuts that are not implicit bound changes to the cut pool */
                if( ! cutislocal && SCIProwGetNNonz(cut) > 1 )
@@ -773,7 +775,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
                   SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                }
 
-               *result = SCIP_SEPARATED;
+               if ( infeasible )
+                  *result = SCIP_CUTOFF;
+               else
+                  *result = SCIP_SEPARATED;
                ncuts++;
             }
 

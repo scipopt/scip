@@ -129,7 +129,7 @@ SCIP_RETCODE sepaSubtour(
 
    *result = SCIP_DIDNOTFIND;
 
-   for( int c = 0; c < nusefulconss; ++c )
+   for( int c = 0; c < nusefulconss && *result != SCIP_CUTOFF; ++c )
    {
       // get all required structures
       SCIP_CONSDATA* consdata;
@@ -162,11 +162,9 @@ SCIP_RETCODE sepaSubtour(
 
       // try to find cuts
       if( ghc_tree( graph, cuts, &ncuts, SCIPfeastol(scip) ) )
-      { 
-         int i = 0;
-
+      {
          // create a new cutting plane for every suitable arc (representing a cut with value < 2) of the Gomory Hu Tree
-         while( i < ncuts )
+         for (int i = 0; i < ncuts && *result != SCIP_CUTOFF; ++i)
          {
             SCIP_ROW* row; 
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "sepa_con", 2.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) ); 
@@ -197,13 +195,15 @@ SCIP_RETCODE sepaSubtour(
             // add cut
             if( SCIPisCutEfficacious(scip, sol, row) )
             {
-               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
-               *result = SCIP_SEPARATED;    
+               SCIP_Bool infeasible;
+               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+               if ( infeasible )
+                  *result = SCIP_CUTOFF;
+               else
+                  *result = SCIP_SEPARATED;
             }
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
-               
-            i++;
-         }            
+         }
       }
       for( int i = graph->nnodes - 1; i >= 0; i-- )
          SCIPfreeBufferArray( scip, &cuts[i] );
