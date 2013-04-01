@@ -74,7 +74,7 @@
 #define SCIP_DEFAULT_MAXUNSUCCESSFUL            0 /**< turn off separation in current node after unsuccessful calls (-1 never turn off) */
 #define SCIP_DEFAULT_MAXLPITERFACTOR          2.0 /**< factor for maximal LP iterations in relative interior computation compared to node LP iterations */
 
-#define SCIP_MIN_LPITERS                      100 /**< minimum number of allowed LP iterations in relative interior computation*/
+#define SCIP_MIN_LPITERS                      100 /**< minimum number of allowed LP iterations in relative interior computation */
 
 
 /** separator data */
@@ -261,7 +261,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
          iterlimit = INT_MAX;
       else
       {
-         nlpiters = SCIPgetNNodeLPIterations(scip);
+         /* determine iteration limit; the number of iterations in the root is only set after its solution, but the
+          * total number of LP iterations is always updated. */
+         if ( SCIPgetDepth(scip) == 0 )
+            nlpiters = SCIPgetNLPIterations(scip);
+         else
+            nlpiters = SCIPgetNRootLPIterations(scip);
          iterlimit = (int)(sepadata->maxlpiterfactor * nlpiters);
          iterlimit = MAX(iterlimit, SCIP_MIN_LPITERS);
          if ( iterlimit <= 0 )

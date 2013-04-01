@@ -3904,7 +3904,8 @@ SCIP_RETCODE addCurrentSolution(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_Bool             checksol            /**< should the solution be checked? */
    )
 {
    SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
@@ -3921,7 +3922,7 @@ SCIP_RETCODE addCurrentSolution(
 
       /* add solution to storage */
       SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
-      if( set->misc_exactsolve )
+      if( checksol || set->misc_exactsolve )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, lp,
@@ -3951,7 +3952,7 @@ SCIP_RETCODE addCurrentSolution(
 
       /* add solution to storage */
       SCIP_CALL( SCIPsolCreatePseudoSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
-      if( set->misc_exactsolve )
+      if( checksol || set->misc_exactsolve )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, lp,
@@ -4179,7 +4180,7 @@ SCIP_RETCODE SCIPsolveCIP(
             if( feasible )
             {
                SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp,
-                     eventqueue, eventfilter) );
+                     eventqueue, eventfilter, FALSE) );
             }
 
             /* issue NODEFEASIBLE event */
@@ -4274,9 +4275,12 @@ SCIP_RETCODE SCIPsolveCIP(
       }
       else if( !infeasible )
       {
-         /* node solution is feasible: add it to the solution store */
+         /* The current solution was not proven to be infeasible, but due to the restart, this does not mean that it is
+          * feasible, we might just have skipped the check. Thus, we try to add it to the solution store, but check it
+          * again.
+          */
          SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp,
-               eventqueue, eventfilter) );
+               eventqueue, eventfilter, TRUE) );
       }
 
       /* compute number of successfully applied conflicts */
