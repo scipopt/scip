@@ -78,8 +78,8 @@ SCIP_RETCODE performDualfix(
       if( SCIPvarIsDeleted(var) )
          continue;
 
-      /* ignore already fixed variables */
-      if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+      /* ignore already fixed variables (use feasibility tolerance since this is used in SCIPfixVar() */
+      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          continue;
 
       obj = SCIPvarGetObj(var);
