@@ -18395,10 +18395,10 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
       /* free */
       SCIPsetFreeBufferArray(set, &primal);
+
+      *success = TRUE;
    }
    SCIP_CALL( SCIPlpiFree(&lpi) );
-
-   *success = TRUE;
 
    return SCIP_OKAY;
 }
