@@ -148,7 +148,7 @@ fixed bugs:
 - fixed memory leak in lp.c (probably never occurred so far since array was not used)
 - fixed bug in reader_gms.c w.r.t. writing nonlinear expressions with polynomials with constants
 - fixed bug in sepa_zerohalf.c not copying the displays to the subscip, but still changing a display parameter there
-- fixed bug in SCIPlpComputeRelIntPoint() with wrong iteration limit
+- fixed bug in SCIPlpComputeRelIntPoint() with wrong iteration limit and with wrong recompution
 - fixed iteration limit determination in sepa_closecuts
 
 features:
