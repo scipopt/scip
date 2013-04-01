@@ -7205,6 +7205,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, FALSE, minefficacy, TRUE, &separateresult, &sepaefficacy) );
+   if ( separateresult == SCIP_CUTOFF )
+   {
+      SCIPdebugMessage("separation found cutoff.)\n");
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
    if( separateresult == SCIP_SEPARATED )
    {
       SCIPdebugMessage("separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
