@@ -287,7 +287,7 @@ struct SCIP_Set
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
    int                   misc_permutationseed;/**< seed value for permuting the problem after the problem was tranformed 
                                                *   (-1: no permutation) */
-   SCIP_Bool             misc_resetstat;     /**< should the statistics be reseted if the transformed problem is freed
+   SCIP_Bool             misc_resetstat;     /**< should the statistics be reset if the transformed problem is freed
                                               *   otherwise the statistics get reset after original problem is freed (in
                                               *   case of bender decomposition this parameter should be set to FALSE and
                                               *   therefore can be used to collect statistics over all runs) */

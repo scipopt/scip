@@ -18452,7 +18452,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       SCIPmessagePrintWarning(messagehdlr, "Could not set time limit of LP solver for relative interior point computation.\n");
 
    /* set iteration limit */
-   retcode = SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPTILIM, iterlimit);
+   retcode = SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, iterlimit);
 
    /* check, if parameter is unknown */
    if ( retcode == SCIP_PARAMETERUNKNOWN )
