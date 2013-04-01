@@ -5091,8 +5091,10 @@ SCIP_RETCODE separatePoint(
 
             /* cut cuts off solution */
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */, &infeasible) );
-            assert( ! infeasible );
-            *result = SCIP_SEPARATED;
+            if ( infeasible )
+               *result = SCIP_CUTOFF;
+            else
+               *result = SCIP_SEPARATED;
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
             SCIPdebugMessage("add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), MAX(consdata->lhsviol, consdata->rhsviol));
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
@@ -5106,6 +5108,9 @@ SCIP_RETCODE separatePoint(
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
       }
+
+      if ( *result == SCIP_CUTOFF )
+         break;
 
       /* enforce only useful constraints
        * others are only checked and enforced if we are still feasible or have not found a separating cut yet
