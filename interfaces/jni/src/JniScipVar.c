@@ -31,9 +31,6 @@
 
 #include <string.h>
 
-//   SCIPerrorMessage("method <bla> it not implemented yet\n");
-//   JNISCIP_CALL( SCIP_ERROR );
-
 /*
  * variable methods
  */
@@ -181,37 +178,20 @@ jint JNISCIPVAR(varCompare)(
    return (jint)ind;
 }
 
-/** to-do: array casts? */
 /** gets corresponding active, fixed, or multi-aggregated problem variables of given variables,
  *  @note the content of the given array will/might change
  */
-// Jniexport
-// Void JNISCIPVAR(varsGetProbvar)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlongArray            jvars,              /**< JNI problem variable */
-//    jint                  jnvars              /**< number of variables */
-//    )
-// {
-//    jlong* jlongvars;
-//    SCIP_VAR** vars;
-
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &jlongvars, nvars) );
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-
-//    (*env)->GetLongArrayRegion(env, jvars, 0, nvars, jlongvars);
-
-//    for( v = 0; v < nvars; ++v )
-//       vars[v] (SCIP_VAR*)(size_t) jlongvars[v];
-
-//    SCIPvarsGetProbvar(vars, (int)jnvars);
-
-//    /* fill long array with SCIP variable pointers */
-//    (*env)->SetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
-
-//    SCIPfreeBufferArray(scip, &vars);
-//    SCIPfreeBufferArray(scip, &jlongvars);
-// }
+JNIEXPORT
+void JNISCIPVAR(varsGetProbvar)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlongArray            jvars,              /**< JNI problem variable */
+   jint                  nvars               /**< number of variables */
+   )
+{
+   SCIPerrorMessage("method varsGetProbvar is not implemented yet\n");
+   JNISCIP_CALL( SCIP_ERROR );
+}
 
 /** gets corresponding active, fixed, or multi-aggregated problem variable of a variable */
 JNIEXPORT
@@ -221,21 +201,15 @@ jlong JNISCIPVAR(varGetProbvar)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method varGetProbvar is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_VAR* probvar;
-
 
    var = (SCIP_VAR*) (size_t) jvar;
    assert(var != NULL);
 
    probvar = SCIPvarGetProbvar(var);
 
-   return (jlong)(size_t)probvar;*/
+   return (jlong)(size_t)probvar;
 }
 
 /** returns whether the given variable is the direct counterpart of an original problem variable */
@@ -267,12 +241,7 @@ jlong JNISCIPVAR(varGetNBranchings)(
    JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
    )
 {
-   SCIPerrorMessage("method varGetNBranchings is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_Longint num;
 
 
@@ -281,7 +250,7 @@ jlong JNISCIPVAR(varGetNBranchings)(
 
    num = SCIPvarGetNBranchings(var, (SCIP_BRANCHDIR) jdir);
 
-   return (jlong)(size_t)num;*/
+   return (jlong)(size_t)num;
 }
 
 /** returns the number of times, a bound of the variable was changed in given direction due to branching
@@ -295,12 +264,7 @@ jlong JNISCIPVAR(varGetNBranchingsCurrentRun)(
    JNISCIP_ENUM          jdir                /**< branching direction (downwards, or upwards) */
    )
 {
-   SCIPerrorMessage("method varGetNBranchingsCurrentRun is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_Longint num;
 
 
@@ -309,7 +273,7 @@ jlong JNISCIPVAR(varGetNBranchingsCurrentRun)(
 
    num = SCIPvarGetNBranchingsCurrentRun(var, (SCIP_BRANCHDIR) jdir);
 
-   return (jlong)(size_t)num;*/
+   return (jlong)(size_t)num;
 }
 
 /** returns the number of inferences branching on this variable in given direction triggered */
@@ -621,18 +585,13 @@ jlong JNISCIPVAR(varGetData)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method varGetData is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_VAR* var;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   var = (SCIP_VAR*)(size_t)jvar;
+   assert(var != NULL);
 
-   // SCIP_VAR* var;
-
-   // /* convert JNI pointer into C pointer */
-   // var = (SCIP_VAR*)(size_t)jvar;
-   // assert(var != NULL);
-
-   // return (jlong) (size_t) SCIPvarGetData(var);
+   return (jlong) (size_t) SCIPvarGetData(var);
 }
 
 void JNISCIPVAR(varSetData)(
@@ -982,12 +941,7 @@ jlong JNISCIPVAR(varGetTransVar)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method varGetTransVar is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_VAR* transvar;
 
 
@@ -996,7 +950,7 @@ jlong JNISCIPVAR(varGetTransVar)(
 
    transvar = SCIPvarGetTransVar(var);
 
-   return (jlong) (size_t) transvar;*/
+   return (jlong) (size_t) transvar;
 }
 
 /** gets column of COLUMN variable */
@@ -1007,12 +961,7 @@ jlong JNISCIPVAR(varGetCol)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method varGetCol is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_COL* col;
 
 
@@ -1021,7 +970,7 @@ jlong JNISCIPVAR(varGetCol)(
 
    col = SCIPvarGetCol(var);
 
-   return (jlong) (size_t) col;*/
+   return (jlong) (size_t) col;
 }
 
 /** returns whether the variable is a COLUMN variable that is member of the current LP */
@@ -1052,12 +1001,7 @@ jlong JNISCIPVAR(varGetAggrVar)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method varGetAggrVar is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_VAR* aggrvar;
 
    var = (SCIP_VAR*) (size_t) jvar;
@@ -1065,7 +1009,7 @@ jlong JNISCIPVAR(varGetAggrVar)(
 
    aggrvar = SCIPvarGetAggrVar(var);
 
-   return (jlong) (size_t) aggrvar;*/
+   return (jlong) (size_t) aggrvar;
 }
 
 /** gets aggregation scalar a of an aggregated variable x = a*y + c */
@@ -1137,12 +1081,7 @@ jlongArray JNISCIPVAR(varGetMultaggrVars)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method varGetMultaggrVar is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_VAR** vars;
    int nvars;
    jlongArray jvars;
@@ -1157,7 +1096,7 @@ jlongArray JNISCIPVAR(varGetMultaggrVars)(
 
    (*env)->SetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
 
-   return jvars;*/
+   return jvars;
 }
 
 /** gets vector of aggregation scalars a of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
@@ -1217,12 +1156,7 @@ jlong JNISCIPVAR(varGetNegatedVar)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method varGetNegatedVar is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_VAR* negvar;
 
 
@@ -1231,7 +1165,7 @@ jlong JNISCIPVAR(varGetNegatedVar)(
 
    negvar = SCIPvarGetNegatedVar(var);
 
-   return (jlong) (size_t) negvar;*/
+   return (jlong) (size_t) negvar;
 }
 
 
@@ -1243,12 +1177,7 @@ jlong JNISCIPVAR(varGetNegationVar)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method varGetNegationVar is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_VAR* negvar;
 
 
@@ -1257,7 +1186,7 @@ jlong JNISCIPVAR(varGetNegationVar)(
 
    negvar = SCIPvarGetNegationVar(var);
 
-   return (jlong) (size_t) negvar;*/
+   return (jlong) (size_t) negvar;
 }
 
 /** gets the negation offset of a negated variable x' = offset - x */
@@ -1350,12 +1279,7 @@ jlong JNISCIPVAR(varGetHolelistOriginal)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method varGetHolelistOriginal is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*  SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_HOLELIST* list;
 
 
@@ -1364,7 +1288,7 @@ jlong JNISCIPVAR(varGetHolelistOriginal)(
 
    list = SCIPvarGetHolelistOriginal(var);
 
-   return (jlong)(size_t)list;*/
+   return (jlong)(size_t)list;
 }
 
 /** gets global lower bound of variable */
@@ -1415,12 +1339,7 @@ jlong JNISCIPVAR(varGetHolelistGlobal)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method bdchgGetVar is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_HOLELIST* list;
 
 
@@ -1429,7 +1348,7 @@ jlong JNISCIPVAR(varGetHolelistGlobal)(
 
    list = SCIPvarGetHolelistGlobal(var);
 
-   return (jlong) (size_t) list;*/
+   return (jlong) (size_t) list;
 }
 
 /** gets best global bound of variable with respect to the objective function */
@@ -1520,12 +1439,7 @@ jlong JNISCIPVAR(varGetHolelistLocal)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method bdchgGetVar is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_HOLELIST* list;
 
 
@@ -1534,7 +1448,7 @@ jlong JNISCIPVAR(varGetHolelistLocal)(
 
    list = SCIPvarGetHolelistLocal(var);
 
-   return (jlong) (size_t) list;*/
+   return (jlong) (size_t) list;
 }
 
 /** gets best local bound of variable with respect to the objective function */
@@ -1751,12 +1665,7 @@ jlongArray JNISCIPVAR(varGetVlbVars)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method varGetVlbVars is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_VAR** vars;
    int nvars;
    jlongArray jvars;
@@ -1774,7 +1683,7 @@ jlongArray JNISCIPVAR(varGetVlbVars)(
 
    (*env)->SetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
 
-   return jvars;*/
+   return jvars;
 }
 
 /** gets array with bounding coefficients b_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
@@ -1788,7 +1697,7 @@ jdoubleArray JNISCIPVAR(varGetVlbCoefs)(
    SCIP_VAR* var;
    SCIP_Real* coeffs;
    int ncoeffs;
-   jlongArray jcoeffs;
+   jdoubleArray jcoeffs;
 
    /* convert JNI pointer into C pointer */
    var = (SCIP_VAR*) (size_t) jvar;
@@ -1817,7 +1726,7 @@ jdoubleArray JNISCIPVAR(varGetVlbConstants)(
    SCIP_VAR* var;
    SCIP_Real* consts;
    int nconsts;
-   jlongArray jconsts;
+   jdoubleArray jconsts;
 
    /* convert JNI pointer into C pointer */
    var = (SCIP_VAR*) (size_t) jvar;
@@ -1865,12 +1774,7 @@ jlongArray JNISCIPVAR(varGetVubVars)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method varGetVubVars is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_VAR** vars;
    int nvars;
    jlongArray jvars;
@@ -1888,7 +1792,7 @@ jlongArray JNISCIPVAR(varGetVubVars)(
 
    (*env)->SetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
 
-   return jvars;*/
+   return jvars;
 }
 
 /** gets array with bounding coefficients b_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
@@ -1902,7 +1806,7 @@ jdoubleArray JNISCIPVAR(varGetVubCoefs)(
    SCIP_VAR* var;
    SCIP_Real* coeffs;
    int ncoeffs;
-   jlongArray jcoeffs;
+   jdoubleArray jcoeffs;
 
    /* convert JNI pointer into C pointer */
    var = (SCIP_VAR*) (size_t) jvar;
@@ -1931,7 +1835,7 @@ jdoubleArray JNISCIPVAR(varGetVubConstants)(
    SCIP_VAR* var;
    SCIP_Real* consts;
    int nconsts;
-   jlongArray jconsts;
+   jdoubleArray jconsts;
 
    /* convert JNI pointer into C pointer */
    var = (SCIP_VAR*) (size_t) jvar;
@@ -2009,12 +1913,7 @@ jlongArray JNISCIPVAR(varGetImplVars)(
    jboolean              jvarfixing          /**< FALSE for implications for x == 0, TRUE for x == 1 */
    )
 {
-   SCIPerrorMessage("method varGetImplVars is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_VAR** vars;
    int nvars;
    jlongArray jvars;
@@ -2032,7 +1931,7 @@ jlongArray JNISCIPVAR(varGetImplVars)(
 
    (*env)->SetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
 
-   return jvars;*/
+   return jvars;
 }
 
 /** gets array with implication types of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem
@@ -2082,7 +1981,7 @@ jdoubleArray JNISCIPVAR(varGetImplBounds)(
    SCIP_VAR* var;
    SCIP_Real* bounds;
    int nbounds;
-   jlongArray jbounds;
+   jdoubleArray jbounds;
 
    /* convert JNI pointer into C pointer */
    var = (SCIP_VAR*) (size_t) jvar;
@@ -2114,7 +2013,7 @@ jintArray JNISCIPVAR(varGetImplIds)(
    SCIP_VAR* var;
    int* ids;
    int nids;
-   jlongArray jids;
+   jintArray jids;
 
    /* convert JNI pointer into C pointer */
    var = (SCIP_VAR*) (size_t) jvar;
@@ -2162,12 +2061,7 @@ jlongArray JNISCIPVAR(varGetCliques)(
    jboolean              jvarfixing          /**< FALSE for implications for x == 0, TRUE for x == 1 */
    )
 {
-   SCIPerrorMessage("method varGetCliques is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_CLIQUE** cliques;
    int ncliques;
    jlongArray jcliques;
@@ -2185,7 +2079,7 @@ jlongArray JNISCIPVAR(varGetCliques)(
 
    (*env)->SetLongArrayRegion(env, jcliques, 0, ncliques, (jlong*)cliques);
 
-   return jcliques;*/
+   return jcliques;
 }
 
 /** gets primal LP solution value of variable */
@@ -2237,12 +2131,7 @@ jlong JNISCIPVAR(varGetBdchgInfoLb)(
    jint                  jpos                /**< requested position */
    )
 {
-   SCIPerrorMessage("method varGetBdchgInfoLb is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_BDCHGINFO* lbchange;
 
 
@@ -2251,7 +2140,7 @@ jlong JNISCIPVAR(varGetBdchgInfoLb)(
 
    lbchange = SCIPvarGetBdchgInfoLb(var, (int) jpos);
 
-   return (jlong) (size_t) lbchange;*/
+   return (jlong) (size_t) lbchange;
 }
 
 /** gets the number of lower bound change info array */
@@ -2283,12 +2172,7 @@ jlong JNISCIPVAR(varGetBdchgInfoUb)(
    jint                  jpos                /**< requested position */
    )
 {
-   SCIPerrorMessage("method varGetBdchgInfoUb is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_BDCHGINFO* ubchange;
 
 
@@ -2297,7 +2181,7 @@ jlong JNISCIPVAR(varGetBdchgInfoUb)(
 
    ubchange = SCIPvarGetBdchgInfoUb(var, (int) jpos);
 
-   return (jlong) (size_t) ubchange;*/
+   return (jlong) (size_t) ubchange;
 }
 
 /** gets the number upper bound change info array */
@@ -2543,12 +2427,7 @@ jlong JNISCIPVAR(varGetLbchgInfo)(
    jboolean              jafter              /**< should the bound change with given index be included? */
    )
 {
-   SCIPerrorMessage("method varGetLbchgInfo is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_BDCHGINFO* info;
    SCIP_BDCHGIDX* bdchgidx;
 
@@ -2561,7 +2440,7 @@ jlong JNISCIPVAR(varGetLbchgInfo)(
 
    info = SCIPvarGetLbchgInfo(var, bdchgidx, (SCIP_Bool) jafter);
 
-   return (jlong)(size_t)info;*/
+   return (jlong)(size_t)info;
 }
 
 /** returns the bound change information for the last upper bound change on given active problem variable before or
@@ -2577,12 +2456,7 @@ jlong JNISCIPVAR(varGetUbchgInfo)(
    jboolean              jafter              /**< should the bound change with given index be included? */
    )
 {
-   SCIPerrorMessage("method varGetUbchgInfo is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_BDCHGINFO* info;
    SCIP_BDCHGIDX* bdchgidx;
 
@@ -2595,7 +2469,7 @@ jlong JNISCIPVAR(varGetUbchgInfo)(
 
    info = SCIPvarGetUbchgInfo(var, bdchgidx, (SCIP_Bool) jafter);
 
-   return (jlong)(size_t)info;*/
+   return (jlong)(size_t)info;
 }
 
 /** returns the bound change information for the last lower or upper bound change on given active problem variable
@@ -2612,12 +2486,7 @@ jlong JNISCIPVAR(varGetBdchgInfo)(
    jboolean              jafter              /**< should the bound change with given index be included? */
    )
 {
-   SCIPerrorMessage("method varGetBdchgInfo is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_BDCHGINFO* info;
    SCIP_BDCHGIDX* bdchgidx;
 
@@ -2630,7 +2499,7 @@ jlong JNISCIPVAR(varGetBdchgInfo)(
 
    info = SCIPvarGetBdchgInfo(var, (SCIP_BOUNDTYPE) jboundtype, bdchgidx, (SCIP_Bool) jafter);
 
-   return (jlong)(size_t)info;*/
+   return (jlong)(size_t)info;
 }
 
 /** returns lower bound of variable directly before or after the bound change given by the bound change index
@@ -2752,12 +2621,7 @@ jlong JNISCIPVAR(varGetLastBdchgIndex)(
    jlong                 jvar                /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method bdchgGetVar is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-/*   SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_BDCHGIDX* bdchgidx;
 
 
@@ -2766,7 +2630,7 @@ jlong JNISCIPVAR(varGetLastBdchgIndex)(
 
    bdchgidx = SCIPvarGetLastBdchgIndex(var);
 
-   return (jlong)(size_t) bdchgidx;*/
+   return (jlong)(size_t) bdchgidx;
 }
 
 /** returns the last depth level, at which the bounds of the given variable were tightened;
@@ -2920,12 +2784,7 @@ jlong JNISCIPVAR(bdchginfoGetVar)(
    jlong                 jbdchginfo          /**< bound change information */
    )
 {
-   SCIPerrorMessage("method bdchginfoGetVar is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /* SCIP_VAR* var;
+   SCIP_VAR* var;
    SCIP_BDCHGINFO* bdchginfo;
 
 
@@ -2934,7 +2793,7 @@ jlong JNISCIPVAR(bdchginfoGetVar)(
 
    var = SCIPbdchginfoGetVar(bdchginfo);
 
-   return (jlong)(size_t) var;*/
+   return (jlong)(size_t) var;
 }
 
 /** returns whether the bound change information belongs to a branching decision or a deduction */
@@ -3025,12 +2884,7 @@ jlong JNISCIPVAR(bdchginfoGetIdx)(
    jlong                 jbdchginfo          /**< bound change information */
    )
 {
-   SCIPerrorMessage("method bdchginfoGetIdx is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-  /*  SCIP_BDCHGINFO* bdchginfo;
+   SCIP_BDCHGINFO* bdchginfo;
    SCIP_BDCHGIDX* idx;
 
 
@@ -3039,7 +2893,7 @@ jlong JNISCIPVAR(bdchginfoGetIdx)(
 
    idx = SCIPbdchginfoGetIdx(bdchginfo);
 
-   return (jlong)(size_t) idx;*/
+   return (jlong)(size_t) idx;
 }
 
 /** returns inference variable of given bound change information */
@@ -3050,12 +2904,7 @@ jlong JNISCIPVAR(bdchginfoGetInferVar)(
    jlong                 jbdchginfo          /**< bound change information */
    )
 {
-   SCIPerrorMessage("method bdchginfoGetInferVar is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-  /*  SCIP_BDCHGINFO* bdchginfo;
+   SCIP_BDCHGINFO* bdchginfo;
    SCIP_VAR* var;
 
 
@@ -3064,7 +2913,7 @@ jlong JNISCIPVAR(bdchginfoGetInferVar)(
 
    var = SCIPbdchginfoGetInferVar(bdchginfo);
 
-   return (jlong)(size_t) var; */
+   return (jlong)(size_t) var;
 }
 
 /** returns inference constraint of given bound change information */
@@ -3075,12 +2924,7 @@ jlong JNISCIPVAR(bdchginfoGetInferCons)(
    jlong                 jbdchginfo          /**< bound change information */
    )
 {
-   SCIPerrorMessage("method bdchginfoGetInferCons is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /* SCIP_BDCHGINFO* bdchginfo;
+   SCIP_BDCHGINFO* bdchginfo;
    SCIP_CONS* cons;
 
 
@@ -3089,7 +2933,7 @@ jlong JNISCIPVAR(bdchginfoGetInferCons)(
 
    cons = SCIPbdchginfoGetInferCons(bdchginfo);
 
-   return (jlong)(size_t) cons; */
+   return (jlong)(size_t) cons;
 }
 
 /** returns inference propagator of given bound change information, or NULL if no propagator was responsible */
@@ -3100,12 +2944,7 @@ jlong JNISCIPVAR(bdchginfoGetInferProp)(
    jlong                 jbdchginfo          /**< bound change information */
    )
 {
-   SCIPerrorMessage("method bdchginfoGetInferProp is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /* SCIP_BDCHGINFO* bdchginfo;
+   SCIP_BDCHGINFO* bdchginfo;
    SCIP_PROP* prop;
 
 
@@ -3114,7 +2953,7 @@ jlong JNISCIPVAR(bdchginfoGetInferProp)(
 
    prop = SCIPbdchginfoGetInferProp(bdchginfo);
 
-   return (jlong)(size_t) prop; */
+   return (jlong)(size_t) prop;
 }
 
 /** returns inference user information of given bound change information */
@@ -3252,12 +3091,7 @@ jlong JNISCIPVAR(boundchgGetVar)(
    jlong                 jboundchg           /**< bound change data */
    )
 {
-   SCIPerrorMessage("method bdchgGetVar is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_BOUNDCHG* boundchg;
+   SCIP_BOUNDCHG* boundchg;
    SCIP_VAR* var;
 
 
@@ -3266,7 +3100,7 @@ jlong JNISCIPVAR(boundchgGetVar)(
 
    var = SCIPboundchgGetVar(boundchg);
 
-   return (jlong)(size_t) var;*/
+   return (jlong)(size_t) var;
 }
 
 /** returns the bound change type of the bound change in the bound change data */
@@ -3358,12 +3192,7 @@ JNIEXPORT
    jint                  jpos                /**< position of the bound change in the domain change data */
    )
 {
-   SCIPerrorMessage("method bdchgGetVar is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_DOMCHG* domchg;
+   SCIP_DOMCHG* domchg;
    SCIP_BOUNDCHG* boundchg;
 
    domchg = (SCIP_DOMCHG*) (size_t) jdomchg;
@@ -3371,7 +3200,7 @@ JNIEXPORT
 
    boundchg = SCIPdomchgGetBoundchg(domchg, (int) jpos);
 
-   return (jlong)(size_t) boundchg;*/
+   return (jlong)(size_t) boundchg;
 }
 
 /** returns left bound of open interval in hole */
@@ -3422,12 +3251,7 @@ jlong JNISCIPVAR(holelistGetNext)(
    jlong                 jholelist           /**< hole list pointer to hole of interest */
    )
 {
-   SCIPerrorMessage("method holelistGenNext is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
-
-   return 0;
-
-   /*   SCIP_HOLELIST* holelist;
+   SCIP_HOLELIST* holelist;
    SCIP_HOLELIST* next;
 
    holelist = (SCIP_HOLELIST*) (size_t) jholelist;
@@ -3435,7 +3259,7 @@ jlong JNISCIPVAR(holelistGetNext)(
 
    next = SCIPholelistGetNext(holelist);
 
-   return (jlong)(size_t) next;*/
+   return (jlong)(size_t) next;
 }
 
 
@@ -3445,55 +3269,7 @@ jlong JNISCIPVAR(holelistGetNext)(
 
 
 
-// /** returns the user data of the variable */
-// JNIEXPORT
-// jlong JNISCIPVAR(varGetData)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar                /**< JNI problem variable */
-//    )
-// {
-//    SCIPerrorMessage("method varGetData is not implemented yet\n");
-//    JNISCIP_CALL( SCIP_ERROR );
 
-//    return 0;
-
-//    /*   SCIP_VAR* var;
-//    SCIP_VARDATA* vardata;
-
-
-//    var = (SCIP_VAR*) (size_t) jvar;
-//    assert(var != NULL);
-
-//    vardata = SCIPvarGetData(var);
-
-//    return (jlong)(size_t) vardata;*/
-// }
-
-// /** sets the user data for the variable */
-// JNIEXPORT
-// void JNISCIPVAR(varSetData)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jvar,               /**< JNI problem variable */
-//    jlong                 jvardata            /**< user variable data */
-//    )
-// {
-//    SCIPerrorMessage("method varSetData is not implemented yet\n");
-//    JNISCIP_CALL( SCIP_ERROR );
-
-//    // SCIP_VAR* var;
-//    // SCIP_VARDATA* vardata;
-
-//    // /* convert JNI pointer into C pointer */
-//    // var = (SCIP_VAR*) (size_t) jvar;
-//    // assert(var != NULL);
-
-//    // vardata = (SCIP_VARDATA*) (size_t) jvardata;
-//    // assert(vardata != NULL);
-
-//    // JNISCIP_CALL( SCIPvarSetData(var, vardata) );
-// }
 
 // /** gets objective value of variable in current SCIP_LP; the value can be different from the bound stored in the variable's own
 //  *  data due to diving, that operate only on the LP without updating the variables

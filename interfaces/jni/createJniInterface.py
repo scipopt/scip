@@ -405,7 +405,7 @@ def convertStructPointer(pointertype):
         'FILE *'
         ]
     for pointer in pointertypes:
-        pointertype = pointertype.replace(pointer, 'long')
+        pointertype = pointertype.replace(pointer, 'long', 1)
         
     return pointertype
 
@@ -534,8 +534,11 @@ if len(sys.argv) < 2:
     sys.exit(1)
 
 # remove NativeScip.java and JniScip.java
-os.remove("java/de/zib/jscip/nativ/NativeScip.java");
-os.remove("java/de/zib/jscip/nativ/jni/JniScip.java");
+if os.path.isfile("java/de/zib/jscip/nativ/NativeScip.java") :
+    os.remove("java/de/zib/jscip/nativ/NativeScip.java");
+
+if os.path.isfile("java/de/zib/jscip/nativ/jni/JniScip.java") :
+    os.remove("java/de/zib/jscip/nativ/jni/JniScip.java");
 
 # create for each imput file one output file
 for arg in sys.argv[1:]:
@@ -708,7 +711,7 @@ for arg in sys.argv[1:]:
                     break;
 
             # check if the parameters is return parameter (reference)
-            if param[2].startswith('pointer to') or param[2].startswith('stores'):
+            if param[2].startswith('pointer to') or param[2].startswith('stores') or param[2].startswith('array to store'):
                 nreturnparams += 1
                 continue
 
@@ -735,6 +738,17 @@ for arg in sys.argv[1:]:
                     nreturnparams = 0
                     params.remove(param)
                     break
+
+                if param[2].startswith('array to store'):
+
+                    # remove the one of the stars
+                    returntype = param[1].replace('*', '', 1) + '[]'
+                    print returntype
+                    returndesc = param[2].replace('array to store', '')
+                    nreturnparams = 0
+                    params.remove(param)
+                    break
+
 
         if nreturnparams == 1 and freemethod == 1:
             for param in params:

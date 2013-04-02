@@ -136,6 +136,71 @@ jlong JNISCIPCONSSOS2(createConsSOS2)(
    return (jlong)(size_t)cons;
 }
 
+/** creates and captures a SOS2 constraint with all constraint flags set to their default values.
+ *
+ *  @warning Do NOT set the constraint to be modifiable manually, because this might lead
+ *  to wrong results as the variable array will not be resorted
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+JNIEXPORT
+jlong JNISCIPCONSSOS2(createConsBasicSOS2)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jstring               jname,              /**< name of constraint */
+   int                   jnvars,             /**< number of variables in the constraint */
+   jlongArray            jvars,              /**< array with variables of constraint entries */
+   jdoubleArray          jvals               /**< weights determining the variable order, or NULL if natural order should be used */
+   )
+{
+   SCIP* scip;
+   SCIP_CONS* cons;
+   const char* name;
+   int nvars;
+
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
+
+   /* convert JNI string into C const char* */
+   name = (*env)->GetStringUTFChars(env, jname, NULL);
+   if( name == NULL )
+      SCIPABORT();
+
+   /* create linear constraint with zero variables */
+   JNISCIP_CALL( SCIPcreateConsBasicSOS2(scip, &cons, name, 0, NULL, NULL) );
+
+   /* convert JNI integer into integer */
+   nvars = (int)jnvars;
+
+   if( nvars > 0 )
+   {
+      jlong* vars;
+      jdouble* vals;
+      int v;
+
+      JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+      JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+      (*env)->GetLongArrayRegion(env, jvars, 0, nvars, vars);
+      (*env)->GetDoubleArrayRegion(env, jvals, 0, nvars, vals);
+
+      for( v = 0; v < nvars; ++v )
+      {
+         JNISCIP_CALL( SCIPaddCoefLinear(scip, cons, (SCIP_VAR*)(size_t)vars[v], (SCIP_Real)vals[v]));
+      }
+
+      SCIPfreeBufferArray(scip, &vals);
+      SCIPfreeBufferArray(scip, &vars);
+   }
+
+   /* relase string object */
+   (*env)->ReleaseStringUTFChars(env, jname, name);
+
+   return (jlong)(size_t)cons;
+}
+
 /** adds variable to SOS2 constraint, the position is determined by the given weight */
 JNIEXPORT
 void JNISCIPCONSSOS2(addVarSOS2)(
