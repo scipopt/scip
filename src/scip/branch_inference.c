@@ -68,7 +68,61 @@ struct SCIP_BranchruleData
 
 /** evaluate the given candidate with the given score against the currently best know candidate */
 static
-void evaluateCand(
+void evaluateValueCand(
+   SCIP_VAR*             cand,               /**< candidate to be checked */
+   SCIP_Real             score,              /**< score of the candidate */
+   SCIP_Real             branchpoint,        /**< potential branching point */
+   SCIP_BRANCHDIR        branchdir,          /**< potential branching direction */
+   SCIP_VAR**            bestcand,           /**< pointer to the currently best candidate */
+   SCIP_Real*            bestscore,          /**< pointer to the score of the currently best candidate */
+   SCIP_Real*            bestbranchpoint,    /**< pointer to store the (best) branching point */
+   SCIP_BRANCHDIR*       bestbranchdir       /**< pointer to store the branching direction relative to the branching point */
+   )
+{
+   /* evaluate the candidate against the currently best candidate */
+   if( (*bestscore) < score )
+   {
+      /* the score of the candidate is better than the currently best know candidate */
+      (*bestscore) = score;
+      (*bestcand) = cand;
+      (*bestbranchpoint) = branchpoint;
+      (*bestbranchdir) = branchdir;
+   }
+   else if( (*bestscore) == score ) /*lint !e777*/
+   {
+      SCIP_Real bestobj;
+      SCIP_Real candobj;
+
+      bestobj = REALABS(SCIPvarGetObj(*bestcand));
+      candobj = REALABS(SCIPvarGetObj(cand));
+
+      /* the candidate has the same score as the best known candidate; therefore we use a second and third
+       * criteria to detect a unique best candidate;
+       *
+       * - the second criteria prefers the candidate with a larger absolute value of its objective coefficient
+       *   since branching on that variable might trigger further propagation w.r.t. objective function
+       * - if the absolute values of the objective coefficient are equal the variable index is used to define a
+       *   unique best candidate
+       *
+       * @note It is very important to select a unique best candidate. Otherwise the solver might vary w.r.t. the
+       *       performance to much since the candidate array which is used here (SCIPgetPseudoBranchCands() or
+       *       SCIPgetLPBranchCands()) gets dynamically changed during the solution process. In particular,
+       *       starting a probing mode might already change the order of these arrays. To be independent of that
+       *       the selection should be unique. Otherwise, to selection process can get influenced by starting a
+       *       probing or not.
+       */
+      if( bestobj < candobj || (bestobj == candobj && SCIPvarGetIndex(*bestcand) < SCIPvarGetIndex(cand)) ) /*lint !e777*/
+      {
+         (*bestcand) = cand;
+         (*bestbranchpoint) = branchpoint;
+         (*bestbranchdir) = branchdir;
+      }
+   }
+}
+
+/** evaluate the given candidate with the given score against the currently best know candidate */
+static
+void evaluateAggrCand(
    SCIP_VAR*             cand,               /**< candidate to be checked */
    SCIP_Real             score,              /**< score of the candidate */
    SCIP_Real             val,                /**< solution value of the candidate */
@@ -77,7 +131,6 @@ void evaluateCand(
    SCIP_Real*            bestval             /**< pointer to the solution value of the currently best candidate */
    )
 {
-
    /* evaluate the candidate against the currently best candidate */
    if( (*bestscore) < score )
    {
@@ -119,117 +172,51 @@ void evaluateCand(
 
 /** check if the score for the given domain value and variable domain value is better than the current best know one */
 static
-void checkScore(
+void checkValueScore(
    SCIP_Real             value,              /**< domain value */
+   SCIP_HISTORY*         history,            /**< variable history for given donain value */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
    SCIP_Real             conflictweight,     /**< weight in score calculations for conflict score */
    SCIP_Real             cutoffweight,       /**< weight in score calculations for cutoff score */
-   SCIP_Real             conflictscore,      /**< conflict score */
-   SCIP_Real             cutoffscore,        /**< cutoff score */
+   SCIP_Real             reliablescore,      /**< score which is seen to be reliable for a branching decision */
    SCIP_Real*            bestscore,          /**< pointer to store the best score */
-   SCIP_Real*            branchpoint         /**< pointer to store the (best) branching point */
+   SCIP_Real*            branchpoint,        /**< pointer to store the (best) branching point */
+   SCIP_BRANCHDIR*       branchdir           /**< pointer to store the branching direction relative to the branching point */
    )
 {
+   SCIP_Real conflictscore;
+   SCIP_Real cutoffscore;
    SCIP_Real score;
+
+   conflictscore = SCIPhistoryGetVSIDS(history, dir);
+   cutoffscore = SCIPhistoryGetCutoffSum(history, dir);
+
+   /* in case the conflict score is below the reliable score we set it to zero since it is seen to be
+    * unreliable
+    */
+   if( conflictscore  < reliablescore )
+      conflictscore = 0.0;
+
+   /* in case the cutoff score is below the reliable score we set it to zero since it is seen to be unreliable */
+   if( cutoffscore < reliablescore )
+      cutoffscore = 0.0;
 
    /* compute weight score */
    score = conflictweight * conflictscore + cutoffweight * cutoffscore;
 
-   /* check if the computed score is better */
    if( score > *bestscore )
    {
       (*bestscore) = score;
       (*branchpoint) = value;
+      (*branchdir) = dir;
    }
-}
-
-/** finds for the given variable the best branching point via the value based history */
-static
-SCIP_Real findBestBranchpoint(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Real             conflictweight,     /**< weight in score calculations for conflict score */
-   SCIP_Real             cutoffweight,       /**< weight in score calculations for cutoff score */
-   SCIP_Real*            branchpoint         /**< pointer to store the branching point */
-   )
-{
-   SCIP_VALUEHISTORY* valuehistory;
-   SCIP_HISTORY** histories;
-   SCIP_Real* values;
-   SCIP_Real bestscore;
-   SCIP_Real conflictscore;
-   SCIP_Real cutoffscore;
-   int nvalues;
-   int v;
-
-   (*branchpoint) = SCIP_UNKNOWN;
-
-   valuehistory = SCIPvarGetValuehistory(var);
-
-   /* check if a value based history exists */
-   if( valuehistory == NULL )
-      return 0.0;
-
-   histories = SCIPvaluehistoryGetHistories(valuehistory);
-   values = SCIPvaluehistoryGetValues(valuehistory);
-   nvalues = SCIPvaluehistoryGetNValues(valuehistory);
-
-   bestscore = 0.0;
-
-   /* find among all potential branching points the one with the best score */
-   for( v = 0; v < nvalues; ++v )
-   {
-      SCIP_Real value;
-
-      value = values[v];
-      assert(value >= SCIPvarGetLbLocal(var));
-
-      /* skip all domain values which are smaller then the lower bound */
-      if( value < SCIPvarGetLbLocal(var) )
-         continue;
-
-      /* skip all domain values which are larger or equal to the upper bound */
-      if( value > SCIPvarGetUbLocal(var) )
-         break;
-
-      if( value < SCIPvarGetUbLocal(var) )
-      {
-         conflictscore = SCIPhistoryGetVSIDS(histories[v], SCIP_BRANCHDIR_DOWNWARDS);
-         cutoffscore = SCIPhistoryGetCutoffSum(histories[v], SCIP_BRANCHDIR_DOWNWARDS);
-
-         if( v+1 < nvalues && values[v+1] == value + 1 )
-         {
-            conflictscore += SCIPhistoryGetVSIDS(histories[v+1], SCIP_BRANCHDIR_UPWARDS);
-            cutoffscore += SCIPhistoryGetCutoffSum(histories[v+1], SCIP_BRANCHDIR_UPWARDS);
-         }
-
-         /* check score */
-         checkScore(value + 0.5, conflictweight, cutoffweight, conflictscore, cutoffscore, &bestscore, branchpoint);
-      }
-
-      if( value >  SCIPvarGetLbLocal(var) )
-      {
-         conflictscore = SCIPhistoryGetVSIDS(histories[v], SCIP_BRANCHDIR_UPWARDS);
-         cutoffscore = SCIPhistoryGetCutoffSum(histories[v], SCIP_BRANCHDIR_UPWARDS);
-
-         if( v > 0 && values[v-1] == value - 1 )
-         {
-            conflictscore += SCIPhistoryGetVSIDS(histories[v-1], SCIP_BRANCHDIR_DOWNWARDS);
-            cutoffscore += SCIPhistoryGetCutoffSum(histories[v-1], SCIP_BRANCHDIR_DOWNWARDS);
-         }
-
-         /* check score */
-         checkScore(value - 0.5, conflictweight, cutoffweight, conflictscore, cutoffscore, &bestscore, branchpoint);
-      }
-   }
-
-   return bestscore;
 }
 
 /** return an aggregated score for the given variable using the conflict score and cutoff score */
 static
 SCIP_Real getAggrScore(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             cand,               /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             conflictweight,     /**< weight in score calculations for conflict score */
    SCIP_Real             inferenceweight,    /**< weight in score calculations for inference score */
    SCIP_Real             cutoffweight,       /**< weight in score calculations for cutoff score */
@@ -239,8 +226,8 @@ SCIP_Real getAggrScore(
    SCIP_Real conflictscore;
    SCIP_Real cutoffscore;
 
-   conflictscore = SCIPgetVarConflictScore(scip, cand);
-   cutoffscore = SCIPgetVarAvgInferenceCutoffScore(scip, cand, cutoffweight);
+   conflictscore = SCIPgetVarConflictScore(scip, var);
+   cutoffscore = SCIPgetVarAvgInferenceCutoffScore(scip, var, cutoffweight);
 
    /* in case the conflict score is below the reliable score we set it to zero since it is seen to be
     * unreliable
@@ -254,6 +241,63 @@ SCIP_Real getAggrScore(
 
    /* compute weighted score for the candidate */
    return (conflictweight * conflictscore + inferenceweight * cutoffscore);
+}
+
+/** return an aggregated score for the given variable using the conflict score and cutoff score */
+static
+SCIP_Real getValueScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             conflictweight,     /**< weight in score calculations for conflict score */
+   SCIP_Real             cutoffweight,       /**< weight in score calculations for cutoff score */
+   SCIP_Real             reliablescore,      /**< score which is seen to be reliable for a branching decision */
+   SCIP_Real*            branchpoint,        /**< pointer to store the branching point */
+   SCIP_BRANCHDIR*       branchdir           /**< pointer to store the branching direction relative to the branching point */
+   )
+{
+   SCIP_VALUEHISTORY* valuehistory;
+   SCIP_Real bestscore;
+
+   (*branchpoint) = SCIP_UNKNOWN;
+   (*branchdir) = SCIP_BRANCHDIR_UPWARDS;
+
+   valuehistory = SCIPvarGetValuehistory(var);
+   bestscore = 0.0;
+
+   if( valuehistory != NULL )
+   {
+      SCIP_HISTORY** histories;
+      SCIP_Real* values;
+      int nvalues;
+      int v;
+
+      histories = SCIPvaluehistoryGetHistories(valuehistory);
+      values = SCIPvaluehistoryGetValues(valuehistory);
+      nvalues = SCIPvaluehistoryGetNValues(valuehistory);
+
+      for( v = 0; v < nvalues; ++v )
+      {
+         SCIP_Real value;
+
+         value = values[v];
+
+         /* skip all domain values which are smaller or equal to the lower bound */
+         if( value <= SCIPvarGetLbLocal(var) )
+            continue;
+
+         /* skip all domain values which are larger or equal to the upper bound */
+         if( value >= SCIPvarGetUbLocal(var) )
+            break;
+
+         /* check var <= value */
+         checkValueScore(value, histories[v], SCIP_BRANCHDIR_DOWNWARDS, conflictweight, cutoffweight, reliablescore, &bestscore, branchpoint, branchdir);
+
+         /* check var >= value */
+         checkValueScore(value, histories[v], SCIP_BRANCHDIR_UPWARDS, conflictweight, cutoffweight, reliablescore, &bestscore, branchpoint, branchdir);
+      }
+   }
+
+   return bestscore;
 }
 
 
@@ -271,9 +315,18 @@ SCIP_RETCODE performBranching(
    SCIP_Bool             useweightedsum      /**< should a weighted sum of inference, conflict and cutoff weights be used? */
    )
 {
-   SCIP_VAR* bestcand;
+   SCIP_VAR* bestaggrcand;
+   SCIP_VAR* bestvaluecand;
    SCIP_Real bestval;
-   SCIP_Real bestscore;
+   SCIP_Real bestaggrscore;
+   SCIP_Real bestvaluescore;
+   SCIP_Real bestbranchpoint;
+   SCIP_BRANCHDIR bestbranchdir;
+
+   bestbranchpoint = SCIP_UNKNOWN;
+   bestbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
+   bestvaluescore = 0.0;
+   bestvaluecand = NULL;
 
    assert(ncands > 0);
 
@@ -282,68 +335,86 @@ SCIP_RETCODE performBranching(
    {
       int c;
 
-      bestcand = cands[0];
-      assert(bestcand != NULL);
+      bestaggrcand = cands[0];
+      bestvaluecand = cands[0];
+      assert(cands[0] != NULL);
 
-      if( candsols != NULL )
-      {
-         bestval = candsols[0];
-         bestscore = getAggrScore(scip, cands[0], conflictweight, inferenceweight, cutoffweight, reliablescore);
-      }
-      else
+      if( candsols == NULL )
       {
          bestval = SCIP_UNKNOWN;
-         bestscore = findBestBranchpoint(scip, cands[0], conflictweight, cutoffweight, &bestval);
-      }
 
+         /* get domain value score for the first candidate */
+         bestvaluescore = getValueScore(scip, cands[0], conflictweight, cutoffweight, reliablescore, &bestbranchpoint, &bestbranchdir);
+         SCIPdebugMessage("current best value candidate <%s>[%g,%g] %s <%g> (value %g)\n",
+            SCIPvarGetName(bestvaluecand), SCIPvarGetLbLocal(bestvaluecand), SCIPvarGetUbLocal(bestvaluecand),
+            bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS ? "<=" : ">=", bestbranchpoint, bestvaluescore);
+      }
+      else
+         bestval = candsols[0];
+
+      /* get aggregated score for the first candidate */
+      bestaggrscore = getAggrScore(scip, cands[0], conflictweight, inferenceweight, cutoffweight, reliablescore);
 
       for( c = 1; c < ncands; ++c )
       {
          SCIP_VAR* cand;
          SCIP_Real val;
-         SCIP_Real score;
+         SCIP_Real aggrscore;
+         SCIP_Real branchpoint;
+         SCIP_BRANCHDIR branchdir;
 
          cand = cands[c];
          assert(cand != NULL);
 
-         if( candsols != NULL )
+         if( candsols == NULL )
          {
-            val = candsols[c];
-            score = getAggrScore(scip, cands[c], conflictweight, inferenceweight, cutoffweight, reliablescore);
+            SCIP_Real valuescore;
+
+            val = SCIP_UNKNOWN;
+
+            /* get domain value score for the candidate */
+            valuescore = getValueScore(scip, cand, conflictweight, cutoffweight, reliablescore, &branchpoint, &branchdir);
+
+            /* evaluate the candidate against the currently best candidate w.r.t. domain value score */
+            evaluateValueCand(cand, valuescore, branchpoint, branchdir, &bestvaluecand, &bestvaluescore, &bestbranchpoint, &bestbranchdir);
+
+            SCIPdebugMessage("current best value candidate <%s>[%g,%g] %s <%g> (value %g)\n",
+               SCIPvarGetName(bestvaluecand), SCIPvarGetLbLocal(bestvaluecand), SCIPvarGetUbLocal(bestvaluecand),
+               bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS ? "<=" : ">=", bestbranchpoint, bestvaluescore);
          }
          else
-         {
-            score = findBestBranchpoint(scip, cands[c], conflictweight, cutoffweight, &val);
-         }
+            val = candsols[c];
 
+         /* get aggregated score for the candidate */
+         aggrscore = getAggrScore(scip, cand, conflictweight, inferenceweight, cutoffweight, reliablescore);
 
          SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
-            val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, score); /*lint !e777*/
+            val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore); /*lint !e777*/
 
-         /* evaluate the candidate against the currently best candidate */
-         evaluateCand(cand, score, val, &bestcand, &bestscore, &bestval);
+         /* evaluate the candidate against the currently best candidate w.r.t. aggregated score */
+         evaluateAggrCand(cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval);
       }
    }
    else
    {
       int c;
 
-      bestcand = cands[0];
-      assert(bestcand != NULL);
+      bestaggrcand = cands[0];
+      assert(cands[0] != NULL);
 
       if( candsols != NULL )
          bestval = candsols[0];
       else
          bestval = SCIP_UNKNOWN;
 
-      bestscore = SCIPgetVarAvgInferenceScore(scip, cands[0]);
+      bestaggrscore = SCIPgetVarAvgInferenceScore(scip, cands[0]);
 
       /* search for variable with best score w.r.t. average inferences per branching */
       for( c = 1; c < ncands; ++c )
       {
          SCIP_VAR* cand;
          SCIP_Real val;
-         SCIP_Real score;
+         SCIP_Real aggrscore;
 
          cand = cands[c];
          assert(cand != NULL);
@@ -353,52 +424,55 @@ SCIP_RETCODE performBranching(
          else
             val = SCIP_UNKNOWN;
 
-         score = SCIPgetVarAvgInferenceScore(scip, cand);
+         aggrscore = SCIPgetVarAvgInferenceScore(scip, cand);
 
          /* in case the average inferences score is below the reliable score we set it to zero since it is seen to be
           * unreliable
           */
-         if( score < reliablescore )
-            score = 0.0;
+         if( aggrscore < reliablescore )
+            aggrscore = 0.0;
 
          SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
-            val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, score); /*lint !e777*/
+            val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore); /*lint !e777*/
 
          /* evaluate the candidate against the currently best candidate */
-         evaluateCand(cand, score, val, &bestcand, &bestscore, &bestval);
+         evaluateAggrCand(cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval);
       }
    }
 
-   assert(bestcand != NULL);
+   assert(bestaggrcand != NULL);
 
    SCIPdebugMessage(" -> %d candidates, selected variable <%s>[%g,%g] (prio=%d, solval=%.12f, score=%g, conflict=%g cutoff=%g, inference=%g)\n",
-      ncands, SCIPvarGetName(bestcand), SCIPvarGetLbLocal (bestcand), SCIPvarGetUbLocal(bestcand), SCIPvarGetBranchPriority(bestcand),
-      bestval == SCIP_UNKNOWN ? SCIPgetVarSol(scip, bestcand) : bestval, bestscore, /*lint !e777*/
-      SCIPgetVarConflictScore(scip, bestcand),  SCIPgetVarAvgInferenceCutoffScore(scip, bestcand, cutoffweight),
-      SCIPgetVarAvgInferenceScore(scip, bestcand));
+      ncands, SCIPvarGetName(bestaggrcand), SCIPvarGetLbLocal (bestaggrcand), SCIPvarGetUbLocal(bestaggrcand), SCIPvarGetBranchPriority(bestaggrcand),
+      bestval == SCIP_UNKNOWN ? SCIPgetVarSol(scip, bestaggrcand) : bestval, bestaggrscore, /*lint !e777*/
+      SCIPgetVarConflictScore(scip, bestaggrcand),  SCIPgetVarAvgInferenceCutoffScore(scip, bestaggrcand, cutoffweight),
+      SCIPgetVarAvgInferenceScore(scip, bestaggrcand));
 
    /* perform the branching */
    if( candsols != NULL )
    {
-      SCIP_CALL( SCIPbranchVarVal(scip, bestcand, SCIPgetBranchingPoint(scip, bestcand, bestval), NULL, NULL, NULL) );
+      SCIP_CALL( SCIPbranchVarVal(scip, bestaggrcand, SCIPgetBranchingPoint(scip, bestaggrcand, bestval), NULL, NULL, NULL) );
+   }
+   else if( bestbranchpoint == SCIP_UNKNOWN ) /*lint !e777*/
+   {
+      SCIP_CALL( SCIPbranchVar(scip, bestaggrcand, NULL, NULL, NULL) );
    }
    else
    {
-      assert(SCIPvarGetType(bestcand) != SCIP_VARTYPE_CONTINUOUS);
+      assert(bestvaluecand != NULL);
 
-      if( bestval == SCIP_UNKNOWN ) /*lint !e777*/
-      {
-         SCIP_CALL( SCIPbranchVar(scip, bestcand, NULL, NULL, NULL) );
-      }
+      if( bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS )
+         bestbranchpoint += 0.5;
       else
-      {
-         SCIP_CALL( SCIPbranchVarVal(scip, bestcand, bestval, NULL, NULL, NULL) );
-      }
+         bestbranchpoint -= 0.5;
+
+      SCIP_CALL( SCIPbranchVarVal(scip, bestvaluecand, bestbranchpoint, NULL, NULL, NULL) );
+
+      SCIPdebugMessage("branch on variable <%s> and value <%g>\n", SCIPvarGetName(bestvaluecand), bestbranchpoint);
    }
 
    return SCIP_OKAY;
 }
-
 
 /*
  * Callback methods
@@ -431,7 +505,6 @@ SCIP_DECL_BRANCHFREE(branchFreeInference)
 
    return SCIP_OKAY;
 }
-
 
 /** branching execution method for fractional LP solutions */
 static
