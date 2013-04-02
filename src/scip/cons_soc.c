@@ -4431,7 +4431,7 @@ SCIP_RETCODE SCIPcreateConsBasicSOC(
 SCIP_RETCODE SCIPgetNlRowSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
    )
 {
    SCIP_CONSDATA* consdata;
