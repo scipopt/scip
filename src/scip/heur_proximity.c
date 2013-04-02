@@ -350,12 +350,9 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* calculate the maximal number of branching nodes until heuristic is aborted */
-   /* todo set node limit depending on the variable number */
-   if( SCIPgetNNodes(scip) <= 1 )
-      nnodes = (SCIP_Longint)SCIPgetNLPBranchCands(scip);
-   else
-      nnodes = (SCIP_Longint) (heurdata->nodesquot * SCIPgetNNodes(scip));
+   /* calculate branching node limit for sub problem */
+   /* todo maybe treat root node differently */
+   nnodes = (SCIP_Longint) (heurdata->nodesquot * SCIPgetNNodes(scip));
    nnodes += heurdata->nodesofs;
 
    /* determine the node and LP iteration limit for the solve of the sub-SCIP */
