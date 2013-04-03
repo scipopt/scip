@@ -1,3 +1,7 @@
+$(LIBOBJDIR)/scip/lpi_grb.o: src/scip/lpi_grb.c lib/grbinc/gurobi_c.h src/scip/lpi.h \
+ src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
+ src/scip/type_message.h src/scip/struct_message.h \
+ src/blockmemshell/memory.h src/scip/type_lpi.h
 $(LIBOBJDIR)/blockmemshell/memory.o: src/blockmemshell/memory.c src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/scip/struct_message.h src/blockmemshell/memory.h
