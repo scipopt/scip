@@ -10025,6 +10025,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
       SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
+      if ( separateresult == SCIP_CUTOFF )
+      {
+         SCIPdebugMessage("separation found cutoff.)\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
       if( separateresult == SCIP_SEPARATED )
       {
          SCIPdebugMessage("separation fallback succeeded, efficacy = %g\n", sepaefficacy);
