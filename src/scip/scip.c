@@ -28018,14 +28018,12 @@ SCIP_RETCODE solveProbingLP(
       {
          SCIP_Bool mustsepa;
          int npricedcolvars;
-         SCIP_Real lowerbound;
          SCIP_Bool result;
 
          mustsepa = FALSE;
-         lowerbound = -SCIPinfinity(scip);
          SCIP_CALL( SCIPpriceLoop(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp,
                scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter, pretendroot, displayinfo, maxpricerounds,
-               &npricedcolvars, &mustsepa, &lowerbound, lperror, &result) );
+               &npricedcolvars, &mustsepa, lperror, &result) );
 
          /* mark the probing node again to update the LP size in the node and the tree path */
          if( !(*lperror) )
