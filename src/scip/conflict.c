@@ -1475,10 +1475,12 @@ void conflictsetPrint(
 
    assert(conflictset != NULL);
    for( i = 0; i < conflictset->nbdchginfos; ++i )
+   {
       SCIPdebugPrintf(" [%d:<%s> %s %g(%g)]", SCIPbdchginfoGetDepth(conflictset->bdchginfos[i]),
          SCIPvarGetName(SCIPbdchginfoGetVar(conflictset->bdchginfos[i])),
          SCIPbdchginfoGetBoundtype(conflictset->bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
          SCIPbdchginfoGetNewbound(conflictset->bdchginfos[i]), conflictset->relaxedbds[i]);
+   }
    SCIPdebugPrintf("\n");
 }
 #endif
@@ -1644,7 +1646,7 @@ SCIP_RETCODE incVSIDS(
    if( SCIPsetIsZero(set, weight) )
       return SCIP_OKAY;
 
-   branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
+   branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS); /*lint !e641*/
    SCIP_CALL( SCIPvarIncVSIDS(var, blkmem, set, stat, branchdir, value, weight) );
    SCIPhistoryIncVSIDS(stat->glbhistory, branchdir,  weight);
    SCIPhistoryIncVSIDS(stat->glbhistorycrun, branchdir,  weight);
@@ -1678,22 +1680,16 @@ SCIP_RETCODE updateStatistics(
       {
          SCIP_VAR* var;
          SCIP_BRANCHDIR branchdir;
-         unsigned int boundtype;
+         SCIP_BOUNDTYPE boundtype;
          SCIP_Real bound;
 
          assert(stat != NULL);
 
          var = conflictset->bdchginfos[i]->var;
-         boundtype = conflictset->bdchginfos[i]->boundtype;
+         boundtype = SCIPbdchginfoGetBoundtype(conflictset->bdchginfos[i]);
          bound = conflictset->relaxedbds[i];
 
          branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS); /*lint !e641*/
-
-         if( SCIPvarIsIntegral(var) )
-         {
-            assert(SCIPsetIsIntegral(set, bound));
-            bound += (branchdir == SCIP_BRANCHDIR_DOWNWARDS ? +1.0 : -1.0);
-         }
 
          SCIP_CALL( SCIPvarIncNActiveConflicts(var, blkmem, set, stat,  branchdir, bound, (SCIP_Real)conflictlength) );
          SCIPhistoryIncNActiveConflicts(stat->glbhistory, branchdir, (SCIP_Real)conflictlength);
