@@ -142,6 +142,7 @@
 struct SCIP_PropData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for catching bound changes */
+   SCIP_VAR**            vars;               /**< array containing all variable which are considered within the propagator */
    int*                  topoorder;          /**< array mapping on the bounds of variables in topological order;
                                               *   or -1, if the bound that should be at that position has no outgoing
                                               *   implications, cliques, or vbounds;
@@ -257,6 +258,7 @@ void resetPropdata(
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
+   propdata->vars = NULL;
    propdata->topoorder = NULL;
    propdata->vboundboundedidx = NULL;
    propdata->vboundcoefs = NULL;
@@ -285,13 +287,14 @@ SCIP_RETCODE catchEvents(
 
    assert(scip != NULL);
    assert(propdata != NULL);
+   assert(propdata->vars != NULL);
    assert(propdata->topoorder != NULL);
 
    /* catch variable events according to computed eventtypes */
    eventhdlr = propdata->eventhdlr;
    assert(eventhdlr != NULL);
 
-   vars = SCIPgetVars(scip);
+   vars = propdata->vars;
    nbounds = propdata->nbounds;
 
    /* setup events */
@@ -347,7 +350,7 @@ SCIP_RETCODE dropEvents(
    eventhdlr = propdata->eventhdlr;
    assert(eventhdlr != NULL);
 
-   vars = SCIPgetVars(scip);
+   vars = propdata->vars;
    nbounds = propdata->nbounds;
 
    for( v = 0; v < nbounds; ++v )
@@ -468,7 +471,7 @@ SCIP_RETCODE dfs(
    assert(dfsnodes != NULL);
    assert(ndfsnodes != NULL);
 
-   vars = SCIPgetVars(scip);
+   vars = propdata->vars;
 
    /* put start node on the stack */
    dfsstack[0] = startnode;
@@ -779,6 +782,11 @@ SCIP_RETCODE initData(
 
    if( nbounds == 0 )
       return SCIP_OKAY;
+
+   /* we need to copy the variable since this array is the basis of the propagator and the corresponding variable array
+    * within SCIP might change during the search
+    */
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->vars, vars, nvars) );
 
    /* allocate memory for the arrays of the propdata */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->topoorder, nbounds) );
@@ -1415,7 +1423,7 @@ SCIP_RETCODE propagateVbounds(
    }
    assert(propdata->propqueue != NULL);
 
-   vars = SCIPgetVars(scip);
+   vars = propdata->vars;
    nbounds = propdata->nbounds;
 
    /* propagate all variables if we are in repropagation */
@@ -1712,6 +1720,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
       SCIPfreeBlockMemoryArray(scip, &propdata->vboundboundedidx, propdata->nbounds);
       SCIPfreeBlockMemoryArray(scip, &propdata->inqueue, propdata->nbounds);
       SCIPfreeBlockMemoryArray(scip, &propdata->topoorder, propdata->nbounds);
+      SCIPfreeBlockMemoryArray(scip, &propdata->vars, propdata->nbounds / 2);
    }
 
    /* reset propagation data */
@@ -1753,7 +1762,7 @@ SCIP_DECL_PROPRESPROP(propRespropVbounds)
    assert(pos >= 0);
    assert(pos < propdata->nbounds);
 
-   vars = SCIPgetVars(scip);
+   vars = propdata->vars;
    assert(vars != NULL);
    startvar = vars[getVarIndex(pos)];
    assert(startvar != NULL);
@@ -1830,7 +1839,7 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
 
    SCIPdebugMessage("eventexec (type=%u): try to add sort index %d: %s(%s) to priority queue\n", SCIPeventGetType(event),
       idx, indexGetBoundString(propdata->topoorder[idx]),
-      SCIPvarGetName(SCIPgetVars(scip)[getVarIndex(propdata->topoorder[idx])]));
+      SCIPvarGetName(propdata->vars[getVarIndex(propdata->topoorder[idx])]));
 
    if( SCIPeventGetType(event) == SCIP_EVENTTYPE_GUBCHANGED && SCIPvarIsBinary(SCIPeventGetVar(event))
       && SCIPeventGetNewbound(event) > 0.5 )
@@ -1841,7 +1850,7 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
       return SCIP_OKAY;
 
    assert(getVarIndex(propdata->topoorder[idx]) < SCIPgetNVars(scip));
-   assert(SCIPvarGetType(SCIPgetVars(scip)[getVarIndex(propdata->topoorder[idx])]) != SCIP_VARTYPE_BINARY
+   assert(SCIPvarGetType(propdata->vars[getVarIndex(propdata->topoorder[idx])]) != SCIP_VARTYPE_BINARY
       || (isIndexLowerbound(propdata->topoorder[idx]) == (SCIPeventGetNewbound(event) > 0.5)));
 
    /* add the bound change to the propagation queue, if it is not already contained */
