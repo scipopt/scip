@@ -1893,7 +1893,7 @@ SCIP_RETCODE SCIPpriceLoop(
          if( (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_FULL
              || ((SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH && npricerounds % 100 == 1) )
          {
-            SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, TRUE) );
+            SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, TRUE, TRUE) );
          }
       }
 
@@ -2103,7 +2103,7 @@ SCIP_RETCODE priceAndCutLoop(
          /* display node information line for root node */
          if( root && (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH )
          {
-            SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, TRUE) );
+            SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, TRUE, TRUE) );
          }
 
          if( !(*lperror) )
@@ -4301,7 +4301,7 @@ SCIP_RETCODE SCIPsolveCIP(
       *restart = *restart || (stat->userrestart && SCIPtreeGetNNodes(tree) > 0 && restartAllowed(set, stat));
 
       /* display node information line */
-      SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol) );
+      SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol, TRUE) );
 
       SCIPdebugMessage("Processing of node %"SCIP_LONGINT_FORMAT" in depth %d finished. %d siblings, %d children, %d leaves left\n",
          stat->nnodes, SCIPnodeGetDepth(focusnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));

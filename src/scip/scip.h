@@ -17699,7 +17699,8 @@ EXTERN
 SCIP_RETCODE SCIPprintDisplayLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   SCIP_VERBLEVEL        verblevel           /**< minimal verbosity level to actually display the information line */
+   SCIP_VERBLEVEL        verblevel,          /**< minimal verbosity level to actually display the information line */
+   SCIP_Bool             endline             /**< should the line be terminated with a newline symbol? */
    );
 
 /** gets total number of implications between variables that are stored in the implication graph

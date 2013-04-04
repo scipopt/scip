@@ -34975,14 +34975,15 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
 SCIP_RETCODE SCIPprintDisplayLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   SCIP_VERBLEVEL        verblevel           /**< minimal verbosity level to actually display the information line */
+   SCIP_VERBLEVEL        verblevel,          /**< minimal verbosity level to actually display the information line */
+   SCIP_Bool             endline             /**< should the line be terminated with a newline symbol? */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPprintDisplayLine", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( (SCIP_VERBLEVEL)scip->set->disp_verblevel >= verblevel )
    {
-      SCIP_CALL( SCIPdispPrintLine(scip->set, scip->messagehdlr, scip->stat, file, TRUE) );
+      SCIP_CALL( SCIPdispPrintLine(scip->set, scip->messagehdlr, scip->stat, file, TRUE, endline) );
    }
 
    return SCIP_OKAY;

@@ -562,7 +562,7 @@ SCIP_RETCODE primalAddSol(
    /* display node information line */
    if( insertpos == 0 && !replace && set->stage >= SCIP_STAGE_SOLVING )
    {
-      SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, TRUE) );
+      SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, TRUE, TRUE) );
    }
 
    /* if an original solution was added during solving, try to transfer it to the transformed space */

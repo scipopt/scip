@@ -396,7 +396,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
          /* display node information line in root node */
          if( SCIPgetDepth(scip) == 0 && nsbcalls % 100 == 0 )
          {
-            SCIP_CALL( SCIPprintDisplayLine(scip, NULL, SCIP_VERBLEVEL_HIGH) );
+            SCIP_CALL( SCIPprintDisplayLine(scip, NULL, SCIP_VERBLEVEL_HIGH, TRUE) );
          }
 
          /* check for an error in strong branching */
