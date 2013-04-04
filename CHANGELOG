@@ -24,6 +24,7 @@ fixed bugs:
 - fixed bug in sepa_zerohalf.c not copying the displays to the subscip, but still changing a display parameter there
 - fixed bug in SCIPlpComputeRelIntPoint() with wrong iteration limit and with wrong recompution
 - fixed iteration limit determination in sepa_closecuts
+- fixed bug in prop_vbound w.r.t. creation of variables during the search
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
