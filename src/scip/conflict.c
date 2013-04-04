@@ -1680,13 +1680,13 @@ SCIP_RETCODE updateStatistics(
       {
          SCIP_VAR* var;
          SCIP_BRANCHDIR branchdir;
-         unsigned int boundtype;
+         SCIP_BOUNDTYPE boundtype;
          SCIP_Real bound;
 
          assert(stat != NULL);
 
          var = conflictset->bdchginfos[i]->var;
-         boundtype = conflictset->bdchginfos[i]->boundtype;
+         boundtype = SCIPbdchginfoGetBoundtype(conflictset->bdchginfos[i]);
          bound = conflictset->relaxedbds[i];
 
          branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS); /*lint !e641*/
