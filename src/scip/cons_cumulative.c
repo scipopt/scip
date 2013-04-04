@@ -8751,9 +8751,7 @@ SCIP_RETCODE constraintNonOverlappingGraph(
 
       SCIPdebugMessage("constraint <%s>\n", SCIPconsGetName(conss[c]));
 
-      /* check pairwise if two jobs have a cumulative demand larger than the capacity; additionally collect the maximum
-       * duration for each job
-       */
+      /* check pairwise if two jobs have a cumulative demand larger than the capacity */
       for( i = 0; i < nvars; ++i )
       {
          int idx1;
@@ -8770,6 +8768,25 @@ SCIP_RETCODE constraintNonOverlappingGraph(
             if( demands[i] + demands[j] > capacity )
             {
                int idx2;
+               int est1;
+               int est2;
+               int lct1;
+               int lct2;
+
+               /* check if the effective horizon is large enough */
+               est1 = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[i]));
+               est2 = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[j]));
+
+               /* at least one of the jobs needs to start at hmin or later */
+               if( est1 < consdata->hmin && est2 < consdata->hmin )
+                  continue;
+
+               lct1 = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[i])) + consdata->durations[i];
+               lct2 = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[j])) + consdata->durations[j];
+
+               /* at least one of the jobs needs to finish not later then hmin */
+               if( lct1 > consdata->hmax && lct2 < consdata->hmax )
+                  continue;
 
                SCIP_CALL( getNodeIdx(scip, tcliquegraph, vars[j], &idx2) );
                assert(idx2 >= 0);
@@ -8782,6 +8799,7 @@ SCIP_RETCODE constraintNonOverlappingGraph(
 
                tcliquegraph->demandmatrix[idx1][idx2] = TRUE;
                tcliquegraph->demandmatrix[idx2][idx1] = TRUE;
+
             }
          }
       }
