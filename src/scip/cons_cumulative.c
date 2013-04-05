@@ -9509,14 +9509,6 @@ SCIP_RETCODE removeRedundantConss(
 
                SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
 
-               SCIP_CALL( SCIPprintCons(scip, cons0, NULL) );
-               SCIPinfoMessage(scip, NULL, "\n");
-
-               SCIP_CALL( SCIPprintCons(scip, cons1, NULL) );
-               SCIPinfoMessage(scip, NULL, "\n");
-
-               SCIPinfoMessage(scip, NULL, "\n");
-
                SCIP_CALL( SCIPdelCons(scip, cons0) );
                (*ndelconss)++;
             }
