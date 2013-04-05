@@ -98,6 +98,7 @@
 #define DEFAULT_DUALPRESOLVE            TRUE /**< should dual presolving be applied? */
 #define DEFAULT_COEFTIGHTENING         FALSE /**< should coeffisient tightening be applied? */
 #define DEFAULT_NORMALIZE               TRUE /**< should demands and capacity be normalized? */
+#define DEFAULT_PRESOLPAIRWISE          TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_DISJUNCTIVE             TRUE /**< extract disjunctive constraints? */
 #define DEFAULT_DETECTDISJUNCTIVE       TRUE /**< search for conflict set via maximal cliques to detect disjunctive constraints */
 #define DEFAULT_DETECTVARBOUNDS         TRUE /**< search for conflict set via maximal cliques to detect variable bound constraints */
@@ -156,6 +157,9 @@ struct SCIP_ConsData
    int                   hmin;               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax;               /**< right bound of time axis to be considered  (not including hmax) */
 
+   unsigned int          signature;          /**< constraint signature which is need for pairwise comparison */
+
+   unsigned int          validsignature:1;   /**< is the signature valid */
    unsigned int          normalized:1;       /**< is the constraint normalized */
    unsigned int          covercuts:1;        /**< cover cuts are created? */
    unsigned int          propagated:1;       /**< is constraint propagted */
@@ -191,6 +195,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             detectdisjunctive;  /**< search for conflict set via maximal cliques to detect disjunctive constraints */
    SCIP_Bool             detectvarbounds;    /**< search for conflict set via maximal cliques to detect variable bound constraints */
    SCIP_Bool             usebdwidening;      /**< should bound widening be used during conflict analysis? */
+   SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
 
    SCIP_Longint          maxnodes;           /**< number of branch-and-bound nodes to solve an independent cumulative constraint  (-1: no limit) */
 
@@ -1549,6 +1554,26 @@ SCIP_RETCODE consdataDropAllEvents(
    return SCIP_OKAY;
 }
 
+/** initialize variable lock data structure */
+static
+void initializeLocks(
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_Bool             locked              /**< should the variable be locked? */
+   )
+{
+   int nvars;
+   int v;
+
+   nvars = consdata->nvars;
+
+   /* initialize locking arrays */
+   for( v = 0; v < nvars; ++v )
+   {
+      consdata->downlocks[v] = locked;
+      consdata->uplocks[v] = locked;
+   }
+}
+
 /** creates constraint data of cumulative constraint */
 static
 SCIP_RETCODE consdataCreate(
@@ -1594,6 +1619,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->bcoverrowssize = 0;
    (*consdata)->nvars = nvars;
    (*consdata)->varssize = nvars;
+   (*consdata)->signature = 0;
+   (*consdata)->validsignature = FALSE;
    (*consdata)->normalized = FALSE;
    (*consdata)->covercuts = FALSE;
    (*consdata)->propagated = FALSE;
@@ -1611,13 +1638,8 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->downlocks, nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->uplocks, nvars) );
 
-      /* initialize locking arrays */
-      for( v = 0; v < nvars; ++v )
-      {
-         /* the locks are only used if the contraint is a check constraint */
-         (*consdata)->downlocks[v] = check;
-         (*consdata)->uplocks[v] = check;
-      }
+      /* initialize variable lock data structure; the locks are only used if the contraint is a check constraint */
+      initializeLocks(*consdata, check);
 
       if( linkingconss != NULL )
       {
@@ -1856,6 +1878,7 @@ SCIP_RETCODE consdataDeletePos(
    }
 
    consdata->nvars--;
+   consdata->validsignature = FALSE;
    consdata->normalized = FALSE;
 
    return SCIP_OKAY;
@@ -9325,6 +9348,188 @@ SCIP_RETCODE detectRedundantConss(
    return SCIP_OKAY;
 }
 
+/** compute the constraint signature which is used to detect constraints which contain potentially the same set of variables */
+static
+void consdataCalcSignature(
+   SCIP_CONSDATA*        consdata            /**< cumulative constraint data */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int v;
+
+   if( consdata->validsignature )
+      return;
+
+   vars = consdata->vars;
+   nvars = consdata->nvars;
+
+   for( v = 0; v < nvars; ++v )
+   {
+      consdata->signature |= ((unsigned int)1 << ((unsigned int)SCIPvarGetIndex(vars[v]) % (sizeof(unsigned int) * 8)));
+   }
+
+   consdata->validsignature = TRUE;
+}
+
+/** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
+static
+SCIP_DECL_SORTINDCOMP(consdataCompVar)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata = (SCIP_CONSDATA*)dataptr;
+
+   assert(consdata != NULL);
+   assert(0 <= ind1 && ind1 < consdata->nvars);
+   assert(0 <= ind2 && ind2 < consdata->nvars);
+
+   return SCIPvarCompare(consdata->vars[ind1], consdata->vars[ind2]);
+}
+
+/** run a pairwise comparison */
+static
+SCIP_RETCODE removeRedundantConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< array of cumulative constraints */
+   int                   nconss,             /**< number of cumulative constraints */
+   int*                  ndelconss           /**< pointer to store the number of deletedconstraints */
+   )
+{
+   int i;
+   int j;
+
+   for( i = 0; i < nconss; ++i )
+   {
+      SCIP_CONSDATA* consdata0;
+      SCIP_CONS* cons0;
+
+      cons0 = conss[i];
+      assert(cons0 != NULL);
+
+      consdata0 = SCIPconsGetData(cons0);
+      assert(consdata0 != NULL);
+
+      consdataCalcSignature(consdata0);
+      assert(consdata0->validsignature);
+
+      for( j = i+1; j < nconss; ++j )
+      {
+         SCIP_CONSDATA* consdata1;
+         SCIP_CONS* cons1;
+
+         cons1 = conss[j];
+         assert(cons1 != NULL);
+
+         consdata1 = SCIPconsGetData(cons1);
+         assert(consdata1 != NULL);
+
+         if( consdata0->capacity != consdata1->capacity )
+            continue;
+
+         consdataCalcSignature(consdata1);
+         assert(consdata1->validsignature);
+
+         if( (consdata1->signature & (~consdata0->signature)) == 0 )
+         {
+            SCIPswapPointers((void**)&consdata0, (void**)&consdata1);
+            SCIPswapPointers((void**)&cons0, (void**)&cons1);
+            assert((consdata0->signature & (~consdata1->signature)) == 0);
+         }
+
+         if( (consdata0->signature & (~consdata1->signature)) == 0 )
+         {
+            int* perm0;
+            int* perm1;
+            int v0;
+            int v1;
+
+            if( consdata0->nvars > consdata1->nvars )
+               continue;
+
+            if( consdata0->hmin < consdata1->hmin )
+               continue;
+
+            if( consdata0->hmax > consdata1->hmax )
+               continue;
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &perm0, consdata0->nvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &perm1, consdata1->nvars) );
+
+            /* call sorting method  */
+            SCIPsort(perm0, consdataCompVar, (void*)consdata0, consdata0->nvars);
+            SCIPsort(perm1, consdataCompVar, (void*)consdata1, consdata1->nvars);
+
+            for( v0 = 0, v1 = 0; v0 < consdata0->nvars && v1 < consdata1->nvars; )
+            {
+               SCIP_VAR* var0;
+               SCIP_VAR* var1;
+               int duration0;
+               int duration1;
+               int demand0;
+               int demand1;
+               int idx0;
+               int idx1;
+               int comp;
+
+               idx0 = perm0[v0];
+               idx1 = perm1[v1];
+
+               var0 = consdata0->vars[idx0];
+               demand0 = consdata0->demands[idx0];
+               duration0 = consdata0->durations[idx0];
+
+               var1 = consdata1->vars[idx1];
+               demand1 = consdata1->demands[idx1];
+               duration1 = consdata1->durations[idx1];
+
+               if( demand0 != demand1 )
+                  break;
+
+               if( duration0 != duration1 )
+                  break;
+
+               comp = SCIPvarCompare(var0, var1);
+
+               if( comp == 0 )
+               {
+                  v0++;
+                  v1++;
+               }
+               else if( comp > 0 )
+                  v1++;
+               else
+                  break;
+            }
+
+            if( v0 == consdata0->nvars )
+            {
+               if( !SCIPconsIsChecked(cons1) )
+               {
+                  initializeLocks(consdata1, TRUE);
+               }
+
+               SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
+
+               SCIP_CALL( SCIPprintCons(scip, cons0, NULL) );
+               SCIPinfoMessage(scip, NULL, "\n");
+
+               SCIP_CALL( SCIPprintCons(scip, cons1, NULL) );
+               SCIPinfoMessage(scip, NULL, "\n");
+
+               SCIPinfoMessage(scip, NULL, "\n");
+
+               SCIP_CALL( SCIPdelCons(scip, cons0) );
+               (*ndelconss)++;
+            }
+
+            SCIPfreeBufferArray(scip, &perm1);
+            SCIPfreeBufferArray(scip, &perm0);
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 
@@ -9982,6 +10187,11 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
       SCIP_CALL( detectRedundantConss(scip, conshdlrdata, conss, nconss, naddconss) );
    }
 
+   if( !cutoff && conshdlrdata->presolpairwise )
+   {
+      SCIP_CALL( removeRedundantConss(scip, conss, nconss, ndelconss) );
+   }
+
    SCIPdebugMessage("delete %d constraints and changed %d variable bounds (cutoff %u)\n",
       *ndelconss - oldndelconss, *nchgbds - oldnchgbds, cutoff);
 
@@ -10414,6 +10624,10 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/normalize", "should demands and capacity be normalized?",
          &conshdlrdata->normalize, FALSE, DEFAULT_NORMALIZE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/presolpairwise",
+         "should pairwise constraint comparison be performed in presolving?",
+         &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/disjunctive", "extract disjunctive constraints?",
          &conshdlrdata->disjunctive, FALSE, DEFAULT_DISJUNCTIVE, NULL, NULL) );
