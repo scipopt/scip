@@ -3523,7 +3523,7 @@ SCIP_RETCODE propagateCoretimes(
             break;
 
          /* second try to update the latest start time */
-         SCIP_CALL( coretimesUpdateUb(scip, vars[j], durations[j], demands[j], capacity, cons,
+         SCIP_CALL( coretimesUpdateUb(scip, var, duration, demand, capacity, cons,
                profile, nchgbds) );
 
          if( *cutoff )
