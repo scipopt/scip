@@ -2195,6 +2195,9 @@ SCIP_RETCODE checkSystemGF2(
       if ( consdata->nvars == 0 )
          continue;
 
+      if( !xoractive[i] )
+         continue;
+
       SCIPfreeBufferArray(scip, &(A[j++]));
    }
    SCIPfreeBufferArray(scip, &A);
