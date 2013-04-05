@@ -328,6 +328,9 @@ void transformVariable(
    SCIP_Real lb;
    SCIP_Real ub;
 
+   SCIP_Bool negatecoeffs; /* do the row coefficients need to be negated? */
+   SCIP_Real deltashift;     /* difference from previous transformation */
+
    assert(matrix != NULL);
    assert(0 <= colpos && colpos < heurdata->nlpcols);
    col = heurdata->lpcols[colpos];
@@ -340,9 +343,8 @@ void transformVariable(
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
 
-   assert(matrix->transformstatus[colpos] == TRANSFORMSTATUS_NONE
-      || matrix->transformstatus[colpos] == TRANSFORMSTATUS_FREE);
-
+   deltashift = 0.0;
+   negatecoeffs = FALSE;
    /* if both lower and upper bound are -infinity and infinity, resp., this is reflected by a free transform status.
     * If the lower bound is already zero, this is reflected by identity transform status. In both cases, none of the
     * corresponding rows needs to be modified.
@@ -350,39 +352,43 @@ void transformVariable(
    if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
    {
       matrix->upperbounds[colpos] = ub;
+
+      if( matrix->transformstatus[colpos] == TRANSFORMSTATUS_NEG )
+         negatecoeffs = TRUE;
+
       matrix->transformstatus[colpos] = TRANSFORMSTATUS_FREE;
+      deltashift = matrix->transformshiftvals[colpos];
       matrix->transformshiftvals[colpos] = 0.0;
    }
-   else if( SCIPisFeasEQ(scip, lb, 0.0) )
+   else if( SCIPisFeasLE(scip, ABS(lb), ABS(ub)) )
    {
+      assert(!SCIPisInfinity(scip, lb));
       matrix->transformstatus[colpos] = TRANSFORMSTATUS_LB;
-      matrix->upperbounds[colpos] = ub;
-      matrix->transformshiftvals[colpos] = 0.0;
+      deltashift = lb;
+      matrix->transformshiftvals[colpos] = lb;
    }
    else
+   {
+      assert(!SCIPisInfinity(scip, ub));
+      if( matrix->transformstatus[colpos] != TRANSFORMSTATUS_NEG )
+         negatecoeffs = TRUE;
+      matrix->transformstatus[colpos] = TRANSFORMSTATUS_NEG;
+      deltashift = ub;
+      matrix->transformshiftvals[colpos] = ub;
+   }
+
+   /* a real transformation is necessary. The variable x is either shifted by -lb or
+    * replaced by ub - x, depending on the smaller absolute of lb and ub.
+    */
+   if( !SCIPisFeasZero(scip, deltashift) || negatecoeffs )
    {
       SCIP_Real* vals;
       int* rows;
 
-      SCIP_Real bound;
       int nrows;
       int i;
 
-      /* a real transformation is necessary. The variable x is either shifted by -lb or
-       * replaced by ub - x, depending on the smaller absolute of lb and ub.
-       */
-      if( SCIPisFeasLE(scip, ABS(lb), ABS(ub)) )
-      {
-         matrix->transformstatus[colpos] = TRANSFORMSTATUS_LB;
-         bound = lb;
-      }
-      else
-      {
-         matrix->transformstatus[colpos] = TRANSFORMSTATUS_NEG;
-         bound = ub;
-      }
-
-      assert(!SCIPisInfinity(scip, bound));
+      assert(!SCIPisInfinity(scip, deltashift));
 
       /* get nonzero values and corresponding rows of column */
       getColumnData(matrix, colpos, &vals, &rows, &nrows);
@@ -395,12 +401,12 @@ void transformVariable(
          assert(rows[i] < matrix->nrows);
 
          if( !SCIPisInfinity(scip, -(matrix->lhs[rows[i]])) )
-            matrix->lhs[rows[i]] -= (vals[i]) * bound;
+            matrix->lhs[rows[i]] -= (vals[i]) * deltashift;
 
          if( !SCIPisInfinity(scip, matrix->rhs[rows[i]]) )
-            matrix->rhs[rows[i]] -= (vals[i]) * bound;
+            matrix->rhs[rows[i]] -= (vals[i]) * deltashift;
 
-         if( matrix->transformstatus[colpos] == TRANSFORMSTATUS_NEG )
+         if( negatecoeffs )
            (vals[i]) = -(vals[i]);
 
          assert(SCIPisFeasLE(scip, matrix->lhs[rows[i]], matrix->rhs[rows[i]]));
@@ -411,7 +417,7 @@ void transformVariable(
       else
          matrix->upperbounds[colpos] = SCIPinfinity(scip);
 
-      matrix->transformshiftvals[colpos] = bound;
+
    }
    SCIPdebugMessage("Variable <%s> at colpos %d transformed. LB <%g> --> <%g>, UB <%g> --> <%g>\n",
       SCIPvarGetName(var), colpos, lb, 0.0, ub, matrix->upperbounds[colpos]);
@@ -938,7 +944,7 @@ SCIP_RETCODE getOptimalShiftingValue(
          /* check if the minimum feasibility recovery shift lies within variable bounds and set corresponding array
           * values
           */
-         if( SCIPisFeasLE(scip, minfeasshift, upperbound) )
+         if( !SCIPisInfinity(scip, minfeasshift) && SCIPisFeasLE(scip, minfeasshift, upperbound) )
          {
             steps[i] = minfeasshift;
             violationchange[i] = -rowweight;
@@ -1073,20 +1079,29 @@ void updateTransformation(
    /* depending on the variable status, deltashift is calculated differently. */
    if( status == TRANSFORMSTATUS_LB )
    {
-      deltashift = lb - (*transformshiftval);
-      *transformshiftval = lb;
-      if( !SCIPisInfinity(scip, ub) )
-         matrix->upperbounds[varindex] = ub - lb;
+      if( SCIPisInfinity(scip, -lb) )
+         transformVariable(scip, matrix, heurdata, varindex);
+      else {
+         deltashift = lb - (*transformshiftval);
+         *transformshiftval = lb;
+         if( !SCIPisInfinity(scip, ub) )
+            matrix->upperbounds[varindex] = ub - lb;
+      }
    }
 
    if( status == TRANSFORMSTATUS_NEG )
    {
-      assert(!SCIPisInfinity(scip, ub));
-      deltashift = (*transformshiftval) - ub;
-      *transformshiftval = ub;
 
-      if( !SCIPisInfinity(scip, -lb) )
-         matrix->upperbounds[varindex] = ub - lb;
+      if( SCIPisInfinity(scip, ub) )
+         transformVariable(scip, matrix, heurdata, varindex);
+      else
+      {
+         deltashift = (*transformshiftval) - ub;
+         *transformshiftval = ub;
+
+         if( !SCIPisInfinity(scip, -lb) )
+            matrix->upperbounds[varindex] = ub - lb;
+      }
    }
 
    if( status == TRANSFORMSTATUS_FREE )
@@ -1151,10 +1166,8 @@ void updateTransformation(
 
          SCIPdebugMessage("             -->                           %g <= 0 <= %g %s\n",
             matrix->lhs[rows[i]], matrix->rhs[rows[i]], updaterow ? ": row violation updated " : "");
-
       }
    }
-
    SCIPdebugMessage("  Variable <%d> [%g,%g], status %d(%g), ub %g \n", varindex, lb, ub, status,
       matrix->transformshiftvals[varindex], matrix->upperbounds[varindex]);
 }
