@@ -9558,10 +9558,6 @@ SCIP_RETCODE removeRedundantConss(
             {
                SCIP_VAR* var0;
                SCIP_VAR* var1;
-               int duration0;
-               int duration1;
-               int demand0;
-               int demand1;
                int idx0;
                int idx1;
                int comp;
@@ -9570,23 +9566,30 @@ SCIP_RETCODE removeRedundantConss(
                idx1 = perm1[v1];
 
                var0 = consdata0->vars[idx0];
-               demand0 = consdata0->demands[idx0];
-               duration0 = consdata0->durations[idx0];
 
                var1 = consdata1->vars[idx1];
-               demand1 = consdata1->demands[idx1];
-               duration1 = consdata1->durations[idx1];
-
-               if( demand0 != demand1 )
-                  break;
-
-               if( duration0 != duration1 )
-                  break;
 
                comp = SCIPvarCompare(var0, var1);
 
                if( comp == 0 )
                {
+                  int duration0;
+                  int duration1;
+                  int demand0;
+                  int demand1;
+
+                  demand0 = consdata0->demands[idx0];
+                  duration0 = consdata0->durations[idx0];
+
+                  demand1 = consdata1->demands[idx1];
+                  duration1 = consdata1->durations[idx1];
+
+                  if( demand0 != demand1 )
+                     break;
+
+                  if( duration0 != duration1 )
+                     break;
+
                   v0++;
                   v1++;
                }
