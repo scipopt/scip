@@ -2141,6 +2141,7 @@ SCIP_RETCODE resolvePropagationCoretimes(
    SCIP_VAR*             infervar,           /**< inference variable */
    int                   inferdemand,        /**< demand of the inference variable */
    int                   inferpeak,          /**< time point which causes the propagation */
+   int                   relaxedpeak,        /**< relaxed time point which would be sufficient to be proved */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
    SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            explanation         /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
@@ -2149,6 +2150,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
    SCIP_VAR* var;
    SCIP_Bool* reported;
    int duration;
+   int maxlst;
+   int minect;
    int ect;
    int lst;
    int j;
@@ -2161,6 +2164,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
 
    /* adjusted capacity */
    capacity -= inferdemand;
+   maxlst = INT_MIN;
+   minect = INT_MAX;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &reported, nvars) );
    BMSclearMemoryArray(reported, nvars);
@@ -2201,6 +2206,9 @@ SCIP_RETCODE resolvePropagationCoretimes(
          capacity -= demands[j];
          reported[j] = TRUE;
 
+         maxlst = MAX(maxlst, lst);
+         minect = MIN(minect, ect);
+
          if( explanation != NULL )
             explanation[j] = TRUE;
 
@@ -2223,6 +2231,9 @@ SCIP_RETCODE resolvePropagationCoretimes(
       {
          capacity -= demands[j];
          reported[j] = TRUE;
+
+         maxlst = MAX(maxlst, lst);
+         minect = MIN(minect, ect);
 
          if( explanation != NULL )
             explanation[j] = TRUE;
@@ -2290,6 +2301,31 @@ SCIP_RETCODE resolvePropagationCoretimes(
          ncands--;
          capacity += canddemands[ncands];
          assert(ncands > 0);
+      }
+
+      /* compute the size (number of time steps) of the job cores */
+      for( c = 0; c < ncands; ++c )
+      {
+         var = vars[cands[c]];
+         assert(var != NULL);
+
+         duration = durations[cands[c]];
+
+         ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
+         lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+
+         maxlst = MAX(maxlst, lst);
+         minect = MIN(minect, ect);
+      }
+
+      /* check if the collect variable are sufficient to prove the relaxed bound (relaxedpeak) */
+      if( relaxedpeak < inferpeak )
+      {
+         inferpeak = MAX(maxlst, relaxedpeak);
+      }
+      else if( relaxedpeak > inferpeak )
+      {
+         inferpeak = MIN(minect, relaxedpeak);
       }
 
       /* post all necessary bound changes */
@@ -2417,6 +2453,7 @@ SCIP_RETCODE respropCumulativeCondition(
    INFERINFO             inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound which is sufficient to be explained */
    SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
@@ -2430,6 +2467,7 @@ SCIP_RETCODE respropCumulativeCondition(
       int inferduration;
       int inferpos;
       int inferpeak;
+      int relaxedpeak;
 
       /* get the position of the inferred variable in the vars array */
       inferpos = inferInfoGetData1(inferinfo);
@@ -2452,12 +2490,14 @@ SCIP_RETCODE respropCumulativeCondition(
           */
          assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) - SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < inferduration + 0.5);
 
-         SCIPdebugMessage("variable <%s>: upper bound changed from %g to %g\n",
+         SCIPdebugMessage("variable <%s>: upper bound changed from %g to %g (relaxed %g)\n",
             SCIPvarGetName(infervar), SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE),
-            SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE));
+            SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE), relaxedbd);
 
          /* get the inference peak that the time point which lead to the that propagtion */
          inferpeak = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE)) + inferduration;
+         relaxedpeak = relaxedbd + inferduration;
+         assert(relaxedpeak >= inferpeak);
 
          /* old upper bound of variable itself is part of the explanation */
          SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
@@ -2466,19 +2506,21 @@ SCIP_RETCODE respropCumulativeCondition(
       {
          assert(boundtype == SCIP_BOUNDTYPE_LOWER);
 
-         SCIPdebugMessage("variable <%s>: lower bound changed from %g to %g\n",
+         SCIPdebugMessage("variable <%s>: lower bound changed from %g to %g (relaxed %g)\n",
             SCIPvarGetName(infervar), SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE),
-            SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE));
+            SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE), relaxedbd);
 
          /* get the time interval where the job could not be scheduled */
          inferpeak = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE)) - 1;
+         relaxedpeak = relaxedbd - 1;
+         assert(relaxedpeak <= inferpeak);
 
          /* old lower bound of variable itself is part of the explanation */
          SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
       }
 
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity,
-            infervar, inferdemand, inferpeak, bdchgidx, usebdwidening, explanation) );
+            infervar, inferdemand, inferpeak, relaxedpeak, bdchgidx, usebdwidening, explanation) );
 
       if( explanation != NULL )
          explanation[inferpos] = TRUE;
@@ -3078,7 +3120,7 @@ SCIP_RETCODE analyseInfeasibelCoreInsertion(
       SCIPdebugMessage("add lower and upper bounds of variable <%s>\n", SCIPvarGetName(infervar));
 
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity,
-            infervar, inferdemand, inferpeak, NULL, usebdwidening, explanation) );
+            infervar, inferdemand, inferpeak, inferpeak, NULL, usebdwidening, explanation) );
 
       /* add both bound of the inference variable since these biuld the core which we could not inserted */
       if( usebdwidening )
@@ -10268,7 +10310,7 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
 
    SCIP_CALL( respropCumulativeCondition(scip, consdata->nvars, consdata->vars,
          consdata->durations, consdata->demands, consdata->capacity, consdata->hmin, consdata->hmax,
-         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, conshdlrdata->usebdwidening, NULL, result) );
+         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, relaxedbd, conshdlrdata->usebdwidening, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -11127,12 +11169,13 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    int                   inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound which is sufficient to be explained */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
    SCIP_CALL( respropCumulativeCondition(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, TRUE, explanation, result) );
+         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, relaxedbd, TRUE, explanation, result) );
 
    return SCIP_OKAY;
 }

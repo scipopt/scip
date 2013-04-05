@@ -3299,7 +3299,7 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
 
       /* resolve propagate of cumulative condition */
       SCIP_CALL( SCIPrespropCumulativeCondition(scip, nvars, vars, durations, demands, consdata->capacity, consdata->hmin, consdata->hmax,
-            infervar, inferinfo, boundtype, bdchgidx, explanation, result) );
+            infervar, inferinfo, boundtype, bdchgidx, relaxedbd, explanation, result) );
 
       /* if the cumulative constraint handler successfully create an explanation for the propagate we extend this
        * explanation with the required choice variables
