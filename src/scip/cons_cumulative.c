@@ -2157,9 +2157,9 @@ SCIP_RETCODE resolvePropagationCoretimes(
 
    SCIPdebugMessage("variable <%s>: (demand %d) resolve propagation of core time algorithm (peak %d)\n",
       SCIPvarGetName(infervar), inferdemand, inferpeak);
-
    assert(nvars > 0);
 
+   /* adjusted capacity */
    capacity -= inferdemand;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &reported, nvars) );
@@ -2229,38 +2229,79 @@ SCIP_RETCODE resolvePropagationCoretimes(
       }
    }
 
-   /* collect all cores of the variables which lay in the considered time window except the inference variable */
-   for( j = 0; j < nvars && capacity >= 0; ++j )
+   if( capacity >= 0 )
    {
-      var = vars[j];
-      assert(var != NULL);
+      int* cands;
+      int* canddemands;
+      int ncands;
+      int c;
 
-      /* skip inference variable */
-      if( var == infervar || reported[j] )
-         continue;
+      SCIP_CALL( SCIPallocBufferArray(scip, &cands, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &canddemands, nvars) );
+      ncands = 0;
 
-      duration = durations[j];
-      assert(duration > 0);
-
-      /* compute cores of jobs; if core overlaps interval of inference variable add this job to the array */
-      assert(SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)));
-      assert(SCIPisFeasIntegral(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)));
-      assert(SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)));
-      assert(SCIPisFeasIntegral(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)));
-
-      /* collect local core information */
-      ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
-      lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
-
-      SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
-         SCIPvarGetName(var), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE),
-         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration, demands[j]);
-
-      /* check if the inference peak is part of the core */
-      if( inferpeak < ect && lst <= inferpeak )
+      /* collect all cores of the variables which lay in the considered time window except the inference variable */
+      for( j = 0; j < nvars; ++j )
       {
+         var = vars[j];
+         assert(var != NULL);
+
+         /* skip inference variable */
+         if( var == infervar || reported[j] )
+            continue;
+
+         duration = durations[j];
+         assert(duration > 0);
+
+         /* compute cores of jobs; if core overlaps interval of inference variable add this job to the array */
+         assert(SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)));
+         assert(SCIPisFeasIntegral(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)));
+         assert(SCIPisFeasIntegral(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)));
+
+         /* collect local core information */
+         ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
+         lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+
+         SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
+            SCIPvarGetName(var), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE),
+            SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration, demands[j]);
+
+         /* check if the inference peak is part of the core */
+         if( inferpeak < ect && lst <= inferpeak )
+         {
+            cands[ncands] = j;
+            canddemands[ncands] = demands[j];
+            ncands++;
+
+            capacity -= demands[j];
+         }
+      }
+
+      /* sort candidates indices w.r.t. their demands */
+      SCIPsortDownIntInt(canddemands, cands, ncands);
+
+      assert(capacity < 0);
+      assert(ncands > 0);
+
+      /* greedily remove candidates form the list such that the needed capacity is still exceeded */
+      while( capacity + canddemands[ncands-1] < 0 )
+      {
+         ncands--;
+         capacity += canddemands[ncands];
+         assert(ncands > 0);
+      }
+
+      /* post all necessary bound changes */
+      for( c = 0; c < ncands; ++c )
+      {
+         var = vars[cands[c]];
+         assert(var != NULL);
+
          if( usebdwidening )
          {
+            duration = durations[cands[c]];
+
             SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, (SCIP_Real)(inferpeak - duration + 1)) );
             SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, (SCIP_Real)inferpeak) );
          }
@@ -2270,14 +2311,13 @@ SCIP_RETCODE resolvePropagationCoretimes(
             SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
          }
 
-         capacity -= demands[j];
-
          if( explanation != NULL )
-            explanation[j] = TRUE;
+            explanation[cands[j]] = TRUE;
       }
-   }
 
-   assert(capacity < 0);
+      SCIPfreeBufferArray(scip, &canddemands);
+      SCIPfreeBufferArray(scip, &cands);
+   }
 
    SCIPfreeBufferArray(scip, &reported);
 
