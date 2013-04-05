@@ -9542,7 +9542,7 @@ SCIP_RETCODE removeRedundantConss(
 
             if( v0 == consdata0->nvars )
             {
-               if( !SCIPconsIsChecked(cons1) )
+               if( SCIPconsIsChecked(cons0) && !SCIPconsIsChecked(cons1) )
                {
                   initializeLocks(consdata1, TRUE);
                }
