@@ -2374,6 +2374,7 @@ SCIP_RETCODE resolvePropagationEdgeFinding(
    SCIP_VAR*             infervar,           /**< variable whose bound change is to be explained */
    INFERINFO             inferinfo,          /**< inference info containing position of correct bdchgids */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            explanation         /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    )
 {
@@ -2397,6 +2398,7 @@ SCIP_RETCODE resolvePropagationEdgeFinding(
       SCIP_VAR* var;
       SCIP_Bool left;
       SCIP_Bool right;
+      int duration;
       int lb;
       int ub;
 
@@ -2414,21 +2416,33 @@ SCIP_RETCODE resolvePropagationEdgeFinding(
       lb = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
       ub = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
 
+      duration = durations[j];
+      assert(duration > 0);
+
       /* in case the earliest start time is equal to hmin we have to also consider the jobs which run in that region
        * since we use adjusted jobs during the propagation
        */
-      left = (est == hmin && lb + durations[j] > hmin) || lb >= est;
+      left = (est == hmin && lb + duration > hmin) || lb >= est;
 
       /* in case the latest completion time is equal to hmin we have to also consider the jobs which run in that region
        * since we use adjusted jobs during the propagation
        */
-      right = (lct == hmax && ub < hmax) || ub + durations[j] <= lct;
+      right = (lct == hmax && ub < hmax) || ub + duration <= lct;
 
       /* store all jobs running in [est_omega; lct_omega] */
       if( left && right  )
       {
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[j], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[j], bdchgidx) );
+         /* check if bound widening should be used */
+         if( usebdwidening )
+         {
+            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, (SCIP_Real)(lct - duration)) );
+            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, (SCIP_Real)(est)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
+            SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
+         }
 
          if( explanation != NULL )
             explanation[j] = TRUE;
@@ -2539,7 +2553,7 @@ SCIP_RETCODE respropCumulativeCondition(
       }
 
       SCIP_CALL( resolvePropagationEdgeFinding(scip, nvars, vars, durations, hmin, hmax,
-            infervar, inferinfo, bdchgidx, explanation) );
+            infervar, inferinfo, bdchgidx, usebdwidening, explanation) );
       break;
 
    default:
