@@ -5483,7 +5483,7 @@ SCIP_RETCODE separateCons(
                if( !SCIPisInfinity(scip, consdata->rhs) )
                {
                   SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, NULL, consdata->nvars, consdata->vars,
-                        consdata->vals, +1.0, consdata->rhs, sol, ncuts, cutoff) );
+                        consdata->vals, +1.0, consdata->rhs, sol, cutoff, ncuts) );
                }
             }
             else if( SCIPisFeasPositive(scip, dualsol) )
@@ -5491,7 +5491,7 @@ SCIP_RETCODE separateCons(
                if( !SCIPisInfinity(scip, -consdata->lhs) )
                {
                   SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, NULL, consdata->nvars, consdata->vars,
-                        consdata->vals, -1.0, -consdata->lhs, sol, ncuts, cutoff) );
+                        consdata->vals, -1.0, -consdata->lhs, sol, cutoff, ncuts) );
                }
             }
          }
@@ -5501,12 +5501,12 @@ SCIP_RETCODE separateCons(
          if( !SCIPisInfinity(scip, consdata->rhs) )
          {
             SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, NULL, consdata->nvars, consdata->vars,
-                  consdata->vals, +1.0, consdata->rhs, sol, ncuts, cutoff) );
+                  consdata->vals, +1.0, consdata->rhs, sol, cutoff, ncuts) );
          }
          if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
             SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, NULL, consdata->nvars, consdata->vars,
-                  consdata->vals, -1.0, -consdata->lhs, sol, ncuts, cutoff) );
+                  consdata->vals, -1.0, -consdata->lhs, sol, cutoff, ncuts) );
          }
       }
    }
