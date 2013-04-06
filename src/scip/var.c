@@ -13491,6 +13491,9 @@ SCIP_RETCODE SCIPvarIncVSIDS(
    if( !stat->collectvarhistory )
       return SCIP_OKAY;
 
+   if( SCIPsetIsZero(set, weight) )
+      return SCIP_OKAY;
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -13516,6 +13519,8 @@ SCIP_RETCODE SCIPvarIncVSIDS(
          assert(history != NULL);
 
          SCIPhistoryIncVSIDS(history, dir, weight);
+         SCIPdebugMessage("variable (<%s> %s %g) + <%g> = <%g>\n", SCIPvarGetName(var), dir == SCIP_BRANCHDIR_UPWARDS ? ">=" : "<=",
+            value, weight, SCIPhistoryGetVSIDS(history, dir));
       }
 
       return SCIP_OKAY;

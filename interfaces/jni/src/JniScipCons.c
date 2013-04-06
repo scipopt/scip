@@ -88,10 +88,13 @@ jlong JNISCIPCONS(conshdlrGetData)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetData is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
+
+   return (jlong) (size_t) SCIPconshdlrGetData(conshdlr);
 }
 
 /** sets user data of constraint handler; user has to free old data in advance! */
@@ -114,7 +117,6 @@ void JNISCIPCONS(conshdlrSetData)(
    SCIPconshdlrSetData(conshdlr, conshdlrdata);
 }
 
-
 /** gets array with active constraints of constraint handler; a constraint is active if it is global and was not removed
  *  during presolving or it was added locally (in that case the local flag is TRUE) and the current node belongs to the
  *  corresponding sub tree
@@ -126,10 +128,25 @@ jlongArray JNISCIPCONS(conshdlrGetConss)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetConss is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** conss;
+   int nconss;
+   jlongArray jconss;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
+
+   conss = SCIPconshdlrGetConss(conshdlr);
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+
+   /* create jlongArray */
+   jconss = (*env)->NewLongArray(env, nconss);
+
+   /* fill long array with SCIP variable pointers */
+   (*env)->SetLongArrayRegion(env, jconss, 0, nconss, (jlong*)conss);
+
+   return jconss;
 }
 
 /** gets array with enforced constraints of constraint handler; this is local information */
@@ -140,10 +157,25 @@ jlongArray JNISCIPCONS(conshdlrGetEnfoConss)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetEnfoConss is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** conss;
+   int nconss;
+   jlongArray jconss;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
+
+   conss = SCIPconshdlrGetEnfoConss(conshdlr);
+   nconss = SCIPconshdlrGetNEnfoConss(conshdlr);
+
+   /* create jlongArray */
+   jconss = (*env)->NewLongArray(env, nconss);
+
+   /* fill long array with SCIP variable pointers */
+   (*env)->SetLongArrayRegion(env, jconss, 0, nconss, (jlong*)conss);
+
+   return jconss;
 }
 
 /** gets array with checked constraints of constraint handler; this is local information */
@@ -154,10 +186,25 @@ jlongArray JNISCIPCONS(conshdlrGetCheckConss)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetCheckConss is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** conss;
+   int nconss;
+   jlongArray jconss;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
+
+   conss = SCIPconshdlrGetCheckConss(conshdlr);
+   nconss = SCIPconshdlrGetNCheckConss(conshdlr);
+
+   /* create jlongArray */
+   jconss = (*env)->NewLongArray(env, nconss);
+
+   /* fill long array with SCIP variable pointers */
+   (*env)->SetLongArrayRegion(env, jconss, 0, nconss, (jlong*)conss);
+
+   return jconss;
 }
 
 /** gets total number of existing transformed constraints of constraint handler */
@@ -472,21 +519,13 @@ jlong JNISCIPCONS(conshdlrGetNEnfoPSCalls)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetNEnfoPSCalls is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
 
-   // SCIP_CONSHDLR* conshdlr;
-   // SCIP_Longint num;
-
-   // /* convert JNI pointer into C pointer */
-   // conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
-   // assert(conshdlr != NULL);
-
-   // num = SCIPconshdlrGetNEnfoPSCalls(conshdlr);
-
-   // return (jlong) num;
+   return (jlong) (size_t) SCIPconshdlrGetNEnfoPSCalls(conshdlr);
 }
 
 /** gets number of calls to the constraint handler's propagation method */
@@ -496,21 +535,13 @@ jlong JNISCIPCONS(conshdlrGetNPropCalls)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetNPropCalls is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
 
-   // SCIP_CONSHDLR* conshdlr;
-   // SCIP_Longint num;
-
-   // /* convert JNI pointer into C pointer */
-   // conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
-   // assert(conshdlr != NULL);
-
-   // num = SCIPconshdlrGetNPropCalls(conshdlr);
-
-   // return (jlong) num;
+   return (jlong) (size_t) SCIPconshdlrGetNPropCalls(conshdlr);
 }
 
 /** gets number of calls to the constraint handler's checking method */
@@ -520,21 +551,13 @@ jlong JNISCIPCONS(conshdlrGetNCheckCalls)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetNCheckCalls is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
 
-   // SCIP_CONSHDLR* conshdlr;
-   // SCIP_Longint num;
-
-   // /* convert JNI pointer into C pointer */
-   // conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
-   // assert(conshdlr != NULL);
-
-   // num = SCIPconshdlrGetNCheckCalls(conshdlr);
-
-   // return (jlong) num;
+   return (jlong) (size_t) SCIPconshdlrGetNCheckCalls(conshdlr);
 }
 
 /** gets number of calls to the constraint handler's resolve propagation method */
@@ -544,21 +567,13 @@ jlong JNISCIPCONS(conshdlrGetNRespropCalls)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetNRespropCalls is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
 
-   // SCIP_CONSHDLR* conshdlr;
-   // SCIP_Longint num;
-
-   // /* convert JNI pointer into C pointer */
-   // conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
-   // assert(conshdlr != NULL);
-
-   // num = SCIPconshdlrGetNRespropCalls(conshdlr);
-
-   // return (jlong) num;
+   return (jlong) SCIPconshdlrGetNRespropCalls(conshdlr);
 }
 
 /** gets total number of times, this constraint handler detected a cutoff */
@@ -568,21 +583,13 @@ jlong JNISCIPCONS(conshdlrGetNCutoffs)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetNCutoffs is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
 
-   // SCIP_CONSHDLR* conshdlr;
-   // SCIP_Longint num;
-
-   // /* convert JNI pointer into C pointer */
-   // conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
-   // assert(conshdlr != NULL);
-
-   // num = SCIPconshdlrGetNCutoffs(conshdlr);
-
-   // return (jlong) num;
+   return (jlong) SCIPconshdlrGetNCutoffs(conshdlr);
 }
 
 /** gets total number of cuts found by this constraint handler */
@@ -592,21 +599,13 @@ jlong JNISCIPCONS(conshdlrGetNCutsFound)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetNCutsFound is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
 
-   // SCIP_CONSHDLR* conshdlr;
-   // SCIP_Longint num;
-
-   // /* convert JNI pointer into C pointer */
-   // conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
-   // assert(conshdlr != NULL);
-
-   // num = SCIPconshdlrGetNCutsFound(conshdlr);
-
-   // return (jlong) num;
+   return (jlong) SCIPconshdlrGetNCutsFound(conshdlr);
 }
 
 /** gets total number of cuts found by this constraint handler applied to lp */
@@ -616,21 +615,13 @@ jlong JNISCIPCONS(conshdlrGetNCutsApplied)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetNCutsApplied is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
 
-   // SCIP_CONSHDLR* conshdlr;
-   // SCIP_Longint num;
-
-   // /* convert JNI pointer into C pointer */
-   // conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
-   // assert(conshdlr != NULL);
-
-   // num = SCIPconshdlrGetNCutsApplied(conshdlr);
-
-   // return (jlong) num;
+   return (jlong) SCIPconshdlrGetNCutsApplied(conshdlr);
 }
 
 /** gets total number of additional constraints added by this constraint handler */
@@ -640,21 +631,13 @@ jlong JNISCIPCONS(conshdlrGetNConssFound)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetNConssFound is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
 
-   // SCIP_CONSHDLR* conshdlr;
-   // SCIP_Longint num;
-
-   // /* convert JNI pointer into C pointer */
-   // conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
-   // assert(conshdlr != NULL);
-
-   // num = SCIPconshdlrGetNConssFound(conshdlr);
-
-   // return (jlong) num;
+   return (jlong) SCIPconshdlrGetNConssFound(conshdlr);
 }
 
 /** gets total number of domain reductions found by this constraint handler */
@@ -664,21 +647,13 @@ jlong JNISCIPCONS(conshdlrGetNDomredsFound)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetNDomredsFound is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
 
-   // SCIP_CONSHDLR* conshdlr;
-   // SCIP_Longint num;
-
-   // /* convert JNI pointer into C pointer */
-   // conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
-   // assert(conshdlr != NULL);
-
-   // num = SCIPconshdlrGetNDomredsFound(conshdlr);
-
-   // return (jlong) num;
+   return (jlong) SCIPconshdlrGetNDomredsFound(conshdlr);
 }
 
 /** gets number of children created by this constraint handler */
@@ -688,21 +663,13 @@ jlong JNISCIPCONS(conshdlrGetNChildren)(
    jlong                 jconshdlr           /**< constraint handler */
    )
 {
-   SCIPerrorMessage("method conshdlrGetNChildren is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONSHDLR* conshdlr;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
 
-   // SCIP_CONSHDLR* conshdlr;
-   // SCIP_Longint num;
-
-   // /* convert JNI pointer into C pointer */
-   // conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
-   // assert(conshdlr != NULL);
-
-   // num = SCIPconshdlrGetNChildren(conshdlr);
-
-   // return (jlong) num;
+   return (jlong) SCIPconshdlrGetNChildren(conshdlr);
 }
 
 /** gets maximum number of active constraints of constraint handler existing at the same time */
@@ -1367,21 +1334,13 @@ jlong JNISCIPCONS(consGetData)(
    jlong                 jcons               /**< JNI problem variable */
    )
 {
-   SCIPerrorMessage("method consGetData is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP_CONS* cons;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   cons = (SCIP_CONS*) (size_t) jcons;
+   assert(cons != NULL);
 
-   // SCIP_CONS* cons;
-   // SCIP_CONSDATA* consdata;
-
-   // /* convert JNI pointer into C pointer */
-   // cons = (SCIP_CONS*) (size_t) jcons;
-   // assert(cons != NULL);
-
-   // consdata = SCIPconsGetData(cons);
-
-   // return (jlong)(size_t) consdata;
+   return (jlong)(size_t) SCIPconsGetData(cons);
 }
 
 /** gets number of times, the constraint is currently captured */

@@ -3658,7 +3658,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleBasic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BRANCHRULE**     branchruleptr,      /**< reference to branching rule pointer, or NULL */
+   SCIP_BRANCHRULE**     branchruleptr,      /**< pointer to branching rule, or NULL */
    const char*           name,               /**< name of branching rule */
    const char*           desc,               /**< description of branching rule */
    int                   priority,           /**< priority of the branching rule */
@@ -6002,7 +6002,7 @@ EXTERN
 SCIP_RETCODE SCIPwriteVarName(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
-   SCIP_VAR*             var,                /**< variable array to output */
+   SCIP_VAR*             var,                /**< variable to output */
    SCIP_Bool             type                /**< should the variable type be also posted */
    );
 
@@ -9505,7 +9505,7 @@ SCIP_RETCODE SCIPcreateCons(
 EXTERN
 SCIP_RETCODE SCIPparseCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to constraint */
+   SCIP_CONS**           cons,               /**< pointer to store constraint */
    const char*           str,                /**< string to parse for constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
@@ -9530,7 +9530,7 @@ SCIP_RETCODE SCIPparseCons(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   SCIP_Bool*            success             /**< pointer store if the paring process was successful */
+   SCIP_Bool*            success             /**< pointer to store if the paring process was successful */
    );
 
 /** increases usage counter of constraint
@@ -9789,6 +9789,25 @@ SCIP_RETCODE SCIPsetConsStickingAtNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             stickingatnode      /**< new value */
+   );
+
+/** updates the flags of the first constraint according to the ones of the second constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPupdateConsFlags(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons0,              /**< constraint that should stay */
+   SCIP_CONS*            cons1               /**< constraint that should be deleted */
    );
 
 /** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
@@ -12453,7 +12472,7 @@ SCIP_RETCODE SCIPcreateNlRow(
 EXTERN
 SCIP_RETCODE SCIPcreateEmptyNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
+   SCIP_NLROW**          nlrow,              /**< pointer to nonlinear row */
    const char*           name,               /**< name of nonlinear row */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs                 /**< right hand side */
@@ -12472,7 +12491,7 @@ SCIP_RETCODE SCIPcreateEmptyNlRow(
 EXTERN
 SCIP_RETCODE SCIPcreateNlRowFromRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
+   SCIP_NLROW**          nlrow,              /**< pointer to nonlinear row */
    SCIP_ROW*             row                 /**< the linear row to copy */
    );
 
@@ -12506,7 +12525,7 @@ SCIP_RETCODE SCIPcaptureNlRow(
 EXTERN
 SCIP_RETCODE SCIPreleaseNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW**          nlrow               /**< nonlinear row to release */
+   SCIP_NLROW**          nlrow               /**< pointer to nonlinear row */
    );
 
 /** changes left hand side of NLP nonlinear row
@@ -12791,7 +12810,7 @@ EXTERN
 SCIP_RETCODE SCIPgetNlRowNLPActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   SCIP_Real*            activity            /**< buffer to store activity value */
+   SCIP_Real*            activity            /**< pointer to store activity value */
    );
 
 /** gives the feasibility of a nonlinear row in the last NLP solution: negative value means infeasibility
@@ -12807,7 +12826,7 @@ EXTERN
 SCIP_RETCODE SCIPgetNlRowNLPFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   SCIP_Real*            feasibility         /**< buffer to store feasibility value */
+   SCIP_Real*            feasibility         /**< pointer to store feasibility value */
    );
 
 /** recalculates the activity of a nonlinear row for the current pseudo solution
@@ -12838,7 +12857,7 @@ EXTERN
 SCIP_RETCODE SCIPgetNlRowPseudoActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   SCIP_Real*            pseudoactivity      /**< buffer to store pseudo activity value */
+   SCIP_Real*            pseudoactivity      /**< pointer to store pseudo activity value */
    );
 
 /** gives the feasibility of a nonlinear row for the current pseudo solution: negative value means infeasibility
@@ -12854,7 +12873,7 @@ EXTERN
 SCIP_RETCODE SCIPgetNlRowPseudoFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   SCIP_Real*            pseudofeasibility   /**< buffer to store pseudo feasibility value */
+   SCIP_Real*            pseudofeasibility   /**< pointer to store pseudo feasibility value */
    );
 
 /** recalculates the activity of a nonlinear row in the last NLP or pseudo solution
@@ -12885,7 +12904,7 @@ EXTERN
 SCIP_RETCODE SCIPgetNlRowActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   SCIP_Real*            activity            /**< buffer to store activity value */
+   SCIP_Real*            activity            /**< pointer to store activity value */
    );
 
 /** gives the feasibility of a nonlinear row in the last NLP or pseudo solution
@@ -12901,7 +12920,7 @@ EXTERN
 SCIP_RETCODE SCIPgetNlRowFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   SCIP_Real*            feasibility         /**< buffer to store feasibility value */
+   SCIP_Real*            feasibility         /**< pointer to store feasibility value */
    );
 
 /** gives the activity of a nonlinear row for the given primal solution or NLP solution or pseudo solution
@@ -12918,7 +12937,7 @@ SCIP_RETCODE SCIPgetNlRowSolActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
    SCIP_SOL*             sol,                /**< primal CIP solution, or NULL for NLP solution of pseudo solution */
-   SCIP_Real*            activity            /**< buffer to store activity value */
+   SCIP_Real*            activity            /**< pointer to store activity value */
    );
 
 /** gives the feasibility of a nonlinear row for the given primal solution
@@ -12935,7 +12954,7 @@ SCIP_RETCODE SCIPgetNlRowSolFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Real*            feasibility         /**< buffer to store feasibility value */
+   SCIP_Real*            feasibility         /**< pointer to store feasibility value */
    );
 
 /** gives the minimal and maximal activity of a nonlinear row w.r.t. the variable's bounds
@@ -14551,7 +14570,7 @@ SCIP_RETCODE SCIPbranchVarValNary(
    int                   n,                  /**< attempted number of children to be created, must be >= 2 */
    SCIP_Real             minwidth,           /**< minimal domain width in children */
    SCIP_Real             widthfactor,        /**< multiplier for children domain width with increasing distance from val, must be >= 1.0 */
-   int*                  nchildren           /**< buffer to store number of created children, or NULL */
+   int*                  nchildren           /**< pointer to store number of created children, or NULL */
    );
 
 /** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
@@ -17700,7 +17719,8 @@ EXTERN
 SCIP_RETCODE SCIPprintDisplayLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   SCIP_VERBLEVEL        verblevel           /**< minimal verbosity level to actually display the information line */
+   SCIP_VERBLEVEL        verblevel,          /**< minimal verbosity level to actually display the information line */
+   SCIP_Bool             endline             /**< should the line be terminated with a newline symbol? */
    );
 
 /** gets total number of implications between variables that are stored in the implication graph

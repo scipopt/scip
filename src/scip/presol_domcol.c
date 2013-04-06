@@ -2176,7 +2176,7 @@ SCIP_RETCODE findFixings(
       }
    }
 
-   if( varstofix[dominatedidx] == NOFIX && SCIPisPositive(scip, SCIPvarGetObj(dominatedvar)) )
+   if( varstofix[dominatedidx] == NOFIX && !SCIPisNegative(scip, SCIPvarGetObj(dominatedvar)) )
    {
       if( !SCIPisInfinity(scip, -dominatingwclb) &&
          SCIPisLE(scip, dominatingwclb, SCIPvarGetUbGlobal(dominatingvar)) )
@@ -2210,7 +2210,7 @@ SCIP_RETCODE findFixings(
       (*npossiblefixings)++;
    }
 
-   if( varstofix[dominatingidx] == NOFIX && SCIPisNegative(scip, SCIPvarGetObj(dominatingvar)) )
+   if( varstofix[dominatingidx] == NOFIX && !SCIPisPositive(scip, SCIPvarGetObj(dominatingvar)) )
    {
       /* we have a x->y dominance relation with a negative obj coefficient
        * of the dominating variable x. if the worst case upper bound is

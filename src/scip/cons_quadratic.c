@@ -11828,7 +11828,7 @@ SCIP_RETCODE SCIPaddBilinTermQuadratic(
 SCIP_RETCODE SCIPgetNlRowQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -12060,7 +12060,7 @@ SCIP_RETCODE SCIPgetViolationQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution which violation to calculate, or NULL for LP solution */
-   SCIP_Real*            violation           /**< buffer to store violation of constraint */
+   SCIP_Real*            violation           /**< pointer to store violation of constraint */
    )
 {
    SCIP_CONSDATA* consdata;

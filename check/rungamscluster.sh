@@ -17,7 +17,7 @@
 # check if tmp-path exists 
 if test ! -d $CLIENTTMPDIR
 then
-    echo Skipping test since the path for the tmp-dir does not exist.
+    echo "Skipping test since the path for the tmp-dir does not exist."
     exit
 fi
 

@@ -247,24 +247,24 @@
       SCIP_RETCODE _restat_;                                            \
                                                                         \
       /* check if retcodes in SCIP and JNI SCIP match */                \
-      assert(SCIP_OKAY == JNIPACKAGENAME(JniScipRetcode_OKAY));         \
-      assert(SCIP_ERROR == JNIPACKAGENAME(JniScipRetcode_ERROR));       \
-      assert(SCIP_NOMEMORY == JNIPACKAGENAME(JniScipRetcode_NOMEMORY)); \
-      assert(SCIP_READERROR == JNIPACKAGENAME(JniScipRetcode_READERROR)); \
-      assert(SCIP_WRITEERROR == JNIPACKAGENAME(JniScipRetcode_WRITEERROR)); \
-      assert(SCIP_NOFILE == JNIPACKAGENAME(JniScipRetcode_NOFILE));     \
-      assert(SCIP_FILECREATEERROR == JNIPACKAGENAME(JniScipRetcode_FILECREATEERROR)); \
-      assert(SCIP_LPERROR == JNIPACKAGENAME(JniScipRetcode_LPERROR));   \
-      assert(SCIP_NOPROBLEM == JNIPACKAGENAME(JniScipRetcode_NOPROBLEM)); \
-      assert(SCIP_INVALIDCALL == JNIPACKAGENAME(JniScipRetcode_INVALIDCALL)); \
-      assert(SCIP_INVALIDDATA == JNIPACKAGENAME(JniScipRetcode_INVALIDDATA)); \
-      assert(SCIP_INVALIDRESULT ==  JNIPACKAGENAME(JniScipRetcode_INVALIDRESULT)); \
-      assert(SCIP_PLUGINNOTFOUND == JNIPACKAGENAME(JniScipRetcode_PLUGINNOTFOUND)); \
-      assert(SCIP_PARAMETERUNKNOWN == JNIPACKAGENAME(JniScipRetcode_PARAMETERUNKNOWN)); \
-      assert(SCIP_PARAMETERWRONGTYPE == JNIPACKAGENAME(JniScipRetcode_PARAMETERWRONGTYPE)); \
-      assert(SCIP_PARAMETERWRONGVAL == JNIPACKAGENAME(JniScipRetcode_PARAMETERWRONGVAL)); \
-      assert(SCIP_KEYALREADYEXISTING == JNIPACKAGENAME(JniScipRetcode_KEYALREADYEXISTING)); \
-      assert(SCIP_MAXDEPTHLEVEL == JNIPACKAGENAME(JniScipRetcode_MAXDEPTHLEVEL)); \
+      assert(SCIP_OKAY == JNIPACKAGENAME(JniScipRetcode_SCIP_OKAY));         \
+      assert(SCIP_ERROR == JNIPACKAGENAME(JniScipRetcode_SCIP_ERROR));       \
+      assert(SCIP_NOMEMORY == JNIPACKAGENAME(JniScipRetcode_SCIP_NOMEMORY)); \
+      assert(SCIP_READERROR == JNIPACKAGENAME(JniScipRetcode_SCIP_READERROR)); \
+      assert(SCIP_WRITEERROR == JNIPACKAGENAME(JniScipRetcode_SCIP_WRITEERROR)); \
+      assert(SCIP_NOFILE == JNIPACKAGENAME(JniScipRetcode_SCIP_NOFILE));     \
+      assert(SCIP_FILECREATEERROR == JNIPACKAGENAME(JniScipRetcode_SCIP_FILECREATEERROR)); \
+      assert(SCIP_LPERROR == JNIPACKAGENAME(JniScipRetcode_SCIP_LPERROR));   \
+      assert(SCIP_NOPROBLEM == JNIPACKAGENAME(JniScipRetcode_SCIP_NOPROBLEM)); \
+      assert(SCIP_INVALIDCALL == JNIPACKAGENAME(JniScipRetcode_SCIP_INVALIDCALL)); \
+      assert(SCIP_INVALIDDATA == JNIPACKAGENAME(JniScipRetcode_SCIP_INVALIDDATA)); \
+      assert(SCIP_INVALIDRESULT ==  JNIPACKAGENAME(JniScipRetcode_SCIP_INVALIDRESULT)); \
+      assert(SCIP_PLUGINNOTFOUND == JNIPACKAGENAME(JniScipRetcode_SCIP_PLUGINNOTFOUND)); \
+      assert(SCIP_PARAMETERUNKNOWN == JNIPACKAGENAME(JniScipRetcode_SCIP_PARAMETERUNKNOWN)); \
+      assert(SCIP_PARAMETERWRONGTYPE == JNIPACKAGENAME(JniScipRetcode_SCIP_PARAMETERWRONGTYPE)); \
+      assert(SCIP_PARAMETERWRONGVAL == JNIPACKAGENAME(JniScipRetcode_SCIP_PARAMETERWRONGVAL)); \
+      assert(SCIP_KEYALREADYEXISTING == JNIPACKAGENAME(JniScipRetcode_SCIP_KEYALREADYEXISTING)); \
+      assert(SCIP_MAXDEPTHLEVEL == JNIPACKAGENAME(JniScipRetcode_SCIP_MAXDEPTHLEVEL)); \
                                                                         \
       if( (_restat_ = (x)) != SCIP_OKAY )                               \
       {                                                                 \

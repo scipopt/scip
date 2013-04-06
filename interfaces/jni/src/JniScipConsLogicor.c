@@ -61,35 +61,35 @@ jlong JNISCIPCONSLOGICOR(createConsLogicor)(
    jint                  jnvars,             /**< number of variables in the constraint */
    jlongArray            jvars,               /**< array with variables of constraint entries */
    jboolean              jinitial,           /**< should the LP relaxation of constraint be in the initial LP?
-					     *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+                                             *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    jboolean              jseparate,          /**< should the constraint be separated during LP processing?
-					     *   Usually set to TRUE. */
+                                             *   Usually set to TRUE. */
    jboolean              jenforce,           /**< should the constraint be enforced during node processing?
-					     *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+                                             *   TRUE for model constraints, FALSE for additional, redundant constraints. */
    jboolean              jcheck,             /**< should the constraint be checked for feasibility?
-					     *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+                                             *   TRUE for model constraints, FALSE for additional, redundant constraints. */
    jboolean              jpropagate,         /**< should the constraint be propagated during node processing?
-					     *   Usually set to TRUE. */
+                                             *   Usually set to TRUE. */
    jboolean              jlocal,             /**< is constraint only valid locally?
-					     *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+                                             *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
    jboolean              jmodifiable,        /**< is constraint modifiable (subject to column generation)?
-					     *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
-					     *   adds coefficients to this constraint. */
+                                             *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                             *   adds coefficients to this constraint. */
    jboolean              jdynamic,           /**< is constraint subject to aging?
-					     *   Usually set to FALSE. Set to TRUE for own cuts which
-					     *   are seperated as constraints. */
+                                             *   Usually set to FALSE. Set to TRUE for own cuts which
+                                             *   are seperated as constraints. */
    jboolean              jremovable,         /**< should the relaxation be removed from the LP due to aging or cleanup?
-					     *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+                                             *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    jboolean              jstickingatnode     /**< should the constraint always be kept at the node where it was added, even
-					     *   if it may be moved to a more global node?
-					     *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+                                             *   if it may be moved to a more global node?
+                                             *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
    SCIP* scip;
    SCIP_CONS* cons;
    const char* name;
    int nvars;
-   
+
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
@@ -100,7 +100,7 @@ jlong JNISCIPCONSLOGICOR(createConsLogicor)(
       SCIPABORT();
 
    /* create logicor constraint with zero variables */
-   JNISCIP_CALL( SCIPcreateConsLogicor(scip, &cons, name, 0, NULL, 
+   JNISCIP_CALL( SCIPcreateConsLogicor(scip, &cons, name, 0, NULL,
          (SCIP_Bool) jinitial, (SCIP_Bool) jseparate, (SCIP_Bool) jenforce, (SCIP_Bool) jcheck, (SCIP_Bool) jpropagate,
          (SCIP_Bool) jlocal, (SCIP_Bool) jmodifiable, (SCIP_Bool) jdynamic, (SCIP_Bool) jremovable, (SCIP_Bool) jstickingatnode) );
 
@@ -112,19 +112,19 @@ jlong JNISCIPCONSLOGICOR(createConsLogicor)(
    {
       jlong* vars;
       int v;
-      
+
       JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
-      (*env)->GetLongArrayRegion(env, jvars, 0, nvars, vars);      
+      (*env)->GetLongArrayRegion(env, jvars, 0, nvars, vars);
 
       for( v = 0; v < nvars; ++v )
       {
          JNISCIP_CALL( SCIPaddCoefLogicor(scip, cons, (SCIP_VAR*)(size_t)vars[v]) );
       }
-      
+
       SCIPfreeBufferArray(scip, &vars);
-   } 
-   
+   }
+
    return (jlong)(size_t)cons;
 }
 
@@ -142,14 +142,34 @@ jlong JNISCIPCONSLOGICOR(createConsBasicLogicor)(
    jobject               jobj,               /**< JNI class pointer */
    jlong                 jscip,              /**< SCIP data structure */
    jstring               jname,              /**< name of constraint */
-   jint                  jnvars,             /**< number of variables in the constraint */
+   jint                  nvars,              /**< number of variables in the constraint */
    jlongArray            jvars               /**< array with variables of constraint entries */
    )
 {
-   SCIPerrorMessage("method createConsBasicLogicor is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP* scip;
+   SCIP_CONS* cons;
+   const char* name;
+   SCIP_VAR** vars;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
+
+   /* convert JNI string into C const char* */
+   name = (*env)->GetStringUTFChars(env, jname, NULL);
+   if( name == NULL )
+      SCIPABORT();
+
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+
+   (*env)->GetLongArrayRegion(env, jvars, 0, nvars, (jlong*)(*vars));
+
+   /* create logicor constraint with zero variables */
+   JNISCIP_CALL( SCIPcreateConsBasicLogicor(scip, &cons, name, (int)nvars, vars ) );
+
+   SCIPfreeBufferArray(scip, &vars);
+
+   return (jlong)(size_t)cons;
 }
 
 /** adds coefficient in logic or constraint */
@@ -238,6 +258,8 @@ jlongArray JNISCIPCONSLOGICOR(getVarsLogicor)(
 
    /* fill long array with SCIP variable pointers */
    (*env)->SetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
+
+   SCIPfreeBufferArray(scip, &vars);
 
    return jvars;
 }

@@ -1751,12 +1751,12 @@ SCIP_RETCODE SCIPpriceLoop(
                                               *   a finite limit means that the LP might not be solved to optimality! */
    int*                  npricedcolvars,     /**< pointer to store number of column variables after problem vars were priced */
    SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if a separation round should follow */
-   SCIP_Real*            lowerbound,         /**< lower bound computed by the pricers */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occured */
    SCIP_Bool*            aborted             /**< pointer to store whether the pricing was aborted and the lower bound must 
                                               *   not be used */
    )
 {
+   SCIP_NODE* focusnode;
    int npricerounds;
    SCIP_Bool mustprice;
    SCIP_Bool cutoff;
@@ -1768,9 +1768,9 @@ SCIP_RETCODE SCIPpriceLoop(
    assert(npricedcolvars != NULL);
    assert(mustsepa != NULL);
    assert(lperror != NULL);
-   assert(lowerbound != NULL);
    assert(aborted != NULL);
 
+   focusnode = SCIPtreeGetFocusNode(tree);
    *npricedcolvars = prob->ncolvars;
    *lperror = FALSE;
    *aborted = FALSE;
@@ -1838,7 +1838,10 @@ SCIP_RETCODE SCIPpriceLoop(
             SCIPpricerGetName(set->pricers[p]), (result == SCIP_DIDNOTRUN ? "didnotrun" : "success"), lb);
          enoughvars = enoughvars || (SCIPpricestoreGetNVars(pricestore) >= (SCIPsetGetPriceMaxvars(set, pretendroot)+1)/2);
          *aborted = ( (*aborted) || (result == SCIP_DIDNOTRUN) );
-         *lowerbound = MAX(*lowerbound, lb);
+
+         /* update lower bound w.r.t. the lower bound given by the pricer */
+         SCIPnodeUpdateLowerbound(focusnode, stat, lb);
+         SCIPdebugMessage(" -> new lower bound given by pricer %s: %g\n", SCIPpricerGetName(set->pricers[p]), lb);
       }
 
       /* apply the priced variables to the LP */
@@ -1890,7 +1893,7 @@ SCIP_RETCODE SCIPpriceLoop(
          if( (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_FULL
              || ((SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH && npricerounds % 100 == 1) )
          {
-            SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, TRUE) );
+            SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, TRUE, TRUE) );
          }
       }
 
@@ -1901,7 +1904,7 @@ SCIP_RETCODE SCIPpriceLoop(
           || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT );
 
       /* if the lower bound is already higher than the cutoff bound, we can stop pricing */
-      mustprice = mustprice && SCIPsetIsLT(set, *lowerbound, primal->cutoffbound);
+      mustprice = mustprice && SCIPsetIsLT(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
    }
    assert(lp->flushed);
    assert(lp->solved || *lperror);
@@ -1984,7 +1987,6 @@ SCIP_RETCODE priceAndCutLoop(
    SCIP_LPSOLSTAT stalllpsolstat;
    SCIP_Real loclowerbound;
    SCIP_Real glblowerbound;
-   SCIP_Real pricerlowerbound;
    SCIP_Real bounddist;
    SCIP_Real stalllpobjval;
    SCIP_Bool separate;
@@ -2072,16 +2074,10 @@ SCIP_RETCODE priceAndCutLoop(
       /* solve the LP with pricing in new variables */
       while( mustprice && !(*lperror) )
       {
-         pricerlowerbound = -SCIPsetInfinity(set);
-
          SCIP_CALL( SCIPpriceLoop(blkmem, set, messagehdlr, stat, prob, primal, tree, lp, pricestore, sepastore, branchcand, eventqueue,
-               eventfilter, root, root, -1, &npricedcolvars, &mustsepa, &pricerlowerbound, lperror, pricingaborted) );
+               eventfilter, root, root, -1, &npricedcolvars, &mustsepa, lperror, pricingaborted) );
 
          mustprice = FALSE;
-
-         /* update lower bound w.r.t. the lower bound given by the pricers */
-         SCIPnodeUpdateLowerbound(focusnode, stat, pricerlowerbound);
-         SCIPdebugMessage(" -> new lower bound given by pricers: %g\n", pricerlowerbound);
 
          assert(lp->flushed);
          assert(lp->solved || *lperror);
@@ -2107,7 +2103,7 @@ SCIP_RETCODE priceAndCutLoop(
          /* display node information line for root node */
          if( root && (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH )
          {
-            SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, TRUE) );
+            SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, TRUE, TRUE) );
          }
 
          if( !(*lperror) )
@@ -4305,7 +4301,7 @@ SCIP_RETCODE SCIPsolveCIP(
       *restart = *restart || (stat->userrestart && SCIPtreeGetNNodes(tree) > 0 && restartAllowed(set, stat));
 
       /* display node information line */
-      SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol) );
+      SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol, TRUE) );
 
       SCIPdebugMessage("Processing of node %"SCIP_LONGINT_FORMAT" in depth %d finished. %d siblings, %d children, %d leaves left\n",
          stat->nnodes, SCIPnodeGetDepth(focusnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));

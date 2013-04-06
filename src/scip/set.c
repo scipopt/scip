@@ -109,6 +109,8 @@
 #define SCIP_DEFAULT_CONF_IGNORERELAXEDBD FALSE /**< should relaxed bounds be ignored? */
 #define SCIP_DEFAULT_CONF_MAXVARSDETECTIMPLIEDBOUNDS 250 /**< maximal number of variables to try to detect global bound implications and shorten the whole conflict set (0: disabled) */
 #define SCIP_DEFAULT_CONF_FULLSHORTENCONFLICT TRUE /**< try to shorten the whole conflict set or terminate early (depending on the 'maxvarsdetectimpliedbounds' parameter) */
+#define SCIP_DEFAULT_CONF_CONFLITWEIGHT     0.0 /**< the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict */
+#define SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT 1.0/**< the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph */
 
 
 /* Constraints */
@@ -944,6 +946,16 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/fullshortenconflict",
          "try to shorten the whole conflict set or terminate early (depending on the 'maxvarsdetectimpliedbounds' parameter)",
          &(*set)->conf_fullshortenconflict, TRUE, SCIP_DEFAULT_CONF_FULLSHORTENCONFLICT,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/conflictweight",
+         "the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict",
+         &(*set)->conf_conflictweight, FALSE, SCIP_DEFAULT_CONF_CONFLITWEIGHT, 0.0, 1.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/conflictgraphweight",
+         "the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph",
+         &(*set)->conf_conflictgraphweight, FALSE, SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT, 0.0, 1.0,
          NULL, NULL) );
 
    /* constraint parameters */

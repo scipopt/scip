@@ -7369,7 +7369,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
  */
 SCIP_RETCODE SCIPincludeBranchruleBasic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BRANCHRULE**     branchruleptr,      /**< reference to branching rule pointer, or NULL */
+   SCIP_BRANCHRULE**     branchruleptr,      /**< pointer to branching rule, or NULL */
    const char*           name,               /**< name of branching rule */
    const char*           desc,               /**< description of branching rule */
    int                   priority,           /**< priority of the branching rule */
@@ -13367,7 +13367,7 @@ SCIP_RETCODE SCIPcreateVarBasic(
 SCIP_RETCODE SCIPwriteVarName(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
-   SCIP_VAR*             var,                /**< variable array to output */
+   SCIP_VAR*             var,                /**< variable to output */
    SCIP_Bool             type                /**< should the variable type be also posted */
    )
 {
@@ -20157,7 +20157,7 @@ SCIP_RETCODE SCIPinitVarBranchStats(
       SCIP_CALL( SCIPvarIncNBranchings(var, NULL, NULL, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, SCIP_UNKNOWN, 1) );
       SCIP_CALL( SCIPvarUpdatePseudocost(var, scip->set, scip->stat, -1.0, downpscost, 1.0) );
       SCIP_CALL( SCIPvarIncInferenceSum(var,  NULL, NULL, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, SCIP_UNKNOWN, downinfer) );
-      SCIP_CALL( SCIPvarIncVSIDS(var, NULL, NULL, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, SCIP_UNKNOWN, downvsids) );
+      SCIP_CALL( SCIPvarIncVSIDS(var, NULL, scip->set, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, SCIP_UNKNOWN, downvsids) );
       SCIP_CALL( SCIPvarIncCutoffSum(var, NULL, NULL, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, SCIP_UNKNOWN, downcutoff) );
    }
 
@@ -20172,7 +20172,7 @@ SCIP_RETCODE SCIPinitVarBranchStats(
       SCIP_CALL( SCIPvarIncNBranchings(var, NULL, NULL, scip->stat, SCIP_BRANCHDIR_UPWARDS, SCIP_UNKNOWN, 1) );
       SCIP_CALL( SCIPvarUpdatePseudocost(var, scip->set, scip->stat, 1.0, uppscost, 1.0) );
       SCIP_CALL( SCIPvarIncInferenceSum(var, NULL, NULL, scip->stat, SCIP_BRANCHDIR_UPWARDS, SCIP_UNKNOWN, upinfer) );
-      SCIP_CALL( SCIPvarIncVSIDS(var, NULL, NULL, scip->stat, SCIP_BRANCHDIR_UPWARDS, SCIP_UNKNOWN, upvsids) );
+      SCIP_CALL( SCIPvarIncVSIDS(var, NULL, scip->set, scip->stat, SCIP_BRANCHDIR_UPWARDS, SCIP_UNKNOWN, upvsids) );
       SCIP_CALL( SCIPvarIncCutoffSum(var, NULL, NULL, scip->stat, SCIP_BRANCHDIR_UPWARDS, SCIP_UNKNOWN, upcutoff) );
    }
 
@@ -20947,7 +20947,7 @@ SCIP_RETCODE SCIPcreateCons(
  */
 SCIP_RETCODE SCIPparseCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to constraint */
+   SCIP_CONS**           cons,               /**< pointer to store constraint */
    const char*           str,                /**< string to parse for constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
@@ -20972,7 +20972,7 @@ SCIP_RETCODE SCIPparseCons(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   SCIP_Bool*            success             /**< pointer store if the paring process was successful */
+   SCIP_Bool*            success             /**< pointer to store if the paring process was successful */
    )
 {
    assert(cons != NULL);
@@ -21367,6 +21367,62 @@ SCIP_RETCODE SCIPsetConsStickingAtNode(
    SCIP_CALL( checkStage(scip, "SCIPsetConsStickingAtNode", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPconsSetStickingAtNode(cons, stickingatnode);
+
+   return SCIP_OKAY;
+}
+
+/** updates the flags of the first constraint according to the ones of the second constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPupdateConsFlags(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons0,              /**< constraint that should stay */
+   SCIP_CONS*            cons1               /**< constraint that should be deleted */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPupdateConsFlags", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( SCIPconsIsInitial(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsInitial(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsSeparated(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsSeparated(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsEnforced(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsEnforced(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsChecked(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsChecked(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsPropagated(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsPropagated(scip, cons0, TRUE) );
+   }
+   if( !SCIPconsIsDynamic(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsDynamic(scip, cons0, FALSE) );
+   }
+   if( !SCIPconsIsRemovable(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsRemovable(scip, cons0, FALSE) );
+   }
+   if( SCIPconsIsStickingAtNode(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsStickingAtNode(scip, cons0, TRUE) );
+   }
 
    return SCIP_OKAY;
 }
@@ -22976,7 +23032,7 @@ SCIP_RETCODE SCIPgetLPBInvARow(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   r,                  /**< row number */
    SCIP_Real*            binvrow,            /**< row in B^-1 from prior call to SCIPgetLPBInvRow(), or NULL */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   SCIP_Real*            coef                /**< array to store the coefficients of the row */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetLPBInvARow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -25354,7 +25410,7 @@ SCIP_RETCODE SCIPcreateNlRow(
  */
 SCIP_RETCODE SCIPcreateEmptyNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
+   SCIP_NLROW**          nlrow,              /**< pointer to nonlinear row */
    const char*           name,               /**< name of nonlinear row */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs                 /**< right hand side */
@@ -25380,7 +25436,7 @@ SCIP_RETCODE SCIPcreateEmptyNlRow(
  */
 SCIP_RETCODE SCIPcreateNlRowFromRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
+   SCIP_NLROW**          nlrow,              /**< pointer to nonlinear row */
    SCIP_ROW*             row                 /**< the linear row to copy */
    )
 {
@@ -25426,7 +25482,7 @@ SCIP_RETCODE SCIPcaptureNlRow(
  */
 SCIP_RETCODE SCIPreleaseNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW**          nlrow               /**< nonlinear row to release */
+   SCIP_NLROW**          nlrow               /**< pointer to nonlinear row */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPreleaseNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
@@ -25840,7 +25896,7 @@ SCIP_RETCODE SCIPrecalcNlRowNLPActivity(
 SCIP_RETCODE SCIPgetNlRowNLPActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   SCIP_Real*            activity            /**< buffer to store activity value */
+   SCIP_Real*            activity            /**< pointer to store activity value */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetMlRowNLPActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -25868,7 +25924,7 @@ SCIP_RETCODE SCIPgetNlRowNLPActivity(
 SCIP_RETCODE SCIPgetNlRowNLPFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   SCIP_Real*            feasibility         /**< buffer to store feasibility value */
+   SCIP_Real*            feasibility         /**< pointer to store feasibility value */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNlRowNLPFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -25917,7 +25973,7 @@ SCIP_RETCODE SCIPrecalcNlRowPseudoActivity(
 SCIP_RETCODE SCIPgetNlRowPseudoActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   SCIP_Real*            pseudoactivity      /**< buffer to store pseudo activity value */
+   SCIP_Real*            pseudoactivity      /**< pointer to store pseudo activity value */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNlRowPseudoActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -25939,7 +25995,7 @@ SCIP_RETCODE SCIPgetNlRowPseudoActivity(
 SCIP_RETCODE SCIPgetNlRowPseudoFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   SCIP_Real*            pseudofeasibility   /**< buffer to store pseudo feasibility value */
+   SCIP_Real*            pseudofeasibility   /**< pointer to store pseudo feasibility value */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNlRowPseudoFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -25989,7 +26045,7 @@ SCIP_RETCODE SCIPrecalcNlRowActivity(
 SCIP_RETCODE SCIPgetNlRowActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   SCIP_Real*            activity            /**< buffer to store activity value */
+   SCIP_Real*            activity            /**< pointer to store activity value */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNlRowActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -26018,7 +26074,7 @@ SCIP_RETCODE SCIPgetNlRowActivity(
 SCIP_RETCODE SCIPgetNlRowFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   SCIP_Real*            feasibility         /**< buffer to store feasibility value */
+   SCIP_Real*            feasibility         /**< pointer to store feasibility value */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNlRowFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -26048,7 +26104,7 @@ SCIP_RETCODE SCIPgetNlRowSolActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
    SCIP_SOL*             sol,                /**< primal CIP solution, or NULL for NLP solution of pseudo solution */
-   SCIP_Real*            activity            /**< buffer to store activity value */
+   SCIP_Real*            activity            /**< pointer to store activity value */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNlRowSolActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -26082,7 +26138,7 @@ SCIP_RETCODE SCIPgetNlRowSolFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Real*            feasibility         /**< buffer to store feasibility value */
+   SCIP_Real*            feasibility         /**< pointer to store feasibility value */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNlRowSolFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -28090,14 +28146,12 @@ SCIP_RETCODE solveProbingLP(
       {
          SCIP_Bool mustsepa;
          int npricedcolvars;
-         SCIP_Real lowerbound;
          SCIP_Bool result;
 
          mustsepa = FALSE;
-         lowerbound = -SCIPinfinity(scip);
          SCIP_CALL( SCIPpriceLoop(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp,
                scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter, pretendroot, displayinfo, maxpricerounds,
-               &npricedcolvars, &mustsepa, &lowerbound, lperror, &result) );
+               &npricedcolvars, &mustsepa, lperror, &result) );
 
          /* mark the probing node again to update the LP size in the node and the tree path */
          if( !(*lperror) )
@@ -28927,7 +28981,7 @@ SCIP_RETCODE SCIPbranchVarValNary(
    int                   n,                  /**< attempted number of children to be created, must be >= 2 */
    SCIP_Real             minwidth,           /**< minimal domain width in children */
    SCIP_Real             widthfactor,        /**< multiplier for children domain width with increasing distance from val, must be >= 1.0 */
-   int*                  nchildren           /**< buffer to store number of created children, or NULL */
+   int*                  nchildren           /**< pointer to store number of created children, or NULL */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPbranchVarValNary", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -34213,8 +34267,8 @@ void printConflictStatistics(
    FILE*                 file                /**< output file */
    )
 {
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Conflict Analysis  :       Time      Calls    Success  Conflicts   Literals    Reconvs ReconvLits   LP Iters\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  propagation      : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f          -\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Conflict Analysis  :       Time      Calls    Success    DomReds  Conflicts   Literals    Reconvs ReconvLits   LP Iters\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  propagation      : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"          - %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f          -\n",
       SCIPconflictGetPropTime(scip->conflict),
       SCIPconflictGetNPropCalls(scip->conflict),
       SCIPconflictGetNPropSuccess(scip->conflict),
@@ -34226,7 +34280,7 @@ void printConflictStatistics(
       SCIPconflictGetNPropReconvergenceConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPropReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNPropReconvergenceConss(scip->conflict) : 0);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  infeasible LP    : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT"\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  infeasible LP    : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"          - %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT"\n",
       SCIPconflictGetInfeasibleLPTime(scip->conflict),
       SCIPconflictGetNInfeasibleLPCalls(scip->conflict),
       SCIPconflictGetNInfeasibleLPSuccess(scip->conflict),
@@ -34239,7 +34293,7 @@ void printConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNInfeasibleLPReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNInfeasibleLPReconvergenceConss(scip->conflict) : 0,
       SCIPconflictGetNInfeasibleLPIterations(scip->conflict));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  bound exceed. LP : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT"\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  bound exceed. LP : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"          - %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT"\n",
       SCIPconflictGetBoundexceedingLPTime(scip->conflict),
       SCIPconflictGetNBoundexceedingLPCalls(scip->conflict),
       SCIPconflictGetNBoundexceedingLPSuccess(scip->conflict),
@@ -34252,7 +34306,7 @@ void printConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNBoundexceedingLPReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNBoundexceedingLPReconvergenceConss(scip->conflict) : 0,
       SCIPconflictGetNBoundexceedingLPIterations(scip->conflict));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  strong branching : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT"\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  strong branching : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"          - %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT"\n",
       SCIPconflictGetStrongbranchTime(scip->conflict),
       SCIPconflictGetNStrongbranchCalls(scip->conflict),
       SCIPconflictGetNStrongbranchSuccess(scip->conflict),
@@ -34265,7 +34319,7 @@ void printConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNStrongbranchReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNStrongbranchReconvergenceConss(scip->conflict) : 0,
       SCIPconflictGetNStrongbranchIterations(scip->conflict));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  pseudo solution  : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f          -\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  pseudo solution  : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"          - %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f          -\n",
       SCIPconflictGetPseudoTime(scip->conflict),
       SCIPconflictGetNPseudoCalls(scip->conflict),
       SCIPconflictGetNPseudoSuccess(scip->conflict),
@@ -34277,13 +34331,15 @@ void printConflictStatistics(
       SCIPconflictGetNPseudoReconvergenceConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPseudoReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNPseudoReconvergenceConss(scip->conflict) : 0);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  applied globally : %10.2f          -          - %10"SCIP_LONGINT_FORMAT" %10.1f          -          -          -\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  applied globally : %10.2f          -          - %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f          -          -          -\n",
       SCIPconflictGetGlobalApplTime(scip->conflict),
+      SCIPconflictGetNGlobalChgBds(scip->conflict),
       SCIPconflictGetNAppliedGlobalConss(scip->conflict),
       SCIPconflictGetNAppliedGlobalConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNAppliedGlobalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedGlobalConss(scip->conflict) : 0);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  applied locally  :          -          -          - %10"SCIP_LONGINT_FORMAT" %10.1f          -          -          -\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  applied locally  :          -          -          - %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f          -          -          -\n",
+      SCIPconflictGetNLocalChgBds(scip->conflict),
       SCIPconflictGetNAppliedLocalConss(scip->conflict),
       SCIPconflictGetNAppliedLocalConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)
@@ -35047,14 +35103,15 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
 SCIP_RETCODE SCIPprintDisplayLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   SCIP_VERBLEVEL        verblevel           /**< minimal verbosity level to actually display the information line */
+   SCIP_VERBLEVEL        verblevel,          /**< minimal verbosity level to actually display the information line */
+   SCIP_Bool             endline             /**< should the line be terminated with a newline symbol? */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPprintDisplayLine", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( (SCIP_VERBLEVEL)scip->set->disp_verblevel >= verblevel )
    {
-      SCIP_CALL( SCIPdispPrintLine(scip->set, scip->messagehdlr, scip->stat, file, TRUE) );
+      SCIP_CALL( SCIPdispPrintLine(scip->set, scip->messagehdlr, scip->stat, file, TRUE, endline) );
    }
 
    return SCIP_OKAY;
