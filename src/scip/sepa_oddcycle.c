@@ -1040,16 +1040,20 @@ SCIP_RETCODE generateOddCycleCut(
       SCIP_Bool infeasible;
 
       SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
-      assert( ! infeasible );
-      SCIP_CALL( SCIPaddPoolCut(scip, cut) );
       ++sepadata->ncuts;
       if ( nlifted > 0 )
          ++sepadata->nliftedcuts;
+      if ( infeasible )
+         *result = SCIP_CUTOFF;
+      else
+      {
+         SCIP_CALL( SCIPaddPoolCut(scip, cut) );
 
-      if( *result == SCIP_DIDNOTFIND )
-         *result = SCIP_SEPARATED;
+         if( *result == SCIP_DIDNOTFIND )
+            *result = SCIP_SEPARATED;
+      }
 
-      assert(*result == SCIP_SEPARATED || *result == SCIP_REDUCEDDOM);
+      assert(*result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_REDUCEDDOM);
    }
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
@@ -2887,8 +2891,14 @@ SCIP_RETCODE separateHeur(
                /* free temporary memory */
                SCIPfreeBufferArray(scip, &incycle);
                SCIPfreeBufferArray(scip, &pred);
+
+               if ( *result == SCIP_CUTOFF )
+                  break;
             }
          }
+
+         if ( *result == SCIP_CUTOFF )
+            break;
 
          /* copy new level to current one */
          ++(graph.nlevels);

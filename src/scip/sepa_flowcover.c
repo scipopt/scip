@@ -1925,6 +1925,7 @@ SCIP_RETCODE addCut(
    SCIP_Bool             cutislocal,         /**< is the cut only locally valid? */
    int                   cutrank,            /**< rank of the cut */
    char                  normtype,           /**< type of norm to use for efficacy norm calculation */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to count the number of added cuts */
    )
 {
@@ -1939,7 +1940,10 @@ SCIP_RETCODE addCut(
    assert(varsolvals != NULL);
    assert(cutcoefs != NULL);
    assert(ncuts != NULL);
+   assert(cutoff != NULL);
    assert(nvars == 0 || vars != NULL);
+
+   *cutoff = FALSE;
 
    SCIPdebugMessage("--------------------- found cut ---------------------------------------------------------\n");
 
@@ -1986,16 +1990,13 @@ SCIP_RETCODE addCut(
       /* if scaling was successful, adds the cut */
       if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
       {
-         SCIP_Bool infeasible;
-
          SCIPdebugMessage(" -> found flowcover cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut),
             SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
             SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
-         SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
-         assert( ! infeasible );
-         if( !cutislocal )
+         SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+         if( !(*cutoff) && !cutislocal )
          {
             SCIP_CALL( SCIPaddPoolCut(scip, cut) );
          }
@@ -2057,6 +2058,7 @@ SCIP_RETCODE cutGenerationHeuristic(
    int*                  transvarflowcoverstatus, /**< pointer to store whether non-binary var is in L2 (2) or not (-1 or 1) */ 
    SCIP_Real             lambda,             /**< lambda */
    char                  normtype,           /**< type of norm to use for efficacy norm calculation */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to count the number of generated cuts */
    )
 {
@@ -2305,7 +2307,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       cutact = lambda * cutact;
 
       assert(SCIPisFeasEQ(scip, bestefficacy, calcEfficacy(nvars, cutcoefs, cutrhs, cutact)));
-      SCIP_CALL( addCut(scip, sepa, sepadata, vars, nvars, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutrank, normtype, ncuts) );
+      SCIP_CALL( addCut(scip, sepa, sepadata, vars, nvars, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutrank, normtype, cutoff, ncuts) );
    }
 
    /* free data structures */
@@ -2339,7 +2341,7 @@ SCIP_RETCODE separateCuts(
    SCIP_Real* transbinvarsolvals;
    SCIP_Real* transcontvarsolvals;
    SCIP_Real* transvarvubcoefs;
-   SCIP_Real* varsolvals;
+   SCIP_Real* varsolvals;   
    int* assoctransvars;
    int* boundsfortrans;
    int* covervars;
@@ -2353,6 +2355,7 @@ SCIP_RETCODE separateCuts(
    SCIP_Real transcapacity;
    SCIP_Bool transsuccess;
    SCIP_Bool flowcoverfound;
+   SCIP_Bool cutoff = FALSE;
    char normtype;
    int depth;
    int maxfails;
@@ -2597,12 +2600,18 @@ SCIP_RETCODE separateCuts(
          /* generate most violated c-MIRFCI for different sets L1 and L2 and different values of delta and add it to the LP */
          SCIP_CALL( cutGenerationHeuristic(scip, sepa, sepadata, vars, nvars, sol, varsolvals, rowweights, mult, boundsfortrans,
                boundtypesfortrans, assoctransvars, ntransvars, transvarcoefs, transbinvarsolvals, transcontvarsolvals,
-               transvarvubcoefs, transvarflowcoverstatus, lambda, normtype, &ncuts) );
+               transvarvubcoefs, transvarflowcoverstatus, lambda, normtype, &cutoff, &ncuts) );
 
          wastried = TRUE;
          mult *= -1.0;
+
+         if ( cutoff )
+            break;
       }
       while( sepadata->multbyminusone && mult < 0.0 );
+
+      if ( cutoff )
+         break;
 
       if( !wastried )
          continue;
@@ -2636,9 +2645,11 @@ SCIP_RETCODE separateCuts(
    SCIPfreeBufferArray(scip, &rowrhsscores);
    SCIPfreeBufferArray(scip, &rowlhsscores);
 
-   if( ncuts > 0 )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( ncuts > 0 )
       *result = SCIP_SEPARATED;
-    
+
    return SCIP_OKAY;
 }
 

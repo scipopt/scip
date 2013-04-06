@@ -1285,14 +1285,18 @@ static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< logic or constraint */
-   SCIP_SOL*             sol                 /**< primal CIP solution, NULL for current LP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
+   SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
    SCIP_CONSDATA* consdata;
-   
+
+   assert( cutoff != NULL );
+   *cutoff = FALSE;
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   
+
    if( consdata->row == NULL )
    {
       /* convert logic or constraint data into LP row */
@@ -1303,11 +1307,8 @@ SCIP_RETCODE addCut(
    /* insert LP row as cut */
    if( !SCIProwIsInLP(consdata->row) )
    {
-      SCIP_Bool infeasible;
-
       SCIPdebugMessage("adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, &infeasible) );
-      assert( ! infeasible );
+      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
    }
 
    return SCIP_OKAY;
@@ -1335,6 +1336,7 @@ SCIP_RETCODE separateCons(
    assert(separated != NULL);
    assert(reduceddom != NULL);
 
+   *cutoff = FALSE;
    SCIPdebugMessage("separating constraint <%s>\n", SCIPconsGetName(cons));
 
    /* update and check the watched variables, if they were changed since last processing */
@@ -1381,7 +1383,7 @@ SCIP_RETCODE separateCons(
    if( addcut )
    {
       /* insert LP row as cut */
-      SCIP_CALL( addCut(scip, cons, sol) );
+      SCIP_CALL( addCut(scip, cons, sol, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
    }
@@ -2440,12 +2442,14 @@ SCIP_DECL_CONSTRANS(consTransLogicor)
 static
 SCIP_DECL_CONSINITLP(consInitlpLogicor)
 {  /*lint --e{715}*/
+   SCIP_Bool cutoff = FALSE;
    int c;
 
    for( c = 0; c < nconss; ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addCut(scip, conss[c], NULL) );
+      SCIP_CALL( addCut(scip, conss[c], NULL, &cutoff) );
+      /* ignore cutoff, cannot return value */
    }
 
    return SCIP_OKAY;

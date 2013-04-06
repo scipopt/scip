@@ -1175,12 +1175,12 @@ SCIP_RETCODE separatePoint(
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
    SCIP_Bool             addweakcuts,        /**< whether also weak (only slightly violated) cuts should be added in a nonconvex constraint */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether a fixing leads to a cutoff */
    SCIP_Bool*            success             /**< buffer to store whether the point was separated */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
-   SCIP_Bool          infeasible;
    SCIP_Real          minefficacy;
    int                c;
    SCIP_ROW*          row;
@@ -1188,7 +1188,10 @@ SCIP_RETCODE separatePoint(
    assert(scip    != NULL);
    assert(conss   != NULL || nconss == 0);
    assert(nusefulconss <= nconss);
+   assert(cutoff != NULL);
    assert(success != NULL);
+
+   *cutoff = FALSE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -1236,14 +1239,16 @@ SCIP_RETCODE separatePoint(
             continue;
 
          /* cut cuts off solution and efficient enough */
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
-         assert( ! infeasible );
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );  /*lint !e613*/
          *success = TRUE;
          SCIPdebugMessage("added cut with efficacy %g\n", SCIPgetCutEfficacy(scip, sol, row));
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
       }
+
+      if ( *cutoff )
+         break;
 
       /* enforce only useful constraints
        * others are only checked and enforced if we are still feasible or have not found a separating cut yet
@@ -1268,7 +1273,8 @@ SCIP_RETCODE addLinearizationCuts(
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             ref,                /**< reference point where to linearize, or NULL for LP solution */
    SCIP_Bool*            separatedlpsol,     /**< buffer to store whether a cut that separates the current LP solution was found and added to LP, or NULL if adding to cutpool only */
-   SCIP_Real             minefficacy         /**< minimal efficacy of a cut when checking for separation of LP solution */
+   SCIP_Real             minefficacy,        /**< minimal efficacy of a cut when checking for separation of LP solution */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a fixing leads to a cutoff */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1279,11 +1285,13 @@ SCIP_RETCODE addLinearizationCuts(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
+   assert(cutoff != NULL);
+   *cutoff = FALSE;
 
    if( separatedlpsol != NULL )
       *separatedlpsol = FALSE;
 
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && !(*cutoff); ++c )
    {
       assert(conss[c] != NULL);  /*lint !e613 */
 
@@ -1320,12 +1328,9 @@ SCIP_RETCODE addLinearizationCuts(
 
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
          {
-            SCIP_Bool infeasible;
-
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, &infeasible) );
-            assert( ! infeasible );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, cutoff) );
          }
       }
 
@@ -1349,6 +1354,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    SCIP_CONS**    conss;
    int            nconss;
    SCIP_SOL*      sol;
+   SCIP_Bool cutoff;
 
    assert(scip != NULL);
    assert(event != NULL);
@@ -1382,7 +1388,8 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 
    SCIPdebugMessage("caught new sol event %x from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
-   SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, sol, NULL, 0.0) );
+   SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, sol, NULL, 0.0, &cutoff) );
+   /* ingore cutoff, cannot return status */
 
    return SCIP_OKAY;
 }
@@ -3311,6 +3318,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          sepasuccess;
+   SCIP_Bool cutoff;
 
    assert(scip     != NULL);
    assert(conshdlr != NULL);
@@ -3398,9 +3406,15 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
             }
          }
 
-         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->minefficacy) );
+         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->minefficacy, &cutoff) );
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
+
+         if ( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
 
          /* if a cut that separated the LP solution was added, then return, otherwise continue with usual separation in LP solution */
          if( lpsolseparated )
@@ -3417,8 +3431,10 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
     * or separating with NLP solution as reference point failed, then try (again) with LP solution as reference point
     */
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, FALSE, &sepasuccess) );
-   if( sepasuccess )
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, FALSE, &cutoff, &sepasuccess) );
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( sepasuccess )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -3432,6 +3448,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOC)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          sepasuccess;
+   SCIP_Bool          cutoff;
 
    assert(scip     != NULL);
    assert(conshdlr != NULL);
@@ -3448,8 +3465,10 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOC)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, &sepasuccess) );
-   if( sepasuccess )
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, &cutoff, &sepasuccess) );
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( sepasuccess )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -3464,6 +3483,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
    SCIP_CONSDATA*     consdata;
    SCIP_CONS*         maxviolcons;
    SCIP_Bool          success;
+   SCIP_Bool          cutoff;
    int                nbndchg;
    int                c;
 
@@ -3515,7 +3535,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
    }
 
    /* try separation, this should usually work */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, &success) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, &cutoff, &success) );
+   if ( cutoff )
+   {
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
    if( success )
    {
       SCIPdebugMessage("enforced by separation\n");

@@ -364,7 +364,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 
    /* for all basic columns belonging to integer variables, try to generate a strong CG cut */
    ncuts = 0;
-   for( i = 0; i < nrows && ncuts < maxsepacuts && !SCIPisStopped(scip); ++i )
+   for( i = 0; i < nrows && ncuts < maxsepacuts && !SCIPisStopped(scip) && *result != SCIP_CUTOFF; ++i )
    {
       SCIP_Bool tryrow;
 
@@ -524,12 +524,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                         SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
                      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
                      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-                     assert( ! infeasible );
-                     if( !cutislocal )
+                     if ( infeasible )
+                        *result = SCIP_CUTOFF;
+                     else
                      {
-                        SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                        if( !cutislocal )
+                        {
+                           SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                        }
+                        *result = SCIP_SEPARATED;
                      }
-                     *result = SCIP_SEPARATED;
                      ncuts++;
                   }
                }
