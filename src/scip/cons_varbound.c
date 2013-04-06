@@ -406,7 +406,7 @@ SCIP_RETCODE addRelaxation(
       SCIPdebugMessage("adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
       SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, &infeasible) );
-      assert( ! infeasible );
+      assert( ! infeasible );   /* this function is only called from initlp -> row should be feasible */
    }
 
    return SCIP_OKAY;

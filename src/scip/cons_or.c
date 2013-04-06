@@ -739,7 +739,7 @@ SCIP_RETCODE addRelaxation(
       {
          SCIP_Bool infeasible;
          SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE, &infeasible) );
-         assert( ! infeasible );
+         assert( ! infeasible );  /* this function is only called from initlp -> the cut should be feasible */
       }
    }
 
