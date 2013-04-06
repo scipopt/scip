@@ -2985,9 +2985,13 @@ SCIP_RETCODE addZerohalfCutToLP(
    /* add cut (if no cutpool is used otherwise add it at the end of the separation main method)*/
    if( !sepadata->usezhcutpool )
    {
-      SCIP_Bool infeasible;
-      SCIP_CALL(SCIPaddCut(scip, NULL, cutdata->cut, sepadata->forcecutstolp, &infeasible) );
-      assert( ! infeasible );
+      SCIP_Bool cutoff;
+      SCIP_CALL(SCIPaddCut(scip, NULL, cutdata->cut, sepadata->forcecutstolp, &cutoff) );
+      if ( cutoff )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
       if( !cutdata->islocal )
       {
          SCIP_CALL(SCIPaddPoolCut(scip, cutdata->cut));
@@ -3150,7 +3154,8 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
    char                  normtype,           /**< SCIP normtype */
    int                   nzerohalfcuts,      /**< number of zerohalf cuts (used for naming the cut) */
    SCIP_Real**           varsolvals,         /**< pointer to array of LP solution values of variables */
-   ZEROHALF_CUTDATA*     cutdata             /**< pointer to data structure used for storing the cut */
+   ZEROHALF_CUTDATA*     cutdata,            /**< pointer to data structure used for storing the cut */
+   SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
    SCIP_Real*            cutcoefs;
@@ -3165,6 +3170,9 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
    assert(varsolvals != NULL); 
    assert(cutdata != NULL);
    assert(cutdata->relatedsubproblem != NULL);
+   assert(cutoff != NULL);
+
+   *cutoff = FALSE;
 
    /* note: cutdata->relatedmod2data can be NULL if cut was determined
     *       before mod 2 data structures were created */
@@ -3219,13 +3227,13 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
       assert(*varsolvals != NULL);
 
       /* find best value of delta */
-      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, sepa, NULL, *varsolvals, sepadata->maxtestdelta, weights, BOUNDSWITCH, 
-            USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC, 
-            sepadata->trynegscaling, TRUE, "zerohalf", &ncuts, &bestdelta, &bestdeltavalid) );  
+      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, sepa, NULL, *varsolvals, sepadata->maxtestdelta, weights, BOUNDSWITCH,
+            USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
+            sepadata->trynegscaling, TRUE, "zerohalf", cutoff, &ncuts, &bestdelta, &bestdeltavalid) );
       assert(ncuts == 0);
 
       /* best delta corresponds to an efficient cut */
-      if( bestdeltavalid ) 
+      if( !(*cutoff) && bestdeltavalid ) 
       {  
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
                BOUNDSFORTRANS, BOUNDTYPESFORTRANS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
@@ -3238,7 +3246,7 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
    cutdata->violation = cutdata->activity - cutdata->rhs;
   
    /* if successful, convert dense cut into sparse row */
-   if( cutdata->success )
+   if( !(*cutoff) && cutdata->success )
    {
       cutdata->isfeasviolated = SCIPisFeasGT(scip, cutdata->activity, cutdata->rhs);
       SCIPdebugMessage("Cut is %sfeasviolated: (act: %e, rhs: %e, viol: %e)\n", 
@@ -3329,6 +3337,7 @@ SCIP_RETCODE preprocessTrivialZerohalfCuts(
    SCIP_Bool*            removerow;
    SCIP_Real*            weights;
    int                   nrowsincut;
+   SCIP_Bool             cutoff = FALSE;
     
    assert(scip != NULL);
    assert(lpdata != NULL);
@@ -3362,8 +3371,11 @@ SCIP_RETCODE preprocessTrivialZerohalfCuts(
   
    /* check all rows */
    for( r = 0 ; r < lastrowsind - firstrowsind && *nsepacuts < maxsepacuts && *nzerohalfcuts < maxcuts; ++r )
+   {
       if( mod2data->rhs[mod2data->rowsind[firstrowsind + r]] == TRUE )
+      {
          if( SCIPisLE(scip, mod2data->slacks[mod2data->rowsind[firstrowsind + r]], maxslack ))
+         {
             if( BITARRAYSAREEQUAL(mod2data->rows[mod2data->rowsind[firstrowsind + r]],
                   zerorow, mod2data->rowsbitarraysize) ) /* check if row is (0 ... 0 , 1) */
             {
@@ -3381,22 +3393,32 @@ SCIP_RETCODE preprocessTrivialZerohalfCuts(
                SCIP_CALL(ZerohalfCutDataCreate(scip, &(zerohalfcuts[*nzerohalfcuts]),
                      mod2data->relatedsubproblem, mod2data, 1, nrowsincut, cutseparatedby));
                SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
-                     lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts]));
-                    
-               /* add cut */
-               SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[*nzerohalfcuts], nsepacuts, result) );
-               (*nzerohalfcuts)++;
-          
+                     lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts], &cutoff));
+
+               if ( cutoff )
+                  *result = SCIP_CUTOFF;
+               else
+               {
+                  /* add cut */
+                  SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[*nzerohalfcuts], nsepacuts, result) );
+                  (*nzerohalfcuts)++;
+               }
+
                /* free temporary memory */
                SCIPfreeMemoryArray(scip, &weights);
+
+               if ( cutoff )
+                  break;
 
                removerow[r] = TRUE;
                nrowsremoved++;
             }
-
+         }
+      }
+   }
 
    /* update mod2data->rowsind if necessary */
-   if( nrowsremoved > 0 )
+   if( ! cutoff && nrowsremoved > 0 )
    {   
       r2 = firstrowsind;
       for( r = firstrowsind ; r < mod2data->nrowsind && r2 < mod2data->nrowsind; ++r)
@@ -5451,6 +5473,7 @@ SCIP_RETCODE separateBySolvingAuxIP(
    int                   nrrowsincut;  
    SCIP_Real*            weights;
    int                   nrowsincut;
+   SCIP_Bool             cutoff = FALSE;
 
    assert(scip != NULL);
    assert(sepadata != NULL);
@@ -5542,18 +5565,24 @@ SCIP_RETCODE separateBySolvingAuxIP(
       SCIP_CALL(ZerohalfCutDataCreate(scip, &(zerohalfcuts[*nzerohalfcuts]),
             mod2data->relatedsubproblem, mod2data, nrrowsincut, nrowsincut, AUXIP));
       SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
-            lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts]));
+            lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts], &cutoff));
 
-    
-      /* add cut */
-      SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[*nzerohalfcuts], nsepacuts, result) );
-      (*nzerohalfcuts)++;
+      if ( cutoff )
+         *result = SCIP_CUTOFF;
+      else
+      {
+         /* add cut */
+         SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[*nzerohalfcuts], nsepacuts, result) );
+         (*nzerohalfcuts)++;
+      }
 
       /* free temporary memory */
       SCIPfreeMemoryArray(scip, &weights);
       SCIPfreeMemoryArray(scip, &rrowsincut);
+
+      if ( cutoff )
+         break;
    }
-  
 
    /* free temporary memory */
    if( sepadata->subscipobjective != 'v' )
@@ -5643,7 +5672,8 @@ SCIP_RETCODE separateByEnumerationHeuristics(
    int                   j;
    SCIP_Real*            weights;
    int                   nrowsincut;
-  
+   SCIP_Bool             cutoff = FALSE;
+
    assert(scip != NULL);
    assert(sepadata != NULL);
    assert(lpdata != NULL);
@@ -5720,6 +5750,7 @@ SCIP_RETCODE separateByEnumerationHeuristics(
    minslackoddrhsrows = mod2data->slacks[mod2data->rowsind[0]];
   
    if( SCIPisLE(scip, minslackoddrhsrows, sepadata->maxslack) )
+   {
       for( ncombinedrows = 1 ; ncombinedrows <= maxncombinedrows ; ++ncombinedrows )
       {
          switch( ncombinedrows )
@@ -5755,14 +5786,19 @@ SCIP_RETCODE separateByEnumerationHeuristics(
                   SCIP_CALL(ZerohalfCutDataCreate(scip, &(zerohalfcuts[*nzerohalfcuts]),
                         mod2data->relatedsubproblem, mod2data, 2, nrowsincut, HEURISTICSENUM));
                   SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
-                        lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts]));
-            
-                  /* add cut */
-                  SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[*nzerohalfcuts], nsepacuts, result) );
-                  (*nzerohalfcuts)++;
-            
+                        lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts], &cutoff));
+
+                  if ( cutoff )
+                     *result = SCIP_CUTOFF;
+                  else
+                  {
+                     /* add cut */
+                     SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[*nzerohalfcuts], nsepacuts, result) );
+                     (*nzerohalfcuts)++;
+                  }
+
                   /* free temporary memory */
-                  SCIPfreeMemoryArray(scip, &weights);          
+                  SCIPfreeMemoryArray(scip, &weights);
                }        
             }      
             break;
@@ -5822,11 +5858,16 @@ SCIP_RETCODE separateByEnumerationHeuristics(
                      SCIP_CALL(ZerohalfCutDataCreate(scip, &(zerohalfcuts[*nzerohalfcuts]),
                            mod2data->relatedsubproblem, mod2data, 2, nrowsincut, HEURISTICSENUM));
                      SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
-                           lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts]));
+                           lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts], &cutoff));
 
-                     /* add cut */
-                     SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[*nzerohalfcuts], nsepacuts, result) );
-                     (*nzerohalfcuts)++;
+                     if ( cutoff )
+                        *result = SCIP_CUTOFF;
+                     else
+                     {
+                        /* add cut */
+                        SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[*nzerohalfcuts], nsepacuts, result) );
+                        (*nzerohalfcuts)++;
+                     }
 
                      /* free temporary memory */
                      SCIPfreeMemoryArray(scip, &weights);
@@ -5838,7 +5879,11 @@ SCIP_RETCODE separateByEnumerationHeuristics(
             SCIPerrorMessage("invalid ncombinedrows '%d'\n", ncombinedrows);
             return SCIP_INVALIDDATA;
          }
+
+         if ( cutoff )
+            break;
       }
+   }
 
    /* free temporary memory */
    if( rrowsincut != NULL )
@@ -6122,6 +6167,7 @@ SCIP_RETCODE separateByAuxGraph(
    int                   nrrowsincut;
    BITARRAY              rrowsincut;
    ZEROHALF_AUXGRAPH_NODE* node;
+   SCIP_Bool             cutoff = FALSE;
   
    assert(scip != NULL);
    assert(sepadata != NULL);
@@ -6193,6 +6239,7 @@ SCIP_RETCODE separateByAuxGraph(
       if( j >= mod2data->ncolsind )
       {
          if( mod2data->rhs[rowsindex] )
+         {
             if( SCIPisLE(scip, mod2data->slacks[rowsindex], sepadata->maxslack) )
             {
                /* violated {0,1/2} cut has been found */
@@ -6211,21 +6258,30 @@ SCIP_RETCODE separateByAuxGraph(
                SCIP_CALL(ZerohalfCutDataCreate(scip, &(zerohalfcuts[*nzerohalfcuts]),
                      mod2data->relatedsubproblem, mod2data, nrrowsincut, nrowsincut, AUXGRAPH));
                SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
-                     lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts]));
-                    
-               /* add cut */
-               SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[*nzerohalfcuts], nsepacuts, result) );
-               (*nzerohalfcuts)++;
-          
+                     lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts], &cutoff));
+
+               if ( cutoff )
+                  *result = SCIP_CUTOFF;
+               else
+               {
+                  /* add cut */
+                  SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[*nzerohalfcuts], nsepacuts, result) );
+                  (*nzerohalfcuts)++;
+               }
+
                /* free temporary memory */
                assert( weights != NULL );
                SCIPfreeMemoryArray(scip, &weights);
                weights = NULL;
-               
+
+               if ( cutoff )
+                  break;
             }
+         }
          continue;
       }
-    
+      assert( ! cutoff );
+
       /* check if row i has only one entry */
       if( k >= mod2data->ncolsind )
       {
@@ -6241,14 +6297,17 @@ SCIP_RETCODE separateByAuxGraph(
             mod2data->rhs[rowsindex], mod2data->slacks[rowsindex], rowsindex));
       
    }
-   /* create edges (j,q) and (j',q') for all nodes j */
-   for( n = 0 ; n < auxgraph->nnodes && n != q ; ++n)
+
+   if ( ! cutoff )
    {
-      SCIP_CALL(addEdgeToAuxGraph(scip, auxgraph, n, q,
-            FALSE, mod2data->fracsol[mod2data->colsind[n]], -1));
+      /* create edges (j,q) and (j',q') for all nodes j */
+      for( n = 0 ; n < auxgraph->nnodes && n != q ; ++n)
+      {
+         SCIP_CALL(addEdgeToAuxGraph(scip, auxgraph, n, q,
+               FALSE, mod2data->fracsol[mod2data->colsind[n]], -1));
+      }
    }
-  
-   if( auxgraph->nnodes == 0 )
+   if( cutoff || auxgraph->nnodes == 0 )
    {
       /* free temporary memory */
       SCIP_CALL(ZerohalfAuxGraphFree(scip, &auxgraph));
@@ -6302,11 +6361,16 @@ SCIP_RETCODE separateByAuxGraph(
          SCIP_CALL(ZerohalfCutDataCreate(scip, &(zerohalfcuts[*nzerohalfcuts]),
                mod2data->relatedsubproblem, mod2data, nrrowsincut, nrowsincut, AUXGRAPH));
          SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
-               lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts]));
+               lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts], &cutoff));
 
-         /* add cut */
-         SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[*nzerohalfcuts], nsepacuts, result) );
-         (*nzerohalfcuts)++;
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+         {
+            /* add cut */
+            SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[*nzerohalfcuts], nsepacuts, result) );
+            (*nzerohalfcuts)++;
+         }
 
          /* free temporary memory */
          assert( weights != NULL );
@@ -6319,8 +6383,10 @@ SCIP_RETCODE separateByAuxGraph(
             rrowsincut = NULL;
          }
       }
+      if ( cutoff )
+         break;
    }
-  
+
    /* free temporary memory */
    SCIP_CALL(ZerohalfAuxGraphFree(scip, &auxgraph));
 
@@ -6856,6 +6922,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    char                  normtype;
    SCIP_Longint          totalncalls;
    SCIP_Real             nrcolsfactor;
+   SCIP_Bool             cutoff = FALSE;
 
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -6960,7 +7027,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
   
 #ifdef ZEROHALF__PRINT_STATISTICS  
    ZEROHALFstatisticsMessage("= SEPA_ZEROHALF ================================================================\
-=============================================\n"); 
+s=============================================\n"); 
 #endif
 
    /* allocate further temporary memory */
@@ -7072,14 +7139,22 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          SCIP_CALL( ZerohalfCutDataCreate(scip, &(zerohalfcuts[nzerohalfcuts]),
                lpdata->subproblems[subproblemindex], NULL, 1, 1, DECOMPOSITION) );
          SCIP_CALL( createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
-               lpdata, weights, normtype, nzerohalfcuts, &varsolvals, zerohalfcuts[nzerohalfcuts]) );
-      
-         /* add cut to LP */
-         SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[nzerohalfcuts], &nsepacuts, result) );
-         nzerohalfcuts++;
-      
+               lpdata, weights, normtype, nzerohalfcuts, &varsolvals, zerohalfcuts[nzerohalfcuts], &cutoff) );
+
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+         {
+            /* add cut to LP */
+            SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[nzerohalfcuts], &nsepacuts, result) );
+            nzerohalfcuts++;
+         }
+
          /* free weightsvector memory */
          SCIPfreeMemoryArray(scip, &weights);
+
+         if ( cutoff )
+            break;
 
          if( lpdata->rrowsindexofleftrow[lpdata->subproblems[subproblemindex]->rrows[0]] >= 0 )
             lpdata->rrowsindexofleftrow[lpdata->subproblems[subproblemindex]->rrows[0]] =
@@ -7091,6 +7166,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       
          continue;
       }
+      assert( ! cutoff );
 
       /* check if enough cuts have been found */
       if( nsepacuts >= maxsepacuts || nzerohalfcuts >= maxcuts )
@@ -7126,7 +7202,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       printZerohalfCutsStatistics(scip, sepadata, zerohalfcuts, nzerohalfcuts, NULL, NULL, NULL, nsepacuts);
 #endif
   
-   if( sepadata->usezhcutpool )
+   if( ! cutoff && sepadata->usezhcutpool )
    {
       ZEROHALF_CUTDATA*   cutdatai;
       ZEROHALF_CUTDATA*   cutdataj;
@@ -7177,10 +7253,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          /* add cut to LP */
          if( hasminorthogonality && cutdatai->addedtolp )
          {
-            SCIP_Bool infeasible;
-
-            SCIP_CALL(SCIPaddCut(scip, NULL, cutdatai->cut, sepadata->forcecutstolp, &infeasible) );
-            assert( ! infeasible );
+            SCIP_CALL(SCIPaddCut(scip, NULL, cutdatai->cut, sepadata->forcecutstolp, &cutoff) );
+            if ( cutoff )
+            {
+               *result = SCIP_CUTOFF;
+               break;
+            }
             if( !cutdatai->islocal )
             {
                SCIP_CALL(SCIPaddPoolCut(scip, cutdatai->cut));
@@ -7230,7 +7308,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
             SCIP_Real bestscore;
             SCIP_Real priotmp;
             SCIP_Real minorthotmp;
-            SCIP_Bool infeasible;
+            SCIP_Bool cutoff;
             int bestpos;
             int sortidxtmp;
 
@@ -7253,8 +7331,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
             cutdatai = zerohalfcuts[sortedzerohalfcuts[bestpos]];
 
             /* add best cut to LP */
-            SCIP_CALL(SCIPaddCut(scip, NULL, cutdatai->cut, sepadata->forcecutstolp), &infeasible);
-            assert( ! infeasible );
+            SCIP_CALL(SCIPaddCut(scip, NULL, cutdatai->cut, sepadata->forcecutstolp), &cutoff);
+            if ( cutoff )
+            {
+               *result = SCIP_CUTOFF;
+               break;
+            }
             if( !cutdatai->islocal )
             {
                SCIP_CALL(SCIPaddPoolCut(scip, cutdatai->cut));
