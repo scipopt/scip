@@ -2838,6 +2838,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOptcumulative)
    /* add a potentially feasible solution was constructed we pass it to the heuristic try sol */
    if( solfeasible && violated && trysol != NULL )
    {
+#ifdef SCIP_DEBUG
       FILE* file;
       file = fopen("build.sol", "w");
 
@@ -2846,6 +2847,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOptcumulative)
          SCIP_CALL( SCIPprintSol(scip, trysol, file, FALSE) );
          fclose(file);
       }
+#endif
 
       SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->heurtrysol, trysol) );
    }
