@@ -8969,6 +8969,7 @@ SCIP_RETCODE constructIncompatibilityGraph(
 static
 SCIP_RETCODE createCumulativeCons(
    SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< constraint name */
    TCLIQUE_GRAPH*        tcliquegraph,       /**< conflict set graph */
    int*                  cliquenodes,        /**< array storing the indecies of the nodes belonging to the clique */
    int                   ncliquenodes        /**< number of nodes in the clique */
@@ -8995,7 +8996,7 @@ SCIP_RETCODE createCumulativeCons(
    }
 
    /* create (unary) cumulative constraint */
-   SCIP_CALL( SCIPcreateConsCumulative(scip, &cons, "nooverlap", ncliquenodes, vars, durations, demands, 1,
+   SCIP_CALL( SCIPcreateConsCumulative(scip, &cons, name, ncliquenodes, vars, durations, demands, 1,
          FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -9031,13 +9032,13 @@ SCIP_RETCODE findCumulativeConss(
    int ntreenodes;
    int ncliques;
    int nnodes;
+   int nconss;
    int v;
-
-   /* for the statistic we count the number added disjunctive constraints */
-   SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->naddeddisjunctives -= *naddconss );
 
    nnodes = tcliquegraph->nnodes;
    sumduration = 0;
+
+   nconss = 0;
 
    /* initialize the weight of each job with its duration */
    for( v = 0; v < nnodes; ++v )
@@ -9163,8 +9164,13 @@ SCIP_RETCODE findCumulativeConss(
    /* create for each clique a disjunctive constraints */
    for( v = 0; v < ncliques; ++v )
    {
-      SCIP_CALL( createCumulativeCons(scip, tcliquegraph, allcliques[v], nallcliques[v]) );
-      (*naddconss)++;
+      char name[SCIP_MAXSTRLEN];
+
+      /* construct constraint name */
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "nooverlap_%d_%d", SCIPgetNRuns(scip), nconss);
+
+      SCIP_CALL( createCumulativeCons(scip, name, tcliquegraph, allcliques[v], nallcliques[v]) );
+      nconss++;
 
       SCIPfreeBufferArray(scip, &allcliques[v]);
    }
@@ -9178,8 +9184,10 @@ SCIP_RETCODE findCumulativeConss(
    SCIPfreeBufferArray(scip, &nallcliques);
    SCIPfreeBufferArray(scip, &allcliques);
 
+   (*naddconss) += nconss;
+
    /* for the statistic we count the number added disjunctive constraints */
-   SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->naddeddisjunctives += *naddconss );
+   SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->naddeddisjunctives += nconss );
 
    return SCIP_OKAY;
 }
@@ -9188,6 +9196,7 @@ SCIP_RETCODE findCumulativeConss(
 static
 SCIP_RETCODE createPrecedenceCons(
    SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,
    SCIP_VAR*             var,                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar,             /**< binary, integer or implicit integer bounding variable y */
    int                   distance            /**< minimum distance between the start time of the jib corresponding to var and the jib corresponding to vbdvar */
@@ -9195,7 +9204,7 @@ SCIP_RETCODE createPrecedenceCons(
 {
    SCIP_CONS* cons;
 
-   SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, "varbound", var, vbdvar, -1.0, -SCIPinfinity(scip), -(SCIP_Real)distance,
+   SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, var, vbdvar, -1.0, -SCIPinfinity(scip), -(SCIP_Real)distance,
          TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -9217,6 +9226,7 @@ SCIP_RETCODE findPrecedenceConss(
    )
 {
    SCIP_VAR** vars;
+   int nconss;
    int nvars;
    int i;
    int j;
@@ -9224,8 +9234,7 @@ SCIP_RETCODE findPrecedenceConss(
    nvars = SCIPgetNVars(scip);
    vars = SCIPgetVars(scip);
 
-   /* for the statistic we count the number added variable constraints */
-   SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->naddedvarbounds -= *naddconss );
+   nconss = 0;
 
    for( i = 0; i < nvars; ++i )
    {
@@ -9235,7 +9244,6 @@ SCIP_RETCODE findPrecedenceConss(
          TCLIQUE_STATUS tcliquestatus;
          int* cliquenodes;
          int k;
-
 
          int ntreenodes;
          int ncliquenodes;
@@ -9265,16 +9273,23 @@ SCIP_RETCODE findPrecedenceConss(
 
          if( ncliquenodes > 1 )
          {
-            SCIP_CALL( createPrecedenceCons(scip, vars[i], vars[j], cliqueweight + tcliquegraph->durations[i]) );
-            (*naddconss)++;
+            char name[SCIP_MAXSTRLEN];
+
+            /* construct constraint name */
+            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "varbound_%d_%d", SCIPgetNRuns(scip), nconss);
+
+            SCIP_CALL( createPrecedenceCons(scip, name, vars[i], vars[j], cliqueweight + tcliquegraph->durations[i]) );
+            nconss++;
          }
 
          SCIPfreeBufferArray(scip, &cliquenodes);
       }
    }
 
+   (*naddconss) += nconss;
+
    /* for the statistic we count the number added variable constraints */
-   SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->naddedvarbounds += *naddconss );
+   SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->naddedvarbounds += nconss );
 
    return SCIP_OKAY;
 }
