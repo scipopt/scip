@@ -3014,11 +3014,11 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
          return SCIP_OKAY;
 
-      SCIPdebugMessage("ignoring relaxed bound information since variable <%s> is not active\n", SCIPvarGetName(var));
-
       /* if the variable is multi-aggregated, add the bounds of all aggregation variables */
       if(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
       {
+         SCIPdebugMessage("ignoring relaxed bound information since variable <%s> is multi-aggregated active\n", SCIPvarGetName(var));
+
          SCIP_CALL( SCIPconflictAddBound(conflict, blkmem, set, stat, var, boundtype, bdchgidx) );
 
          return SCIP_OKAY;
@@ -3559,6 +3559,29 @@ SCIP_RETCODE conflictResolveBound(
             SCIPconsGetName(infercons),
             SCIPconsIsGlobal(infercons) ? "global" : "local",
             inferinfo);
+
+         /* in case the inference variables is not an active variables, we need to transform the relaxed bound */
+         if( actvar != infervar )
+         {
+            SCIP_VAR* var;
+            SCIP_Real scalar;
+            SCIP_Real constant;
+
+            assert(SCIPvarGetStatus(infervar) == SCIP_VARSTATUS_AGGREGATED
+               || SCIPvarGetStatus(infervar) == SCIP_VARSTATUS_NEGATED);
+
+            scalar = 1.0;
+            constant = 0.0;
+
+            var = infervar;
+
+            /* transform given varibale to active varibale */
+            SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &constant) );
+            assert(var == actvar);
+
+            relaxedbd *= scalar;
+            relaxedbd += constant;
+         }
 
          SCIP_CALL( SCIPconsResolvePropagation(infercons, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, &result) );
          *resolved = (result == SCIP_SUCCESS);
