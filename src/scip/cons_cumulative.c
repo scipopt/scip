@@ -8759,6 +8759,9 @@ SCIP_RETCODE projectVbd(
       SCIP_CALL( getNodeIdx(scip, tcliquegraph, var, &idx1) );
       assert(idx1 >= 0);
 
+      if( tcliquegraph->durations[idx1] == 0 )
+         continue;
+
       vbdvars = SCIPvarGetVlbVars(var);
       vbdcoefs = SCIPvarGetVlbCoefs(var);
       vbdconsts = SCIPvarGetVlbConstants(var);
@@ -8770,6 +8773,9 @@ SCIP_RETCODE projectVbd(
 
          SCIP_CALL( getNodeIdx(scip, tcliquegraph, vbdvars[b], &idx2) );
          assert(idx2 >= 0);
+
+         if( tcliquegraph->durations[idx2] == 0 )
+            continue;
 
          if( impliesVlbPrecedenceCondition(scip, vbdvars[b], vbdcoefs[b], vbdconsts[b], tcliquegraph->durations[idx2]) )
             tcliquegraph->precedencematrix[idx2][idx1] = TRUE;
@@ -8787,6 +8793,9 @@ SCIP_RETCODE projectVbd(
          SCIP_CALL( getNodeIdx(scip, tcliquegraph, vbdvars[b], &idx2) );
          assert(idx2 >= 0);
 
+         if( tcliquegraph->durations[idx2] == 0 )
+            continue;
+
          if( impliesVubPrecedenceCondition(scip, var, vbdcoefs[b], vbdconsts[b], tcliquegraph->durations[idx1]) )
             tcliquegraph->precedencematrix[idx1][idx2] = TRUE;
       }
@@ -8797,6 +8806,9 @@ SCIP_RETCODE projectVbd(
 
          SCIP_CALL( getNodeIdx(scip, tcliquegraph, vars[b], &idx2) );
          assert(idx2 >= 0);
+
+         if( tcliquegraph->durations[idx2] == 0 )
+            continue;
 
          /* check if the latest completion time of job1 is smaller than the earliest start time of job2 */
          if( SCIPisLE(scip, SCIPvarGetUbLocal(var) + tcliquegraph->durations[idx1], SCIPvarGetLbLocal(vars[b])) )
