@@ -2348,7 +2348,7 @@ SCIP_RETCODE resolvePropagationCoretimes(
          }
 
          if( explanation != NULL )
-            explanation[cands[j]] = TRUE;
+            explanation[cands[c]] = TRUE;
       }
 
       SCIPfreeBufferArray(scip, &canddemands);
