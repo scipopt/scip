@@ -2845,7 +2845,7 @@ SCIP_RETCODE enforceConstraints(
    else
    {
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set, prob);
-      objinfeasible = SCIPsetIsLT(set, pseudoobjval, SCIPnodeGetLowerbound(SCIPtreeGetFocusNode(tree)));
+      objinfeasible = SCIPsetIsFeasLT(set, pseudoobjval, SCIPnodeGetLowerbound(SCIPtreeGetFocusNode(tree)));
    }
 
    /* during constraint enforcement, generated cuts should enter the LP in any case; otherwise, a constraint handler

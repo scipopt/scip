@@ -149,6 +149,7 @@ fixed bugs:
 - fixed bug in SCIPlpComputeRelIntPoint() with wrong iteration limit and with wrong recompution
 - fixed iteration limit determination in sepa_closecuts
 - fixed bug in prop_vbound w.r.t. creation of variables during the search
+- fixed bug using a too hard comparison on the objective-infeasible-decision in constraint enforcement
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
