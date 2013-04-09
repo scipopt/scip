@@ -3457,8 +3457,355 @@ SCIP_RETCODE coretimesUpdateUb(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE computeCoreEngeryAfter(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< core profile */
+   int                   nvars,              /**< number of start time variables (activities) */
+   int*                  ests,               /**< array of sorted earliest start times */
+   int*                  lcts,               /**< array of sorted latest completion times */
+   int*                  coreEnergyAfterEst, /**< array to store the core energy after the earliest start time of each job */
+   int*                  coreEnergyAfterLct  /**< array to store the core energy after the latest completion time of each job */
+   )
+{
+   int ntimepoints;
+   int energy;
+   int t;
+   int v;
+
+   ntimepoints = SCIPprofileGetNTimepoints(profile);
+   t = ntimepoints - 1;
+   energy = 0;
+
+   /* compute core energy after the earliest start time of each job */
+   for( v = nvars-1; v >= 0; --v )
+   {
+      while( t > 0 && SCIPprofileGetTime(profile, t-1) >= ests[v] )
+      {
+         assert(SCIPprofileGetLoad(profile, t-1) >= 0);
+         assert(SCIPprofileGetTime(profile, t) - SCIPprofileGetTime(profile, t-1)>= 0);
+         energy += SCIPprofileGetLoad(profile, t-1) * (SCIPprofileGetTime(profile, t) - SCIPprofileGetTime(profile, t-1));
+         t--;
+      }
+      assert(SCIPprofileGetTime(profile, t) >= ests[v] || t == ntimepoints-1);
+
+      /* maybe ests[j] is in-between two timepoints */
+      if( SCIPprofileGetTime(profile, t) - ests[v] > 0 )
+      {
+         assert(t > 0);
+         coreEnergyAfterEst[v] = energy + SCIPprofileGetLoad(profile, t-1) * (SCIPprofileGetTime(profile, t) - ests[v]);
+      }
+      else
+         coreEnergyAfterEst[v] = energy;
+   }
+
+   t = ntimepoints - 1;
+   energy = 0;
+
+   /* compute core energy after the latest completion time of each job */
+   for( v = nvars-1; v >= 0; --v )
+   {
+      while( t > 0 && SCIPprofileGetTime(profile, t-1) >= lcts[v] )
+      {
+         assert(SCIPprofileGetLoad(profile, t-1) >= 0);
+         assert(SCIPprofileGetTime(profile, t) - SCIPprofileGetTime(profile, t-1)>= 0);
+         energy += SCIPprofileGetLoad(profile, t-1) * (SCIPprofileGetTime(profile, t) - SCIPprofileGetTime(profile, t-1));
+         t--;
+      }
+      assert(SCIPprofileGetTime(profile, t) >= lcts[v] || t == ntimepoints-1);
+
+      /* maybe lcts[j] is in-between two timepoints */
+      if( SCIPprofileGetTime(profile, t) - lcts[v] > 0 )
+      {
+         assert(t > 0);
+         coreEnergyAfterLct[v] = energy + SCIPprofileGetLoad(profile, t-1) * (SCIPprofileGetTime(profile, t) - lcts[v]);
+      }
+      else
+         coreEnergyAfterLct[v] = energy;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether the instance is infeasible due to a overload within a certain time frame using the idea of time table edge finding
+ *
+ *  @note The algorithm is based on the following two papers:
+ *        - Petr Vilim, "Timetable Edge Finding Filtering Algorithm for Discrete Cumulative Resources", In: Tobias
+ *          Achterberg and J. Christopher Beck (Eds.), Integration of AI and OR Techniques in Constraint Programming for
+ *          Combinatorial Optimization Problems (CPAIOR 2011), LNCS 6697, pp 230--245
+ *        - Andreas Schutt, Thibaut Feydy, and Peter J. Stuckey, "Explaining Time-Table-Edge-Finding Propagation for the
+ *          Cumulative Resource Constraint (submitted to CPAIOR 2013)
+ */
+static
+SCIP_RETCODE checkOverloadViaTTEF(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_PROFILE*         profile,            /**< current core profile */
+   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
+   SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
+   SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
+   )
+{
+   int* coreEnergyAfterEst;
+   int* coreEnergyAfterLct;
+   int* freeenergies;
+   int* idlcts;
+   int* idests;
+   int* lcts;
+   int* ests;
+   int* lsts;
+   int maxavailable;
+   int minavailable;
+   int end;
+   int nests;
+   int v;
+
+   SCIPdebugMessage("run time table edge finding overload cheching\n");
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &coreEnergyAfterEst, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coreEnergyAfterLct, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &freeenergies, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idlcts, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idests, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lcts, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ests, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lsts, nvars) );
+
+   /* collect earliest start times, latest completion time, and free energy contributions */
+   for( v = 0; v < nvars; ++ v)
+   {
+      int duration;
+      int est;
+      int lct;
+      int ect;
+      int lst;
+
+      duration = durations[v];
+      assert(duration > 0);
+
+      est = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v]));
+      lst = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v]));
+      ect = est + duration;
+      lct = lst + duration;
+
+      ests[v] = est;
+      lcts[v] = lct;
+      idests[v] = v;
+      idlcts[v] = v;
+
+      freeenergies[v] = duration - MAX(0, hmin - est) - MAX(0, lct - hmax) - MAX(0, ect - lst);
+      freeenergies[v] *= demands[v];
+
+      /* the latest start time of the free energy */
+      lsts[v] = MAX(ect, lst);
+   }
+
+   /* sort the earliest start times and latest completion in non-decreasing order */
+   SCIPsortIntInt(ests, idests, nvars);
+   SCIPsortIntInt(lcts, idlcts, nvars);
+
+   SCIP_CALL( computeCoreEngeryAfter(scip, profile, nvars, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct) );
+
+   end = hmax + 1;
+
+   maxavailable = (hmax - hmin) * capacity;
+   minavailable = maxavailable;
+
+   nests = nvars;
+
+   for( v = nvars-1; v >= 0  && !(*cutoff); --v )
+   {
+      int energy;
+      int lct;
+      int i;
+
+      lct = lcts[v];
+
+      /* if the latetest completion time is larger then hmax an infeasibilty cannot be detected, hence we skip that */
+      if( lct > hmax )
+         continue;
+
+      /* if the latetest completion time is smaller then hmin we have to stop */
+      if( lct <= hmin )
+         continue;
+
+      /* if the latest completion time equals to previous end time, we con continue since this particular interval
+       * induced by end was just analyzed
+       */
+      if( lct == end )
+         continue;
+
+      /* check if we can skip the interval; this is the case if the free energy (the energy which is not occupied by any
+       * core) is smaller than the previous minimum free energy; if so it means that in the next iterate the free-energy
+       * cannot be negative
+       */
+      if( end <= hmax && minavailable < maxavailable )
+      {
+         int freeenergy;
+
+         assert(v+1 < nvars);
+         assert(coreEnergyAfterLct[v] >= coreEnergyAfterLct[v+1]);
+
+         freeenergy = capacity * (end - lct) - coreEnergyAfterLct[v] + coreEnergyAfterLct[v+1];
+
+         if( freeenergy <= minavailable )
+         {
+            SCIPdebugMessage("skip latest completion time  <%d> (minimum available energy <%d>, free energy <%d>)\n", lct, minavailable, freeenergy);
+            continue;
+         }
+      }
+
+      SCIPdebugMessage("check interval ending with <%d>\n", lct);
+
+      end = lct;
+
+      energy = 0;
+      minavailable = maxavailable;
+
+      for( i = nests-1; i >= 0; --i )
+      {
+         int freeenergy;
+         int begin;
+         int idx;
+         int est;
+         int lst;
+
+         idx = idests[i];
+         assert(idx >= 0);
+         assert(idx < nvars);
+
+         /* the earliest start time of the job */
+         est = ests[i];
+         lct = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[idx])) + durations[idx];
+
+         /* the latest start time of the free part of the job */
+         lst = lsts[idx];
+
+         /* if the job starts after the current end, we can skip it and do not need to consider it again since the
+          * latest completion times (which define end) are scant in non-increasing order
+          */
+         if( end <= est )
+         {
+            nests--;
+            continue;
+         }
+
+         begin = est;
+
+         SCIPdebugMessage("check variable <%s>[%g,%g] (duration %d, demands %d, est <%d>, lst of free part <%d>\n",
+            SCIPvarGetName(vars[idx]), SCIPvarGetLbLocal(vars[idx]), SCIPvarGetUbLocal(vars[idx]), durations[idx], demands[idx], est, lst);
+
+         if( lct <= end )
+         {
+            /* if the jobs has to finish before the end, all the energy has to be scheduled */
+            energy += freeenergies[idx];
+         }
+         else if( lst < end )
+         {
+            /* the job partly overlaps with the end */
+            energy += demands[idx] * (end - lst);
+         }
+
+         SCIPdebugMessage("to schedule free energy <%d>\n", energy);
+
+         assert(coreEnergyAfterEst[i] >= coreEnergyAfterLct[v]);
+
+         /* compute the free energy */
+         freeenergy = capacity * (end - begin) - energy - coreEnergyAfterEst[i] + coreEnergyAfterLct[v];
+
+         if( freeenergy < 0 )
+         {
+            int j;
+
+            /* analyze infeasibilty */
+            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+            for( j = i; j < nests; ++j )
+            {
+               idx = idests[j];
+               assert(idx >= 0);
+               assert(idx < nvars);
+
+               /* check if bound widening should be used */
+               if( usebdwidening )
+               {
+                  int duration;
+                  int relaxlb;
+                  int relaxub;
+
+                  est = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[idx]));
+                  lst = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[idx]));
+                  duration = durations[idx];
+
+                  assert(est >= begin);
+
+                  if( lct <= end )
+                  {
+                     relaxlb = begin;
+                     relaxub = end - duration;
+                  }
+                  else if( lst <= end )
+                  {
+                     relaxlb = begin + (end -lst) - duration;
+                     relaxub = lst;
+                  }
+                  else if( est + duration > lst )
+                  {
+                     relaxlb = begin + lst - (est  + duration) - duration;
+                     relaxub = end - lst + (est  + duration);
+                  }
+                  else
+                     continue;
+
+                  SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vars[idx], NULL, (SCIP_Real)relaxlb) );
+                  SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vars[idx], NULL, (SCIP_Real)relaxub) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPaddConflictLb(scip, vars[idx], NULL) );
+                  SCIP_CALL( SCIPaddConflictUb(scip, vars[idx], NULL) );
+               }
+
+               if( explanation != NULL )
+                  explanation[idx] = TRUE;
+            }
+
+            (*initialized) = TRUE;
+            (*cutoff) = TRUE;
+            break;
+         }
+
+         minavailable = MIN(minavailable, freeenergy);
+
+         /* if the earliest start time is smaller than hmin we can stop here since the next job will not decrease the free energy */
+         if( est < hmin )
+            break;
+      }
+   }
+
+   /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &lsts);
+   SCIPfreeBufferArray(scip, &ests);
+   SCIPfreeBufferArray(scip, &lcts);
+   SCIPfreeBufferArray(scip, &idests);
+   SCIPfreeBufferArray(scip, &idlcts);
+   SCIPfreeBufferArray(scip, &freeenergies);
+   SCIPfreeBufferArray(scip, &coreEnergyAfterLct);
+   SCIPfreeBufferArray(scip, &coreEnergyAfterEst);
+
+   return SCIP_OKAY;
+}
+
 /** a cumulative condition is not satisfied if its capacity is exceeded at a time where jobs cannot be shifted (core)
- *  anymore we build up a cumulative profile of all cores of jobs and try to improve bounds of all jobs
+ *  anymore we build up a cumulative profile of all cores of jobs and try to improve bounds of all jobs; also known as
+ *  time table propagator
  */
 static
 SCIP_RETCODE propagateCoretimes(
@@ -3537,7 +3884,7 @@ SCIP_RETCODE propagateCoretimes(
       est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
       lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
 
-      /* check if the job runs completly outside of the effective horizon [hmin, hmax); if so skip it */
+      /* check if the job runs completely outside of the effective horizon [hmin, hmax); if so skip it */
       if( lst + duration <= hmin || est >= hmax )
       {
          ignorejobs[j] = TRUE;
@@ -3558,7 +3905,7 @@ SCIP_RETCODE propagateCoretimes(
          SCIPdebugMessage("variable <%s>[%d,%d] (duration %d, demand %d): add core [%d,%d)\n",
             SCIPvarGetName(var), est, lst, duration, demand, starts[j], ends[j]);
 
-         /* insert the core into core resource profile */
+         /* insert the core into core resource profile (complexity O(log n)) */
          SCIP_CALL( SCIPprofileInsertCore(profile, starts[j], ends[j], demand, &pos, &infeasible) );
 
          /* in case the insertion of the core leads to an infeasibility; start the conflict analysis */
@@ -3680,7 +4027,14 @@ SCIP_RETCODE propagateCoretimes(
             cores[j] = TRUE;
             ncores++;
          }
+
       }
+   }
+
+   if( !(*cutoff) )
+   {
+      SCIP_CALL( checkOverloadViaTTEF(scip, nvars, vars, durations, demands, capacity, hmin, hmax, profile,
+            usebdwidening, initialized, explanation, cutoff) );
    }
 
    /* free resource profile */
@@ -4809,14 +5163,14 @@ SCIP_RETCODE propagateEdgeFinder(
    return SCIP_OKAY;
 }
 
-/** checks whether the instance is infeasible due to a overload within a certain time frame
+/** checks whether the instance is infeasible due to a overload within a certain time frame using the idea of theta trees
  *
  *  @note The algorithm is based on the paper: Petr Vilim, "Max Energy Filtering Algorithm for Discrete Cumulative
  *        Resources". In: Willem Jan van Hoeve and John N. Hooker (Eds.), Integration of AI and OR Techniques in
  *        Constraint Programming for Combinatorial Optimization Problems (CPAIOR 2009), LNCS 5547, pp 294--308
  */
 static
-SCIP_RETCODE checkOverload(
+SCIP_RETCODE checkOverloadViaThetaTree(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
@@ -5281,7 +5635,7 @@ SCIP_RETCODE propagateCumulativeCondition(
    if( conshdlrdata->overload )
    {
       /* check for overload, which may result in a cutoff */
-      SCIP_CALL( checkOverload(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
+      SCIP_CALL( checkOverloadViaThetaTree(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
             cons, usebdwidening, conshdlrdata->useadjustedjobs, TRUE, conshdlrdata->edgefinding,
             initialized, explanation, nchgbds, cutoff) );
 
@@ -5292,7 +5646,7 @@ SCIP_RETCODE propagateCumulativeCondition(
    if( conshdlrdata->edgefinding )
    {
       /* check for overload, which may result in a cutoff */
-      SCIP_CALL( checkOverload(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
+      SCIP_CALL( checkOverloadViaThetaTree(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
             cons, usebdwidening, conshdlrdata->useadjustedjobs, FALSE, TRUE, initialized, explanation, nchgbds, cutoff) );
    }
 
@@ -8677,6 +9031,7 @@ SCIP_RETCODE getNodeIdx(
       }
       else
       {
+         int pos;
          int v;
 
          /**@todo we might want to add the aggregation path to graph */
@@ -8703,27 +9058,29 @@ SCIP_RETCODE getNodeIdx(
          }
          assert(tcliquegraph->nnodes < tcliquegraph->size);
 
-         (*idx) = tcliquegraph->nnodes;
+         pos = tcliquegraph->nnodes;
 
-         tcliquegraph->durations[*idx] = 0;
-         tcliquegraph->weights[*idx] = 0;
-         tcliquegraph->vars[*idx] = var;
+         tcliquegraph->durations[pos] = 0;
+         tcliquegraph->weights[pos] = 0;
+         tcliquegraph->vars[pos] = var;
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &tcliquegraph->precedencematrix[*idx], tcliquegraph->size) );
-         BMSclearMemoryArray(tcliquegraph->precedencematrix[*idx], tcliquegraph->nnodes);
+         SCIP_CALL( SCIPallocBufferArray(scip, &tcliquegraph->precedencematrix[pos], tcliquegraph->size) );
+         BMSclearMemoryArray(tcliquegraph->precedencematrix[pos], tcliquegraph->nnodes);
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &tcliquegraph->demandmatrix[*idx], tcliquegraph->size) );
-         BMSclearMemoryArray(tcliquegraph->demandmatrix[*idx], tcliquegraph->nnodes);
+         SCIP_CALL( SCIPallocBufferArray(scip, &tcliquegraph->demandmatrix[pos], tcliquegraph->size) );
+         BMSclearMemoryArray(tcliquegraph->demandmatrix[pos], tcliquegraph->nnodes);
 
-         SCIP_CALL( SCIPhashmapInsert(tcliquegraph->varmap, (void*)var, (void*)(size_t)(*idx)) );
+         SCIP_CALL( SCIPhashmapInsert(tcliquegraph->varmap, (void*)var, (void*)(size_t)(pos)) );
 
          tcliquegraph->nnodes++;
 
          for( v = 0; v < tcliquegraph->nnodes; ++v )
          {
-            tcliquegraph->precedencematrix[v][*idx] = 0;
-            tcliquegraph->demandmatrix[v][*idx] = 0;
+            tcliquegraph->precedencematrix[v][pos] = 0;
+            tcliquegraph->demandmatrix[v][pos] = 0;
          }
+
+         (*idx) = tcliquegraph->nnodes;
       }
    }
    else
