@@ -2138,6 +2138,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
    int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_VAR*             infervar,           /**< inference variable */
    int                   inferdemand,        /**< demand of the inference variable */
    int                   inferpeak,          /**< time point which causes the propagation */
@@ -2208,6 +2210,7 @@ SCIP_RETCODE resolvePropagationCoretimes(
 
          maxlst = MAX(maxlst, lst);
          minect = MIN(minect, ect);
+         assert(maxlst < minect);
 
          if( explanation != NULL )
             explanation[j] = TRUE;
@@ -2234,6 +2237,7 @@ SCIP_RETCODE resolvePropagationCoretimes(
 
          maxlst = MAX(maxlst, lst);
          minect = MIN(minect, ect);
+         assert(maxlst < minect);
 
          if( explanation != NULL )
             explanation[j] = TRUE;
@@ -2316,7 +2320,12 @@ SCIP_RETCODE resolvePropagationCoretimes(
 
          maxlst = MAX(maxlst, lst);
          minect = MIN(minect, ect);
+         assert(maxlst < minect);
       }
+
+      SCIPdebugMessage("infer peak %d, relaxed peak %d, lst %d, ect %d\n", inferpeak, relaxedpeak, maxlst, minect);
+      assert(inferpeak >= maxlst);
+      assert(inferpeak < minect);
 
       /* check if the collect variable are sufficient to prove the relaxed bound (relaxedpeak) */
       if( relaxedpeak < inferpeak )
@@ -2325,8 +2334,12 @@ SCIP_RETCODE resolvePropagationCoretimes(
       }
       else if( relaxedpeak > inferpeak )
       {
-         inferpeak = MIN(minect, relaxedpeak);
+         inferpeak = MIN(minect-1, relaxedpeak);
       }
+      assert(inferpeak >= hmin);
+      assert(inferpeak < hmax);
+      assert(inferpeak >= maxlst);
+      assert(inferpeak < minect);
 
       /* post all necessary bound changes */
       for( c = 0; c < ncands; ++c )
@@ -2533,7 +2546,7 @@ SCIP_RETCODE respropCumulativeCondition(
          SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
       }
 
-      SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity,
+      SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
             infervar, inferdemand, inferpeak, relaxedpeak, bdchgidx, usebdwidening, explanation) );
 
       if( explanation != NULL )
@@ -3113,6 +3126,8 @@ SCIP_RETCODE analyseInfeasibelCoreInsertion(
    int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_VAR*             infervar,           /**< start time variable which lead to the infeasibilty */
    int                   inferduration,      /**< duration of the start time variable */
    int                   inferdemand,        /**< demand of the start time variable */
@@ -3123,18 +3138,18 @@ SCIP_RETCODE analyseInfeasibelCoreInsertion(
    )
 {
    SCIPdebugMessage("detected infeasibility due to adding a core to the core resource profile\n");
-   SCIPdebugMessage("variable <%s>[%g,%g] (demand %d)\n", SCIPvarGetName(infervar),
-      SCIPvarGetLbLocal(infervar), SCIPvarGetUbLocal(infervar), inferdemand);
+   SCIPdebugMessage("variable <%s>[%g,%g] (demand %d, duration %d)\n", SCIPvarGetName(infervar),
+      SCIPvarGetLbLocal(infervar), SCIPvarGetUbLocal(infervar), inferdemand, inferduration);
 
    /* initialize conflict analysis if conflict analysis is applicable */
    if( SCIPisConflictAnalysisApplicable(scip) )
    {
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-      SCIPdebugMessage("add lower and upper bounds of variable <%s>\n", SCIPvarGetName(infervar));
-
-      SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity,
+      SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
             infervar, inferdemand, inferpeak, inferpeak, NULL, usebdwidening, explanation) );
+
+      SCIPdebugMessage("add lower and upper bounds of variable <%s>\n", SCIPvarGetName(infervar));
 
       /* add both bound of the inference variable since these biuld the core which we could not inserted */
       if( usebdwidening )
@@ -3167,6 +3182,8 @@ SCIP_RETCODE coretimesUpdateLb(
    int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_PROFILE*         profile,            /**< resource profile */
    int                   idx,                /**< position of the variable to propagate */
@@ -3258,7 +3275,7 @@ SCIP_RETCODE coretimesUpdateLb(
          SCIPdebugMessage("variable <%s>: cannot be scheduled\n", SCIPvarGetName(var));
 
          /* use conflict analysis to analysis the core insertion which was infeasible */
-         SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
+         SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
                var, duration, demand, newlb-1, usebdwidening, initialized, explanation) );
 
          if( explanation != NULL )
@@ -3317,6 +3334,8 @@ SCIP_RETCODE coretimesUpdateUb(
    int                   duration,           /**< duration of the job */
    int                   demand,             /**< demand of the job */
    int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_PROFILE*         profile,            /**< resource profile */
    int*                  nchgbds             /**< pointer to store the number of bound changes */
@@ -3551,7 +3570,7 @@ SCIP_RETCODE propagateCoretimes(
             assert(ends[j] > SCIPprofileGetTime(profile, pos));
 
             /* use conflict analysis to analysis the core insertion which was infeasible */
-            SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
+            SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
                   var, duration, demand, SCIPprofileGetTime(profile, pos), usebdwidening, initialized, explanation) );
 
             if( explanation != NULL )
@@ -3612,14 +3631,14 @@ SCIP_RETCODE propagateCoretimes(
          }
 
          /* first try to update the earliest start time */
-         SCIP_CALL( coretimesUpdateLb(scip, nvars, vars, durations, demands, capacity, cons,
+         SCIP_CALL( coretimesUpdateLb(scip, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
                profile, j, nchgbds, usebdwidening, initialized, explanation, cutoff) );
 
          if( *cutoff )
             break;
 
          /* second try to update the latest start time */
-         SCIP_CALL( coretimesUpdateUb(scip, var, duration, demand, capacity, cons,
+         SCIP_CALL( coretimesUpdateUb(scip, var, duration, demand, capacity, hmin, hmax, cons,
                profile, nchgbds) );
 
          if( *cutoff )
@@ -3646,7 +3665,7 @@ SCIP_RETCODE propagateCoretimes(
             if( infeasible )
             {
                /* use conflict analysis to analysis the core insertion which was infeasible */
-               SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
+               SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
                      var, duration, demand, SCIPprofileGetTime(profile, pos), usebdwidening, initialized, explanation) );
 
                if( explanation != NULL )
@@ -10349,8 +10368,9 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("resolve propagation: variable <%s>, cumulative constraint <%s> (capacity %d, propagation %d)\n",
-      SCIPvarGetName(infervar), SCIPconsGetName(cons), consdata->capacity, inferInfoGetProprule(intToInferInfo(inferinfo)));
+   SCIPdebugMessage("resolve propagation: variable <%s>, cumulative constraint <%s> (capacity %d, propagation %d, [%d,%d))\n",
+      SCIPvarGetName(infervar), SCIPconsGetName(cons), consdata->capacity, inferInfoGetProprule(intToInferInfo(inferinfo)),
+      SCIPgetHminCumulative(scip, cons), SCIPgetHmaxCumulative(scip, cons));
 
    SCIP_CALL( respropCumulativeCondition(scip, consdata->nvars, consdata->vars,
          consdata->durations, consdata->demands, consdata->capacity, consdata->hmin, consdata->hmax,
