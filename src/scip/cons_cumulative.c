@@ -2523,7 +2523,7 @@ SCIP_RETCODE respropCumulativeCondition(
 
          /* get the inference peak that the time point which lead to the that propagtion */
          inferpeak = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE)) + inferduration;
-         relaxedpeak = relaxedbd + inferduration;
+         relaxedpeak = convertBoundToInt(scip, relaxedbd) + inferduration;
          assert(relaxedpeak >= inferpeak);
 
          /* old upper bound of variable itself is part of the explanation */
@@ -2539,7 +2539,7 @@ SCIP_RETCODE respropCumulativeCondition(
 
          /* get the time interval where the job could not be scheduled */
          inferpeak = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE)) - 1;
-         relaxedpeak = relaxedbd - 1;
+         relaxedpeak = convertBoundToInt(scip, relaxedbd) - 1;
          assert(relaxedpeak <= inferpeak);
 
          /* old lower bound of variable itself is part of the explanation */
@@ -3334,8 +3334,6 @@ SCIP_RETCODE coretimesUpdateUb(
    int                   duration,           /**< duration of the job */
    int                   demand,             /**< demand of the job */
    int                   capacity,           /**< cumulative capacity */
-   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
-   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_PROFILE*         profile,            /**< resource profile */
    int*                  nchgbds             /**< pointer to store the number of bound changes */
@@ -3638,7 +3636,7 @@ SCIP_RETCODE propagateCoretimes(
             break;
 
          /* second try to update the latest start time */
-         SCIP_CALL( coretimesUpdateUb(scip, var, duration, demand, capacity, hmin, hmax, cons,
+         SCIP_CALL( coretimesUpdateUb(scip, var, duration, demand, capacity, cons,
                profile, nchgbds) );
 
          if( *cutoff )
