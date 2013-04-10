@@ -3778,7 +3778,7 @@ SCIP_RETCODE checkOverloadViaTTEF(
 
                   if( lst + duration <= end )
                   {
-                     elaxlb = begin;
+                     relaxlb = begin;
                      relaxub = end - duration;
                   }
                   else if( lst <= end )
