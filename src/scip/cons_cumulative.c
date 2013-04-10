@@ -3609,6 +3609,19 @@ SCIP_RETCODE analyzeConflictOverloadTTEF(
 
       overlap = overlaps[v];
 
+      requiredenergy -= locenergies[v];
+
+      if( requiredenergy < -1 )
+      {
+         int demand;
+
+         demand = demands[idx];
+         assert(demand > 0);
+
+         overlap -= (int)((requiredenergy + 1) / demand);
+      }
+      assert(overlap > 0);
+
       relaxlb = begin - duration + overlap;
       relaxub = end - overlap;
 
@@ -3625,7 +3638,6 @@ SCIP_RETCODE analyzeConflictOverloadTTEF(
       if( explanation != NULL )
          explanation[idx] = TRUE;
 
-      requiredenergy -= locenergies[v];
    }
 
    assert(requiredenergy < 0);
@@ -3890,10 +3902,6 @@ SCIP_RETCODE checkOverloadViaTTEF(
 
          /* the earliest start time of the job */
          est = ests[i];
-         lct = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[idx])) + durations[idx];
-
-         /* the latest start time of the free part of the job */
-         lst = lsts[idx];
 
          /* if the job starts after the current end, we can skip it and do not need to consider it again since the
           * latest completion times (which define end) are scant in non-increasing order
@@ -3904,7 +3912,10 @@ SCIP_RETCODE checkOverloadViaTTEF(
             continue;
          }
 
-         begin = est;
+         lct = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[idx])) + durations[idx];
+
+         /* the latest start time of the free part of the job */
+         lst = lsts[idx];
 
          SCIPdebugMessage("check variable <%s>[%g,%g] (duration %d, demands %d, est <%d>, lst of free part <%d>\n",
             SCIPvarGetName(vars[idx]), SCIPvarGetLbLocal(vars[idx]), SCIPvarGetUbLocal(vars[idx]), durations[idx], demands[idx], est, lst);
@@ -3924,6 +3935,8 @@ SCIP_RETCODE checkOverloadViaTTEF(
          SCIPdebugMessage("to schedule free energy <%d>\n", energy);
 
          assert(coreEnergyAfterEst[i] >= coreEnergyAfterLct[v]);
+
+         begin = est;
 
          /* compute the free energy */
          freeenergy = capacity * (end - begin) - energy - coreEnergyAfterEst[i] + coreEnergyAfterLct[v];
