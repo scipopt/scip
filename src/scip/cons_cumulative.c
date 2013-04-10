@@ -2437,7 +2437,7 @@ SCIP_RETCODE resolvePropagationEdgeFinding(
        */
       left = (est == hmin && lb + duration > hmin) || lb >= est;
 
-      /* in case the latest completion time is equal to hmin we have to also consider the jobs which run in that region
+      /* in case the latest completion time is equal to hmax we have to also consider the jobs which run in that region
        * since we use adjusted jobs during the propagation
        */
       right = (lct == hmax && ub < hmax) || ub + duration <= lct;
@@ -3457,6 +3457,9 @@ SCIP_RETCODE coretimesUpdateUb(
    return SCIP_OKAY;
 }
 
+/** compute for the different earliest start and latest completion time the core energy of the corresponding time
+ *  points
+ */
 static
 SCIP_RETCODE computeCoreEngeryAfter(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3527,7 +3530,8 @@ SCIP_RETCODE computeCoreEngeryAfter(
    return SCIP_OKAY;
 }
 
-/** checks whether the instance is infeasible due to a overload within a certain time frame using the idea of time table edge finding
+/** checks whether the instance is infeasible due to a overload within a certain time frame using the idea of time-table
+ *  edge-finding
  *
  *  @note The algorithm is based on the following two papers:
  *        - Petr Vilim, "Timetable Edge Finding Filtering Algorithm for Discrete Cumulative Resources", In: Tobias
@@ -3555,8 +3559,7 @@ SCIP_RETCODE checkOverloadViaTTEF(
 {
    int* coreEnergyAfterEst;
    int* coreEnergyAfterLct;
-   int* freeenergies;
-   int* idlcts;
+   int* flexenergies;
    int* idests;
    int* lcts;
    int* ests;
@@ -3567,12 +3570,11 @@ SCIP_RETCODE checkOverloadViaTTEF(
    int nests;
    int v;
 
-   SCIPdebugMessage("run time table edge finding overload cheching\n");
+   SCIPdebugMessage("run time-table edge-finding overload checking\n");
 
    SCIP_CALL( SCIPallocBufferArray(scip, &coreEnergyAfterEst, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coreEnergyAfterLct, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &freeenergies, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &idlcts, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &flexenergies, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &idests, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lcts, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ests, nvars) );
@@ -3582,6 +3584,9 @@ SCIP_RETCODE checkOverloadViaTTEF(
    for( v = 0; v < nvars; ++ v)
    {
       int duration;
+      int leftadjust;
+      int rightadjust;
+      int core;
       int est;
       int lct;
       int ect;
@@ -3598,10 +3603,21 @@ SCIP_RETCODE checkOverloadViaTTEF(
       ests[v] = est;
       lcts[v] = lct;
       idests[v] = v;
-      idlcts[v] = v;
 
-      freeenergies[v] = duration - MAX(0, hmin - est) - MAX(0, lct - hmax) - MAX(0, ect - lst);
-      freeenergies[v] *= demands[v];
+      /* compute core time window which lies within the effective horizon */
+      core = MAX(0, MIN(hmax, ect) - MAX(lst,hmin));
+
+      /* compute the number of time steps the job could run before the effective horizon */
+      leftadjust = MAX(0, hmin - est);
+
+      /* compute the number of time steps the job could run after the effective horizon */
+      rightadjust = MAX(0, lct - hmax);
+
+      /* compute for each job the energy which is flexible; meaning not part of the core */
+      flexenergies[v] = duration - leftadjust - rightadjust - core;
+      flexenergies[v] = MAX(0, flexenergies[v]);
+      flexenergies[v] *= demands[v];
+      assert(flexenergies[v] >= 0);
 
       /* the latest start time of the free energy */
       lsts[v] = MAX(ect, lst);
@@ -3609,8 +3625,11 @@ SCIP_RETCODE checkOverloadViaTTEF(
 
    /* sort the earliest start times and latest completion in non-decreasing order */
    SCIPsortIntInt(ests, idests, nvars);
-   SCIPsortIntInt(lcts, idlcts, nvars);
+   SCIPsortInt(lcts, nvars);
 
+   /** compute for the different earliest start and latest completion time the core energy of the corresponding time
+    *  points
+    */
    SCIP_CALL( computeCoreEngeryAfter(scip, profile, nvars, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct) );
 
    end = hmax + 1;
@@ -3628,15 +3647,20 @@ SCIP_RETCODE checkOverloadViaTTEF(
 
       lct = lcts[v];
 
-      /* if the latetest completion time is larger then hmax an infeasibilty cannot be detected, hence we skip that */
+      /* if the latest completion time is larger then hmax an infeasibility cannot be detected, since after hamx an
+       * infinity capacity is available; hence we skip that
+       */
       if( lct > hmax )
          continue;
 
-      /* if the latetest completion time is smaller then hmin we have to stop */
+      /* if the latest completion time is smaller then hmin we have to stop */
       if( lct <= hmin )
-         continue;
+      {
+         assert(v == 0 || lcts[v-1] <= lcts[v]);
+         break;
+      }
 
-      /* if the latest completion time equals to previous end time, we con continue since this particular interval
+      /* if the latest completion time equals to previous end time, we can continue since this particular interval
        * induced by end was just analyzed
        */
       if( lct == end )
@@ -3653,6 +3677,7 @@ SCIP_RETCODE checkOverloadViaTTEF(
          assert(v+1 < nvars);
          assert(coreEnergyAfterLct[v] >= coreEnergyAfterLct[v+1]);
 
+         /* compute the energy which is not consumed by the cores */
          freeenergy = capacity * (end - lct) - coreEnergyAfterLct[v] + coreEnergyAfterLct[v+1];
 
          if( freeenergy <= minavailable )
@@ -3705,7 +3730,8 @@ SCIP_RETCODE checkOverloadViaTTEF(
          if( lct <= end )
          {
             /* if the jobs has to finish before the end, all the energy has to be scheduled */
-            energy += freeenergies[idx];
+            assert(flexenergies[v] >= 0);
+            energy += flexenergies[idx];
          }
          else if( lst < end )
          {
@@ -3727,13 +3753,13 @@ SCIP_RETCODE checkOverloadViaTTEF(
             /* analyze infeasibilty */
             SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-            for( j = i; j < nests; ++j )
+            for( j = 0; j < nests; ++j )
             {
                idx = idests[j];
                assert(idx >= 0);
                assert(idx < nvars);
 
-               /* check if bound widening should be used */
+               /* check if bound widening should be used ??????? */
                if( usebdwidening )
                {
                   int duration;
@@ -3744,22 +3770,26 @@ SCIP_RETCODE checkOverloadViaTTEF(
                   lst = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[idx]));
                   duration = durations[idx];
 
-                  assert(est >= begin);
+                  if( est + duration <= begin )
+                     continue;
 
-                  if( lct <= end )
+                  if( lst >= end )
+                     continue;
+
+                  if( lst + duration <= end )
                   {
-                     relaxlb = begin;
+                     elaxlb = begin;
                      relaxub = end - duration;
                   }
                   else if( lst <= end )
                   {
-                     relaxlb = begin + (end -lst) - duration;
+                     relaxlb = begin + (end - lst) - duration;
                      relaxub = lst;
                   }
                   else if( est + duration > lst )
                   {
-                     relaxlb = begin + lst - (est  + duration) - duration;
-                     relaxub = end - lst + (est  + duration);
+                     relaxlb = begin + lst - (est + duration) - duration;
+                     relaxub = end - lst + (est + duration);
                   }
                   else
                      continue;
@@ -3788,7 +3818,9 @@ SCIP_RETCODE checkOverloadViaTTEF(
 
          minavailable = MIN(minavailable, freeenergy);
 
-         /* if the earliest start time is smaller than hmin we can stop here since the next job will not decrease the free energy */
+         /* if the earliest start time is smaller than hmin we can stop here since the next job will not decrease the
+          * free energy
+          */
          if( est < hmin )
             break;
       }
@@ -3799,8 +3831,7 @@ SCIP_RETCODE checkOverloadViaTTEF(
    SCIPfreeBufferArray(scip, &ests);
    SCIPfreeBufferArray(scip, &lcts);
    SCIPfreeBufferArray(scip, &idests);
-   SCIPfreeBufferArray(scip, &idlcts);
-   SCIPfreeBufferArray(scip, &freeenergies);
+   SCIPfreeBufferArray(scip, &flexenergies);
    SCIPfreeBufferArray(scip, &coreEnergyAfterLct);
    SCIPfreeBufferArray(scip, &coreEnergyAfterEst);
 
