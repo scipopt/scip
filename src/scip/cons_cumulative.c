@@ -320,6 +320,11 @@ INFERINFO getInferInfo(
 {
    INFERINFO inferinfo;
 
+   /* check that the data menber are in the range of the available bits */
+   assert((int)proprule >= 0 && (int)proprule < (1<<2));
+   assert(data1 >= 0 && data1 < (1<<15));
+   assert(data2 >= 0 && data2 < (1<<15));
+
    inferinfo.val.asbits.proprule = proprule; /*lint !e641*/
    inferinfo.val.asbits.data1 = (unsigned int) data1; /*lint !e732*/
    inferinfo.val.asbits.data2 = (unsigned int) data2; /*lint !e732*/
@@ -501,10 +506,9 @@ SCIP_RETCODE createWorstCaseProfile(
    int                   nvars,              /**< number of variables (jobs) */
    SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
    int*                  durations,          /**< array containing corresponding durations */
-   int*                  demands,            /**< array containing corresponding demands */
-   int                   capacity            /**< available cumulative capacity */
+   int*                  demands             /**< array containing corresponding demands */
    )
-{  /*lint --e{715}*/
+{
    SCIP_VAR* var;
    SCIP_HASHMAP* addedvars;
    int* copydemands;
@@ -923,7 +927,6 @@ void createSelectedSortedEventpointsSol(
       SCIPdebugMessage("%d: job[%d] endtime %d,  demand = %d\n", j, endindices[j], endtimes[j],
          consdata->demands[endindices[j]]);
    }
-   SCIPdebugMessage("capacity = %d\n", consdata->capacity);
 #endif
 }
 
@@ -2373,7 +2376,7 @@ SCIP_RETCODE resolvePropagationCoretimes(
    return SCIP_OKAY;
 }
 
-/** repropagation of Edge finding algorithm simplified version from Petr Vilim only a small subset is reported such that
+/** repropagation of edge finding algorithm simplified version from Petr Vilim only a small subset is reported such that
  *  energy in total and for bound change is enough
  */
 static
@@ -3289,7 +3292,7 @@ SCIP_RETCODE coretimesUpdateLb(
       /* construct the inference information which we are using with the conflict analysis to resolve that particular
        * bound change
        */
-      inferinfo = getInferInfo(PROPRULE_1_CORETIMES, pos, 0);
+      inferinfo = getInferInfo(PROPRULE_1_CORETIMES, idx, 0);
 
       /* perform the bound lower bound change */
       SCIP_CALL( SCIPinferVarLbCons(scip, var, (SCIP_Real)newlb, cons, inferInfoToInt(inferinfo), TRUE, infeasible, &tightened) );
@@ -3336,6 +3339,7 @@ SCIP_RETCODE coretimesUpdateUb(
    int                   capacity,           /**< cumulative capacity */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_PROFILE*         profile,            /**< resource profile */
+   int                   idx,                /**< position of the variable to propagate */
    int*                  nchgbds             /**< pointer to store the number of bound changes */
    )
 {
@@ -3423,7 +3427,7 @@ SCIP_RETCODE coretimesUpdateUb(
       /* construct the inference information which we are using with the conflict analysis to resolve that particular
        * bound change
        */
-      inferinfo = getInferInfo(PROPRULE_1_CORETIMES, pos, 0);
+      inferinfo = getInferInfo(PROPRULE_1_CORETIMES, idx, 0);
 
       /* perform the bound upper bound change */
       SCIP_CALL( SCIPinferVarUbCons(scip, var, (SCIP_Real)newub, cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
@@ -4158,7 +4162,7 @@ SCIP_RETCODE propagateCoretimes(
 
          /* second try to update the latest start time */
          SCIP_CALL( coretimesUpdateUb(scip, var, duration, demand, capacity, cons,
-               profile, nchgbds) );
+               profile, j, nchgbds) );
 
          if( *cutoff )
             break;
@@ -6004,8 +6008,7 @@ SCIP_RETCODE computeAlternativeBounds(
          SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
          /* create worst case resource profile */
-         SCIP_CALL( createWorstCaseProfile(scip, profile,
-               consdata->nvars, consdata->vars, consdata->durations, consdata->demands, consdata->capacity) );
+         SCIP_CALL( createWorstCaseProfile(scip, profile, consdata->nvars, consdata->vars, consdata->durations, consdata->demands) );
 
          hmin = computeHmin(scip, profile, consdata->capacity);
          hmax = computeHmax(scip, profile, consdata->capacity);
@@ -7767,7 +7770,7 @@ SCIP_RETCODE computeEffectiveHorizonCumulativeCondition(
    SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
    /* create worst case resource profile */
-   SCIP_CALL( createWorstCaseProfile(scip, profile, nvars, vars, durations, demands, capacity) );
+   SCIP_CALL( createWorstCaseProfile(scip, profile, nvars, vars, durations, demands) );
 
    /* print resource profile in if SCIP_DEBUG is defined */
    SCIPdebug( SCIPprofilePrint(profile, SCIPgetMessagehdlr(scip), NULL) );
