@@ -3487,7 +3487,7 @@ int computeOverlap(
    right = end - lst;
    assert(right > 0);
 
-   return MIN(left, right);
+   return MIN3(left, right, end - begin);
 }
 
 /** an overload was detected due to the time-time edge-finding propagate; initialized conflict analysis, add an initial
@@ -3572,7 +3572,7 @@ SCIP_RETCODE analyzeConflictOverloadTTEF(
       lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
       locenergies[v] = 0;
 
-      /* check if the has any overlap w.r.t. local bound; meaning some parts of the job will run for sure within the
+      /* check if the job has any overlap w.r.t. local bound; meaning some parts of the job will run for sure within the
        * time window
        */
       if( est + duration > begin && lst < end )
@@ -3637,7 +3637,6 @@ SCIP_RETCODE analyzeConflictOverloadTTEF(
 
       if( explanation != NULL )
          explanation[idx] = TRUE;
-
    }
 
    assert(requiredenergy < 0);
@@ -3943,7 +3942,7 @@ SCIP_RETCODE checkOverloadViaTTEF(
 
          if( freeenergy < 0 )
          {
-            SCIPdebugMessage("analyze overload  within time window [%d,%d)\n", begin, end);
+            SCIPdebugMessage("analyze overload  within time window [%d,%d) capacity %d\n", begin, end, capacity);
 
             SCIP_CALL( analyzeConflictOverloadTTEF(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
                   begin, end, usebdwidening, initialized, explanation) );
