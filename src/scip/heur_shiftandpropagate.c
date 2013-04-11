@@ -351,14 +351,12 @@ void transformVariable(
     */
    if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
    {
-      matrix->upperbounds[colpos] = ub;
-
       if( matrix->transformstatus[colpos] == TRANSFORMSTATUS_NEG )
          negatecoeffs = TRUE;
 
-      matrix->transformstatus[colpos] = TRANSFORMSTATUS_FREE;
       deltashift = matrix->transformshiftvals[colpos];
       matrix->transformshiftvals[colpos] = 0.0;
+      matrix->transformstatus[colpos] = TRANSFORMSTATUS_FREE;
    }
    else if( SCIPisFeasLE(scip, ABS(lb), ABS(ub)) )
    {
@@ -376,6 +374,14 @@ void transformVariable(
       deltashift = ub;
       matrix->transformshiftvals[colpos] = ub;
    }
+
+   /**
+    * determine the upper bound for this variable in heuristic transformation (lower bound is implicit; always 0)
+    */
+   if( !SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, lb) )
+      matrix->upperbounds[colpos] = ub - lb;
+   else
+      matrix->upperbounds[colpos] = SCIPinfinity(scip);
 
    /* a real transformation is necessary. The variable x is either shifted by -lb or
     * replaced by ub - x, depending on the smaller absolute of lb and ub.
@@ -411,13 +417,6 @@ void transformVariable(
 
          assert(SCIPisFeasLE(scip, matrix->lhs[rows[i]], matrix->rhs[rows[i]]));
       }
-
-      if( !SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, lb) )
-         matrix->upperbounds[colpos] = ub - lb;
-      else
-         matrix->upperbounds[colpos] = SCIPinfinity(scip);
-
-
    }
    SCIPdebugMessage("Variable <%s> at colpos %d transformed. LB <%g> --> <%g>, UB <%g> --> <%g>\n",
       SCIPvarGetName(var), colpos, lb, 0.0, ub, matrix->upperbounds[colpos]);
