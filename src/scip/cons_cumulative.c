@@ -357,7 +357,7 @@ int convertBoundToInt(
    )
 {
    assert(SCIPisFeasIntegral(scip, bound));
-   assert(SCIPisFeasEQ(scip, bound, (SCIP_Real)(int)(bound + 0.5)));
+   assert(SCIPisFeasEQ(scip, bound, (SCIP_Real)(int)(bound < 0 ? bound - 0.5 : bound + 0.5)));
 
    return (int)(bound < 0 ? (bound - 0.5) : (bound + 0.5));
 }
@@ -4112,8 +4112,8 @@ SCIP_RETCODE tightenUbTTEF(
    /* adjust the available energy for the job; the given available energy assumes that the core of the considered job is
     * present; therefore, we need to add the core;
     *
-    * @note the variable lst define the latest start time of the free part of the job; hence we need to compute the
-    *       latest start of the job
+    * @note the variable lst define the latest start time of the flexible part of the job; hence we need to compute the
+    *       latest start of the (whole) job
     */
    energy += computeCoreWithInterval(begin, end, est + duration, lct - duration) * demand;
    assert(energy >= 0);
@@ -4126,7 +4126,7 @@ SCIP_RETCODE tightenUbTTEF(
    newub = begin - duration + energy / demand;
 
    /* check if we detected an infeasibility which is the case if the new upper bound is smaller than the current lower
-    * bound (earliest start time)
+    * bound (earliest start time); meaning it is not possible to schedule the job
     */
    if( newub < est )
    {
