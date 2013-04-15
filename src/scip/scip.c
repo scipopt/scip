@@ -19459,6 +19459,16 @@ SCIP_Bool SCIPdoNotAggr(
    return scip->set->presol_donotaggr;
 }
 
+/** returns whether multi-aggregation is disabled */
+SCIP_Bool SCIPdoNotMultaggr(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return scip->set->presol_donotmultaggr;
+}
+
 /** returns whether variable is not allowed to be multi-aggregated */
 SCIP_Bool SCIPdoNotMultaggrVar(
    SCIP*                 scip,               /**< SCIP data structure */

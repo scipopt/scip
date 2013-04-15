@@ -8414,6 +8414,12 @@ SCIP_Bool SCIPdoNotAggr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether multi-aggregation is disabled */
+EXTERN
+SCIP_Bool SCIPdoNotMultaggr(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns whether variable is not allowed to be multi-aggregated */
 EXTERN
 SCIP_Bool SCIPdoNotMultaggrVar(

@@ -86,6 +86,7 @@ interface
 - SCIPcalcMIR() takes an additional parameter sidetypes to determine which side of the rows to use (relevant for ranged rows)
 - New methods SCIPconshdlrIncNCutsFound(), SCIPsepaIncNCutsFound(), and SCIPsepaIncNCutsFoundAtNode() to increase the number of found cuts
 - added function SCIPseparateSolCutpool() to separate a cutpool w.r.t. a given solution
+- added method SCIPdoNotMultaggr() returning whether multi-aggregation is completely disabled
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
