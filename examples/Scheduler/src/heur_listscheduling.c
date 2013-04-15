@@ -579,6 +579,7 @@ SCIP_RETCODE performBackwardScheduling(
    return SCIP_OKAY;
 }
 
+/** creates a permutation of the job w.r.t. earliest start time */
 static
 SCIP_RETCODE getEstPermutation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -607,6 +608,7 @@ SCIP_RETCODE getEstPermutation(
    return SCIP_OKAY;
 }
 
+/** creates a permutation of the job w.r.t. latest completion time */
 static
 SCIP_RETCODE getLctPermuataion(
    SCIP*                 scip,               /**< SCIP data structure */
