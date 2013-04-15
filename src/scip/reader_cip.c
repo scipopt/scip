@@ -769,7 +769,7 @@ SCIP_DECL_READERWRITE(readerWriteCip)
 
                tmpvar = SCIPvarGetNegationVar(var);
                assert( tmpvar != NULL );
-               assert( var == SCIPvarGetNegationVar(tmpvar) );
+               assert( var == SCIPvarGetNegatedVar(tmpvar) );
 
                /* if the negated variable has been written, we can write the current variable */
                if ( SCIPhashtableExists(varhash, (void*) tmpvar) )
