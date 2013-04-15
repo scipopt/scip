@@ -44,6 +44,8 @@ features:
 - added new statistic which distinguish between internal nodes and leaves which got processed
 - added reader_pbm, which writes the matrix structure in pbm format (possibly scaled to given size)
 - added possibility to separate a cutpool w.r.t. given solution (instead of LP-solution)
+- added multi-aggregation for binary variables with at most two uplocks and two downlocks, which emerge from set-
+  partitioning or set-packing constraints
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor

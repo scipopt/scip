@@ -98,6 +98,7 @@ struct SCIP_ConshdlrData
 #ifdef VARUSES
    SCIP_INTARRAY*        varuses;            /**< number of times a var is used in the active setppc constraints */
 #endif
+   SCIP_Longint          nsetpart;           /**< number of set partitioning constraints in transformed problem */
    int                   npseudobranches;    /**< number of children created in pseudo branching (0 to disable branching) */
    int                   noldfixedvars;      /**< number of fixed variables after last clique lifting run */
    int                   noldimpls;          /**< number of implication before last clique lifting run */
@@ -201,6 +202,68 @@ SCIP_DECL_SORTPTRCOMP(setppcConssSort)
    return setppcCompare((SCIP_CONS*)elem1, (SCIP_CONS*)elem2);
 }
 
+/** compares two setppc constraints such that a "-1" is return if the first constraint is active and
+ *    1. the second constraint is deleted
+ *    2. the first constraint is a set partitioning constraint and the second is a set packing or
+ *    3. both constraints are set partitioning constraints and the second has more! variables than the first or
+ *    4. both constraints are set packing constraints and the second has less! variables than the first
+ *  a "0" is return if
+ *    1. both constraint are set-covering constraints
+ *    2. both constraint are of the same type and have the amount of variables or
+ *  and a "1" is returned otherwise
+ */
+static
+int setppcCompare2(
+   SCIP_CONS*const       cons1,              /**< first problem variable */
+   SCIP_CONS*const       cons2               /**< second problem variable */
+   )
+{
+   SCIP_CONSDATA* consdata1;
+   SCIP_CONSDATA* consdata2;
+
+   assert(cons1 != NULL);
+   assert(cons2 != NULL);
+
+   if( SCIPconsIsDeleted(cons1) )
+   {
+      if( SCIPconsIsDeleted(cons2) )
+         return 0;
+      else
+         return +1;
+   }
+   else if( SCIPconsIsDeleted(cons2) )
+      return -1;
+
+   consdata1 = SCIPconsGetData(cons1);
+   assert(consdata1 != NULL);
+   consdata2 = SCIPconsGetData(cons2);
+   assert(consdata2 != NULL);
+
+   /* the partitioning type should be the smallest value and the packing the second smallest */
+   assert(SCIP_SETPPCTYPE_PARTITIONING < SCIP_SETPPCTYPE_PACKING && SCIP_SETPPCTYPE_PACKING < SCIP_SETPPCTYPE_COVERING);
+
+   if( consdata1->setppctype < consdata2->setppctype ||
+      ((SCIP_SETPPCTYPE)consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->nvars < consdata2->nvars) ||
+      ((SCIP_SETPPCTYPE)consdata2->setppctype == SCIP_SETPPCTYPE_PACKING && consdata1->nvars > consdata2->nvars) )
+      return -1;
+   else if( ((SCIP_SETPPCTYPE)consdata2->setppctype == SCIP_SETPPCTYPE_COVERING || (consdata1->setppctype == consdata2->setppctype && consdata1->nvars == consdata2->nvars)) )
+      return 0;
+   else
+   {
+      assert(consdata1->setppctype > consdata2->setppctype || (consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->setppctype == consdata2->setppctype && consdata1->nvars > consdata2->nvars) || (consdata1->setppctype == SCIP_SETPPCTYPE_PACKING && consdata1->setppctype == consdata2->setppctype && consdata1->nvars < consdata2->nvars)); /*lint !e641*/
+      return +1;
+   }
+}
+
+/** sort constraints first after type (partitioning before packing before covering) and second after number of
+ *  variables such that the partitioning constraints have increasing number of variables and the packing constraints
+ *  have decreasing number of variables */
+static
+SCIP_DECL_SORTPTRCOMP(setppcConssSort2)
+{
+   return setppcCompare2((SCIP_CONS*)elem1, (SCIP_CONS*)elem2);
+}
+
 
 /** installs rounding locks for the given variable in the given setppc constraint */
 static
@@ -292,6 +355,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
    /* set event handler for bound change events */
    (*conshdlrdata)->eventhdlr = eventhdlr;
+   (*conshdlrdata)->nsetpart = 0;
 
    return SCIP_OKAY;
 }
@@ -679,6 +743,8 @@ SCIP_RETCODE setSetppcType(
    SCIP_SETPPCTYPE       setppctype          /**< new type of constraint */
    )
 {
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
 
    consdata = SCIPconsGetData(cons);
@@ -700,6 +766,25 @@ SCIP_RETCODE setSetppcType(
       }
    }
 
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( SCIPisTransformed(scip) )
+   {
+      if( setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+      {
+         ++(conshdlrdata->nsetpart);
+         assert(conshdlrdata->nsetpart >= 0);
+      }
+      else if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+      {
+         --(conshdlrdata->nsetpart);
+         assert(conshdlrdata->nsetpart >= 0);
+      }
+   }
+
    /* change the constraint type */
    consdata->setppctype = setppctype; /*lint !e641*/
 
@@ -716,17 +801,7 @@ SCIP_RETCODE setSetppcType(
 
    /* remember that we changed a constraint type for clique lifting procedure */
    if( setppctype != SCIP_SETPPCTYPE_COVERING )
-   {
-      SCIP_CONSHDLR* conshdlr;
-      SCIP_CONSHDLRDATA* conshdlrdata;
-
-      conshdlr = SCIPconsGetHdlr(cons);
-      assert(conshdlr != NULL);
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-
       conshdlrdata->updatedsetppctype = TRUE;
-   }
 
    return SCIP_OKAY;
 }
@@ -1199,7 +1274,7 @@ SCIP_RETCODE dualPresolving(
    if( setppctype != SCIP_SETPPCTYPE_COVERING )
    {
       /* first part of all variables */
-      for( v = 0; v < nvars; ++v )
+      for( v = nvars - 1; v >= 0; --v )
       {
 	 if( v == idx )
 	    continue;
@@ -1243,7 +1318,7 @@ SCIP_RETCODE dualPresolving(
    else
    {
       /* first part of all variables */
-      for( v = 0; v < nvars; ++v )
+      for( v = nvars - 1; v >= 0; --v )
       {
 	 if( v == idx )
 	    continue;
@@ -1880,7 +1955,7 @@ SCIP_RETCODE processFixings(
             assert(consdata->nfixedones >= 2 || (fixedonefound && fixed));
 
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
-            *reduceddom = TRUE;
+            *reduceddom = fixed;
          }
 
          /* now all other variables are fixed to zero:
@@ -5037,6 +5112,561 @@ SCIP_RETCODE preprocessCliques(
    return SCIP_OKAY;
 }
 
+/** perform multi-aggregation on variables resulting from a set-partitioning/-packing constraint */
+static
+SCIP_RETCODE multiAggregateBinvar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< all variables including the variable to which will be
+                                              *   multi-aggregated
+                                              */
+   int                   nvars,              /**< number of all variables */
+   int                   pos,                /**< position of variable for multi-aggregation */
+   SCIP_Bool*            infeasible,         /**< pointer to store infeasibility status of aggregation */
+   SCIP_Bool*            aggregated          /**< pointer to store aggregation status */
+)
+{
+   SCIP_VAR** tmpvars;
+   SCIP_Real* scalars;
+   int v;
+
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(nvars > 2);
+   assert(0 <= pos && pos < nvars);
+   assert(infeasible != NULL);
+   assert(aggregated != NULL);
+
+   /* if the last variable will be multi-aggregated, we do not need to copy the variables */
+   if( pos == nvars - 1 )
+      tmpvars = vars;
+   else
+   {
+      /* copy variables for aggregation */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpvars, vars, nvars) );
+      tmpvars[pos] = tmpvars[nvars - 1];
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &scalars, nvars - 1) );
+   /* initialize scalars */
+   for( v = nvars - 2; v >= 0; --v )
+      scalars[v] = -1.0;
+
+   SCIPdebugMessage("multi-aggregating binary variable <%s>\n", SCIPvarGetName(vars[pos]));
+
+   /* perform multi-aggregation */
+   SCIP_CALL( SCIPmultiaggregateVar(scip, vars[pos], nvars - 1, tmpvars, scalars, 1.0, infeasible, aggregated) );
+   assert(!(*infeasible));
+
+   SCIPfreeBufferArray(scip, &scalars);
+
+   if( pos < nvars - 1 )
+   {
+      assert(tmpvars != vars);
+      SCIPfreeBufferArray(scip, &tmpvars);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** determine singleton variables in set-partitioning/-packing constraints, or doubleton variables (active and negated)
+ *  in any combination of set-partitioning and set-packing constraints
+ *
+ *  we can multi-aggregate the variable and either change the set-partitioning constraint to a set-packing constraint or
+ *  even delete it
+ *
+ *  1. c1: x + y + z = 1,  uplocks(x) = 1, downlocks(x) = 1               =>  x = 1 - y - z and change c1 to y + z <= 1
+ *
+ *  2. c2: x + y + z <= 1,  uplocks(x) = 1, downlocks(x) = 0, obj(x) < 0  =>  x = 1 - y - z and change c2 to y + z <= 1
+ *
+ *  3. d1: x + y + z <= 1 and d2: ~x + u + v <= 1, uplocks(x) = 1, downlocks(x) = 1
+ *    a)  obj(x) <= 0                                                     =>  x = 1 - y - z and delete d1
+ *    b)  obj(x) > 0                                                      => ~x = 1 - u - v and delete d2
+ *
+ *  4. e1: x + y + z == 1 and e2: ~x + u + v (<= or ==) 1, uplocks(x) = (1 or 2), downlocks(x) = 2
+ *                                                                        =>  x = 1 - y - z and delete e1
+ *
+ */
+static
+SCIP_RETCODE removeDoubleAndSingletons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraint set */
+   int                   nconss,             /**< number of constraints in constraint set */
+   SCIP_Bool             dualpresolvingenabled,/**< is dual presolving enabled */
+   int*                  nfixedvars,         /**< pointer to count number of deleted variables */
+   int*                  naggrvars,          /**< pointer to count number of aggregated variables */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
+   int*                  nchgcoefs,          /**< pointer to count number of changed coefficients */
+   int*                  nchgsides           /**< pointer to count number of changed left hand sides */
+   )
+{
+   SCIP_CONS** usefulconss;
+   SCIP_VAR** binvars;
+   SCIP_HASHMAP* vartoindex;
+   SCIP_Bool* chgtype;
+   int* considxs;
+   int* posincons;
+   SCIP_Bool infeasible;
+   SCIP_Bool aggregated;
+   int nposvars;
+   int ndecs;
+   int nbinvars;
+   int nposbinvars;
+   int nuplocks;
+   int ndownlocks;
+   int posreplacements;
+   int nhashmapentries;
+   int nlocaladdconss;
+   int v;
+   int c;
+
+   assert(scip != NULL);
+   assert(conss != NULL);
+   assert(nconss > 0);
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
+
+   nbinvars = SCIPgetNBinVars(scip);
+   nposbinvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   assert(nbinvars + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip) == nposbinvars);
+
+   binvars = SCIPgetVars(scip);
+
+   nposvars = 0;
+   for( v = nposbinvars - 1; v >= 0; --v )
+   {
+      assert(SCIPvarGetType(binvars[v]) != SCIP_VARTYPE_CONTINUOUS);
+
+      if( v < nbinvars || SCIPvarIsBinary(binvars[v]) )
+      {
+         nuplocks = SCIPvarGetNLocksUp(binvars[v]);
+         ndownlocks = SCIPvarGetNLocksDown(binvars[v]);
+
+         if( (nuplocks == 1 && ndownlocks <= 1) || (nuplocks <= 1 && ndownlocks == 1) || (nuplocks <= 2 && ndownlocks <= 2 && SCIPvarGetNegatedVar(binvars[v]) != NULL) )
+            ++nposvars;
+      }
+   }
+
+   SCIPdebugMessage("found %d binary variables for possible multi-aggregation\n", nposvars);
+
+   if( nposvars == 0 )
+      return SCIP_OKAY;
+
+   /* a hashmap from var to index when found in a set-partitioning constraint */
+   SCIP_CALL( SCIPhashmapCreate(&vartoindex, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nposvars)) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &chgtype, nconss) );
+   BMSclearMemoryArray(chgtype, nconss);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &considxs, nposbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &posincons, nposbinvars) );
+
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &usefulconss, conss, nconss) );
+   SCIPsortDownPtr((void**)usefulconss, setppcConssSort2, nconss);
+
+   nlocaladdconss = 0;
+   posreplacements = 0;
+   nhashmapentries = 0;
+   ndecs = 0;
+
+   /* @todo multi-aggregation itself makes problems in propagation, therefore when trying this on the "air" instances we
+    *       need to disable probing
+    */
+
+   /* determine singleton variables in set-partitioning/-packing constraints, or doubleton variables (active and
+    * negated) in any combination of set-partitioning and set-packing constraints
+    *
+    * we can multi-aggregate the variable and either change the set-partitioning constraint to a set-packing constraint
+    * or even delete it
+    */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONS* cons;
+      SCIP_CONSDATA* consdata;
+
+      cons = usefulconss[c];
+      assert(cons != NULL);
+
+      if( SCIPconsIsDeleted(cons) )
+         continue;
+
+      if( !SCIPconsIsChecked(cons) )
+         continue;
+
+      if( SCIPconsIsModifiable(cons) )
+         continue;
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      /* if we cannot find any constraint to perform a useful multi-aggregation, stop */
+      if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_COVERING || ndecs >= nposvars )
+         break;
+
+      /* update the variables */
+      SCIP_CALL( applyFixings(scip, cons, &nlocaladdconss, ndelconss) );
+      assert(!SCIPconsIsDeleted(cons));
+      assert(nlocaladdconss == 0);
+
+      if( consdata->nvars <= 2 )
+         continue;
+
+      /* if the following condition does not hold, we have an unmerged constraint, and we might need to merge it first */
+      assert(nposbinvars >= consdata->nvars);
+
+      /* search for possible variables for multi-aggregation */
+      for( v = consdata->nvars - 1; v >= 0; --v )
+      {
+         SCIP_VAR* var;
+         int deleteconsindex = -1;
+
+         var = consdata->vars[v];
+         assert(var != NULL);
+         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+
+         aggregated = FALSE;
+         nuplocks = SCIPvarGetNLocksUp(var);
+         ndownlocks = SCIPvarGetNLocksDown(var);
+         assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED && nuplocks >= 0 && ndownlocks >= 1) || (nuplocks >= 1 && ndownlocks >= 0));
+
+         if( dualpresolvingenabled && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING && (nuplocks == 1 || ndownlocks == 1) && nuplocks + ndownlocks <= 2 )
+         {
+            assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED && nuplocks <= 1 && ndownlocks == 1) || (nuplocks == 1 && ndownlocks <= 1));
+
+            /* we found a redundant variable in a set-partitioning constraint */
+            if( nuplocks == 0 || ndownlocks == 0 )
+            {
+               SCIP_Real objval;
+
+               SCIP_CALL( SCIPvarGetAggregatedObj(var, &objval) );
+
+               /* if the objective value is >= 0 the fixing is normally done by the dualfix presolver */
+               if( !SCIPisNegative(scip, objval) )
+               {
+                  SCIP_Bool fixed;
+
+                  SCIPdebugMessage("dual-fixing of variable <%s> to 0.0\n", SCIPvarGetName(var));
+
+                  SCIP_CALL( SCIPfixVar(scip, var, 0.0, &infeasible, &fixed) );
+                  assert(!infeasible);
+                  assert(fixed);
+
+                  ++(*nfixedvars);
+               }
+               else
+               {
+                  SCIPdebugMessage("multi-aggregating in set-packing constraint\n");
+
+                  /* perform aggregation on variables resulting from a set-packing constraint */
+                  SCIP_CALL( multiAggregateBinvar(scip, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
+                  assert(!infeasible);
+               }
+
+               ++ndecs;
+            }
+            else if( ndownlocks == 1 && SCIPvarGetNegatedVar(var) != NULL )
+            {
+               SCIP_CONSDATA* aggrconsdata;
+               SCIP_VAR* negvar;
+               SCIP_VAR* activevar;
+               SCIP_Real objval;
+               int multaggridx;
+               int notmultaggridx;
+               int image;
+               int consindex;
+               int varindex;
+
+               assert(!SCIPhashmapExists(vartoindex, (void*) var));
+
+               negvar = SCIPvarGetNegatedVar(var);
+
+               /* if we found a new variable add it to the data */
+               if( !SCIPhashmapExists(vartoindex, (void*) negvar) )
+               {
+                  ++nhashmapentries;
+                  SCIP_CALL( SCIPhashmapInsert(vartoindex, (void*) var, (void*) (size_t) nhashmapentries) );
+
+                  considxs[nhashmapentries - 1] = c;
+                  posincons[nhashmapentries - 1] = v;
+
+                  ++posreplacements;
+                  continue;
+               }
+
+               assert(SCIPhashmapExists(vartoindex, (void*) negvar));
+               image = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) negvar);
+               assert(image > 0 && image <= nhashmapentries);
+
+               consindex = considxs[image - 1];
+               assert(0 <= consindex && consindex < nconss);
+
+               /* if the following assert fails, the constraint was not merged, or something really strange happened */
+               assert(consindex < c);
+
+               ++ndecs;
+               --posreplacements;
+               assert(posreplacements >= 0);
+
+               varindex = posincons[image - 1];
+               considxs[image - 1] = -1;
+               posincons[image - 1] = -1;
+               SCIP_CALL( SCIPhashmapRemove(vartoindex, (void*) negvar) );
+
+               /* if two variables in one constraint might be multi-aggregated, it might happen that this constraint was already removed */
+               if( SCIPconsIsDeleted(usefulconss[consindex]) )
+                  continue;
+
+               aggrconsdata = SCIPconsGetData(usefulconss[consindex]);
+               assert(aggrconsdata != NULL);
+
+               assert(0 <= varindex && varindex < aggrconsdata->nvars);
+               assert((SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PACKING);
+               assert(aggrconsdata->vars[varindex] == negvar);
+               assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(negvar) == SCIP_VARSTATUS_NEGATED);
+
+               /* determine active variable and constraint that corresponds to */
+               if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED )
+               {
+                  activevar = negvar;
+                  multaggridx = consindex;
+                  notmultaggridx = c;
+               }
+               else
+               {
+                  activevar = var;
+                  multaggridx = c;
+                  notmultaggridx = consindex;
+               }
+               objval = SCIPvarGetObj(activevar);
+
+               SCIPdebugMessage("multi-aggregating in two set-packing constraint\n");
+
+               if( objval <= 0.0 )
+               {
+                  /* perform aggregation on variables resulting from a set-packing constraint */
+                  if( multaggridx == c )
+                  {
+                     SCIP_CALL( multiAggregateBinvar(scip, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( multiAggregateBinvar(scip, aggrconsdata->vars, aggrconsdata->nvars, varindex, &infeasible, &aggregated) );
+                  }
+                  deleteconsindex = multaggridx;
+               }
+               else
+               {
+                  /* perform aggregation on variables resulting from a set-packing constraint */
+                  if( multaggridx == c )
+                  {
+                     SCIP_CALL( multiAggregateBinvar(scip, aggrconsdata->vars, aggrconsdata->nvars, varindex, &infeasible, &aggregated) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( multiAggregateBinvar(scip, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
+                  }
+                  deleteconsindex = notmultaggridx;
+               }
+               assert(!infeasible);
+               assert(deleteconsindex >= 0 && deleteconsindex <= c);
+            }
+         }
+         /* we found a redundant variable in a set-partitioning constraint */
+         else if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING && nuplocks == 1 && ndownlocks == 1 )
+         {
+            SCIPdebugMessage("multi-aggregating in set-partitioning constraint\n");
+
+            /* perform aggregation on variables resulting from a set-partitioning constraint */
+            SCIP_CALL( multiAggregateBinvar(scip, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
+            assert(!infeasible);
+
+            ++ndecs;
+         }
+         /* we might have found a redundant variable */
+         else if( nuplocks <= 2 && nuplocks <= 2 && SCIPvarGetNegatedVar(var) != NULL )
+         {
+            SCIP_CONSDATA* aggrconsdata;
+            int image;
+            int consindex;
+            int varindex;
+
+            /* if we have two times the same variable in a set-partitioning constraint, so we cannot aggregate this */
+            if( SCIPhashmapExists(vartoindex, (void*) var) )
+            {
+               image = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) var);
+               assert(image > 0 && image <= nhashmapentries);
+
+               assert(0 <= considxs[image - 1] && considxs[image - 1] < nconss);
+               assert(SCIPconsIsDeleted(usefulconss[considxs[image - 1]]) || chgtype[considxs[image - 1]] || (0 <= posincons[image - 1] && posincons[image - 1] < SCIPconsGetData(usefulconss[considxs[image - 1]])->nvars));
+
+               considxs[image - 1] = -1;
+               posincons[image - 1] = -1;
+
+               SCIP_CALL( SCIPhashmapRemove(vartoindex, (void*) var) );
+
+               --posreplacements;
+               assert(posreplacements >= 0);
+
+               continue;
+            }
+            else if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+            {
+               /* if we found a new variable add it to the data */
+               if( !SCIPhashmapExists(vartoindex, (void*) SCIPvarGetNegatedVar(var)) )
+               {
+                  assert(!SCIPhashmapExists(vartoindex, (void*) var));
+
+                  ++nhashmapentries;
+                  SCIP_CALL( SCIPhashmapInsert(vartoindex, (void*) var, (void*) (size_t) nhashmapentries) );
+
+                  considxs[nhashmapentries - 1] = c;
+                  posincons[nhashmapentries - 1] = v;
+
+                  ++posreplacements;
+                  continue;
+               }
+            }
+            else
+            {
+               assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING);
+
+               /* if we have two times the same variable in a set-partitioning constraint, so we cannot aggregate this */
+               if( !SCIPhashmapExists(vartoindex, (void*) SCIPvarGetNegatedVar(var)) )
+                  continue;
+            }
+
+            assert(!chgtype[c]);
+            assert(SCIPhashmapExists(vartoindex, (void*) SCIPvarGetNegatedVar(var)));
+            image = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) SCIPvarGetNegatedVar(var));
+            assert(image > 0 && image <= nhashmapentries);
+
+            consindex = considxs[image - 1];
+            assert(0 <= consindex && consindex < nconss);
+
+            /* if the following assert fails, the constraint was not merged, or something really strange happened */
+            assert(consindex < c);
+
+            ++ndecs;
+            --posreplacements;
+            assert(posreplacements >= 0);
+
+            varindex = posincons[image - 1];
+            considxs[image - 1] = -1;
+            posincons[image - 1] = -1;
+            SCIP_CALL( SCIPhashmapRemove(vartoindex, (void*) SCIPvarGetNegatedVar(var)) );
+
+            /* if two variables in one constraint might be multi-aggregated, it might happen that this constraint was already removed */
+            if( SCIPconsIsDeleted(usefulconss[consindex]) )
+               continue;
+
+            /* we already remove a variable before, so our positioning information might be wrong, so we need to walk over all variables again */
+            if( chgtype[consindex] )
+            {
+#ifndef NDEBUG
+               int v2;
+
+               aggrconsdata = SCIPconsGetData(usefulconss[consindex]);
+               assert(aggrconsdata != NULL);
+               assert((SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PACKING);
+
+               /* negated variables needs to be still in the upgraded set-packing constraint */
+               for( v2 = aggrconsdata->nvars - 1; v2 >= 0; --v2 )
+               {
+                  if( aggrconsdata->vars[v2] == SCIPvarGetNegatedVar(var) )
+                     break;
+               }
+               assert(v2 >= 0);
+#endif
+               SCIPdebugMessage("multi-aggregating in one set-partitioning or one set-packing constraint\n");
+
+               /* perform aggregation on variables resulting from a set-partitioning constraint */
+               SCIP_CALL( multiAggregateBinvar(scip, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
+               assert(!infeasible);
+               assert(deleteconsindex == -1);
+            }
+            else
+            {
+               aggrconsdata = SCIPconsGetData(usefulconss[consindex]);
+               assert(aggrconsdata != NULL);
+
+               assert(0 <= varindex && varindex < aggrconsdata->nvars);
+               assert((SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
+               assert(aggrconsdata->vars[varindex] == SCIPvarGetNegatedVar(var));
+
+               SCIPdebugMessage("multi-aggregating in two set-partitioning or one set-partitioning and -packing constraint\n");
+
+               /* perform aggregation on variables resulting from a set-partitioning constraint */
+               SCIP_CALL( multiAggregateBinvar(scip, aggrconsdata->vars, aggrconsdata->nvars, varindex, &infeasible, &aggregated) );
+               assert(!infeasible);
+
+               /* change pointer for deletion */
+               cons = usefulconss[consindex];
+               assert(deleteconsindex == -1);
+            }
+         }
+
+         if( aggregated )
+         {
+            ++(*naggrvars);
+
+            if( ((nuplocks == 1 && ndownlocks == 0) || (nuplocks == 0 && ndownlocks == 1)) && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+            {
+               SCIP_CALL( delCoefPos(scip, cons, v) );
+               ++(*nchgcoefs);
+            }
+            else if( nuplocks == 1 && ndownlocks == 1 && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+            {
+               SCIP_CALL( delCoefPos(scip, cons, v) );
+               ++(*nchgcoefs);
+
+               SCIPdebugMessage("changing constraint <%s> from set-partitioning to set-packing, due to multi-aggregation\n", SCIPconsGetName(cons));
+
+               chgtype[c] = TRUE;
+
+               SCIP_CALL( setSetppcType(scip, cons, SCIP_SETPPCTYPE_PACKING) );
+               ++(*nchgsides);
+            }
+            else
+            {
+               if( deleteconsindex >= 0 )
+               {
+                  SCIPdebugMessage("1: deleting redundant constraint <%s>, due to multi-aggregation\n", SCIPconsGetName(usefulconss[deleteconsindex]));
+                  SCIPdebugPrintCons(scip, usefulconss[deleteconsindex], NULL);
+
+                  assert(!SCIPconsIsDeleted(usefulconss[deleteconsindex]));
+                  SCIP_CALL( SCIPdelCons(scip, usefulconss[deleteconsindex]) );
+               }
+               else
+               {
+                  SCIPdebugMessage("2: deleting redundant constraint <%s>, due to multi-aggregation\n", SCIPconsGetName(cons));
+                  SCIPdebugPrintCons(scip, cons, NULL);
+
+                  assert(!SCIPconsIsDeleted(cons));
+                  SCIP_CALL( SCIPdelCons(scip, cons) );
+               }
+               ++(*ndelconss);
+            }
+
+            break;
+         }
+      }
+   }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &usefulconss);
+   SCIPfreeBufferArray(scip, &posincons);
+   SCIPfreeBufferArray(scip, &considxs);
+   SCIPfreeBufferArray(scip, &chgtype);
+
+   /* free hashmap */
+   SCIPhashmapFree(&vartoindex);
+
+   return SCIP_OKAY;
+}
+
+
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint
  *  accordingly; in contrast to removeRedundantConstraints(), it uses a hash table
  */
@@ -5618,6 +6248,7 @@ SCIP_RETCODE createConsSetppc(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(scip != NULL);
 
@@ -5645,13 +6276,18 @@ SCIP_RETCODE createConsSetppc(
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( SCIPisTransformed(scip) && setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+   {
+      ++(conshdlrdata->nsetpart);
+      assert(conshdlrdata->nsetpart >= 0);
+   }
+
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
-      SCIP_CONSHDLRDATA* conshdlrdata;
-
       /* get event handler */
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
       assert(conshdlrdata->eventhdlr != NULL);
 
       /* catch bound change events of variables */
@@ -5936,6 +6572,15 @@ SCIP_DECL_CONSDELETE(consDeleteSetppc)
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->eventhdlr != NULL);
 
+   if( SCIPisTransformed(scip) )
+   {
+      if( (SCIP_SETPPCTYPE)((*consdata)->setppctype) == SCIP_SETPPCTYPE_PARTITIONING )
+      {
+         --(conshdlrdata->nsetpart);
+         assert(conshdlrdata->nsetpart >= 0);
+      }
+   }
+
    /* if constraint belongs to transformed problem space, drop bound change events on variables */
    if( (*consdata)->nvars > 0 && SCIPvarIsTransformed((*consdata)->vars[0]) )
    {
@@ -5984,6 +6629,12 @@ SCIP_DECL_CONSTRANS(consTransSetppc)
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+
+   if( (SCIP_SETPPCTYPE)sourcedata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+   {
+      ++(conshdlrdata->nsetpart);
+      assert(conshdlrdata->nsetpart >= 0);
+   }
 
    /* catch bound change events of variables */
    SCIP_CALL( catchAllEvents(scip, *targetcons, conshdlrdata->eventhdlr) );
@@ -6779,6 +7430,17 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
          *result = SCIP_SUCCESS;
    }
 
+   /* determine singleton variables in set-partitioning/-packing constraints, or doubleton variables (active and
+    * negated) in any combination of set-partitioning and set-packing constraints
+    */
+   if( nconss > 1 && !SCIPdoNotMultaggr(scip) && SCIPisPresolveFinished(scip) && !SCIPisStopped(scip) )
+   {
+      SCIP_CALL( removeDoubleAndSingletons(scip, conss, nconss, conshdlrdata->dualpresolving, nfixedvars, naggrvars, ndelconss, nchgcoefs, nchgsides) );
+
+      if( oldnfixedvars < *nfixedvars || oldnaggrvars < *naggrvars || oldndelconss < *ndelconss )
+         *result = SCIP_SUCCESS;
+   }
+
    /* clique lifting */
    if( conshdlrdata->cliquelifting && conshdlrdata->enablecliquelifting )
    {
@@ -6862,7 +7524,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       if( !consdata->cliqueadded && consdata->nvars >= 2 )
       {
          /* add a set partitioning / packing constraint as clique */
-         if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_PACKING ) /*lint !e641*/
+         if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
          {
             SCIP_Bool infeasible;
             int ncliquebdchgs;
