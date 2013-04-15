@@ -57,6 +57,7 @@ performance improvements:
 - improved multi-aggregation in linear constraint handler when only one variable in the aggregation has infinity
   contribution
 - stop pricing if the lower bound computed by pricing already exceeds the cutoff bound
+- improved dual-presolving for setppc constraints in special cases
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
