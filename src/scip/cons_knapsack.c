@@ -8086,7 +8086,9 @@ static
 SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
-   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off, or NULL if this
+                                              *   information is not needed; in this case, we apply all fixings
+                                              *   instead of stopping after the first infeasible one */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -8094,13 +8096,13 @@ SCIP_RETCODE applyFixings(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(cutoff != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || consdata->vars != NULL);
 
-   *cutoff = FALSE;
+   if( cutoff != NULL )
+      *cutoff = FALSE;
 
    SCIPdebugMessage("apply fixings:\n");
    SCIPdebugPrintCons(scip, cons, NULL);
@@ -8109,7 +8111,10 @@ SCIP_RETCODE applyFixings(
    if ( consdata->onesweightsum > consdata->capacity )
    {
       SCIPdebugMessage("apply fixings detected cutoff.\n");
-      *cutoff = TRUE;
+
+      if( cutoff != NULL )
+         *cutoff = TRUE;
+
       return SCIP_OKAY;
    }
 
@@ -8245,8 +8250,11 @@ SCIP_RETCODE applyFixings(
 
             if( consdata->capacity < 0 )
             {
-               *cutoff = TRUE;
-               break;
+               if( cutoff != NULL )
+               {
+                  *cutoff = TRUE;
+                  break;
+               }
             }
          }
          /* check, if the variable should be replaced with the representative */
@@ -8270,7 +8278,7 @@ SCIP_RETCODE applyFixings(
    /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have to
     * clean up the constraint
     */
-   if( !(*cutoff) )
+   if( cutoff != NULL && !(*cutoff) )
    {
       SCIP_CALL( mergeMultiples(scip, cons, cutoff) );
       SCIPdebugMessage("after applyFixings and merging:\n");
@@ -10462,9 +10470,19 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int c;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      if( !SCIPconsIsDeleted(conss[c]) )
+      {
+         /* since we are not allowed to detect infeasibility in the exitpre stage, we dont give an infeasible pointer */
+         SCIP_CALL( applyFixings(scip, conss[c], NULL) );
+      }
+   }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -10889,18 +10907,15 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
       SCIPdebugMessage("presolving knapsack constraint <%s>\n", SCIPconsGetName(cons));
       SCIPdebugPrintCons(scip, cons, NULL);
-      consdata->presolved = TRUE;
 
       /* remove all fixed variables */
-      if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0
-         || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
-      {
-         SCIP_CALL( applyFixings(scip, cons, &cutoff) );
-         if( cutoff )
-            break;
-      }
+      SCIP_CALL( applyFixings(scip, cons, &cutoff) );
+      if( cutoff )
+         break;
+
       thisnfixedvars = *nfixedvars;
       thisnchgbds = *nchgbds;
+      consdata->presolved = TRUE;
 
       /* merge constraint, so propagation works better */
       SCIP_CALL( mergeMultiples(scip, cons, &cutoff) );
@@ -10911,7 +10926,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       SCIP_CALL( addCliques(scip, cons, &cutoff, nchgbds) );
       if( cutoff )
          break;
-      
+
       /* propagate constraint */
       SCIP_CALL( propagateCons(scip, cons, &cutoff, &redundant, nfixedvars, TRUE) );
       if( cutoff )

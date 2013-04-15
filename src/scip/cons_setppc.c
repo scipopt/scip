@@ -1482,7 +1482,13 @@ SCIP_RETCODE mergeMultiples(
 static
 SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< set partitioning / packing / covering constraint */
+   SCIP_CONS*            cons,               /**< set partitioning / packing / covering constraint */
+   int*                  naddconss,          /**< pointer to count number of added constraints, or NULL indicating we
+                                              *   can not resolve multi-aggregations
+                                              */
+   int*                  ndelconss           /**< pointer to count number of deleted constraints, or NULL indicating we
+                                              *   can not resolve multi-aggregations
+                                              */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1515,17 +1521,188 @@ SCIP_RETCODE applyFixings(
          /* get binary representative of variable */
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
 
-         /* check, if the variable should be replaced with the representative */
-         if( repvar != var )
+         /* resolve multi-aggregation */
+         if( SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_MULTAGGR || (SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_NEGATED && SCIPvarGetStatus(SCIPvarGetNegatedVar(repvar)) == SCIP_VARSTATUS_MULTAGGR) )
          {
-            /* delete old (aggregated) variable */
-            SCIP_CALL( delCoefPos(scip, cons, v) );
+            SCIP_VAR** consvars;
+            SCIP_Real* consvals;
+            SCIP_Real constant = 0.0;
+            SCIP_Bool easycase;
+            int nconsvars;
+            int requiredsize;
+            int v2;
 
-            /* add representative instead */
-            SCIP_CALL( addCoef(scip, cons, repvar) );
+            nconsvars = 1;
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 1) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 1) );
+            consvars[0] = repvar;
+            consvals[0] = 1.0;
+
+            /* get active variables for new constraint */
+            SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize, TRUE) );
+            /* if space was not enough we need to resize the buffers */
+            if( requiredsize > nconsvars )
+            {
+               SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
+
+               SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize, TRUE) );
+               assert(requiredsize <= nconsvars);
+            }
+
+            easycase = FALSE;
+
+            if( SCIPisZero(scip, constant) )
+            {
+               /* add active representation */
+               for( v2 = nconsvars - 1; v2 >= 0; --v2 )
+               {
+                  if( !SCIPvarIsBinary(consvars[v2]) )
+                  {
+                     break;
+#if 0
+                     SCIPerrorMessage("try to resolve a multi-aggregation with a non-binary variable <%s>\n", consvars[v2]);
+                     return SCIP_ERROR;
+#endif
+                  }
+
+                  if( !SCIPisEQ(scip, consvals[v2], 1.0) )
+                     break;
+               }
+
+               if( v2 < 0 )
+                  easycase = TRUE;
+            }
+            else if( SCIPisFeasEQ(scip, constant, 1.0) )
+            {
+               /* if the assert fails the constraint is redundant and we can fix all leftover variable to zero, note that cannot be done in exitpre */
+               assert(nconsvars > 0);
+            }
+
+            /* we can easily add the coefficients and still have a setppc constraint */
+            if( easycase )
+            {
+               /* delete old (multi-aggregated) variable */
+               SCIP_CALL( delCoefPos(scip, cons, v) );
+
+               /* add active representation */
+               for( v2 = nconsvars - 1; v2 >= 0; --v2 )
+               {
+                  assert(SCIPvarIsBinary(consvars[v2]));
+                  assert(SCIPvarIsActive(consvars[v2]) || (SCIPvarGetStatus(consvars[v2]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(consvars[v2]))));
+
+                  SCIP_CALL( addCoef(scip, cons, consvars[v2]) );
+               }
+            }
+            /* we need to degrade this setppc constraint to a linear constraint*/
+            else if( ndelconss != NULL && naddconss != NULL )
+            {
+               char name[SCIP_MAXSTRLEN];
+               SCIP_CONS* newcons;
+               SCIP_Real lhs;
+               SCIP_Real rhs;
+               int k;
+#ifndef NDEBUG
+               SCIP_Bool found = FALSE;
+#endif
+
+               SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, nconsvars + consdata->nvars - 1) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, nconsvars + consdata->nvars - 1) );
+
+               /* add constraint variables to new linear variables */
+               for( k = consdata->nvars - 1; k >= 0; --k )
+               {
+                  if( consdata->vars[k] != repvar )
+                  {
+                     consvars[nconsvars] = consdata->vars[k];
+                     consvals[nconsvars] = 1.0;
+                     ++nconsvars;
+                  }
+#ifndef NDEBUG
+                  else
+                  {
+                     /* we allow no multiple occurances of one multi-aggregated variable */
+                     assert(!found);
+                     found = TRUE;
+                  }
+#endif
+               }
+               assert(found);
+
+               /* compute sides */
+               if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+               {
+                  lhs = -SCIPinfinity(scip);
+                  rhs = 1.0 - constant;
+               }
+               else if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+               {
+                  lhs = 1.0 - constant;
+                  rhs = 1.0 - constant;
+               }
+               else
+               {
+                  assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_COVERING);
+                  lhs = 1.0 - constant;
+                  rhs = SCIPinfinity(scip);
+               }
+
+               /* create linear constraint */
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", SCIPconsGetName(cons));
+               SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, nconsvars, consvars, consvals, lhs, rhs,
+                  SCIPconsIsInitial(cons),
+                  SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                  SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+                  SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+               SCIP_CALL( SCIPaddCons(scip, newcons) );
+
+               SCIPdebugMessage("added linear constraint: ");
+               SCIPdebugPrintCons(scip, newcons, NULL);
+               SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+
+               SCIPfreeBufferArray(scip, &consvals);
+               SCIPfreeBufferArray(scip, &consvars);
+
+               /* delete old constraint */
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               ++(*ndelconss);
+               ++(*naddconss);
+
+               return SCIP_OKAY;
+            }
+            /* we need to degrade this logicor constraint to a linear constraint*/
+            else
+            {
+               /* check, if the variable should be replaced with the representative */
+               if( repvar != var )
+               {
+                  /* delete old (aggregated) variable */
+                  SCIP_CALL( delCoefPos(scip, cons, v) );
+
+                  /* add representative instead */
+                  SCIP_CALL( addCoef(scip, cons, repvar) );
+               }
+
+               SCIPwarningMessage(scip, "setppc constraint <%s> has a multi-aggregated variable, which was not resolved and therefore could lead to aborts\n", SCIPconsGetName(cons));
+            }
+
+            SCIPfreeBufferArray(scip, &consvals);
+            SCIPfreeBufferArray(scip, &consvars);
          }
          else
-            ++v;
+         {
+            /* check, if the variable should be replaced with the representative */
+            if( repvar != var )
+            {
+               /* delete old (aggregated) variable */
+               SCIP_CALL( delCoefPos(scip, cons, v) );
+
+               /* add representative instead */
+               SCIP_CALL( addCoef(scip, cons, repvar) );
+            }
+            else
+               ++v;
+         }
       }
    }
 
@@ -2378,6 +2555,7 @@ SCIP_RETCODE collectCliqueConss(
    SCIP_Bool reduceddom;
    SCIP_Bool addcut;
    SCIP_Bool mustcheck;
+   int nlocaladdconss = 0;
    int c;
 
    assert(scip != NULL);
@@ -2403,7 +2581,10 @@ SCIP_RETCODE collectCliqueConss(
        *
        * @todo: maybe write a new method for deleting aggregations and all fixings
        */
-      SCIP_CALL( applyFixings(scip, cons) );
+      SCIP_CALL( applyFixings(scip, cons, &nlocaladdconss, ndelconss) );
+      assert(!SCIPconsIsDeleted(cons));
+      assert(nlocaladdconss == 0);
+
       SCIP_CALL( processFixings(scip, cons, cutoff, &reduceddom, &addcut, &mustcheck) );
       if( *cutoff )
          return SCIP_OKAY;
@@ -2499,6 +2680,7 @@ SCIP_RETCODE collectCliqueData(
          SCIP_VAR* var;
 
          var = consdata->vars[v];
+         assert(var != NULL);
 
          /* don't remember fixed vars */
          if( SCIPvarGetLbLocal(var) > 0.5 && SCIPvarGetUbLocal(var) < 0.5 )
@@ -2999,7 +3181,6 @@ SCIP_RETCODE presolvePropagateCons(
 
    return SCIP_OKAY;
 }
-
 
 /** check for overlapping constraint */
 static
@@ -4427,7 +4608,7 @@ SCIP_RETCODE preprocessCliques(
    int*const             ndelconss,          /**< pointer to count number of deleted constraints */
    int*const             nchgcoefs,          /**< pointer to count number of deleted coefficients */
    SCIP_Bool*const       cutoff              /**< pointer to store if the problem is infeasible due to a fixing */
-)
+   )
 {
    /* extend cliques/constraints by checking whether some variables are in the same clique, no pairwise clique lifting
     * which would be slower
@@ -5696,6 +5877,28 @@ SCIP_DECL_CONSINIT(consInitSetppc)
    return SCIP_OKAY;
 }
 
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+static
+SCIP_DECL_CONSEXITPRE(consExitpreSetppc)
+{  /*lint --e{715}*/
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      if( !SCIPconsIsDeleted(conss[c]) )
+      {
+         /* we are not allowed to detect infeasibility in the exitpre stage */
+         SCIP_CALL( applyFixings(scip, conss[c], NULL, NULL) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolSetppc)
@@ -6379,6 +6582,7 @@ SCIP_DECL_CONSPROP(consPropSetppc)
    SCIP_Bool reduceddom;
    SCIP_Bool addcut;
    SCIP_Bool mustcheck;
+   SCIP_Bool inprobing;
    int c;
 
    assert(conshdlr != NULL);
@@ -6392,10 +6596,35 @@ SCIP_DECL_CONSPROP(consPropSetppc)
 
    cutoff = FALSE;
    reduceddom = FALSE;
+   inprobing = SCIPinProbing(scip);
 
    /* propagate all useful set partitioning / packing / covering constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
+      /* do not propagate constraints with multi-aggregated variables, which should only happen in probing mode,
+       * otherwise the multi-aggregation should be resolved
+       */
+      if( inprobing )
+      {
+         SCIP_CONSDATA* consdata;
+         SCIP_VAR* var;
+         int v;
+
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+
+         for( v = consdata->nvars - 1; v >= 0; --v )
+         {
+            var = SCIPvarGetProbvar(consdata->vars[v]);
+            assert(var != NULL);
+
+            if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+               break;
+         }
+
+         if( v >= 0 )
+            continue;
+      }
       SCIP_CALL( processFixings(scip, conss[c], &cutoff, &reduceddom, &addcut, &mustcheck) );
    }
 
@@ -6474,7 +6703,10 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       /* remove all variables that are fixed to zero and replace all aggregated variables */
       if( consdata->nfixedzeros > 0 || nnewaggrvars > 0 || nnewaddconss > 0 || *naggrvars > oldnaggrvars || (nrounds == 0 && SCIPgetNRuns(scip) > 1) )
       {
-         SCIP_CALL( applyFixings(scip, cons) );
+         SCIP_CALL( applyFixings(scip, cons, naddconss, ndelconss) );
+
+         if( SCIPconsIsDeleted(cons) )
+            continue;
       }
 
       /** find pairs of negated variables in constraint:
@@ -6575,8 +6807,8 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       /* check constraints for redundancy */
       if( conshdlrdata->presolpairwise )
       {
-         SCIP_Longint npaircomparisons;
-         npaircomparisons = 0;
+         SCIP_Longint npaircomparisons = 0;
+
          oldndelconss = *ndelconss;
          oldnfixedvars = *nfixedvars;
 
@@ -7284,6 +7516,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySetppc, consCopySetppc) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSetppc) );
    SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsSetppc) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreSetppc) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSetppc) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSetppc) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSetppc) );
