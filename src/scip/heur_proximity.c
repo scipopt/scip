@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_STATISTIC
 /**@file   heur_proximity.c
  * @brief  improvement heuristic which uses an auxiliary objective instead of the original objective function which
  *         is itself added as a constraint to a sub-SCIP instance. The heuristic was presented by Matteo Fischetti
@@ -81,6 +81,7 @@ struct SCIP_HeurData
 
    int                   nsubvars;           /**< the number of subvars                                               */
    int                   lastsolidx;         /**< index of last solution on which the heuristic was processed         */
+   int                   subprobidx;         /**< counter for the subproblem index to be solved by proximity */
 };
 
 
@@ -284,6 +285,7 @@ SCIP_DECL_HEURINIT(heurInitProximity)
    heurdata->usednodes = 0LL;
    heurdata->lastsolidx = -1;
    heurdata->nusedlpiters = 0LL;
+   heurdata->subprobidx = 0;
    
    heurdata->subscip = NULL;
    heurdata->varmapfw = NULL;
@@ -456,6 +458,7 @@ SCIP_RETCODE SCIPapplyProximity(
    SCIP_Real lowerbound;
 
    int nvars;                                /* number of original problem's variables          */
+   int nfixedvars;
    int nsubsols;
    int solidx;
    int i;
@@ -697,13 +700,20 @@ SCIP_RETCODE SCIPapplyProximity(
          "iterlim: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNNodes(scip), nnodes, iterlim);
 
    /* solve the subproblem with all previously adjusted parameters */
+   nfixedvars = SCIPgetNFixedVars(subscip);
+
+   SCIP_CALL( SCIPpresolve(subscip) );
+
+   nfixedvars = SCIPgetNFixedVars(subscip) - nfixedvars;
+   assert(nfixedvars >= 0);
+   SCIPstatisticMessage("presolve fixings %d: %d\n", ++(heurdata->subprobidx), nfixedvars);
    retcode = SCIPsolve(subscip);
 
-   SCIPstatisticMessage("solve of subscip:"
+   SCIPstatisticMessage("solve of subscip %d:"
          "usednodes: %"SCIP_LONGINT_FORMAT" "
          "lp iters: %"SCIP_LONGINT_FORMAT" "
          "root iters: %"SCIP_LONGINT_FORMAT" "
-         "Presolving Time: %.2f\n",
+         "Presolving Time: %.2f\n", heurdata->subprobidx,
          SCIPgetNNodes(subscip), SCIPgetNLPIterations(subscip), SCIPgetNRootLPIterations(subscip), SCIPgetPresolvingTime(subscip));
 
    /* drop LP events of sub-SCIP */
