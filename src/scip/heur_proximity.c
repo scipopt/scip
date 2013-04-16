@@ -506,7 +506,7 @@ SCIP_RETCODE SCIPapplyProximity(
    if( SCIPisObjIntegral(scip) )
    {
       assert(SCIPisFeasIntegral(scip, bestobj));
-      SCIPdebugMessage(" Rounding up lower bound: %f --> %f \n", lowerbound, SCIPceil(scip, lowerbound));
+      SCIPdebugMessage(" Rounding up lower bound: %f --> %f \n", lowerbound, SCIPfeasCeil(scip, lowerbound));
       lowerbound = SCIPfeasCeil(scip, lowerbound);
    }
 
