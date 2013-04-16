@@ -276,6 +276,34 @@ SCIP_RETCODE createRows(
    return SCIP_OKAY;
 }
 
+/** frees the subproblem */
+static
+SCIP_RETCODE deleteSubproblem(
+   SCIP*                scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*       heurdata            /**< heuristic data */
+   )
+{
+   /* free remaining memory from heuristic execution */
+   if( heurdata->subscip != NULL )
+   {
+
+      assert(heurdata->varmapfw != NULL);
+      assert(heurdata->subvars != NULL);
+      assert(heurdata->objcons != NULL);
+
+      SCIPdebugMessage("Freeing subproblem of proximity heuristic\n");
+      SCIPfreeBlockMemoryArray(scip, &heurdata->subvars, heurdata->nsubvars);
+      SCIPhashmapFree(&heurdata->varmapfw);
+      SCIP_CALL( SCIPreleaseCons(heurdata->subscip, &heurdata->objcons) );
+      SCIP_CALL( SCIPfree(&heurdata->subscip) );
+
+      heurdata->subscip = NULL;
+      heurdata->varmapfw = NULL;
+      heurdata->subvars = NULL;
+      heurdata->objcons = NULL;
+   }
+   return SCIP_OKAY;
+}
 /* ---------------- Callback methods of event handler ---------------- */
 
 /* exec the event handler
@@ -384,23 +412,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolProximity)
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
 
-   /* free remaining memory from heuristic execution */
-   if( heurdata->subscip != NULL )
-   {
-      assert(heurdata->varmapfw != NULL);
-      assert(heurdata->subvars != NULL);
-      assert(heurdata->objcons != NULL);
-
-      SCIPfreeBlockMemoryArray(scip, &heurdata->subvars, heurdata->nsubvars);
-      SCIPhashmapFree(&heurdata->varmapfw);
-      SCIP_CALL( SCIPreleaseCons(heurdata->subscip, &heurdata->objcons) );
-      SCIP_CALL( SCIPfree(&heurdata->subscip) );
-
-      heurdata->subscip = NULL;
-      heurdata->varmapfw = NULL;
-      heurdata->subvars = NULL;
-      heurdata->objcons = NULL;
-   }
+   SCIP_CALL( deleteSubproblem(scip, heurdata) );
 
    assert(heurdata->subscip == NULL && heurdata->varmapfw == NULL
          && heurdata->subvars == NULL && heurdata->objcons == NULL);
@@ -488,6 +500,10 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    if( foundsol )
       *result = SCIP_FOUNDSOL;
 
+   if( SCIPgetNActivePricers(scip) > 0 )
+   {
+      SCIP_CALL( deleteSubproblem(scip, heurdata) );
+   }
    return SCIP_OKAY;
 }
 
