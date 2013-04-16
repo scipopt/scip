@@ -1376,7 +1376,8 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            origprob            /**< original problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob           /**< transformed problem */
    )
 {
    int i;
@@ -1387,7 +1388,7 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    {
       if( SCIPsolGetOrigin(primal->existingsols[i]) == SCIP_SOLORIGIN_ZERO )
       {
-         SCIP_CALL( SCIPsolRetransform(primal->existingsols[i], set, stat, origprob) );
+         SCIP_CALL( SCIPsolRetransform(primal->existingsols[i], set, stat, origprob, transprob) );
       }
    }
 
