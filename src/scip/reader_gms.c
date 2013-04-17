@@ -2420,11 +2420,29 @@ SCIP_RETCODE SCIPwriteGms(
       }
       else if( strcmp(conshdlrname, "nonlinear") == 0 )
       {
-         SCIP_CALL( printNonlinearCons(scip, file, consname,
-               SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
-               SCIPgetNExprtreesNonlinear(scip, cons), SCIPgetExprtreesNonlinear(scip, cons), SCIPgetExprtreeCoefsNonlinear(scip, cons),
-               SCIPgetLhsNonlinear(scip, cons),  SCIPgetRhsNonlinear(scip, cons), transformed, &nsmooth) );
+         /* cons_nonlinear does not have exprtree's at hand during presolve */
+         if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE
+             && SCIPgetExprgraphNonlinear(scip,conshdlr) != NULL )
+         {
+            SCIP_EXPRTREE* exprtree;
+            SCIP_Real coef;
 
+            SCIP_CALL( SCIPexprgraphGetTree(SCIPgetExprgraphNonlinear(scip,conshdlr), SCIPgetExprgraphNodeNonlinear(scip,cons), &exprtree) );
+            coef = 1.0;
+            SCIP_CALL( printNonlinearCons(scip, file, consname,
+                  SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
+                  1, &exprtree, &coef,
+                  SCIPgetLhsNonlinear(scip, cons),  SCIPgetRhsNonlinear(scip, cons), transformed, &nsmooth) );
+
+            SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+         }
+         else
+         {
+            SCIP_CALL( printNonlinearCons(scip, file, consname,
+                  SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
+                  SCIPgetNExprtreesNonlinear(scip, cons), SCIPgetExprtreesNonlinear(scip, cons), SCIPgetExprtreeCoefsNonlinear(scip, cons),
+                  SCIPgetLhsNonlinear(scip, cons),  SCIPgetRhsNonlinear(scip, cons), transformed, &nsmooth) );
+         }
          nlcons = TRUE;
          nqcons = TRUE;
       }
