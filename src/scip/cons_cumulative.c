@@ -93,7 +93,6 @@
 #define DEFAULT_OVERLOAD                TRUE /**< should edge finding be used to detect an overload? */
 #define DEFAULT_EDGEFINDING             TRUE /**< should edge-finding be executed? */
 #define DEFAULT_USEADJUSTEDJOBS        FALSE /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
-#define DEFAULT_TTEF                    TRUE /**< should time-table edge-finding propagator be applied */
 
 /* presolving */
 #define DEFAULT_DUALPRESOLVE            TRUE /**< should dual presolving be applied? */
@@ -182,7 +181,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool             overload;           /**< should edge finding be used to detect an overload? */
    SCIP_Bool             edgefinding;        /**< should edge-finding be executed? */
    SCIP_Bool             useadjustedjobs;    /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
-   SCIP_Bool             ttef;               /**< should time-table edge-finding be applied */
    SCIP_Bool             localcuts;          /**< should cuts be added only locally? */
    SCIP_Bool             usecovercuts;       /**< should covering cuts be added? */
    SCIP_Bool             sepaold;            /**< shall old sepa algo be applied? */
@@ -12264,9 +12262,6 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/useadjustedjobs", "should edge-finding be executed?",
          &conshdlrdata->useadjustedjobs, FALSE, DEFAULT_USEADJUSTEDJOBS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/ttef", "should time-table edge-finding be executed?",
-         &conshdlrdata->ttef, FALSE, DEFAULT_TTEF, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/usebinvars", "should the binary representation be used?",
