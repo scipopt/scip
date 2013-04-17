@@ -10468,7 +10468,7 @@ SCIP_RETCODE constraintNonOverlappingGraph(
                lct2 = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[j])) + consdata->durations[j];
 
                /* at least one of the jobs needs to finish not later then hmin */
-               if( lct1 > consdata->hmax && lct2 < consdata->hmax )
+               if( lct1 > consdata->hmax && lct2 > consdata->hmax )
                   continue;
 
                SCIP_CALL( getNodeIdx(scip, tcliquegraph, vars[j], &idx2) );
