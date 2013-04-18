@@ -93,6 +93,7 @@
 #define DEFAULT_OVERLOAD                TRUE /**< should edge finding be used to detect an overload? */
 #define DEFAULT_EDGEFINDING             TRUE /**< should edge-finding be executed? */
 #define DEFAULT_USEADJUSTEDJOBS        FALSE /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
+#define DEFAULT_TTEF                    TRUE /**< should time-table edge-finding propagator be used */
 
 /* presolving */
 #define DEFAULT_DUALPRESOLVE            TRUE /**< should dual presolving be applied? */
@@ -181,6 +182,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             overload;           /**< should edge finding be used to detect an overload? */
    SCIP_Bool             edgefinding;        /**< should edge-finding be executed? */
    SCIP_Bool             useadjustedjobs;    /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
+   SCIP_Bool             ttef;                /**< should time-table edge-finding propagator be used */
    SCIP_Bool             localcuts;          /**< should cuts be added only locally? */
    SCIP_Bool             usecovercuts;       /**< should covering cuts be added? */
    SCIP_Bool             sepaold;            /**< shall old sepa algo be applied? */
@@ -4806,6 +4808,7 @@ SCIP_RETCODE propagateLbTTEF(
 static
 SCIP_RETCODE propagateTTEF(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< current core profile */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
@@ -4814,7 +4817,6 @@ SCIP_RETCODE propagateTTEF(
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated (needed to SCIPinferVar**Cons()) */
-   SCIP_PROFILE*         profile,            /**< current core profile */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
    SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
@@ -4988,6 +4990,7 @@ SCIP_RETCODE propagateTTEF(
 static
 SCIP_RETCODE propagateCoretimes(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< core profile */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
@@ -5003,17 +5006,8 @@ SCIP_RETCODE propagateCoretimes(
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
    )
 {
-   SCIP_PROFILE* profile;
-   SCIP_Bool* cores;
-   SCIP_Bool* fixeds;
-   SCIP_Bool* ignorejobs;
-   int* starts;
-   int* ends;
-
    SCIP_Bool infeasible;
-
-   int ncores;
-   int j;
+   int v;
 
    assert(scip != NULL);
    assert(nvars > 0);
@@ -5022,82 +5016,100 @@ SCIP_RETCODE propagateCoretimes(
    assert(*cutoff ==  FALSE);
    assert(*initialized ==  FALSE);
 
-   SCIPdebugMessage("check/propagate cores of cumulative condition of constraint <%s>[%d,%d) <= %d\n",
+   SCIPdebugMessage("propagate cores of cumulative condition of constraint <%s>[%d,%d) <= %d\n",
       SCIPconsGetName(cons), hmin, hmax, capacity);
 
-   /* allocate buffer arrays */
-   SCIP_CALL( SCIPallocBufferArray(scip, &cores, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &fixeds, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ignorejobs, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &starts, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ends, nvars) );
-
    infeasible = FALSE;
-   ncores = 0;
 
-   /* create an empty resource profile for profiling the cores of the jobs */
-   SCIP_CALL( SCIPprofileCreate(&profile, capacity) );
+   /* if core profile is empty; nothing to do */
+   if( SCIPprofileGetNTimepoints(profile) == 0 )
+      return SCIP_OKAY;
 
-   /* insert all cores */
-   for( j = 0; j < nvars; ++j )
+   /* start checking each job whether the bounds can be improved */
+   for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
-      int duration;
       int demand;
+      int duration;
+      int begin;
+      int end;
       int est;
       int lst;
 
-      var = vars[j];
+      var = vars[v];
       assert(var != NULL);
-      assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
-      assert(SCIPisFeasIntegral(scip, SCIPvarGetUbLocal(var)));
 
-      duration = durations[j];
+      duration = durations[v];
       assert(duration > 0);
-
-      demand =  demands[j];
-      assert(demand > 0);
 
       /* collect earliest and latest start time */
       est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
       lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
 
+      /* check if the start time variables is already fixed; in that case we can ignore the job */
+      if( est == lst )
+         continue;
+
       /* check if the job runs completely outside of the effective horizon [hmin, hmax); if so skip it */
       if( lst + duration <= hmin || est >= hmax )
-      {
-         ignorejobs[j] = TRUE;
          continue;
-      }
-
-      ignorejobs[j] = FALSE;
 
       /* compute core interval w.r.t. effective time horizon */
-      starts[j] = MAX(hmin, lst);
-      ends[j] = MIN(hmax, est + duration);
+      begin = MAX(hmin, lst);
+      end = MIN(hmax, est + duration);
 
-      /* check if a core exists */
-      if( starts[j] < ends[j] )
+      demand = demands[v];
+      assert(demand > 0);
+
+      /* if the job has a core, remove it first */
+      if( begin < end  )
+      {
+         SCIPdebugMessage("variable <%s>[%g,%g] (duration %d, demand %d): remove core [%d,%d)\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), duration, demand, begin, end);
+
+         SCIP_CALL( SCIPprofileDeleteCore(profile, begin, end, demand) );
+      }
+
+      /* first try to update the earliest start time */
+      SCIP_CALL( coretimesUpdateLb(scip, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
+            profile, v, nchgbds, usebdwidening, initialized, explanation, cutoff) );
+
+      if( *cutoff )
+         break;
+
+      /* second try to update the latest start time */
+      SCIP_CALL( coretimesUpdateUb(scip, var, duration, demand, capacity, cons,
+            profile, v, nchgbds) );
+
+      if( *cutoff )
+         break;
+
+      /* collect the potentially updated earliest and latest start time */
+      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+      lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+
+      /* compute core interval w.r.t. effective time horizon */
+      begin = MAX(hmin, lst);
+      end = MIN(hmax, est + duration);
+
+      /* after updating the bound we might have a new core */
+      if( begin < end )
       {
          int pos;
 
          SCIPdebugMessage("variable <%s>[%d,%d] (duration %d, demand %d): add core [%d,%d)\n",
-            SCIPvarGetName(var), est, lst, duration, demand, starts[j], ends[j]);
+            SCIPvarGetName(var), est, lst, duration, demand, begin, end);
 
-         /* insert the core into core resource profile (complexity O(log n)) */
-         SCIP_CALL( SCIPprofileInsertCore(profile, starts[j], ends[j], demand, &pos, &infeasible) );
+         SCIP_CALL( SCIPprofileInsertCore(profile, begin, end, demand, &pos, &infeasible) );
 
-         /* in case the insertion of the core leads to an infeasibility; start the conflict analysis */
          if( infeasible )
          {
-            assert(starts[j] <= SCIPprofileGetTime(profile, pos));
-            assert(ends[j] > SCIPprofileGetTime(profile, pos));
-
             /* use conflict analysis to analysis the core insertion which was infeasible */
             SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
                   var, duration, demand, SCIPprofileGetTime(profile, pos), usebdwidening, initialized, explanation) );
 
             if( explanation != NULL )
-               explanation[j] = TRUE;
+               explanation[v] = TRUE;
 
             (*cutoff) = TRUE;
 
@@ -5106,124 +5118,8 @@ SCIP_RETCODE propagateCoretimes(
 
             break;
          }
-
-         /* remenber that the job has a core */
-         cores[j] = TRUE;
-         ncores++;
-
-         /* check if the start time variables is already fixed; in that case we can ignore the job */
-         if( est == lst )
-            ignorejobs[j] = TRUE;
-      }
-      else
-         cores[j] = FALSE;
-   }
-
-   if( !(*cutoff) && ncores > 0 )
-   {
-      /* start checking each job whether the bounds can be improved */
-      for( j = 0; j < nvars; ++j )
-      {
-         SCIP_VAR* var;
-         int demand;
-         int duration;
-         int est;
-         int lst;
-
-         /* check if the job can be ignored */
-         if( ignorejobs[j] )
-            continue;
-
-         var = vars[j];
-         assert(var != NULL);
-
-         duration = durations[j];
-         assert(duration > 0);
-
-         demand = demands[j];
-         assert(demand > 0);
-
-         /* if the job has a core, remove it first */
-         if( cores[j] )
-         {
-            SCIPdebugMessage("variable <%s>[%g,%g] (duration %d, demand %d): remove core [%d,%d)\n",
-               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), duration, demand, starts[j], ends[j]);
-
-            SCIP_CALL( SCIPprofileDeleteCore(profile, starts[j], ends[j], demand) );
-            ncores--;
-         }
-
-         /* first try to update the earliest start time */
-         SCIP_CALL( coretimesUpdateLb(scip, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-               profile, j, nchgbds, usebdwidening, initialized, explanation, cutoff) );
-
-         if( *cutoff )
-            break;
-
-         /* second try to update the latest start time */
-         SCIP_CALL( coretimesUpdateUb(scip, var, duration, demand, capacity, cons,
-               profile, j, nchgbds) );
-
-         if( *cutoff )
-            break;
-
-         /* collect earliest and latest start time */
-         est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-         lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
-
-         /* compute core interval w.r.t. effective time horizon */
-         starts[j] = MAX(hmin, lst);
-         ends[j] = MIN(hmax, est + duration);
-
-         /* after updating the bound we might have a new core */
-         if( starts[j] < ends[j] )
-         {
-            int pos;
-
-            SCIPdebugMessage("variable <%s>[%d,%d] (duration %d, demand %d): add core [%d,%d)\n",
-               SCIPvarGetName(var), est, lst, duration, demand, starts[j], ends[j]);
-
-            SCIP_CALL( SCIPprofileInsertCore(profile, starts[j], ends[j], demand, &pos, &infeasible) );
-
-            if( infeasible )
-            {
-               /* use conflict analysis to analysis the core insertion which was infeasible */
-               SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-                     var, duration, demand, SCIPprofileGetTime(profile, pos), usebdwidening, initialized, explanation) );
-
-               if( explanation != NULL )
-                  explanation[j] = TRUE;
-
-               (*cutoff) = TRUE;
-
-               /* for the statistic we count the number of times a cutoff was detected due the time-time */
-               SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ncutofftimetable++ );
-
-               break;
-            }
-
-            cores[j] = TRUE;
-            ncores++;
-         }
-
       }
    }
-
-   if( !(*cutoff) )
-   {
-      SCIP_CALL( propagateTTEF(scip, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            profile, nchgbds, usebdwidening, initialized, explanation, cutoff) );
-   }
-
-   /* free resource profile */
-   SCIPprofileFree(&profile);
-
-   /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &ends);
-   SCIPfreeBufferArray(scip, &starts);
-   SCIPfreeBufferArray(scip, &ignorejobs);
-   SCIPfreeBufferArray(scip, &fixeds);
-   SCIPfreeBufferArray(scip, &cores);
 
    return SCIP_OKAY;
 }
@@ -6768,6 +6664,99 @@ SCIP_RETCODE consCheckRedundancy(
    return SCIP_OKAY;
 }
 
+/** creates the worst case resource profile, that is, all jobs are inserted with the earliest start and latest
+ *  completion time
+ */
+static
+SCIP_RETCODE createCoreProfile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< resource profile */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
+   SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
+   SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
+   )
+{
+   int v;
+
+   /* insert all cores */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_VAR* var;
+      SCIP_Bool infeasible;
+      int duration;
+      int demand;
+      int begin;
+      int end;
+      int est;
+      int lst;
+      int pos;
+
+      var = vars[v];
+      assert(var != NULL);
+      assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
+      assert(SCIPisFeasIntegral(scip, SCIPvarGetUbLocal(var)));
+
+      duration = durations[v];
+      assert(duration > 0);
+
+      demand =  demands[v];
+      assert(demand > 0);
+
+      /* collect earliest and latest start time */
+      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+      lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+
+      /* check if the job runs completely outside of the effective horizon [hmin, hmax); if so skip it */
+      if( lst + duration <= hmin || est >= hmax )
+         continue;
+
+      /* compute core interval w.r.t. effective time horizon */
+      begin = MAX(hmin, lst);
+      end = MIN(hmax, est + duration);
+
+      /* check if a core exists */
+      if( begin >= end )
+         continue;
+
+      SCIPdebugMessage("variable <%s>[%d,%d] (duration %d, demand %d): add core [%d,%d)\n",
+         SCIPvarGetName(var), est, lst, duration, demand, begin, end);
+
+      /* insert the core into core resource profile (complexity O(log n)) */
+      SCIP_CALL( SCIPprofileInsertCore(profile, begin, end, demand, &pos, &infeasible) );
+
+      /* in case the insertion of the core leads to an infeasibility; start the conflict analysis */
+      if( infeasible )
+      {
+         assert(begin <= SCIPprofileGetTime(profile, pos));
+         assert(end > SCIPprofileGetTime(profile, pos));
+
+         /* use conflict analysis to analysis the core insertion which was infeasible */
+         SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
+               var, duration, demand, SCIPprofileGetTime(profile, pos), usebdwidening, initialized, explanation) );
+
+         if( explanation != NULL )
+            explanation[v] = TRUE;
+
+         (*cutoff) = TRUE;
+
+         /* for the statistic we count the number of times a cutoff was detected due the time-time */
+         SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->ncutofftimetable++ );
+
+         break;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** propagate the cumulative condition */
 static
 SCIP_RETCODE propagateCumulativeCondition(
@@ -6789,6 +6778,8 @@ SCIP_RETCODE propagateCumulativeCondition(
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
    )
 {
+   SCIP_PROFILE* profile;
+
    assert(nchgbds != NULL);
    assert(initialized != NULL);
    assert(cutoff != NULL);
@@ -6802,34 +6793,44 @@ SCIP_RETCODE propagateCumulativeCondition(
    if( *redundant )
       return SCIP_OKAY;
 
-   /* propagate the job cores until nothing else can be detected */
-   if( conshdlrdata->coretimes )
-   {
-      SCIP_CALL( propagateCoretimes(scip, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            nchgbds, usebdwidening, initialized, explanation, cutoff) );
+   /* create an empty resource profile for profiling the cores of the jobs */
+   SCIP_CALL( SCIPprofileCreate(&profile, capacity) );
 
-      if( *cutoff )
-         return SCIP_OKAY;
+   /* create core profile */
+   SCIP_CALL( createCoreProfile(scip, profile, nvars, vars, durations, demands, capacity, hmin, hmax,
+         usebdwidening, initialized, explanation, cutoff) );
+
+   /* propagate the job cores until nothing else can be detected */
+   if( !(*cutoff) && conshdlrdata->coretimes )
+   {
+      SCIP_CALL( propagateCoretimes(scip, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
+            nchgbds, usebdwidening, initialized, explanation, cutoff) );
    }
 
-   if( conshdlrdata->overload )
+   if( !(*cutoff) && conshdlrdata->overload )
    {
       /* check for overload, which may result in a cutoff */
       SCIP_CALL( checkOverloadViaThetaTree(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
             cons, usebdwidening, conshdlrdata->useadjustedjobs, TRUE, conshdlrdata->edgefinding,
             initialized, explanation, nchgbds, cutoff) );
-
-      if( *cutoff )
-         return SCIP_OKAY;
    }
 
-   if( conshdlrdata->edgefinding )
+   if( !(*cutoff) && conshdlrdata->edgefinding )
    {
       /* check for overload, which may result in a cutoff */
       SCIP_CALL( checkOverloadViaThetaTree(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
             cons, usebdwidening, conshdlrdata->useadjustedjobs, FALSE, TRUE, initialized, explanation, nchgbds, cutoff) );
    }
 
+   /* run time-table edge finding propagator */
+   if( !(*cutoff) && conshdlrdata->ttef )
+   {
+      SCIP_CALL( propagateTTEF(scip, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
+            nchgbds, usebdwidening, initialized, explanation, cutoff) );
+   }
+
+   /* free resource profile */
+   SCIPprofileFree(&profile);
 
    return SCIP_OKAY;
 }
@@ -6892,10 +6893,12 @@ SCIP_RETCODE propagateCons(
       {
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
+      else
+      {
+         /* mark the constraint to be propagated */
+         consdata->propagated = TRUE;
+      }
    }
-
-   /* mark the constraint to be propagated */
-   consdata->propagated = TRUE;
 
    return SCIP_OKAY;
 }
@@ -12261,7 +12264,10 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
          &conshdlrdata->edgefinding, FALSE, DEFAULT_EDGEFINDING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/useadjustedjobs", "should edge-finding be executed?",
-         &conshdlrdata->useadjustedjobs, FALSE, DEFAULT_USEADJUSTEDJOBS, NULL, NULL) );
+         &conshdlrdata->useadjustedjobs, TRUE, DEFAULT_USEADJUSTEDJOBS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/ttef", "should time-table edge-finding propagator be executed?",
+         &conshdlrdata->ttef, FALSE, DEFAULT_TTEF, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/usebinvars", "should the binary representation be used?",
