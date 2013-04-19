@@ -634,7 +634,7 @@ SCIP_DECL_READERREAD(readerReadSm)
 
    /* create problem */
    SCIP_CALL( SCIPcreateSchedulingProblem(scip, filename, rcpspdata.jobnames, rcpspdata.resourcenames, rcpspdata.demands,
-         rcpspdata.precedencegraph, rcpspdata.durations, rcpspdata.capacities, rcpspdata.njobs, rcpspdata.nresources) );
+         rcpspdata.precedencegraph, rcpspdata.durations, rcpspdata.capacities, rcpspdata.njobs, rcpspdata.nresources, TRUE) );
 
    (*result) = SCIP_SUCCESS;
 
@@ -722,7 +722,8 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
    int*                  durations,          /**< array to store the processing for each job */
    int*                  capacities,         /**< array to store the different capacities */
    int                   njobs,              /**< number of jobs to be parsed */
-   int                   nresources          /**< number of capacities to be parsed */
+   int                   nresources,         /**< number of capacities to be parsed */
+   SCIP_Bool             initialize          /**< initialize list scheduling heuristic */
    )
 {
    SCIP_VAR** jobs;
@@ -753,7 +754,7 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
 
    /* compute a feasible upper bound on the makespan */
    ubmakespan = computeUbmakespan(durations, njobs);
-   ubmakespan *= 100;
+   ubmakespan *= 10;
 
    /* allocate buffer for jobs and precedence constraints */
    SCIP_CALL( SCIPallocBufferArray(scip, &jobs, njobs) );
@@ -877,8 +878,11 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
    }
 
    /* initialize the problem specific heuristic */
-   SCIP_CALL( SCIPinitializeHeurListScheduling(scip, precedencegraph, jobs,
-         durations, demands, capacities, njobs, nresources) );
+   if( initialize )
+   {
+      SCIP_CALL( SCIPinitializeHeurListScheduling(scip, precedencegraph, jobs,
+            durations, demands, capacities, njobs, nresources) );
+   }
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &consdurations);
