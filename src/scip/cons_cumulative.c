@@ -91,7 +91,7 @@
 /* propagation */
 #define DEFAULT_CORETIMES               TRUE /**< should core-times be propagated (time tabling)? */
 #define DEFAULT_OVERLOAD                TRUE /**< should edge finding be used to detect an overload? */
-#define DEFAULT_EDGEFINDING             TRUE /**< should edge-finding be executed? */
+#define DEFAULT_EDGEFINDING            FALSE /**< should edge-finding be executed? */
 #define DEFAULT_USEADJUSTEDJOBS        FALSE /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
 #define DEFAULT_TTEF                    TRUE /**< should time-table edge-finding propagator be used */
 
@@ -10186,7 +10186,7 @@ SCIP_Bool impliesVubPrecedenceCondition(
 
    /* convert the variable upper bound into an variable lower bound */
    vlbcoef = 1.0 / vubcoef;
-   vlbconst = vubconst / vubcoef;
+   vlbconst = -vubconst / vubcoef;
 
    return impliesVlbPrecedenceCondition(scip, var, vlbcoef, vlbconst, duration);
 }
@@ -10798,6 +10798,8 @@ SCIP_RETCODE findPrecedenceConss(
          TCLIQUE_WEIGHT cliqueweight;
          TCLIQUE_STATUS tcliquestatus;
          int* cliquenodes;
+         int lct;
+         int est;
          int k;
 
          int ntreenodes;
@@ -10812,10 +10814,29 @@ SCIP_RETCODE findPrecedenceConss(
          /* reset the weights to zero */
          BMSclearMemoryArray(tcliquegraph->weights, nvars);
 
+         lct = convertBoundToInt(scip, SCIPvarGetUbLocal(tcliquegraph->vars[i])) + tcliquegraph->durations[i];
+         est = convertBoundToInt(scip, SCIPvarGetLbLocal(tcliquegraph->vars[j]));
+
          for( k = 0; k < nvars; ++k )
          {
-            if( tcliquegraph->precedencematrix[i][k] && tcliquegraph->precedencematrix[k][j] )
-               tcliquegraph->weights[k] = tcliquegraph->durations[k];
+            SCIP_VAR* var;
+            int duration;
+
+            var = tcliquegraph->vars[k];
+            assert(var != NULL);
+
+            duration = tcliquegraph->durations[k];
+
+            if( i == k || j == k )
+               tcliquegraph->weights[k] = 0;
+            else if( tcliquegraph->precedencematrix[i][k] && tcliquegraph->precedencematrix[k][j] )
+               tcliquegraph->weights[k] = duration;
+            else if( lct > convertBoundToInt(scip, SCIPvarGetLbLocal(var)) )
+               tcliquegraph->weights[k] = 0;
+            else if( est < convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration )
+               tcliquegraph->weights[k] = 0;
+            else
+               tcliquegraph->weights[k] = duration;
          }
 
          SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, nvars) );
