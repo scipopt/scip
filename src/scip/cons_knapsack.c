@@ -559,7 +559,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_Longint          capacity            /**< capacity of knapsack */
    )
 {
-   int i;
+   int v;
 
    assert(consdata != NULL);
 
@@ -567,16 +567,15 @@ SCIP_RETCODE consdataCreate(
    if( nvars > 0 )
    {
       int k;
-      int v;
 
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->weights, weights, nvars) );
-      
+
       k = 0;
       for( v = 0; v < nvars; ++v )
       {
          assert(vars[v] != NULL);
-         
+
          /* all weight have to be not negative */
          assert( weights[v] >= 0 );
 
@@ -642,6 +641,15 @@ SCIP_RETCODE consdataCreate(
    {
       SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
 
+#ifndef NDEBUG
+      for( v = 0; v < (*consdata)->nvars; v++ )
+      {
+         SCIP_VAR* var = SCIPvarGetProbvar((*consdata)->vars[v]);
+         assert(var != NULL);
+         assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR);
+      }
+#endif
+
       /* allocate memory for additional data structures */
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cliquepartition, (*consdata)->nvars) );
@@ -649,17 +657,17 @@ SCIP_RETCODE consdataCreate(
 
       /* catch events for variables */
       SCIP_CALL( catchEvents(scip, *consdata, eventhdlr) );
-   } 
+   }
 
    /* calculate sum of weights and capture variables */
-   for( i = 0; i < (*consdata)->nvars; ++i )
+   for( v = 0; v < (*consdata)->nvars; ++v )
    {
-      (*consdata)->weightsum += (*consdata)->weights[i];
-      if( SCIPvarGetLbLocal((*consdata)->vars[i]) > 0.5 )
-         (*consdata)->onesweightsum += (*consdata)->weights[i];
+      (*consdata)->weightsum += (*consdata)->weights[v];
+      if( SCIPvarGetLbLocal((*consdata)->vars[v]) > 0.5 )
+         (*consdata)->onesweightsum += (*consdata)->weights[v];
 
       /* capture variables */
-      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[i]) );
+      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
 
    return SCIP_OKAY;
@@ -8745,35 +8753,38 @@ SCIP_RETCODE tightenWeightsLift(
          cliquevars = SCIPcliqueGetVars(cliques[j]);
          cliquevalues = SCIPcliqueGetValues(cliques[j]);
 
-         for( k = 0; k < ncliquevars && !memlimitreached; ++k )
+         for( k = ncliquevars - 1; k >= 0; --k )
          {
-            if( cliquevars[k] != var )
+            SCIP_Bool implvalue;
+            int probindex;
+
+            if( var == cliquevars[k] )
+               continue;
+
+            probindex = SCIPvarGetProbindex(cliquevars[k]);
+            assert(0 <= probindex && probindex < nbinvars);
+            implvalue = cliquevalues[k];
+
+            /* insert the item into the list of the clique variable/value */
+            if( !zeroiteminserted[implvalue][probindex] )
             {
-               int probindex;
-               SCIP_Bool implvalue;
-
-               probindex = SCIPvarGetProbindex(cliquevars[k]);
-               assert(0 <= probindex && probindex < nbinvars);
-               implvalue = cliquevalues[k];
-
-               /* insert the item into the list of the clique variable/value */
-               if( !zeroiteminserted[implvalue][probindex] )
+               if( firstidxs[implvalue][probindex] == 0 )
                {
-                  if( firstidxs[implvalue][probindex] == 0 )
-                  {
-                     tmpboolindices2[tmp2] = implvalue;
-                     tmpindices2[tmp2] = probindex;
-                     ++tmp2;
-                  }
-
-                  SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
-                        &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems, probindex, implvalue, i, weight,
-                        &memlimitreached) );
-                  zeroiteminserted[implvalue][probindex] = TRUE;
-                  tmpboolindices[tmp] = implvalue;
-                  tmpindices[tmp] = probindex;
-                  ++tmp;
+                  tmpboolindices2[tmp2] = implvalue;
+                  tmpindices2[tmp2] = probindex;
+                  ++tmp2;
                }
+
+               SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
+                     &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems, probindex, implvalue, i, weight,
+                     &memlimitreached) );
+               zeroiteminserted[implvalue][probindex] = TRUE;
+               tmpboolindices[tmp] = implvalue;
+               tmpindices[tmp] = probindex;
+               ++tmp;
+
+               if( memlimitreached )
+                  break;
             }
          }
       }
