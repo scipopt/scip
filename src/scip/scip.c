@@ -29303,6 +29303,7 @@ SCIP_RETCODE SCIPcreateOrigSol(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPcreateSolCopy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -29310,7 +29311,7 @@ SCIP_RETCODE SCIPcreateSolCopy(
    SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPcreateSolCopy", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateSolCopy", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* check if we want to copy the current solution, which is the same as creating a current solution */
    if( sourcesol == NULL )
