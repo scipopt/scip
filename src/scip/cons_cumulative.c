@@ -2613,9 +2613,9 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
          assert(relaxedbd != SCIP_UNKNOWN); /*lint !e777*/
 
-         SCIPdebugMessage("inference variable <%s>[%g,%g] %s %g\n",
+         SCIPdebugMessage("inference variable <%s>[%g,%g] %s %g (duration %d, demand %d)\n",
             SCIPvarGetName(var), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE),
-            boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", relaxedbd);
+            boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", relaxedbd, duration, demand);
 
          /* compute the amount of energy which needs to be available for enforcing the propagation and report the bound
           * which is necessary from the inference variable
@@ -2713,7 +2713,13 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
          /* adjust the required energy by the amount the inference variable overlaps */
          if( overlap >= end - begin )
-            requiredenergy -= (end - begin) * demands[v];
+         {
+            /* the inference variable overlaps completely with time window; the get a proper reason we need to make sure
+             * that at least one unit of is blocked by on other job; meaning the inference job cannot run through the
+             * time window
+             */
+            requiredenergy -= (end - begin) * demands[v] - 1;
+         }
          else
             requiredenergy -= (overlap + 1) * demands[v] - 1;
 
