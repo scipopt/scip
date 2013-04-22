@@ -307,6 +307,11 @@ SCIP_RETCODE consdataCreate(
    {
       SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->var, &(*consdata)->var) );
       SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vbdvar, &(*consdata)->vbdvar) );
+
+#ifndef NDEBUG
+      assert(SCIPvarGetStatus(SCIPvarGetProbvar((*consdata)->var)) != SCIP_VARSTATUS_MULTAGGR);
+      assert(SCIPvarGetStatus(SCIPvarGetProbvar((*consdata)->vbdvar)) != SCIP_VARSTATUS_MULTAGGR);
+#endif
    }
 
    /* capture variables */
@@ -4161,9 +4166,9 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
       consdata->propagated = FALSE;
       consdata->presolved = FALSE;
       consdata->tightened = FALSE;
-   }
 
-   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+   }
 
    return SCIP_OKAY;
 }
