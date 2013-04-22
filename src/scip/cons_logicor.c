@@ -248,6 +248,15 @@ SCIP_RETCODE consdataCreate(
    if( SCIPisTransformed(scip) )
    {
       SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
+
+#ifndef NDEBUG
+      for( v = 0; v < (*consdata)->nvars; v++ )
+      {
+         SCIP_VAR* var = SCIPvarGetProbvar((*consdata)->vars[v]);
+         assert(var != NULL);
+         assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR);
+      }
+#endif
    }
 
    /* capture variables */
@@ -258,7 +267,7 @@ SCIP_RETCODE consdataCreate(
    }
 
    return SCIP_OKAY;
-}   
+}
 
 /** frees a logic or constraint data */
 static
@@ -851,11 +860,6 @@ SCIP_RETCODE applyFixings(
             if( v2 < 0 )
                easycase = TRUE;
          }
-         else if( SCIPisFeasEQ(scip, constant, 1.0) )
-         {
-            /* if the assert fails the constraint is redundant, note that we cannot delete it in exitpre */
-            assert(nconsvars > 0);
-         }
 
          /* we can easily add the coefficients and still have a setppc constraint */
          if( easycase )
@@ -879,33 +883,40 @@ SCIP_RETCODE applyFixings(
             SCIP_CONS* newcons;
             SCIP_Real lhs;
             SCIP_Real rhs;
+            int size;
             int k;
-#ifndef NDEBUG
-            SCIP_Bool found = FALSE;
-#endif
 
-            SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, nconsvars + consdata->nvars - 1) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, nconsvars + consdata->nvars - 1) );
+            /* it might happen that there are more than one multi-aggregated variable, so we need to get the whole probvar sum over all variables */
+
+            size = MAX(nconsvars, 1) + nvars - 1;
+
+            /* memory needed is at least old number of variables - 1 + number of variables in first multi-aggregation */
+            SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, size) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, size) );
+
+            nconsvars = nvars;
 
             /* add constraint variables to new linear variables */
-            for( k = consdata->nvars - 1; k >= 0; --k )
+            for( k = nvars - 1; k >= 0; --k )
             {
-               if( consdata->vars[k] != var )
-               {
-                  consvars[nconsvars] = consdata->vars[k];
-                  consvals[nconsvars] = 1.0;
-                  ++nconsvars;
-               }
-#ifndef NDEBUG
-               else
-               {
-                  /* we allow no multiple occurances of one multi-aggregated variable */
-                  assert(!found);
-                  found = TRUE;
-               }
-#endif
+               consvars[k] = vars[k];
+               consvals[k] = 1.0;
             }
-            assert(found);
+
+            constant = 0.0;
+
+            /* get active variables for new constraint */
+            SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize, TRUE) );
+
+            /* if space was not enough(we found another multi-aggregation), we need to resize the buffers */
+            if( requiredsize > nconsvars )
+            {
+               SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
+
+               SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize, TRUE) );
+               assert(requiredsize <= nconsvars);
+            }
 
             lhs = 1.0 - constant;
             rhs = SCIPinfinity(scip);
