@@ -792,19 +792,22 @@ SCIP_RETCODE initData(
 
    SCIPdebugMessage("initialize vbounds propagator for problem <%s>\n", SCIPgetProbName(scip));
 
-   propdata->initialized = TRUE;
-
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    nbounds = 2 * nvars;
+
+   /* store size of the bounds of variables array */
+   propdata->nbounds = nbounds;
+
+   if( nbounds == 0 )
+      return SCIP_OKAY;
+
+   propdata->initialized = TRUE;
 
    /* prepare priority queue structure */
    SCIP_CALL( SCIPpqueueCreate(&propdata->propqueue, nvars, 2.0, compVarboundIndices) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->inqueue, nbounds) );
    BMSclearMemoryArray(propdata->inqueue, nbounds);
-
-   if( nbounds == 0 )
-      return SCIP_OKAY;
 
    /* we need to copy the variable since this array is the basis of the propagator and the corresponding variable array
     * within SCIP might change during the search
@@ -829,9 +832,6 @@ SCIP_RETCODE initData(
    BMSclearMemoryArray(propdata->vboundconstants, nbounds);
    BMSclearMemoryArray(propdata->nvbounds, nbounds);
    BMSclearMemoryArray(propdata->vboundsize, nbounds);
-
-   /* store size of the bounds of variables array */
-   propdata->nbounds = nbounds;
 
    for( v = 0; v < nbounds; ++v )
    {
@@ -1451,10 +1451,13 @@ SCIP_RETCODE propagateVbounds(
    {
       SCIP_CALL( initData(scip, prop) );
    }
-   assert(propdata->propqueue != NULL);
+   assert(propdata->nbounds == 0 || propdata->propqueue != NULL);
 
    vars = propdata->vars;
    nbounds = propdata->nbounds;
+
+   if( nbounds == 0 )
+      return SCIP_OKAY;
 
    /* propagate all variables if we are in repropagation */
    if( SCIPinRepropagation(scip) )
