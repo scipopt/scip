@@ -3449,7 +3449,7 @@ SCIP_RETCODE varEventVarFixed(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   int                   fixeventtype        /**< is this event a fixation(0), an aggregation(1), or an
+   int                   fixeventtype        /**< is this event a fixation(0), an aggregation(1), or a
 					      *   multi-aggregation(2)
 					      */
    )
@@ -3466,11 +3466,18 @@ SCIP_RETCODE varEventVarFixed(
    SCIP_CALL( SCIPeventCreateVarFixed(&event, blkmem, var) );
    SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
 
+#ifndef NDEBUG
+   for( i = var->nparentvars -1; i >= 0; --i )
+   {
+      assert(SCIPvarGetStatus(var->parentvars[i]) != SCIP_VARSTATUS_MULTAGGR);
+   }
+#endif
+
    switch( fixeventtype )
    {
    case 0:
       /* process all parents of a fixed variable */
-      for( i = 0; i < var->nparentvars; ++i )
+      for( i = var->nparentvars - 1; i >= 0; --i )
       {
 	 varstatus = SCIPvarGetStatus(var->parentvars[i]);
 
@@ -3487,23 +3494,38 @@ SCIP_RETCODE varEventVarFixed(
       break;
    case 1:
       /* process all parents of a aggregated variable */
-      for( i = 0; i < var->nparentvars; ++i )
+      for( i = var->nparentvars - 1; i >= 0; --i )
       {
 	 varstatus = SCIPvarGetStatus(var->parentvars[i]);
 
 	 assert(varstatus != SCIP_VARSTATUS_FIXED);
 
-	 /* issue event on all not yet fixed and aggregated parent variables, (that should already issued this event)
-	  * except the original one
+	 /* issue event until an aggregated parent variable was found, because for this and its parents the var event
+          * was already issued(, except the original one)
 	  */
-	 if( varstatus != SCIP_VARSTATUS_AGGREGATED && varstatus != SCIP_VARSTATUS_ORIGINAL )
+         if( varstatus == SCIP_VARSTATUS_AGGREGATED )
+            break;
+
+	 if( varstatus != SCIP_VARSTATUS_ORIGINAL )
 	 {
 	    SCIP_CALL( varEventVarFixed(var->parentvars[i], blkmem, set, eventqueue, fixeventtype) );
 	 }
       }
       break;
    case 2:
-      /* do not process event on parents in multi-aggregation case */
+      /* process all parents of a aggregated variable */
+      for( i = var->nparentvars - 1; i >= 0; --i )
+      {
+	 varstatus = SCIPvarGetStatus(var->parentvars[i]);
+
+	 assert(varstatus != SCIP_VARSTATUS_FIXED);
+
+	 /* issue event on all parent variables except the original one */
+	 if( varstatus != SCIP_VARSTATUS_ORIGINAL )
+	 {
+	    SCIP_CALL( varEventVarFixed(var->parentvars[i], blkmem, set, eventqueue, fixeventtype) );
+	 }
+      }
       break;
    default:
       SCIPerrorMessage("unknown variable fixation event origin\n");
@@ -3658,7 +3680,8 @@ SCIP_RETCODE SCIPvarFix(
 
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot fix a multiple aggregated variable\n");
-      return SCIP_INVALIDDATA;
+      SCIPABORT();
+      return SCIP_INVALIDDATA;  /*lint !e527*/
 
    case SCIP_VARSTATUS_NEGATED:
       /* fix negation variable x in x' = offset - x, instead of fixing x' directly */
