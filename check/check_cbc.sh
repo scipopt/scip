@@ -103,9 +103,9 @@ do
             if test $SETNAME != "default"
             then
                 cp $SETTINGS $TMPFILE
-                echo ""                              >> $TMPFILE
+                echo -n ""                          >> $TMPFILE
             else
-                echo ""                              > $TMPFILE
+                echo -n ""                          > $TMPFILE
             fi
             if test $FEASTOL != "default"
             then
@@ -116,7 +116,7 @@ do
             TIMELIMIT=`expr $TIMELIMIT \* $THREADS`
             echo seconds $TIMELIMIT                 >> $TMPFILE
 #$MEMLIMIT not supported (version 2.4)
-            echo threads $THREADS                   >> $TMPFILE
+#            echo threads $THREADS                   >> $TMPFILE
             echo ratioGap 0.0                       >> $TMPFILE
             echo maxNodes $NODELIMIT                >> $TMPFILE
             echo import $i                          >> $TMPFILE
