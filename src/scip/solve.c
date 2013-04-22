@@ -267,7 +267,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
       /* if the new solution cuts off the current node due to a new primal solution (via the cutoff bound) interrupt
        * calling the remaining heuristics
        */
-      if( result == SCIP_FOUNDSOL && lowerbound > primal->cutoffbound )
+      if( SCIPsolveIsStopped(set, stat, FALSE) || (result == SCIP_FOUNDSOL && lowerbound > primal->cutoffbound) )
          break;
 
       /* make sure that heuristic did not change probing or diving status */
@@ -3369,7 +3369,8 @@ SCIP_RETCODE solveNode(
    SCIP_Bool*            unbounded,          /**< pointer to store whether the focus node is unbounded */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the focus node's solution is infeasible */
    SCIP_Bool*            restart,            /**< should solving process be started again with presolving? */
-   SCIP_Bool*            afternodeheur       /**< pointer to store whether AFTERNODE heuristics were already called */
+   SCIP_Bool*            afternodeheur,      /**< pointer to store whether AFTERNODE heuristics were already called */
+   SCIP_Bool*            stopped             /**< pointer to store whether solving was interrupted */
    )
 {
    SCIP_NODE* focusnode;
@@ -3410,6 +3411,7 @@ SCIP_RETCODE solveNode(
    *infeasible = FALSE;
    *restart = FALSE;
    *afternodeheur = FALSE;
+   *stopped = FALSE;
    pricingaborted = FALSE;
 
    focusnode = SCIPtreeGetFocusNode(tree);
@@ -3443,6 +3445,12 @@ SCIP_RETCODE solveNode(
    /* call primal heuristics that should be applied before the node was solved */
    SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_BEFORENODE, &foundsol) );
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
+
+   if( SCIPsolveIsStopped(set, stat, FALSE) )
+   {
+      *stopped = TRUE;
+      return SCIP_OKAY;
+   }
 
    /* if diving produced an LP error, switch back to non-LP node */
    if( lp->resolvelperror )
@@ -4059,6 +4067,7 @@ SCIP_RETCODE SCIPsolveCIP(
    {
       SCIP_Longint nsuccessconflicts;
       SCIP_Bool afternodeheur;
+      SCIP_Bool stopped;
 
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
@@ -4130,11 +4139,14 @@ SCIP_RETCODE SCIPsolveCIP(
 
       /* solve focus node */
       SCIP_CALL( solveNode(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp, relaxation, pricestore, sepastore, branchcand,
-            cutpool, delayedcutpool, conflict, eventfilter, eventqueue, &cutoff, &unbounded, &infeasible, restart, &afternodeheur) );
+            cutpool, delayedcutpool, conflict, eventfilter, eventqueue, &cutoff, &unbounded, &infeasible, restart, &afternodeheur, &stopped) );
       assert(!cutoff || infeasible);
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
       assert(SCIPtreeGetCurrentNode(tree) == focusnode);
       assert(SCIPtreeGetFocusNode(tree) == focusnode);
+
+      if( stopped )
+         break;
 
       /* check for restart */
       if( !(*restart) )
