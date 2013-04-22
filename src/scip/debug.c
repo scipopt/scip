@@ -944,6 +944,121 @@ SCIP_RETCODE SCIPdebugCheckClique(
    return SCIP_OKAY;
 }
 
+/** check, whether at least one literals is TRUE in the debugging solution */
+static
+SCIP_Bool debugCheckBdchginfos(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BDCHGINFO**      bdchginfos,         /**< bound change informations of the conflict set */
+   SCIP_Real*            relaxedbds,         /**< array with relaxed bounds which are efficient to create a valid conflict, or NULL */
+   int                   nbdchginfos         /**< number of bound changes in the conflict set */
+   )
+{
+   SCIP_Real solval;
+   int i;
+
+   /* check, whether at least one literals is TRUE in the debugging solution */
+   for( i = 0; i < nbdchginfos; ++i )
+   {
+      SCIP_BDCHGINFO* bdchginfo;
+      SCIP_VAR* var;
+      SCIP_Real newbound;
+
+      bdchginfo = bdchginfos[i];
+      assert(bdchginfo != NULL);
+
+      var = SCIPbdchginfoGetVar(bdchginfo);
+      assert(var != NULL);
+
+      if( relaxedbds != NULL )
+         newbound = relaxedbds[i];
+      else
+         newbound = SCIPbdchginfoGetNewbound(bdchginfo);
+
+      SCIP_CALL( getSolutionValue(set, var, &solval) );
+
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+         return TRUE;
+
+      if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
+      {
+         assert(SCIPsetIsLE(set, newbound, SCIPbdchginfoGetNewbound(bdchginfo)));
+
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            if( SCIPsetIsLE(set, solval, newbound) )
+               return TRUE;
+         }
+         else
+         {
+            if( SCIPsetIsLT(set, solval, newbound) )
+               return TRUE;
+         }
+      }
+      else
+      {
+         assert(SCIPsetIsGE(set, newbound, SCIPbdchginfoGetNewbound(bdchginfo)));
+
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            if( SCIPsetIsGE(set, solval, newbound) )
+               return TRUE;
+         }
+         else
+         {
+            if( SCIPsetIsGT(set, solval, newbound) )
+               return TRUE;
+         }
+      }
+   }
+
+   return FALSE;
+}
+
+/** print bound change information */
+static
+SCIP_RETCODE printBdchginfo(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BDCHGINFO *      bdchginfo,          /**< bound change information */
+   SCIP_Real             relaxedbd           /**< array with relaxed bounds which are efficient to create a valid conflict, or NULL */
+   )
+{
+   SCIP_Real solval;
+
+   /* get solution value within the debug solution */
+   SCIP_CALL( getSolutionValue(set, SCIPbdchginfoGetVar(bdchginfo), &solval) );
+
+   printf(" <%s>[%.15g] %s %g(%g)", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)), solval,
+      SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+      SCIPbdchginfoGetNewbound(bdchginfo), relaxedbd);
+
+   return SCIP_OKAY;
+}
+
+
+/** print bound change information */
+static
+SCIP_RETCODE printBdchginfos(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BDCHGINFO**      bdchginfos,         /**< bound change information array */
+   SCIP_Real*            relaxedbds,         /**< array with relaxed bounds which are efficient to create a valid conflict, or NULL */
+   int                   nbdchginfos         /**< number of bound changes in the conflict set */
+   )
+{
+   int i;
+
+   for( i = 0; i < nbdchginfos; ++i )
+   {
+      SCIP_BDCHGINFO* bdchginfo;
+
+      bdchginfo = bdchginfos[i];
+      assert(bdchginfo != NULL);
+
+      printBdchginfo(set, bdchginfo, relaxedbds != NULL ? relaxedbds[i] : SCIPbdchginfoGetNewbound(bdchginfo));
+   }
+
+   return SCIP_OKAY;
+}
+
 /** checks whether given conflict is valid for the debugging solution */
 SCIP_RETCODE SCIPdebugCheckConflict(
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -954,9 +1069,7 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    int                   nbdchginfos         /**< number of bound changes in the conflict set */
    )
 {
-   SCIP_Real solval;
    SCIP_Bool solcontained;
-   int i;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -981,63 +1094,103 @@ SCIP_RETCODE SCIPdebugCheckConflict(
       return SCIP_OKAY;
 
    /* check, whether at least one literals is TRUE in the debugging solution */
-   for( i = 0; i < nbdchginfos; ++i )
-   {
-      SCIP_VAR* var;
-      SCIP_Real newbound;
-
-      var = SCIPbdchginfoGetVar(bdchginfos[i]);
-      newbound = relaxedbds[i];
-
-      SCIP_CALL( getSolutionValue(set, var, &solval) );
-      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
-         return SCIP_OKAY;
-      if( SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER )
-      {
-         assert(SCIPsetIsLE(set, newbound, SCIPbdchginfoGetNewbound(bdchginfos[i])));
-
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-         {
-            if( SCIPsetIsLE(set, solval, newbound) )
-               return SCIP_OKAY;
-         }
-         else
-         {
-            if( SCIPsetIsLT(set, solval, newbound) )
-               return SCIP_OKAY;
-         }
-      }
-      else
-      {
-         assert(SCIPsetIsGE(set, newbound, SCIPbdchginfoGetNewbound(bdchginfos[i])));
-
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-         {
-            if( SCIPsetIsGE(set, solval, newbound) )
-               return SCIP_OKAY;
-         }
-         else
-         {
-            if( SCIPsetIsGT(set, solval, newbound) )
-               return SCIP_OKAY;
-         }
-      }
-   }
+   if( debugCheckBdchginfos(set, bdchginfos, relaxedbds, nbdchginfos) )
+      return SCIP_OKAY;
 
    SCIPerrorMessage("invalid conflict set:");
-   for( i = 0; i < nbdchginfos; ++i )
-   {
-      SCIP_CALL( getSolutionValue(set, SCIPbdchginfoGetVar(bdchginfos[i]), &solval) );
-      printf(" <%s>[%.15g] %s %g(%g)", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfos[i])), solval,
-         SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-         SCIPbdchginfoGetNewbound(bdchginfos[i]), relaxedbds[i]);
-   }
+
+   /* print bound changes which are already part of the conflict set */
+   SCIP_CALL( printBdchginfos(set, bdchginfos, relaxedbds, nbdchginfos) );
+
    printf("\n");
    SCIPABORT();
 
    return SCIP_OKAY; /*lint !e527*/
 }
 
+/** checks whether given conflict graph frontier is valid for the debugging solution */
+SCIP_RETCODE SCIPdebugCheckConflictFrontier(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node,               /**< node where the conflict clause is added */
+   SCIP_BDCHGINFO*       bdchginfo,          /**< bound change info which got resolved, or NULL */
+   SCIP_BDCHGINFO**      bdchginfos,         /**< bound change informations of the conflict set */
+   SCIP_Real*            relaxedbds,         /**< array with relaxed bounds which are efficient to create a valid conflict */
+   int                   nbdchginfos,        /**< number of bound changes in the conflict set */
+   SCIP_PQUEUE*          bdchgqueue,         /**< unprocessed conflict bound changes */
+   SCIP_PQUEUE*          forcedbdchgqueue    /**< unprocessed conflict bound changes that must be resolved */
+   )
+{
+   SCIP_BDCHGINFO** bdchgqueued;
+   SCIP_BDCHGINFO** forcedbdchgqueued;
+   SCIP_Bool solcontained;
+   int nbdchgqueued;
+   int nforcedbdchgqueued;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(node != NULL);
+   assert(nbdchginfos == 0 || bdchginfos != NULL);
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( debugsoldisabled )
+      return SCIP_OKAY;
+
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isSolutionInMip(set) )
+      return SCIP_OKAY;
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(set) )
+      return SCIP_OKAY;
+
+   /* check whether the debugging solution is contained in the local subproblem */
+   SCIP_CALL( isSolutionInNode(blkmem, set, node, &solcontained) );
+   if( !solcontained )
+      return SCIP_OKAY;
+
+   /* check, whether one literals is TRUE in the debugging solution */
+   if( debugCheckBdchginfos(set, bdchginfos, relaxedbds, nbdchginfos) )
+      return SCIP_OKAY;
+
+   /* get the elements of the bound change queue */
+   bdchgqueued = (SCIP_BDCHGINFO**)SCIPpqueueElems(bdchgqueue);
+   nbdchgqueued = SCIPpqueueNElems(bdchgqueue);
+
+   /* check, whether one literals is TRUE in the debugging solution */
+   if( debugCheckBdchginfos(set, bdchgqueued, NULL, nbdchgqueued) )
+      return SCIP_OKAY;
+
+   /* get the elements of the bound change queue */
+   forcedbdchgqueued = (SCIP_BDCHGINFO**)SCIPpqueueElems(forcedbdchgqueue);
+   nforcedbdchgqueued = SCIPpqueueNElems(forcedbdchgqueue);
+
+   /* check, whether one literals is TRUE in the debugging solution */
+   if( debugCheckBdchginfos(set, forcedbdchgqueued, NULL, nforcedbdchgqueued) )
+      return SCIP_OKAY;
+
+   SCIPerrorMessage("invalid conflict frontier:");
+
+   if( bdchginfo != NULL )
+   {
+      printBdchginfo(set, bdchginfo, SCIPbdchginfoGetNewbound(bdchginfo));
+      printf("\n");
+   }
+
+   /* print bound changes which are already part of the conflict set */
+   SCIP_CALL( printBdchginfos(set, bdchginfos, relaxedbds, nbdchginfos) );
+
+   /* print bound changes which are queued */
+   SCIP_CALL( printBdchginfos(set, bdchgqueued, NULL, nbdchgqueued) );
+
+   /* print bound changes which are queued in the force queue */
+   SCIP_CALL( printBdchginfos(set, forcedbdchgqueued, NULL, nforcedbdchgqueued) );
+
+   printf("\n");
+   SCIPABORT();
+
+   return SCIP_OKAY; /*lint !e527*/
+}
 
 /** check whether the debugging solution is valid in the current node */
 SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
