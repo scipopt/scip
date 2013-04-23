@@ -41,6 +41,8 @@ performance improvements:
 interface:
 - allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
 - remove problematic function cons_indicator:SCIPsetSlackVarIndicator()
+- added methods SCIPmarkColNotRemovableLocal() and SCIPmarkRowNotRemovableLocal() to forbid removal of an column/row
+  from the LP in the current node
 
 
 SCIP version 3.0.1
