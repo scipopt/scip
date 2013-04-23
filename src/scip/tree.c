@@ -5766,6 +5766,9 @@ SCIP_RETCODE SCIPtreeStartProbing(
    SCIPdebugMessage("probing started in depth %d (LP flushed: %u, LP solved: %u, solstat: %d), probing root in depth %d\n",
       tree->pathlen-1, lp->flushed, lp->solved, SCIPlpGetSolstat(lp), tree->pathlen);
 
+   /* store all marked constraints for propagation */
+   SCIP_CALL( SCIPconshdlrsStorePropagationStatus(set, set->conshdlrs, set->nconshdlrs) );
+
    /* inform LP about probing mode */
    SCIP_CALL( SCIPlpStartProbing(lp) );
 
@@ -6146,6 +6149,9 @@ SCIP_RETCODE SCIPtreeEndProbing(
 
    /* inform LP about end of probing mode */
    SCIP_CALL( SCIPlpEndProbing(lp) );
+
+   /* reset all marked constraints for propagation */
+   SCIP_CALL( SCIPconshdlrsResetPropagationStatus(set, blkmem, set->conshdlrs, set->nconshdlrs) );
 
    SCIPdebugMessage("probing ended in depth %d (LP flushed: %u, solstat: %d)\n",
       tree->pathlen-1, lp->flushed, SCIPlpGetSolstat(lp));

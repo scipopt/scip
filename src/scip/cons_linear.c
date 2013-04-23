@@ -138,6 +138,9 @@ enum SCIP_Constype
 typedef enum SCIP_Constype SCIP_CONSTYPE;
 #endif
 
+/* @todo add multi-aggregation of variables that are in exactly two equations (, if not numerically an issue), maybe in fullDualPresolve(), *       see convertLongEquality()
+ */
+
 
 /** constraint data for linear constraints */
 struct SCIP_ConsData

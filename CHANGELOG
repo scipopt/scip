@@ -47,6 +47,7 @@ features:
 - added possibility to separate a cutpool w.r.t. given solution (instead of LP-solution)
 - added multi-aggregation for binary variables with at most two uplocks and two downlocks, which emerge from set-
   partitioning or set-packing constraints
+- added full-dual presolving step in setppc constraint handler
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -97,6 +98,7 @@ interface
 - New methods SCIPconshdlrIncNCutsFound(), SCIPsepaIncNCutsFound(), and SCIPsepaIncNCutsFoundAtNode() to increase the number of found cuts
 - added function SCIPseparateSolCutpool() to separate a cutpool w.r.t. a given solution
 - added method SCIPdoNotMultaggr() returning whether multi-aggregation is completely disabled
+- added method SCIPconsIsMarkedPropagate() to ask whether a constraint was explicitly added for propagation
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
