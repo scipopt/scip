@@ -136,6 +136,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             dualpresolve;       /**< should dual presolve be applied? */
    SCIP_Bool             sepainboundsonly;   /**< should tangents only be generated in variable bounds during separation? */
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
+   SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
 
    SCIP_HEUR*            subnlpheur;         /**< a pointer to the subnlp heuristic */
    SCIP_HEUR*            trysolheur;         /**< a pointer to the trysol heuristic */
@@ -3650,7 +3651,7 @@ SCIP_RETCODE separatePoint(
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    SCIP_Real             minefficacy,        /**< minimal efficacy of a cut if it should be added to the LP */
-   SCIP_Bool             convexalways,       /**< whether to ignore minefficacy criteria for a convex constraint (and use feastol instead) */
+   SCIP_Bool             inenforcement,      /**< whether we are in constraint enforcement */
    SCIP_Bool             onlyinbounds,       /**< whether linearization is allowed only in variable bounds */
    SCIP_Bool*            success,            /**< result of separation: separated point (TRUE) or not (FALSE) */
    SCIP_Real*            bestefficacy        /**< buffer to store best efficacy of a cut that was added to the LP, if found; or NULL if not of interest */
@@ -3718,8 +3719,8 @@ SCIP_RETCODE separatePoint(
          else
             efficacy = -feasibility;
 
-         /* if cut is strong or it's weak but we are convex and desperate, then add */
-         if( efficacy > minefficacy || (convexalways && convex && SCIPisFeasPositive(scip, efficacy)) )
+         /* if cut is strong or it's weak but we are convex and desperate (speak, in enforcement), then add */
+         if( efficacy > minefficacy || (inenforcement && convex && SCIPisFeasPositive(scip, efficacy)) )
          {
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
             *success = TRUE;
@@ -3731,6 +3732,10 @@ SCIP_RETCODE separatePoint(
             {
                SCIP_CALL( SCIPaddRowIndicator(scip, conshdlrdata->conshdlrindicator, row) );
             }
+
+            /* mark row as not removable from LP for current node, if in enforcement */
+            if( inenforcement && !conshdlrdata->enfocutsremovable )
+               SCIPmarkRowNotRemovableLocal(scip, row);
          }
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
@@ -6724,6 +6729,10 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sepanlpmincont",
          "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",
          &conshdlrdata->sepanlpmincont, FALSE, 1.0, 0.0, 2.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/enfocutsremovable",
+         "are cuts added during enforcement removable from the LP in the same node?",
+         &conshdlrdata->enfocutsremovable, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, CONSHDLR_NAME, "signals a bound change on a variable to an absolute power constraint",
          processVarEvent, NULL) );

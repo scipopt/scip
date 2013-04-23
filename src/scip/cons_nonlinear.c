@@ -149,6 +149,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             reformulate;        /**< whether to reformulate expression graph */
    int                   maxexpansionexponent;/**< maximal exponent where still expanding non-monomial polynomials in expression simplification */
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
+   SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
 
    SCIP_HEUR*            subnlpheur;         /**< a pointer to the subNLP heuristic, if available */
    SCIP_HEUR*            trysolheur;         /**< a pointer to the TRYSOL heuristic, if available */
@@ -5008,7 +5009,7 @@ SCIP_RETCODE separatePoint(
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    SCIP_Bool             newsol,             /**< have the constraints just been evaluated at this point? */
    SCIP_Real             minefficacy,        /**< minimal efficacy of a cut if it should be added to the LP */
-   SCIP_Bool             convexalways,       /**< whether to ignore minefficacy criteria for a convex constraint (and use feastol instead) */
+   SCIP_Bool             inenforcement,      /**< whether we are in constraint enforcement */
    SCIP_RESULT*          result,             /**< result of separation */
    SCIP_Real*            bestefficacy        /**< buffer to store best efficacy of a cut that was added to the LP, if found; or NULL if not of interest */
    )
@@ -5080,7 +5081,7 @@ SCIP_RETCODE separatePoint(
             efficacy = -feasibility;
 
          if( SCIPisGT(scip, efficacy, minefficacy) ||
-            (convexalways &&
+            (inenforcement &&
                ( ( violside == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
                   (violside == SCIP_SIDETYPE_LEFT  && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) ) &&
                SCIPisGT(scip, efficacy, SCIPfeastol(scip))
@@ -5089,12 +5090,20 @@ SCIP_RETCODE separatePoint(
          {
             /* cut cuts off solution */
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
+
             *result = SCIP_SEPARATED;
+
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+
             SCIPdebugMessage("add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), MAX(consdata->lhsviol, consdata->rhsviol));
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+
             if( bestefficacy != NULL && efficacy > *bestefficacy )
                *bestefficacy = efficacy;
+
+            /* mark row as not removable from LP for current node, if in enforcement */
+            if( inenforcement && !conshdlrdata->enfocutsremovable )
+               SCIPmarkRowNotRemovableLocal(scip, row);
          }
          else
          {
@@ -8327,6 +8336,10 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sepanlpmincont",
          "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",
          &conshdlrdata->sepanlpmincont, FALSE, 1.0, 0.0, 2.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/enfocutsremovable",
+         "are cuts added during enforcement removable from the LP in the same node?",
+         &conshdlrdata->enfocutsremovable, TRUE, FALSE, NULL, NULL) );
 
    conshdlrdata->linvareventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->linvareventhdlr), CONSHDLR_NAME"_boundchange", "signals a bound change to a nonlinear constraint",
