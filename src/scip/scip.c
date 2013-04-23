@@ -9469,6 +9469,9 @@ SCIP_RETCODE SCIPdelVar(
       }
       SCIP_CALL( SCIPprobDelVar(scip->origprob, scip->mem->probmem, scip->set, scip->eventqueue, var, deleted) );
 
+      /* delete the variables from the problems that were marked to be deleted */
+      SCIP_CALL( SCIPprobPerformVarDeletions(scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, scip->branchcand) );
+
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -11649,10 +11652,7 @@ SCIP_RETCODE initPresolve(
    SCIP_CALL( SCIPsetInitprePlugins(scip->set, scip->mem->probmem, scip->stat) );
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
-   /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
-    * into implications
-    * delete the variables from the problems that were marked to be deleted
-    */
+   /* delete the variables from the problems that were marked to be deleted */
    SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, scip->branchcand) );
 
    /* switch stage to PRESOLVING */

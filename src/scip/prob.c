@@ -1063,7 +1063,8 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
          SCIP_CALL( probRemoveVar(prob, blkmem, set, var) );
 
          /* update the number of variables with non-zero objective coefficient */
-         SCIPprobUpdateNObjVars(prob, set, SCIPvarGetObj(var), 0.0);
+         if( prob->transformed )
+            SCIPprobUpdateNObjVars(prob, set, SCIPvarGetObj(var), 0.0);
 
          /* release variable */
          SCIP_CALL( SCIPvarRelease(&prob->deletedvars[i], blkmem, set, eventqueue, lp) );
