@@ -984,7 +984,7 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
 
    assert(sepastore != NULL);
 
-   SCIPdebugMessage("clearing %d cuts\n", sepastore->nforcedcuts + sepastore->ncuts);
+   SCIPdebugMessage("clearing %d cuts\n", sepastore->ncuts);
 
    /* release cuts */
    for( c = 0; c < sepastore->ncuts; ++c )
