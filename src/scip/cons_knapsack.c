@@ -10918,15 +10918,18 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
       SCIPdebugMessage("presolving knapsack constraint <%s>\n", SCIPconsGetName(cons));
       SCIPdebugPrintCons(scip, cons, NULL);
+      consdata->presolved = TRUE;
 
-      /* remove all fixed variables */
-      SCIP_CALL( applyFixings(scip, cons, &cutoff) );
-      if( cutoff )
-         break;
+      if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0
+         || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
+      {
+         SCIP_CALL( applyFixings(scip, cons, &cutoff) );
+         if( cutoff )
+            break;
+      }
 
       thisnfixedvars = *nfixedvars;
       thisnchgbds = *nchgbds;
-      consdata->presolved = TRUE;
 
       /* merge constraint, so propagation works better */
       SCIP_CALL( mergeMultiples(scip, cons, &cutoff) );
