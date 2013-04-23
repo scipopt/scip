@@ -1547,7 +1547,14 @@ SCIP_RETCODE checkCons(
  *    x_1 \oplus x_2 \oplus \dots \oplus x_n = b
  *  \f]
  *  with \f$b \in \{0,1\}\f$ and a solution \f$x^*\f$ to be cut off. Small XOR constraints are handled by adding the
- *  inequalities of the convex hull. Larger XOR constraints are handled by separating inequalities
+ *  inequalities of the convex hull.
+ *
+ *  The separation of larger XOR constraints has been described by @n
+ *  Xiaojie Zhang and Paul H. Siegel@n
+ *  "Adaptive Cut Generation Algorithm for Improved Linear Programming Decoding of Binary Linear Codes"@n
+ *  IEEE Transactions on Information Theory, vol. 58, no. 10, 2012
+ *
+ *  We separate the inequalities
  *  \f[
  *    \sum_{j \in S} (1 - x_j) + \sum_{j \notin S} x_j \geq 1
  *  \f]
@@ -1557,9 +1564,9 @@ SCIP_RETCODE checkCons(
  *  \f[
  *    \oplus_{j \in S} x_j = |S| \mbox{ mod } 2 = b+1 \mbox{ mod } 2,
  *  \f]
- *  which is not equal to \f$b\f$.
+ *  which is not equal to \f$b\f$ as required by the XOR-constraint.
  *
- *  Let \f$L= \{j \;:\; x^*_j > \frac{1}{2}\}\f$. Suppose that \f$|L|\f$ has the same parity as \f$b\f$ rhs. Then
+ *  Let \f$L= \{j \;:\; x^*_j > \frac{1}{2}\}\f$. Suppose that \f$|L|\f$ has @em not the same parity as \f$b\f$ rhs. Then
  *  \f[
  *    \sum_{j \in L} (1 - x_j) + \sum_{j \notin L} x_j \geq 1
  *  \f]
@@ -1655,8 +1662,8 @@ SCIP_RETCODE separateCons(
          }
       }
 
-      /* if size of set has same parity as rhs */
-      if ( (cnt - consdata->rhs) % 2 == 0 )
+      /* if size of set does not have the same parity as rhs (e.g., size is odd if rhs is 0) */
+      if ( (cnt - consdata->rhs) % 2 == 1 )
       {
          if ( SCIPisEfficacious(scip, 1.0 - sum) )
          {
@@ -1690,7 +1697,7 @@ SCIP_RETCODE separateCons(
       }
       else
       {
-         /* If the parity is not equal: check removing the element with smallest value from the set and adding the
+         /* If the parity is equal: check removing the element with smallest value from the set and adding the
           * element with largest value to the set. If we remove the element with smallest value, we have to subtract (1
           * - minval) and add minval to correct the sum. */
          if ( SCIPisEfficacious(scip, 1.0 - (sum - 1.0 + 2.0 * minval)) )
