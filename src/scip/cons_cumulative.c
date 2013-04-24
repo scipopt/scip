@@ -1267,8 +1267,6 @@ SCIP_RETCODE getActiveVar(
          (*scalar) = -convertBoundToInt(scip, -realscalar);
       else
          (*scalar) = convertBoundToInt(scip, realscalar);
-
-
    }
    else
    {
@@ -8582,7 +8580,24 @@ SCIP_RETCODE fixIntegerVariableUb(
    if( SCIPvarGetNLocksUp(var) > (int)(uplock) )
       return SCIP_OKAY;
 
-   objval = SCIPvarGetObj(var);
+   /* in case the variable is not active we need to check the object coefficient of the active variable */
+   if( !SCIPvarIsActive(var) )
+   {
+      SCIP_VAR* actvar;
+      int scalar;
+      int constant;
+
+      actvar = var;
+
+      SCIP_CALL( getActiveVar(scip, &actvar, &scalar, &constant) );
+      assert(!SCIPisZero(scip, scalar));
+
+      objval = scalar * SCIPvarGetObj(actvar);
+   }
+   else
+   {
+      objval = SCIPvarGetObj(var);
+   }
 
    /* rounding the integer variable up is only a valid dual reduction if the object coefficient is zero or negative
     * (the transformed problem is always a minimization problem)
@@ -8634,8 +8649,24 @@ SCIP_RETCODE fixIntegerVariableLb(
    if( SCIPvarGetNLocksDown(var) > (int)(downlock) )
       return SCIP_OKAY;
 
-   objval = SCIPvarGetObj(var);
+   /* in case the variable is not active we need to check the object coefficient of the active variable */
+   if( !SCIPvarIsActive(var) )
+   {
+      SCIP_VAR* actvar;
+      int scalar;
+      int constant;
 
+      actvar = var;
+
+      SCIP_CALL( getActiveVar(scip, &actvar, &scalar, &constant) );
+      assert(!SCIPisZero(scip, scalar));
+
+      objval = scalar * SCIPvarGetObj(actvar);
+   }
+   else
+   {
+      objval = SCIPvarGetObj(var);
+   }
    /* rounding the integer variable down is only a valid dual reduction if the object coefficient is zero or positive
     * (the transformed problem is always a minimization problem)
     */
