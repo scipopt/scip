@@ -5274,7 +5274,7 @@ SCIP_RETCODE multiAggregateBinvar(
    for( v = nvars - 2; v >= 0; --v )
       scalars[v] = -1.0;
 
-   SCIPdebugMessage("multi-aggregating binary variable <%s>\n", SCIPvarGetName(vars[pos]));
+   SCIPdebugMessage("multi-aggregating binary variable <%s> (locks: [%d,%d]; to %d variables)\n", SCIPvarGetName(vars[pos]), SCIPvarGetNLocksDown(vars[pos]), SCIPvarGetNLocksUp(vars[pos]), nvars - 1);
 
    /* perform multi-aggregation */
    SCIP_CALL( SCIPmultiaggregateVar(scip, vars[pos], nvars - 1, tmpvars, scalars, 1.0, infeasible, aggregated) );

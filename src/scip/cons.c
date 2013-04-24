@@ -7329,6 +7329,9 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 
       if( conshdlr->storednmarkedpropconss > 0 )
       {
+#ifndef NDEBUG
+         int ndelconss = 0;
+#endif
          int v;
 
          assert(conshdlr->storednmarkedpropconss <= conshdlr->npropconss);
@@ -7340,9 +7343,13 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
             {
                SCIP_CALL( SCIPconsMarkPropagate(conshdlr->storedpropconss[v], set) );
             }
+#ifndef NDEBUG
+            else
+               ++ndelconss;
+#endif
             SCIP_CALL( SCIPconsRelease(&(conshdlr->storedpropconss[v]), blkmem, set) );
          }
-         assert(conshdlr->nmarkedpropconss >= conshdlr->storednmarkedpropconss);
+         assert(conshdlr->nmarkedpropconss + ndelconss >= conshdlr->storednmarkedpropconss || (conshdlrAreUpdatesDelayed(conshdlr) && conshdlr->nupdateconss + ndelconss >= conshdlr->storednmarkedpropconss));
 
          conshdlr->storednmarkedpropconss = 0;
       }
