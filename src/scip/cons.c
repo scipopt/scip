@@ -7330,7 +7330,7 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
       if( conshdlr->storednmarkedpropconss > 0 )
       {
 #ifndef NDEBUG
-         int ndelconss = 0;
+         int ndisabled = 0;
 #endif
          int v;
 
@@ -7339,17 +7339,17 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
          /* mark all previously marked constraint, which were marked before probing */
          for( v = conshdlr->storednmarkedpropconss - 1; v >= 0; --v )
          {
-            if( !SCIPconsIsDeleted(conshdlr->storedpropconss[v]) )
+            if( !SCIPconsIsEnabled(conshdlr->storedpropconss[v]) )
             {
                SCIP_CALL( SCIPconsMarkPropagate(conshdlr->storedpropconss[v], set) );
             }
 #ifndef NDEBUG
             else
-               ++ndelconss;
+               ++ndisabled;
 #endif
             SCIP_CALL( SCIPconsRelease(&(conshdlr->storedpropconss[v]), blkmem, set) );
          }
-         assert(conshdlr->nmarkedpropconss + ndelconss >= conshdlr->storednmarkedpropconss || (conshdlrAreUpdatesDelayed(conshdlr) && conshdlr->nupdateconss + ndelconss >= conshdlr->storednmarkedpropconss));
+         assert(conshdlr->nmarkedpropconss + ndisabled >= conshdlr->storednmarkedpropconss || (conshdlrAreUpdatesDelayed(conshdlr) && conshdlr->nupdateconss + ndisabled >= conshdlr->storednmarkedpropconss));
 
          conshdlr->storednmarkedpropconss = 0;
       }
