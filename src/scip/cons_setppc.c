@@ -7503,7 +7503,6 @@ static
 SCIP_DECL_CONSPROP(consPropSetppc)
 {  /*lint --e{715}*/
    SCIP_Bool cutoff;
-   SCIP_Bool reduceddom;
    SCIP_Bool addcut;
    SCIP_Bool mustcheck;
    SCIP_Bool inpresolve;
@@ -7520,7 +7519,6 @@ SCIP_DECL_CONSPROP(consPropSetppc)
    SCIPdebugMessage("propagating %d/%d set partitioning / packing / covering constraints\n", nusefulconss, nconss);
 
    cutoff = FALSE;
-   reduceddom = FALSE;
    inpresolve = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
 
    /* propagate all useful set partitioning / packing / covering constraints */
@@ -7541,12 +7539,10 @@ SCIP_DECL_CONSPROP(consPropSetppc)
       SCIP_CALL( processFixings(scip, conss[c], &cutoff, &nfixedvars, &addcut, &mustcheck) );
    }
 
-   reduceddom = (nfixedvars > 0);
-
    /* return the correct result */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( reduceddom )
+   else if( nfixedvars > 0 )
       *result = SCIP_REDUCEDDOM;
 
    return SCIP_OKAY;
