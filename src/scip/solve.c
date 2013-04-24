@@ -267,7 +267,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
       /* if the new solution cuts off the current node due to a new primal solution (via the cutoff bound) interrupt
        * calling the remaining heuristics
        */
-      if( SCIPsolveIsStopped(set, stat, FALSE) || (result == SCIP_FOUNDSOL && lowerbound > primal->cutoffbound) )
+      if( result == SCIP_FOUNDSOL && (lowerbound > primal->cutoffbound || SCIPsolveIsStopped(set, stat, FALSE)) )
          break;
 
       /* make sure that heuristic did not change probing or diving status */
