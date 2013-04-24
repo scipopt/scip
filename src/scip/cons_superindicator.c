@@ -1793,6 +1793,9 @@ SCIP_DECL_CONSPARSE(consParseSuperindicator)
       /* create the superindicator constraint */
       SCIP_CALL( SCIPcreateConsSuperindicator(scip, cons, name, binvar, slackcons,
             initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+
+      /* the new superindicator constraint captured the slack constraint, so we can release it now */
+      SCIP_CALL( SCIPreleaseCons(scip, &slackcons) );
    }
 
    return SCIP_OKAY;
