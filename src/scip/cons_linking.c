@@ -501,7 +501,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->nfixedzeros = 0;
    (*consdata)->nfixedones = 0;
 
-   if( binvars == NULL )
+   if( nbinvars == 0 )
    {
       (*consdata)->binvars = NULL;
    }
@@ -514,7 +514,7 @@ SCIP_RETCODE consdataCreate(
    /* get transformed variable, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
    {
-      if( binvars != NULL )
+      if( nbinvars > 0 )
       {
          SCIP_CALL( SCIPgetTransformedVars(scip, nbinvars, (*consdata)->binvars, (*consdata)->binvars) );
 
@@ -550,7 +550,7 @@ SCIP_RETCODE consdataFree(
    }
 
    /* free binary variable array */
-   if( (*consdata)->nbinvars > 0 )
+   if( (*consdata)->sizebinvars > 0 )
    {
       /* if constraint belongs to transformed problem space, drop bound change events on variables */
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->binvars, (*consdata)->sizebinvars);
