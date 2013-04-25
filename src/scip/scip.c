@@ -2142,6 +2142,9 @@ SCIP_RETCODE SCIPcopyOrigVars(
  *        SCIPconsIsAdded(). (If you mix SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add
  *        explicitly and what is already added.)
  *
+ *  @note The constraint is always captured, either during the creation of the copy or after finding the copy of the
+ *        constraint in the constraint hash map
+ *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  *
@@ -2237,6 +2240,7 @@ SCIP_RETCODE SCIPgetConsCopy(
       *targetcons = (SCIP_CONS*) SCIPhashmapGetImage(localconsmap, sourcecons);
       if( *targetcons != NULL )
       {
+         SCIP_CALL( SCIPcaptureCons(targetscip, *targetcons) );
          *success =TRUE;
          return SCIP_OKAY;
       }

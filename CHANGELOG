@@ -9,6 +9,7 @@ fixed bugs:
 - fixed bug when flushing the warning buffer when SCIP is closed
 - fixed wrong strong branching results in lpi_grb.c and an invalid write
 - fixed wrong presolving finished status which sometimes occurred when the time limit was hit during presolve
+- fixed several bugs where variables or constraints were not freed correctly
 
 data structures
 - new data structure for (circular) queues (SCIP_QUEUE)
@@ -58,14 +59,10 @@ performance improvements:
 - disabled multi-aggregation in linear constraint handler when coefficients differ too much
 - improved multi-aggregation in linear constraint handler when only one variable in the aggregation has infinity
   contribution
-<<<<<<< HEAD
-- stop pricing if the lower bound computed by pricing already exceeds the cutoff bound
 - improved dual-presolving for setppc constraints in special cases
-=======
 - apply lowerbound provided by pricers already during pricing loop, stop pricing if the lower bound computed by pricing
   already exceeds the cutoff bound
 - improved performance of method SCIPsolRetransform() when called during presolving with many aggregations
->>>>>>> improved performance of method SCIPsolRetransform()
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
@@ -99,6 +96,7 @@ interface
 - added function SCIPseparateSolCutpool() to separate a cutpool w.r.t. a given solution
 - added method SCIPdoNotMultaggr() returning whether multi-aggregation is completely disabled
 - added method SCIPconsIsMarkedPropagate() to ask whether a constraint was explicitly added for propagation
+- SCIPgetConsCopy() now always captures the created constraint
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
