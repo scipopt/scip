@@ -5658,7 +5658,7 @@ void SCIPconsCapture(
    assert(cons != NULL);
    assert(cons->nuses >= 0);
 
-   SCIPdebugMessage("capture constraint <%s> with nuses=%d\n", cons->name, cons->nuses);
+   SCIPdebugMessage("capture constraint <%s> with nuses=%d, cons pointer %p\n", cons->name, cons->nuses, (void*)cons);
    cons->nuses++;
 }
 
@@ -5677,7 +5677,7 @@ SCIP_RETCODE SCIPconsRelease(
    assert(set != NULL);
    assert((*cons)->scip == set->scip);
 
-   SCIPdebugMessage("release constraint <%s> with nuses=%d\n", (*cons)->name, (*cons)->nuses);
+   SCIPdebugMessage("release constraint <%s> with nuses=%d, cons pointer %p\n", (*cons)->name, (*cons)->nuses, (void*)(*cons));
    (*cons)->nuses--;
    if( (*cons)->nuses == 0 )
    {
@@ -5697,7 +5697,7 @@ SCIP_RETCODE SCIPconsRelease(
          SCIP_CALL( SCIPconsFree(cons, blkmem, set) );
       }
    }
-   *cons  = NULL;
+   *cons = NULL;
 
    return SCIP_OKAY;
 }
