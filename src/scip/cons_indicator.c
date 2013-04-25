@@ -2947,6 +2947,10 @@ SCIP_RETCODE consdataCreate(
 #endif
    }
 
+   /* capture slack variable and linear constraint */
+   SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->slackvar) );
+   SCIP_CALL( SCIPcaptureCons(scip, (*consdata)->lincons) );
+
    return SCIP_OKAY;
 }
 
@@ -4544,22 +4548,14 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
                   (SCIP_EVENTDATA*) conshdlrdata, -1) );
          }
       }
-
-      /* Can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible? */
-      assert( (*consdata)->lincons != NULL );
-
-      /* release linear constraint if it is transformed as well - otherwise initpre has not been called */
-      if ( SCIPconsIsTransformed((*consdata)->lincons) )
-      {
-         SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
-      }
    }
-   else
-   {
-      /* release linear constraint and slack variable only for nontransformed constraint */
-      SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->slackvar) );
-      SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
-   }
+
+   /* Can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible? */
+   assert( (*consdata)->lincons != NULL );
+
+   /* release linear constraint and slack variable */
+   SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->slackvar) );
+   SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
 
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -4668,6 +4664,8 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
 
          SCIP_CALL( SCIPgetTransformedCons(scip, consdata->lincons, &translincons) );
          assert( translincons != NULL );
+
+         SCIP_CALL( SCIPreleaseCons(scip, &consdata->lincons) );
          SCIP_CALL( SCIPcaptureCons(scip, translincons) );
          consdata->lincons = translincons;
       }
@@ -5526,6 +5524,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
          /* adjust the linear constraint in the original constraint (no need to release translincons) */
          SCIP_CALL( SCIPgetTransformedCons(sourcescip, sourcelincons, &translincons) );
          assert(translincons != NULL);
+         SCIP_CALL( SCIPreleaseCons(sourcescip, &sourceconsdata->lincons) );
          SCIP_CALL( SCIPcaptureCons(sourcescip, translincons) );
          sourceconsdata->lincons = translincons;
          sourcelincons = translincons;
@@ -6245,6 +6244,10 @@ SCIP_RETCODE SCIPcreateConsIndicator(
             local, modifiable, dynamic, removable, stickingatnode) );
    }
 
+   /* release slack variable and linear constraint */
+   SCIP_CALL( SCIPreleaseVar(scip, &slackvar) );
+   SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+
    return SCIP_OKAY;
 }
 
@@ -6352,10 +6355,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
 
    /* mark slack variable not to be multi-aggregated */
    SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
-
-   /* capture slack variable and linear constraint */
-   SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
-   SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
    /* if the problem should be decomposed (only if all variables are continuous) */
    linconsactive = TRUE;
