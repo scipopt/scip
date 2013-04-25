@@ -13197,7 +13197,8 @@ SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
-   SCIP_Bool             forcecut            /**< should the cut be forced to enter the LP? */
+   SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
    );
 
 /** if not already existing, adds row to global cut pool

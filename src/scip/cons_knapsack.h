@@ -221,6 +221,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    SCIP_Longint          capacity,           /**< capacity of knapsack */
    SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
    SCIP_Bool             usegubs,            /**< should GUB information be used for separation? */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
 
@@ -236,8 +237,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
    SCIP_Real             rhs,                /**< right hand side of the continuous knapsack constraint */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   int*                  ncuts,              /**< pointer to add up the number of found cuts */
-   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff was found */
+   int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
 
 #ifdef __cplusplus

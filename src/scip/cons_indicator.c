@@ -2783,6 +2783,7 @@ SCIP_RETCODE extendToCover(
          else
          {
             SCIP_ROW* row;
+            SCIP_Bool rowinfeasible;
 
             /* create row */
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "iis", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
@@ -2814,7 +2815,8 @@ SCIP_RETCODE extendToCover(
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &rowinfeasible) );
+            assert( ! rowinfeasible );
 
             /* cut should be violated: */
             assert( SCIPisFeasNegative(scip, SCIPgetRowSolFeasibility(scip, row, sol)) );
@@ -4002,6 +4004,7 @@ SCIP_RETCODE separateIndicators(
             if ( SCIPisEfficacious(scip, activity) )
             {
                SCIP_ROW* row;
+               SCIP_Bool infeasible;
                char name[50];
 #ifndef NDEBUG
                (void) SCIPsnprintf(name, 50, "couple%d", c);
@@ -4020,7 +4023,8 @@ SCIP_RETCODE separateIndicators(
 #ifdef SCIP_OUTPUT
                SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+               assert( ! infeasible );
                SCIP_CALL( SCIPreleaseRow(scip, &row));
 
                SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
@@ -4928,6 +4932,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
          else
          {
             SCIP_ROW* row;
+            SCIP_Bool infeasible;
 
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -4940,7 +4945,8 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+            assert( ! infeasible );
 
             SCIP_CALL( SCIPaddPoolCut(scip, row) );
             SCIP_CALL( SCIPreleaseRow(scip, &row));

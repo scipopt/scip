@@ -5087,9 +5087,14 @@ SCIP_RETCODE separatePoint(
                )
             )
          {
+            SCIP_Bool infeasible;
+
             /* cut cuts off solution */
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
-            *result = SCIP_SEPARATED;
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */, &infeasible) );
+            if ( infeasible )
+               *result = SCIP_CUTOFF;
+            else
+               *result = SCIP_SEPARATED;
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
             SCIPdebugMessage("add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), MAX(consdata->lhsviol, consdata->rhsviol));
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
@@ -5103,6 +5108,9 @@ SCIP_RETCODE separatePoint(
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
       }
+
+      if ( *result == SCIP_CUTOFF )
+         break;
 
       /* enforce only useful constraints
        * others are only checked and enforced if we are still feasible or have not found a separating cut yet
@@ -5183,9 +5191,12 @@ SCIP_RETCODE addLinearizationCuts(
 
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
          {
+            SCIP_Bool infeasible;
+
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, &infeasible) );
+            assert( ! infeasible );
          }
       }
 
@@ -6831,12 +6842,15 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
       if( consdata->nexprtrees == 0 )
       {
+         SCIP_Bool infeasible;
+
          assert(consdata->exprgraphnode == NULL);
          /* if we are actually linear, add the constraint as row to the LP */
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613*/
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -6890,7 +6904,10 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
          if( row != NULL )
          {
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+            assert( ! infeasible );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
@@ -6902,7 +6919,10 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
          if( row != NULL )
          {
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+            assert( ! infeasible );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
@@ -7185,6 +7205,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, FALSE, minefficacy, TRUE, &separateresult, &sepaefficacy) );
+   if ( separateresult == SCIP_CUTOFF )
+   {
+      SCIPdebugMessage("separation found cutoff.)\n");
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
    if( separateresult == SCIP_SEPARATED )
    {
       SCIPdebugMessage("separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);

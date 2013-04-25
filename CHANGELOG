@@ -97,6 +97,7 @@ interface
 - added method SCIPdoNotMultaggr() returning whether multi-aggregation is completely disabled
 - added method SCIPconsIsMarkedPropagate() to ask whether a constraint was explicitly added for propagation
 - SCIPgetConsCopy() now always captures the created constraint
+- SCIPaddCut() has an additional parameter that determines whether the cut to be added is infeasible
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
@@ -131,6 +132,7 @@ core:
 - the main output routine of message.c (bufferMessage - now handleMessage) has been rewritten: it now does not need
   a copy of the string to be output anymore, which makes the code much simpler (and also faster); it is passed a
   function pointer to the output function and uses it to directly output the (buffered) messages
+- changed all calls to SCIPaddCut() to take infeasibility parameter
 
 
 SCIP version 3.0.2

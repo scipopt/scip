@@ -2627,6 +2627,7 @@ SCIP_RETCODE createCGCutDirect(
    SCIP_Real*            weights,            /**< weights to compute cmir cut */
    int*                  nprevrows,          /**< number of previously generated rows */
    SCIP_ROW**            prevrows,           /**< previously generated rows */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    unsigned int*         ngen                /**< number of generated cuts */
    )
 {
@@ -2652,6 +2653,7 @@ SCIP_RETCODE createCGCutDirect(
    assert( weights != NULL );
    assert( nprevrows != NULL );
    assert( prevrows != NULL );
+   assert( cutoff != NULL );
    assert( ngen != NULL );
 
    /* get variable data */
@@ -2660,6 +2662,7 @@ SCIP_RETCODE createCGCutDirect(
    cutrhs = 0.0;
    localrowsused = FALSE;
    localboundsused = FALSE;
+   *cutoff = FALSE;
    success = TRUE;
 
    /* compute coefficients */
@@ -2783,7 +2786,7 @@ SCIP_RETCODE createCGCutDirect(
                      SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                      SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, cutoff) );
                   ++(*ngen);
                }
                else
@@ -2824,6 +2827,7 @@ SCIP_RETCODE createCGCutCMIR(
    SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds for cmir function or NULL */
    int*                  nprevrows,          /**< number of previously generated rows */
    SCIP_ROW**            prevrows,           /**< previously generated rows */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    unsigned int*         ngen                /**< number of generated cuts */
    )
 {
@@ -2853,8 +2857,10 @@ SCIP_RETCODE createCGCutCMIR(
    assert( weights != NULL );
    assert( nprevrows != NULL );
    assert( prevrows != NULL );
+   assert( cutoff != NULL );
    assert( ngen != NULL );
 
+   *cutoff = FALSE;
    subscip = mipdata->subscip;
    assert( subscip != NULL );
 
@@ -3056,7 +3062,7 @@ SCIP_RETCODE createCGCutCMIR(
 #ifdef SCIP_OUTPUT
                      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
 #endif
-                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, cutoff) );
                      ++(*ngen);
                   }
                   else
@@ -3099,6 +3105,7 @@ SCIP_RETCODE createCGCutStrongCG(
    SCIP_Real*            weights,            /**< weights to compute cmir cut */
    int*                  nprevrows,          /**< number of previously generated rows */
    SCIP_ROW**            prevrows,           /**< previously generated rows */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    unsigned int*         ngen                /**< number of generated cuts */
    )
 {
@@ -3128,8 +3135,10 @@ SCIP_RETCODE createCGCutStrongCG(
    assert( weights != NULL );
    assert( nprevrows != NULL );
    assert( prevrows != NULL );
+   assert( cutoff != NULL );
    assert( ngen != NULL );
 
+   *cutoff = FALSE;
    subscip = mipdata->subscip;
    assert( subscip != NULL );
 
@@ -3273,7 +3282,7 @@ SCIP_RETCODE createCGCutStrongCG(
 #ifdef SCIP_OUTPUT
                      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
 #endif
-                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, cutoff) );
                      ++(*ngen);
                   }
                   else
@@ -3307,6 +3316,7 @@ SCIP_RETCODE createCGCuts(
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    unsigned int*         ngen                /**< number of generated cuts */
    )
 {
@@ -3333,11 +3343,13 @@ SCIP_RETCODE createCGCuts(
    assert( scip != NULL );
    assert( sepadata != NULL );
    assert( mipdata != NULL );
+   assert( cutoff != NULL );
    assert( ngen != NULL );
 
    subscip = mipdata->subscip;
    assert( subscip != NULL );
 
+   *cutoff = FALSE;
    *ngen = 0;
 
    /* check if solving was successful and get solutions */
@@ -3404,19 +3416,19 @@ SCIP_RETCODE createCGCuts(
       if ( sepadata->usecmir )
       {
          SCIP_CALL( createCGCutCMIR(scip, sepa, sepadata, mipdata, sol, normtype, cutcoefs, cutvars, cutvals, varsolvals, weights,
-               boundsfortrans, boundtypesfortrans, &nprevrows, prevrows, ngen) );
+               boundsfortrans, boundtypesfortrans, &nprevrows, prevrows, cutoff, ngen) );
       }
 
       if ( sepadata->usestrongcg )
       {
          SCIP_CALL( createCGCutStrongCG(scip, sepa, sepadata, mipdata, sol, normtype, cutcoefs, cutvars, cutvals, varsolvals, weights,
-               &nprevrows, prevrows, ngen) );
+               &nprevrows, prevrows, cutoff, ngen) );
       }
 
       if ( ! sepadata->usecmir && ! sepadata->usestrongcg )
       {
          SCIP_CALL( createCGCutDirect(scip, sepa, sepadata, mipdata, sol, normtype, cutcoefs, cutvars, cutvals, varsolvals, weights,
-               &nprevrows, prevrows, ngen) );
+               &nprevrows, prevrows, cutoff, ngen) );
       }
    }
    assert( nprevrows <= 2 * nsols );
@@ -3585,6 +3597,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    int nrows;
    unsigned int ngen;
    SCIP_Bool success;
+   SCIP_Bool cutoff;
 
    assert( scip != NULL );
    assert( sepa != NULL );
@@ -3717,7 +3730,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
       /* preceed if solution was successful */
       if ( success && !SCIPisStopped(scip) )
       {
-         SCIP_CALL( createCGCuts(scip, sepa, sepadata, mipdata, &ngen) );
+         SCIP_CALL( createCGCuts(scip, sepa, sepadata, mipdata, &cutoff, &ngen) );
       }
    }
 
@@ -3726,7 +3739,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
 
    SCIPdebugMessage("Found %u CG-cuts.\n", ngen);
 
-   if ( ngen > 0 )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( ngen > 0 )
       *result = SCIP_SEPARATED;
 
 #ifdef SCIP_OUTPUT

@@ -7908,8 +7908,11 @@ SCIP_RETCODE addRelaxation(
    {
       if( !SCIProwIsInLP(consdata->demandrows[r]) )
       {
+         SCIP_Bool infeasible;
+
          assert(consdata->demandrows[r] != NULL);
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->demandrows[r], FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->demandrows[r], FALSE, &infeasible) );
+         assert( ! infeasible );  /* this function is only called by initlp -> the cut should be feasible */
       }
    }
 
@@ -7922,7 +7925,8 @@ SCIP_RETCODE separateConsBinaryRepresentation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< cumulative constraint to be separated */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   SCIP_Bool*            separated           /**< pointer to store TRUE, if a cut was found */
+   SCIP_Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
+   SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
@@ -7931,6 +7935,11 @@ SCIP_RETCODE separateConsBinaryRepresentation(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(separated != NULL);
+   assert(cutoff != NULL);
+
+   *separated = FALSE;
+   *cutoff = FALSE;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7958,7 +7967,13 @@ SCIP_RETCODE separateConsBinaryRepresentation(
 
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol,  consdata->demandrows[r], FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, sol,  consdata->demandrows[r], FALSE, cutoff) );
+            if ( *cutoff )
+            {
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+               return SCIP_OKAY;
+            }
+            *separated = TRUE;
             ncuts++;
          }
       }
@@ -7982,7 +7997,8 @@ SCIP_RETCODE separateCoverCutsCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< logic or constraint to be separated */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   SCIP_Bool*            separated           /**< pointer to store TRUE, if a cut was found */
+   SCIP_Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
+   SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -7992,6 +8008,11 @@ SCIP_RETCODE separateCoverCutsCons(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(separated != NULL);
+   assert(cutoff != NULL);
+
+   *separated = FALSE;
+   *cutoff = FALSE;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -8039,10 +8060,10 @@ SCIP_RETCODE separateCoverCutsCons(
          SCIPconsGetName(cons), minfeasibility);
 
       assert(row != NULL);
-      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
-
-      /* if successful, reset age of constraint */
+      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
+      if ( *cutoff )
+         return SCIP_OKAY;
       (*separated) = TRUE;
    }
 
@@ -8076,17 +8097,17 @@ SCIP_RETCODE separateCoverCutsCons(
          SCIPconsGetName(cons), minfeasibility);
 
       assert(row != NULL);
-      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
-
-      /* if successful, reset age of constraint */
+      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
+      if ( *cutoff )
+         return SCIP_OKAY;
       (*separated) = TRUE;
    }
 
    return SCIP_OKAY;
 }
 
-/** this method creats a row for time point curtime which ensures the capacity restriction of the cumulative constraint */
+/** this method creates a row for time point @p curtime which ensures the capacity restriction of the cumulative constraint */
 static
 SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8101,6 +8122,7 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
 {
    SCIP_CONSDATA* consdata;
    char name[SCIP_MAXSTRLEN];
+   SCIP_Bool infeasible;
    int lhs; /* left hand side of constraint */
 
    SCIP_VAR** activevars;
@@ -8143,7 +8165,8 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
    SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
 
-   SCIP_CALL( SCIPaddCut(scip, sol, row, TRUE) );
+   SCIP_CALL( SCIPaddCut(scip, sol, row, TRUE, &infeasible) );
+   assert( ! infeasible );
 
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
@@ -11529,14 +11552,14 @@ SCIP_DECL_CONSSEPALP(consSepalpCumulative)
       /* check all useful cumulative constraints for feasibility  */
       for( c = 0; c < nusefulconss && !reducedom && !cutoff; ++c )
       {
-         SCIP_CALL( separateConsBinaryRepresentation(scip, conss[c], NULL, &separated) );
+         SCIP_CALL( separateConsBinaryRepresentation(scip, conss[c], NULL, &separated, &cutoff) );
       }
 
       if( !cutoff && !reducedom && conshdlrdata->usecovercuts )
       {
          for( c = 0; c < nusefulconss; ++c )
          {
-            SCIP_CALL( separateCoverCutsCons(scip, conss[c], NULL, &separated) );
+            SCIP_CALL( separateCoverCutsCons(scip, conss[c], NULL, &separated, &cutoff) );
          }
       }
    }
@@ -11594,14 +11617,14 @@ SCIP_DECL_CONSSEPASOL(consSepasolCumulative)
       /* check all useful cumulative constraints for feasibility  */
       for( c = 0; c < nusefulconss && !cutoff && !reducedom; ++c )
       {
-         SCIP_CALL( separateConsBinaryRepresentation(scip, conss[c], NULL, &separated) );
+         SCIP_CALL( separateConsBinaryRepresentation(scip, conss[c], NULL, &separated, &cutoff) );
       }
 
       if( !cutoff && !reducedom && conshdlrdata->usecovercuts )
       {
          for( c = 0; c < nusefulconss; ++c )
          {
-            SCIP_CALL( separateCoverCutsCons(scip, conss[c], sol, &separated) );
+            SCIP_CALL( separateCoverCutsCons(scip, conss[c], sol, &separated, &cutoff) );
          }
       }
    }
@@ -11652,6 +11675,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpCumulative)
    if( conshdlrdata->usebinvars )
    {
       SCIP_Bool separated;
+      SCIP_Bool cutoff;
       int c;
 
       separated = FALSE;
@@ -11670,7 +11694,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpCumulative)
          if( !violated )
             continue;
 
-         SCIP_CALL( separateConsBinaryRepresentation(scip, cons, NULL, &separated) );
+         SCIP_CALL( separateConsBinaryRepresentation(scip, cons, NULL, &separated, &cutoff) );
+         if ( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
       }
 
       for( ; c < nconss && !separated; ++c )
@@ -11686,7 +11715,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpCumulative)
          if( !violated )
             continue;
 
-         SCIP_CALL( separateConsBinaryRepresentation(scip, cons, NULL, &separated) );
+         SCIP_CALL( separateConsBinaryRepresentation(scip, cons, NULL, &separated, &cutoff) );
+         if ( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
       }
 
       if( separated )

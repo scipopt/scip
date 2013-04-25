@@ -56,12 +56,15 @@ SCIP_RETCODE addCut(
    SCIP_VAR*             var2,               /**< given second variable */
    SCIP_Real             solval2,            /**< current LP solution value of second variable */
    SCIP_Real             rhs,                /**< given right hand side of the cut to add */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to update number of cuts added */
    )
 {
    SCIP_Real activity;
 
    assert(ncuts != NULL);
+   assert(cutoff != NULL);
+   *cutoff = FALSE;
 
    /* calculate activity of cut */
    activity = val1 * solval1 + val2 * solval2;
@@ -90,9 +93,12 @@ SCIP_RETCODE addCut(
 #endif
 
       /* add cut */
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
-      SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-      (*ncuts)++;
+      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+      if ( ! (*cutoff) )
+      {
+         SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+         (*ncuts)++;
+      }
 
       /* release cut */
       SCIP_CALL( SCIPreleaseRow(scip, &cut) );
@@ -111,6 +117,7 @@ SCIP_RETCODE separateCuts(
    SCIP_VAR**            fracvars,           /**< array of fractional variables */
    SCIP_Real*            fracvals,           /**< solution values of fractional variables */
    int                   nfracs,             /**< number of fractional variables */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to store the number of generated cuts */
    )
 {
@@ -119,8 +126,10 @@ SCIP_RETCODE separateCuts(
    assert(solvals != NULL);
    assert(fracvars != NULL || nfracs == 0);
    assert(fracvals != NULL || nfracs == 0);
+   assert(cutoff != NULL);
    assert(ncuts != NULL);
 
+   *cutoff = FALSE;
    *ncuts = 0;
 
    SCIPdebugMessage("searching for implied bound cuts\n");
@@ -179,7 +188,9 @@ SCIP_RETCODE separateCuts(
             {
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sepa, sol, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
-                     ub, ncuts) );
+                     ub, cutoff, ncuts) );
+               if ( *cutoff )
+                  return SCIP_OKAY;
             }
          }
          else
@@ -195,10 +206,12 @@ SCIP_RETCODE separateCuts(
             {
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sepa, sol, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
-                     -lb, ncuts) );
+                     -lb, cutoff, ncuts) );
+               if ( *cutoff )
+                  return SCIP_OKAY;
             }
          }
-      } 
+      }
 
       /* get implications of x == 0 */
       nimpl = SCIPvarGetNImpls(fracvars[i], FALSE);
@@ -234,7 +247,9 @@ SCIP_RETCODE separateCuts(
             {
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sepa, sol, 1.0, implvars[j], solval, (implbounds[j] - ub), fracvars[i], fracvals[i],
-                     implbounds[j], ncuts) );
+                     implbounds[j], cutoff, ncuts) );
+               if ( *cutoff )
+                  return SCIP_OKAY;
             }
          }
          else
@@ -250,7 +265,9 @@ SCIP_RETCODE separateCuts(
             {
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sepa, sol, -1.0, implvars[j], solval, (lb - implbounds[j]), fracvars[i], fracvals[i],
-                     -implbounds[j], ncuts) );
+                     -implbounds[j], cutoff, ncuts) );
+               if ( *cutoff )
+                  return SCIP_OKAY;
             }
          }
       }
@@ -287,6 +304,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
    SCIP_VAR** fracvars;
    SCIP_Real* solvals;
    SCIP_Real* fracvals;
+   SCIP_Bool cutoff;
    int nvars;
    int nbinvars;
    int nfracs;
@@ -312,10 +330,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
    SCIP_CALL( SCIPgetVarSols(scip, nvars, vars, solvals) );
 
    /* call the cut separation */
-   SCIP_CALL( separateCuts(scip, sepa, NULL, solvals, fracvars, fracvals, nfracs, &ncuts) );
+   SCIP_CALL( separateCuts(scip, sepa, NULL, solvals, fracvars, fracvals, nfracs, &cutoff, &ncuts) );
 
    /* adjust result code */
-   if( ncuts > 0 )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( ncuts > 0 )
       *result = SCIP_SEPARATED;
    else
       *result = SCIP_DIDNOTFIND;
@@ -335,6 +355,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolImpliedbounds)
    SCIP_VAR** fracvars;
    SCIP_Real* solvals;
    SCIP_Real* fracvals;
+   SCIP_Bool cutoff;
    int nvars;
    int nbinvars;
    int nfracs;
@@ -373,11 +394,13 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolImpliedbounds)
    ncuts = 0;
    if( nfracs > 0 )
    {
-      SCIP_CALL( separateCuts(scip, sepa, sol, solvals, fracvars, fracvals, nfracs, &ncuts) );
+      SCIP_CALL( separateCuts(scip, sepa, sol, solvals, fracvars, fracvals, nfracs, &cutoff, &ncuts) );
    }
 
    /* adjust result code */
-   if( ncuts > 0 )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( ncuts > 0 )
       *result = SCIP_SEPARATED;
    else
       *result = SCIP_DIDNOTFIND;

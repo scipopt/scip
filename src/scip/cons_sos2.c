@@ -1470,9 +1470,12 @@ SCIP_DECL_CONSINITLP(consInitlpSOS2)
       /* put corresponding rows into LP */
       if ( consdata->row != NULL && ! SCIProwIsInLP(consdata->row) )
       {
+         SCIP_Bool infeasible;
+
          assert( ! SCIPisInfinity(scip, REALABS(SCIProwGetLhs(consdata->row))) || ! SCIPisInfinity(scip, REALABS(SCIProwGetRhs(consdata->row))) );
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL) ) );
       }
    }
@@ -1485,6 +1488,7 @@ SCIP_DECL_CONSINITLP(consInitlpSOS2)
 static
 SCIP_DECL_CONSSEPALP(consSepalpSOS2)
 {  /*lint --e{715}*/
+   SCIP_Bool cutoff = FALSE;
    int c;
    int nGen = 0;
 
@@ -1497,7 +1501,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS2)
    *result = SCIP_DIDNOTRUN;
 
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for (c = 0; c < nconss && ! cutoff; ++c)
    {
       SCIP_CONSDATA* consdata;
       SCIP_ROW* row;
@@ -1520,14 +1524,16 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS2)
       /* possibly add row to LP if it is useful */
       if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          ++nGen;
       }
    }
    SCIPdebugMessage("Separated %d SOS2 constraints.\n", nGen);
-   if ( nGen > 0 )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( nGen > 0 )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -1538,6 +1544,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS2)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolSOS2)
 {  /*lint --e{715}*/
+   SCIP_Bool cutoff = FALSE;
    int c;
    int nGen = 0;
 
@@ -1550,7 +1557,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS2)
    *result = SCIP_DIDNOTRUN;
 
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for (c = 0; c < nconss && ! cutoff; ++c)
    {
       SCIP_CONSDATA* consdata;
       SCIP_ROW* row;
@@ -1573,14 +1580,16 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS2)
       /* possibly add row to LP if it is useful */
       if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, sol, row) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          ++nGen;
       }
    }
    SCIPdebugMessage("Separated %d SOS2 constraints.\n", nGen);
-   if ( nGen > 0 )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( nGen > 0 )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;

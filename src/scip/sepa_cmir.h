@@ -55,6 +55,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    SCIP_Bool             trynegscaling,      /**< should negative values also be tested in scaling? */
    SCIP_Bool             cutremovable,       /**< should the cut be removed from the LP due to aging or cleanup? */
    const char*           cutclassname,       /**< name of cut class to use for row names */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts,              /**< pointer to count the number of generated cuts */
    SCIP_Real*            delta,              /**< pointer to store best delta found; NULL, if cut should be added here */
    SCIP_Bool*            deltavalid          /**< pointer to store whether best delta value is valid or NULL */

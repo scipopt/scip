@@ -960,6 +960,7 @@ SCIP_RETCODE addRelaxation(
    SCIP_CONS*            cons                /**< constraint to check */
    )
 {
+   SCIP_Bool infeasible;
    SCIP_ROW* aggrrow;
    SCIP_CONSDATA* consdata;
 
@@ -989,13 +990,15 @@ SCIP_RETCODE addRelaxation(
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
    SCIP_CALL( SCIPaddVarToRow(scip, aggrrow, consdata->resvar, (SCIP_Real) consdata->nvars) );
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, aggrrow, consdata->nvars, consdata->vars, -1.0) );
-   SCIP_CALL( SCIPaddCut(scip, NULL, aggrrow, FALSE) );
+   SCIP_CALL( SCIPaddCut(scip, NULL, aggrrow, FALSE, &infeasible) );
+   assert( ! infeasible );  /* this function is only called by initlp() -> the cuts should be feasible */
    SCIP_CALL( SCIPreleaseRow(scip, &aggrrow) );
 
    /* add additional row */
    if( !SCIProwIsInLP(consdata->rows[0]) )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE, &infeasible) );
+      assert( ! infeasible );  /* this function is only called by initlp() -> the cuts should be feasible */
    }
 
    return SCIP_OKAY;
@@ -1103,7 +1106,8 @@ SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   SCIP_Bool*            separated           /**< pointer to store whether a cut was found */
+   SCIP_Bool*            separated,          /**< pointer to store whether a cut was found */
+   SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1111,11 +1115,13 @@ SCIP_RETCODE separateCons(
    int r;
 
    assert(separated != NULL);
+   assert(cutoff != NULL);
+
+   *separated = FALSE;
+   *cutoff = FALSE;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   *separated = FALSE;
 
    /* create all necessary rows for the linear relaxation */
    if( consdata->rows == NULL )
@@ -1132,7 +1138,9 @@ SCIP_RETCODE separateCons(
          feasibility = SCIPgetRowSolFeasibility(scip, consdata->rows[r], sol);
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE, cutoff) );
+            if ( *cutoff )
+               return SCIP_OKAY;
             *separated = TRUE;
          }
       }
@@ -3699,6 +3707,7 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpAnd)
 {  /*lint --e{715}*/
    SCIP_Bool separated;
+   SCIP_Bool cutoff;
    int c;
 
    *result = SCIP_DIDNOTFIND;
@@ -3706,8 +3715,10 @@ SCIP_DECL_CONSSEPALP(consSepalpAnd)
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &separated) );
-      if( separated )
+      SCIP_CALL( separateCons(scip, conss[c], NULL, &separated, &cutoff) );
+      if ( cutoff )
+         *result = SCIP_CUTOFF;
+      else if ( separated )
          *result = SCIP_SEPARATED;
    }
 
@@ -3723,6 +3734,7 @@ static
 SCIP_DECL_CONSSEPASOL(consSepasolAnd)
 {  /*lint --e{715}*/
    SCIP_Bool separated;
+   SCIP_Bool cutoff;
    int c;
 
    *result = SCIP_DIDNOTFIND;
@@ -3730,8 +3742,10 @@ SCIP_DECL_CONSSEPASOL(consSepasolAnd)
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], sol, &separated) );
-      if( separated )
+      SCIP_CALL( separateCons(scip, conss[c], sol, &separated, &cutoff) );
+      if ( cutoff )
+         *result = SCIP_CUTOFF;
+      else if ( separated )
          *result = SCIP_SEPARATED;
    }
 
@@ -3749,6 +3763,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool separated;
    SCIP_Bool violated;
+   SCIP_Bool cutoff;
    int i;
 
    separated = FALSE;
@@ -3766,7 +3781,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
          {
 	    SCIP_Bool consseparated;
 
-            SCIP_CALL( separateCons(scip, conss[i], NULL, &consseparated) );
+            SCIP_CALL( separateCons(scip, conss[i], NULL, &consseparated, &cutoff) );
+            if ( cutoff )
+            {
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
 	    separated = separated || consseparated;
 
 	    /* following assert is wrong in the case some variables were not in LP (dynamic columns),

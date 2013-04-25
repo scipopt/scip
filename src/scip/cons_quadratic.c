@@ -7013,12 +7013,22 @@ SCIP_RETCODE separatePoint(
 
          if( SCIPisGT(scip, efficacy, actminefficacy) )  /*lint !e644 */
          {
+            SCIP_Bool infeasible;
+
             /* cut cuts off solution */
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
-            *result = SCIP_SEPARATED;
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */, &infeasible) );
+            if ( infeasible )
+            {
+               SCIPdebugMessage("cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(conss[c]));
+               *result = SCIP_CUTOFF;
+            }
+            else
+            {
+               SCIPdebugMessage("add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy,
+                  SCIPconsGetName(conss[c]), consdata->lhsviol+consdata->rhsviol);
+               *result = SCIP_SEPARATED;
+            }
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-            SCIPdebugMessage("add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy,
-               SCIPconsGetName(conss[c]), consdata->lhsviol+consdata->rhsviol);
          }
          if( bestefficacy != NULL && efficacy > *bestefficacy )
             *bestefficacy = efficacy;
@@ -7026,9 +7036,12 @@ SCIP_RETCODE separatePoint(
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
       }
 
+      if ( *result == SCIP_CUTOFF )
+         break;
+
       /* enforce only useful constraints
        * others are only checked and enforced if we are still feasible or have not found a separating cut yet
-       */ 
+       */
       if( c >= nusefulconss && *result == SCIP_SEPARATED )
          break;
    }
@@ -7107,9 +7120,12 @@ SCIP_RETCODE addLinearizationCuts(
 
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
          {
+            SCIP_Bool infeasible;
+
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, &infeasible) );
+            assert( ! infeasible );
             SCIPdebugMessage("added linearization cut <%s> to LP, efficacy = %g\n", SCIProwGetName(row), -feasibility / MAX(1.0, norm));
          }
       }
@@ -9561,11 +9577,14 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
 
       if( consdata->nquadvars == 0 )
       {
+         SCIP_Bool infeasible;
+
          /* if we are actually linear, add the constraint as row to the LP */
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613 */
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -9611,7 +9630,10 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
             SCIP_CALL( generateCut(scip, conss[c], x, NULL, consdata->isconvex ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, &row, NULL, conshdlrdata->cutmaxrange, FALSE, -SCIPinfinity(scip)) );  /*lint !e613 */
             if( row != NULL )
             {
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+               SCIP_Bool infeasible;
+
+               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+               assert( ! infeasible );
                SCIPdebugMessage("initlp adds row <%s> for lambda = %g of conss <%s>\n", SCIProwGetName(row), lambda, SCIPconsGetName(conss[c]));  /*lint !e613 */
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
                SCIP_CALL( SCIPreleaseRow (scip, &row) );
@@ -9678,7 +9700,10 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                SCIP_CALL( generateCut(scip, conss[c], x, NULL, SCIP_SIDETYPE_RIGHT, &row, NULL, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
                if( row != NULL )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIP_Bool infeasible;
+
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                  assert( ! infeasible );
                   SCIPdebugMessage("initlp adds row <%s> for rhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);  /*lint !e613 */
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
@@ -9689,7 +9714,10 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                SCIP_CALL( generateCut(scip, conss[c], x, NULL, SCIP_SIDETYPE_LEFT, &row, NULL, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
                if( row != NULL )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIP_Bool infeasible;
+
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                  assert( ! infeasible );
                   SCIPdebugMessage("initlp adds row <%s> for lhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);  /*lint !e613 */
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
@@ -9971,6 +9999,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666 */
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666 */
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, TRUE, &separateresult, &sepaefficacy) );
+   if ( separateresult == SCIP_CUTOFF )
+   {
+      SCIPdebugMessage("separation found cutoff.)\n");
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
    if( separateresult == SCIP_SEPARATED )
    {
       SCIPdebugMessage("separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
@@ -9991,6 +10025,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
       SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
+      if ( separateresult == SCIP_CUTOFF )
+      {
+         SCIPdebugMessage("separation found cutoff.)\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
       if( separateresult == SCIP_SEPARATED )
       {
          SCIPdebugMessage("separation fallback succeeded, efficacy = %g\n", sepaefficacy);

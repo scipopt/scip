@@ -1391,11 +1391,15 @@ static
 SCIP_RETCODE addCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linking constraint */
-   SCIP_SOL*             sol                 /**< primal CIP solution, NULL for current LP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
+   SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
    SCIP_CONSDATA* consdata;
-   
+
+   assert( cutoff != NULL );
+   *cutoff = FALSE;
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    
@@ -1416,16 +1420,16 @@ SCIP_RETCODE addCuts(
    if( !SCIProwIsInLP(consdata->row1) )
    {
       SCIPdebugMessage("adding linking row of constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row1, TRUE/*FALSE*/) );
+      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row1, TRUE/*FALSE*/, cutoff) );
    }
 
    /* insert LP set partitioning row as cut */
    if( !SCIProwIsInLP(consdata->row2) )
    {
       SCIPdebugMessage("adding set partitioning row of constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row2, TRUE/*FALSE*/) );
+      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row2, TRUE/*FALSE*/, cutoff) );
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -1459,7 +1463,8 @@ SCIP_RETCODE separateCons(
    assert(consdata->nbinvars > 1);
 
    SCIPdebugMessage("separating constraint <%s>\n", SCIPconsGetName(cons));
-   
+
+   *cutoff = FALSE;
    addcut = FALSE;
    mustcheck = TRUE;
 
@@ -1527,7 +1532,7 @@ SCIP_RETCODE separateCons(
    {
       /* insert LP row as cut */
       assert(!(*cutoff));
-      SCIP_CALL( addCuts(scip, cons, sol) );
+      SCIP_CALL( addCuts(scip, cons, sol, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
    }
@@ -1778,8 +1783,9 @@ static
 SCIP_DECL_CONSINITLP(consInitlpLinking)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   SCIP_Bool cutoff;
    int c;
-   
+
    for( c = 0; c < nconss; ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
@@ -1789,10 +1795,11 @@ SCIP_DECL_CONSINITLP(consInitlpLinking)
       
       if( consdata->nbinvars <= 1 )
          continue;
-      
-      SCIP_CALL( addCuts(scip, conss[c], NULL) );
+
+      SCIP_CALL( addCuts(scip, conss[c], NULL, &cutoff) );
+      /* ignore cutoff, cannot return value */
    }
-   
+
    return SCIP_OKAY;
 }
 

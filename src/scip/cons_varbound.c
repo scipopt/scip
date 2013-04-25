@@ -406,9 +406,12 @@ SCIP_RETCODE addRelaxation(
 
    if( !SCIProwIsInLP(consdata->row) )
    {
+      SCIP_Bool infeasible;
+
       SCIPdebugMessage("adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, &infeasible) );
+      assert( ! infeasible );   /* this function is only called from initlp -> row should be feasible */
    }
 
    return SCIP_OKAY;
@@ -946,7 +949,10 @@ SCIP_RETCODE separateCons(
       feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
       if( SCIPisFeasNegative(scip, feasibility) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, &infeasible) );
+         assert( ! infeasible );
          *result = SCIP_SEPARATED;
       }
    }

@@ -4277,12 +4277,20 @@ SCIP_RETCODE separatePoint(
          if( SCIPisGT(scip, efficacy, minefficacy) ||
             (convexalways && SCIPisGT(scip, efficacy, SCIPfeastol(scip)) && isConvexLocal(scip, conss[c], violside)) )
          {
+            SCIP_Bool infeasible;
+
             /* cut cuts off solution sufficiently */
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
-
-            SCIPdebugMessage("added cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), MAX(consdata->lhsviol, consdata->rhsviol));
-
-            *result = SCIP_SEPARATED;
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+            if ( infeasible )
+            {
+               SCIPdebugMessage("cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(conss[c]));
+               *result = SCIP_CUTOFF;
+            }
+            else
+            {
+               SCIPdebugMessage("added cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), MAX(consdata->lhsviol, consdata->rhsviol));
+               *result = SCIP_SEPARATED;
+            }
             if( bestefficacy != NULL && efficacy > *bestefficacy )
                *bestefficacy = efficacy;
          }
@@ -4291,8 +4299,11 @@ SCIP_RETCODE separatePoint(
             SCIPdebugMessage("abandon cut since efficacy %g is too small\n", efficacy);
          }
 
-         SCIP_CALL( SCIPreleaseRow (scip, &row) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
+
+      if ( *result == SCIP_CUTOFF )
+         break;
 
       /* enforce only useful constraints
        * others are only checked and enforced if we are still feasible or have not found a separating cut yet
@@ -6116,13 +6127,17 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
             /* add to LP */
             if( row1 != NULL )
             {
-               SCIP_CALL( SCIPaddCut(scip, NULL, row1, FALSE /* forcecut */) );
+               SCIP_Bool infeasible;
+               SCIP_CALL( SCIPaddCut(scip, NULL, row1, FALSE /* forcecut */, &infeasible) );
+               assert( ! infeasible );
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row1, NULL) ) );
                SCIP_CALL( SCIPreleaseRow(scip, &row1) );
             }
             if( row2 != NULL )
             {
-               SCIP_CALL( SCIPaddCut(scip, NULL, row2, FALSE /* forcecut */) );
+               SCIP_Bool infeasible;
+               SCIP_CALL( SCIPaddCut(scip, NULL, row2, FALSE /* forcecut */, &infeasible) );
+               assert( ! infeasible );
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row2, NULL) ) );
                SCIP_CALL( SCIPreleaseRow(scip, &row2) );
             }

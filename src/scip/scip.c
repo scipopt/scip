@@ -26594,7 +26594,8 @@ SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
-   SCIP_Bool             forcecut            /**< should the cut be forced to enter the LP? */
+   SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -26602,7 +26603,78 @@ SCIP_RETCODE SCIPaddCut(
    assert(SCIPtreeGetCurrentNode(scip->tree) != NULL);
 
    SCIP_CALL( SCIPsepastoreAddCut(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->eventfilter, scip->lp, sol, cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0)) );
+         scip->eventfilter, scip->lp, sol, cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0), infeasible) );
+
+   /* possibly run conflict analysis */
+   if ( *infeasible && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && SCIPisConflictAnalysisApplicable(scip) )
+   {
+      SCIP_Real act;
+      SCIP_VAR* var;
+      SCIP_Real val;
+      int ncols;
+      int j;
+
+      printf("call conflict analysis!\n");
+
+      /* initialize conflict analysis */
+      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+      if ( ! SCIPisInfinity(scip, -cut->lhs) )
+      {
+         act = SCIProwGetMaxActivity(cut, scip->set, scip->stat);
+         if ( SCIPisLT(scip, act, cut->lhs) )
+         {
+            ncols = SCIProwGetNNonz(cut);
+            for (j = 0; j < ncols; ++j)
+            {
+               val = cut->vals[j];
+               if ( ! SCIPisZero(scip, val) )
+               {
+                  var = SCIPcolGetVar(cut->cols[j]);
+                  assert( var != NULL );
+
+                  if ( val > 0.0 )
+                  {
+                     SCIP_CALL( SCIPaddConflictUb(scip, var, NULL) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPaddConflictLb(scip, var, NULL) );
+                  }
+               }
+            }
+         }
+      }
+      else if ( ! SCIPisInfinity(scip, cut->rhs) )
+      {
+         act = SCIProwGetMinActivity(cut, scip->set, scip->stat);
+         if ( SCIPisGT(scip, act, cut->rhs) )
+         {
+            ncols = SCIProwGetNNonz(cut);
+            for (j = 0; j < ncols; ++j)
+            {
+               val = cut->vals[j];
+               if ( ! SCIPisZero(scip, val) )
+               {
+                  var = SCIPcolGetVar(cut->cols[j]);
+                  assert( var != NULL );
+
+                  if ( val > 0.0 )
+                  {
+                     SCIP_CALL( SCIPaddConflictLb(scip, var, NULL) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPaddConflictUb(scip, var, NULL) );
+                  }
+               }
+            }
+         }
+      }
+
+      /* analyze the conflict */
+      SCIP_CALL( SCIPanalyzeConflict(scip, SCIPgetDepth(scip), NULL) );
+   }
 
    return SCIP_OKAY;
 }

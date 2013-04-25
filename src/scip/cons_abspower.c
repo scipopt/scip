@@ -3653,6 +3653,7 @@ SCIP_RETCODE separatePoint(
    SCIP_Bool             convexalways,       /**< whether to ignore minefficacy criteria for a convex constraint (and use feastol instead) */
    SCIP_Bool             onlyinbounds,       /**< whether linearization is allowed only in variable bounds */
    SCIP_Bool*            success,            /**< result of separation: separated point (TRUE) or not (FALSE) */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    SCIP_Real*            bestefficacy        /**< buffer to store best efficacy of a cut that was added to the LP, if found; or NULL if not of interest */
    )
 {
@@ -3669,8 +3670,10 @@ SCIP_RETCODE separatePoint(
    assert(conshdlr != NULL);
    assert(conss    != NULL || nconss == 0);
    assert(success  != NULL);
+   assert(cutoff   != NULL);
 
    *success = FALSE;
+   *cutoff = FALSE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3678,7 +3681,7 @@ SCIP_RETCODE separatePoint(
    if( bestefficacy != NULL )
       *bestefficacy = 0.0;
 
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && ! (*cutoff); ++c )
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
@@ -3721,8 +3724,13 @@ SCIP_RETCODE separatePoint(
          /* if cut is strong or it's weak but we are convex and desperate, then add */
          if( efficacy > minefficacy || (convexalways && convex && SCIPisFeasPositive(scip, efficacy)) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
-            *success = TRUE;
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+            if ( infeasible )
+               *cutoff = TRUE;
+            else
+               *success = TRUE;
             if( bestefficacy != NULL && efficacy > *bestefficacy )
                *bestefficacy = efficacy;
 
@@ -3822,9 +3830,12 @@ SCIP_RETCODE addLinearizationCuts(
 
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
          {
+            SCIP_Bool infeasible;
+
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, &infeasible) );
+            assert( ! infeasible );
          }
       }
 
@@ -5245,6 +5256,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSDATA*     consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool infeasible;
    SCIP_ROW*          row;
    int                c;
    SCIP_Real          xlb;
@@ -5283,7 +5295,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                {
                   if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                   {
-                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                     assert( ! infeasible );
 
                      if( conshdlrdata->conshdlrindicator != NULL && !SCIProwIsLocal(row) )
                      {
@@ -5301,7 +5314,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                  assert( ! infeasible );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5322,7 +5336,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                  assert( ! infeasible );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5347,7 +5362,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                {
                   if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                   {
-                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                     assert( ! infeasible );
 
                      if( conshdlrdata->conshdlrindicator != NULL && !SCIProwIsLocal(row) )
                      {
@@ -5365,7 +5381,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                  assert( ! infeasible );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5386,7 +5403,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                  assert( ! infeasible );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5409,6 +5427,7 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          success;
+   SCIP_Bool          cutoff;
 
    assert(scip     != NULL);
    assert(conshdlr != NULL);
@@ -5540,8 +5559,10 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
     * or separating with NLP solution as reference point failed, then try (again) with LP solution as reference point
     */
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutefficacysepa, FALSE, conshdlrdata->sepainboundsonly, &success, NULL) );
-   if( success )
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutefficacysepa, FALSE, conshdlrdata->sepainboundsonly, &success, &cutoff, NULL) );
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( success )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -5554,6 +5575,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          success;
+   SCIP_Bool          cutoff;
 
    assert(scip     != NULL);
    assert(conshdlr != NULL);
@@ -5570,8 +5592,10 @@ SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutefficacysepa, FALSE, FALSE, &success, NULL) );
-   if( success )
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutefficacysepa, FALSE, FALSE, &success, &cutoff, NULL) );
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( success )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -5585,6 +5609,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
    SCIP_CONS*         maxviolcons;
    SCIP_CONSDATA*     consdata;
    SCIP_Bool          success;
+   SCIP_Bool          cutoff;
    SCIP_Real          minefficacy;
    SCIP_Real          sepaefficacy;
    SCIP_Real          maxviol;
@@ -5642,7 +5667,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
    /* run domain propagation for violated constraints */
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_Bool cutoff;
       int       nchgbds;
       int       naddconss;
 
@@ -5682,7 +5706,13 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
     */
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, TRUE, FALSE, &success, &sepaefficacy) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, TRUE, FALSE, &success, &cutoff, &sepaefficacy) );
+   if ( cutoff )
+   {
+      SCIPdebugMessage("separation detected cutoff.\n");
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
    if( success )
    {
       SCIPdebugMessage("separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
@@ -5699,7 +5729,13 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
    if( nnotify == 0 && !solinfeasible && minefficacy > SCIPfeastol(scip) )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), TRUE, FALSE, &success, &sepaefficacy) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), TRUE, FALSE, &success, &cutoff, &sepaefficacy) );
+      if ( cutoff )
+      {
+         SCIPdebugMessage("separation detected cutoff.\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
       if( success )
       {
          *result = SCIP_SEPARATED;
