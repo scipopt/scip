@@ -1658,7 +1658,7 @@ SCIP_DECL_CONSCOPY(consCopySuperindicator)
 
          SCIP_CALL( SCIPgetTransformedCons(sourcescip, sourceslackcons, &transslackcons) );
          assert(transslackcons != NULL);
-
+         SCIP_CALL( SCIPreleaseCons(sourcescip, &sourceconsdata->slackcons) );
          SCIP_CALL( SCIPcaptureCons(sourcescip, transslackcons) );
 
          sourceconsdata->slackcons = transslackcons;
@@ -1696,8 +1696,8 @@ SCIP_DECL_CONSCOPY(consCopySuperindicator)
             initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
    }
 
-   /* release empty constraint */
-   if( SCIPconsIsDeleted(sourceslackcons) )
+   /* relase slack constraint */
+   if( targetslackcons != NULL )
    {
       SCIP_CALL( SCIPreleaseCons(scip, &targetslackcons) );
    }

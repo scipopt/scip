@@ -5465,9 +5465,9 @@ static
 SCIP_DECL_CONSCOPY(consCopyIndicator)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* sourceconsdata;
-   SCIP_CONS* targetlincons;
-   SCIP_VAR* targetbinvar;
-   SCIP_VAR* targetslackvar;
+   SCIP_CONS* targetlincons = NULL;
+   SCIP_VAR* targetbinvar = NULL;
+   SCIP_VAR* targetslackvar = NULL;
    SCIP_CONS* sourcelincons;
    SCIP_CONSHDLR* conshdlrlinear;
    const char* consname;
@@ -5562,8 +5562,8 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    if ( *valid )
    {
       assert( targetlincons != NULL );
-      assert( targetbinvar != NULL ); /*lint !e644*/
-      assert( targetslackvar != NULL ); /*lint !e644*/
+      assert( targetbinvar != NULL );
+      assert( targetslackvar != NULL );
 
       /* creates indicator constraint (and captures the linear constraint) */
       SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
@@ -5574,8 +5574,8 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy linear constraint <%s>\n", SCIPconsGetName(sourcelincons));
    }
 
-   /* release empty constraint */
-   if ( SCIPconsIsDeleted(sourcelincons) )
+   /* relase copied linear constraint */
+   if( targetlincons != NULL )
    {
       SCIP_CALL( SCIPreleaseCons(scip, &targetlincons) );
    }
