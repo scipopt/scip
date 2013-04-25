@@ -8105,7 +8105,7 @@ SCIP_DECL_CONSCOPY(consCopyNonlinear)
    SCIPfreeBufferArrayNull(sourcescip, &linvars);
    if( exprtrees != NULL )
    {
-      for( j = 0; j < consdata->nexprtrees; ++j )
+      for( j = 0; j < nexprtrees; ++j )
       {
          if( exprtrees[j] != NULL )
          {
