@@ -124,6 +124,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             warning;            /**< was the warning messages already posted? */
 
    /* specific problem data */
+   SCIP_HASHMAP*         hashmap;            /**< hashmap to store position of active transformed problem variable in our vars array */
    SCIP_VAR**            allvars;            /**< array containing a copy of all variables before presolving */
    SCIP_VAR**            vars;               /**< array containing a copy of all active variables (after presolving) */
    int                   nallvars;           /**< number of all variables in the problem */
@@ -310,6 +311,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
    (*conshdlrdata)->cutoffSolution = NULL;
    (*conshdlrdata)->warning = FALSE;
+   (*conshdlrdata)->hashmap = NULL;
    (*conshdlrdata)->allvars = NULL;
    (*conshdlrdata)->vars = NULL;
    (*conshdlrdata)->nallvars = 0;
@@ -648,7 +650,6 @@ SCIP_RETCODE collectSolution(
 
       var = conshdlrdata->vars[v];
       assert(var != NULL);
-      assert(SCIPvarIsActive(var));
 
       if( sol == NULL )
       {
@@ -1441,6 +1442,7 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    int s;
+   int v;
 
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
@@ -1448,13 +1450,24 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL );
 
+   /* release variables to hashmap */
+   for( v = conshdlrdata->nvars - 1; v >= 0; --v )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &(conshdlrdata->vars[v])) );
+   }
+
+   if( conshdlrdata->hashmap != NULL)
+   {
+      /* free hashmap of active variables to pistions */
+      SCIPhashmapFree(&(conshdlrdata->hashmap));
+   }
+
+   /* free active variables */
    SCIPfreeMemoryArrayNull(scip, &(conshdlrdata->vars) );
    conshdlrdata->nvars = 0;
 
    if( conshdlrdata->allvars != NULL )
    {
-      int v;
-
       /* release and unlock all variables */
       for( v = 0; v < conshdlrdata->nallvars; ++v )
       {
@@ -1510,32 +1523,28 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
 
    if( conshdlrdata->active )
    {
-      SCIP_VAR** vars;
-      int nvars;
       int v;
 
       assert(conshdlrdata->nsolutions == 0);
       assert(conshdlrdata->solutions == NULL);
 
-      /* copy array containing all variables */
-      SCIP_CALL( SCIPallocMemoryArray(scip, &vars, conshdlrdata->nallvars) );
+      conshdlrdata->nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
-      nvars = 0;
+      /* copy array of active variables */
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(conshdlrdata->vars), SCIPgetVars(scip), conshdlrdata->nvars) );
 
-      /* only consider active variables of original variables which are not continuous */
-      for( v = 0; v < conshdlrdata->nallvars; ++v )
+      /* store mapping from all active variables to their position afetr presolving because during solving new variables
+       * might be added and therefore could destroy writing collected solutions
+       */
+      SCIP_CALL( SCIPhashmapCreate(&(conshdlrdata->hashmap), SCIPblkmem(scip), 5 * conshdlrdata->nvars) );
+
+      /* add variables to hashmap */
+      for( v = conshdlrdata->nvars - 1; v >= 0; --v )
       {
-	 assert(SCIPvarGetType(conshdlrdata->allvars[v]) != SCIP_VARTYPE_CONTINUOUS);
-
-         if( SCIPvarIsActive(conshdlrdata->allvars[v]) )
-         {
-            vars[nvars] = conshdlrdata->allvars[v];
-            nvars++;
-         }
+         assert(SCIPvarGetProbindex(conshdlrdata->vars[v]) == v);
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->hashmap, conshdlrdata->vars[v], (void*) (size_t)(v+1)) );
+         SCIP_CALL( SCIPcaptureVar(scip, conshdlrdata->vars[v]) );
       }
-
-      conshdlrdata->vars = vars;
-      conshdlrdata->nvars = nvars;
 
       /* check if the problem is binary (ignoring continuous variables) */
       if( SCIPgetNBinVars(scip) == (SCIPgetNVars(scip) - SCIPgetNContVars(scip)) )
@@ -1710,6 +1719,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
    case SCIP_STAGE_PRESOLVING:
       /* presolve problem */
       SCIP_CALL( SCIPpresolve(scip) );
+
+      /* reset cons_countsols activation */
+      if( !active )
+      {
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
+      }
       break;
 
    case SCIP_STAGE_PRESOLVED:
@@ -1865,6 +1880,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          SCIP_CALL( SCIPsetIntParam(scip, "display/feasST/active", displayfeasST) );
       }
 
+      /* reset cons_countsols activation */
+      if( !active )
+      {
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
+      }
+
       /* evaluate retcode */
       SCIP_CALL( retcode );
       break;
@@ -2018,27 +2039,37 @@ SCIP_RETCODE writeExpandedSolutions(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< file handler */
    SCIP_VAR**            allvars,            /**< SCIP variables */
-   int                   nactivevars,        /**< number of active variables */
    int                   nallvars,           /**< number of all variables */
+   SCIP_VAR**            activevars,         /**< SCIP variables */
+   int                   nactivevars,        /**< number of active variables */
+   SCIP_HASHMAP*         hashmap,            /**< hashmap from active solution variable to the position in the active
+                                              *   variables array
+                                              */
    SCIP_SPARSESOL**      sols,               /**< sparse solutions to expands and write */
    int                   nsols               /**< number of sparse solutions */
    )
 {
    SCIP_SPARSESOL* sparsesol;
    SCIP_VAR** vars;
+   SCIP_Real* scalars;
    SCIP_Longint* sol;
-   int* perm;
    SCIP_Longint solcnt;
-   SCIP_Real objcoeff;
    int s;
    int v;
+
+   assert(scip != NULL);
+   assert(file != NULL);
+   assert(hashmap != NULL);
+   assert(allvars != NULL || nallvars == 0);
+   assert(activevars != NULL || nactivevars == 0);
+   assert(sols != NULL || nsols == 0);
 
    solcnt = 0;
 
    /* get memory to store active solution */
    SCIP_CALL( SCIPallocBufferArray(scip, &sol, nactivevars) );
-   /* create permutation array for accessing the correct indices later on */
-   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nactivevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nactivevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &scalars, nactivevars) );
 
    /* loop over all sparse solutions */
    for( s = 0; s < nsols; ++s )
@@ -2050,25 +2081,9 @@ SCIP_RETCODE writeExpandedSolutions(
       /* get first solution of the sparse solution */
       getFirstSolution(sparsesol, sol, nactivevars);
 
-      /* duplicate variables in sparse solution, only used for sorting */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPsparseSolGetVars(sparsesol), nactivevars) );
-
-      /* create identity permutation */
-      for( v = 0; v < nactivevars; ++v )
-	 perm[v] = v;
-
-      /* create permutation for variables of the sparse solution w.r.t. the problem index */
-      SCIPsortDownPtrInt((void**)vars, perm, varCompProbindex, nactivevars);
-
-      /* free variable array copy (this copy was only used to get the permutation array */
-      SCIPfreeBufferArray(scip, &vars);
-
       do
       {
-         SCIP_Real* scalars;
-         SCIP_Longint value;
          SCIP_Real objval;
-         int idx;
 
          solcnt++;
 
@@ -2077,30 +2092,14 @@ SCIP_RETCODE writeExpandedSolutions(
 
          objval = 0.0;
 
-         for( v = 0; v < nactivevars; ++v )
-         {
-            idx = perm[v];
-
-            value = sol[idx];
-
-            SCIPinfoMessage(scip, file, "%"SCIP_LONGINT_FORMAT", ", value);
-
-            objcoeff = SCIPvarGetObj(allvars[v]);
-            objval += objcoeff * value;
-         }
-
-         assert(v == nactivevars);
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars, nallvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &scalars, nallvars) );
-
          /* write none active variables */
-         for( ; v < nallvars; ++v )
+         for( v = 0; v < nallvars; ++v )
          {
             SCIP_Real constant;
             SCIP_Real realvalue;
             int requiredsize;
             int nvars;
+            int idx;
             int i;
 
             vars[0] = allvars[v];
@@ -2115,34 +2114,31 @@ SCIP_RETCODE writeExpandedSolutions(
 
             for( i = 0; i < nvars; ++i )
             {
-               idx = perm[nactivevars - SCIPvarGetProbindex(vars[i]) - 1];
-               assert(idx >= 0);
+               assert(SCIPhashmapExists(hashmap, vars[i]));
+               idx = ((int) (size_t)SCIPhashmapGetImage(hashmap, vars[i])) - 1;
+               assert(0 <= idx && idx < nactivevars);
+               assert(activevars[idx] == vars[i]);
 
+               objval += SCIPvarGetObj(vars[i]) * sol[idx];
                realvalue += scalars[i] * sol[idx];
             }
-
             assert(SCIPisIntegral(scip, realvalue));
 
             SCIPinfoMessage(scip, file, "%g, ", realvalue);
-
-            assert(SCIPisZero(scip, SCIPvarGetObj(allvars[v])));
          }
-
-         SCIPfreeBufferArray(scip, &scalars);
-         SCIPfreeBufferArray(scip, &vars);
 
          /* transform objective value into original problem space */
          objval = SCIPretransformObj(scip, objval);
 
          /* output the objective value of the solution */
          SCIPinfoMessage(scip, file, "%g\n", objval);
-
       }
       while( getNextSolution(sparsesol, sol, nactivevars) );
    }
 
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &perm);
+   SCIPfreeBufferArray(scip, &scalars);
+   SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &sol);
 
    return SCIP_OKAY;
@@ -2259,8 +2255,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                SCIP_SPARSESOL** sparsesols;
                SCIP_VAR** origvars;
                SCIP_VAR** allvars;
-               SCIP_VAR* var;
-               const char* varname;
                int norigvars;
                int nvars;
                int v;
@@ -2317,16 +2311,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                      assert(transvar == allvars[v]);
                   }
 #endif
-                  var = origvars[v];
-                  varname = SCIPvarGetName(var);
-
-                  SCIPinfoMessage(scip, file, "%s, ", varname);
+                  SCIPinfoMessage(scip, file, "%s, ", SCIPvarGetName(origvars[v]));
                }
 
                SCIPinfoMessage(scip, file, "objval\n");
 
                /* expand and write solution */
-               retcode = writeExpandedSolutions(scip, file, allvars, nvars, conshdlrdata->nallvars, sparsesols, nsparsesols);
+               retcode = writeExpandedSolutions(scip, file, allvars, conshdlrdata->nallvars, conshdlrdata->vars, nvars, conshdlrdata->hashmap, sparsesols, nsparsesols);
                if( retcode != SCIP_OKAY )
                {
                   fclose(file);
