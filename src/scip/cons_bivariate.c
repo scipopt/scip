@@ -1412,7 +1412,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
    SCIP_Real*            coefx,              /**< coefficient of x in estimator */
    SCIP_Real*            coefy,              /**< coefficient of y in estimator */
    SCIP_Real*            constant,           /**< constant part of estimator */
-   SCIP_Bool*            success             /**< buffer to indicate whether coefficients where successfully computed */
+   SCIP_Bool*            success             /**< pointer to indicate whether coefficients where successfully computed */
    )
 {
    SCIP_VAR*      x;
@@ -1653,7 +1653,7 @@ SCIP_RETCODE generateOverestimatingHyperplaneCut(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real coefs[2];
-   SCIP_Real constant;
+   SCIP_Real constant = SCIP_INVALID;
    SCIP_Bool success;
 
    assert(scip != NULL);

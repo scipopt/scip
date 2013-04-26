@@ -1959,7 +1959,7 @@ SCIP_RETCODE computeViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
-   SCIP_Real*            viol                /**< buffer to store absolute (unscaled) constraint violation */
+   SCIP_Real*            viol                /**< pointer to store absolute (unscaled) constraint violation */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -6335,7 +6335,7 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
    SCIP_CONSDATA*     consdata;
    SCIP_Bool          dolinfeasshift;
    SCIP_Real          maxviol;
-   SCIP_Real          viol;
+   SCIP_Real          viol = SCIP_INVALID;
    int                c;
 
    assert(scip   != NULL);
