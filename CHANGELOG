@@ -50,6 +50,7 @@ features:
   partitioning or set-packing constraints
 - added full-dual presolving step in setppc constraint handler
 - added upgrade from quadratic constraints to set-packing constraints
+- generalized the linking constraint handler
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor

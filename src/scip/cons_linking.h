@@ -22,8 +22,8 @@
  * The constraints handler stores linking constraints between an integer variable and an array of binary variables. Such
  * a linking constraint has the form:
  * \f[
- * y = \sum_{i=1}^n {(b+i) * x_i}
- *\f]
+ * y = \sum_{i=1}^n {c_i * x_i}
+ * \f]
  * with integer variable \f$ y \f$, binary variables \f$ x_1, \dots, x_n \f$ and offset \f$b \in Q\f$, and
  * with the additional side condition that exactly one binary variable has to be one (set partitioning condition).
  *
@@ -61,8 +61,8 @@ SCIP_RETCODE SCIPcreateConsLinking(
    const char*           name,               /**< name of constraint */
    SCIP_VAR*             intvar,             /**< integer variable which should be linked */
    SCIP_VAR**            binvars,            /**< binary variables */
+   int*                  vals,               /**< coefficients of the binary variables */
    int                   nbinvars,           /**< number of binary starting variables */
-   int                   offset,             /**< offset of the binary variable representation */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -103,8 +103,8 @@ SCIP_RETCODE SCIPcreateConsBasicLinking(
    const char*           name,               /**< name of constraint */
    SCIP_VAR*             intvar,             /**< integer variable which should be linked */
    SCIP_VAR**            binvars,            /**< binary variables, or NULL */
-   int                   nbinvars,           /**< number of binary variables */
-   int                   offset              /**< offset of the binary variable representation */
+   int*                  vals,               /**< coefficients of the binary variables */
+   int                   nbinvars            /**< number of binary variables */
    );
 
 
@@ -145,9 +145,9 @@ int SCIPgetNBinvarsLinking(
    SCIP_CONS*            cons                /**< linking constraint */
    );
 
-/** returns the offset of the linking constraint */
+/** returns the coefficients of the binary variables */
 EXTERN
-int SCIPgetOffsetLinking(
+int* SCIPgetValsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linking constraint */
    );

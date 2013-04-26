@@ -616,17 +616,8 @@ SCIP_RETCODE collectBinaryVars(
    int                   nfinished           /**< number of jobs that finished before curtime or at curtime */
    )
 {
-   SCIP_VAR** binvars;
-   SCIP_VAR* var;
-   int nbinvars;
    int nrowvars;
    int startindex;
-   int endtime;
-   int duration;
-   int demand;
-   int varidx;
-   int offset;
-   int minub;
    int size;
 
    size = 10;
@@ -639,6 +630,12 @@ SCIP_RETCODE collectBinaryVars(
    /* search for the (nstarted - nfinished) jobs which are active at curtime */
    while( nstarted - nfinished > nrowvars )
    {
+      SCIP_VAR* var;
+      int endtime;
+      int duration;
+      int demand;
+      int varidx;
+
       /* collect job information */
       varidx = startindices[startindex];
       assert(varidx >= 0 && varidx < consdata->nvars);
@@ -653,7 +650,12 @@ SCIP_RETCODE collectBinaryVars(
       /* check the end time of this job is larger than the curtime; in this case the job is still running */
       if( endtime > curtime )
       {
-         int tau;  /* counter from curtime - duration + 1 to curtime */
+         SCIP_VAR** binvars;
+         int* vals;
+         int nbinvars;
+         int start;
+         int end;
+         int b;
 
          /* check if the linking constraints exists */
          assert(SCIPexistsConsLinking(scip, var));
@@ -662,14 +664,20 @@ SCIP_RETCODE collectBinaryVars(
 
          /* collect linking constraint information */
          SCIP_CALL( SCIPgetBinvarsLinking(scip, consdata->linkingconss[varidx], &binvars, &nbinvars) );
-         offset = SCIPgetOffsetLinking(scip, consdata->linkingconss[varidx]);
+         vals = SCIPgetValsLinking(scip, consdata->linkingconss[varidx]);
 
-         minub = MIN(curtime, endtime - duration);
+         start = curtime - duration + 1;
+         end = MIN(curtime, endtime - duration);
 
-         for (tau = MAX(curtime - duration + 1, offset); tau <= minub; ++tau )
+         for( b = 0; b < nbinvars; ++b )
          {
-            assert(tau >= offset && tau < nbinvars + offset);
-            assert(binvars[tau-offset] != NULL);
+            if( vals[b] < start )
+               continue;
+
+            if( vals[b] > end )
+               break;
+
+            assert(binvars[b] != NULL);
 
             /* ensure array proper array size */
             if( size == *nvars )
@@ -679,7 +687,7 @@ SCIP_RETCODE collectBinaryVars(
                SCIP_CALL( SCIPreallocBufferArray(scip, coefs, size) );
             }
 
-            (*vars)[*nvars] = binvars[tau-offset];
+            (*vars)[*nvars] = binvars[b];
             (*coefs)[*nvars] = demand;
             (*nvars)++;
          }
@@ -7251,7 +7259,6 @@ SCIP_RETCODE createCoverCutsTimepoint(
    int                   time                /**< at this point in time covering constraints are valid */
    )
 {
-   SCIP_VAR** binvars;    /* binary variables of some integer variable */
    SCIP_CONSDATA* consdata;
    SCIP_ROW* row;
    int* flexibleids;
@@ -7262,14 +7269,11 @@ SCIP_RETCODE createCoverCutsTimepoint(
    int remainingcap;
    int smallcoversize;    /* size of a small cover */
    int bigcoversize;    /* size of a big cover */
-   int nbinvars;
-   int offset;
    int nvars;
 
    int nflexible;
-   int D;            /* demand of all jobs up to a certain index */
+   int sumdemand;            /* demand of all jobs up to a certain index */
    int j;
-   int i;
 
    assert(cons != NULL);
 
@@ -7322,18 +7326,18 @@ SCIP_RETCODE createCoverCutsTimepoint(
     */
 
    /* find maximum number of jobs that can run in parallel (-->coversize = j) */
-   D = 0;
+   sumdemand = 0;
    j = 0;
 
-   while( j < nflexible && D <= remainingcap )
+   while( j < nflexible && sumdemand <= remainingcap )
    {
-      D += demands[j];
-      ++j;
+      sumdemand += demands[j];
+      j++;
    }
 
    /* j jobs form a conflict, set coversize to 'j - 1' */
    bigcoversize = j-1;
-   assert(D > remainingcap);
+   assert(sumdemand > remainingcap);
    assert(bigcoversize < nflexible);
 
    /* - create a row for all jobs and their binary variables.
@@ -7348,32 +7352,43 @@ SCIP_RETCODE createCoverCutsTimepoint(
 
    for( j = 0; j < nflexible; ++j )
    {
+      SCIP_VAR** binvars;
+      int* vals;
+      int nbinvars;
       int idx;
-      int end;
       int start;
+      int end;
       int lb;
       int ub;
+      int b;
 
       idx = flexibleids[j];
 
       /* get and add binvars into var array */
       SCIP_CALL( SCIPgetBinvarsLinking(scip, consdata->linkingconss[idx], &binvars, &nbinvars) );
       assert(nbinvars != 0);
-      offset = SCIPgetOffsetLinking(scip, consdata->linkingconss[idx]);
+
+      vals = SCIPgetValsLinking(scip, consdata->linkingconss[idx]);
+      assert(vals != NULL);
 
       lb = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[idx]));
       ub = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[idx]));
+
       /* compute start and finishing time */
-      start = MAX(lb, time + 1 - consdata->durations[idx]) - offset;
-      end =  MIN(time, ub) + 1 - offset;
+      start = time - consdata->durations[idx] + 1;
+      end =  MIN(time, ub);
 
       /* add all neccessary binary variables */
-      for( i = start; i < end; ++i )
+      for( b = 0; b < nbinvars; ++b )
       {
-         assert(i >= 0);
-         assert(i < nbinvars);
-         assert(binvars[i] != NULL);
-         SCIP_CALL( SCIPaddVarToRow(scip, row, binvars[i], 1.0) );
+         if( vals[b] < start || vals[b] < lb )
+            continue;
+
+         if( vals[b] > end )
+            break;
+
+         assert(binvars[b] != NULL);
+         SCIP_CALL( SCIPaddVarToRow(scip, row, binvars[b], 1.0) );
       }
    }
 
@@ -7400,13 +7415,13 @@ SCIP_RETCODE createCoverCutsTimepoint(
     * erzeuge cover constraint und fuege alle jobs i hinzu, mit d_i = d_largest
     */
    /* find maximum number of jobs that can run in parallel (= coversize -1) */
-   D = 0;
+   sumdemand = 0;
    j = nflexible -1;
-   while( D <= remainingcap )
+   while( sumdemand <= remainingcap )
    {
       assert(j >= 0);
-      D += demands[j];
-      --j;
+      sumdemand += demands[j];
+      j--;
    }
 
    smallcoversize = nflexible - (j + 1) - 1;
@@ -7426,32 +7441,43 @@ SCIP_RETCODE createCoverCutsTimepoint(
       /* filter binary variables for each unfixed job */
       for( j = j + 1; j < nflexible; ++j )
       {
+         SCIP_VAR** binvars;
+         int* vals;
+         int nbinvars;
          int idx;
-         int end;
          int start;
+         int end;
          int lb;
          int ub;
+         int b;
 
          idx = flexibleids[j];
 
          /* get and add binvars into var array */
          SCIP_CALL( SCIPgetBinvarsLinking(scip, consdata->linkingconss[idx], &binvars, &nbinvars) );
          assert(nbinvars != 0);
-         offset = SCIPgetOffsetLinking(scip, consdata->linkingconss[idx]);
+
+         vals = SCIPgetValsLinking(scip, consdata->linkingconss[idx]);
+         assert(vals != NULL);
 
          lb = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[idx]));
          ub = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[idx]));
-         /* compute start and finishing time */
-         start = MAX(lb, time + 1 - consdata->durations[idx]) - offset;
-         end =  MIN(time, ub) + 1 - offset;
 
-         /* add  all neccessary binary variables */
-         for( i = start; i < end; ++i )
+         /* compute start and finishing time */
+         start = time - consdata->durations[idx] + 1;
+         end =  MIN(time, ub);
+
+         /* add all neccessary binary variables */
+         for( b = 0; b < nbinvars; ++b )
          {
-            assert(i >= 0);
-            assert(i < nbinvars);
-            assert(binvars[i] != NULL);
-            SCIP_CALL( SCIPaddVarToRow(scip, row, binvars[i], 1.0) );
+            if( vals[b] < start || vals[b] < lb )
+               continue;
+
+            if( vals[b] > end )
+               break;
+
+            assert(binvars[b] != NULL);
+            SCIP_CALL( SCIPaddVarToRow(scip, row, binvars[b], 1.0) );
          }
       }
 
@@ -8613,7 +8639,7 @@ SCIP_RETCODE fixIntegerVariableUb(
       actvar = var;
 
       SCIP_CALL( getActiveVar(scip, &actvar, &scalar, &constant) );
-      assert(!SCIPisZero(scip, scalar));
+      assert(scalar != 0);
 
       objval = scalar * SCIPvarGetObj(actvar);
    }
@@ -8682,7 +8708,7 @@ SCIP_RETCODE fixIntegerVariableLb(
       actvar = var;
 
       SCIP_CALL( getActiveVar(scip, &actvar, &scalar, &constant) );
-      assert(!SCIPisZero(scip, scalar));
+      assert(scalar != 0);
 
       objval = scalar * SCIPvarGetObj(actvar);
    }
