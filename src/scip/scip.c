@@ -26643,8 +26643,6 @@ SCIP_RETCODE SCIPaddCut(
       int ncols;
       int j;
 
-      printf("call conflict analysis!\n");
-
       /* initialize conflict analysis */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
