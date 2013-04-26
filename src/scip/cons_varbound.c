@@ -2969,6 +2969,12 @@ SCIP_RETCODE tightenCoefs(
    xlb = SCIPvarGetLbGlobal(consdata->var);
    xub = SCIPvarGetUbGlobal(consdata->var);
 
+   /* it can happen that var is not of varstatus SCIP_VARSTATUS_FIXED but the bounds are equal, in this case we need to
+    * stop
+    */
+   if( SCIPisEQ(scip, xlb, xub) )
+      return SCIP_OKAY;
+
    /* modification of coefficient checking for slack in constraints */
    if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs) )
    {
@@ -3719,6 +3725,7 @@ static
 SCIP_DECL_CONSPRESOL(consPresolVarbound)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    SCIP_Bool cutoff;
    int oldnchgbds;
@@ -3746,11 +3753,14 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    oldnchgsides = *nchgsides;
    oldnaggrvars = *naggrvars;
 
-   for( i = 0; i < nconss && !cutoff && !SCIPisStopped(scip); i++ )
+   for( i = 0; i < nconss && !SCIPisStopped(scip); i++ )
    {
-      assert(!SCIPconsIsModifiable(conss[i]));
+      cons = conss[i];
+      assert(cons != NULL);
 
-      consdata = SCIPconsGetData(conss[i]);
+      assert(!SCIPconsIsModifiable(cons));
+
+      consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
       /* force presolving the constraint in the initial round */
@@ -3765,18 +3775,24 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       consdata->propagated = FALSE;
 
       /* incorporate fixings and aggregations in constraint */
-      SCIP_CALL( applyFixings(scip, conss[i], conshdlrdata->eventhdlr, &cutoff, nchgbds, ndelconss, naddconss) );
-      if( cutoff || !SCIPconsIsActive(conss[i]) )
+      SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &cutoff, nchgbds, ndelconss, naddconss) );
+
+      if( cutoff )
+         break;
+      if( !SCIPconsIsActive(cons) )
          continue;
 
       /* propagate constraint */
-      SCIP_CALL( propagateCons(scip, conss[i], conshdlrdata->usebdwidening, &cutoff, nchgbds, nchgsides, ndelconss) );
-      if( cutoff || !SCIPconsIsActive(conss[i]) )
+      SCIP_CALL( propagateCons(scip, cons, conshdlrdata->usebdwidening, &cutoff, nchgbds, nchgsides, ndelconss) );
+
+      if( cutoff )
+         break;
+      if( !SCIPconsIsActive(cons) )
          continue;
 
       /* tighten variable bound coefficient */
-      SCIP_CALL( tightenCoefs(scip, conss[i], nchgcoefs, nchgsides, ndelconss) );
-      if( !SCIPconsIsActive(conss[i]) )
+      SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
+      if( !SCIPconsIsActive(cons) )
          continue;
 
       /** informs once variable x about a globally valid variable lower or upper bound */
@@ -3822,7 +3838,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
          if( *nchgbds > localoldnchgbds )
          {
             /* tighten variable bound coefficient */
-            SCIP_CALL( tightenCoefs(scip, conss[i], nchgcoefs, nchgsides, ndelconss) );
+            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
          }
       }
    }
