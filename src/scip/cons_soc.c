@@ -121,6 +121,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             linfeasshift;       /**< whether to try to make solutions feasible in check by shifting the variable on the right hand side */
    char                  nlpform;            /**< formulation of SOC constraint in NLP */
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
+   SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
+
    SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
    int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
 };
@@ -1174,7 +1176,7 @@ SCIP_RETCODE separatePoint(
    int                   nconss,             /**< number of constraints */
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
-   SCIP_Bool             addweakcuts,        /**< whether also weak (only slightly violated) cuts should be added in a nonconvex constraint */
+   SCIP_Bool             inenforcement,      /**< whether we are in constraint enforcement */
    SCIP_Bool*            cutoff,             /**< pointer to store whether a fixing leads to a cutoff */
    SCIP_Bool*            success             /**< buffer to store whether the point was separated */
    )
@@ -1198,7 +1200,7 @@ SCIP_RETCODE separatePoint(
 
    *success = FALSE;
 
-   minefficacy = addweakcuts ? SCIPfeastol(scip) : conshdlrdata->minefficacy;
+   minefficacy = inenforcement ? SCIPfeastol(scip) : conshdlrdata->minefficacy;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -1241,8 +1243,14 @@ SCIP_RETCODE separatePoint(
          /* cut cuts off solution and efficient enough */
          SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );  /*lint !e613*/
+
          *success = TRUE;
+
          SCIPdebugMessage("added cut with efficacy %g\n", SCIPgetCutEfficacy(scip, sol, row));
+
+         /* mark row as not removable from LP for current node, if in enforcement */
+         if( inenforcement && !conshdlrdata->enfocutsremovable )
+            SCIPmarkRowNotRemovableLocal(scip, row);
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
       }
@@ -4299,6 +4307,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sepanlpmincont",
          "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",
          &conshdlrdata->sepanlpmincont, FALSE, 1.0, 0.0, 2.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/enfocutsremovable",
+         "are cuts added during enforcement removable from the LP in the same node?",
+         &conshdlrdata->enfocutsremovable, TRUE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

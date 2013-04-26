@@ -963,7 +963,7 @@ SCIP_RETCODE findNewBounds(
                bound->newval = SCIPvarGetLPSol(var);
                bound->found = TRUE;
 
-               SCIPdebugMessage("      LP value: %f\n", bound->newval);
+               SCIPdebugMessage("      var <%s>, LP value: %f\n", SCIPvarGetName(var), bound->newval);
 
                /* in root node we may want to create a genvbound (independent of tightening success) */
                if( SCIPgetDepth(scip) == 0 && propdata->genvboundprop != NULL )

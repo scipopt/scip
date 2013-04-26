@@ -178,13 +178,14 @@ struct SCIP_ConshdlrData
    SCIP_Bool             disaggregate;       /**< whether to disaggregate quadratic constraints */
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve */
    int                   maxproproundspresolve; /**< limit on number of propagation rounds for a single constraint within one presolving round */
-   SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
+   SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
+   SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
 
    SCIP_HEUR*            subnlpheur;         /**< a pointer to the subnlp heuristic, if available */
    SCIP_HEUR*            trysolheur;         /**< a pointer to the trysol heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;          /**< our handler for variable bound change events */
    int                   newsoleventfilterpos; /**< filter position of new solution event handler, if caught */
-   SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
+   SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
    SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
    int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
    SCIP_QUADCONSUPGRADE** quadconsupgrades;  /**< quadratic constraint upgrade methods for specializing quadratic constraints */
@@ -6921,7 +6922,7 @@ SCIP_RETCODE separatePoint(
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    SCIP_Real             minefficacy,        /**< minimal efficacy of a cut if it should be added to the LP */
-   SCIP_Bool             convexalways,       /**< whether to ignore minefficacy criteria for a convex constraint (and use feastol instead) */
+   SCIP_Bool             inenforcement,      /**< whether we are in constraint enforcement */
    SCIP_RESULT*          result,             /**< result of separation */
    SCIP_Real*            bestefficacy        /**< buffer to store best efficacy of a cut that was added to the LP, if found; or NULL if not of interest */
    )
@@ -6963,7 +6964,7 @@ SCIP_RETCODE separatePoint(
          violside = SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT;
 
          /* actual minimal efficacy */
-         actminefficacy = convexalways && ((violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex ) || (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave)) ? SCIPfeastol(scip) : minefficacy;
+         actminefficacy = inenforcement && ((violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex ) || (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave)) ? SCIPfeastol(scip) : minefficacy;
 
          /* generate cut */
          if( sol == NULL && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
@@ -7029,6 +7030,10 @@ SCIP_RETCODE separatePoint(
                *result = SCIP_SEPARATED;
             }
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+
+            /* mark row as not removable from LP for current node, if in enforcement */
+            if( inenforcement && !conshdlrdata->enfocutsremovable )
+               SCIPmarkRowNotRemovableLocal(scip, row);
          }
          if( bestefficacy != NULL && efficacy > *bestefficacy )
             *bestefficacy = efficacy;
@@ -11191,6 +11196,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sepanlpmincont",
          "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",
          &conshdlrdata->sepanlpmincont, FALSE, 1.0, 0.0, 2.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/enfocutsremovable",
+         "are cuts added during enforcement removable from the LP in the same node?",
+         &conshdlrdata->enfocutsremovable, TRUE, FALSE, NULL, NULL) );
 
    conshdlrdata->eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",

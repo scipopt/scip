@@ -23502,6 +23502,20 @@ SCIP_Real SCIPgetColFarkasCoef(
    return SCIPcolGetFarkasCoef(col, scip->stat, scip->lp);
 }
 
+/** marks a column to be not removable from the LP in the current node
+ *
+ *  @pre this method can be called in the following stage of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+void SCIPmarkColNotRemovableLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COL*             col                 /**< LP column */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkColNotRemovableLocal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPcolMarkNotRemovableLocal(col, scip->stat);
+}
 
 /*
  * LP row methods
@@ -24063,6 +24077,21 @@ SCIP_RETCODE SCIPmakeRowIntegral(
          usecontvars, success) );
 
    return SCIP_OKAY;
+}
+
+/** marks a row to be not removable from the LP in the current node
+ *
+ *  @pre this method can be called in the following stage of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+void SCIPmarkRowNotRemovableLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkRowNotRemovableLocal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIProwMarkNotRemovableLocal(row, scip->stat);
 }
 
 /** returns minimal absolute value of row vector's non-zero coefficients

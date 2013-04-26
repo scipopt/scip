@@ -11242,6 +11242,17 @@ SCIP_Real SCIPgetColFarkasCoef(
    SCIP_COL*             col                 /**< LP column */
    );
 
+/** marks a column to be not removable from the LP in the current node
+ *
+ *  @pre this method can be called in the following stage of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+void SCIPmarkColNotRemovableLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COL*             col                 /**< LP column */
+   );
+
 /**@} */
 
 
@@ -11647,6 +11658,17 @@ SCIP_RETCODE SCIPmakeRowIntegral(
    SCIP_Real             maxscale,           /**< maximal value to scale row with */
    SCIP_Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
    SCIP_Bool*            success             /**< stores whether row could be made rational */
+   );
+
+/** marks a row to be not removable from the LP in the current node
+ *
+ *  @pre this method can be called in the following stage of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+void SCIPmarkRowNotRemovableLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
    );
 
 /** returns minimal absolute value of row vector's non-zero coefficients

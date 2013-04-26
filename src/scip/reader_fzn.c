@@ -2818,8 +2818,8 @@ SCIP_RETCODE parseLinking(
    )
 {
    char** names;
-   SCIP_Real lhs = -SCIPinfinity(scip);
-   SCIP_Real rhs = SCIPinfinity(scip);
+   SCIP_Real lhs = SCIP_INVALID;
+   SCIP_Real rhs = SCIP_INVALID;
    int nnames;
 
    nnames = 0;

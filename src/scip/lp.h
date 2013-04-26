@@ -282,7 +282,12 @@ SCIP_Longint SCIPcolGetStrongbranchLPAge(
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
-
+/** marks a column to be not removable from the LP in the current node because it became obsolete */
+extern
+void SCIPcolMarkNotRemovableLocal(
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
 
 
 /*
@@ -716,6 +721,12 @@ SCIP_RETCODE SCIProwDropEvent(
    int                   filterpos           /**< position of event filter entry returned by SCIPvarCatchEvent(), or -1 */
    );
 
+/** marks a row to be not removable from the LP in the current node */
+extern
+void SCIProwMarkNotRemovableLocal(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
 
 
 /*

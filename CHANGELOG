@@ -163,6 +163,8 @@ fixed bugs:
 - fixed iteration limit determination in sepa_closecuts
 - fixed bug in prop_vbound w.r.t. creation of variables during the search
 - fixed bug using a too hard comparison on the objective-infeasible-decision in constraint enforcement
+- fixed possible cycling in enforcement of nonlinear constraints due to too early removal of newly added cuts from LP
+- fixed solution collection when counting solutions
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
@@ -178,6 +180,8 @@ performance improvements:
 interface:
 - allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
 - remove problematic function cons_indicator:SCIPsetSlackVarIndicator()
+- added methods SCIPmarkColNotRemovableLocal() and SCIPmarkRowNotRemovableLocal() to forbid removal of an column/row
+  from the LP in the current node
 
 
 SCIP version 3.0.1
