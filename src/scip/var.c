@@ -4850,12 +4850,13 @@ SCIP_RETCODE tryAggregateIntVars(
 
    SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue,
          aggvar, (SCIP_Real)(-b), (SCIP_Real)xsol, infeasible, aggregated) );
-   assert(*aggregated);
+   assert(*aggregated || *infeasible);
+
    if( !(*infeasible) )
    {
       SCIP_CALL( SCIPvarAggregate(vary, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue,
             aggvar, (SCIP_Real)a, (SCIP_Real)ysol, infeasible, aggregated) );
-      assert(*aggregated);
+      assert(*aggregated || *infeasible);
    }
 
    /* release z */
