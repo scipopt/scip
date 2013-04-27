@@ -852,6 +852,7 @@ SCIP_RETCODE disableCons(
    }
    else
    {
+      SCIPdebugMessage("disabling constraint cons <%s> at depth %d\n", SCIPconsGetName(cons), SCIPgetDepth(scip));
       SCIP_CALL( SCIPdisableCons(scip, cons) );
    }
 
@@ -3294,6 +3295,8 @@ SCIP_DECL_EVENTEXEC(eventExecLogicor)
 
    if( SCIPeventGetType(event) == SCIP_EVENTTYPE_LBRELAXED )
    {
+      SCIPdebugMessage("enabling constraint cons <%s> at depth %d\n", SCIPconsGetName((SCIP_CONS*)eventdata), SCIPgetDepth(scip));
+
       SCIP_CALL( SCIPenableCons(scip, (SCIP_CONS*)eventdata) );
       SCIP_CALL( SCIPenableConsPropagation(scip, (SCIP_CONS*)eventdata) );
    }
