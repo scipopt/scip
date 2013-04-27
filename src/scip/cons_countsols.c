@@ -635,6 +635,8 @@ SCIP_RETCODE collectSolution(
    /* get number of active variables */
    nvars = conshdlrdata->nvars;
 
+   SCIPdebugMessage("creating solution number %d\n", conshdlrdata->nsolutions);
+
    /* create a solution */
    SCIP_CALL( SCIPsparseSolCreate(&solution, conshdlrdata->vars, nvars, FALSE) );
    assert(solution != NULL);
@@ -843,9 +845,11 @@ SCIP_RETCODE checkLogicor(
          SCIPdebugPrintCons(scip, conss[c], NULL);
          (*satisfied) = FALSE;
       }
-
-      /* delete constraint from the problem locally since it is satisfied */
-      SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+      else
+      {
+         /* delete constraint from the problem locally since it is satisfied */
+         SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+      }
    }
 
    return SCIP_OKAY;
@@ -937,9 +941,11 @@ SCIP_RETCODE checkKnapsack(
          SCIPdebugPrintCons(scip, conss[c], NULL);
          (*satisfied) = FALSE;
       }
-
-      /* delete constraint from the problem locally since it is satisfied */
-      SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+      else
+      {
+         /* delete constraint from the problem locally since it is satisfied */
+         SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+      }
    }
    return SCIP_OKAY;
 }
@@ -1014,9 +1020,11 @@ SCIP_RETCODE checkBounddisjunction(
          SCIPdebugPrintCons(scip, conss[c], NULL);
          (*satisfied) = FALSE;
       }
-
-      /* delete constraint from the problem locally since it is satisfied */
-      SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+      else
+      {
+         /* delete constraint from the problem locally since it is satisfied */
+         SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+      }
    }
    return SCIP_OKAY;
 }
@@ -1087,9 +1095,11 @@ SCIP_RETCODE checkVarbound(
          SCIPdebugMessage("<%s>  lb: %.15g\t ub: %.15g\n", SCIPvarGetName(vbdvar), SCIPvarGetLbLocal(vbdvar), SCIPvarGetUbLocal(vbdvar));
          (*satisfied) = FALSE;
       }
-
-      /* delete constraint from the problem locally since it is satisfied */
-      SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+      else
+      {
+         /* delete constraint from the problem locally since it is satisfied */
+         SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1124,7 +1134,7 @@ SCIP_RETCODE checkFeasSubtree(
 
    nconshdlrs = SCIPgetNConshdlrs(scip) - 1;
    conshdlrs = SCIPgetConshdlrs(scip);
-   assert (conshdlrs != NULL);
+   assert(conshdlrs != NULL);
 
    /* check each constraint handler if there are constraints which are not enabled */
    for( h = nconshdlrs ;  h >= 0 ; --h )
@@ -1479,23 +1489,22 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
 
       SCIPfreeMemoryArrayNull(scip, &conshdlrdata->allvars);
       conshdlrdata->nvars = 0;
+   }
 
-      if( conshdlrdata->nsolutions > 0 )
+   if( conshdlrdata->nsolutions > 0 )
+   {
+      for( s = conshdlrdata->nsolutions - 1; s >= 0 ; --s )
       {
-         for( s = conshdlrdata->nsolutions - 1; s >= 0 ; --s )
-         {
-            SCIPsparseSolFree(&(conshdlrdata->solutions[s]));
-         }
-
-         SCIPfreeMemoryArrayNull(scip, &conshdlrdata->solutions);
-         conshdlrdata->nsolutions = 0;
-         conshdlrdata->ssolutions = 0;
-
-         assert( conshdlrdata->solutions == NULL );
+         SCIPsparseSolFree(&(conshdlrdata->solutions[s]));
       }
 
-      conshdlrdata->continuous = FALSE;
+      SCIPfreeMemoryArrayNull(scip, &conshdlrdata->solutions);
+      conshdlrdata->nsolutions = 0;
+      conshdlrdata->ssolutions = 0;
+
+      assert( conshdlrdata->solutions == NULL );
    }
+   conshdlrdata->continuous = FALSE;
 
    assert( conshdlrdata->solutions == NULL );
    assert( conshdlrdata->nsolutions == 0 );

@@ -28,6 +28,7 @@ fixed bugs:
 - fixed bug using a too hard comparison on the objective-infeasible-decision in constraint enforcement
 - fixed possible cycling in enforcement of nonlinear constraints due to too early removal of newly added cuts from LP
 - fixed solution collection when counting solutions
+- fixed bug wrongly removing constraints locally while counting
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
