@@ -187,6 +187,12 @@ struct SCIP_Set
    SCIP_Bool             conf_fullshortenconflict;/**< try to shorten the whole conflict set or terminate early
                                                    *   (depending on the 'maxvarsdetectimpliedbounds' parameter)
                                                    */
+   SCIP_Real             conf_conflictweight;/**< the weight the VSIDS score is weight by updating the VSIDS for a
+                                              *   variable if it is part of a conflict
+                                              */
+   SCIP_Real             conf_conflictgraphweight; /**< the weight the VSIDS score is weight by updating the VSIDS for a
+                                                    *   variable if it is part of a conflict graph
+                                                    */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
@@ -287,7 +293,7 @@ struct SCIP_Set
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
    int                   misc_permutationseed;/**< seed value for permuting the problem after the problem was tranformed 
                                                *   (-1: no permutation) */
-   SCIP_Bool             misc_resetstat;     /**< should the statistics be reseted if the transformed problem is freed
+   SCIP_Bool             misc_resetstat;     /**< should the statistics be reset if the transformed problem is freed
                                               *   otherwise the statistics get reset after original problem is freed (in
                                               *   case of bender decomposition this parameter should be set to FALSE and
                                               *   therefore can be used to collect statistics over all runs) */

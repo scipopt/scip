@@ -131,7 +131,7 @@ READ		=	read -e
 LN_s		= 	ln -s
 
 #initial compiler and linker flags
-FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPREALPATH)/src
+FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=

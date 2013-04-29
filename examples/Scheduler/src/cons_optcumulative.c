@@ -2838,6 +2838,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOptcumulative)
    /* add a potentially feasible solution was constructed we pass it to the heuristic try sol */
    if( solfeasible && violated && trysol != NULL )
    {
+#ifdef SCIP_DEBUG
       FILE* file;
       file = fopen("build.sol", "w");
 
@@ -2846,6 +2847,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOptcumulative)
          SCIP_CALL( SCIPprintSol(scip, trysol, file, FALSE) );
          fclose(file);
       }
+#endif
 
       SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->heurtrysol, trysol) );
    }
@@ -3299,7 +3301,7 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
 
       /* resolve propagate of cumulative condition */
       SCIP_CALL( SCIPrespropCumulativeCondition(scip, nvars, vars, durations, demands, consdata->capacity, consdata->hmin, consdata->hmax,
-            infervar, inferinfo, boundtype, bdchgidx, explanation, result) );
+            infervar, inferinfo, boundtype, bdchgidx, relaxedbd, explanation, result) );
 
       /* if the cumulative constraint handler successfully create an explanation for the propagate we extend this
        * explanation with the required choice variables

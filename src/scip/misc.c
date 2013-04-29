@@ -3315,8 +3315,6 @@ int SCIPptrarrayGetMaxIdx(
 }
 
 
-
-
 /*
  * Sorting algorithms
  */
@@ -6301,15 +6299,43 @@ SCIP_Longint SCIPcalcGreComDiv(
          break;
       }
    }
+
    /* while val2 is even, divide it by 2 */
    while( !(val2 & 1) )
       val2 >>= 1; /*lint !e704*/
 
-   /* val1 and val 2 are odd */
+   /* the following if/else condition is only to make sure that we do not overflow when adding up both values before
+    * dividing them by 4 in the following while loop
+    */
+   if( t == 0 )
+   {
+      if( val1 > val2 )
+      {
+         val1 -= val2;
+
+         /* divide val1 by 2 as long as possible  */
+         while( !(val1 & 1) )
+            val1 >>= 1;   /*lint !e704*/
+      }
+      else if( val1 < val2 )
+      {
+         val2 -= val1;
+
+         /* divide val2 by 2 as long as possible  */
+         while( !(val2 & 1) )
+            val2 >>= 1;   /*lint !e704*/
+      }
+   }
+
+   /* val1 and val2 are odd */
    while( val1 != val2 )
    {
       if( val1 > val2 )
       {
+         /* we can stop if one value reached one */
+         if( val2 == 1 )
+            return (1 << t);  /*lint !e647 !e701*/
+
          /* if ((val1 xor val2) and 2) = 2, then gcd(val1, val2) = gcd((val1 + val2)/4, val2),
           * and otherwise                        gcd(val1, val2) = gcd((val1 − val2)/4, val2)
           */
@@ -6327,6 +6353,10 @@ SCIP_Longint SCIPcalcGreComDiv(
       }
       else
       {
+         /* we can stop if one value reached one */
+         if( val1 == 1 )
+            return (1 << t);  /*lint !e647 !e701*/
+
          /* if ((val2 xor val1) and 2) = 2, then gcd(val2, val1) = gcd((val2 + val1)/4, val1),
           * and otherwise                        gcd(val2, val1) = gcd((val2 − val1)/4, val1)
           */

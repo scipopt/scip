@@ -723,50 +723,6 @@ SCIP_DECL_HASHKEYVAL(hashKeyValXorcons)
    return hashval;
 }
 
-/** updates the flags of the first constraint according to the ones of the second constraint */
-static
-SCIP_RETCODE updateFlags(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons0,              /**< constraint that should stay */
-   SCIP_CONS*            cons1               /**< constraint that should be deleted */
-   )
-{
-   if( SCIPconsIsInitial(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsInitial(scip, cons0, TRUE) );
-   }
-   if( SCIPconsIsSeparated(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsSeparated(scip, cons0, TRUE) );
-   }
-   if( SCIPconsIsEnforced(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsEnforced(scip, cons0, TRUE) );
-   }
-   if( SCIPconsIsChecked(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsChecked(scip, cons0, TRUE) );
-   }
-   if( SCIPconsIsPropagated(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsPropagated(scip, cons0, TRUE) );
-   }
-   if( !SCIPconsIsDynamic(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsDynamic(scip, cons0, FALSE) );
-   }
-   if( !SCIPconsIsRemovable(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsRemovable(scip, cons0, FALSE) );
-   }
-   if( SCIPconsIsStickingAtNode(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsStickingAtNode(scip, cons0, TRUE) );
-   }
-
-   return SCIP_OKAY;
-}
-
 /** deletes all fixed variables and all pairs equal variables variables */
 static
 SCIP_RETCODE applyFixings(
@@ -1718,7 +1674,7 @@ SCIP_RETCODE separateCons(
  *  @returns the rank of @p A
  *
  *  Here, \f$A \in R^{m \times n},\; b \in R^m\f$. On exit, the vector @p p contains a permutation of the row indices
- *  used for pivoting and the function returns the rank @p r of @p A. For each row @p i = 1, \dots, @p r, the entry @p
+ *  used for pivoting and the function returns the rank @p r of @p A. For each row \f$i = 1, \ldots, r\f$, the entry @p
  *  s[i] contains the column index of the first nonzero in row @p i.
  */
 static
@@ -1862,7 +1818,7 @@ void solveRowEcholonGF2(
    /* loop backwards through solution vector */
    for (i = r-2; i >= 0; --i)
    {
-      int val;
+      Type val;
 
       assert( i <= s[i] && s[i] <= n );
 
@@ -2051,11 +2007,11 @@ SCIP_RETCODE checkSystemGF2(
       assert( consdata != NULL );
       assert( consdata->nvars > 0 );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &(A[nconssmat]), nvars) );
-      BMSclearMemoryArray(A[nconssmat], nvars);
+      SCIP_CALL( SCIPallocBufferArray(scip, &(A[nconssmat]), nvars) ); /*lint !e866*/
+      BMSclearMemoryArray(A[nconssmat], nvars); /*lint !e866*/
 
       /* correct rhs w.r.t. to fixed variables and count nonfixed variables in constraint */
-      b[nconssmat] = consdata->rhs;
+      b[nconssmat] = (Type) consdata->rhs;
       for (j = 0; j < consdata->nvars; ++j)
       {
          SCIP_VAR* var;
@@ -2167,7 +2123,7 @@ SCIP_RETCODE checkSystemGF2(
                {
                   assert( (int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j]) < nvars );
                   assert( xorbackidx[(int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j])] == j );
-                  SCIP_CALL( SCIPsetSolVal(scip, sol, xorvars[j], 1) );
+                  SCIP_CALL( SCIPsetSolVal(scip, sol, xorvars[j], 1.0) );
                }
             }
             SCIPfreeBufferArray(scip, &x);
@@ -2178,7 +2134,7 @@ SCIP_RETCODE checkSystemGF2(
             {
                if ( SCIPcomputeVarLbLocal(scip, vars[j]) > 0.5 )
                {
-                  SCIP_CALL( SCIPsetSolVal(scip, sol, vars[j], 1) );
+                  SCIP_CALL( SCIPsetSolVal(scip, sol, vars[j], 1.0) );
                   SCIPdebugMessage("Added fixed variable <%s>.\n", SCIPvarGetName(vars[j]));
                }
             }
@@ -2237,6 +2193,9 @@ SCIP_RETCODE checkSystemGF2(
       assert(consdata != NULL);
 
       if ( consdata->nvars == 0 )
+         continue;
+
+      if( !xoractive[i] )
          continue;
 
       SCIPfreeBufferArray(scip, &(A[j++]));
@@ -2894,7 +2853,7 @@ SCIP_RETCODE detectRedundantConstraints(
          }
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-         SCIP_CALL( updateFlags(scip, cons1, cons0) );
+         SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
 
          /* delete consdel */
          SCIP_CALL( SCIPdelCons(scip, cons0) );

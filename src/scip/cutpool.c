@@ -310,6 +310,7 @@ SCIP_RETCODE cutCreate(
    (*cut)->row = row;
    (*cut)->age = 0;
    (*cut)->processedlp = -1;
+   (*cut)->processedlpsol = -1;
    (*cut)->pos = -1;
 
    /* capture row */
@@ -405,7 +406,9 @@ SCIP_RETCODE SCIPcutpoolCreate(
    (*cutpool)->nremovablecuts = 0;
    (*cutpool)->agelimit = agelimit;
    (*cutpool)->processedlp = -1;
+   (*cutpool)->processedlpsol = -1;
    (*cutpool)->firstunprocessed = 0;
+   (*cutpool)->firstunprocessedsol = 0;
    (*cutpool)->maxncuts = 0;
    (*cutpool)->ncalls = 0;
    (*cutpool)->ncutsfound = 0;
@@ -555,9 +558,11 @@ SCIP_RETCODE cutpoolDelCut(
 
    assert(cutpool != NULL);
    assert(cutpool->firstunprocessed <= cutpool->ncuts);
+   assert(cutpool->firstunprocessedsol <= cutpool->ncuts);
    assert(blkmem != NULL);
    assert(stat != NULL);
    assert(cutpool->processedlp <= stat->lpcount);
+   assert(cutpool->processedlpsol <= stat->lpcount);
    assert(cut != NULL);
    assert(cut->row != NULL);
 
@@ -591,11 +596,17 @@ SCIP_RETCODE cutpoolDelCut(
       cutpool->cuts[pos] = cutpool->cuts[cutpool->ncuts-1];
       cutpool->cuts[pos]->pos = pos;
       assert(cutpool->cuts[pos]->processedlp <= stat->lpcount);
+      assert(cutpool->cuts[pos]->processedlpsol <= stat->lpcount);
       if( cutpool->cuts[pos]->processedlp < stat->lpcount )
          cutpool->firstunprocessed = MIN(cutpool->firstunprocessed, pos);
+      if( cutpool->cuts[pos]->processedlpsol < stat->lpcount )
+         cutpool->firstunprocessedsol = MIN(cutpool->firstunprocessedsol, pos);
    }
    else
+   {
       cutpool->firstunprocessed = MIN(cutpool->firstunprocessed, cutpool->ncuts-1);
+      cutpool->firstunprocessedsol = MIN(cutpool->firstunprocessedsol, cutpool->ncuts-1);
+   }
 
    cutpool->ncuts--;
 
@@ -641,6 +652,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SOL*             sol,                /**< solution to be separated (or NULL for LP-solution) */
    SCIP_Bool             cutpoolisdelayed,   /**< is the cutpool delayed (count cuts found)? */
    SCIP_Bool             root,               /**< are we at the root node? */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
@@ -648,13 +660,16 @@ SCIP_RETCODE SCIPcutpoolSeparate(
 {
    SCIP_CUT* cut;
    SCIP_Bool found;
+   int firstunproc;
    int oldncuts;
    int c;
 
    assert(cutpool != NULL);
    assert(stat != NULL);
    assert(cutpool->processedlp <= stat->lpcount);
+   assert(cutpool->processedlpsol <= stat->lpcount);
    assert(cutpool->firstunprocessed <= cutpool->ncuts);
+   assert(cutpool->firstunprocessedsol <= cutpool->ncuts);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
@@ -663,17 +678,28 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    if( root && cutpool->nremovablecuts == 0 )
       return SCIP_OKAY;
 
-   if( cutpool->processedlp < stat->lpcount )
-      cutpool->firstunprocessed = 0;
-   if( cutpool->firstunprocessed == cutpool->ncuts )
-      return SCIP_OKAY;
+   if ( sol == NULL )
+   {
+      if( cutpool->processedlp < stat->lpcount )
+         cutpool->firstunprocessed = 0;
+      if( cutpool->firstunprocessed == cutpool->ncuts )
+         return SCIP_OKAY;
+      firstunproc = cutpool->firstunprocessed;
+   }
+   else
+   {
+      if( cutpool->processedlpsol < stat->lpcount )
+         cutpool->firstunprocessedsol = 0;
+      if( cutpool->firstunprocessedsol == cutpool->ncuts )
+         return SCIP_OKAY;
+      firstunproc = cutpool->firstunprocessedsol;
+   }
 
    *result = SCIP_DIDNOTFIND;
    cutpool->ncalls++;
    found = FALSE;
 
-   SCIPdebugMessage("separating cut pool %p with %d cuts, beginning with cut %d\n",
-      (void*)cutpool, cutpool->ncuts, cutpool->firstunprocessed);
+   SCIPdebugMessage("separating%s cut pool %p with %d cuts, beginning with cut %d\n", ( sol == NULL ) ? "" : " solution from", (void*)cutpool, cutpool->ncuts, firstunproc);
 
    /* start timing */
    SCIPclockStart(cutpool->poolclock, set);
@@ -682,20 +708,28 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    oldncuts = SCIPsepastoreGetNCuts(sepastore);
 
    /* process all unprocessed cuts in the pool */
-   for( c = cutpool->firstunprocessed; c < cutpool->ncuts; ++c )
+   for( c = firstunproc; c < cutpool->ncuts; ++c )
    {
+      SCIP_Longint proclp;
+
       cut = cutpool->cuts[c];
       assert(cut != NULL);
       assert(cut->processedlp <= stat->lpcount);
+      assert(cut->processedlpsol <= stat->lpcount);
       assert(cut->pos == c);
 
-      if( cut->processedlp < stat->lpcount )
+      proclp = ( sol == NULL ) ? cut->processedlp : cut->processedlpsol;
+
+      if( proclp < stat->lpcount )
       {
          SCIP_ROW* row;
 
-         cut->processedlp = stat->lpcount;
-         row = cut->row;
+         if ( sol == NULL )
+            cut->processedlp = stat->lpcount;
+         else
+            cut->processedlpsol = stat->lpcount;
 
+         row = cut->row;
          if( !SCIProwIsInLP(row) )
          {
             /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP
@@ -704,16 +738,16 @@ SCIP_RETCODE SCIPcutpoolSeparate(
             if( !SCIProwIsModifiable(row) && SCIProwGetNNonz(row) == 1 )
             {
                /* insert bound change cut into separation store which will force that cut */
-               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, row, FALSE, root) );
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, row, FALSE, root) );
 
                SCIP_CALL( cutpoolDelCut(cutpool, blkmem, set, stat, lp, cut) );
             }
-            else if( SCIProwIsLPEfficacious(row, set, stat, lp, root) )
+            else if( (sol == NULL && SCIProwIsLPEfficacious(row, set, stat, lp, root)) || (sol != NULL && SCIProwIsSolEfficacious(row, set, stat, sol, root)) )
             {
                /* insert cut in separation storage */
                SCIPdebugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
-                  SCIProwGetName(row), SCIProwGetLPFeasibility(row, set, stat, lp));
-               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, row, FALSE, root) );
+                  SCIProwGetName(row), ( sol == NULL ) ? SCIProwGetLPFeasibility(row, set, stat, lp) : SCIProwGetSolFeasibility(row, set, stat, sol) );
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, row, FALSE, root) );
 
                /* count cuts */
                if ( cutpoolisdelayed )
@@ -750,8 +784,16 @@ SCIP_RETCODE SCIPcutpoolSeparate(
       }
    }
 
-   cutpool->processedlp = stat->lpcount;
-   cutpool->firstunprocessed = cutpool->ncuts;
+   if ( sol == NULL )
+   {
+      cutpool->processedlp = stat->lpcount;
+      cutpool->firstunprocessed = cutpool->ncuts;
+   }
+   else
+   {
+      cutpool->processedlpsol = stat->lpcount;
+      cutpool->firstunprocessedsol = cutpool->ncuts;
+   }
 
    /* update the number of found cuts */
    cutpool->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/

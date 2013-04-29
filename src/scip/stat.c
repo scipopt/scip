@@ -198,6 +198,7 @@ void SCIPstatReset(
    stat->nrootsblpiterations = 0;
    stat->nconflictlpiterations = 0;
    stat->ntotalnodes = 0;
+   stat->ntotalinternalnodes = 0;
    stat->ncreatednodes = 0;
    stat->nlpsolsfound = 0;
    stat->npssolsfound = 0;
@@ -302,6 +303,7 @@ void SCIPstatResetCurrentRun(
    assert(stat != NULL);
 
    stat->nnodes = 0;
+   stat->ninternalnodes = 0;
    stat->ncreatednodesrun = 0;
    stat->nactivatednodes = 0;
    stat->ndeactivatednodes = 0;

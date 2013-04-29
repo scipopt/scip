@@ -556,7 +556,7 @@ SCIP_RETCODE consdataFree(
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->binvars, (*consdata)->sizebinvars);
    }
 
-   /* check if the fixed counters a reseted */
+   /* check if the fixed counters are reset */
    assert((*consdata)->nfixedzeros == 0);
    assert((*consdata)->nfixedones == 0);
 

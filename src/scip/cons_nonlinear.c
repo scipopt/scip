@@ -8183,7 +8183,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
          nexprvars = SCIPexprtreeGetNVars(consdata->exprtrees[e]);
          assert(exprvars != NULL || nexprvars == 0);
 
-         if( cnt + nexprvars >= varssize )
+         if( cnt + nexprvars > varssize )
          {
             *success = FALSE;
             break;
@@ -8752,7 +8752,7 @@ SCIP_RETCODE SCIPaddExprtreesNonlinear(
 SCIP_RETCODE SCIPgetNlRowNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -8911,7 +8911,7 @@ SCIP_RETCODE SCIPgetCurvatureNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             checkcurv,          /**< whether to check constraint curvature, if not checked before */
-   SCIP_EXPRCURV*        curvature           /**< buffer to store curvature of constraint */
+   SCIP_EXPRCURV*        curvature           /**< pointer to store curvature of constraint */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -8982,7 +8982,7 @@ SCIP_RETCODE SCIPgetViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution which violation to calculate, or NULL for LP solution */
-   SCIP_Real*            violation           /**< buffer to store violation of constraint */
+   SCIP_Real*            violation           /**< pointer to store violation of constraint */
    )
 {
    SCIP_CONSHDLR* conshdlr;

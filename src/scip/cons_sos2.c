@@ -1074,9 +1074,12 @@ static
 SCIP_RETCODE generateRowSOS2(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONSDATA*        consdata            /**< constraint data */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             local               /**< produce local cut? */
    )
 {
+   char name[SCIP_MAXSTRLEN];
+   SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
    SCIP_Real minLb = SCIPinfinity(scip);
    SCIP_Real minLb2 = SCIPinfinity(scip);
@@ -1089,6 +1092,10 @@ SCIP_RETCODE generateRowSOS2(
    int j;
 
    assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( cons != NULL );
+
+   consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
    assert( consdata->row == NULL );
 
@@ -1101,7 +1108,11 @@ SCIP_RETCODE generateRowSOS2(
    {
       SCIP_Real val;
 
-      val = SCIPvarGetLbLocal(vars[j]);
+      if ( local )
+         val = SCIPvarGetLbLocal(vars[j]);
+      else
+         val = SCIPvarGetLbGlobal(vars[j]);
+
       if ( val < minLb )
       {
          minLb2 = minLb;
@@ -1113,7 +1124,11 @@ SCIP_RETCODE generateRowSOS2(
             minLb2 = val;
       }
 
-      val = SCIPvarGetUbLocal(vars[j]);
+      if ( local )
+         val = SCIPvarGetUbLocal(vars[j]);
+      else
+         val = SCIPvarGetUbGlobal(vars[j]);
+
       if ( val > maxUb )
       {
          maxUb2 = maxUb;
@@ -1139,7 +1154,8 @@ SCIP_RETCODE generateRowSOS2(
    /* create upper and lower bound inequality if one of the bounds is finite */
    if ( ! SCIPisInfinity(scip, REALABS(lhs)) || ! SCIPisInfinity(scip, REALABS(rhs)) )
    {
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "sosbnd", lhs, rhs, FALSE, FALSE, FALSE) );
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sos2bnd#%s", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, lhs, rhs, local, FALSE, FALSE) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, row, nvars, vars, 1.0) );
       consdata->row = row;
 
@@ -1448,7 +1464,7 @@ SCIP_DECL_CONSINITLP(consInitlpSOS2)
       /* possibly generate row if not yet done */
       if ( consdata->row == NULL )
       {
-         SCIP_CALL( generateRowSOS2(scip, conshdlr, consdata) );
+         SCIP_CALL( generateRowSOS2(scip, conshdlr, conss[c], FALSE) );
       }
 
       /* put corresponding rows into LP */
@@ -1498,7 +1514,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS2)
       /* possibly generate row if not yet done */
       if ( row == NULL )
       {
-         SCIP_CALL( generateRowSOS2(scip, conshdlr, consdata) );
+         SCIP_CALL( generateRowSOS2(scip, conshdlr, conss[c], FALSE) );
       }
 
       /* possibly add row to LP if it is useful */
@@ -1551,7 +1567,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS2)
       /* possibly generate row if not yet done */
       if ( row == NULL )
       {
-         SCIP_CALL( generateRowSOS2(scip, conshdlr, consdata) );
+         SCIP_CALL( generateRowSOS2(scip, conshdlr, conss[c], FALSE) );
       }
 
       /* possibly add row to LP if it is useful */

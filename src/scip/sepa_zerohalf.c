@@ -4968,7 +4968,7 @@ SCIP_RETCODE createSubscip(
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, &success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #endif
    SCIPdebugMessage("Copying the plugins was %s successful.\n", success ? "" : "not");
 
@@ -4995,20 +4995,18 @@ SCIP_RETCODE createSubscip(
 #ifdef SCIP_DEBUG
       SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "display/verblevel", 4));
       SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "display/freq", 1));
-      SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "display/nsols/active", 2));
 #else
       SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "display/verblevel", 0));
-      SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "display/nsols/active", 2));
-    
-      SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "display/freq", 1000)); 
+      SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "display/freq", 1000));
 #endif
-        
+      SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "display/nsols/active", 2));
+
       /* forbid recursive call of heuristics solving subMIPs */
       SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "heuristics/rins/freq", -1));
       SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "heuristics/rens/freq", -1));
       SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "heuristics/localbranching/freq", -1));
       SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "heuristics/crossover/freq", -1));
-  
+
       /* disable cut separation in subscip */
       SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "separating/zerohalf/freq", -1));
       /*    SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "separating/maxrounds", 0)); */

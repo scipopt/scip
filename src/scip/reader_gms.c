@@ -1581,13 +1581,13 @@ SCIP_RETCODE printExpr(
          int i;
          int j;
 
+         appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
+
          if( SCIPexprGetPolynomialConstant(expr) != 0.0 || SCIPexprGetNMonomials(expr) == 0 )
          {
             (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g", SCIPexprGetPolynomialConstant(expr));
             appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
          }
-
-         appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
 
          for( i = 0; i < SCIPexprGetNMonomials(expr); ++i )
          {

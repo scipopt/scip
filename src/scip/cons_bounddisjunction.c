@@ -914,7 +914,9 @@ SCIP_RETCODE disableCons(
    SCIP_CONS*            cons                /**< bound disjunction constraint to be disabled */
    )
 {
-   if( SCIPgetDepth(scip) == 0 )
+   assert(SCIPconsGetValidDepth(cons) <= SCIPgetDepth(scip));
+
+   if( SCIPgetDepth(scip) == SCIPconsGetValidDepth(cons) )
    {
       SCIP_CALL( SCIPdelCons(scip, cons) );
    }

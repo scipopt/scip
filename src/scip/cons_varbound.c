@@ -1437,50 +1437,6 @@ SCIP_RETCODE propagateCons(
    return SCIP_OKAY;
 }
 
-/** updates the flags of the first constraint according to the ones of the second constraint */
-static
-SCIP_RETCODE updateFlags(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons0,              /**< constraint that should stay */
-   SCIP_CONS*            cons1               /**< constraint that should be deleted */
-   )
-{
-   if( SCIPconsIsInitial(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsInitial(scip, cons0, TRUE) );
-   }
-   if( SCIPconsIsSeparated(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsSeparated(scip, cons0, TRUE) );
-   }
-   if( SCIPconsIsEnforced(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsEnforced(scip, cons0, TRUE) );
-   }
-   if( SCIPconsIsChecked(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsChecked(scip, cons0, TRUE) );
-   }
-   if( SCIPconsIsPropagated(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsPropagated(scip, cons0, TRUE) );
-   }
-   if( !SCIPconsIsDynamic(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsDynamic(scip, cons0, FALSE) );
-   }
-   if( !SCIPconsIsRemovable(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsRemovable(scip, cons0, FALSE) );
-   }
-   if( SCIPconsIsStickingAtNode(cons1) )
-   {
-      SCIP_CALL( SCIPsetConsStickingAtNode(scip, cons0, TRUE) );
-   }
-
-   return SCIP_OKAY;
-}
-
 /* check whether one constraints side is redundant to another constraints side by calculating extreme values for
  * variables
  */
@@ -1966,7 +1922,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             if( (lhsequal || cons0lhsred) && (rhsequal || cons0rhsred) )
             {
                /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-               SCIP_CALL( updateFlags(scip, cons1, cons0) );
+               SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
 
                SCIPdebugMessage("constraint: ");
                SCIPdebugPrintCons(scip, cons0, NULL);
@@ -1983,7 +1939,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             else if( cons1lhsred && cons1rhsred )
             {
                /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-               SCIP_CALL( updateFlags(scip, cons0, cons1) );
+               SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
 
                SCIPdebugMessage("constraint: ");
                SCIPdebugPrintCons(scip, cons1, NULL);
@@ -2188,7 +2144,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 	 }
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-         SCIP_CALL( updateFlags(scip, cons0, cons1) );
+         SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
 
          SCIPdebugMessage("lead to new constraint: ");
          SCIPdebugPrintCons(scip, cons0, NULL);

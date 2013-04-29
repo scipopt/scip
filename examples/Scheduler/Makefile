@@ -91,6 +91,7 @@ lint:		$(MAINSRC)
 .PHONY: scip
 scip:
 		@$(MAKE) -C $(SCIPDIR) libs $^
+		@$(MAKE) $^
 
 .PHONY: doc
 doc:

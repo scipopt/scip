@@ -31,6 +31,17 @@
 #include <assert.h>
 
 /*
+ * GNU COMPILER VERSION define
+ */
+#ifdef __GNUC__
+#ifndef GCC_VERSION
+#define GCC_VERSION (__GNUC__ * 100                     \
+      + __GNUC_MINOR__ * 10                             \
+      + __GNUC_PATCHLEVEL__)
+#endif
+#endif
+
+/*
  * Boolean values
  */
 

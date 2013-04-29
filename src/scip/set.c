@@ -109,6 +109,8 @@
 #define SCIP_DEFAULT_CONF_IGNORERELAXEDBD FALSE /**< should relaxed bounds be ignored? */
 #define SCIP_DEFAULT_CONF_MAXVARSDETECTIMPLIEDBOUNDS 250 /**< maximal number of variables to try to detect global bound implications and shorten the whole conflict set (0: disabled) */
 #define SCIP_DEFAULT_CONF_FULLSHORTENCONFLICT TRUE /**< try to shorten the whole conflict set or terminate early (depending on the 'maxvarsdetectimpliedbounds' parameter) */
+#define SCIP_DEFAULT_CONF_CONFLITWEIGHT     0.0 /**< the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict */
+#define SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT 1.0/**< the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph */
 
 
 /* Constraints */
@@ -218,7 +220,7 @@
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
 #define SCIP_DEFAULT_MISC_PERMUTATIONSEED    -1 /**< seed value for permuting the problem after the problem was transformed (-1: no permutation) */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
-#define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reseted if the transformed problem is
+#define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reset if the transformed problem is
                                                  *   freed otherwise the statistics get reset after original problem is
                                                  *   freed (in case of bender decomposition this parameter should be set
                                                  *   to FALSE and therefore can be used to collect statistics over all
@@ -945,6 +947,16 @@ SCIP_RETCODE SCIPsetCreate(
          "try to shorten the whole conflict set or terminate early (depending on the 'maxvarsdetectimpliedbounds' parameter)",
          &(*set)->conf_fullshortenconflict, TRUE, SCIP_DEFAULT_CONF_FULLSHORTENCONFLICT,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/conflictweight",
+         "the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict",
+         &(*set)->conf_conflictweight, FALSE, SCIP_DEFAULT_CONF_CONFLITWEIGHT, 0.0, 1.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/conflictgraphweight",
+         "the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph",
+         &(*set)->conf_conflictgraphweight, FALSE, SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT, 0.0, 1.0,
+         NULL, NULL) );
 
    /* constraint parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -1306,7 +1318,7 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/resetstat",
-         "should the statistics be reseted if the transformed problem is freed (in case of a benders decomposition this parameter should be set to FALSE)",
+         "should the statistics be reset if the transformed problem is freed (in case of a benders decomposition this parameter should be set to FALSE)",
          &(*set)->misc_resetstat, FALSE, SCIP_DEFAULT_MISC_RESETSTAT,
          NULL, NULL) );
 

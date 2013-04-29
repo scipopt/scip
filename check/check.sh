@@ -196,8 +196,8 @@ do
 	    if test $SETCUTOFF = 1
 	    then
 		export CUTOFF=`grep "$SHORTFILENAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
+		echo CUTOFF:  $CUTOFF
 	    fi
-	    echo CUTOFF:  $CUTOFF
 
             echo @01 $i ===========
             echo @01 $i ===========                >> $ERRFILE

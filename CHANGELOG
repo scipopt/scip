@@ -39,6 +39,11 @@ features:
 - added method SCIPcreateSolCopyRemoveInfiniteFixings() which creates a copy of a solution, thereby trying to reduce
   the solution value of variables which were fixed to infinite to the smallest feasible value
 - added propagation method to cons_xor relying on Gaussian elimination, which can also produce feasible solutions
+- new branching rule "cloud branching" that considers several alternative LP optima
+- additional vbc output added: branching information is printed earlier and also for nodes which were cut off
+- added new statistic which distinguish between internal nodes and leaves which got processed
+- added reader_pbm, which writes the matrix structure in pbm format (possibly scaled to given size)
+- added possibility to separate a cutpool w.r.t. given solution (instead of LP-solution)
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -49,6 +54,7 @@ performance improvements:
 - disabled multi-aggregation in linear constraint handler when coefficients differ too much
 - improved multi-aggregation in linear constraint handler when only one variable in the aggregation has infinity
   contribution
+- stop pricing if the lower bound computed by pricing already exceeds the cutoff bound
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
@@ -75,6 +81,11 @@ interface
 - methods SCIPparseVar(), SCIPvarParseOriginal(), and SCIPvarParseTransformed() now return the end of the parsed string
 - new methods SCIPcopyOrig(), SCIPcopyOrigProb(), SCIPcopyOrigVars(), and SCIPcopyOrigConss() which allow to copy the
   complete original problem, the problem data, variables, and constraint, respectively
+- new functions SCIPchgRowLhsDive() and SCIPchgRowRhsDive() that allow to change the sides of a row during diving
+- new function SCIPselectVarStrongBranching() to get the variable that fullstrongbranching would select
+- SCIPcalcMIR() takes an additional parameter sidetypes to determine which side of the rows to use (relevant for ranged rows)
+- New methods SCIPconshdlrIncNCutsFound(), SCIPsepaIncNCutsFound(), and SCIPsepaIncNCutsFoundAtNode() to increase the number of found cuts
+- added function SCIPseparateSolCutpool() to separate a cutpool w.r.t. a given solution
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
@@ -131,6 +142,14 @@ fixed bugs:
 - fixed several asserts in cons_xor presolving
 - fixed fieldtypes in sorting template
 - fixed bug concerning the userinterrupt flag, which was not reset
+- fixed potential performance issue with tree depth always assumed to be zero when propagating in probing mode
+- fixed memory leak in lp.c (probably never occurred so far since array was not used)
+- fixed bug in reader_gms.c w.r.t. writing nonlinear expressions with polynomials with constants
+- fixed bug in sepa_zerohalf.c not copying the displays to the subscip, but still changing a display parameter there
+- fixed bug in SCIPlpComputeRelIntPoint() with wrong iteration limit and with wrong recompution
+- fixed iteration limit determination in sepa_closecuts
+- fixed bug in prop_vbound w.r.t. creation of variables during the search
+- fixed bug using a too hard comparison on the objective-infeasible-decision in constraint enforcement
 
 features:
 - can now output the solutions in the solution pool in the interactive shell

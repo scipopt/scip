@@ -157,12 +157,23 @@ SCIP_RETCODE getStart(
    CIPINPUT*             cipinput            /**< CIP parsing data */
    )
 {
-   if( strncmp(cipinput->strbuf, "STATISTICS", 9) == 0 )
+   char* buf;
+
+   buf = cipinput->strbuf;
+
+   if( strncmp(buf, "STATISTICS", 9) == 0 )
    {
       cipinput->section = CIP_STATISTIC;
       return SCIP_OKAY;
    }
-   
+
+   if( strncmp(buf, "VARIABLES", 8) == 0 || strncmp(buf, "FIXED", 5) == 0 || strncmp(buf, "CONSTRAINTS", 11) == 0 || strncmp(buf, "OBJECTIVE", 9) == 0 )
+   {
+      SCIPerrorMessage("Syntax Error: File has to start with 'STATISTICS' section.\n");
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
+   }
+
    return SCIP_OKAY;
 }
 
@@ -250,7 +261,11 @@ SCIP_RETCODE getObjective(
 
    SCIPdebugMessage("parse objective information\n");
 
-   if( strncmp(buf, "  Sense", 7) == 0 )
+   /* remove white space */
+   while ( isspace((unsigned char)* buf) )
+      ++buf;
+
+   if( strncasecmp(buf, "Sense", 5) == 0 )
    {
       SCIP_OBJSENSE objsense;
 
@@ -269,9 +284,9 @@ SCIP_RETCODE getObjective(
       while( isspace((unsigned char)* name) )
          ++name;
 
-      if( strncmp(name, "minimize", 3) == 0 )
+      if( strncasecmp(name, "minimize", 3) == 0 )
          objsense = SCIP_OBJSENSE_MINIMIZE;
-      else if( strncmp(name, "maximize", 3) == 0 )
+      else if( strncasecmp(name, "maximize", 3) == 0 )
          objsense = SCIP_OBJSENSE_MAXIMIZE;
       else
       {
@@ -283,8 +298,9 @@ SCIP_RETCODE getObjective(
       SCIP_CALL( SCIPsetObjsense(scip, objsense) );
       SCIPdebugMessage("objective sense <%s>\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
    }
-   else if( strncmp(buf, "  Offset", 7) == 0 )
+   else if( strncasecmp(buf, "Offset", 6) == 0 )
    {
+      SCIP_Real off = 0;
       char* endptr;
 
       name = strchr(buf, ':');
@@ -300,12 +316,22 @@ SCIP_RETCODE getObjective(
 
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
-         name++;
+         ++name;
 
-      *objoffset += strtod(name, &endptr);
+      if ( SCIPstrToRealValue(name, &off, &endptr) )
+      {
+         *objoffset += off;
+         SCIPdebugMessage("offset <%g> (total: %g)\n", off, *objoffset);
+      }
+      else
+      {
+         SCIPwarningMessage(scip, "could not parse offset (line: %d)\n%s\n", cipinput->linenumber, cipinput->strbuf);
+         return SCIP_OKAY;
+      }
    }
-   else if( strncmp(buf, "  Scale", 7) == 0 )
+   else if( strncasecmp(buf, "Scale", 5) == 0 )
    {
+      SCIP_Real scale = 1.0;
       char* endptr;
 
       name = strchr(buf, ':');
@@ -321,9 +347,18 @@ SCIP_RETCODE getObjective(
 
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
-         name++;
+         ++name;
 
-      *objscale *= strtod(name, &endptr);
+      if ( SCIPstrToRealValue(name, &scale, &endptr) )
+      {
+         *objscale *= scale;
+         SCIPdebugMessage("objscale <%g> (total: %g)\n", scale, *objscale);
+      }
+      else
+      {
+         SCIPwarningMessage(scip, "could not parse objective scale (line: %d)\n%s\n", cipinput->linenumber, cipinput->strbuf);
+         return SCIP_OKAY;
+      }
    }
 
    return SCIP_OKAY;
@@ -694,11 +729,35 @@ SCIP_DECL_READERREAD(readerReadCip)
    return SCIP_OKAY;
 }
 
+/** hash key retrieval function for variables */
+static
+SCIP_DECL_HASHGETKEY(hashGetKeyVar)
+{  /*lint --e{715}*/
+   return elem;
+}
+
+/** returns TRUE iff the indices of both variables are equal */
+static
+SCIP_DECL_HASHKEYEQ(hashKeyEqVar)
+{  /*lint --e{715}*/
+   if( key1 == key2 )
+      return TRUE;
+   return FALSE;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(hashKeyValVar)
+{  /*lint --e{715}*/
+   assert( SCIPvarGetIndex((SCIP_VAR*) key) >= 0 );
+   return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
+}
 
 /** problem writing method of reader */
 static
 SCIP_DECL_READERWRITE(readerWriteCip)
 {  /*lint --e{715}*/
+   SCIP_HASHTABLE* varhash = NULL;
    int i;
 
    SCIPinfoMessage(scip, file, "STATISTICS\n");
@@ -714,41 +773,141 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    if( !SCIPisEQ(scip, objscale, 1.0) )
       SCIPinfoMessage(scip, file, "  Scale            : %.15g\n", objscale);
 
-   if( nvars > 0 )
+   if ( nfixedvars > 0 )
+   {
+      /* set up hash table for variables that have been written property (used for writing out fixed vars in the right order) */
+      SCIP_CALL( SCIPhashtableCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * (nvars + nfixedvars)), hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   }
+
+   if ( nvars + nfixedvars > 0 )
    {
       SCIPinfoMessage(scip, file, "VARIABLES\n");
+   }
+
+   if( nvars > 0 )
+   {
       for( i = 0; i < nvars; ++i )
       {
-         SCIP_CALL( SCIPprintVar(scip, vars[i], file) );
+         SCIP_VAR* var;
+
+         var = vars[i];
+         assert( var != NULL );
+         SCIP_CALL( SCIPprintVar(scip, var, file) );
+         if ( varhash != NULL )
+         {
+            /* add free variable to hashtable */
+            if ( ! SCIPhashtableExists(varhash, (void*) var) )
+            {
+               SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+            }
+         }
       }
    }
 
    if( nfixedvars > 0 )
    {
+      int nwritten = 0;
+
       SCIPinfoMessage(scip, file, "FIXED\n");
 
-      /* first print fixed variables to increase chance that variables are defined for aggregated variables */
-      for( i = 0; i < nfixedvars; ++i )
+      /* loop through variables until each has been written after the variables that depend on have been written; this
+       * requires several runs over the variables, but the depth (= number of loops) is usually small. */
+      while ( nwritten < nfixedvars )
       {
-         assert( SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_AGGREGATED ||
-            SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_NEGATED );
+         SCIPdebugMessage("written %d of %d fixed variables.\n", nwritten, nfixedvars);
+         for (i = 0; i < nfixedvars; ++i)
+         {
+            SCIP_VAR* var;
+            SCIP_VAR* tmpvar;
 
-         if (SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_FIXED )
-            SCIP_CALL( SCIPprintVar(scip, fixedvars[i], file) );
-      }
+            var = fixedvars[i];
+            assert( var != NULL );
 
-      /* next print aggregated or negated variables */
-      for( i = 0; i < nfixedvars; ++i )
-      {
-         if ( SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_AGGREGATED || SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_NEGATED )
-            SCIP_CALL( SCIPprintVar(scip, fixedvars[i], file) );
-      }
+            /* skip variables already written */
+            if ( SCIPhashtableExists(varhash, (void*) var) )
+               continue;
 
-      /* finally print multi-aggregated variables */
-      for( i = 0; i < nfixedvars; ++i )
-      {
-         if ( SCIPvarGetStatus(fixedvars[i]) == SCIP_VARSTATUS_MULTAGGR )
-            SCIP_CALL( SCIPprintVar(scip, fixedvars[i], file) );
+            switch ( SCIPvarGetStatus(var) )
+            {
+            case SCIP_VARSTATUS_FIXED:
+
+               /* fixed variables can simply be output and added to the hashtable */
+               SCIP_CALL( SCIPprintVar(scip, var, file) );
+               assert( ! SCIPhashtableExists(varhash, (void*) var) );
+               SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+               ++nwritten;
+
+               break;
+
+            case SCIP_VARSTATUS_NEGATED:
+
+               tmpvar = SCIPvarGetNegationVar(var);
+               assert( tmpvar != NULL );
+               assert( var == SCIPvarGetNegationVar(tmpvar) );
+
+               /* if the negated variable has been written, we can write the current variable */
+               if ( SCIPhashtableExists(varhash, (void*) tmpvar) )
+               {
+                  SCIP_CALL( SCIPprintVar(scip, var, file) );
+                  assert( ! SCIPhashtableExists(varhash, (void*) var) );
+                  SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+                  ++nwritten;
+               }
+               break;
+
+            case SCIP_VARSTATUS_AGGREGATED:
+
+               tmpvar = SCIPvarGetAggrVar(var);
+               assert( tmpvar != NULL );
+
+               /* if the aggregating variable has been written, we can write the current variable */
+               if ( SCIPhashtableExists(varhash, (void*) tmpvar) )
+               {
+                  SCIP_CALL( SCIPprintVar(scip, var, file) );
+                  assert( ! SCIPhashtableExists(varhash, (void*) var) );
+                  SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+                  ++nwritten;
+               }
+               break;
+
+            case SCIP_VARSTATUS_MULTAGGR:
+            {
+               SCIP_VAR** aggrvars;
+               int naggrvars;
+               int j;
+
+               /* get the active representation */
+               SCIP_CALL( SCIPflattenVarAggregationGraph(scip, var) );
+
+               naggrvars = SCIPvarGetMultaggrNVars(var);
+               aggrvars = SCIPvarGetMultaggrVars(var);
+               assert( aggrvars != NULL );
+
+               for (j = 0; j < naggrvars; ++j)
+               {
+                  if ( ! SCIPhashtableExists(varhash, (void*) aggrvars[j]) )
+                     break;
+               }
+
+               /* if all multi-aggregating variables have been written, we can write the current variable */
+               if ( j >= naggrvars )
+               {
+                  SCIP_CALL( SCIPprintVar(scip, var, file) );
+                  assert( ! SCIPhashtableExists(varhash, (void*) var) );
+                  SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+                  ++nwritten;
+               }
+               break;
+            }
+
+            case SCIP_VARSTATUS_ORIGINAL:
+            case SCIP_VARSTATUS_LOOSE:
+            case SCIP_VARSTATUS_COLUMN:
+               SCIPerrorMessage("Only fixed variables are allowed to be present in fixedvars list.\n");
+               SCIPABORT();
+               return SCIP_ERROR; /*lint !e527*/
+            }
+         }
       }
    }
 
@@ -765,10 +924,13 @@ SCIP_DECL_READERWRITE(readerWriteCip)
          SCIPinfoMessage(scip, file, ";\n");
       }
    }
+   SCIPinfoMessage(scip, file, "END\n");
+
+   if ( nfixedvars > 0 )
+      SCIPhashtableFree(&varhash);
 
    *result = SCIP_SUCCESS;
 
-   SCIPinfoMessage(scip, file, "END\n");
    return SCIP_OKAY;
 }
 

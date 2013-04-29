@@ -1413,23 +1413,19 @@ void computeLinearConsSides(
    else if( equalTokens(scip, name, "ge") )
    {
       *lhs = sidevalue;
-      *rhs = SCIPinfinity(scip);
    }
    else if( equalTokens(scip, name, "le") )
    {
-      *lhs = -SCIPinfinity(scip);
       *rhs = sidevalue;
    }
    else if( equalTokens(scip, name, "gt") )
    {
       /* greater than only works if there are not continuous variables are involved */
       *lhs = sidevalue + 1.0;
-      *rhs = SCIPinfinity(scip);
    }
    else if( equalTokens(scip, name, "lt") )
    {
       /* less than only works if there are not continuous variables are involved */
-      *lhs = -SCIPinfinity(scip);
       *rhs = sidevalue - 1.0;
    }
    else
@@ -2822,8 +2818,8 @@ SCIP_RETCODE parseLinking(
    )
 {
    char** names;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
+   SCIP_Real lhs = -SCIPinfinity(scip);
+   SCIP_Real rhs = SCIPinfinity(scip);
    int nnames;
 
    nnames = 0;
@@ -3101,8 +3097,6 @@ static
 CREATE_CONSTRAINT(createComparisonOpCons)
 {  /*lint --e{715}*/
    char assignment[FZN_BUFFERLEN];
-   SCIP_Real lhs;
-   SCIP_Real rhs;
 
    assert(scip != NULL);
    assert(fzninput != NULL);
@@ -3209,6 +3203,9 @@ CREATE_CONSTRAINT(createComparisonOpCons)
 
       if( !hasError(fzninput) )
       {
+         SCIP_Real lhs = -SCIPinfinity(scip);
+         SCIP_Real rhs = SCIPinfinity(scip);
+
          assert(sidevalue != SCIP_INVALID); /*lint !e777*/
 
          /* compute left and right side */

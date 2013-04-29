@@ -63,10 +63,10 @@ jlong JNISCIPCONSINDICATOR(createConsIndicator)(
    jlong                 jscip,              /**< SCIP data structure */
    jstring               jname,              /**< name of constraint */
    jlong                 jbinvar,            /**< binary indicator variable (or NULL) */
-   jint                  jnvars,             /**< number of variables in the constraint */
+   jint                  nvars,              /**< number of variables in the constraint */
    jlongArray            jvars,              /**< array with variables of constraint entries */
    jdoubleArray          jvals,              /**< values of variables in inequality (or NULL) */
-   jdouble               jrhs,               /**< rhs of the inequality */
+   jdouble               rhs,                /**< rhs of the inequality */
    jboolean              jinitial,           /**< should the LP relaxation of constraint be in the initial LP?
                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    jboolean              jseparate,          /**< should the constraint be separated during LP processing?
@@ -93,7 +93,8 @@ jlong JNISCIPCONSINDICATOR(createConsIndicator)(
    SCIP_CONS* cons;
    const char* name;
    SCIP_VAR* binvar;
-   int nvars;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
@@ -107,40 +108,88 @@ jlong JNISCIPCONSINDICATOR(createConsIndicator)(
    /* convert JNI pointer into C pointer */
    binvar = (SCIP_VAR*) (size_t) jbinvar;
 
-   /* create empty indicator constraint */
-   JNISCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, 0, NULL, NULL, (SCIP_Real) jrhs,
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   (*env)->GetLongArrayRegion(env, jvars, 0, nvars, (jlong*)(*vars));
+   (*env)->GetDoubleArrayRegion(env, jvals, 0, nvars, (jdouble*)vals);
+
+   JNISCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, (int)nvars, vars, vals, (SCIP_Real)rhs,
          (SCIP_Bool) jinitial, (SCIP_Bool) jseparate, (SCIP_Bool) jenforce, (SCIP_Bool) jcheck, (SCIP_Bool) jpropagate,
          (SCIP_Bool) jlocal, (SCIP_Bool) jdynamic, (SCIP_Bool) jremovable, (SCIP_Bool) jstickingatnode) );
 
-   /* convert JNI integer into integer */
-   nvars = (int) jnvars;
-
-   /* add itmes */
-   if( nvars > 0 )
-   {
-      jlong* vars;
-      jdouble* vals;
-      int v;
-
-      JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-      JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
-
-      (*env)->GetLongArrayRegion(env, jvars, 0, nvars, vars);
-      (*env)->GetDoubleArrayRegion(env, jvals, 0, nvars, vals);
-
-      for( v = 0; v < nvars; ++v )
-      {
-         JNISCIP_CALL( SCIPaddVarIndicator(scip, cons, (SCIP_VAR*)(size_t)(vars[v]), (SCIP_Real)vals[v]) );
-      }
-
-      SCIPfreeBufferArray(scip, &vals);
-      SCIPfreeBufferArray(scip, &vars);
-   }
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
 
    (*env)->ReleaseStringUTFChars(env, jname, name);
 
    return (jlong)(size_t)cons;
 }
+
+/** creates and captures an indicator constraint with given linear constraint and slack variable
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsIndicator(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @note @a binvar is checked to be binary only later. This enables a change of the type in
+ *  procedures reading an instance.
+ *
+ *  @note we assume that @a slackvar actually appears in @a lincons and we also assume that it takes
+ *  the role of a slack variable!
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ *
+ *  @see SCIPcreateConsIndicatorLinCons() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+JNIEXPORT
+jlong JNISCIPCONSINDICATOR(createConsBasicIndicator)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jstring               jname,              /**< name of constraint */
+   jlong                 jbinvar,            /**< binary indicator variable (or NULL) */
+   jint                  nvars,              /**< number of variables in the inequality */
+   jlongArray            jvars,              /**< array with variables of inequality (or NULL) */
+   jdoubleArray          jvals,              /**< values of variables in inequality (or NULL) */
+   jdouble               rhs                 /**< rhs of the inequality */
+   )
+{
+   SCIP* scip;
+   SCIP_CONS* cons;
+   const char* name;
+   SCIP_VAR* binvar;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
+
+   /* convert JNI string into C const char* */
+   name = (*env)->GetStringUTFChars(env, jname, NULL);
+   if( name == NULL )
+      SCIPABORT();
+
+   /* convert JNI pointer into C pointer */
+   binvar = (SCIP_VAR*) (size_t) jbinvar;
+
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   (*env)->GetLongArrayRegion(env, jvars, 0, nvars, (jlong*)(*vars));
+   (*env)->GetDoubleArrayRegion(env, jvals, 0, nvars, (jdouble*)vals);
+
+   JNISCIP_CALL( SCIPcreateConsBasicIndicator(scip, &cons, name, binvar, (int)nvars, vars, vals, (SCIP_Real)rhs) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   (*env)->ReleaseStringUTFChars(env, jname, name);
+
+   return (jlong)(size_t)cons;
+}
+
 
 
 /** creates and captures an indicator constraint with given linear constraint and slack variable
@@ -436,6 +485,36 @@ jboolean JNISCIPCONSINDICATOR(makeIndicatorFeasible)(
    assert(sol != NULL);
 
    JNISCIP_CALL( SCIPmakeIndicatorFeasible(scip, cons, sol, &changed) );
+
+   return (jboolean) changed;
+}
+
+/** Based on values of other variables, computes slack and binary variable to turn all constraints feasible */
+JNIEXPORT
+jboolean JNISCIPCONSINDICATOR(makeIndicatorsFeasible)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jlong                 jconshdlr,          /**< indicator constraint handler */
+   jlong                 jsol                /**< solution */
+   )
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_SOL* sol;
+   SCIP_Bool changed;
+
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
+
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
+
+   sol = (SCIP_SOL*) (size_t) jsol;
+   assert(sol != NULL);
+
+   JNISCIP_CALL( SCIPmakeIndicatorsFeasible(scip, conshdlr, sol, &changed) );
 
    return (jboolean) changed;
 }

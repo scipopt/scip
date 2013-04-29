@@ -267,6 +267,7 @@ endif
 SCIPLIBSHORTNAME=	scip
 SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
 SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
+			scip/branch_cloud.o \
 			scip/branch_fullstrong.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
@@ -374,6 +375,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_osil.o \
 			scip/reader_pip.o \
 			scip/reader_ppm.o \
+			scip/reader_pbm.o \
 			scip/reader_rlp.o \
 			scip/reader_sol.o \
 			scip/reader_wbo.o \

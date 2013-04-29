@@ -31,6 +31,7 @@
  * scipdefplugins.h
  */
 #include "scip/branch_allfullstrong.h"
+#include "scip/branch_cloud.h"
 #include "scip/branch_fullstrong.h"
 #include "scip/branch_inference.h"
 #include "scip/branch_leastinf.h"
@@ -136,6 +137,7 @@
 #include "scip/reader_osil.h"
 #include "scip/reader_pip.h"
 #include "scip/reader_ppm.h"
+#include "scip/reader_pbm.h"
 #include "scip/reader_rlp.h"
 #include "scip/reader_sol.h"
 #include "scip/reader_wbo.h"

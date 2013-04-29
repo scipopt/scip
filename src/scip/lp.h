@@ -1370,6 +1370,14 @@ SCIP_RETCODE SCIPlpEndDive(
    int                   nvars               /**< number of active variables */
    );
 
+/** records a current row side such that any change will be undone after diving */
+extern
+SCIP_RETCODE SCIPlpRecordOldRowSideDive(
+   SCIP_LP*              lp,                 /**< LP data object */
+   SCIP_ROW*             row,                /**< row affected by the change */
+   SCIP_SIDETYPE         sidetype            /**< side type */
+   );
+
 /** informs the LP that probing mode was initiated */
 extern
 SCIP_RETCODE SCIPlpStartProbing(

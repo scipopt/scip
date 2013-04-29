@@ -2857,8 +2857,8 @@ SCIP_RETCODE lpiStrongbranch(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(down != NULL);
-   assert(up != NULL);
+   /*  assert(down != NULL);
+    * assert(up != NULL); temporary hack for cloud branching */
    assert(downvalid != NULL);
    assert(upvalid != NULL);
 
@@ -2883,7 +2883,7 @@ SCIP_RETCODE lpiStrongbranch(
 
    /* down branch */
    newub = EPSCEIL(psol-1.0, lpi->spx->feastol());
-   if( newub >= oldlb - 0.5 )
+   if( newub >= oldlb - 0.5 && down != NULL )
    {
       SCIPdebugMessage("strong branching down on x%d (%g) with %d iterations\n", col, psol, itlim);
 
@@ -2949,17 +2949,19 @@ SCIP_RETCODE lpiStrongbranch(
       spx->changeUpper(col, oldub);
       assert(spx->lower(col) <= spx->upper(col));
    }
-   else
+   else if( down != NULL )
    {
       *down = spx->terminationValue();
       *downvalid = TRUE;
    }
+   else
+      *downvalid = TRUE;
 
    /* up branch */
    if( !error )
    {
       newlb = EPSFLOOR(psol+1.0, lpi->spx->feastol());
-      if( newlb <= oldub + 0.5 )
+      if( newlb <= oldub + 0.5 && up != NULL )
       {
          SCIPdebugMessage("strong branching  up  on x%d (%g) with %d iterations\n", col, psol, itlim);
 
@@ -3025,11 +3027,13 @@ SCIP_RETCODE lpiStrongbranch(
          spx->changeLower(col, oldlb);
          assert(spx->lower(col) <= spx->upper(col));
       }
-      else
+      else if( up != NULL )
       {
          *up = spx->terminationValue();
          *upvalid = TRUE;
       }
+      else
+         *upvalid = TRUE;
    }
 
    /* reset old iteration limit */
