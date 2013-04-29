@@ -306,7 +306,7 @@ SCIP_DECL_HEURINIT(heurInitRins)
 static
 SCIP_DECL_HEUREXEC(heurExecRins)
 {  /*lint --e{715}*/
-   SCIP_Longint nstallnodes;
+   SCIP_Longint nnodes;
 
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
    SCIP* subscip;                            /* the subproblem created by RINS      */
@@ -358,19 +358,19 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    *result = SCIP_DIDNOTRUN;
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
-   nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
+   nnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
 
    /* reward RINS if it succeeded often */
-   nstallnodes = (SCIP_Longint)(nstallnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-   nstallnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
-   nstallnodes += heurdata->nodesofs;
+   nnodes = (SCIP_Longint)(nnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+   nnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
+   nnodes += heurdata->nodesofs;
 
    /* determine the node limit for the current process */
-   nstallnodes -= heurdata->usednodes;
-   nstallnodes = MIN(nstallnodes, heurdata->maxnodes);
+   nnodes -= heurdata->usednodes;
+   nnodes = MIN(nnodes, heurdata->maxnodes);
 
    /* check whether we have enough nodes left to call subproblem solving */
-   if( nstallnodes < heurdata->minnodes )
+   if( nnodes < heurdata->minnodes )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
@@ -464,7 +464,8 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       goto TERMINATE;
 
    /* set limits for the subproblem */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nstallnodes) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nnodes/10)) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );

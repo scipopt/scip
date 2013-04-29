@@ -502,7 +502,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 1) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nsubnodes/10)) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
