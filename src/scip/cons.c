@@ -2099,6 +2099,10 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->lastnusefulsepaconss = 0;
    (*conshdlr)->lastnusefulenfoconss = 0;
 
+   (*conshdlr)->storedpropconss = NULL;
+   (*conshdlr)->storedpropconsssize = 0;
+   (*conshdlr)->storednmarkedpropconss = 0;
+
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->sepatime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -2244,6 +2248,7 @@ SCIP_RETCODE SCIPconshdlrFree(
    BMSfreeMemoryArrayNull(&(*conshdlr)->checkconss);
    BMSfreeMemoryArrayNull(&(*conshdlr)->propconss);
    BMSfreeMemoryArrayNull(&(*conshdlr)->updateconss);
+   BMSfreeMemoryArrayNull(&(*conshdlr)->storedpropconss);
    BMSfreeMemory(conshdlr);
 
    return SCIP_OKAY;
@@ -5653,7 +5658,7 @@ void SCIPconsCapture(
    assert(cons != NULL);
    assert(cons->nuses >= 0);
 
-   SCIPdebugMessage("capture constraint <%s> with nuses=%d\n", cons->name, cons->nuses);
+   SCIPdebugMessage("capture constraint <%s> with nuses=%d, cons pointer %p\n", cons->name, cons->nuses, (void*)cons);
    cons->nuses++;
 }
 
@@ -5672,7 +5677,7 @@ SCIP_RETCODE SCIPconsRelease(
    assert(set != NULL);
    assert((*cons)->scip == set->scip);
 
-   SCIPdebugMessage("release constraint <%s> with nuses=%d\n", (*cons)->name, (*cons)->nuses);
+   SCIPdebugMessage("release constraint <%s> with nuses=%d, cons pointer %p\n", (*cons)->name, (*cons)->nuses, (void*)(*cons));
    (*cons)->nuses--;
    if( (*cons)->nuses == 0 )
    {
@@ -5692,7 +5697,7 @@ SCIP_RETCODE SCIPconsRelease(
          SCIP_CALL( SCIPconsFree(cons, blkmem, set) );
       }
    }
-   *cons  = NULL;
+   *cons = NULL;
 
    return SCIP_OKAY;
 }
@@ -7233,7 +7238,128 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons)
 }
 
 
+/*
+ * method for arrays of contraint handlers
+ */
 
+/** ensures size of storage for propagable constraints with a minimum size of num */
+static
+SCIP_RETCODE ensurePropagationStorage(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(set != NULL);
+   assert(conshdlr != NULL);
+
+   if( num > conshdlr->storedpropconsssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&(conshdlr->storedpropconss), newsize) );
+
+      conshdlr->storedpropconsssize = newsize;
+   }
+   assert(num <= conshdlr->storedpropconsssize);
+
+   return SCIP_OKAY;
+}
+
+/** stores all constraints marked for propagation away when probing is started */
+SCIP_RETCODE SCIPconshdlrsStorePropagationStatus(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONSHDLR**       conshdlrs,          /**< all constraint handlers */
+   int                   nconshdlrs          /**< number of contraint handlers */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   int c;
+
+   assert(set != NULL);
+   assert(conshdlrs != NULL || nconshdlrs == 0);
+
+   for( c = nconshdlrs - 1; c >= 0; --c )
+   {
+      conshdlr = conshdlrs[c];
+      assert(conshdlr != NULL);
+      assert(conshdlr->storednmarkedpropconss == 0);
+
+      if( conshdlr->nmarkedpropconss > 0 )
+      {
+         int v;
+
+         SCIP_CALL( ensurePropagationStorage(set, conshdlr, conshdlr->nmarkedpropconss) );
+         BMScopyMemoryArray(conshdlr->storedpropconss, conshdlr->propconss, conshdlr->nmarkedpropconss);
+
+         conshdlr->storednmarkedpropconss = conshdlr->nmarkedpropconss;
+
+         for( v = conshdlr->storednmarkedpropconss - 1; v >= 0; --v )
+         {
+            SCIPconsCapture(conshdlr->storedpropconss[v]);
+            SCIP_CALL( SCIPconsUnmarkPropagate(conshdlr->storedpropconss[v], set) );
+         }
+         assert(conshdlr->nmarkedpropconss == 0);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** reset all constraints marked for propagation when probing was finished */
+SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CONSHDLR**       conshdlrs,          /**< all constraint handlers */
+   int                   nconshdlrs          /**< number of contraint handlers */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   int c;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(conshdlrs != NULL || nconshdlrs == 0);
+
+   for( c = nconshdlrs - 1; c >= 0; --c )
+   {
+      conshdlr = conshdlrs[c];
+      assert(conshdlr != NULL);
+
+      if( conshdlr->storednmarkedpropconss > 0 )
+      {
+#ifndef NDEBUG
+         int ndisabled = 0;
+#endif
+         int v;
+
+         assert(conshdlr->storednmarkedpropconss <= conshdlr->npropconss);
+
+         /* mark all previously marked constraint, which were marked before probing */
+         for( v = conshdlr->storednmarkedpropconss - 1; v >= 0; --v )
+         {
+            SCIP_CONS* cons = conshdlr->storedpropconss[v];
+            assert(cons != NULL);
+
+            if( cons->enabled && cons->propagate && cons->propenabled )
+            {
+               SCIP_CALL( SCIPconsMarkPropagate(cons, set) );
+            }
+#ifndef NDEBUG
+            else
+               ++ndisabled;
+#endif
+            SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
+         }
+         assert(conshdlr->nmarkedpropconss + ndisabled >= conshdlr->storednmarkedpropconss || (conshdlrAreUpdatesDelayed(conshdlr) && conshdlr->nupdateconss + ndisabled >= conshdlr->storednmarkedpropconss));
+
+         conshdlr->storednmarkedpropconss = 0;
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /*
  * simple functions implemented as defines
@@ -7263,6 +7389,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons)
 #undef SCIPconsIsSeparated
 #undef SCIPconsIsEnforced
 #undef SCIPconsIsChecked
+#undef SCIPconsIsMarkedPropagate
 #undef SCIPconsIsPropagated
 #undef SCIPconsIsGlobal
 #undef SCIPconsIsLocal
@@ -7467,6 +7594,16 @@ SCIP_Bool SCIPconsIsChecked(
    assert(cons != NULL);
 
    return cons->check;
+}
+
+/** returns whether the constraint is marked for propagation */
+SCIP_Bool SCIPconsIsMarkedPropagate(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->markpropagate;
 }
 
 /** returns TRUE iff constraint should be propagated during node processing */

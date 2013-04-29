@@ -175,6 +175,9 @@ struct SCIP_Conshdlr
    SCIP_CONS**           enfoconss;          /**< array with active constraints that must be enforced during node processing */
    SCIP_CONS**           checkconss;         /**< array with active constraints that must be checked for feasibility */
    SCIP_CONS**           propconss;          /**< array with active constraints that must be propagated during node processing */
+   SCIP_CONS**           storedpropconss;    /**< array to store constraints that were marked for propagation before
+                                              *   starting probing mode
+                                              */
    SCIP_CONS**           updateconss;        /**< array with constraints that changed and have to be update in the handler */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this constraint handler for the next stages */
    SCIP_CLOCK*           presoltime;         /**< time used for presolving of this constraint handler */
@@ -214,6 +217,8 @@ struct SCIP_Conshdlr
    int                   npropconss;         /**< number of active constraints that may be propagated during node processing */
    int                   nmarkedpropconss;   /**< number of active constraints which are marked to be propagated in the next round */
    int                   nusefulpropconss;   /**< number of non-obsolete active constraints that should be propagated */
+   int                   storedpropconsssize;/**< size of array for storing away marked propagation constraints */
+   int                   storednmarkedpropconss;/**< number of marked propagation constraints that are stored away */
    int                   updateconsssize;    /**< size of updateconss array */
    int                   nupdateconss;       /**< number of update constraints */
    int                   nenabledconss;      /**< total number of enabled constraints of the handler */

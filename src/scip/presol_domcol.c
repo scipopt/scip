@@ -2302,6 +2302,7 @@ SCIP_RETCODE findDominancePairs(
    SCIP_Real tmplowerbounddominatedcol2;
    SCIP_Real tmpwcupperbounddominatedcol1;
    SCIP_Real tmpwcupperbounddominatedcol2;
+   SCIP_Real obj1;
    SCIP_Bool col1domcol2;
    SCIP_Bool col2domcol1;
    SCIP_Bool onlyoneone;
@@ -2328,10 +2329,17 @@ SCIP_RETCODE findDominancePairs(
    /* pair comparisons */
    for( cnt1 = 0; cnt1 < searchsize; cnt1++ )
    {
+      /* get index of the first variable */
+      col1 = searchcols[cnt1];
+
+      if( varstofix[col1] == FIXATLB )
+         continue;
+
+      obj1 = SCIPvarGetObj(matrix->vars[col1]);
+
       for( cnt2 = cnt1+1; cnt2 < searchsize; cnt2++ )
       {
-         /* get indexes of this variable pair */
-         col1 = searchcols[cnt1];
+         /* get index of the second variable */
          col2 = searchcols[cnt2];
 
          onlyoneone = FALSE;
@@ -2339,10 +2347,10 @@ SCIP_RETCODE findDominancePairs(
          /* we always have minimize as obj sense */
 
          /* column 1 dominating column 2 */
-         col1domcol2 = (SCIPvarGetObj(matrix->vars[col1]) <= SCIPvarGetObj(matrix->vars[col2]));
+         col1domcol2 = (obj1 <= SCIPvarGetObj(matrix->vars[col2]));
 
          /* column 2 dominating column 1 */
-         col2domcol1 = (SCIPvarGetObj(matrix->vars[col2]) <= SCIPvarGetObj(matrix->vars[col1]));
+         col2domcol1 = (SCIPvarGetObj(matrix->vars[col2]) <= obj1);
 
          /* search only if nothing was found yet */
          col1domcol2 = col1domcol2 && (varstofix[col2] == NOFIX);
@@ -2620,6 +2628,8 @@ SCIP_RETCODE findDominancePairs(
                      varstofix, nchgbds) );
             }
          }
+         if( varstofix[col1] == FIXATLB )
+            break;
       }
    }
 

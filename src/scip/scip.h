@@ -754,6 +754,9 @@ SCIP_RETCODE SCIPcopyOrigVars(
  *        SCIPconsIsAdded(). (If you mix SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add
  *        explicitly and what is already added.)
  *
+ *  @note The constraint is always captured, either during the creation of the copy or after finding the copy of the
+ *        constraint in the constraint hash map
+ *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  *
@@ -8462,6 +8465,12 @@ SCIP_Bool SCIPdoNotAggr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether multi-aggregation is disabled */
+EXTERN
+SCIP_Bool SCIPdoNotMultaggr(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns whether variable is not allowed to be multi-aggregated */
 EXTERN
 SCIP_Bool SCIPdoNotMultaggrVar(
@@ -10170,6 +10179,7 @@ SCIP_RETCODE SCIPdisableConsPropagation(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -10191,6 +10201,7 @@ SCIP_RETCODE SCIPmarkConsPropagate(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -11279,6 +11290,17 @@ SCIP_Real SCIPgetColFarkasCoef(
    SCIP_COL*             col                 /**< LP column */
    );
 
+/** marks a column to be not removable from the LP in the current node
+ *
+ *  @pre this method can be called in the following stage of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+void SCIPmarkColNotRemovableLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COL*             col                 /**< LP column */
+   );
+
 /**@} */
 
 
@@ -11684,6 +11706,17 @@ SCIP_RETCODE SCIPmakeRowIntegral(
    SCIP_Real             maxscale,           /**< maximal value to scale row with */
    SCIP_Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
    SCIP_Bool*            success             /**< stores whether row could be made rational */
+   );
+
+/** marks a row to be not removable from the LP in the current node
+ *
+ *  @pre this method can be called in the following stage of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+void SCIPmarkRowNotRemovableLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
    );
 
 /** returns minimal absolute value of row vector's non-zero coefficients
@@ -13234,7 +13267,8 @@ SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
-   SCIP_Bool             forcecut            /**< should the cut be forced to enter the LP? */
+   SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
    );
 
 /** if not already existing, adds row to global cut pool

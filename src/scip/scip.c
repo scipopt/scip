@@ -2142,6 +2142,9 @@ SCIP_RETCODE SCIPcopyOrigVars(
  *        SCIPconsIsAdded(). (If you mix SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add
  *        explicitly and what is already added.)
  *
+ *  @note The constraint is always captured, either during the creation of the copy or after finding the copy of the
+ *        constraint in the constraint hash map
+ *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  *
@@ -2237,6 +2240,7 @@ SCIP_RETCODE SCIPgetConsCopy(
       *targetcons = (SCIP_CONS*) SCIPhashmapGetImage(localconsmap, sourcecons);
       if( *targetcons != NULL )
       {
+         SCIP_CALL( SCIPcaptureCons(targetscip, *targetcons) );
          *success =TRUE;
          return SCIP_OKAY;
       }
@@ -9469,6 +9473,9 @@ SCIP_RETCODE SCIPdelVar(
       }
       SCIP_CALL( SCIPprobDelVar(scip->origprob, scip->mem->probmem, scip->set, scip->eventqueue, var, deleted) );
 
+      /* delete the variables from the problems that were marked to be deleted */
+      SCIP_CALL( SCIPprobPerformVarDeletions(scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, scip->branchcand) );
+
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -11627,7 +11634,7 @@ SCIP_RETCODE initPresolve(
    /* retransform all existing solutions to original problem space, because the transformed problem space may
     * get modified in presolving and the solutions may become invalid for the transformed problem
     */
-   SCIP_CALL( SCIPprimalRetransformSolutions(scip->primal, scip->set, scip->stat, scip->origprob) );
+   SCIP_CALL( SCIPprimalRetransformSolutions(scip->primal, scip->set, scip->stat, scip->origprob, scip->transprob) );
 
    /* reset statistics for presolving and current branch and bound run */
    SCIPstatResetPresolving(scip->stat);
@@ -11649,10 +11656,7 @@ SCIP_RETCODE initPresolve(
    SCIP_CALL( SCIPsetInitprePlugins(scip->set, scip->mem->probmem, scip->stat) );
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
-   /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
-    * into implications
-    * delete the variables from the problems that were marked to be deleted
-    */
+   /* delete the variables from the problems that were marked to be deleted */
    SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, scip->branchcand) );
 
    /* switch stage to PRESOLVING */
@@ -12245,7 +12249,7 @@ SCIP_RETCODE presolve(
    }
 
    /* deinitialize presolving */
-   if( finished )
+   if( finished && !stopped )
    {
       SCIP_CALL( exitPresolve(scip, *unbounded || *infeasible, infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
@@ -12596,7 +12600,7 @@ SCIP_RETCODE freeTransform(
       if( !SCIPsolIsOriginal(sol) )
       {
          /* retransform solution into the original problem space */
-         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );
+         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
       }
    
       /* add solution to original candidate solution storage */
@@ -20018,6 +20022,16 @@ SCIP_Bool SCIPdoNotAggr(
    return scip->set->presol_donotaggr;
 }
 
+/** returns whether multi-aggregation is disabled */
+SCIP_Bool SCIPdoNotMultaggr(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return scip->set->presol_donotmultaggr;
+}
+
 /** returns whether variable is not allowed to be multi-aggregated */
 SCIP_Bool SCIPdoNotMultaggrVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -22417,6 +22431,7 @@ SCIP_RETCODE SCIPdisableConsPropagation(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -22429,7 +22444,7 @@ SCIP_RETCODE SCIPmarkConsPropagate(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPmarkConsPropagate", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPmarkConsPropagate", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsMarkPropagate(cons, scip->set) );
 
@@ -22444,6 +22459,7 @@ SCIP_RETCODE SCIPmarkConsPropagate(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -22454,7 +22470,7 @@ SCIP_RETCODE SCIPunmarkConsPropagate(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPunmarkConsPropagate", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPunmarkConsPropagate", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsUnmarkPropagate(cons, scip->set) );
 
@@ -24045,6 +24061,20 @@ SCIP_Real SCIPgetColFarkasCoef(
    return SCIPcolGetFarkasCoef(col, scip->stat, scip->lp);
 }
 
+/** marks a column to be not removable from the LP in the current node
+ *
+ *  @pre this method can be called in the following stage of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+void SCIPmarkColNotRemovableLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COL*             col                 /**< LP column */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkColNotRemovableLocal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPcolMarkNotRemovableLocal(col, scip->stat);
+}
 
 /*
  * LP row methods
@@ -24606,6 +24636,21 @@ SCIP_RETCODE SCIPmakeRowIntegral(
          usecontvars, success) );
 
    return SCIP_OKAY;
+}
+
+/** marks a row to be not removable from the LP in the current node
+ *
+ *  @pre this method can be called in the following stage of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+void SCIPmarkRowNotRemovableLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkRowNotRemovableLocal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIProwMarkNotRemovableLocal(row, scip->stat);
 }
 
 /** returns minimal absolute value of row vector's non-zero coefficients
@@ -27137,7 +27182,8 @@ SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
-   SCIP_Bool             forcecut            /**< should the cut be forced to enter the LP? */
+   SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -27145,7 +27191,76 @@ SCIP_RETCODE SCIPaddCut(
    assert(SCIPtreeGetCurrentNode(scip->tree) != NULL);
 
    SCIP_CALL( SCIPsepastoreAddCut(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->eventfilter, scip->lp, sol, cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0)) );
+         scip->eventfilter, scip->lp, sol, cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0), infeasible) );
+
+   /* possibly run conflict analysis */
+   if ( *infeasible && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && SCIPisConflictAnalysisApplicable(scip) )
+   {
+      SCIP_Real act;
+      SCIP_VAR* var;
+      SCIP_Real val;
+      int ncols;
+      int j;
+
+      /* initialize conflict analysis */
+      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+      if ( ! SCIPisInfinity(scip, -cut->lhs) )
+      {
+         act = SCIProwGetMaxActivity(cut, scip->set, scip->stat);
+         if ( SCIPisLT(scip, act, cut->lhs) )
+         {
+            ncols = SCIProwGetNNonz(cut);
+            for (j = 0; j < ncols; ++j)
+            {
+               val = cut->vals[j];
+               if ( ! SCIPisZero(scip, val) )
+               {
+                  var = SCIPcolGetVar(cut->cols[j]);
+                  assert( var != NULL );
+
+                  if ( val > 0.0 )
+                  {
+                     SCIP_CALL( SCIPaddConflictUb(scip, var, NULL) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPaddConflictLb(scip, var, NULL) );
+                  }
+               }
+            }
+         }
+      }
+      else if ( ! SCIPisInfinity(scip, cut->rhs) )
+      {
+         act = SCIProwGetMinActivity(cut, scip->set, scip->stat);
+         if ( SCIPisGT(scip, act, cut->rhs) )
+         {
+            ncols = SCIProwGetNNonz(cut);
+            for (j = 0; j < ncols; ++j)
+            {
+               val = cut->vals[j];
+               if ( ! SCIPisZero(scip, val) )
+               {
+                  var = SCIPcolGetVar(cut->cols[j]);
+                  assert( var != NULL );
+
+                  if ( val > 0.0 )
+                  {
+                     SCIP_CALL( SCIPaddConflictLb(scip, var, NULL) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPaddConflictUb(scip, var, NULL) );
+                  }
+               }
+            }
+         }
+      }
+
+      /* analyze the conflict */
+      SCIP_CALL( SCIPanalyzeConflict(scip, SCIPgetDepth(scip), NULL) );
+   }
 
    return SCIP_OKAY;
 }
@@ -29852,6 +29967,7 @@ SCIP_RETCODE SCIPcreateOrigSol(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPcreateSolCopy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -29859,7 +29975,7 @@ SCIP_RETCODE SCIPcreateSolCopy(
    SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPcreateSolCopy", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateSolCopy", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* check if we want to copy the current solution, which is the same as creating a current solution */
    if( sourcesol == NULL )
@@ -31248,8 +31364,6 @@ SCIP_RETCODE SCIProundSol(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
@@ -31266,7 +31380,7 @@ SCIP_RETCODE SCIPretransformSol(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPretransformSol", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPretransformSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    switch ( SCIPsolGetOrigin(sol) )
    {
@@ -31285,7 +31399,7 @@ SCIP_RETCODE SCIPretransformSol(
       /*lint -fallthrough*/
    case SCIP_SOLORIGIN_ZERO:
 
-      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );
+      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
       break;
 
    case SCIP_SOLORIGIN_UNKNOWN:
@@ -31370,7 +31484,7 @@ SCIP_RETCODE SCIPaddSol(
       if( !SCIPsolIsOriginal(sol) )
       {
          SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
-         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
+         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
@@ -31440,7 +31554,7 @@ SCIP_RETCODE SCIPaddSolFree(
       if( !SCIPsolIsOriginal(*sol) )
       {
          SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
-         SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
+         SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
@@ -31539,7 +31653,7 @@ SCIP_RETCODE SCIPtrySol(
    if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(sol) )
    {
       SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
-      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
+      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
    }
 
    if( SCIPsolIsOriginal(sol) )
@@ -31616,7 +31730,7 @@ SCIP_RETCODE SCIPtrySolFree(
    if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(*sol) )
    {
       SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
-      SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
+      SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
    }
 
    if( SCIPsolIsOriginal(*sol) )
@@ -33797,6 +33911,8 @@ SCIP_Bool SCIPisPrimalboundSol(
  *  or infinity, if they have opposite sign
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
@@ -33808,7 +33924,7 @@ SCIP_Real SCIPgetGap(
    SCIP_Real primalbound;
    SCIP_Real dualbound;
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetGap", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetGap", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
    {
@@ -35397,8 +35513,6 @@ SCIP_RETCODE SCIPprintStatistics(
    }
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_EXITPRESOLVE:
    {
       printTimingStatistics(scip, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
@@ -35412,6 +35526,8 @@ SCIP_RETCODE SCIPprintStatistics(
       printConflictStatistics(scip, file);
       return SCIP_OKAY;
    }
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_PRESOLVED:
    {
       printTimingStatistics(scip, file);

@@ -193,9 +193,58 @@ SCIP_Bool sepastoreIsCutRedundant(
    maxactivity = SCIProwGetMaxActivity(cut, set, stat);
    if( SCIPsetIsLE(set, lhs, minactivity) && SCIPsetIsLE(set, maxactivity, rhs) )
    {
-      SCIPdebugMessage("ignoring activity redundant cut <%s> (sides=[%g,%g], act=[%g,%g]\n",
+      SCIPdebugMessage("ignoring activity redundant cut <%s> (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
       /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+/** checks cut for redundancy or infeasibility due to activity bounds */
+static
+SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_ROW*             cut,                /**< separated cut */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the cut has been detected to be infeasible */
+   )
+{
+   SCIP_Real minactivity;
+   SCIP_Real maxactivity;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+
+   assert(sepastore != NULL);
+   assert(cut != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   /* modifiable cuts cannot be declared redundant or infeasible, since we don't know all coefficients */
+   if( SCIProwIsModifiable(cut) )
+      return FALSE;
+
+   /* check for activity redundancy */
+   lhs = SCIProwGetLhs(cut);
+   rhs = SCIProwGetRhs(cut);
+   minactivity = SCIProwGetMinActivity(cut, set, stat);
+   maxactivity = SCIProwGetMaxActivity(cut, set, stat);
+   if( SCIPsetIsLE(set, lhs, minactivity) && SCIPsetIsLE(set, maxactivity, rhs) )
+   {
+      SCIPdebugMessage("ignoring activity redundant cut <%s> (sides=[%g,%g], act=[%g,%g])\n",
+         SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
+      /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
+      return TRUE;
+   }
+   if ( SCIPsetIsGT(set, minactivity, rhs) || SCIPsetIsLT(set, maxactivity, lhs) )
+   {
+      SCIPdebugMessage("cut <%s> is infeasible (sides=[%g,%g], act=[%g,%g])\n",
+         SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
+      /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
+      *infeasible = TRUE;
       return TRUE;
    }
 
@@ -217,12 +266,14 @@ SCIP_RETCODE sepastoreAddCut(
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
-   SCIP_Bool             root                /**< are we at the root node? */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the cut is infeasible */
    )
 {
    SCIP_Real cutefficacy;
    SCIP_Real cutobjparallelism;
    SCIP_Real cutscore;
+   SCIP_Bool redundant;
    int pos;
 
    assert(sepastore != NULL);
@@ -244,10 +295,13 @@ SCIP_RETCODE sepastoreAddCut(
       assert(!SCIProwIsLocal(cut));
    }
 
-   /* check cut for redundancy
-    * in each separation round, make sure that at least one (even redundant) cut enters the LP to avoid cycling
-    */
-   if( !forcecut && sepastore->ncuts > 0 && sepastoreIsCutRedundant(sepastore, set, stat, cut) )
+   /* check cut for redundancy or infeasibility */
+   redundant = sepastoreIsCutRedundantOrInfeasible(sepastore, set, stat, cut, infeasible);
+   /* Note that we add infeasible rows in any case, since we cannot be sure whether the return values are handled
+    * correctly. In this way, the LP becomes infeasible. */
+
+   /* in each separation round, make sure that at least one (even redundant) cut enters the LP to avoid cycling */
+   if( !forcecut && sepastore->ncuts > 0 && redundant )
       return SCIP_OKAY;
 
    /* if only one cut is currently present in the cut store, it could be redundant; in this case, it can now be removed
@@ -255,9 +309,7 @@ SCIP_RETCODE sepastoreAddCut(
     */
    if( sepastore->ncuts == 1 && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
    {
-      /* check, if the row deletions from separation storage events are tracked
-       * if so, issue ROWDELETEDSEPA event
-       */
+      /* check, if the row deletions from separation storage events are tracked if so, issue ROWDELETEDSEPA event */
       if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDSEPA) != 0 )
       {
          SCIP_EVENT* event;
@@ -277,8 +329,7 @@ SCIP_RETCODE sepastoreAddCut(
     *  - it is a bound change
     * if it is a non-forced cut and no cuts should be added, abort
     */
-   forcecut = forcecut || sepastore->initiallp || sepastore->forcecuts
-      || (!SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1);
+   forcecut = forcecut || sepastore->initiallp || sepastore->forcecuts || (!SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1);
    if( !forcecut && SCIPsetGetSepaMaxcuts(set, root) == 0 )
       return SCIP_OKAY;
 
@@ -403,7 +454,8 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
-   SCIP_Bool             root                /**< are we at the root node? */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the cut is infeasible */
    )
 {
    assert(sepastore != NULL);
@@ -422,7 +474,7 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    }
 
    /* add LP row cut to separation storage */
-   SCIP_CALL( sepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, cut, forcecut, root) );
+   SCIP_CALL( sepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, cut, forcecut, root, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -984,7 +1036,7 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
 
    assert(sepastore != NULL);
 
-   SCIPdebugMessage("clearing %d cuts\n", sepastore->nforcedcuts + sepastore->ncuts);
+   SCIPdebugMessage("clearing %d cuts\n", sepastore->ncuts);
 
    /* release cuts */
    for( c = 0; c < sepastore->ncuts; ++c )

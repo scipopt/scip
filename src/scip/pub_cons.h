@@ -578,6 +578,12 @@ SCIP_Bool SCIPconsIsChecked(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** returns whether the constraint is marked for propagation */
+EXTERN
+SCIP_Bool SCIPconsIsMarkedPropagate(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint should be propagated during node processing */
 EXTERN
 SCIP_Bool SCIPconsIsPropagated(
@@ -702,6 +708,7 @@ SCIP_Bool SCIPconsIsAdded(
 #define SCIPconsIsSeparated(cons)       (cons)->separate
 #define SCIPconsIsEnforced(cons)        (cons)->enforce
 #define SCIPconsIsChecked(cons)         (cons)->check
+#define SCIPconsIsMarkedPropagate(cons) (cons)->markpropagate
 #define SCIPconsIsPropagated(cons)      (cons)->propagate
 #define SCIPconsIsGlobal(cons)          !(cons)->local
 #define SCIPconsIsLocal(cons)           (cons)->local

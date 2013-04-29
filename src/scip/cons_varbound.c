@@ -307,6 +307,11 @@ SCIP_RETCODE consdataCreate(
    {
       SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->var, &(*consdata)->var) );
       SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vbdvar, &(*consdata)->vbdvar) );
+
+#ifndef NDEBUG
+      assert(SCIPvarGetStatus(SCIPvarGetProbvar((*consdata)->var)) != SCIP_VARSTATUS_MULTAGGR);
+      assert(SCIPvarGetStatus(SCIPvarGetProbvar((*consdata)->vbdvar)) != SCIP_VARSTATUS_MULTAGGR);
+#endif
    }
 
    /* capture variables */
@@ -401,9 +406,12 @@ SCIP_RETCODE addRelaxation(
 
    if( !SCIProwIsInLP(consdata->row) )
    {
+      SCIP_Bool infeasible;
+
       SCIPdebugMessage("adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, &infeasible) );
+      assert( ! infeasible );   /* this function is only called from initlp -> row should be feasible */
    }
 
    return SCIP_OKAY;
@@ -941,7 +949,10 @@ SCIP_RETCODE separateCons(
       feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
       if( SCIPisFeasNegative(scip, feasibility) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, &infeasible) );
+         assert( ! infeasible );
          *result = SCIP_SEPARATED;
       }
    }
@@ -2958,6 +2969,12 @@ SCIP_RETCODE tightenCoefs(
    xlb = SCIPvarGetLbGlobal(consdata->var);
    xub = SCIPvarGetUbGlobal(consdata->var);
 
+   /* it can happen that var is not of varstatus SCIP_VARSTATUS_FIXED but the bounds are equal, in this case we need to
+    * stop
+    */
+   if( SCIPisEQ(scip, xlb, xub) )
+      return SCIP_OKAY;
+
    /* modification of coefficient checking for slack in constraints */
    if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs) )
    {
@@ -3708,6 +3725,7 @@ static
 SCIP_DECL_CONSPRESOL(consPresolVarbound)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    SCIP_Bool cutoff;
    int oldnchgbds;
@@ -3735,11 +3753,14 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    oldnchgsides = *nchgsides;
    oldnaggrvars = *naggrvars;
 
-   for( i = 0; i < nconss && !cutoff && !SCIPisStopped(scip); i++ )
+   for( i = 0; i < nconss && !SCIPisStopped(scip); i++ )
    {
-      assert(!SCIPconsIsModifiable(conss[i]));
+      cons = conss[i];
+      assert(cons != NULL);
 
-      consdata = SCIPconsGetData(conss[i]);
+      assert(!SCIPconsIsModifiable(cons));
+
+      consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
       /* force presolving the constraint in the initial round */
@@ -3754,18 +3775,24 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       consdata->propagated = FALSE;
 
       /* incorporate fixings and aggregations in constraint */
-      SCIP_CALL( applyFixings(scip, conss[i], conshdlrdata->eventhdlr, &cutoff, nchgbds, ndelconss, naddconss) );
-      if( cutoff || !SCIPconsIsActive(conss[i]) )
+      SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &cutoff, nchgbds, ndelconss, naddconss) );
+
+      if( cutoff )
+         break;
+      if( !SCIPconsIsActive(cons) )
          continue;
 
       /* propagate constraint */
-      SCIP_CALL( propagateCons(scip, conss[i], conshdlrdata->usebdwidening, &cutoff, nchgbds, nchgsides, ndelconss) );
-      if( cutoff || !SCIPconsIsActive(conss[i]) )
+      SCIP_CALL( propagateCons(scip, cons, conshdlrdata->usebdwidening, &cutoff, nchgbds, nchgsides, ndelconss) );
+
+      if( cutoff )
+         break;
+      if( !SCIPconsIsActive(cons) )
          continue;
 
       /* tighten variable bound coefficient */
-      SCIP_CALL( tightenCoefs(scip, conss[i], nchgcoefs, nchgsides, ndelconss) );
-      if( !SCIPconsIsActive(conss[i]) )
+      SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
+      if( !SCIPconsIsActive(cons) )
          continue;
 
       /** informs once variable x about a globally valid variable lower or upper bound */
@@ -3811,7 +3838,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
          if( *nchgbds > localoldnchgbds )
          {
             /* tighten variable bound coefficient */
-            SCIP_CALL( tightenCoefs(scip, conss[i], nchgcoefs, nchgsides, ndelconss) );
+            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
          }
       }
    }
@@ -4161,9 +4188,9 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
       consdata->propagated = FALSE;
       consdata->presolved = FALSE;
       consdata->tightened = FALSE;
-   }
 
-   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+   }
 
    return SCIP_OKAY;
 }

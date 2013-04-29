@@ -559,7 +559,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_Longint          capacity            /**< capacity of knapsack */
    )
 {
-   int i;
+   int v;
 
    assert(consdata != NULL);
 
@@ -567,16 +567,15 @@ SCIP_RETCODE consdataCreate(
    if( nvars > 0 )
    {
       int k;
-      int v;
 
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->weights, weights, nvars) );
-      
+
       k = 0;
       for( v = 0; v < nvars; ++v )
       {
          assert(vars[v] != NULL);
-         
+
          /* all weight have to be not negative */
          assert( weights[v] >= 0 );
 
@@ -642,6 +641,15 @@ SCIP_RETCODE consdataCreate(
    {
       SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
 
+#ifndef NDEBUG
+      for( v = 0; v < (*consdata)->nvars; v++ )
+      {
+         SCIP_VAR* var = SCIPvarGetProbvar((*consdata)->vars[v]);
+         assert(var != NULL);
+         assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR);
+      }
+#endif
+
       /* allocate memory for additional data structures */
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cliquepartition, (*consdata)->nvars) );
@@ -649,17 +657,17 @@ SCIP_RETCODE consdataCreate(
 
       /* catch events for variables */
       SCIP_CALL( catchEvents(scip, *consdata, eventhdlr) );
-   } 
+   }
 
    /* calculate sum of weights and capture variables */
-   for( i = 0; i < (*consdata)->nvars; ++i )
+   for( v = 0; v < (*consdata)->nvars; ++v )
    {
-      (*consdata)->weightsum += (*consdata)->weights[i];
-      if( SCIPvarGetLbLocal((*consdata)->vars[i]) > 0.5 )
-         (*consdata)->onesweightsum += (*consdata)->weights[i];
+      (*consdata)->weightsum += (*consdata)->weights[v];
+      if( SCIPvarGetLbLocal((*consdata)->vars[v]) > 0.5 )
+         (*consdata)->onesweightsum += (*consdata)->weights[v];
 
       /* capture variables */
-      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[i]) );
+      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
 
    return SCIP_OKAY;
@@ -786,11 +794,15 @@ static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
-   SCIP_SOL*             sol                 /**< primal CIP solution, NULL for current LP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
+   SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
    SCIP_CONSDATA* consdata;
-   
+
+   assert( cutoff != NULL );
+   *cutoff = FALSE;
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -806,7 +818,7 @@ SCIP_RETCODE addRelaxation(
       SCIPdebugMessage("adding relaxation of knapsack constraint <%s> (capacity %"SCIP_LONGINT_FORMAT"): ", 
          SCIPconsGetName(cons), consdata->capacity);
       SCIPdebug( SCIP_CALL(SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
    }
 
    return SCIP_OKAY;
@@ -4723,6 +4735,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
    int                   nnonmincovervars,   /**< number of nonmincover variables */
    SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
    SCIP_GUBSET*          gubset,             /**< GUB set data structure, NULL if no GUB information should be used */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
@@ -4737,6 +4750,9 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
    SCIP_Real cutact;
    int* liftcoefs;
    int liftrhs;
+
+   assert( cutoff != NULL );
+   *cutoff = FALSE;
 
    /* allocates temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &varsC1, nvars) );
@@ -4919,7 +4935,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -4952,6 +4968,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
    int                   nfeassetvars,       /**< number of variables in feasible set */
    int                   nnonfeassetvars,    /**< number of variables not in feasible set */
    SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
@@ -4967,6 +4984,9 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
    int nvarsR;
    int liftrhs;
    int j;
+
+   assert( cutoff != NULL );
+   *cutoff = FALSE;
 
    /* allocates temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &varsT1, nvars) );
@@ -5082,7 +5102,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -5116,6 +5136,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
    int                   nnonmincovervars,   /**< number of nonmincover variables */
    SCIP_Longint          mincoverweight,     /**< weight of minimal cover */
    SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
@@ -5123,6 +5144,8 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
    SCIP_Real cutact;
    int liftrhs;
 
+   assert( cutoff != NULL );
+   *cutoff = FALSE;
    cutact = 0.0;
 
    /* allocates temporary memory */
@@ -5185,7 +5208,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
          }
       }
       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-            
+
       /* checks, if cut is violated enough */
       if( SCIPisCutEfficacious(scip, sol, row) )
       {
@@ -5193,7 +5216,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -5371,6 +5394,7 @@ SCIP_RETCODE getFeasibleSet(
    SCIP_Longint*         coverweight,        /**< pointer to store weight of cover */
    SCIP_Bool             modtransused,       /**< TRUE if mod trans sepa prob was used to find cover */
    SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
@@ -5389,6 +5413,9 @@ SCIP_RETCODE getFeasibleSet(
    assert(*coverweight > 0);
    assert(*coverweight > capacity);
    assert(*ncovervars + *nnoncovervars == nvars - ntightened);
+   assert(cutoff != NULL);
+
+   *cutoff = FALSE;
 
    /* allocates temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeys, *ncovervars) );
@@ -5434,7 +5461,7 @@ SCIP_RETCODE getFeasibleSet(
       if( (*coverweight) <= capacity )
       {
          SCIP_CALL( separateSequLiftedExtendedWeightInequality(scip, cons, sepa, vars, nvars, ntightened, weights, capacity, solvals,
-               covervars, noncovervars, *ncovervars, *nnoncovervars, sol, ncuts) );
+               covervars, noncovervars, *ncovervars, *nnoncovervars, sol, cutoff, ncuts) );
       }
 
       /* stop if cover is too large */
@@ -5459,6 +5486,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    SCIP_Longint          capacity,           /**< capacity of knapsack */
    SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
    SCIP_Bool             usegubs,            /**< should GUB information be used for separation? */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
@@ -5478,7 +5506,10 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    assert(nvars > 0);
    assert(weights != NULL);
    assert(capacity >= 0);
+   assert(cutoff != NULL);
    assert(ncuts != NULL);
+
+   *cutoff = FALSE;
 
    /* increase age of constraint (age is reset to zero, if a cut was found) */
    if( cons != NULL )
@@ -5560,7 +5591,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
          {
             /* separates lifted minimal cover inequalities using sequential up- and down-lifting and GUB information */
             SCIP_CALL( separateSequLiftedMinimalCoverInequality(scip, cons, sepa, vars, nvars, ntightened, weights, capacity,
-                  solvals, covervars, noncovervars, ncovervars, nnoncovervars, sol, gubset, ncuts) );
+                  solvals, covervars, noncovervars, ncovervars, nnoncovervars, sol, gubset, cutoff, ncuts) );
          }
          else
          {
@@ -5568,7 +5599,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
              * GUB information
              */
             SCIP_CALL( separateSequLiftedMinimalCoverInequality(scip, cons, sepa, vars, nvars, ntightened, weights, capacity,
-                  solvals, covervars, noncovervars, ncovervars, nnoncovervars, sol, NULL, ncuts) );
+                  solvals, covervars, noncovervars, ncovervars, nnoncovervars, sol, NULL, cutoff, ncuts) );
          }
       }
 
@@ -5608,43 +5639,45 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
 
          /* separates lifted minimal cover inequalities using sequential up- and down-lifting */
          SCIP_CALL( separateSequLiftedMinimalCoverInequality(scip, cons, sepa, vars, nvars, ntightened, weights, capacity,
-               solvals, covervars, noncovervars, ncovervars, nnoncovervars, sol, NULL, ncuts) );
+               solvals, covervars, noncovervars, ncovervars, nnoncovervars, sol, NULL, cutoff, ncuts) );
 
          if( USESUPADDLIFT ) /*lint !e506 !e774*/
          {
             SCIPdebugMessage("separate LMCI2 cuts:\n");
             /* separates lifted minimal cover inequalities using superadditive up-lifting */
             SCIP_CALL( separateSupLiftedMinimalCoverInequality(scip, cons, sepa, vars, nvars, ntightened, weights, capacity,
-                  solvals, covervars, noncovervars, ncovervars, nnoncovervars, coverweight, sol, ncuts) );
+                  solvals, covervars, noncovervars, ncovervars, nnoncovervars, coverweight, sol, cutoff, ncuts) );
          }
       }
    }
 
    /* LEWI (lifted extended weight inequalities using sequential up- and down-lifting) */
+   if ( ! (*cutoff) )
+   {
+      /* gets a most violated initial cover C_init ( sum_{j in C_init} a_j > a_0 ) by using the
+       * transformed separation problem and taking into account the following fixing:
+       *   j in C_init,           if j in N_1 = {j in N : x*_j = 1} and
+       *   j in N\C_init,         if j in N_0 = {j in N : x*_j = 0},
+       * if one exists
+       */
+      SCIPdebugMessage("separate LEWI cuts:\n");
+      modtransused = FALSE;
+      SCIP_CALL( getCover(scip, vars, nvars, weights, capacity, solvals, covervars, noncovervars, &ncovervars,
+            &nnoncovervars, &coverweight, &coverfound, modtransused, &ntightened, &fractional) );
+      assert(fractional);
+      assert(!coverfound || ncovervars + nnoncovervars == nvars - ntightened);
 
-   /* gets a most violated initial cover C_init ( sum_{j in C_init} a_j > a_0 ) by using the
-    * transformed separation problem and taking into account the following fixing:
-    *   j in C_init,           if j in N_1 = {j in N : x*_j = 1} and
-    *   j in N\C_init,         if j in N_0 = {j in N : x*_j = 0},
-    * if one exists
-    */
-   SCIPdebugMessage("separate LEWI cuts:\n");
-   modtransused = FALSE;
-   SCIP_CALL( getCover(scip, vars, nvars, weights, capacity, solvals, covervars, noncovervars, &ncovervars,
-         &nnoncovervars, &coverweight, &coverfound, modtransused, &ntightened, &fractional) );
-   assert(fractional);
-   assert(!coverfound || ncovervars + nnoncovervars == nvars - ntightened);
-
-   /* if no cover was found we stop the separation routine */
-   if( !coverfound )
-      goto TERMINATE;
-
-   /* converts initial cover C_init to a feasible set by removing variables in the reverse order in which
-    * they were chosen to be in C_init and separates lifted extended weight inequalities using sequential
-    * up- and down-lifting for this feasible set and all subsequent feasible sets.
-    */
-   SCIP_CALL( getFeasibleSet(scip, cons, sepa, vars, nvars, ntightened, weights, capacity, solvals, covervars, noncovervars,
-         &ncovervars, &nnoncovervars, &coverweight, modtransused, sol, ncuts) );
+      /* if no cover was found we stop the separation routine */
+      if( coverfound )
+      {
+         /* converts initial cover C_init to a feasible set by removing variables in the reverse order in which
+          * they were chosen to be in C_init and separates lifted extended weight inequalities using sequential
+          * up- and down-lifting for this feasible set and all subsequent feasible sets.
+          */
+         SCIP_CALL( getFeasibleSet(scip, cons, sepa, vars, nvars, ntightened, weights, capacity, solvals, covervars, noncovervars,
+               &ncovervars, &nnoncovervars, &coverweight, modtransused, sol, cutoff, ncuts) );
+      }
+   }
 
  TERMINATE:
    /* frees temporary memory */
@@ -5666,8 +5699,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
    SCIP_Real             rhs,                /**< right hand side of the continuous knapsack constraint */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   int*                  ncuts,              /**< pointer to add up the number of found cuts */
-   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff was found */
+   int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
    SCIP_VAR** binvars;
@@ -6046,7 +6079,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
       if( maxact > capacity )
       {
          /* separate lifted cut from relaxed knapsack constraint */
-         SCIP_CALL( SCIPseparateKnapsackCuts(scip, cons, sepa, consvars, nconsvars, consvals, capacity, sol, usegubs, ncuts) );
+         SCIP_CALL( SCIPseparateKnapsackCuts(scip, cons, sepa, consvars, nconsvars, consvals, capacity, sol, usegubs, cutoff, ncuts) );
       }
    }
 
@@ -6080,6 +6113,7 @@ SCIP_RETCODE separateCons(
    SCIP_SOL*             sol,                /**< primal SCIP solution, NULL for current LP solution */
    SCIP_Bool             sepacuts,           /**< should knapsack cuts be separated? */
    SCIP_Bool             usegubs,            /**< should GUB information be used for separation? */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
@@ -6087,6 +6121,8 @@ SCIP_RETCODE separateCons(
    SCIP_Bool violated;
 
    assert(ncuts != NULL);
+   assert(cutoff != NULL);
+   *cutoff = FALSE;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -6099,15 +6135,15 @@ SCIP_RETCODE separateCons(
    if( violated )
    {
       /* add knapsack constraint as LP row to the LP */
-      SCIP_CALL( addRelaxation(scip, cons, sol) );
+      SCIP_CALL( addRelaxation(scip, cons, sol, cutoff) );
       (*ncuts)++;
    }
    else if( sepacuts )
    {
       SCIP_CALL( SCIPseparateKnapsackCuts(scip, cons, NULL, consdata->vars, consdata->nvars, consdata->weights,
-            consdata->capacity, sol, usegubs, ncuts) );
+            consdata->capacity, sol, usegubs, cutoff, ncuts) );
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -8086,7 +8122,9 @@ static
 SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
-   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off, or NULL if this
+                                              *   information is not needed; in this case, we apply all fixings
+                                              *   instead of stopping after the first infeasible one */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -8094,13 +8132,13 @@ SCIP_RETCODE applyFixings(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(cutoff != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || consdata->vars != NULL);
 
-   *cutoff = FALSE;
+   if( cutoff != NULL )
+      *cutoff = FALSE;
 
    SCIPdebugMessage("apply fixings:\n");
    SCIPdebugPrintCons(scip, cons, NULL);
@@ -8109,7 +8147,10 @@ SCIP_RETCODE applyFixings(
    if ( consdata->onesweightsum > consdata->capacity )
    {
       SCIPdebugMessage("apply fixings detected cutoff.\n");
-      *cutoff = TRUE;
+
+      if( cutoff != NULL )
+         *cutoff = TRUE;
+
       return SCIP_OKAY;
    }
 
@@ -8245,8 +8286,11 @@ SCIP_RETCODE applyFixings(
 
             if( consdata->capacity < 0 )
             {
-               *cutoff = TRUE;
-               break;
+               if( cutoff != NULL )
+               {
+                  *cutoff = TRUE;
+                  break;
+               }
             }
          }
          /* check, if the variable should be replaced with the representative */
@@ -8270,7 +8314,7 @@ SCIP_RETCODE applyFixings(
    /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have to
     * clean up the constraint
     */
-   if( !(*cutoff) )
+   if( cutoff != NULL && !(*cutoff) )
    {
       SCIP_CALL( mergeMultiples(scip, cons, cutoff) );
       SCIPdebugMessage("after applyFixings and merging:\n");
@@ -8737,35 +8781,38 @@ SCIP_RETCODE tightenWeightsLift(
          cliquevars = SCIPcliqueGetVars(cliques[j]);
          cliquevalues = SCIPcliqueGetValues(cliques[j]);
 
-         for( k = 0; k < ncliquevars && !memlimitreached; ++k )
+         for( k = ncliquevars - 1; k >= 0; --k )
          {
-            if( cliquevars[k] != var )
+            SCIP_Bool implvalue;
+            int probindex;
+
+            if( var == cliquevars[k] )
+               continue;
+
+            probindex = SCIPvarGetProbindex(cliquevars[k]);
+            assert(0 <= probindex && probindex < nbinvars);
+            implvalue = cliquevalues[k];
+
+            /* insert the item into the list of the clique variable/value */
+            if( !zeroiteminserted[implvalue][probindex] )
             {
-               int probindex;
-               SCIP_Bool implvalue;
-
-               probindex = SCIPvarGetProbindex(cliquevars[k]);
-               assert(0 <= probindex && probindex < nbinvars);
-               implvalue = cliquevalues[k];
-
-               /* insert the item into the list of the clique variable/value */
-               if( !zeroiteminserted[implvalue][probindex] )
+               if( firstidxs[implvalue][probindex] == 0 )
                {
-                  if( firstidxs[implvalue][probindex] == 0 )
-                  {
-                     tmpboolindices2[tmp2] = implvalue;
-                     tmpindices2[tmp2] = probindex;
-                     ++tmp2;
-                  }
-
-                  SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
-                        &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems, probindex, implvalue, i, weight,
-                        &memlimitreached) );
-                  zeroiteminserted[implvalue][probindex] = TRUE;
-                  tmpboolindices[tmp] = implvalue;
-                  tmpindices[tmp] = probindex;
-                  ++tmp;
+                  tmpboolindices2[tmp2] = implvalue;
+                  tmpindices2[tmp2] = probindex;
+                  ++tmp2;
                }
+
+               SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
+                     &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems, probindex, implvalue, i, weight,
+                     &memlimitreached) );
+               zeroiteminserted[implvalue][probindex] = TRUE;
+               tmpboolindices[tmp] = implvalue;
+               tmpindices[tmp] = probindex;
+               ++tmp;
+
+               if( memlimitreached )
+                  break;
             }
          }
       }
@@ -10462,9 +10509,19 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int c;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      if( !SCIPconsIsDeleted(conss[c]) )
+      {
+         /* since we are not allowed to detect infeasibility in the exitpre stage, we dont give an infeasible pointer */
+         SCIP_CALL( applyFixings(scip, conss[c], NULL) );
+      }
+   }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -10576,12 +10633,14 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
 static
 SCIP_DECL_CONSINITLP(consInitlpKnapsack)
 {  /*lint --e{715}*/
+   SCIP_Bool cutoff;
    int i;
 
    for( i = 0; i < nconss; i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i], NULL) );
+      SCIP_CALL( addRelaxation(scip, conss[i], NULL, &cutoff) );
+      /* ignore cutoff: cannot return status */
    }
 
    return SCIP_OKAY;
@@ -10593,12 +10652,13 @@ SCIP_DECL_CONSSEPALP(consSepalpKnapsack)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool sepacardinality;
+   SCIP_Bool cutoff;
 
    SCIP_Real loclowerbound;
    SCIP_Real glblowerbound;
    SCIP_Real cutoffbound;
    SCIP_Real maxbound;
-  
+
    int depth;
    int nrounds;
    int sepafreq;
@@ -10646,13 +10706,15 @@ SCIP_DECL_CONSSEPALP(consSepalpKnapsack)
    /* separate useful constraints */
    for( i = 0; i < nusefulconss && ncuts < maxsepacuts && !SCIPisStopped(scip); i++ )
    {
-      SCIP_CALL( separateCons(scip, conss[i], NULL, sepacardinality, conshdlrdata->usegubs, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[i], NULL, sepacardinality, conshdlrdata->usegubs, &cutoff, &ncuts) );
    }
-   
+
    /* adjust return value */
-   if( ncuts > 0 )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( ncuts > 0 )
       *result = SCIP_SEPARATED;
-   
+
    return SCIP_OKAY;
 }
 
@@ -10663,6 +10725,8 @@ SCIP_DECL_CONSSEPASOL(consSepasolKnapsack)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool sepacardinality;
+   SCIP_Bool cutoff;
+
    int depth;
    int nrounds;
    int sepafreq;
@@ -10702,13 +10766,15 @@ SCIP_DECL_CONSSEPASOL(consSepasolKnapsack)
    /* separate useful constraints */
    for( i = 0; i < nusefulconss && ncuts < maxsepacuts && !SCIPisStopped(scip); i++ )
    {
-      SCIP_CALL( separateCons(scip, conss[i], sol, sepacardinality, conshdlrdata->usegubs, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[i], sol, sepacardinality, conshdlrdata->usegubs, &cutoff, &ncuts) );
    }
-   
+
    /* adjust return value */
-   if( ncuts > 0 )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( ncuts > 0 )
       *result = SCIP_SEPARATED;
-   
+
    return SCIP_OKAY;
 }
 
@@ -10719,8 +10785,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpKnapsack)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool violated;
+   SCIP_Bool cutoff = FALSE;
    int maxncuts;
-   int ncuts;
+   int ncuts = 0;
    int i;
 
    *result = SCIP_FEASIBLE;
@@ -10732,34 +10799,34 @@ SCIP_DECL_CONSENFOLP(consEnfolpKnapsack)
    assert(conshdlrdata != NULL);
    maxncuts = (SCIPgetDepth(scip) == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
 
-   ncuts = 0;
-
    /* search for violated useful knapsack constraints */
-   for( i = 0; i < nusefulconss && ncuts < maxncuts; i++ )
+   for( i = 0; i < nusefulconss && ncuts < maxncuts && ! cutoff; i++ )
    {
       SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, FALSE, &violated) );
       if( violated )
       {
          /* add knapsack constraint as LP row to the LP */
-         SCIP_CALL( addRelaxation(scip, conss[i], NULL) );
+         SCIP_CALL( addRelaxation(scip, conss[i], NULL, &cutoff) );
          ncuts++;
       }
    } 
 
    /* as long as no violations were found, search for violated obsolete knapsack constraints */
-   for( i = nusefulconss; i < nconss && ncuts == 0; i++ )
+   for( i = nusefulconss; i < nconss && ncuts == 0 && ! cutoff; i++ )
    {
       SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, FALSE, &violated) );
       if( violated )
       {
          /* add knapsack constraint as LP row to the LP */
-         SCIP_CALL( addRelaxation(scip, conss[i], NULL) );
+         SCIP_CALL( addRelaxation(scip, conss[i], NULL, &cutoff) );
          ncuts++;
       }
-   } 
+   }
 
    /* adjust the result code */
-   if( ncuts > 0 )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( ncuts > 0 )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -10891,7 +10958,6 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       SCIPdebugPrintCons(scip, cons, NULL);
       consdata->presolved = TRUE;
 
-      /* remove all fixed variables */
       if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0
          || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
       {
@@ -10899,6 +10965,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          if( cutoff )
             break;
       }
+
       thisnfixedvars = *nfixedvars;
       thisnchgbds = *nchgbds;
 
@@ -10911,7 +10978,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       SCIP_CALL( addCliques(scip, cons, &cutoff, nchgbds) );
       if( cutoff )
          break;
-      
+
       /* propagate constraint */
       SCIP_CALL( propagateCons(scip, cons, &cutoff, &redundant, nfixedvars, TRUE) );
       if( cutoff )

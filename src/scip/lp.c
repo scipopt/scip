@@ -4306,6 +4306,19 @@ SCIP_Longint SCIPcolGetStrongbranchLPAge(
    return (col->sbnode != stat->nnodes ? SCIP_LONGINT_MAX : stat->lpcount - stat->ndivinglps - col->validsblp);
 }
 
+/** marks a column to be not removable from the LP in the current node because it became obsolete */
+void SCIPcolMarkNotRemovableLocal(
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(col  != NULL);
+   assert(stat != NULL);
+   assert(stat->nnodes > 0);
+
+   /* lpRemoveObsoleteCols() does not remove a column if the node number stored in obsoletenode equals the current node number */
+   col->obsoletenode = stat->nnodes;
+}
 
 
 /*
@@ -6861,6 +6874,19 @@ SCIP_RETCODE SCIProwDropEvent(
    return SCIP_OKAY;
 }
 
+/** marks a row to be not removable from the LP in the current node because it became obsolete */
+void SCIProwMarkNotRemovableLocal(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(row  != NULL);
+   assert(stat != NULL);
+   assert(stat->nnodes > 0);
+
+   /* lpRemoveObsoleteRows() does not remove a row if the node number stored in obsoletenode equals the current node number */
+   row->obsoletenode = stat->nnodes;
+}
 
 /*
  * LP solver data update
@@ -15941,7 +15967,7 @@ SCIP_RETCODE lpRemoveObsoleteCols(
       assert(cols[c]->lppos == c);
       assert(cols[c]->lpipos == c);
       if( cols[c]->removable
-         && cols[c]->obsoletenode != stat->nnodes /* don't remove column a second time from same node (avoid cycling) */
+         && cols[c]->obsoletenode != stat->nnodes /* don't remove column a second time from same node (avoid cycling), or a first time if marked nonremovable locally */
          && cols[c]->age > set->lp_colagelimit
          && (SCIP_BASESTAT)cols[c]->basisstatus != SCIP_BASESTAT_BASIC
          && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
@@ -16020,7 +16046,7 @@ SCIP_RETCODE lpRemoveObsoleteRows(
       assert(rows[r]->lppos == r);
       assert(rows[r]->lpipos == r);
       if( rows[r]->removable
-         && rows[r]->obsoletenode != stat->nnodes  /* don't remove row a second time from same node (avoid cycling) */
+         && rows[r]->obsoletenode != stat->nnodes  /* don't remove row a second time from same node (avoid cycling), or a first time if marked nonremovable locally */
          && rows[r]->age > set->lp_rowagelimit
          && (SCIP_BASESTAT)rows[r]->basisstatus == SCIP_BASESTAT_BASIC )
       {

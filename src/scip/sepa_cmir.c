@@ -180,6 +180,7 @@ SCIP_RETCODE addCut(
    SCIP_Bool             cutremovable,       /**< should the cut be removed from the LP due to aging or cleanup? */
    int                   cutrank,            /**< rank of the cut */
    const char*           cutclassname,       /**< name of cut class to use for row names */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to count the number of added cuts */
    )
 {
@@ -193,7 +194,10 @@ SCIP_RETCODE addCut(
    assert(scip != NULL);
    assert(varsolvals != NULL);
    assert(cutcoefs != NULL);
+   assert(cutoff != NULL);
    assert(ncuts != NULL);
+
+   *cutoff = FALSE;
 
    /* get active problem variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -252,8 +256,8 @@ SCIP_RETCODE addCut(
                SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
-            SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
-            if( !cutislocal )
+            SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+            if( !(*cutoff) && !cutislocal )
             {
                SCIP_CALL( SCIPaddPoolCut(scip, cut) );
             }
@@ -432,6 +436,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    SCIP_Bool             trynegscaling,      /**< should negative values also be tested in scaling? */
    SCIP_Bool             cutremovable,       /**< should the cut be removed from the LP due to aging or cleanup? */
    const char*           cutclassname,       /**< name of cut class to use for row names */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts,              /**< pointer to count the number of generated cuts */
    SCIP_Real*            delta,              /**< pointer to store best delta found; NULL, if cut should be added here */
    SCIP_Bool*            deltavalid          /**< pointer to store whether best delta value is valid or NULL */
@@ -451,9 +456,12 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    int ntesteddeltas;
    int vi;
 
+   assert( cutoff != NULL );
+   *cutoff = FALSE;
+
    if( maxtestdelta == -1 )
       maxtestdelta = INT_MAX;
-   
+
    if( delta != NULL )
       *deltavalid = FALSE;
 
@@ -593,7 +601,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
          assert(success); 
          
          /* add the cut to the separation storage */
-         SCIP_CALL( addCut(scip, sepa, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutremovable, cutrank, cutclassname, ncuts) );
+         SCIP_CALL( addCut(scip, sepa, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutremovable, cutrank, cutclassname, cutoff, ncuts) );
       }
       else
       {
@@ -683,6 +691,7 @@ SCIP_RETCODE aggregation(
    SCIP_Real             maxslack,           /**< maximal slack of rows to be used in aggregation */
    int                   maxconts,           /**< maximal number of active continuous variables in aggregated row */
    SCIP_Bool*            wastried,           /**< pointer to store whether the given startrow was actually tried */
+   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to count the number of generated cuts */
    )
 {
@@ -720,8 +729,10 @@ SCIP_RETCODE aggregation(
    assert(rowlhsscores != NULL);
    assert(rowrhsscores != NULL);
    assert(wastried != NULL);
+   assert(cutoff != NULL);
    assert(ncuts != NULL);
 
+   *cutoff = FALSE;
    *wastried = FALSE;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
@@ -849,9 +860,12 @@ SCIP_RETCODE aggregation(
        * try to generate a MIR cut out of the current aggregation 
        */
       oldncuts = *ncuts;
-      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, sepa, sol, varsolvals, sepadata->maxtestdelta, rowweights, BOUNDSWITCH, 
-            USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, (int) MAXAGGRLEN(nvars), sepadata->maxrowfac, MINFRAC, MAXFRAC, 
-            sepadata->trynegscaling, sepadata->dynamiccuts, "cmir", ncuts, NULL, NULL) );
+      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, sepa, sol, varsolvals, sepadata->maxtestdelta, rowweights, BOUNDSWITCH,
+            USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, (int) MAXAGGRLEN(nvars), sepadata->maxrowfac, MINFRAC, MAXFRAC,
+            sepadata->trynegscaling, sepadata->dynamiccuts, "cmir", cutoff, ncuts, NULL, NULL) );
+
+      if ( *cutoff )
+         break;
 
       /* if the cut was successfully added, abort the aggregation of further rows */
       if( *ncuts > oldncuts )
@@ -1191,6 +1205,7 @@ SCIP_RETCODE separateCuts(
    int* roworder;
    SCIP_Real maxslack;
    SCIP_Real objnorm;
+   SCIP_Bool cutoff = FALSE;
    int nvars;
    int nintvars;
    int ncontvars;
@@ -1409,10 +1424,14 @@ SCIP_RETCODE separateCuts(
 
       oldncuts = ncuts;
       SCIP_CALL( aggregation(scip, sepa, sepadata, sol, varsolvals, bestcontlbs, bestcontubs, contvarscorebounds,
-            rowlhsscores, rowrhsscores, roworder[r], maxaggrs, maxslack, maxconts, &wastried, &ncuts) );
+            rowlhsscores, rowrhsscores, roworder[r], maxaggrs, maxslack, maxconts, &wastried, &cutoff, &ncuts) );
+      if ( cutoff )
+         break;
+
       if( !wastried )
          continue;
       ntries++;
+
       if( ncuts == oldncuts )
       {
          nfails++;
@@ -1433,9 +1452,11 @@ SCIP_RETCODE separateCuts(
    SCIPfreeBufferArray(scip, &rowrhsscores);
    SCIPfreeBufferArray(scip, &rowlhsscores);
 
-   if( ncuts > 0 )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( ncuts > 0 )
       *result = SCIP_SEPARATED;
-    
+
    return SCIP_OKAY;
 }
 

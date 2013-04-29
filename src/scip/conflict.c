@@ -3826,6 +3826,11 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
                assert(conflictFirstCand(conflict) == NULL); /* the starting UIP was not resolved */
          }
 
+         /* check conflict graph frontier on debugging solution */
+         SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
+               bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos,
+               conflict->bdchgqueue, conflict->forcedbdchgqueue) );
+
          /* get next conflicting bound from the conflict candidate queue (this does not need to be nextbdchginfo, because
           * due to resolving the bound changes, a variable could be added to the queue which must be
           * resolved before nextbdchginfo)
@@ -3950,6 +3955,12 @@ SCIP_RETCODE conflictAnalyze(
    lastconsresoldepth = (mustresolve ? currentdepth : INT_MAX);
    bdchginfo = conflictFirstCand(conflict);
    nfirstuips = 0;
+
+   /* check if the initial reason on debugging solution */
+   SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
+         NULL, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos,
+         conflict->bdchgqueue, conflict->forcedbdchgqueue) );
+
    while( bdchginfo != NULL && validdepth <= maxvaliddepth )
    {
       SCIP_BDCHGINFO* nextbdchginfo;
@@ -4083,6 +4094,11 @@ SCIP_RETCODE conflictAnalyze(
             SCIP_CALL( conflictAddConflictBound(conflict, blkmem, set, bdchginfo, relaxedbd) );
          }
       }
+
+      /* check conflict graph frontier on debugging solution */
+      SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
+            bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos,
+            conflict->bdchgqueue, conflict->forcedbdchgqueue) );
 
       /* get next conflicting bound from the conflict candidate queue (this needs not to be nextbdchginfo, because
        * due to resolving the bound changes, a bound change could be added to the queue which must be

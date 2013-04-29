@@ -1177,6 +1177,27 @@ SCIP_RETCODE SCIPconsAddLocks(
 extern
 SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons);
 
+/*
+ * method for arrays of contraint handlers
+ */
+
+/** stores all constraints marked for propagation away when probing is started */
+extern
+SCIP_RETCODE SCIPconshdlrsStorePropagationStatus(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONSHDLR**       conshdlrs,          /**< all constraint handlers */
+   int                   nconshdlrs          /**< number of contraint handlers */
+   );
+
+/** reset all constraints marked for propagation when probing was finished */
+extern
+SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CONSHDLR**       conshdlrs,          /**< all constraint handlers */
+   int                   nconshdlrs          /**< number of contraint handlers */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -8,6 +8,8 @@ fixed bugs:
   transformed problem to be infeasible in the original problem
 - fixed bug when flushing the warning buffer when SCIP is closed
 - fixed wrong strong branching results in lpi_grb.c and an invalid write
+- fixed wrong presolving finished status which sometimes occurred when the time limit was hit during presolve
+- fixed several bugs where variables or constraints were not freed correctly
 
 data structures
 - new data structure for (circular) queues (SCIP_QUEUE)
@@ -44,6 +46,9 @@ features:
 - added new statistic which distinguish between internal nodes and leaves which got processed
 - added reader_pbm, which writes the matrix structure in pbm format (possibly scaled to given size)
 - added possibility to separate a cutpool w.r.t. given solution (instead of LP-solution)
+- added multi-aggregation for binary variables with at most two uplocks and two downlocks, which emerge from set-
+  partitioning or set-packing constraints
+- added full-dual presolving step in setppc constraint handler
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -54,7 +59,10 @@ performance improvements:
 - disabled multi-aggregation in linear constraint handler when coefficients differ too much
 - improved multi-aggregation in linear constraint handler when only one variable in the aggregation has infinity
   contribution
-- stop pricing if the lower bound computed by pricing already exceeds the cutoff bound
+- improved dual-presolving for setppc constraints in special cases
+- apply lowerbound provided by pricers already during pricing loop, stop pricing if the lower bound computed by pricing
+  already exceeds the cutoff bound
+- improved performance of method SCIPsolRetransform() when called during presolving with many aggregations
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
@@ -86,6 +94,10 @@ interface
 - SCIPcalcMIR() takes an additional parameter sidetypes to determine which side of the rows to use (relevant for ranged rows)
 - New methods SCIPconshdlrIncNCutsFound(), SCIPsepaIncNCutsFound(), and SCIPsepaIncNCutsFoundAtNode() to increase the number of found cuts
 - added function SCIPseparateSolCutpool() to separate a cutpool w.r.t. a given solution
+- added method SCIPdoNotMultaggr() returning whether multi-aggregation is completely disabled
+- added method SCIPconsIsMarkedPropagate() to ask whether a constraint was explicitly added for propagation
+- SCIPgetConsCopy() now always captures the created constraint
+- SCIPaddCut() has an additional parameter that determines whether the cut to be added is infeasible
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
@@ -120,6 +132,7 @@ core:
 - the main output routine of message.c (bufferMessage - now handleMessage) has been rewritten: it now does not need
   a copy of the string to be output anymore, which makes the code much simpler (and also faster); it is passed a
   function pointer to the output function and uses it to directly output the (buffered) messages
+- changed all calls to SCIPaddCut() to take infeasibility parameter
 
 
 SCIP version 3.0.2
@@ -150,6 +163,8 @@ fixed bugs:
 - fixed iteration limit determination in sepa_closecuts
 - fixed bug in prop_vbound w.r.t. creation of variables during the search
 - fixed bug using a too hard comparison on the objective-infeasible-decision in constraint enforcement
+- fixed possible cycling in enforcement of nonlinear constraints due to too early removal of newly added cuts from LP
+- fixed solution collection when counting solutions
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
@@ -165,6 +180,8 @@ performance improvements:
 interface:
 - allow to add columns (rows) with nonzero indices beyond current number of rows (columns) in SoPlex LPi
 - remove problematic function cons_indicator:SCIPsetSlackVarIndicator()
+- added methods SCIPmarkColNotRemovableLocal() and SCIPmarkRowNotRemovableLocal() to forbid removal of an column/row
+  from the LP in the current node
 
 
 SCIP version 3.0.1

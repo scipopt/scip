@@ -2783,6 +2783,7 @@ SCIP_RETCODE extendToCover(
          else
          {
             SCIP_ROW* row;
+            SCIP_Bool rowinfeasible;
 
             /* create row */
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "iis", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
@@ -2814,7 +2815,8 @@ SCIP_RETCODE extendToCover(
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &rowinfeasible) );
+            assert( ! rowinfeasible );
 
             /* cut should be violated: */
             assert( SCIPisFeasNegative(scip, SCIPgetRowSolFeasibility(scip, row, sol)) );
@@ -2946,6 +2948,10 @@ SCIP_RETCODE consdataCreate(
       }
 #endif
    }
+
+   /* capture slack variable and linear constraint */
+   SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->slackvar) );
+   SCIP_CALL( SCIPcaptureCons(scip, (*consdata)->lincons) );
 
    return SCIP_OKAY;
 }
@@ -3998,6 +4004,7 @@ SCIP_RETCODE separateIndicators(
             if ( SCIPisEfficacious(scip, activity) )
             {
                SCIP_ROW* row;
+               SCIP_Bool infeasible;
                char name[50];
 #ifndef NDEBUG
                (void) SCIPsnprintf(name, 50, "couple%d", c);
@@ -4016,7 +4023,8 @@ SCIP_RETCODE separateIndicators(
 #ifdef SCIP_OUTPUT
                SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+               assert( ! infeasible );
                SCIP_CALL( SCIPreleaseRow(scip, &row));
 
                SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
@@ -4544,22 +4552,14 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
                   (SCIP_EVENTDATA*) conshdlrdata, -1) );
          }
       }
-
-      /* Can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible? */
-      assert( (*consdata)->lincons != NULL );
-
-      /* release linear constraint if it is transformed as well - otherwise initpre has not been called */
-      if ( SCIPconsIsTransformed((*consdata)->lincons) )
-      {
-         SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
-      }
    }
-   else
-   {
-      /* release linear constraint and slack variable only for nontransformed constraint */
-      SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->slackvar) );
-      SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
-   }
+
+   /* Can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible? */
+   assert( (*consdata)->lincons != NULL );
+
+   /* release linear constraint and slack variable */
+   SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->slackvar) );
+   SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
 
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -4668,6 +4668,8 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
 
          SCIP_CALL( SCIPgetTransformedCons(scip, consdata->lincons, &translincons) );
          assert( translincons != NULL );
+
+         SCIP_CALL( SCIPreleaseCons(scip, &consdata->lincons) );
          SCIP_CALL( SCIPcaptureCons(scip, translincons) );
          consdata->lincons = translincons;
       }
@@ -4930,6 +4932,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
          else
          {
             SCIP_ROW* row;
+            SCIP_Bool infeasible;
 
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -4942,7 +4945,8 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+            assert( ! infeasible );
 
             SCIP_CALL( SCIPaddPoolCut(scip, row) );
             SCIP_CALL( SCIPreleaseRow(scip, &row));
@@ -5467,9 +5471,9 @@ static
 SCIP_DECL_CONSCOPY(consCopyIndicator)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* sourceconsdata;
-   SCIP_CONS* targetlincons;
-   SCIP_VAR* targetbinvar;
-   SCIP_VAR* targetslackvar;
+   SCIP_CONS* targetlincons = NULL;
+   SCIP_VAR* targetbinvar = NULL;
+   SCIP_VAR* targetslackvar = NULL;
    SCIP_CONS* sourcelincons;
    SCIP_CONSHDLR* conshdlrlinear;
    const char* consname;
@@ -5526,6 +5530,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
          /* adjust the linear constraint in the original constraint (no need to release translincons) */
          SCIP_CALL( SCIPgetTransformedCons(sourcescip, sourcelincons, &translincons) );
          assert(translincons != NULL);
+         SCIP_CALL( SCIPreleaseCons(sourcescip, &sourceconsdata->lincons) );
          SCIP_CALL( SCIPcaptureCons(sourcescip, translincons) );
          sourceconsdata->lincons = translincons;
          sourcelincons = translincons;
@@ -5563,8 +5568,8 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    if ( *valid )
    {
       assert( targetlincons != NULL );
-      assert( targetbinvar != NULL ); /*lint !e644*/
-      assert( targetslackvar != NULL ); /*lint !e644*/
+      assert( targetbinvar != NULL );
+      assert( targetslackvar != NULL );
 
       /* creates indicator constraint (and captures the linear constraint) */
       SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
@@ -5575,8 +5580,8 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy linear constraint <%s>\n", SCIPconsGetName(sourcelincons));
    }
 
-   /* release empty constraint */
-   if ( SCIPconsIsDeleted(sourcelincons) )
+   /* relase copied linear constraint */
+   if( targetlincons != NULL )
    {
       SCIP_CALL( SCIPreleaseCons(scip, &targetlincons) );
    }
@@ -5659,7 +5664,7 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
 
       if ( lincons == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin%s> or <%s>.\n",
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin_%s> or <%s>.\n",
             name, binvarname, binvarname);
          *success = FALSE;
          return SCIP_OKAY;
@@ -6245,6 +6250,10 @@ SCIP_RETCODE SCIPcreateConsIndicator(
             local, modifiable, dynamic, removable, stickingatnode) );
    }
 
+   /* release slack variable and linear constraint */
+   SCIP_CALL( SCIPreleaseVar(scip, &slackvar) );
+   SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+
    return SCIP_OKAY;
 }
 
@@ -6352,10 +6361,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
 
    /* mark slack variable not to be multi-aggregated */
    SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
-
-   /* capture slack variable and linear constraint */
-   SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
-   SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
    /* if the problem should be decomposed (only if all variables are continuous) */
    linconsactive = TRUE;

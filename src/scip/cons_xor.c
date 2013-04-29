@@ -1439,12 +1439,11 @@ SCIP_RETCODE addRelaxation(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Bool infeasible;
    int r;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   SCIPdebugMessage("Add relaxation of xor constraint <%s>\n", SCIPconsGetName(cons));
 
    if( consdata->rows[0] == NULL )
    {
@@ -1455,7 +1454,8 @@ SCIP_RETCODE addRelaxation(
    {
       if( consdata->rows[r] != NULL && !SCIProwIsInLP(consdata->rows[r]) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE, &infeasible) );
+         assert( ! infeasible );   /* function is only called from initlp -> row should be feasible */
       }
    }
 
@@ -1541,21 +1541,62 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
-/** separates current LP solution */
+/** separates current LP solution
+ *
+ *  Consider a XOR-constraint
+ *  \f[
+ *    x_1 \oplus x_2 \oplus \dots \oplus x_n = b
+ *  \f]
+ *  with \f$b \in \{0,1\}\f$ and a solution \f$x^*\f$ to be cut off. Small XOR constraints are handled by adding the
+ *  inequalities of the convex hull.
+ *
+ *  The separation of larger XOR constraints has been described by @n
+ *  Xiaojie Zhang and Paul H. Siegel@n
+ *  "Adaptive Cut Generation Algorithm for Improved Linear Programming Decoding of Binary Linear Codes"@n
+ *  IEEE Transactions on Information Theory, vol. 58, no. 10, 2012
+ *
+ *  We separate the inequalities
+ *  \f[
+ *    \sum_{j \in S} (1 - x_j) + \sum_{j \notin S} x_j \geq 1
+ *  \f]
+ *  with \f$|S| \equiv (b+1) \mbox{ mod } 2\f$ as follows. That these inequalities are valid can be seen as follows: Let
+ *  \f$x\f$ be a feasible solution and suppose that the inequality is violated for some \f$S\f$. Then \f$x_j = 1\f$ for
+ *  all \f$j \in S\f$ and \f$x_j = 0\f$ for all \f$j \notin S\f$. Thus we should have
+ *  \f[
+ *    \oplus_{j \in S} x_j = |S| \mbox{ mod } 2 = b+1 \mbox{ mod } 2,
+ *  \f]
+ *  which is not equal to \f$b\f$ as required by the XOR-constraint.
+ *
+ *  Let \f$L= \{j \;:\; x^*_j > \frac{1}{2}\}\f$. Suppose that \f$|L|\f$ has @em not the same parity as \f$b\f$ rhs. Then
+ *  \f[
+ *    \sum_{j \in L} (1 - x_j) + \sum_{j \notin L} x_j \geq 1
+ *  \f]
+ *  is the only inequality that can be violated. We rewrite the inequality as
+ *  \f[
+ *     \sum_{j \in L} x_j - \sum_{j \notin L} x_j \leq |L| - 1.
+ *  \f]
+ *  These inequalities are added.
+ *
+ *  Otherwise let \f$k = \mbox{argmin}\{x^*_j \;:\; j \in L\}\f$ and check the inequality for \f$L \setminus \{k\}\f$
+ *  and similarly for \f$k = \mbox{argmax}\{x^*_j \;:\; j \in L\}\f$.
+ */
 static
 SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool             separateparity,     /**< should parity inequalities be separated? */
-   SCIP_Bool*            separated           /**< pointer to store whether a cut was found */
+   SCIP_Bool*            separated,          /**< pointer to store whether a cut was found */
+   SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real feasibility;
    int r;
 
-   assert(separated != NULL);
+   assert( separated != NULL );
+   assert( cutoff != NULL );
+   *cutoff = FALSE;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1577,7 +1618,9 @@ SCIP_RETCODE separateCons(
          feasibility = SCIPgetRowSolFeasibility(scip, consdata->rows[r], sol);
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE, cutoff) );
+            if ( *cutoff )
+               return SCIP_OKAY;
             *separated = TRUE;
          }
       }
@@ -1586,85 +1629,158 @@ SCIP_RETCODE separateCons(
    /* separate parity inequalities if required */
    if ( separateparity && consdata->nvars > 3 )
    {
-      SCIP_Real* vals;
+      char name[SCIP_MAXSTRLEN];
+      SCIP_Real maxval = -1.0;
+      SCIP_Real minval = 2.0;
       SCIP_Real sum = 0.0;
-      SCIP_Real val = 0.0;
-      int* idx;
-      int start = 0;
+      int maxidx = -1;
+      int minidx = -1;
       int ngen = 0;
+      int cnt = 0;
       int j;
 
       SCIPdebugMessage("separating parity inequalities ...\n");
 
-      /* get solution values */
-      SCIP_CALL( SCIPallocBufferArray(scip, &vals, consdata->nvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &idx, consdata->nvars) );
+      /* compute value */
       for (j = 0; j < consdata->nvars; ++j)
       {
-         vals[j] = SCIPgetSolVal(scip, sol, consdata->vars[j]);
-         idx[j] = j;
+         SCIP_Real val;
+
+         val = SCIPgetSolVal(scip, sol, consdata->vars[j]);
+         if ( SCIPisFeasGT(scip, val, 0.5) )
+         {
+            if ( val < minval )
+            {
+               minval = val;
+               minidx = j;
+            }
+            ++cnt;
+            sum += (1.0 - val);
+         }
+         else
+         {
+            if ( val > maxval )
+            {
+               maxval = val;
+               maxidx = j;
+            }
+            sum += val;
+         }
       }
 
-      /* sort solution values */
-      SCIPsortDownRealInt(vals, idx, consdata->nvars);
-
-      /* compute total sum */
-      for (j = 0; j < consdata->nvars; ++j)
-         sum += vals[j];
-
-      /* make sure that we consider even sets if the rhs is 1 */
-      if ( consdata->rhs )
-         start = 1;
-
-      /* compute start */
-      for (j = 0; j < start; ++j)
-         val += vals[j];
-
-      /* pass through values */
-      for (j = start; j < consdata->nvars; j = j+2)
+      /* if size of set does not have the same parity as rhs (e.g., size is odd if rhs is 0) */
+      if ( (cnt - consdata->rhs) % 2 == 1 )
       {
-         val += vals[j];
-
-         if ( SCIPisEfficacious(scip, 2.0 * val - sum - (SCIP_Real) j) )
+         if ( SCIPisEfficacious(scip, 1.0 - sum) )
          {
             SCIP_ROW* row;
-            int l;
 
-            SCIPdebugMessage("found violated parity cut (j: %d, efficiacy: %f)\n", j, 2.0 * val - sum - (SCIP_Real) j);
+            SCIPdebugMessage("found violated parity cut (efficiacy: %f)\n", 1.0 - sum);
 
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons), -SCIPinfinity(scip), (SCIP_Real) j, FALSE, FALSE, TRUE) );
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "parity#%s", SCIPconsGetName(cons));
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) (cnt - 1), FALSE, FALSE, TRUE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             /* fill in row */
-            for (l = 0; l <= j; ++l)
+            for (j = 0; j < consdata->nvars; ++j)
             {
-               assert( 0 <= idx[l] && idx[l] < consdata->nvars );
-               SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[idx[l]], 1.0) );
+               if ( SCIPisFeasGT(scip, SCIPgetSolVal(scip, sol, consdata->vars[j]), 0.5) )
+               {
+                  SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[j], 1.0) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[j], -1.0) );
+               }
             }
-            for (l = j+1; l < consdata->nvars; ++l)
-            {
-               assert( 0 <= idx[l] && idx[l] < consdata->nvars );
-               SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[idx[l]], -1.0) );
-            }
-
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
-            assert( SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real)(j-1)) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
+            assert( SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real) (cnt-1)) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
             ++ngen;
+         }
+      }
+      else
+      {
+         /* If the parity is equal: check removing the element with smallest value from the set and adding the
+          * element with largest value to the set. If we remove the element with smallest value, we have to subtract (1
+          * - minval) and add minval to correct the sum. */
+         if ( SCIPisEfficacious(scip, 1.0 - (sum - 1.0 + 2.0 * minval)) )
+         {
+            SCIP_ROW* row;
 
-            /* stop search -> no more violated inequalites will be found */
-            break;
+            SCIPdebugMessage("found violated parity cut (efficiacy: %f, minval: %f)\n", 1.0 - (sum - 1.0 + 2.0 * minval), minval);
+
+            /* the rhs of the inequality is the corrected set size minus 1 */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "parity#%s", SCIPconsGetName(cons));
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) (cnt - 2), FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
+            /* fill in row */
+            for (j = 0; j < consdata->nvars; ++j)
+            {
+               if ( SCIPisFeasGT(scip, SCIPgetSolVal(scip, sol, consdata->vars[j]), 0.5) )
+               {
+                  /* if the index corresponds to the smallest element, we reverse the sign */
+                  if ( j == minidx )
+                     SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[j], -1.0) );
+                  else
+                     SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[j], 1.0) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[j], -1.0) );
+               }
+            }
+            SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
+            assert( SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real) (cnt-2)) );
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
+            ++ngen;
+         }
+
+         /* If we add the element with largest value, we have to add (1 - maxval) and subtract maxval to get the correct sum. */
+         if ( SCIPisEfficacious(scip, 1.0 - (sum + 1.0 - 2.0 * maxval)) )
+         {
+            SCIP_ROW* row;
+
+            SCIPdebugMessage("found violated parity cut (efficiacy: %f, maxval: %f)\n", 1.0 - (sum + 1.0 - 2.0 * maxval), maxval);
+
+            /* the rhs of the inequality is the size of the corrected set */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "parity#%s", SCIPconsGetName(cons));
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) cnt, FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
+            /* fill in row */
+            for (j = 0; j < consdata->nvars; ++j)
+            {
+               if ( SCIPisFeasGT(scip, SCIPgetSolVal(scip, sol, consdata->vars[j]), 0.5) )
+               {
+                  SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[j], 1.0) );
+               }
+               else
+               {
+                  /* if the index corresponds to the largest element, we reverse the sign */
+                  if ( j == maxidx )
+                     SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[j], 1.0) );
+                  else
+                     SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[j], -1.0) );
+               }
+            }
+            SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
+            assert( *cutoff || SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real)(j-1)) );
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
+            ++ngen;
          }
       }
 
       SCIPdebugMessage("separated parity inequalites: %d\n", ngen);
       if ( ngen > 0 )
          *separated = TRUE;
-
-      SCIPfreeBufferArray(scip, &idx);
-      SCIPfreeBufferArray(scip, &vals);
    }
 
    return SCIP_OKAY;
@@ -3478,6 +3594,7 @@ SCIP_DECL_CONSSEPALP(consSepalpXor)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool separated;
+   SCIP_Bool cutoff;
    int c;
 
    *result = SCIP_DIDNOTFIND;
@@ -3488,8 +3605,10 @@ SCIP_DECL_CONSSEPALP(consSepalpXor)
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->separateparity, &separated) );
-      if( separated )
+      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->separateparity, &separated, &cutoff) );
+      if ( cutoff )
+         *result = SCIP_CUTOFF;
+      else if ( separated )
          *result = SCIP_SEPARATED;
    }
 
@@ -3506,6 +3625,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolXor)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool separated;
+   SCIP_Bool cutoff;
    int c;
 
    *result = SCIP_DIDNOTFIND;
@@ -3516,8 +3636,10 @@ SCIP_DECL_CONSSEPASOL(consSepasolXor)
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], sol, conshdlrdata->separateparity, &separated) );
-      if( separated )
+      SCIP_CALL( separateCons(scip, conss[c], sol, conshdlrdata->separateparity, &separated, &cutoff) );
+      if ( cutoff )
+         *result = SCIP_CUTOFF;
+      else if ( separated )
          *result = SCIP_SEPARATED;
    }
 
@@ -3534,6 +3656,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpXor)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool violated;
+   SCIP_Bool cutoff;
    int i;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3547,9 +3670,14 @@ SCIP_DECL_CONSENFOLP(consEnfolpXor)
       {
          SCIP_Bool separated;
 
-         SCIP_CALL( separateCons(scip, conss[i], NULL, conshdlrdata->separateparity, &separated) );
-         assert(separated); /* because the solution is integral, the separation always finds a cut */
-         *result = SCIP_SEPARATED;
+         SCIP_CALL( separateCons(scip, conss[i], NULL, conshdlrdata->separateparity, &separated, &cutoff) );
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+         {
+            assert(separated); /* because the solution is integral, the separation always finds a cut */
+            *result = SCIP_SEPARATED;
+         }
          return SCIP_OKAY;
       }
    }

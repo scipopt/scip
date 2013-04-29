@@ -55,7 +55,7 @@
 #define DEFAULT_NODESOFS      50LL       /* number of nodes added to the contingent of the total nodes                 */
 #define DEFAULT_WAITINGNODES  100LL      /* default waiting nodes since last incumbent before heuristic is executed    */
 #define DEFAULT_NODESQUOT     0.1        /* default quotient of sub-MIP nodes with respect to number of processed nodes*/
-
+#define DEFAULT_USELPROWS     FALSE      /* should subproblem be constructed based on LP row information? */
 /*
  * Data structures
  */
@@ -81,6 +81,9 @@ struct SCIP_HeurData
 
    int                   nsubvars;           /**< the number of subvars                                               */
    int                   lastsolidx;         /**< index of last solution on which the heuristic was processed         */
+   int                   subprobidx;         /**< counter for the subproblem index to be solved by proximity */
+
+   SCIP_Bool             uselprows;          /**< should subproblem be constructed based on LP row information? */
 };
 
 
@@ -201,6 +204,67 @@ SCIP_RETCODE setupSubproblem(
    return SCIP_OKAY;
 }
 
+/** creates the rows of the subproblem */
+static
+SCIP_RETCODE createRows(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
+   SCIP_VAR**            subvars             /**< the variables of the subproblem */
+   )
+{
+   SCIP_ROW** rows;                          /* original scip rows                       */
+   SCIP_CONS* cons;                          /* new constraint                           */
+   SCIP_VAR** consvars;                      /* new constraint's variables               */
+   SCIP_COL** cols;                          /* original row's columns                   */
+
+   SCIP_Real constant;                       /* constant added to the row                */
+   SCIP_Real lhs;                            /* left hand side of the row                */
+   SCIP_Real rhs;                            /* left right side of the row               */
+   SCIP_Real* vals;                          /* variables' coefficient values of the row */
+
+   int nrows;
+   int nnonz;
+   int i;
+   int j;
+
+   /* get the rows and their number */
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+
+   /* copy all rows to linear constraints */
+   for( i = 0; i < nrows; i++ )
+   {
+      /* ignore rows that are only locally valid */
+      if( SCIProwIsLocal(rows[i]) )
+         continue;
+
+      /* get the row's data */
+      constant = SCIProwGetConstant(rows[i]);
+      lhs = SCIProwGetLhs(rows[i]) - constant;
+      rhs = SCIProwGetRhs(rows[i]) - constant;
+      vals = SCIProwGetVals(rows[i]);
+      nnonz = SCIProwGetNNonz(rows[i]);
+      cols = SCIProwGetCols(rows[i]);
+
+      assert(lhs <= rhs);
+
+      /* allocate memory array to be filled with the corresponding subproblem variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
+      for( j = 0; j < nnonz; j++ )
+         consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
+
+      /* create a new linear constraint and add it to the subproblem */
+      SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+      SCIP_CALL( SCIPaddCons(subscip, cons) );
+      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+
+      /* free temporary memory */
+      SCIPfreeBufferArray(scip, &consvars);
+   }
+
+   return SCIP_OKAY;
+}
+
 /* ---------------- Callback methods of event handler ---------------- */
 
 /* exec the event handler
@@ -284,6 +348,7 @@ SCIP_DECL_HEURINIT(heurInitProximity)
    heurdata->usednodes = 0LL;
    heurdata->lastsolidx = -1;
    heurdata->nusedlpiters = 0LL;
+   heurdata->subprobidx = 0;
    
    heurdata->subscip = NULL;
    heurdata->varmapfw = NULL;
@@ -456,6 +521,7 @@ SCIP_RETCODE SCIPapplyProximity(
    SCIP_Real lowerbound;
 
    int nvars;                                /* number of original problem's variables          */
+   int nfixedvars;
    int nsubsols;
    int solidx;
    int i;
@@ -506,7 +572,7 @@ SCIP_RETCODE SCIPapplyProximity(
    if( SCIPisObjIntegral(scip) )
    {
       assert(SCIPisFeasIntegral(scip, bestobj));
-      SCIPdebugMessage(" Rounding up lower bound: %f --> %f \n", lowerbound, SCIPceil(scip, lowerbound));
+      SCIPdebugMessage(" Rounding up lower bound: %f --> %f \n", lowerbound, SCIPfeasCeil(scip, lowerbound));
       lowerbound = SCIPfeasCeil(scip, lowerbound);
    }
 
@@ -572,7 +638,24 @@ SCIP_RETCODE SCIPapplyProximity(
 
       /* copy complete SCIP instance */
       valid = FALSE;
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "proximity", TRUE, FALSE, TRUE, &valid) );
+      if( !heurdata->uselprows )
+      {
+         SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "proximity", TRUE, FALSE, TRUE, &valid) );
+      }
+      else
+      {
+         /* create the subproblem step by step, adding plugins and variables first, and finally creating
+          * linear constraints based on current LP rows */
+         SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+               TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+         SCIP_CALL( SCIPcreateProbBasic(subscip, "proximitysub") );
+
+         SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
+         for( i = 0; i < nvars; i++ )
+            subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+
+         SCIP_CALL( createRows(scip, subscip, subvars) );
+      }
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
       /* create event handler for LP events */
@@ -697,13 +780,20 @@ SCIP_RETCODE SCIPapplyProximity(
          "iterlim: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNNodes(scip), nnodes, iterlim);
 
    /* solve the subproblem with all previously adjusted parameters */
+   nfixedvars = SCIPgetNFixedVars(subscip);
+
+   SCIP_CALL( SCIPpresolve(subscip) );
+
+   nfixedvars = SCIPgetNFixedVars(subscip) - nfixedvars;
+   assert(nfixedvars >= 0);
+   SCIPstatisticMessage("presolve fixings %d: %d\n", ++(heurdata->subprobidx), nfixedvars);
    retcode = SCIPsolve(subscip);
 
-   SCIPstatisticMessage("solve of subscip:"
+   SCIPstatisticMessage("solve of subscip %d:"
          "usednodes: %"SCIP_LONGINT_FORMAT" "
          "lp iters: %"SCIP_LONGINT_FORMAT" "
          "root iters: %"SCIP_LONGINT_FORMAT" "
-         "Presolving Time: %.2f\n",
+         "Presolving Time: %.2f\n", heurdata->subprobidx,
          SCIPgetNNodes(subscip), SCIPgetNLPIterations(subscip), SCIPgetNRootLPIterations(subscip), SCIPgetPresolvingTime(subscip));
 
    /* drop LP events of sub-SCIP */
@@ -786,6 +876,8 @@ SCIP_RETCODE SCIPincludeHeurProximity(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolProximity) );
 
    /* add proximity primal heuristic parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows", "should subproblem be constructed based on LP row information?",
+         &heurdata->uselprows, TRUE, DEFAULT_USELPROWS, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/maxnodes",
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes, TRUE,DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );

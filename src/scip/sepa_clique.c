@@ -69,6 +69,7 @@ struct SCIP_SepaData
    int                   ncuts;              /**< number of cuts found */
    SCIP_Bool             tcliquegraphloaded; /**< TRUE if tcliquegraph is already loaded (tcliquegraph can be NULL),
                                               *   FALSE otherwise */
+   SCIP_Bool             cutoff;             /**< whether the clique algorithm detected a cutoff */
    SCIP_RETCODE          retcode;            /**< error code which might occur during the maximal clique algorithm */
 };
 
@@ -1132,13 +1133,17 @@ SCIP_RETCODE newsolCliqueAddRow(
    SCIP_SEPA*            sepa,               /**< the cut separator itself */
    SCIP_SEPADATA*        sepadata,           /**< data of separator */
    int                   ncliquenodes,       /**< number of nodes in clique */
-   int*                  cliquenodes         /**< nodes in clique */
+   int*                  cliquenodes,        /**< nodes in clique */
+   SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
    SCIP_VAR** vars;
    SCIP_ROW* cut;
    char cutname[SCIP_MAXSTRLEN];
    int i;
+
+   assert( cutoff != NULL );
+   *cutoff = FALSE;
 
    vars = sepadata->tcliquegraph->vars;
    assert(sepadata->tcliquegraph->nnodes > 0);
@@ -1166,7 +1171,7 @@ SCIP_RETCODE newsolCliqueAddRow(
 
    /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
-   SCIP_CALL( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );
+   SCIP_CALL( SCIPaddCut(scip, sepadata->sol, cut, FALSE, cutoff) );
    SCIP_CALL( SCIPaddPoolCut(scip, cut) );
 
    /* release the row */
@@ -1210,6 +1215,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
       SCIP_SEPA* sepa;
       SCIP_Real* varsolvals;
       SCIP_Real unscaledweight;
+      SCIP_Bool cutoff;
       int i;
 
       scip = sepadata->scip;
@@ -1227,21 +1233,30 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          SCIP_RETCODE retcode;
 
          /* explicitly handle return code */
-         retcode = newsolCliqueAddRow(scip, sepa, sepadata, ncliquenodes, cliquenodes);
+         retcode = newsolCliqueAddRow(scip, sepa, sepadata, ncliquenodes, cliquenodes, &cutoff);
          if ( retcode == SCIP_OKAY )
          {
-            SCIPdebugMessage(" -> found clique cut (act=%g)\n", unscaledweight);
-            sepadata->ncuts++;
-
-            /* if we found more than half the cuts we are allowed to generate, we accept the clique as new incumbent,
-             * such that only more violated cuts are generated afterwards
-             */
-            if( sepadata->maxsepacuts >= 0 )
+            if ( cutoff )
             {
-               if( sepadata->ncuts > sepadata->maxsepacuts/2 )
-                  *acceptsol = TRUE;
-               if( sepadata->ncuts >= sepadata->maxsepacuts )
-                  *stopsolving = TRUE;
+               sepadata->cutoff = TRUE;
+               *acceptsol = FALSE;
+               *stopsolving = TRUE;
+            }
+            else
+            {
+               SCIPdebugMessage(" -> found clique cut (act=%g)\n", unscaledweight);
+               sepadata->ncuts++;
+
+               /* if we found more than half the cuts we are allowed to generate, we accept the clique as new incumbent,
+                * such that only more violated cuts are generated afterwards
+                */
+               if( sepadata->maxsepacuts >= 0 )
+               {
+                  if( sepadata->ncuts > sepadata->maxsepacuts/2 )
+                     *acceptsol = TRUE;
+                  if( sepadata->ncuts >= sepadata->maxsepacuts )
+                     *stopsolving = TRUE;
+               }
             }
          }
          else
@@ -1288,6 +1303,7 @@ SCIP_RETCODE separateCuts(
 
    sepadata->sol = sol;
    sepadata->ncalls = SCIPsepaGetNCalls(sepa);
+   sepadata->cutoff = FALSE;
    sepadata->ncuts = 0;
 
    /* if we already detected that no implications between binary variables exist, nothing has to be done */
@@ -1353,7 +1369,9 @@ SCIP_RETCODE separateCuts(
    SCIPfreeBufferArray(scip, &sepadata->varsolvals);
 
    /* adjust result code */
-   if( sepadata->ncuts > 0 )
+   if ( sepadata->cutoff )
+      *result = SCIP_CUTOFF;
+   else if( sepadata->ncuts > 0 )
       *result = SCIP_SEPARATED;
 
    /* better reset the sol pointer in sepadata to avoid having an invalid pointer */

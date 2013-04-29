@@ -5831,9 +5831,9 @@ SCIP_RETCODE addCut(
       SCIPdebugMessage(" -> found MCF cut <%s>: rhs=%f, act=%f eff=%f rank=%d\n",
                        cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut));
       /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
 
-      if( !cutislocal )
+      if( !(*cutoff) && !cutislocal )
       {
          SCIP_CALL( SCIPaddPoolCut(scip, cut) );
       }
@@ -5843,10 +5843,10 @@ SCIP_RETCODE addCut(
    /* release the row */
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 
-   if( sepadata->separateknapsack)
+   if( !(*cutoff) && sepadata->separateknapsack)
    {
       /* relax cut to knapsack row and separate lifted cover cuts */
-      SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, sepa, ncutvars, cutvars, cutvals, +1.0, cutrhs, sol, ncuts, cutoff) );
+      SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, sepa, ncutvars, cutvars, cutvals, +1.0, cutrhs, sol, cutoff, ncuts) );
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &cutvals);

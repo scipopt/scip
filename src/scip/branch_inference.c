@@ -459,14 +459,48 @@ SCIP_RETCODE performBranching(
    }
    else
    {
+      SCIP_NODE* child;
+      SCIP_Real estimate;
+      SCIP_Real downprio;
+      SCIP_Real upprio;
+      SCIP_Real downub;
+      SCIP_Real uplb;
+
       assert(bestvaluecand != NULL);
 
-      if( bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS )
-         bestbranchpoint += 0.5;
-      else
-         bestbranchpoint -= 0.5;
+      downprio = 0.0;
+      upprio = 0.0;
 
-      SCIP_CALL( SCIPbranchVarVal(scip, bestvaluecand, bestbranchpoint, NULL, NULL, NULL) );
+      if( bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS )
+      {
+         downprio = 1.0;
+         downub = bestbranchpoint;
+         uplb = bestbranchpoint + 1.0;
+      }
+      else
+      {
+         upprio = 1.0;
+         downub = bestbranchpoint - 1.0;
+         uplb = bestbranchpoint;
+      }
+
+      /* calculate the child estimate */
+      estimate = SCIPcalcChildEstimate(scip, bestvaluecand, downub);
+
+      /* create down child */
+      SCIP_CALL( SCIPcreateChild(scip, &child, downprio, estimate) );
+
+      /* change upper bound in down child */
+      SCIP_CALL( SCIPchgVarUbNode(scip, child, bestvaluecand, downub) );
+
+      /* calculate the child estimate */
+      estimate = SCIPcalcChildEstimate(scip, bestvaluecand, uplb);
+
+      /* create up child */
+      SCIP_CALL( SCIPcreateChild(scip, &child, upprio, estimate) );
+
+      /* change lower bound in up child */
+      SCIP_CALL( SCIPchgVarLbNode(scip, child, bestvaluecand, uplb) );
 
       SCIPdebugMessage("branch on variable <%s> and value <%g>\n", SCIPvarGetName(bestvaluecand), bestbranchpoint);
    }
