@@ -619,6 +619,9 @@ SCIP_RETCODE SCIPapplyRens(
          SCIPwarningMessage(scip, "Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
       }
 
+      /* print solving statistics of subproblem if we are in SCIP's debug mode */
+      SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
+
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
        */

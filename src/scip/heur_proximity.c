@@ -810,6 +810,9 @@ SCIP_RETCODE SCIPapplyProximity(
       SCIPwarningMessage(scip, "Error while solving subproblem in proximity heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
 
+   /* print solving statistics of subproblem if we are in SCIP's debug mode */
+   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
+
    /* keep track of relevant information for future runs of heuristic */
    if( nusednodes != NULL )
       *nusednodes = SCIPgetNNodes(subscip);

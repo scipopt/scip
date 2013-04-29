@@ -592,6 +592,9 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       SCIPwarningMessage(scip, "Error while solving subproblem in local branching heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
 
+   /* print solving statistics of subproblem if we are in SCIP's debug mode */
+   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
+
    heurdata->usednodes += SCIPgetNNodes(subscip);
    SCIPdebugMessage("local branching used %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" nodes\n",
       SCIPgetNNodes(subscip), nsubnodes);
