@@ -180,7 +180,11 @@ struct SCIP_ConshdlrData
    int                   maxproproundspresolve; /**< limit on number of propagation rounds for a single constraint within one presolving round */
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
-
+   int                   enfolplimit;        /**< maximum number of enforcement round before declaring the LP relaxation
+                                              * infeasible (-1: no limit); WARNING: if this parameter is not set to -1,
+                                              * SCIP might declare sub-optimal solutions optimal or feasible instances
+                                              * infeasible; thus, the result returned by SCIP might be incorrect!
+                                              */
    SCIP_HEUR*            subnlpheur;         /**< a pointer to the subnlp heuristic, if available */
    SCIP_HEUR*            trysolheur;         /**< a pointer to the trysol heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;          /**< our handler for variable bound change events */
@@ -9977,8 +9981,20 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
             return SCIP_OKAY;
          }
       }
-      else
-         ++conshdlrdata->nenfolprounds;
+
+      ++conshdlrdata->nenfolprounds;
+
+      /* cut off the current subtree, if a limit on the enforcement rounds should be applied. At this point, feasible
+       * solutions might get cut off; the enfolplimit parameter should therefore only be set if SCIP is used as a
+       * heuristic solver and when the returned result (infeasible, optimal, the gap) can be ignored
+       */
+      if( conshdlrdata->enfolplimit != -1 && conshdlrdata->nenfolprounds > conshdlrdata->enfolplimit )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+            "cut off subtree because enforcement limit was reached; this might lead to incorrect results\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
    }
    else
    {
@@ -11192,6 +11208,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxproproundspresolve",
          "limit on number of propagation rounds for a single constraint within one round of SCIP presolve",
          &conshdlrdata->maxproproundspresolve, TRUE, 10, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/enfolplimit",
+         "maximum number of enforcement rounds before declaring the LP relaxation infeasible (-1: no limit); WARNING: changing this parameter might lead to incorrect results!",
+         &conshdlrdata->enfolplimit, TRUE, -1, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sepanlpmincont",
          "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",

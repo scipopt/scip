@@ -538,6 +538,17 @@ SCIP_RETCODE SCIPapplyRens(
       {
          SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
       }
+
+      /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
+       * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
+       * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
+       * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
+       * made for the original SCIP
+       */
+      if( !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
+      }
    }
 
 #ifdef SCIP_DEBUG
