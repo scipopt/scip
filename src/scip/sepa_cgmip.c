@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* #define SCIP_DEBUG */
 /* #define SCIP_WRITEPROB */
 /* #define SCIP_OUTPUT */
 /**@file   sepa_cgmip.c
@@ -3597,7 +3596,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    int nrows;
    unsigned int ngen;
    SCIP_Bool success;
-   SCIP_Bool cutoff;
+   SCIP_Bool cutoff = FALSE;
 
    assert( scip != NULL );
    assert( sepa != NULL );
