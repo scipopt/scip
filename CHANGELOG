@@ -49,6 +49,7 @@ features:
 - added multi-aggregation for binary variables with at most two uplocks and two downlocks, which emerge from set-
   partitioning or set-packing constraints
 - added full-dual presolving step in setppc constraint handler
+- added upgrade from quadratic constraints to set-packing constraints
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor

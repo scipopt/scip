@@ -29,6 +29,7 @@
 
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_quadratic.h"
 #include "scip/pub_misc.h"
 
 
@@ -50,6 +51,7 @@
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 #define LINCONSUPGD_PRIORITY    +700000 /**< priority of the constraint handler for upgrading of linear constraints */
+#define QUADCONSUPGD_PRIORITY   +700000 /**< priority of the constraint handler for upgrading of linear constraints */
 
 #define EVENTHDLR_NAME         "setppc"
 #define EVENTHDLR_DESC         "bound change event handler for set partitioning / packing / covering constraints"
@@ -6649,6 +6651,7 @@ static
 SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
 {  /*lint --e{715}*/
    assert(upgdcons != NULL);
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear") == 0 );
 
    /* check, if linear constraint can be upgraded to set partitioning, packing, or covering constraint
     * - all set partitioning / packing / covering constraints consist only of binary variables with a
@@ -6723,6 +6726,65 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
 
    return SCIP_OKAY;
 }
+
+/** tries to upgrade a quadratic constraint to a setpacking constraint */
+static
+SCIP_DECL_QUADCONSUPGD(quadraticUpgdSetppc)
+{
+   SCIP_BILINTERM* term;
+   SCIP_VAR* vars[2];
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( nupgdconss != NULL );
+   assert( upgdconss  != NULL );
+   assert( ! SCIPconsIsModifiable(cons) );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "quadratic") == 0 );
+
+   *nupgdconss = 0;
+
+   SCIPdebugMessage("try to upgrade quadratic constraint <%s> to setpacking constraint ...\n", SCIPconsGetName(cons));
+   SCIPdebugPrintCons(scip, cons, NULL);
+
+   /* cannot currently handle linear part */
+   if ( SCIPgetNLinearVarsQuadratic(scip, cons) > 0 )
+      return SCIP_OKAY;
+
+   /* need only one bilinear term */
+   if ( SCIPgetNBilinTermsQuadratic(scip, cons) != 1 )
+      return SCIP_OKAY;
+
+   /* should only contain two variables */
+   assert( SCIPgetNQuadVarTermsQuadratic(scip, cons) == 2 );
+
+   /* get bilinear term */
+   term = SCIPgetBilinTermsQuadratic(scip, cons);
+   if ( SCIPisZero(scip, term->coef) )
+      return SCIP_OKAY;
+
+   /* check types */
+   if ( SCIPvarGetType(term->var1) != SCIP_VARTYPE_BINARY || SCIPvarGetType(term->var2) != SCIP_VARTYPE_BINARY )
+      return SCIP_OKAY;
+
+   /* left/right hande side needs to be 0 */
+   if ( ! SCIPisZero(scip, SCIPgetLhsQuadratic(scip, cons)) || ! SCIPisZero(scip, SCIPgetRhsQuadratic(scip, cons)) )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("constraint <%s> can be upgraded ...\n", SCIPconsGetName(cons));
+   vars[0] = term->var1;
+   vars[1] = term->var2;
+
+   SCIP_CALL( SCIPcreateConsSetpack(scip, &upgdconss[0], SCIPconsGetName(cons), 2, vars,
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+   SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+
+   ++(*nupgdconss);
+
+
+   return SCIP_OKAY;
+} /*lint !e715*/
 
 
 /*
@@ -8505,11 +8567,17 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSetppc) );
 
-   if( SCIPfindConshdlr(scip,"linear") != NULL )
+   if( SCIPfindConshdlr(scip, "linear") != NULL )
    {
       /* include the linear constraint to setppc constraint upgrade in the linear constraint handler */
       SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdSetppc, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
    }
+   if( SCIPfindConshdlr(scip, "quadratic") != NULL )
+   {
+      /* notify function that upgrades quadratic constraint to setpacking */
+      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadraticUpgdSetppc, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+   }
+
 
    /* set partitioning constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
