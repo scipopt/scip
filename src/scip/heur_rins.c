@@ -42,7 +42,7 @@
 #define DEFAULT_MAXNODES      5000      /* maximum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MINNODES      500       /* minimum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MINIMPROVE    0.01      /* factor by which RINS should at least improve the incumbent          */
-#define DEFAULT_MINFIXINGRATE 0.0       /* minimum percentage of integer variables that have to be fixed       */
+#define DEFAULT_MINFIXINGRATE 0.3       /* minimum percentage of integer variables that have to be fixed       */
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem       */
 #define DEFAULT_NWAITINGNODES 200       /* number of nodes without incumbent change that heuristic should wait */
 #define DEFAULT_USELPROWS    FALSE      /* should subproblem be created out of the rows in the LP rows,
