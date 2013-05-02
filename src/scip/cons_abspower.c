@@ -6371,7 +6371,7 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
    SCIP_CONSDATA*     consdata;
    SCIP_Bool          dolinfeasshift;
    SCIP_Real          maxviol;
-   SCIP_Real          viol = SCIP_INVALID;
+   SCIP_Real          viol;
    int                c;
 
    assert(scip   != NULL);
@@ -6384,7 +6384,7 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
    *result = SCIP_FEASIBLE;
 
    maxviol = 0.0;
-   viol = 0.0;
+   viol = SCIP_INVALID;
 
    dolinfeasshift = conshdlrdata->linfeasshift && (conshdlrdata->trysolheur != NULL) && SCIPgetStage(scip) > SCIP_STAGE_PROBLEM && SCIPgetStage(scip) < SCIP_STAGE_SOLVED;
    for( c = 0; c < nconss; ++c )

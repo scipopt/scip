@@ -10680,7 +10680,7 @@ SCIP_DECL_CONSSEPALP(consSepalpKnapsack)
 
    depth = SCIPgetDepth(scip);
    nrounds = SCIPgetNSepaRounds(scip);
-   
+
    SCIPdebugMessage("knapsack separation of %d/%d constraints, round %d (max %d/%d)\n",
       nusefulconss, nconss, nrounds, conshdlrdata->maxroundsroot, conshdlrdata->maxrounds);
 
@@ -10708,6 +10708,7 @@ SCIP_DECL_CONSSEPALP(consSepalpKnapsack)
 
    *result = SCIP_DIDNOTFIND;
    ncuts = 0;
+   cutoff = FALSE;
 
    /* separate useful constraints */
    for( i = 0; i < nusefulconss && ncuts < maxsepacuts && !SCIPisStopped(scip); i++ )
@@ -10748,7 +10749,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolKnapsack)
 
    depth = SCIPgetDepth(scip);
    nrounds = SCIPgetNSepaRounds(scip);
-   
+
    SCIPdebugMessage("knapsack separation of %d/%d constraints, round %d (max %d/%d)\n",
       nusefulconss, nconss, nrounds, conshdlrdata->maxroundsroot, conshdlrdata->maxrounds);
 
@@ -10768,6 +10769,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolKnapsack)
 
    *result = SCIP_DIDNOTFIND;
    ncuts = 0;
+   cutoff = FALSE;
 
    /* separate useful constraints */
    for( i = 0; i < nusefulconss && ncuts < maxsepacuts && !SCIPisStopped(scip); i++ )

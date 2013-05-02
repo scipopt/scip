@@ -813,7 +813,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       goto TERMINATE;
 
    /* abort, if the amount of fixed variables is insufficient */
-   if( fixingcounter / (SCIP_Real)(MAX(nbinvars + nintvars, 1) < heurdata->minfixingrate ) )
+   if( fixingcounter / (SCIP_Real)(MAX(nbinvars + nintvars, 1)) < heurdata->minfixingrate )
       goto TERMINATE;
 
    /* add an objective cutoff */

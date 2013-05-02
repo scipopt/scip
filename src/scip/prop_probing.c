@@ -1352,6 +1352,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
       /* assert dichotomy in case of continuous var: leftub >= rightlb */
       assert(SCIPisGE(scip, leftub, rightlb));
       probingvarisbinary = FALSE;
+      probingvarisinteger = FALSE;
    }
 
    /* check if probing variable was fixed in the branches */
