@@ -1780,7 +1780,7 @@ int eventfilterSearch(
    assert(eventtype != SCIP_EVENTTYPE_DISABLED);
    assert(eventhdlr != NULL);
 
-   for( i = 0; i < eventfilter->len; ++i )
+   for( i = eventfilter->len - 1; i >= 0; --i )
    {
       if( eventdata == eventfilter->eventdatas[i]
          && eventhdlr == eventfilter->eventhdlrs[i]
@@ -1788,7 +1788,7 @@ int eventfilterSearch(
          && eventfilter->nextpos[i] == -2 )
          return i;
    }
-   
+
    return -1;
 }
 
