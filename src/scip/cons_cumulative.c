@@ -1287,6 +1287,25 @@ SCIP_RETCODE getActiveVar(
    return SCIP_OKAY;
 }
 
+/** computes the total energy of all jobs */
+static
+int computeTotalEnergy(
+   int*                  durations,          /**< array of job durations */
+   int*                  demands,            /**< array of job demands */
+   int                   njobs               /**< number of jobs */
+   )
+{
+   int energy;
+   int j;
+
+   energy = 0;
+
+   for( j = 0; j < njobs; ++j )
+      energy += durations[j] * demands[j];
+
+   return energy;
+}
+
 /**@} */
 
 /**@name Default method to solve a cumulative condition
@@ -4216,6 +4235,7 @@ SCIP_RETCODE propagateUbTTEF(
    int coreEnergyAfterEnd;
    int maxavailable;
    int minavailable;
+   int totalenergy;
    int nests;
    int end;
    int v;
@@ -4225,6 +4245,11 @@ SCIP_RETCODE propagateUbTTEF(
 
    maxavailable = (hmax - hmin) * capacity;
    minavailable = maxavailable;
+   totalenergy = computeTotalEnergy(durations, demands, nvars);
+
+   /* check if the smallest interval has a size such that the total energy fits, if so we can skip the propagator */
+   if( (lcts[0] - ests[nvars-1]) * capacity >= totalenergy )
+      return SCIP_OKAY;
 
    nests = nvars;
 
@@ -4330,6 +4355,12 @@ SCIP_RETCODE propagateUbTTEF(
             nests--;
             continue;
          }
+
+         /* check if the interval has a size such that the total energy fits, if so we can skip all intervals with the
+          * current ending time
+          */
+         if( (end - est) * capacity >= totalenergy )
+            break;
 
          var = vars[idx];
          assert(var != NULL);
@@ -4539,6 +4570,7 @@ SCIP_RETCODE propagateLbTTEF(
    int coreEnergyAfterStart;
    int maxavailable;
    int minavailable;
+   int totalenergy;
    int nlcts;
    int begin;
    int v;
@@ -4551,6 +4583,11 @@ SCIP_RETCODE propagateLbTTEF(
 
    maxavailable = (hmax - hmin) * capacity;
    minavailable = maxavailable;
+   totalenergy = computeTotalEnergy(durations, demands, nvars);
+
+   /* check if the smallest interval has a size such that the total energy fits, if so we can skip the propagator */
+   if( (lcts[0] - ests[nvars-1]) * capacity >= totalenergy )
+      return SCIP_OKAY;
 
    nlcts = 0;
 
@@ -4586,7 +4623,7 @@ SCIP_RETCODE propagateLbTTEF(
 
       assert(est > begin);
 
-      SCIPdebugMessage("check intervals ending with <%d>\n", est);
+      SCIPdebugMessage("check intervals starting with <%d>\n", est);
 
       begin = est;
       coreEnergyAfterStart = coreEnergyAfterEst[v];
@@ -4627,6 +4664,12 @@ SCIP_RETCODE propagateLbTTEF(
             nlcts++;
             continue;
          }
+
+         /* check if the interval has a size such that the total energy fits, if so we can skip all intervals which
+          * start with current beginning time
+          */
+         if( (lct - begin) * capacity >= totalenergy )
+            break;
 
          var = vars[idx];
          assert(var != NULL);
@@ -5034,7 +5077,7 @@ SCIP_RETCODE propagateCoretimes(
    infeasible = FALSE;
 
    /* if core profile is empty; nothing to do */
-   if( SCIPprofileGetNTimepoints(profile) == 0 )
+   if( SCIPprofileGetNTimepoints(profile) <= 1 )
       return SCIP_OKAY;
 
    /* start checking each job whether the bounds can be improved */
