@@ -10172,8 +10172,6 @@ TCLIQUE_ISEDGE(tcliqueIsedgeClique)
 static
 TCLIQUE_SELECTADJNODES(tcliqueSelectadjnodesClique)
 {
-   TCLIQUE_Bool** precedencematrix;
-   TCLIQUE_Bool** demandmatrix;
    int nadjnodes;
    int i;
 
@@ -10184,17 +10182,14 @@ TCLIQUE_SELECTADJNODES(tcliqueSelectadjnodesClique)
 
    nadjnodes = 0;
 
-   /* check for each node in given nodes set, if it is adjacent to the given node or shares a common clique */
-   precedencematrix = tcliquegraph->precedencematrix;
-   demandmatrix = tcliquegraph->demandmatrix;
-
    for( i = 0; i < nnodes; i++ )
    {
       /* check if the node is adjacent to the given node (nodes and adjacent nodes are ordered by node index) */
       assert(0 <= nodes[i] && nodes[i] < tcliquegraph->nnodes);
       assert(i == 0 || nodes[i-1] < nodes[i]);
 
-      if( precedencematrix[node][nodes[i]] || demandmatrix[node][nodes[i]] )
+      /* check if an edge exists */
+      if( tcliqueIsedgeClique(tcliquegraph, node, nodes[i]) )
       {
          /* current node is adjacent to given node */
          adjnodes[nadjnodes] = nodes[i];
@@ -10707,32 +10702,23 @@ SCIP_RETCODE findCumulativeConss(
    TCLIQUE_Bool* precedencecol;
    TCLIQUE_Bool* demandrow;
    TCLIQUE_Bool* demandcol;
-   int** allcliques;
-   int* nallcliques;
+   SCIP_HASHTABLE* covered;
    int* cliquenodes;
    int ncliquenodes;
-   int sumduration;
    int cliqueweight;
    int ntreenodes;
-   int ncliques;
    int nnodes;
    int nconss;
    int v;
 
    nnodes = tcliquegraph->nnodes;
-   sumduration = 0;
-
    nconss = 0;
 
    /* initialize the weight of each job with its duration */
    for( v = 0; v < nnodes; ++v )
    {
       tcliquegraph->weights[v] = tcliquegraph->durations[v];
-      sumduration += tcliquegraph->durations[v];
    }
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &allcliques, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nallcliques, nnodes) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &precedencerow, nnodes) );
@@ -10740,17 +10726,21 @@ SCIP_RETCODE findCumulativeConss(
    SCIP_CALL( SCIPallocBufferArray(scip, &demandrow, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &demandcol, nnodes) );
 
-   ncliques = 0;
+   /* create a hash table to store all start time variables which are already covered by at least one clique */
+   SCIP_CALL( SCIPhashtableCreate(&covered, SCIPblkmem(scip), SCIPcalcHashtableSize(nnodes),
+         SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
    /* for each variables/job we are ... */
    for( v = 0; v < nnodes; ++v )
    {
+      char name[SCIP_MAXSTRLEN];
       int c;
 
-      SCIPdebugMessage("********** variable <%s>\n", SCIPvarGetName(tcliquegraph->vars[v]));
+      /* check if the start time variable is already covered by at least one clique */
+      if( SCIPhashtableExists(covered, tcliquegraph->vars[v]) )
+         continue;
 
-      /* set the weights of the variable to maximum such that the clique contains that variable for sure */
-      tcliquegraph->weights[v] = 2*sumduration;
+      SCIPdebugMessage("********** variable <%s>\n", SCIPvarGetName(tcliquegraph->vars[v]));
 
       /* temporarily remove the connection via the precedence graph */
       for( c = 0; c < nnodes; ++c )
@@ -10773,62 +10763,27 @@ SCIP_RETCODE findCumulativeConss(
          tcliquegraph->precedencematrix[v][c] = FALSE;
       }
 
-      /* find (heuristically) maximum cliques */
+      /* find (heuristically) maximum cliques which includes node v */
       tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique,
          tcliquegraph, tcliqueNewsolClique, NULL,
          cliquenodes, &ncliquenodes, &cliqueweight, 1, 1,
-         100000, 0, 0, -1, &ntreenodes, &tcliquestatus);
+         10000, 1000, 1000, v, &ntreenodes, &tcliquestatus);
 
       SCIPdebugMessage("tree nodes %d clique size %d (weight %d, status %d)\n", ntreenodes, ncliquenodes, cliqueweight, tcliquestatus);
 
       if( ncliquenodes == 1 )
          continue;
 
-      SCIPsortInt(cliquenodes, ncliquenodes);
+      /* construct constraint name */
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "nooverlap_%d_%d", SCIPgetNRuns(scip), nconss);
 
-      /* check if we found a new clique */
-      for( c = 0; c < ncliques; ++c )
+      SCIP_CALL( createCumulativeCons(scip, name, tcliquegraph, cliquenodes, ncliquenodes) );
+      nconss++;
+
+      /* all start time variable to covered hash table */
+      for( c = 0; c < ncliquenodes; ++c )
       {
-         int clique1;
-         int clique2;
-         int nequals;
-
-         clique1 = 0;
-         clique2 = 0;
-         nequals = 0;
-
-         while( clique1 < ncliquenodes && clique2 < nallcliques[c] )
-         {
-            if( allcliques[c][clique2] < cliquenodes[clique1] )
-               clique2++;
-            else if( allcliques[c][clique2] > cliquenodes[clique1] )
-               clique1++;
-            else
-            {
-               clique1++;
-               clique2++;
-               nequals++;
-            }
-         }
-
-         if( nequals == nallcliques[c] )
-         {
-            if( nallcliques[c] < ncliquenodes )
-            {
-               SCIPfreeBufferArray(scip, &allcliques[c]);
-               SCIP_CALL( SCIPduplicateBufferArray(scip, &allcliques[c], cliquenodes, ncliquenodes) );
-               nallcliques[ncliques] = ncliquenodes;
-            }
-
-            break;
-         }
-      }
-
-      if( c == ncliques )
-      {
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &allcliques[ncliques], cliquenodes, ncliquenodes) );
-         nallcliques[ncliques] = ncliquenodes;
-         ncliques++;
+         SCIP_CALL( SCIPhashtableInsert(covered, tcliquegraph->vars[cliquenodes[c]]) );
       }
 
       /* copy the precedence relations back */
@@ -10840,33 +10795,15 @@ SCIP_RETCODE findCumulativeConss(
          tcliquegraph->demandmatrix[v][c] = demandrow[c];
          tcliquegraph->demandmatrix[c][v] = demandcol[c];
       }
-
-      /* reset the weights of the job with ist duration */
-      tcliquegraph->weights[v] = tcliquegraph->durations[v];
    }
 
-   /* create for each clique a disjunctive constraints */
-   for( v = 0; v < ncliques; ++v )
-   {
-      char name[SCIP_MAXSTRLEN];
-
-      /* construct constraint name */
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "nooverlap_%d_%d", SCIPgetNRuns(scip), nconss);
-
-      SCIP_CALL( createCumulativeCons(scip, name, tcliquegraph, allcliques[v], nallcliques[v]) );
-      nconss++;
-
-      SCIPfreeBufferArray(scip, &allcliques[v]);
-   }
+   SCIPhashtableFree(&covered);
 
    SCIPfreeBufferArray(scip, &demandcol);
    SCIPfreeBufferArray(scip, &demandrow);
    SCIPfreeBufferArray(scip, &precedencecol);
    SCIPfreeBufferArray(scip, &precedencerow);
    SCIPfreeBufferArray(scip, &cliquenodes);
-
-   SCIPfreeBufferArray(scip, &nallcliques);
-   SCIPfreeBufferArray(scip, &allcliques);
 
    (*naddconss) += nconss;
 
@@ -12013,7 +11950,7 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
       SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, FALSE, nfixedvars, NULL) );
    }
 
-   if( !cutoff && nrounds == 2 && (conshdlrdata->detectvarbounds || conshdlrdata->detectdisjunctive) )
+   if( !cutoff && SCIPgetNRuns(scip) == 1 && nrounds == 2 && (conshdlrdata->detectvarbounds || conshdlrdata->detectdisjunctive) )
    {
       /* combine different source and detect disjunctive constraints and variable bound constraints to improve the
        * propagation
