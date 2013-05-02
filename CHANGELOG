@@ -10,6 +10,7 @@ fixed bugs:
 - fixed wrong strong branching results in lpi_grb.c and an invalid write
 - fixed wrong presolving finished status which sometimes occurred when the time limit was hit during presolve
 - fixed several bugs where variables or constraints were not freed correctly
+- fixed minor bugs in presolving in cons_setppc.c and cons_logicor.c
 
 data structures
 - new data structure for (circular) queues (SCIP_QUEUE)
@@ -51,6 +52,7 @@ features:
 - added full-dual presolving step in setppc constraint handler
 - added upgrade from quadratic constraints to set-packing constraints
 - generalized the linking constraint handler
+- in verblevel SCIP_VERBLEVEL_FULL the number of non-zeros will be computed for the original and presolved model
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -65,6 +67,7 @@ performance improvements:
 - apply lowerbound provided by pricers already during pricing loop, stop pricing if the lower bound computed by pricing
   already exceeds the cutoff bound
 - improved performance of method SCIPsolRetransform() when called during presolving with many aggregations
+- minor presolving performance improvements in cons_logicor.c and cons_knapsack.c
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
