@@ -6731,8 +6731,12 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
 static
 SCIP_DECL_QUADCONSUPGD(quadraticUpgdSetppc)
 {
+   SCIP_QUADVARTERM* quadvarterms;
    SCIP_BILINTERM* term;
    SCIP_VAR* vars[2];
+   SCIP_Real coefx;
+   SCIP_Real coefy;
+   SCIP_Real rhs;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -6747,41 +6751,106 @@ SCIP_DECL_QUADCONSUPGD(quadraticUpgdSetppc)
    SCIPdebugPrintCons(scip, cons, NULL);
 
    /* cannot currently handle linear part */
-   if ( SCIPgetNLinearVarsQuadratic(scip, cons) > 0 )
+   if( SCIPgetNLinearVarsQuadratic(scip, cons) > 0 )
       return SCIP_OKAY;
 
    /* need only one bilinear term */
-   if ( SCIPgetNBilinTermsQuadratic(scip, cons) != 1 )
+   if( SCIPgetNBilinTermsQuadratic(scip, cons) != 1 )
       return SCIP_OKAY;
 
-   /* should only contain two variables */
-   assert( SCIPgetNQuadVarTermsQuadratic(scip, cons) == 2 );
+   /* need exactly two quadratic variables */
+   if( SCIPgetNQuadVarTermsQuadratic(scip, cons) != 2 )
+      return SCIP_OKAY;
 
    /* get bilinear term */
    term = SCIPgetBilinTermsQuadratic(scip, cons);
-   if ( SCIPisZero(scip, term->coef) )
+   if( SCIPisZero(scip, term->coef) )
       return SCIP_OKAY;
 
    /* check types */
-   if ( SCIPvarGetType(term->var1) != SCIP_VARTYPE_BINARY || SCIPvarGetType(term->var2) != SCIP_VARTYPE_BINARY )
+   if( SCIPvarGetType(term->var1) != SCIP_VARTYPE_BINARY || SCIPvarGetType(term->var2) != SCIP_VARTYPE_BINARY )
       return SCIP_OKAY;
 
-   /* left/right hande side needs to be 0 */
-   if ( ! SCIPisZero(scip, SCIPgetLhsQuadratic(scip, cons)) || ! SCIPisZero(scip, SCIPgetRhsQuadratic(scip, cons)) )
+   /* left and right hand side need to be equal
+    * @todo we could also handle inequalities
+    */
+   rhs = SCIPgetRhsQuadratic(scip, cons);
+   if( SCIPisInfinity(scip, rhs) || !SCIPisEQ(scip, SCIPgetLhsQuadratic(scip, cons), rhs) )
+      return SCIP_OKAY;
+
+   quadvarterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
+
+   coefx = quadvarterms[0].lincoef + quadvarterms[0].sqrcoef;  /* for binary variables, we can treat sqr coef as lin coef */
+   coefy = quadvarterms[1].lincoef + quadvarterms[0].sqrcoef;  /* for binary variables, we can treat sqr coef as lin coef */
+
+   /* divide constraint by coefficient of x*y */
+   coefx /= term->coef;
+   coefy /= term->coef;
+   rhs   /= term->coef;
+
+   /* constraint is now of the form coefx * x + coefy * y + x * y == rhs
+    * we can rewrite as (x + coefy) * (y + coefx) == rhs + coefx * coefy
+    */
+
+   /* we can only upgrade if coefx and coefy are 0 or -1 */
+   if( !SCIPisZero(scip, coefx) && !SCIPisEQ(scip, coefx, -1.0) )
+      return SCIP_OKAY;
+   if( !SCIPisZero(scip, coefy) && !SCIPisEQ(scip, coefy, -1.0) )
+      return SCIP_OKAY;
+
+   rhs += coefx * coefy;
+   if( SCIPisZero(scip, coefy) )
+   {
+      vars[0] = quadvarterms[0].var;
+   }
+   else
+   {
+      assert(SCIPisEQ(scip, coefy, -1.0));
+      /* x - 1 = -(1-x) = -(~x) */
+      SCIP_CALL( SCIPgetNegatedVar(scip, quadvarterms[0].var, &vars[0]) );
+      /* divide constraint by -1 */
+      rhs *= -1.0;
+   }
+   if( SCIPisZero(scip, coefx) )
+   {
+      vars[1] = quadvarterms[1].var;
+   }
+   else
+   {
+      assert(SCIPisEQ(scip, coefx, -1.0));
+      /* y - 1 = -(1 - y) = -(~y) */
+      SCIP_CALL( SCIPgetNegatedVar(scip, quadvarterms[1].var, &vars[1]) );
+      /* divide constraint by -1 */
+      rhs *= -1.0;
+   }
+
+   /* constraint is now of the form  vars[0] * vars[1] == rhs */
+
+   /* can only upgrade if rhs is 0 or 1 */
+   if( !SCIPisZero(scip, rhs) && !SCIPisEQ(scip, rhs, 1.0) )
       return SCIP_OKAY;
 
    SCIPdebugMessage("constraint <%s> can be upgraded ...\n", SCIPconsGetName(cons));
-   vars[0] = term->var1;
-   vars[1] = term->var2;
 
-   SCIP_CALL( SCIPcreateConsSetpack(scip, &upgdconss[0], SCIPconsGetName(cons), 2, vars,
+   if( SCIPisZero(scip, rhs) )
+   {
+      /* vars[0] + vars[1] <= 1 */
+      SCIP_CALL( SCIPcreateConsSetpack(scip, &upgdconss[0], SCIPconsGetName(cons), 2, vars,
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
          SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
          SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+   }
+   else
+   {
+      /* vars[0] + vars[1] >= 1 */
+      SCIP_CALL( SCIPcreateConsSetcover(scip, &upgdconss[0], SCIPconsGetName(cons), 2, vars,
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+   }
    SCIPdebugPrintCons(scip, upgdconss[0], NULL);
 
    ++(*nupgdconss);
-
 
    return SCIP_OKAY;
 } /*lint !e715*/
