@@ -26,6 +26,7 @@ ERRFILE=$CLIENTTMPDIR/$BASENAME.err
 LSTFILE=$CLIENTTMPDIR/$BASENAME.lst
 TRCFILE=$CLIENTTMPDIR/$BASENAME.trc
 WORKDIR=$CLIENTTMPDIR/$BASENAME.scr
+OPTDIR=$CLIENTTMPDIR/$BASENAME.opt
 
 # setup scratch directory
 mkdir -p $WORKDIR
@@ -39,6 +40,21 @@ trap "
   test -e $ERRFILE && mv $ERRFILE results/$BASENAME.err
   test -e $TRCFILE && mv $TRCFILE results/$BASENAME.trc
 " EXIT
+
+
+# create directory $OPTDIR and put optionfile <solvername>.opt there
+if test -n "$SETTINGS"
+then
+  if test -d $OPTDIR
+  then
+    rm -f $OPTDIR/*
+  else
+    mkdir -p $OPTDIR
+  fi
+  # replace all ${var} by their value w.r.t. the current environment
+  awk '{while(match($0,"[$]{[^}]*}")) {var=substr($0,RSTART+2,RLENGTH -3);gsub("[$]{"var"}",ENVIRON[var])}}1' $SETTINGS > $OPTDIR/${SOLVER,,}.opt
+  GAMSOPTS="$GAMSOPTS optdir=$OPTDIR optfile=1"
+fi
 
 # initialize trace file
 echo "* Trace Record Definition" > $TRCFILE
