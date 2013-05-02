@@ -8447,6 +8447,7 @@ SCIP_RETCODE insertZerolist(
    return SCIP_OKAY;
 }
 
+#define MAX_CLIQUELENGTH_PERCENTAGE 10
 /** applies rule (3) of the weight tightening procedure, which can lift other variables into the knapsack:
  *  (3) for a clique C let C(xi == v) := C \ {j: xi == v -> xj == 0}),
  *      let cliqueweightsum(xi == v) := sum(W(C(xi == v)))
@@ -8778,6 +8779,11 @@ SCIP_RETCODE tightenWeightsLift(
          int k;
 
          ncliquevars = SCIPcliqueGetNVars(cliques[j]);
+
+         /* discard big cliques */
+         if( ncliquevars > (SCIPgetNBinVars(scip) % MAX_CLIQUELENGTH_PERCENTAGE) )
+            continue;
+
          cliquevars = SCIPcliqueGetVars(cliques[j]);
          cliquevalues = SCIPcliqueGetValues(cliques[j]);
 
