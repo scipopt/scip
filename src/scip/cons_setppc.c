@@ -1027,6 +1027,10 @@ SCIP_RETCODE addCoef(
       }
 #endif
    }
+   else
+   {
+      assert(SCIPvarGetStatus(SCIPvarGetProbvar(var)) != SCIP_VARSTATUS_MULTAGGR);
+   }
 
    /* install the rounding locks for the new variable */
    SCIP_CALL( lockRounding(scip, cons, var) );
@@ -1768,7 +1772,7 @@ SCIP_RETCODE applyFixings(
                }
             }
             /* we need to degrade this setppc constraint to a linear constraint*/
-            else if( ndelconss != NULL && naddconss != NULL )
+            else if( (ndelconss != NULL && naddconss != NULL) || SCIPconsIsAdded(cons) )
             {
                char name[SCIP_MAXSTRLEN];
                SCIP_CONS* newcons;
@@ -1845,8 +1849,11 @@ SCIP_RETCODE applyFixings(
 
                /* delete old constraint */
                SCIP_CALL( SCIPdelCons(scip, cons) );
-               ++(*ndelconss);
-               ++(*naddconss);
+               if( ndelconss != NULL && naddconss != NULL )
+               {
+                  ++(*ndelconss);
+                  ++(*naddconss);
+               }
 
                /* all multi-aggregations should be resolved */
                consdata->existmultaggr = FALSE;
@@ -1867,6 +1874,7 @@ SCIP_RETCODE applyFixings(
                }
 
                SCIPwarningMessage(scip, "setppc constraint <%s> has a multi-aggregated variable, which was not resolved and therefore could lead to aborts\n", SCIPconsGetName(cons));
+               ++v;
             }
 
             SCIPfreeBufferArray(scip, &consvals);
@@ -3139,7 +3147,7 @@ SCIP_RETCODE presolvePropagateCons(
 	 return SCIP_OKAY;
       }
 
-      SCIPdebugMessage("set partitioning / packing constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("set partitioning / packing constraint <%s> is infeasible, %d variables fixed to one\n", SCIPconsGetName(cons), consdata->nfixedones);
       *cutoff = TRUE;
 
       return SCIP_OKAY;
@@ -7785,6 +7793,21 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       if( !SCIPconsIsActive(cons) )
          continue;
 
+      /* remove fixings found by merging */
+      if( consdata->nfixedzeros > 0 )
+      {
+         SCIP_CALL( applyFixings(scip, cons, naddconss, ndelconss, nfixedvars, &cutoff) );
+
+         if( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         if( SCIPconsIsDeleted(cons) )
+            continue;
+      }
+
       /* check if constraint is already redundant or infeasible due to fixings, fix or aggregate left over variables if
        * possible
        */
@@ -7799,6 +7822,21 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       /* if constraint was deleted while propagation, go to the next constraint */
       if( !SCIPconsIsActive(cons) )
          continue;
+
+      /* remove fixings found by presolvePropagateCons() */
+      if( consdata->nfixedzeros > 0 )
+      {
+         SCIP_CALL( applyFixings(scip, cons, naddconss, ndelconss, nfixedvars, &cutoff) );
+
+         if( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         if( SCIPconsIsDeleted(cons) )
+            continue;
+      }
 
       /* perform dual reductions */
       if( conshdlrdata->dualpresolving )
