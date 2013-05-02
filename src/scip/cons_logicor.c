@@ -94,6 +94,11 @@ struct SCIP_ConshdlrData
    int                   nlastimpls;         /**< number of implications after last negated clique presolving round */
 };
 
+/* @todo it might speed up exit-presolve to remember all positions for variables when catching the varfixed event, or we
+ *       change catching and dropping the events like it is done in cons_setppc, which probably makes the code more
+ *       clear
+ */
+
 /** logic or constraint data */
 struct SCIP_ConsData
 {
@@ -105,10 +110,14 @@ struct SCIP_ConsData
    int                   watchedvar2;        /**< position of the second watched variable */
    int                   filterpos1;         /**< event filter position of first watched variable */
    int                   filterpos2;         /**< event filter position of second watched variable */
+   unsigned int          presolved:1;        /**< flag indicates if we have some fixed, aggregated or multi-aggregated
+                                              *   variables
+                                              */
    unsigned int          impladded:1;        /**< was the 2-variable logic or constraint already added as implication? */
    unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
    unsigned int          changed:1;          /**< was constraint changed since last redundancy round in preprocessing? */
    unsigned int          merged:1;           /**< are the constraint's equal/negated variables already merged? */
+   unsigned int          existmultaggr:1;    /**< does this constraint contain aggregations */
 };
 
 
@@ -239,10 +248,12 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->watchedvar2 = -1;
    (*consdata)->filterpos1 = -1;
    (*consdata)->filterpos2 = -1;
+   (*consdata)->presolved = FALSE;
    (*consdata)->impladded = FALSE;
    (*consdata)->changed = TRUE;
    (*consdata)->sorted = (nvars <= 1);
    (*consdata)->merged = (nvars <= 1);
+   (*consdata)->existmultaggr = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -420,6 +431,15 @@ SCIP_RETCODE addCoef(
    if( transformed )
    {
       SCIP_CALL( SCIPgetTransformedVar(scip, var, &var) );
+
+      if( !consdata->existmultaggr && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
+         consdata->existmultaggr = TRUE;
+
+      consdata->presolved = FALSE;
+   }
+   else
+   {
+      assert(SCIPvarGetStatus(SCIPvarGetProbvar(var)) != SCIP_VARSTATUS_MULTAGGR);
    }
    assert(var != NULL);
    assert(transformed == SCIPvarIsTransformed(var));
@@ -527,6 +547,7 @@ SCIP_RETCODE delCoefPos(
 
    return SCIP_OKAY;
 }
+
 /** in case a part (more than one variable) in the logic or constraint is independent of every else, we can perform dual
  *  reductions;
  *  - fix the variable with the smallest object coefficient to one if the constraint is not modifiable and all
@@ -542,8 +563,10 @@ static
 SCIP_RETCODE dualPresolving(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< setppc constraint */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int*                  nfixedvars,         /**< pointer to count number of fixings */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints  */
+   int*                  nchgcoefs,          /**< pointer to count number of changed/deleted coefficients */
    SCIP_RESULT*          result              /**< pointer to store the result SCIP_SUCCESS, if presolving was performed */
    )
 {
@@ -561,11 +584,13 @@ SCIP_RETCODE dualPresolving(
    int nvars;
    int idx;
    int v;
-   
+
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(eventhdlr != NULL);
    assert(nfixedvars != NULL);
    assert(ndelconss != NULL);
+   assert(nchgcoefs != NULL);
    assert(result != NULL);
 
    /* constraints for which the check flag is set to FALSE, did not contribute to the lock numbers; therefore, we cannot
@@ -574,16 +599,16 @@ SCIP_RETCODE dualPresolving(
     */
    if( !SCIPconsIsChecked(cons) )
       return SCIP_OKAY;
-   
+
    assert(SCIPconsIsActive(cons));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    nvars = consdata->nvars;
-   
+
    /* we don't want to consider small constraints (note that the constraints can be modifiable, so we can't delete this
-    * constraint) 
+    * constraint)
     */
    if( nvars < 2 )
       return SCIP_OKAY;
@@ -591,29 +616,43 @@ SCIP_RETCODE dualPresolving(
    vars = consdata->vars;
    idx = -1;
    bestobjval = SCIP_INVALID;
-   
+
    nfixables = 0;
 
    /* check if we can apply the dual reduction; therefore count the number of variables where the logic or has the only
-    * locks on 
+    * locks on
     */
-   for( v = 0; v < nvars; ++v )
+   for( v = nvars - 1; v >= 0; --v )
    {
       var = vars[v];
       assert(var != NULL);
 
-      /* the variable should not be (globally) fixed */
-      assert(SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5);
-      
+      /* variables with varstatus not equal to SCIP_VARSTATUS_FIXED can also have fixed bounds, but were not removed yet */
+      if( SCIPvarGetUbGlobal(var) < 0.5 )
+      {
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         ++(*nchgcoefs);
+
+         continue;
+      }
+      if( SCIPvarGetLbGlobal(var) > 0.5 )
+      {
+         /* remove constraint since it is redundant */
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+
+         return SCIP_OKAY;
+      }
+
       /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
        * variables
        */
-      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 ) 
+      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
          continue;
-      
+
       ++nfixables;
       negated = FALSE;
-      
+
       /* get the active variable */
       SCIP_CALL( SCIPvarGetProbvarBinary(&var, &negated) );
       assert(SCIPvarIsActive(var));
@@ -622,7 +661,7 @@ SCIP_RETCODE dualPresolving(
          objval = -SCIPvarGetObj(var);
       else
          objval = SCIPvarGetObj(var);
-      
+
       /* check if the current variable has a smaller objective coefficient */
       if( SCIPisLT(scip, objval, bestobjval) )
       {
@@ -634,23 +673,25 @@ SCIP_RETCODE dualPresolving(
    if( nfixables < 2 )
       return SCIP_OKAY;
 
+   nvars = consdata->nvars;
+
    assert(idx >= 0 && idx < nvars);
    assert(bestobjval < SCIPinfinity(scip));
-   
+
    *result = SCIP_SUCCESS;
 
    /* fix all redundant variables to their best bound */
-   
+
    /* first part of all variables */
-   for( v = 0; v < idx; ++v ) 
+   for( v = 0; v < idx; ++v )
    {
       var = vars[v];
       assert(var != NULL);
-         
+
       /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
        * variables
        */
-      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 ) 
+      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
          continue;
 
       activevar = var;
@@ -659,7 +700,7 @@ SCIP_RETCODE dualPresolving(
       /* get the active variable */
       SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
       assert(SCIPvarIsActive(activevar));
-         
+
       if( negated )
          objval = -SCIPvarGetObj(activevar);
       else
@@ -669,11 +710,11 @@ SCIP_RETCODE dualPresolving(
          fixval = 0.0;
       else
          fixval = 1.0;
-            
-      SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) ); 
-      assert(!infeasible); 
+
+      SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
+      assert(!infeasible);
       assert(fixed);
-   
+
       SCIPdebugMessage(" -> fixed <%s> == %g\n", SCIPvarGetName(var), fixval);
       ++(*nfixedvars);
    }
@@ -689,19 +730,19 @@ SCIP_RETCODE dualPresolving(
        */
       if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
          continue;
-      
+
       activevar = var;
       negated = FALSE;
 
       /* get the active variable */
       SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
       assert(SCIPvarIsActive(activevar));
-      
+
       if( negated )
          objval = -SCIPvarGetObj(activevar);
       else
          objval = SCIPvarGetObj(activevar);
-      
+
       if( objval > 0.0 )
          fixval = 0.0;
       else
@@ -710,11 +751,11 @@ SCIP_RETCODE dualPresolving(
       SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
       assert(!infeasible);
       assert(fixed);
-      
+
       SCIPdebugMessage(" -> fixed <%s> == %g\n", SCIPvarGetName(var), fixval);
       ++(*nfixedvars);
    }
-   
+
    /* if all variable have our appreciated number of locks and the constraint is not modifiable, or if the bestobjval is
     * less than or equal to zero, we can fix the variable with the smallest objective coefficient to one and the
     * constraint gets redundant
@@ -724,11 +765,11 @@ SCIP_RETCODE dualPresolving(
       SCIP_CALL( SCIPfixVar(scip, vars[idx], 1.0, &infeasible, &fixed) );
       assert(!infeasible);
       assert(fixed);
-      
+
       SCIPdebugMessage(" -> fixed <%s> == 1.0\n", SCIPvarGetName(vars[idx]));
       ++(*nfixedvars);
 
-      /* remove constraint since i*/
+      /* remove constraint since it is now redundant */
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
    }
@@ -745,6 +786,7 @@ SCIP_RETCODE applyFixings(
    SCIP_CONS*            cons,               /**< logic or constraint */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    SCIP_Bool*            redundant,          /**< returns whether a variable fixed to one exists in the constraint */
+   int*                  nchgcoefs,          /**< pointer to count number of changed/deleted coefficients */
    int*                  naddconss,          /**< pointer to count number of added constraints, or NULL indicating we
                                               *   can not resolve multi-aggregations
                                               */
@@ -770,6 +812,9 @@ SCIP_RETCODE applyFixings(
    *redundant = FALSE;
    v = 0;
 
+   /* all multi-aggregations should be resolved */
+   consdata->existmultaggr = FALSE;
+
    /* remove zeros and mark constraint redundant when found one variable fixed to one */
    while( v < consdata->nvars )
    {
@@ -780,12 +825,14 @@ SCIP_RETCODE applyFixings(
       {
          assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
          *redundant = TRUE;
+
          return SCIP_OKAY;
       }
       else if( SCIPvarGetUbGlobal(var) < 0.5 )
       {
          assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         ++(*nchgcoefs);
       }
       else
          ++v;
@@ -866,6 +913,7 @@ SCIP_RETCODE applyFixings(
          {
             /* delete old (multi-aggregated) variable */
             SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+            ++(*nchgcoefs);
 
             /* add active representation */
             for( v2 = nconsvars - 1; v2 >= 0; --v2 )
@@ -874,10 +922,11 @@ SCIP_RETCODE applyFixings(
                assert(SCIPvarIsActive(consvars[v2]) || (SCIPvarGetStatus(consvars[v2]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(consvars[v2]))));
 
                SCIP_CALL( addCoef(scip, cons, consvars[v2]) );
+               ++(*nchgcoefs);
             }
          }
          /* we need to degrade this logicor constraint to a linear constraint*/
-         else if( ndelconss != NULL && naddconss != NULL )
+         else if( (ndelconss != NULL && naddconss != NULL) || SCIPconsIsAdded(cons) )
          {
             char name[SCIP_MAXSTRLEN];
             SCIP_CONS* newcons;
@@ -939,8 +988,11 @@ SCIP_RETCODE applyFixings(
 
             /* delete old constraint */
             SCIP_CALL( SCIPdelCons(scip, cons) );
-            ++(*ndelconss);
-            ++(*naddconss);
+            if( ndelconss != NULL && naddconss != NULL )
+            {
+               ++(*ndelconss);
+               ++(*naddconss);
+            }
 
             goto TERMINATE;
          }
@@ -1080,22 +1132,32 @@ SCIP_RETCODE mergeMultiples(
       return SCIP_OKAY;
    }
 
-   /* allocate temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &negarray, nvars) );
-
    assert(consdata->vars != NULL && nvars > 0);
 
    nintvars = SCIPgetNIntVars(scip);
 #ifndef NDEBUG
    nbinvars = SCIPgetNBinVars(scip);
    nimplvars = SCIPgetNImplVars(scip);
-#endif
-
    assert(*nentries >= nbinvars + nimplvars);
 
-   /* get active or negation of active variables */
-   SCIP_CALL( SCIPgetBinvarRepresentatives(scip, nvars, consdata->vars, vars, negarray) );
+   /* all variables should be active or negative active variables, otherwise something went wrong with applyFixings()
+    * called before mergeMultiples()
+    */
+   assert(consdata->presolved);
+#endif
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &negarray, nvars) );
+
+   vars = consdata->vars;
+   /* all variables should be active or negative active variables, otherwise something went wrong with applyFixings()
+    * called before mergeMultiples()
+    */
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      assert(SCIPvarIsActive(vars[v]) || (SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(vars[v]))));
+      negarray[v] = SCIPvarIsNegated(vars[v]);
+   }
 
    /** initialize entries array */
    for( v = nvars - 1; v >= 0; --v )
@@ -1165,7 +1227,6 @@ SCIP_RETCODE mergeMultiples(
  TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &negarray);
-   SCIPfreeBufferArray(scip, &vars);
 
    consdata->merged = TRUE;
 
@@ -2077,7 +2138,7 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
    SCIP_CALL( SCIPallocBufferArray(scip, &negated, size) );
 
    /* iterate over all constraints and try to find negated cliques in logicors */
-   for( c = nconss - 1; c >= 0 && !SCIPisStopped(scip); --c )
+   for( c = nconss - 1; c >= 0; --c )
    {
       int v;
 
@@ -2097,11 +2158,31 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
       if( SCIPconsIsModifiable(cons) && consdata->nvars == 2 )
          continue;
 
+      if( nconss % 100 == 0 && SCIPisStopped(scip) )
+         break;
+
       maxcomppercons = MAXCOMPARISONS / nconss;
       comppercons = 0;
 
-      /* get binary representations of constraint variables */
-      SCIP_CALL( SCIPgetBinvarRepresentatives(scip, consdata->nvars, consdata->vars, repvars, negated) );
+      if( !consdata->presolved )
+      {
+         /* get binary representations of constraint variables */
+         SCIP_CALL( SCIPgetBinvarRepresentatives(scip, consdata->nvars, consdata->vars, repvars, negated) );
+      }
+      else
+      {
+         BMScopyMemoryArray(repvars, consdata->vars, consdata->nvars);
+
+         /* all variables should be active or negative active variables, otherwise something went wrong with applyFixings()
+          * called before mergeMultiples()
+          */
+         for( v = consdata->nvars - 1; v >= 0; --v )
+         {
+            assert(SCIPvarIsActive(repvars[v]) || (SCIPvarGetStatus(repvars[v]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(repvars[v]))));
+            negated[v] = SCIPvarIsNegated(repvars[v]);
+         }
+      }
+
       for( v = consdata->nvars - 1; v > 0; --v )
       {
          SCIP_Bool breakloop;
@@ -2440,6 +2521,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_Bool redundant;
+   int nchgcoefs;
    int c;
    int v;
 
@@ -2448,23 +2531,22 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
    assert(conshdlrdata != NULL);
 
    /* drop all variable event for deleted variables, which was only used in presolving */
-   for( c = nconss - 1; c >= 0; --c )
+   for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      for( v = consdata->nvars - 1; v >= 0; --v )
+      for( v = 0; v < consdata->nvars; ++v )
       {
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[v], SCIP_EVENTTYPE_VARFIXED, conshdlrdata->eventhdlr,
                (SCIP_EVENTDATA*)conss[c], -1) );
       }
 
-      if( !SCIPconsIsDeleted(conss[c]) )
+      if( !SCIPconsIsDeleted(conss[c]) && !consdata->presolved )
       {
-         SCIP_Bool redundant;
-
          /* we are not allowed to detect infeasibility in the exitpre stage */
-         SCIP_CALL( applyFixings(scip, conss[c], conshdlrdata->eventhdlr, &redundant, NULL, NULL) );
+         SCIP_CALL( applyFixings(scip, conss[c], conshdlrdata->eventhdlr, &redundant, &nchgcoefs, NULL, NULL) );
+         consdata->presolved = TRUE;
       }
    }
 
@@ -2848,6 +2930,9 @@ SCIP_DECL_CONSPROP(consPropLogicor)
    SCIP_Bool addcut;
    SCIP_Bool mustcheck;
    int c;
+#ifndef NDEBUG
+   SCIP_Bool inpresolve = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
+#endif
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -2863,6 +2948,8 @@ SCIP_DECL_CONSPROP(consPropLogicor)
    /* propagate all useful logic or constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
+      assert(inpresolve || !(SCIPconsGetData(conss[c])->existmultaggr));
+
       SCIPdebugMessage(" propagate constraint %s\n", SCIPconsGetName(conss[c]));
       SCIP_CALL( processWatchedVars(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &reduceddom, &addcut, &mustcheck) );
    }
@@ -2936,11 +3023,17 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          SCIP_CALL( SCIPenableConsPropagation(scip, cons) );
       }
 
-      /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
-      SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &redundant, naddconss, ndelconss) );
+      redundant = FALSE;
+      if( !consdata->presolved )
+      {
+         /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
+         SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &redundant, nchgcoefs, naddconss, ndelconss) );
+      }
 
       if( SCIPconsIsDeleted(cons) )
          continue;
+
+      consdata->presolved = TRUE;
 
       /* find pairs of negated variables in constraint: constraint is redundant */
       /* find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
@@ -2974,8 +3067,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                SCIPconsGetName(cons));
 
             assert(consdata->vars != NULL);
-            assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
-            assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
+            assert(consdata->vars[0] != NULL);
 
             if( SCIPvarGetStatus(consdata->vars[0]) != SCIP_VARSTATUS_MULTAGGR )
             {
@@ -2988,8 +3080,8 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                   *result = SCIP_CUTOFF;
                   goto TERMINATE;
                }
-               assert(fixed);
-               (*nfixedvars)++;
+               if( fixed )
+                  (*nfixedvars)++;
 
                SCIP_CALL( SCIPdelCons(scip, cons) );
                (*ndelconss)++;
@@ -3009,14 +3101,14 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "fixmaggr_%s_%s", SCIPconsGetName(cons),SCIPvarGetName(consdata->vars[0]) );
                SCIP_CALL( SCIPcreateConsLinear(scip, &conslinear, consname, 1, consdata->vars, &coef, 1.0, 1.0,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
+                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
                      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                      SCIPconsIsStickingAtNode(cons)) );
 
                /* add constraint */
                SCIP_CALL( SCIPaddCons(scip, conslinear) );
                SCIP_CALL( SCIPreleaseCons(scip, &conslinear) );
-               SCIP_CALL( SCIPdelCons(scip, cons) );       
+               SCIP_CALL( SCIPdelCons(scip, cons) );
 
                (*nupgdconss)++;
                *result = SCIP_SUCCESS;
@@ -3032,7 +3124,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
             values[0] = FALSE;
             values[1] = FALSE;
             /* a two-variable logicor constraint x + y >= 1 yields the implication x == 0 -> y == 1, and is represented
-             * by the clique inequality ~x + ~y <= 1 
+             * by the clique inequality ~x + ~y <= 1
              */
             SCIP_CALL( SCIPaddClique(scip, consdata->vars, values, consdata->nvars, &implinfeasible, &nimplbdchgs) );
             *nchgbds += nimplbdchgs;
@@ -3046,7 +3138,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
             if ( nimplbdchgs > 0 )
             {
                /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
-               SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &redundant, naddconss, ndelconss) );
+               SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &redundant, nchgcoefs, naddconss, ndelconss) );
                assert(!SCIPconsIsDeleted(cons));
 
                if( redundant )
@@ -3065,7 +3157,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       /* perform dual reductions */
       if( conshdlrdata->dualpresolving )
       {
-         SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, result) );
+         SCIP_CALL( dualPresolving(scip, cons, conshdlrdata->eventhdlr, nfixedvars, ndelconss, nchgcoefs, result) );
 
          /* if dual reduction deleted the constraint we take the next */
          if( !SCIPconsIsActive(cons) )
@@ -3454,21 +3546,32 @@ SCIP_DECL_EVENTEXEC(eventExecLogicor)
    if( SCIPeventGetType(event) == SCIP_EVENTTYPE_VARFIXED )
    {
       SCIP_VAR* var = SCIPeventGetVar(event);
+      SCIP_CONS* cons = (SCIP_CONS*)eventdata;
+      SCIP_CONSDATA* consdata;
+
+      assert(cons != NULL);
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
 
       /* we only catch this event in presolving stage */
       assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
       assert(var != NULL);
 
-      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED && SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5 )
-      {
-	 SCIP_CONS* cons = (SCIP_CONS*)eventdata;
+      consdata->presolved = FALSE;
 
+      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
+      {
          if( SCIPconsIsActive(cons) )
-	 {
-	    SCIP_CONSDATA* consdata = SCIPconsGetData(cons);
-	    assert(consdata != NULL);
-	    consdata->merged = FALSE;
-	 }
+         {
+            if( SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5 )
+               consdata->merged = FALSE;
+
+            if( !consdata->existmultaggr )
+            {
+               if( SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
+                  consdata->existmultaggr = TRUE;
+            }
+         }
       }
    }
 
