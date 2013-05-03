@@ -114,6 +114,7 @@
 #define DEFAULT_CONSHDLRUSENORM    TRUE /**< Should the violation constraint handler use the norm of a cut to check for feasibility? */
 #define DEFAULT_USEOBJUB          FALSE /**< Use upper bound on objective function (via primal solution)? */
 #define DEFAULT_USEOBJLB          FALSE /**< Use lower bound on objective function (via lower bound)? */
+#define DEFAULT_SUBSCIPFAST        TRUE /**< Should the settings for the sub-MIP be optimized for speed? */
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
 #define NCOLSTOOSMALL                 5 /**< only separate if the number of columns is larger than this number */
@@ -177,6 +178,7 @@ struct SCIP_SepaData
    SCIP_Bool             conshdlrusenorm;    /**< Should the violation constraint handler use the cut-norm to check for feasibility? */
    SCIP_Bool             useobjub;           /**< Use upper bound on objective function (via primal solution)? */
    SCIP_Bool             useobjlb;           /**< Use lower bound on objective function (via lower bound)? */
+   SCIP_Bool             subscipfast;        /**< Should the settings for the sub-MIP be optimized for speed? */
 };
 
 
@@ -1839,57 +1841,72 @@ SCIP_RETCODE subscipSetParams(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1000) );
 #endif
 
-   /* forbid recursive call of plugins solving subMIPs (also disables CG-separation) */
+   if ( sepadata->subscipfast )
+   {
+      /* forbid recursive call of plugins solving subMIPs (also disables CG-separation) */
 #ifdef SCIP_OUTPUT
-   SCIP_CALL( SCIPsetSubscipsOff(subscip, FALSE) );
+      SCIP_CALL( SCIPsetSubscipsOff(subscip, FALSE) );
 #else
-   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) ); /* quiet */
+      SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) ); /* quiet */
 #endif
+   }
+   else
+   {
+      /* avoid recursive call */
+      if ( ! SCIPisParamFixed(subscip, "separating/cgmip/freq") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "separating/cgmip/freq", -1) );
+      }
+   }
 
 #if 0
    SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
 #else
-   /* set other heuristics */
-   if( !SCIPisParamFixed(subscip, "heuristics/shifting/freq") )
+
+   if ( sepadata->subscipfast )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shifting/freq", 3) );
+      /* set other heuristics */
+      if( !SCIPisParamFixed(subscip, "heuristics/shifting/freq") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shifting/freq", 3) );
+      }
+      if( !SCIPisParamFixed(subscip, "heuristics/simplerounding/freq") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/simplerounding/freq", 1) );
+      }
+      if( !SCIPisParamFixed(subscip, "heuristics/rounding/freq") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rounding/freq", 1) );
+      }
+      if( !SCIPisParamFixed(subscip, "heuristics/oneopt/freq") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
+      }
+
+      /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/pscostdiving/freq", 1) ); */
+      /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", 3) ); */
+
+      /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/coefdiving/freq", -1) ); */
+      /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/fracdiving/freq", -1) ); */
+      /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/guideddiving/freq", -1) ); */
+      /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/linesearchdiving/freq", -1) ); */
+      /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/objpscostdiving/freq", -1) ); */
+      /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rootsoldiving/freq", -1) ); */
+      /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/veclendiving/freq", -1) ); */
+
+      /* use fast presolving */
+      SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+      /* disable conflict analysis */
+      /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); */
+      /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) ); */
+      /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) ); */
+      /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) ); */
+      /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) ); */
+
+      /* use fast separation */
+      SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
    }
-   if( !SCIPisParamFixed(subscip, "heuristics/simplerounding/freq") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/simplerounding/freq", 1) );
-   }
-   if( !SCIPisParamFixed(subscip, "heuristics/rounding/freq") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rounding/freq", 1) );
-   }
-   if( !SCIPisParamFixed(subscip, "heuristics/oneopt/freq") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
-   }
-
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/pscostdiving/freq", 1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", 3) ); */
-
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/coefdiving/freq", -1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/fracdiving/freq", -1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/guideddiving/freq", -1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/linesearchdiving/freq", -1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/objpscostdiving/freq", -1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rootsoldiving/freq", -1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/veclendiving/freq", -1) ); */
-
-   /* use fast presolving */
-   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-
-   /* disable conflict analysis */
-   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); */
-   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) ); */
-   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) ); */
-   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) ); */
-   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) ); */
-
-   /* use fast separation */
-   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 #endif
 
    return SCIP_OKAY;
@@ -3921,6 +3938,10 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "separating/cgmip/useobjlb",
          "Use lower bound on objective function (via primal solution)?",
          &sepadata->useobjlb, FALSE, DEFAULT_USEOBJLB, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/subscipfast",
+         "Should the settings for the sub-MIP be optimized for speed?",
+         &sepadata->subscipfast, FALSE, DEFAULT_SUBSCIPFAST, NULL, NULL) );
 
    return SCIP_OKAY;
 }
