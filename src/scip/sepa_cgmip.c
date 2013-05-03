@@ -219,8 +219,14 @@ struct CGMIP_MIPData
 
    SCIP_VAR**            z;                  /**< auxiliary variables for upper bounds (NULL if not present) */
 
-   SCIP_Bool             conshdlrusenorm;    /**< copy from sepadata */
    char                  normtype;           /**< type of norm to use for efficacy norm calculation */
+
+   /* additional redundant data */
+   SCIP_Bool             conshdlrusenorm;    /**< copy from sepadata */
+   SCIP_Bool             conshdlrfullnorm;   /**< compute real cut and compute norm for this */
+   SCIP*                 scip;               /**< original SCIP */
+   SCIP_SEPA*            sepa;               /**< CG-cut separator */
+   SCIP_SEPADATA*        sepadata;           /**< CG-cut separator data */
 };
 typedef struct CGMIP_MIPData CGMIP_MIPDATA;
 
@@ -239,6 +245,21 @@ struct SCIP_ConshdlrData
    CGMIP_MIPDATA*        mipdata;            /**< data of separating sub-MIP */
 };
 
+/* temporary forward declaration */
+static
+SCIP_RETCODE computeCut(
+   SCIP*                 scip,               /**< original scip */
+   SCIP_SEPA*            sepa,               /**< separator */
+   CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_SOL*             sol,                /**< current solution for sub-MIP */
+   SCIP_Real*            cutcoefs,           /**< coefficients of the cut */
+   SCIP_Real*            cutrhs,             /**< rhs of the cut */
+   SCIP_Bool*            localrowsused,      /**< pointer to store whether local rows were used in summation */
+   SCIP_Bool*            localboundsused,    /**< pointer to store whether local bounds were used in summation */
+   SCIP_Bool*            success             /**< whether we produced a valid cut */
+   );
+
 
 /** check whether cut corresponding to solution is violated */
 static
@@ -248,6 +269,7 @@ SCIP_Bool solCutIsViolated(
    SCIP_SOL*             sol                 /**< solution to be checked */
    )
 {
+   SCIP_Real cutsqrnorm = 0.0;
    SCIP* subscip;
    SCIP_Real act;
    SCIP_Real norm;
@@ -268,77 +290,125 @@ SCIP_Bool solCutIsViolated(
    /* compute activity and norm  */
    if ( mipdata->conshdlrusenorm )
    {
-      SCIP_Real cutsqrnorm = 0.0;
-      switch ( mipdata->normtype )
+      /* check whether we should compute the full cut and then compute the norm */
+      if ( mipdata->conshdlrfullnorm )
       {
-      case 'e':
-         cutsqrnorm = 0.0;
-         for (j = 0; j < mipdata->ncols; ++j)
-         {
-            var = mipdata->alpha[j];
-            if ( var == NULL )
-               continue;
+         SCIP_Real* cutcoefs;
+         SCIP_Bool localrowsused;
+         SCIP_Bool localboundsused;
+         SCIP_Bool success;
+         SCIP_VAR** vars;
+         int nvars;
 
-            val = SCIPgetSolVal(subscip, sol, var);
-            if ( !SCIPisZero(scip, val) )
+         /* get data */
+         SCIP_CALL( SCIPgetVarsData(mipdata->scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
+
+         /* compute coefficients */
+         SCIP_CALL( computeCut(mipdata->scip, mipdata->sepa, mipdata, mipdata->sepadata, sol, cutcoefs, &rhs, &localrowsused, &localboundsused, &success) );
+
+#if 0
+         for (j = 0; (int) j < nvars; ++j)
+         {
+            if ( ! SCIPisZero(scip, cutcoefs[j]) )
+               SCIPinfoMessage(scip, NULL, "+ %f x%d", cutcoefs[j], j);
+         }
+         SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+         /* ignore solution if cut was not valid */
+         if ( ! success )
+            return FALSE;
+
+         /* compute activity and Euclidean norm (todo: use arbitrary norm) */
+         cutsqrnorm = 0.0;
+         for (j = 0; (int) j < nvars; ++j)
+         {
+            if ( ! SCIPisZero(scip, cutcoefs[j]) )
             {
-               act += val * SCIPvarGetObj(var);
-               cutsqrnorm += SQR(val);
+               act += cutcoefs[j] * SCIPvarGetLPSol(vars[j]);
+               cutsqrnorm += SQR(cutcoefs[j]);
             }
          }
          norm = SQRT(cutsqrnorm);
-         break;
-      case 'm':
-         for (j = 0; j < mipdata->ncols; ++j)
-         {
-            var = mipdata->alpha[j];
-            if ( var == NULL )
-               continue;
 
-            val = SCIPgetSolVal(subscip, sol, var);
-            if ( !SCIPisZero(scip, val) )
-            {
-               act += val * SCIPvarGetObj(var);
-               if ( REALABS(val) > norm )
-                  norm = REALABS(val);
-            }
-         }
-         break;
-      case 's':
-         for (j = 0; j < mipdata->ncols; ++j)
+         SCIPfreeBufferArray(scip, &cutcoefs);
+      }
+      else
+      {
+         switch ( mipdata->normtype )
          {
-            var = mipdata->alpha[j];
-            if ( var == NULL )
-               continue;
-
-            val = SCIPgetSolVal(subscip, sol, var);
-            if ( !SCIPisZero(scip, val) )
+         case 'e':
+            cutsqrnorm = 0.0;
+            for (j = 0; j < mipdata->ncols; ++j)
             {
-               act += val * SCIPvarGetObj(var);
-               norm += REALABS(val);
-            }
-         }
-         break;
-      case 'd':
-         for (j = 0; j < mipdata->ncols; ++j)
-         {
-            var = mipdata->alpha[j];
-            if ( var == NULL )
-               continue;
+               var = mipdata->alpha[j];
+               if ( var == NULL )
+                  continue;
 
-            val = SCIPgetSolVal(subscip, sol, var);
-            if ( !SCIPisZero(scip, val) )
-            {
-               act += val * SCIPvarGetObj(var);
-               ++len;
+               val = SCIPgetSolVal(subscip, sol, var);
+               if ( !SCIPisZero(scip, val) )
+               {
+                  act += val * SCIPvarGetObj(var);
+                  cutsqrnorm += SQR(val);
+               }
             }
+            norm = SQRT(cutsqrnorm);
+            break;
+         case 'm':
+            for (j = 0; j < mipdata->ncols; ++j)
+            {
+               var = mipdata->alpha[j];
+               if ( var == NULL )
+                  continue;
+
+               val = SCIPgetSolVal(subscip, sol, var);
+               if ( !SCIPisZero(scip, val) )
+               {
+                  act += val * SCIPvarGetObj(var);
+                  if ( REALABS(val) > norm )
+                     norm = REALABS(val);
+               }
+            }
+            break;
+         case 's':
+            for (j = 0; j < mipdata->ncols; ++j)
+            {
+               var = mipdata->alpha[j];
+               if ( var == NULL )
+                  continue;
+
+               val = SCIPgetSolVal(subscip, sol, var);
+               if ( !SCIPisZero(scip, val) )
+               {
+                  act += val * SCIPvarGetObj(var);
+                  norm += REALABS(val);
+               }
+            }
+            break;
+         case 'd':
+            for (j = 0; j < mipdata->ncols; ++j)
+            {
+               var = mipdata->alpha[j];
+               if ( var == NULL )
+                  continue;
+
+               val = SCIPgetSolVal(subscip, sol, var);
+               if ( !SCIPisZero(scip, val) )
+               {
+                  act += val * SCIPvarGetObj(var);
+                  ++len;
+               }
+            }
+            if ( len > 0 )
+               norm = 1.0;
+            break;
+         default:
+            SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", mipdata->normtype);
+            return SCIP_INVALIDDATA;
          }
-         if ( len > 0 )
-            norm = 1.0;
-         break;
-      default:
-         SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", mipdata->normtype);
-         return SCIP_INVALIDDATA;
+         /* get rhs */
+         rhs = SCIPgetSolVal(subscip, sol, mipdata->beta);
       }
 
       /* if norm is 0, the cut is trivial */
@@ -357,19 +427,23 @@ SCIP_Bool solCutIsViolated(
          if ( !SCIPisZero(subscip, val) )
             act += SCIPvarGetObj(var) * val;
       }
-   }
 
-   /* get rhs */
-   rhs = SCIPgetSolVal(subscip, sol, mipdata->beta);
+      /* get rhs */
+      rhs = SCIPgetSolVal(subscip, sol, mipdata->beta);
+   }
 
 #ifdef SCIP_DEBUG
    if ( SCIPisEfficacious(subscip, (act - rhs)/norm) )
    {
       SCIPdebugMessage("Violated cut from solution - act: %f, rhs: %f, norm: %f, eff.: %f\n", act, rhs, norm, (act-rhs)/norm);
    }
+   else
+   {
+      SCIPdebugMessage("Rejected cut from solution - act: %f, rhs: %f, norm: %f, eff.: %f\n", act, rhs, norm, (act-rhs)/norm);
+   }
 #endif
 
-   return SCIPisEfficacious(subscip, (act - rhs)/norm);   
+   return SCIPisEfficacious(subscip, (act - rhs)/norm);
 }
 
 
@@ -2250,7 +2324,6 @@ SCIP_RETCODE computeCut(
    assert( scip != NULL );
    assert( mipdata != NULL );
    assert( sepadata != NULL );
-   assert( sol != NULL );
    assert( cutcoefs != NULL );
    assert( cutrhs != NULL );
    assert( localrowsused != NULL );
@@ -3829,6 +3902,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    mipdata->yrhs = NULL;
    mipdata->z = NULL;
    mipdata->normtype = ' ';
+
+   mipdata->conshdlrfullnorm = TRUE;
+   mipdata->scip = scip;
+   mipdata->sepa = sepa;
+   mipdata->sepadata = sepadata;
+
 
    /* get the type of norm to use for efficacy calculations */
    SCIP_CALL( SCIPgetCharParam(scip, "separating/efficacynorm", &mipdata->normtype) );
