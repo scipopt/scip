@@ -231,6 +231,7 @@ void SCIPstatReset(
    stat->nnodelps = 0;
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
+   stat->nsbdivinglps = 0;
    stat->nstrongbranchs = 0;
    stat->nrootstrongbranchs = 0;
    stat->nconflictlps = 0;

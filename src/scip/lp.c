@@ -3810,7 +3810,7 @@ void SCIPcolSetStrongbranchData(
 
    col->sblpobjval = lpobjval;
    col->sbsolval = primsol;
-   col->validsblp = stat->lpcount - stat->ndivinglps;
+   col->validsblp = stat->lpcount - stat->nsbdivinglps;
    col->sbnode = stat->nnodes;
 
    col->sbitlim = itlim;
@@ -3912,9 +3912,9 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
 
    *lperror = FALSE;
 
-   if( col->validsblp != stat->lpcount - stat->ndivinglps || itlim > col->sbitlim )
+   if( col->validsblp != stat->lpcount - stat->nsbdivinglps || itlim > col->sbitlim )
    {
-      col->validsblp = stat->lpcount - stat->ndivinglps;
+      col->validsblp = stat->lpcount - stat->nsbdivinglps;
       col->sbsolval = col->primsol;
       col->sblpobjval = SCIPlpGetObjval(lp, set, prob);
       col->sbnode = stat->nnodes;
@@ -4105,9 +4105,9 @@ SCIP_RETCODE SCIPcolGetStrongbranches(
       assert(col->lpipos >= 0);
       assert(col->lppos >= 0);
 
-      if( col->validsblp != stat->lpcount - stat->ndivinglps || itlim > col->sbitlim )
+      if( col->validsblp != stat->lpcount - stat->nsbdivinglps || itlim > col->sbitlim )
       {
-         col->validsblp = stat->lpcount - stat->ndivinglps;
+         col->validsblp = stat->lpcount - stat->nsbdivinglps;
          col->sbsolval = col->primsol;
          col->sblpobjval = SCIPlpGetObjval(lp, set, prob);
          col->sbnode = stat->nnodes;
@@ -4303,7 +4303,7 @@ SCIP_Longint SCIPcolGetStrongbranchLPAge(
    assert(col != NULL);
    assert(stat != NULL);
 
-   return (col->sbnode != stat->nnodes ? SCIP_LONGINT_MAX : stat->lpcount - stat->ndivinglps - col->validsblp);
+   return (col->sbnode != stat->nnodes ? SCIP_LONGINT_MAX : stat->lpcount - stat->nsbdivinglps - col->validsblp);
 }
 
 /** marks a column to be not removable from the LP in the current node because it became obsolete */
@@ -11755,6 +11755,8 @@ SCIP_RETCODE lpPrimalSimplex(
          stat->lastdivenode = stat->nnodes;
          stat->ndivinglps++;
          stat->ndivinglpiterations += iterations;
+         if( lp->strongbranchprobing )
+            stat->nsbdivinglps++;
       }
       else
       {
@@ -11875,6 +11877,8 @@ SCIP_RETCODE lpDualSimplex(
          stat->lastdivenode = stat->nnodes;
          stat->ndivinglps++;
          stat->ndivinglpiterations += iterations;
+         if( lp->strongbranchprobing )
+            stat->nsbdivinglps++;
       }
       else
       {
@@ -12016,6 +12020,8 @@ SCIP_RETCODE lpLexDualSimplex(
          stat->lastdivenode = stat->nnodes;
          stat->ndivinglps++;
          stat->ndivinglpiterations += iterations;
+         if( lp->strongbranchprobing )
+            stat->nsbdivinglps++;
       }
       else
       {
@@ -12595,6 +12601,8 @@ SCIP_RETCODE lpBarrier(
          stat->lastdivenode = stat->nnodes;
          stat->ndivinglps++;
          stat->ndivinglpiterations += iterations;
+         if( lp->strongbranchprobing )
+            stat->nsbdivinglps++;
       }
       else
       {
