@@ -6555,6 +6555,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    SCIPsetFreeBufferArray(set, &rstat);
    SCIPsetFreeBufferArray(set, &cstat);
 
+   assert(lp->flushed);
+
    /* resolve LP if something has changed in order to synchronize LPI and LP */
    if ( resolve )
    {
