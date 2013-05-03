@@ -115,6 +115,7 @@
 #define DEFAULT_USEOBJUB          FALSE /**< Use upper bound on objective function (via primal solution)? */
 #define DEFAULT_USEOBJLB          FALSE /**< Use lower bound on objective function (via lower bound)? */
 #define DEFAULT_SUBSCIPFAST        TRUE /**< Should the settings for the sub-MIP be optimized for speed? */
+#define DEFAULT_OUTPUT            FALSE /**< Should information about the sub-MIP and cuts be displayed? */
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
 #define NCOLSTOOSMALL                 5 /**< only separate if the number of columns is larger than this number */
@@ -179,6 +180,7 @@ struct SCIP_SepaData
    SCIP_Bool             useobjub;           /**< Use upper bound on objective function (via primal solution)? */
    SCIP_Bool             useobjlb;           /**< Use lower bound on objective function (via lower bound)? */
    SCIP_Bool             subscipfast;        /**< Should the settings for the sub-MIP be optimized for speed? */
+   SCIP_Bool             output;             /**< Should information about the sub-MIP and cuts be displayed? */
 };
 
 
@@ -1837,8 +1839,16 @@ SCIP_RETCODE subscipSetParams(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1000) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/nsols/active", 2) );
 #else
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1000) );
+   if ( sepadata->output )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 4) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1000) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/nsols/active", 2) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   }
 #endif
 
    if ( sepadata->subscipfast )
@@ -2011,6 +2021,11 @@ SCIP_RETCODE solveSubscip(
 
 #ifdef SCIP_OUTPUT
       SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+#else
+      if ( sepadata->output )
+      {
+         SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+      }
 #endif
 
       /* if the solution process was terminated or the problem is infeasible (can happen because of violation constraint) */
@@ -2091,6 +2106,11 @@ SCIP_RETCODE solveSubscip(
 
 #ifdef SCIP_OUTPUT
          SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+#else
+         if ( sepadata->output )
+         {
+            SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+         }
 #endif
 
          /* if the solution process was terminated */
@@ -3077,6 +3097,11 @@ SCIP_RETCODE createCGCutCMIR(
                         SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
 #ifdef SCIP_OUTPUT
                      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
+#else
+                     if ( sepadata->output )
+                     {
+                        SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+                     }
 #endif
                      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, cutoff) );
                      ++(*ngen);
@@ -3297,6 +3322,11 @@ SCIP_RETCODE createCGCutStrongCG(
                         SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
 #ifdef SCIP_OUTPUT
                      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
+#else
+                     if ( sepadata->output )
+                     {
+                        SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+                     }
 #endif
                      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, cutoff) );
                      ++(*ngen);
@@ -3942,6 +3972,10 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "separating/cgmip/subscipfast",
          "Should the settings for the sub-MIP be optimized for speed?",
          &sepadata->subscipfast, FALSE, DEFAULT_SUBSCIPFAST, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/output",
+         "Should information about the sub-MIP and cuts be displayed?",
+         &sepadata->output, FALSE, DEFAULT_OUTPUT, NULL, NULL) );
 
    return SCIP_OKAY;
 }
