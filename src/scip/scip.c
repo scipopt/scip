@@ -15466,6 +15466,8 @@ SCIP_RETCODE SCIPstartStrongbranch(
 
    assert(!SCIPinProbing(scip));
 
+   SCIPdebugMessage("starting strong branching mode%s: lpcount=%lld\n", enablepropagation ? " with propagation" : "", scip->stat->lpcount - scip->stat->nsbdivinglps);
+
    /* start probing mode to allow propagation before solving the strong branching LPs; if no propagation should be done,
     * start the strong branching mode in the LP interface
     */
@@ -15549,6 +15551,8 @@ SCIP_RETCODE SCIPendStrongbranch(
          ++nbnds;
       }
 
+      SCIPdebugMessage("ending strong branching with probing: %d bound changes collected\n", nbnds);
+
       /* inform the LP that the probing mode is not used for strong branching anymore */
       SCIPlpEndStrongbranchProbing(scip->lp);
 
@@ -15575,6 +15579,8 @@ SCIP_RETCODE SCIPendStrongbranch(
    }
    else
    {
+      SCIPdebugMessage("ending strong branching\n");
+
       SCIP_CALL( SCIPlpEndStrongbranch(scip->lp) );
    }
 
