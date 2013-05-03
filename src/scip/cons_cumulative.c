@@ -10736,6 +10736,10 @@ SCIP_RETCODE findCumulativeConss(
       char name[SCIP_MAXSTRLEN];
       int c;
 
+      /* jobs with zero durations are skipped */
+      if( tcliquegraph->durations[v] == 0 )
+         continue;
+
       /* check if the start time variable is already covered by at least one clique */
       if( SCIPhashtableExists(covered, tcliquegraph->vars[v]) )
          continue;
