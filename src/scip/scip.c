@@ -16080,7 +16080,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    /* if propagation did not already detect infeasibility, solve the probing LP */
    if( !cutoff )
    {
-      SCIP_CALL( SCIPsolveProbingLP(scip, itlim, lperror) );
+      SCIP_CALL( SCIPsolveProbingLP(scip, itlim, lperror, &cutoff) );
 
       SCIPdebugMessage("probing LP solution status: %d\n", SCIPgetLPSolstat(scip));
 
@@ -16123,9 +16123,11 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
             *up = objval + looseobjval;
          break;
       }
+      case SCIP_LPSOLSTAT_NOTSOLVED:
+         assert(cutoff); /* the LP should only be unsolved if a conflict unflushed the LP */
+         break;
       case SCIP_LPSOLSTAT_ERROR:
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-      case SCIP_LPSOLSTAT_NOTSOLVED:
          *lperror = TRUE;
          break;
       default:
@@ -16211,7 +16213,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    /* if propagation did not already detect infeasibility, solve the probing LP */
    if( !cutoff )
    {
-      SCIP_CALL( SCIPsolveProbingLP(scip, itlim, lperror) );
+      SCIP_CALL( SCIPsolveProbingLP(scip, itlim, lperror, &cutoff) );
 
       SCIPdebugMessage("probing LP solution status: %d\n", SCIPgetLPSolstat(scip));
 
@@ -16253,9 +16255,11 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
             *down = objval + looseobjval;
          break;
       }
+      case SCIP_LPSOLSTAT_NOTSOLVED:
+         assert(cutoff); /* the LP should only be unsolved if a conflict unflushed the LP */
+         break;
       case SCIP_LPSOLSTAT_ERROR:
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-      case SCIP_LPSOLSTAT_NOTSOLVED:
          *lperror = TRUE;
          break;
       default:
