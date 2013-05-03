@@ -137,7 +137,7 @@ SCIP_RETCODE solveLP(
    *optimal = FALSE;
    *error = FALSE;
 
-   retcode = SCIPsolveDiveLP(scip, itlimit, error);
+   retcode = SCIPsolveDiveLP(scip, itlimit, error, NULL);
    lpsolstat = SCIPgetLPSolstat(scip);
 
    /* an error should not kill the overall solving process */

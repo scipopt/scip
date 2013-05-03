@@ -1961,7 +1961,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 #ifdef NDEBUG
          {
             SCIP_RETCODE retstat;
-            retstat = SCIPsolveProbingLP(scip, -1, &lperror);
+            retstat = SCIPsolveProbingLP(scip, -1, &lperror, NULL);
             if( retstat != SCIP_OKAY )
             {
                SCIPwarningMessage(scip, "Error while solving LP in SHIFTANDPROPAGATE heuristic; LP solve terminated with code <%d>\n",
@@ -1969,7 +1969,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             }
          }
 #else
-         SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror) );
+         SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
 #endif
 
          SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));

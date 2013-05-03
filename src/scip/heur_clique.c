@@ -699,7 +699,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 #ifdef NDEBUG
       {
          SCIP_Bool retstat;
-         retstat = SCIPsolveProbingLP(scip, -1, &lperror);
+         retstat = SCIPsolveProbingLP(scip, -1, &lperror, NULL);
          if( retstat != SCIP_OKAY )
          {
             SCIPwarningMessage(scip, "Error while solving LP in clique heuristic; LP solve terminated with code <%d>\n",
@@ -707,7 +707,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          }
       }
 #else
-      SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror) );
+      SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
 #endif
       SCIPdebugMessage("ending solving clique-lp at time %g\n", SCIPgetSolvingTime(scip));
 

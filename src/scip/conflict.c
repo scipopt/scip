@@ -6140,7 +6140,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    }
 
    /* possibly restore solution values */
-   if ( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED )
+   if( lp->flushed && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED )
    {
       /* restore status */
       lp->lpsolstat = storedsolvals.lpsolstat;

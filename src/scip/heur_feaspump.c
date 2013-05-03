@@ -1112,7 +1112,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIP_CALL( SCIPunlinkSol(scip, heurdata->roundedsol) );
       }
       
-      retcode = SCIPsolveDiveLP(scip, iterlimit, &lperror);
+      retcode = SCIPsolveDiveLP(scip, iterlimit, &lperror, NULL);
       lpsolstat = SCIPgetLPSolstat(scip);
 
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
