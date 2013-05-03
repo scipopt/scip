@@ -123,6 +123,7 @@
 #define EPSILONVALUE              1e-03 /**< epsilon value needed to model strict-inequalities */
 #define BETAEPSILONVALUE          1e-02 /**< epsilon value for fracbeta - is larger than EPSILONVALUE for numerical stability */
 #define STALLNODELIMIT           1000LL /**< number of stalling nodes if earlyterm is true */
+#define CONSHDLRFULLNORM          FALSE /**< compute real cut and compute norm for this */
 #define MINEFFICACY                0.05 /**< minimum efficacy of a cut - compare set.c */
 
 /* parameters used for CMIR-generation (taken from sepa_gomory) */
@@ -3903,7 +3904,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    mipdata->z = NULL;
    mipdata->normtype = ' ';
 
-   mipdata->conshdlrfullnorm = TRUE;
+   mipdata->conshdlrfullnorm = CONSHDLRFULLNORM;
    mipdata->scip = scip;
    mipdata->sepa = sepa;
    mipdata->sepadata = sepadata;
