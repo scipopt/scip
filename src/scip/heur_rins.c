@@ -42,7 +42,7 @@
 #define DEFAULT_MAXNODES      5000      /* maximum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MINNODES      500       /* minimum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MINIMPROVE    0.01      /* factor by which RINS should at least improve the incumbent          */
-#define DEFAULT_MINFIXINGRATE 0.0       /* minimum percentage of integer variables that have to be fixed       */
+#define DEFAULT_MINFIXINGRATE 0.3       /* minimum percentage of integer variables that have to be fixed       */
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem       */
 #define DEFAULT_NWAITINGNODES 200       /* number of nodes without incumbent change that heuristic should wait */
 #define DEFAULT_USELPROWS    FALSE      /* should subproblem be created out of the rows in the LP rows,
@@ -306,7 +306,7 @@ SCIP_DECL_HEURINIT(heurInitRins)
 static
 SCIP_DECL_HEUREXEC(heurExecRins)
 {  /*lint --e{715}*/
-   SCIP_Longint nstallnodes;
+   SCIP_Longint nnodes;
 
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
    SCIP* subscip;                            /* the subproblem created by RINS      */
@@ -358,19 +358,19 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    *result = SCIP_DIDNOTRUN;
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
-   nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
+   nnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
 
    /* reward RINS if it succeeded often */
-   nstallnodes = (SCIP_Longint)(nstallnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-   nstallnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
-   nstallnodes += heurdata->nodesofs;
+   nnodes = (SCIP_Longint)(nnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+   nnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
+   nnodes += heurdata->nodesofs;
 
    /* determine the node limit for the current process */
-   nstallnodes -= heurdata->usednodes;
-   nstallnodes = MIN(nstallnodes, heurdata->maxnodes);
+   nnodes -= heurdata->usednodes;
+   nnodes = MIN(nnodes, heurdata->maxnodes);
 
    /* check whether we have enough nodes left to call subproblem solving */
-   if( nstallnodes < heurdata->minnodes )
+   if( nnodes < heurdata->minnodes )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
@@ -446,6 +446,12 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
+#ifdef SCIP_DEBUG
+   /* for debugging RINS, enable MIP output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#endif
+
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
@@ -464,7 +470,8 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       goto TERMINATE;
 
    /* set limits for the subproblem */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nstallnodes) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nnodes/10)) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
@@ -512,6 +519,17 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
    }
 
+   /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
+    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
+    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
+    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
+    * made for the original SCIP
+    */
+   if( !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
+   }
+
    /* add an objective cutoff */
    cutoff = SCIPinfinity(scip);
    assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
@@ -544,6 +562,9 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 #endif
       SCIPwarningMessage(scip, "Error while solving subproblem in RINS heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
+
+   /* print solving statistics of subproblem if we are in SCIP's debug mode */
+   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
 

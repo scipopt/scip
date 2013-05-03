@@ -7282,7 +7282,7 @@ SCIP_RETCODE SCIPconshdlrsStorePropagationStatus(
 
    for( c = nconshdlrs - 1; c >= 0; --c )
    {
-      conshdlr = conshdlrs[c];
+      conshdlr = conshdlrs[c]; /*lint !e613*/
       assert(conshdlr != NULL);
       assert(conshdlr->storednmarkedpropconss == 0);
 
@@ -7324,7 +7324,7 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 
    for( c = nconshdlrs - 1; c >= 0; --c )
    {
-      conshdlr = conshdlrs[c];
+      conshdlr = conshdlrs[c]; /*lint !e613*/
       assert(conshdlr != NULL);
 
       if( conshdlr->storednmarkedpropconss > 0 )

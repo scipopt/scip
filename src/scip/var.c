@@ -3500,11 +3500,14 @@ SCIP_RETCODE varEventVarFixed(
 
 	 assert(varstatus != SCIP_VARSTATUS_FIXED);
 
-	 /* issue event until an aggregated parent variable was found, because for this and its parents the var event
-          * was already issued(, except the original one)
+	 /* issue event for not aggregated parent variable, because for these and its parents the var event was already
+          * issued(, except the original one)
+          *
+          * @note that even before an aggregated parent variable, there might be variables, for which the vent was not
+          *       yet issued
 	  */
          if( varstatus == SCIP_VARSTATUS_AGGREGATED )
-            break;
+            continue;
 
 	 if( varstatus != SCIP_VARSTATUS_ORIGINAL )
 	 {

@@ -392,6 +392,8 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolImpliedbounds)
 
    /* call the cut separation */
    ncuts = 0;
+   cutoff = FALSE;
+
    if( nfracs > 0 )
    {
       SCIP_CALL( separateCuts(scip, sepa, sol, solvals, fracvars, fracvals, nfracs, &cutoff, &ncuts) );

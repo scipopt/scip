@@ -90,8 +90,6 @@ then
   exit 1
 fi
 
-SETDIR=../settings
-
 if test ! -e results
 then
     mkdir results
@@ -104,8 +102,8 @@ fi
 EVALFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.eval
 SETFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.set
 SCHFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.sch
+OPTFILE=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.opt
 GMSDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.gms
-OPTDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.opt
 SOLDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.sol
 
 # additional environment variables needed by finishgamscluster.sh at the end (or when trap is setup)
@@ -145,20 +143,15 @@ then
   GAMSOPTS="$GAMSOPTS gdxcompress=1"
 fi
 
-# setup option file
-# create directory $OPTDIR and put optionfile <solvername>.opt there
+# check for solver settings (template) file
+SETTINGS=
 if test "$SETNAME" != "default"
 then
+  SETDIR=`cd ../settings ; pwd`
   if test -f "$SETDIR/$SETNAME.gamsset"
   then
-    if test -d $OPTDIR
-    then
-      rm -f $OPTDIR/*
-    else
-      mkdir -p $OPTDIR
-    fi
-    cp "$SETDIR/$SETNAME.gamsset" $OPTDIR/${SOLVER,,}.opt
-    GAMSOPTS="$GAMSOPTS optdir=$OPTDIR optfile=1"
+    SETTINGS="$SETDIR/${SETNAME}.gamsset"
+    cp $SETTINGS $OPTFILE
   else
     echo "${m} settings file $SETDIR/${SETNAME}.gamsset not found"
     exit 1
@@ -363,15 +356,16 @@ do
     # additional environment variables needed by rungamscluster.sh
     export BASENAME=$FILENAME
     export FILENAME=$i
-    export GAMSBIN="$GAMSBIN"
-    export GAMSOPTS="$GAMSOPTS"
-    export GMSFILE=$GMSFILE
-    export INPUTDIR=$INPUTDIR
-    export MODTYPE=$MODTYPE
-    export SOLVER=$SOLVER
-    export GDXFILE=$GDXFILE
-    export CLIENTTMPDIR=$CLIENTTMPDIR
-    export PASSSTARTSOL=$PASSSTARTSOL
+    export GAMSBIN
+    export GAMSOPTS
+    export GMSFILE
+    export INPUTDIR
+    export MODTYPE
+    export SOLVER
+    export GDXFILE
+    export CLIENTTMPDIR
+    export PASSSTARTSOL
+    export SETTINGS
 
     case $QUEUETYPE in
       srun )

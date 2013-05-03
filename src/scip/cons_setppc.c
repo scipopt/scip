@@ -29,6 +29,7 @@
 
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_quadratic.h"
 #include "scip/pub_misc.h"
 
 
@@ -50,6 +51,7 @@
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 #define LINCONSUPGD_PRIORITY    +700000 /**< priority of the constraint handler for upgrading of linear constraints */
+#define QUADCONSUPGD_PRIORITY   +700000 /**< priority of the constraint handler for upgrading of linear constraints */
 
 #define EVENTHDLR_NAME         "setppc"
 #define EVENTHDLR_DESC         "bound change event handler for set partitioning / packing / covering constraints"
@@ -1025,6 +1027,10 @@ SCIP_RETCODE addCoef(
       }
 #endif
    }
+   else
+   {
+      assert(SCIPvarGetStatus(SCIPvarGetProbvar(var)) != SCIP_VARSTATUS_MULTAGGR);
+   }
 
    /* install the rounding locks for the new variable */
    SCIP_CALL( lockRounding(scip, cons, var) );
@@ -1766,7 +1772,7 @@ SCIP_RETCODE applyFixings(
                }
             }
             /* we need to degrade this setppc constraint to a linear constraint*/
-            else if( ndelconss != NULL && naddconss != NULL )
+            else if( (ndelconss != NULL && naddconss != NULL) || SCIPconsIsAdded(cons) )
             {
                char name[SCIP_MAXSTRLEN];
                SCIP_CONS* newcons;
@@ -1843,8 +1849,11 @@ SCIP_RETCODE applyFixings(
 
                /* delete old constraint */
                SCIP_CALL( SCIPdelCons(scip, cons) );
-               ++(*ndelconss);
-               ++(*naddconss);
+               if( ndelconss != NULL && naddconss != NULL )
+               {
+                  ++(*ndelconss);
+                  ++(*naddconss);
+               }
 
                /* all multi-aggregations should be resolved */
                consdata->existmultaggr = FALSE;
@@ -1865,6 +1874,7 @@ SCIP_RETCODE applyFixings(
                }
 
                SCIPwarningMessage(scip, "setppc constraint <%s> has a multi-aggregated variable, which was not resolved and therefore could lead to aborts\n", SCIPconsGetName(cons));
+               ++v;
             }
 
             SCIPfreeBufferArray(scip, &consvals);
@@ -3137,7 +3147,7 @@ SCIP_RETCODE presolvePropagateCons(
 	 return SCIP_OKAY;
       }
 
-      SCIPdebugMessage("set partitioning / packing constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("set partitioning / packing constraint <%s> is infeasible, %d variables fixed to one\n", SCIPconsGetName(cons), consdata->nfixedones);
       *cutoff = TRUE;
 
       return SCIP_OKAY;
@@ -6649,6 +6659,7 @@ static
 SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
 {  /*lint --e{715}*/
    assert(upgdcons != NULL);
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear") == 0 );
 
    /* check, if linear constraint can be upgraded to set partitioning, packing, or covering constraint
     * - all set partitioning / packing / covering constraints consist only of binary variables with a
@@ -6723,6 +6734,116 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
 
    return SCIP_OKAY;
 }
+
+/** tries to upgrade a quadratic constraint to a setpacking constraint */
+static
+SCIP_DECL_QUADCONSUPGD(quadraticUpgdSetppc)
+{
+   SCIP_QUADVARTERM* quadvarterms;
+   SCIP_BILINTERM* term;
+   SCIP_VAR* vars[2];
+   SCIP_Real coefx;
+   SCIP_Real coefy;
+   SCIP_Real rhs;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( nupgdconss != NULL );
+   assert( upgdconss  != NULL );
+   assert( ! SCIPconsIsModifiable(cons) );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "quadratic") == 0 );
+
+   *nupgdconss = 0;
+
+   SCIPdebugMessage("try to upgrade quadratic constraint <%s> to setpacking constraint ...\n", SCIPconsGetName(cons));
+   SCIPdebugPrintCons(scip, cons, NULL);
+
+   /* cannot currently handle linear part */
+   if( SCIPgetNLinearVarsQuadratic(scip, cons) > 0 )
+      return SCIP_OKAY;
+
+   /* need only one bilinear term */
+   if( SCIPgetNBilinTermsQuadratic(scip, cons) != 1 )
+      return SCIP_OKAY;
+
+   /* need exactly two quadratic variables */
+   if( SCIPgetNQuadVarTermsQuadratic(scip, cons) != 2 )
+      return SCIP_OKAY;
+
+   /* get bilinear term */
+   term = SCIPgetBilinTermsQuadratic(scip, cons);
+   if( SCIPisZero(scip, term->coef) )
+      return SCIP_OKAY;
+
+   /* check types */
+   if( SCIPvarGetType(term->var1) != SCIP_VARTYPE_BINARY || SCIPvarGetType(term->var2) != SCIP_VARTYPE_BINARY )
+      return SCIP_OKAY;
+
+   /* left and right hand side need to be equal
+    * @todo we could also handle inequalities
+    */
+   rhs = SCIPgetRhsQuadratic(scip, cons);
+   if( SCIPisInfinity(scip, rhs) || !SCIPisEQ(scip, SCIPgetLhsQuadratic(scip, cons), rhs) )
+      return SCIP_OKAY;
+
+   quadvarterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
+
+   coefx = quadvarterms[0].lincoef + quadvarterms[0].sqrcoef;  /* for binary variables, we can treat sqr coef as lin coef */
+   coefy = quadvarterms[1].lincoef + quadvarterms[0].sqrcoef;  /* for binary variables, we can treat sqr coef as lin coef */
+
+   /* divide constraint by coefficient of x*y */
+   coefx /= term->coef;
+   coefy /= term->coef;
+   rhs   /= term->coef;
+
+   /* constraint is now of the form coefx * x + coefy * y + x * y == rhs
+    * we can rewrite as (x + coefy) * (y + coefx) == rhs + coefx * coefy
+    */
+
+   /* we can only upgrade if coefx and coefy are 0 or -1 and rhs == -coefx * coefy */
+   if( !SCIPisZero(scip, coefx) && !SCIPisEQ(scip, coefx, -1.0) )
+      return SCIP_OKAY;
+   if( !SCIPisZero(scip, coefy) && !SCIPisEQ(scip, coefy, -1.0) )
+      return SCIP_OKAY;
+   if( !SCIPisEQ(scip, rhs, -coefx * coefy) )
+      return SCIP_OKAY;
+
+   if( SCIPisZero(scip, coefy) )
+   {
+      vars[0] = quadvarterms[0].var;
+   }
+   else
+   {
+      assert(SCIPisEQ(scip, coefy, -1.0));
+      /* x - 1 = -(1-x) = -(~x) */
+      SCIP_CALL( SCIPgetNegatedVar(scip, quadvarterms[0].var, &vars[0]) );
+   }
+   if( SCIPisZero(scip, coefx) )
+   {
+      vars[1] = quadvarterms[1].var;
+   }
+   else
+   {
+      assert(SCIPisEQ(scip, coefx, -1.0));
+      /* y - 1 = -(1 - y) = -(~y) */
+      SCIP_CALL( SCIPgetNegatedVar(scip, quadvarterms[1].var, &vars[1]) );
+   }
+
+   /* constraint is now of the form  vars[0] * vars[1] == 0 */
+
+   SCIPdebugMessage("constraint <%s> can be upgraded ...\n", SCIPconsGetName(cons));
+
+   /* vars[0] + vars[1] <= 1 */
+   SCIP_CALL( SCIPcreateConsSetpack(scip, &upgdconss[0], SCIPconsGetName(cons), 2, vars,
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+   SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+
+   ++(*nupgdconss);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
 
 
 /*
@@ -7654,6 +7775,21 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       if( !SCIPconsIsActive(cons) )
          continue;
 
+      /* remove fixings found by merging */
+      if( consdata->nfixedzeros > 0 )
+      {
+         SCIP_CALL( applyFixings(scip, cons, naddconss, ndelconss, nfixedvars, &cutoff) );
+
+         if( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         if( SCIPconsIsDeleted(cons) )
+            continue;
+      }
+
       /* check if constraint is already redundant or infeasible due to fixings, fix or aggregate left over variables if
        * possible
        */
@@ -7668,6 +7804,21 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       /* if constraint was deleted while propagation, go to the next constraint */
       if( !SCIPconsIsActive(cons) )
          continue;
+
+      /* remove fixings found by presolvePropagateCons() */
+      if( consdata->nfixedzeros > 0 )
+      {
+         SCIP_CALL( applyFixings(scip, cons, naddconss, ndelconss, nfixedvars, &cutoff) );
+
+         if( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         if( SCIPconsIsDeleted(cons) )
+            continue;
+      }
 
       /* perform dual reductions */
       if( conshdlrdata->dualpresolving )
@@ -8505,11 +8656,17 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSetppc) );
 
-   if( SCIPfindConshdlr(scip,"linear") != NULL )
+   if( SCIPfindConshdlr(scip, "linear") != NULL )
    {
       /* include the linear constraint to setppc constraint upgrade in the linear constraint handler */
       SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdSetppc, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
    }
+   if( SCIPfindConshdlr(scip, "quadratic") != NULL )
+   {
+      /* notify function that upgrades quadratic constraint to setpacking */
+      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadraticUpgdSetppc, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+   }
+
 
    /* set partitioning constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

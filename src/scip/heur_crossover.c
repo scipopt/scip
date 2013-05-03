@@ -874,6 +874,12 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
+#ifdef SCIP_DEBUG
+   /* for debugging DINS, enable MIP output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
+#endif
+
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
@@ -939,6 +945,17 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
    }
 
+   /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
+    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
+    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
+    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
+    * made for the original SCIP
+    */
+   if( !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
+   }
+
    /* add an objective cutoff */
    cutoff = SCIPinfinity(scip);
    assert(!SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
@@ -977,6 +994,9 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 #endif
       SCIPwarningMessage(scip, "Error while solving subproblem in Crossover heuristic; sub-SCIP terminated with code <%d>\n", retcode);
    }
+
+   /* print solving statistics of subproblem if we are in SCIP's debug mode */
+   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
 

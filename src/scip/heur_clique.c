@@ -621,6 +621,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    /* disable conflict analysis, because we can it better than SCIP itself, cause we have more information */
    SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &enabledconflicts) );
+
    if( !SCIPisParamFixed(scip, "conflict/enable") )
    {
       SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", FALSE) );
@@ -698,7 +699,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 #ifdef NDEBUG
       {
          SCIP_Bool retstat;
-         retstat = SCIPsolveProbingLP(scip, -1, &lperror);
+         retstat = SCIPsolveProbingLP(scip, -1, &lperror, NULL);
          if( retstat != SCIP_OKAY )
          {
             SCIPwarningMessage(scip, "Error while solving LP in clique heuristic; LP solve terminated with code <%d>\n",
@@ -706,7 +707,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          }
       }
 #else
-      SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror) );
+      SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
 #endif
       SCIPdebugMessage("ending solving clique-lp at time %g\n", SCIPgetSolvingTime(scip));
 
@@ -862,6 +863,17 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       /* disable expensive presolving */
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+      /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
+       * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
+       * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
+       * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
+       * made for the original SCIP
+       */
+      if( !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
+      }
 
 #ifdef SCIP_DEBUG
       /* for debugging clique heuristic, enable MIP output */

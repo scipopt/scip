@@ -3829,7 +3829,7 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
          /* check conflict graph frontier on debugging solution */
          SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
                bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos,
-               conflict->bdchgqueue, conflict->forcedbdchgqueue) );
+               conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
 
          /* get next conflicting bound from the conflict candidate queue (this does not need to be nextbdchginfo, because
           * due to resolving the bound changes, a variable could be added to the queue which must be
@@ -3959,7 +3959,7 @@ SCIP_RETCODE conflictAnalyze(
    /* check if the initial reason on debugging solution */
    SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
          NULL, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos,
-         conflict->bdchgqueue, conflict->forcedbdchgqueue) );
+         conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
 
    while( bdchginfo != NULL && validdepth <= maxvaliddepth )
    {
@@ -4098,7 +4098,7 @@ SCIP_RETCODE conflictAnalyze(
       /* check conflict graph frontier on debugging solution */
       SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
             bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos,
-            conflict->bdchgqueue, conflict->forcedbdchgqueue) );
+            conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
 
       /* get next conflicting bound from the conflict candidate queue (this needs not to be nextbdchginfo, because
        * due to resolving the bound changes, a bound change could be added to the queue which must be
@@ -6140,7 +6140,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    }
 
    /* possibly restore solution values */
-   if ( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED )
+   if( lp->flushed && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED )
    {
       /* restore status */
       lp->lpsolstat = storedsolvals.lpsolstat;
@@ -6554,6 +6554,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    /* free temporary memory for storing current LP basis */
    SCIPsetFreeBufferArray(set, &rstat);
    SCIPsetFreeBufferArray(set, &cstat);
+
+   assert(lp->flushed);
 
    /* resolve LP if something has changed in order to synchronize LPI and LP */
    if ( resolve )

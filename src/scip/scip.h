@@ -13833,7 +13833,9 @@ EXTERN
 SCIP_RETCODE SCIPsolveDiveLP(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the probing LP was infeasible or the objective
+                                              *   limit was reached (or NULL, if not needed) */
    );
 
 /** returns the number of the node in the current branch and bound run, where the last LP was solved in diving
@@ -14104,7 +14106,9 @@ EXTERN
 SCIP_RETCODE SCIPsolveProbingLP(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the probing LP was infeasible or the objective
+                                              *   limit was reached (or NULL, if not needed) */
    );
 
 /** solves the LP at the current probing node (cannot be applied at preprocessing stage) and applies pricing
@@ -14123,7 +14127,10 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
    SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
    int                   maxpricerounds,     /**< maximal number of pricing rounds (-1: no limit);
                                               *   a finite limit means that the LP might not be solved to optimality! */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the probing LP was infeasible or the objective
+                                              *   limit was reached (or NULL, if not needed) */
+
    );
 
 /**@} */

@@ -42,6 +42,7 @@
 #define DEFAULT_MINNODES      500LL     /* minimum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MINIMPROVE    0.01      /* factor by which DINS should at least improve the incumbent          */
 #define DEFAULT_NODESQUOT     0.05      /* subproblem nodes in relation to nodes of the original problem       */
+#define DEFAULT_MINFIXINGRATE 0.3       /* minimum percentage of integer variables that have to be fixed       */
 #define DEFAULT_NWAITINGNODES 0LL       /* number of nodes without incumbent change that heuristic should wait */
 #define DEFAULT_NEIGHBORHOODSIZE  18    /* radius of the incumbents neighborhood to be searched                */
 #define DEFAULT_SOLNUM        5         /* number of pool-solutions to be checked for flag array update        */
@@ -61,6 +62,7 @@ struct SCIP_HeurData
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes          */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem                 */
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem                 */
+   SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed       */
    SCIP_Longint          nwaitingnodes;      /**< number of nodes without incumbent change that heuristic should wait */
    SCIP_Real             minimprove;         /**< factor by which DINS should at least improve the incumbent          */
    SCIP_Longint          usednodes;          /**< nodes already used by DINS in earlier calls                         */
@@ -90,11 +92,11 @@ SCIP_RETCODE createSubproblem(
    SCIP_VAR**            subvars,            /**< variables of the subproblem                                    */
    int                   nbinvars,           /**< number of binary variables of problem and subproblem           */
    int                   nintvars,           /**< number of general integer variables of problem and subproblem  */
+   int*                  fixingcounter,      /**< number of integer variables that get fixed */
    SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?   */
    )
 {
    SCIP_SOL* bestsol;
-
    int i;
 
    assert(scip != NULL);
@@ -168,6 +170,9 @@ SCIP_RETCODE createSubproblem(
          /* perform the bound change */
          SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], lb) );
          SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], ub) );
+
+         if( ub-lb < 0.5 )
+            (*fixingcounter)++;
       }
       else
       {
@@ -178,6 +183,7 @@ SCIP_RETCODE createSubproblem(
          /* hard fixing for general integer variables with abs(mipsol-lpsol) < 0.5 */
          SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], mipsol) );
          SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], mipsol) );
+         (*fixingcounter)++;
       }
    }
 
@@ -491,6 +497,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    int nsols;                                /* number of known solutions                                    */
    int nsubsols;
    int checklength;
+   int fixingcounter;
    int i;
    int j;
 
@@ -604,7 +611,8 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIPhashmapFree(&varmapfw);
 
    /* create variables and rebound them if their bounds differ by more than 0.5 */
-   SCIP_CALL( createSubproblem(scip, subscip, vars, subvars, nbinvars, nintvars, heurdata->uselprows) );
+   fixingcounter = 0;
+   SCIP_CALL( createSubproblem(scip, subscip, vars, subvars, nbinvars, nintvars, &fixingcounter, heurdata->uselprows) );
    SCIPdebugMessage("DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
       SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip));
 
@@ -615,6 +623,12 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+
+#ifdef SCIP_DEBUG
+   /* for debugging DINS, enable MIP output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#endif
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -635,7 +649,8 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 1) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nsubnodes/10)) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
@@ -680,6 +695,17 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    if( !SCIPisParamFixed(subscip, "conflict/usepseudo") )
    {
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
+   }
+
+   /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
+    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
+    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
+    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
+    * made for the original SCIP
+    */
+   if( !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
    }
 
    /* get the best MIP-solution known so far */
@@ -745,14 +771,19 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
          /* hard fixing if rootlpsolval=nodelpsolval=mipsolval(s) and delta (is TRUE) */
          if( delta[i] && SCIPisFeasEQ(scip, mipsolval, lpsolval) && SCIPisFeasEQ(scip, mipsolval, rootlpsolval)
-            && SCIPisFeasEQ(scip, rootlpsolval, lpsolval) )
+            && SCIPisFeasEQ(scip, rootlpsolval, lpsolval)
+            && !SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i])) )
          {
             SCIP_CALL( SCIPfixVar(subscip, subvars[i], mipsolval, &infeasible, &success) );
             fixed[i] = !infeasible;
-            if( !success )
+
+            if( success )
+               fixingcounter++;
+            else
             {
                SCIPdebugMessage("variable %d was already fixed\n", i);
             }
+
             if( infeasible )
             {
                SCIPdebugMessage("fixing of variable %d to value %f was infeasible\n", i, mipsolval);
@@ -774,6 +805,16 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* free fixing flag array */
    SCIPfreeBufferArray(scip, &fixed);
+
+   /* abort, if all integer variables were fixed (which should not happen for MIP),
+    * but frequently happens for MINLPs using an LP relaxation
+    */
+   if( fixingcounter == nbinvars + nintvars )
+      goto TERMINATE;
+
+   /* abort, if the amount of fixed variables is insufficient */
+   if( fixingcounter / (SCIP_Real)(MAX(nbinvars + nintvars, 1)) < heurdata->minfixingrate )
+      goto TERMINATE;
 
    /* add an objective cutoff */
    cutoff = SCIPinfinity(scip);
@@ -810,6 +851,9 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 #endif
       SCIPwarningMessage(scip, "Error while solving subproblem in DINS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
    }
+
+   /* print solving statistics of subproblem if we are in SCIP's debug mode */
+   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
    nsubsols = SCIPgetNSols(subscip);
@@ -893,6 +937,10 @@ SCIP_RETCODE SCIPincludeHeurDins(
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/nwaitingnodes",
          "number of nodes without incumbent change that heuristic should wait",
          &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minfixingrate",
+         "minimum percentage of integer variables that have to be fixable",
+         &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows",
          "should subproblem be created out of the rows in the LP rows?",

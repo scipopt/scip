@@ -502,7 +502,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 1) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nsubnodes/10)) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
@@ -549,6 +550,17 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
    }
 
+   /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
+    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
+    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
+    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
+    * made for the original SCIP
+    */
+   if( !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
+   }
+
    /* copy the original problem and add the local branching constraint */
    if( heurdata->uselprows )
    {
@@ -590,6 +602,9 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 #endif
       SCIPwarningMessage(scip, "Error while solving subproblem in local branching heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
+
+   /* print solving statistics of subproblem if we are in SCIP's debug mode */
+   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
    SCIPdebugMessage("local branching used %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" nodes\n",

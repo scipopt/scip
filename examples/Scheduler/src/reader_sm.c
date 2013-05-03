@@ -754,7 +754,7 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
 
    /* compute a feasible upper bound on the makespan */
    ubmakespan = computeUbmakespan(durations, njobs);
-   ubmakespan *= 10;
+   ubmakespan *= 2;
 
    /* allocate buffer for jobs and precedence constraints */
    SCIP_CALL( SCIPallocBufferArray(scip, &jobs, njobs) );

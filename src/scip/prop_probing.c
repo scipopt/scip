@@ -500,8 +500,7 @@ SCIP_RETCODE applyProbing(
          SCIP_Bool probingone;
 
          /* check whether probing should be aborted */
-         if( SCIPisStopped(scip) || propdata->nuseless >= maxuseless
-            || propdata->ntotaluseless >= maxtotaluseless || propdata->nsumuseless >= maxsumuseless )
+         if( propdata->nuseless >= maxuseless || propdata->ntotaluseless >= maxtotaluseless || propdata->nsumuseless >= maxsumuseless || SCIPisStopped(scip) )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) probing: %d/%d (%.1f%%) - %d fixings, %d aggregations, %d implications, %d bound changes\n",
@@ -510,12 +509,7 @@ SCIP_RETCODE applyProbing(
 
             aborted = TRUE;
 
-            if( SCIPisStopped(scip) )
-            {
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                  "   (%.1fs) probing aborted: solving stopped\n", SCIPgetSolvingTime(scip));
-            }
-            else if( propdata->nuseless >= maxuseless )
+            if( propdata->nuseless >= maxuseless )
             {
                SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                   "   (%.1fs) probing aborted: %d/%d successive useless probings\n", SCIPgetSolvingTime(scip),
@@ -532,6 +526,12 @@ SCIP_RETCODE applyProbing(
                SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                   "   (%.1fs) probing aborted: %d/%d useless probings in total\n", SCIPgetSolvingTime(scip),
                   propdata->nsumuseless, maxsumuseless);
+            }
+            else
+            {
+               assert(SCIPisStopped(scip));
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+                  "   (%.1fs) probing aborted: solving stopped\n", SCIPgetSolvingTime(scip));
             }
             break;
          }
@@ -669,8 +669,8 @@ SCIP_RETCODE applyProbing(
          localnimplications = 0;
          localnchgbds       = 0;
          SCIP_CALL( SCIPanalyzeDeductionsProbing(scip, vars[i], 0.0, 1.0,
-            nvars, vars, zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
-            &localnfixedvars, &localnaggrvars, &localnimplications, &localnchgbds, cutoff) );
+               nvars, vars, zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
+               &localnfixedvars, &localnaggrvars, &localnimplications, &localnchgbds, cutoff) );
 
          *nfixedvars += localnfixedvars;
          *naggrvars  += localnaggrvars;
@@ -1352,6 +1352,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
       /* assert dichotomy in case of continuous var: leftub >= rightlb */
       assert(SCIPisGE(scip, leftub, rightlb));
       probingvarisbinary = FALSE;
+      probingvarisinteger = FALSE;
    }
 
    /* check if probing variable was fixed in the branches */

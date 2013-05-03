@@ -793,6 +793,7 @@ SCIP_Real collectMinactImplicVar(
    return REALABS(objval);
 }
 
+#define MAX_CLIQUELENGTH_PERCENTAGE 10
 /** returns the objective change provided by the implications of the given variable by fixing it to the given bound
  *  w.r.t. minimum activity of the objective function; additionally it collects all contributors for that objective
  *  change;
@@ -871,6 +872,13 @@ SCIP_RETCODE collectMinactImplicVars(
          continue;
 
       nbinvars = SCIPcliqueGetNVars(clique);
+
+      if( nbinvars > (SCIPgetNVars(scip) % MAX_CLIQUELENGTH_PERCENTAGE) )
+      {
+         SCIP_CALL( SCIPhashtableInsert(uselesscliques, (void*)clique) );
+         continue;
+      }
+
       vars = SCIPcliqueGetVars(clique);
       values = SCIPcliqueGetValues(clique);
       useless = TRUE;
