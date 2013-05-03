@@ -6800,13 +6800,14 @@ SCIP_DECL_QUADCONSUPGD(quadraticUpgdSetppc)
     * we can rewrite as (x + coefy) * (y + coefx) == rhs + coefx * coefy
     */
 
-   /* we can only upgrade if coefx and coefy are 0 or -1 */
+   /* we can only upgrade if coefx and coefy are 0 or -1 and rhs == -coefx * coefy */
    if( !SCIPisZero(scip, coefx) && !SCIPisEQ(scip, coefx, -1.0) )
       return SCIP_OKAY;
    if( !SCIPisZero(scip, coefy) && !SCIPisEQ(scip, coefy, -1.0) )
       return SCIP_OKAY;
+   if( !SCIPisEQ(scip, rhs, -coefx * coefy) )
+      return SCIP_OKAY;
 
-   rhs += coefx * coefy;
    if( SCIPisZero(scip, coefy) )
    {
       vars[0] = quadvarterms[0].var;
@@ -6816,8 +6817,6 @@ SCIP_DECL_QUADCONSUPGD(quadraticUpgdSetppc)
       assert(SCIPisEQ(scip, coefy, -1.0));
       /* x - 1 = -(1-x) = -(~x) */
       SCIP_CALL( SCIPgetNegatedVar(scip, quadvarterms[0].var, &vars[0]) );
-      /* divide constraint by -1 */
-      rhs *= -1.0;
    }
    if( SCIPisZero(scip, coefx) )
    {
@@ -6828,34 +6827,17 @@ SCIP_DECL_QUADCONSUPGD(quadraticUpgdSetppc)
       assert(SCIPisEQ(scip, coefx, -1.0));
       /* y - 1 = -(1 - y) = -(~y) */
       SCIP_CALL( SCIPgetNegatedVar(scip, quadvarterms[1].var, &vars[1]) );
-      /* divide constraint by -1 */
-      rhs *= -1.0;
    }
 
-   /* constraint is now of the form  vars[0] * vars[1] == rhs */
-
-   /* can only upgrade if rhs is 0 or 1 */
-   if( !SCIPisZero(scip, rhs) && !SCIPisEQ(scip, rhs, 1.0) )
-      return SCIP_OKAY;
+   /* constraint is now of the form  vars[0] * vars[1] == 0 */
 
    SCIPdebugMessage("constraint <%s> can be upgraded ...\n", SCIPconsGetName(cons));
 
-   if( SCIPisZero(scip, rhs) )
-   {
-      /* vars[0] + vars[1] <= 1 */
-      SCIP_CALL( SCIPcreateConsSetpack(scip, &upgdconss[0], SCIPconsGetName(cons), 2, vars,
+   /* vars[0] + vars[1] <= 1 */
+   SCIP_CALL( SCIPcreateConsSetpack(scip, &upgdconss[0], SCIPconsGetName(cons), 2, vars,
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
          SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
          SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-   }
-   else
-   {
-      /* vars[0] + vars[1] >= 1 */
-      SCIP_CALL( SCIPcreateConsSetcover(scip, &upgdconss[0], SCIPconsGetName(cons), 2, vars,
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-   }
    SCIPdebugPrintCons(scip, upgdconss[0], NULL);
 
    ++(*nupgdconss);
