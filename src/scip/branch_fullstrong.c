@@ -16,6 +16,7 @@
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
  * @author Tobias Achterberg
+ * @author Gerald Gamrath
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -130,7 +131,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_RESULT*          result              /**< result pointer                                      */
    )
 {
-   SCIP_VAR** vars;
+   SCIP_VAR** vars = NULL;
    SCIP_Real* newlbs;
    SCIP_Real* newubs;
    SCIP_BRANCHRULE* branchrule;
@@ -157,7 +158,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_Bool downconflict;
    SCIP_Bool upconflict;
    SCIP_Bool bothgains;
-   int nvars;
+   int nvars = 0;
    int nsbcalls;
    int i;
    int c;
@@ -176,6 +177,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    assert(bestupvalid != NULL);
    assert(provedbound != NULL);
    assert(result != NULL);
+   assert(nlpcands > 0);
 
    /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
     * for cutting off sub problems and improving lower bounds of children
@@ -390,6 +392,9 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
             {
                int nboundchgs;
                int v;
+
+               assert(vars != NULL);
+               assert(nvars > 0);
 
                nboundchgs = 0;
 
