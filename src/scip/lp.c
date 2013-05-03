@@ -11686,8 +11686,8 @@ SCIP_RETCODE lpPrimalSimplex(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving primal LP %"SCIP_LONGINT_FORMAT" (LP %"SCIP_LONGINT_FORMAT", %d cols, %d rows)\n",
-      stat->nprimallps+1, stat->nlps+1, lp->ncols, lp->nrows);
+   SCIPdebugMessage("solving LP %"SCIP_LONGINT_FORMAT" (%d cols, %d rows) with primal simplex (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
+      stat->lpcount+1, lp->ncols, lp->nrows, lp->diving || lp->probing, stat->nprimallps, stat->ndivinglps);
 
    *lperror = FALSE;
 
@@ -11782,7 +11782,8 @@ SCIP_RETCODE lpPrimalSimplex(
       }
    }
 
-   SCIPdebugMessage("solved primal LP %"SCIP_LONGINT_FORMAT" in %d iterations\n", stat->lpcount, iterations);
+   SCIPdebugMessage("solved LP %"SCIP_LONGINT_FORMAT" with primal simplex (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
+      stat->lpcount, lp->diving || lp->probing, stat->nprimallps, stat->ndivinglps);
 
    return SCIP_OKAY;
 }
@@ -11808,8 +11809,8 @@ SCIP_RETCODE lpDualSimplex(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving dual LP %"SCIP_LONGINT_FORMAT" (LP %"SCIP_LONGINT_FORMAT", %d cols, %d rows)\n",
-      stat->nduallps+1, stat->nlps+1, lp->ncols, lp->nrows);
+   SCIPdebugMessage("solving LP %"SCIP_LONGINT_FORMAT" (%d cols, %d rows) with dual simplex (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
+      stat->lpcount+1, lp->ncols, lp->nrows, lp->diving || lp->probing, stat->nduallps, stat->ndivinglps);
 
    *lperror = FALSE;
 
@@ -11904,7 +11905,8 @@ SCIP_RETCODE lpDualSimplex(
       }
    }
 
-   SCIPdebugMessage("solved dual LP %"SCIP_LONGINT_FORMAT" in %d iterations\n", stat->lpcount, iterations);
+   SCIPdebugMessage("solved LP %"SCIP_LONGINT_FORMAT" with dual simplex (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
+      stat->lpcount, lp->diving || lp->probing, stat->nduallps, stat->ndivinglps);
 
    return SCIP_OKAY;
 }
@@ -11966,7 +11968,8 @@ SCIP_RETCODE lpLexDualSimplex(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving lex dual LP %"SCIP_LONGINT_FORMAT" (LP %"SCIP_LONGINT_FORMAT", %d cols, %d rows)\n", stat->nduallps+1, stat->nlps+1, lp->ncols, lp->nrows);
+   SCIPdebugMessage("solving LP %"SCIP_LONGINT_FORMAT" (%d cols, %d rows) with lex dual simplex (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
+      stat->lpcount+1, lp->ncols, lp->nrows, lp->diving || lp->probing, stat->nduallps, stat->ndivinglps);
 
    *lperror = FALSE;
 
@@ -12494,7 +12497,8 @@ SCIP_RETCODE lpLexDualSimplex(
       /* stop timing */
       SCIPclockStop(stat->lexduallptime, set);
 
-      SCIPdebugMessage("solved dual lexicographic LP %"SCIP_LONGINT_FORMAT" in %d iterations (%d lex. iters.) in %d rounds\n", stat->lpcount, totalIterations, lexIterations, rounds);
+      SCIPdebugMessage("solving LP %"SCIP_LONGINT_FORMAT" with lex dual simplex (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
+         stat->lpcount, lp->diving || lp->probing, stat->nduallps, stat->ndivinglps);
    }
    lp->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
    lp->solisbasic = TRUE;
@@ -12537,8 +12541,9 @@ SCIP_RETCODE lpBarrier(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving barrier%s LP %"SCIP_LONGINT_FORMAT" (LP %"SCIP_LONGINT_FORMAT", %d cols, %d rows)\n",
-      crossover ? "/crossover" : "", stat->nbarrierlps+1, stat->nlps+1, lp->ncols, lp->nrows);
+   SCIPdebugMessage("solving LP %"SCIP_LONGINT_FORMAT" (%d cols, %d rows) with barrier%s (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
+      stat->lpcount+1, lp->ncols, lp->nrows, crossover ? "/crossover" : "", lp->diving || lp->probing,
+      stat->nbarrierlps, stat->ndivinglps);
 
    *lperror = FALSE;
 
@@ -12628,7 +12633,8 @@ SCIP_RETCODE lpBarrier(
       }
    }
 
-   SCIPdebugMessage("solved barrier LP %"SCIP_LONGINT_FORMAT" in %d iterations\n", stat->lpcount, iterations);
+   SCIPdebugMessage("solving LP %"SCIP_LONGINT_FORMAT" with barrier%s (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
+      stat->lpcount, crossover ? "/crossover" : "", lp->diving || lp->probing, stat->nbarrierlps, stat->ndivinglps);
 
    return SCIP_OKAY;
 }
@@ -13560,6 +13566,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
    /* flush changes to the LP solver */
    SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+   assert(lp->flushed);
 
    if( !lp->solved )
    {
