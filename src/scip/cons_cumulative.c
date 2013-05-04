@@ -4018,14 +4018,14 @@ SCIP_RETCODE tightenLbTTEF(
    assert(begin >= hmin);
    assert(end <= hmax);
 
+   /* if the job can be processed completely before or after the time window, nothing can be tightened */
+   if( est >= end || ect <= begin )
+      return SCIP_OKAY;
+
    /* if flexible part runs completely within the time window (assuming it is scheduled on its earliest start time), we
     * skip since the overload check will do the job
     */
    if( est >= begin && ect <= end )
-      return SCIP_OKAY;
-
-   /* if the job can be processed completely before or after the time window, nothing can be tightened */
-   if( est >= end || ect <= begin )
       return SCIP_OKAY;
 
    /* check if the available energy in the time window is to small to handle the flexible part if it is schedule on its
@@ -4128,14 +4128,14 @@ SCIP_RETCODE tightenUbTTEF(
    assert(end <= hmax);
    assert(est < begin);
 
+   /* if flexible part of the job can be processed completely before or after the time window, nothing can be tightened */
+   if( lst >= end || lct <= begin )
+      return SCIP_OKAY;
+
    /* if flexible part runs completely within the time window (assuming it is scheduled on its latest start time), we
     * skip since the overload check will do the job
     */
    if( lst >= begin && lct <= end )
-      return SCIP_OKAY;
-
-   /* if flexible part of the job can be processed completely before or after the time window, nothing can be tightened */
-   if( lst >= end || lct <= begin )
       return SCIP_OKAY;
 
    /* check if the available energy in the time window is to small to handle the flexible part  of the job */
