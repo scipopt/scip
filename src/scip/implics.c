@@ -153,6 +153,7 @@ SCIP_RETCODE vboundsSearchPos(
       }
       else if( negativecoef )
       {
+         assert(vbounds->coefs[pos] > 0.0);
          if( pos+1 < vbounds->len && vbounds->vars[pos+1] == var )
          {
             /* the variable exists with the desired sign at the next position */
@@ -169,6 +170,7 @@ SCIP_RETCODE vboundsSearchPos(
       }
       else
       {
+         assert(vbounds->coefs[pos] < 0.0);
          if( pos-1 >= 0 && vbounds->vars[pos-1] == var )
          {
             /* the variable exists with the desired sign at the previous position */
