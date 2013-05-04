@@ -164,6 +164,7 @@ struct SCIP_ConsData
    unsigned int          normalized:1;       /**< is the constraint normalized */
    unsigned int          covercuts:1;        /**< cover cuts are created? */
    unsigned int          propagated:1;       /**< is constraint propagted */
+   unsigned int          varbounds:1;        /**< bool to store if variable bound strengthening was already preformed */
    unsigned int          triedsolving:1;     /**< bool to store if we tried already to solve that constraint as independent subproblem */
 
 #ifdef SCIP_STATISTIC
@@ -1674,6 +1675,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->normalized = FALSE;
    (*consdata)->covercuts = FALSE;
    (*consdata)->propagated = FALSE;
+   (*consdata)->varbounds = FALSE;
    (*consdata)->triedsolving = FALSE;
 
    if( nvars > 0 )
@@ -8863,6 +8865,7 @@ SCIP_RETCODE normalizeDemands(
    )
 {
    SCIP_CONSDATA* consdata;
+   int capacity;
 
    assert(nchgcoefs != NULL);
    assert(nchgsides != NULL);
@@ -8874,12 +8877,17 @@ SCIP_RETCODE normalizeDemands(
    if( consdata->normalized )
       return SCIP_OKAY;
 
+   capacity = consdata->capacity;
+
    /**@todo sort items w.r.t. the demands, because we can stop earlier if the smaller weights are evaluated first */
 
    SCIP_CALL( normalizeCumulativeCondition(scip, consdata->nvars, consdata->vars, consdata->durations,
          consdata->demands, &consdata->capacity, nchgcoefs, nchgsides) );
 
    consdata->normalized = TRUE;
+
+   if( capacity > consdata->capacity )
+      consdata->varbounds = FALSE;
 
    return SCIP_OKAY;
 }
@@ -9466,6 +9474,8 @@ SCIP_RETCODE presolveConsEffectiveHorizon(
             }
 
             consdata->capacity -= consdata->demands[v];
+
+            consdata->varbounds = FALSE;
          }
 
          SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
@@ -9733,6 +9743,7 @@ SCIP_RETCODE tightenCapacity(
 
       SCIPdebugPrintf("; changed additionally %d coefficients\n", (*nchgcoefs)-oldnchgcoefs);
 
+      consdata->varbounds = FALSE;
    }
 
    return SCIP_OKAY;
@@ -10051,6 +10062,12 @@ SCIP_RETCODE presolveCons(
 {
    assert(!SCIPconsIsDeleted(cons));
 
+   /* computes the effective horizon and checks if the constraint can be decomposed */
+   SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
+
+   if( SCIPconsIsDeleted(cons) )
+      return SCIP_OKAY;
+
    /* only perform dual reductions on model constraints */
    if( conshdlrdata->dualpresolve )
    {
@@ -10060,12 +10077,6 @@ SCIP_RETCODE presolveCons(
       SCIP_CALL( solveIndependentCons(scip, cons, conshdlrdata->maxnodes, nchgbds, nfixedvars, ndelconss, cutoff, unbounded) );
 
       if( *cutoff || *unbounded )
-         return SCIP_OKAY;
-
-      /* computes the effective horizon and checks if the constraint can be decomposed */
-      SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
-
-      if( SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
 
       SCIP_CALL( presolveConsEffectiveHorizon(scip, cons, nfixedvars, nchgcoefs, nchgsides, cutoff) );
@@ -10821,16 +10832,19 @@ SCIP_RETCODE findCumulativeConss(
 static
 SCIP_RETCODE createPrecedenceCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,
+   const char*           name,               /**< constraint name */
    SCIP_VAR*             var,                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar,             /**< binary, integer or implicit integer bounding variable y */
-   int                   distance            /**< minimum distance between the start time of the jib corresponding to var and the jib corresponding to vbdvar */
+   int                   distance            /**< minimum distance between the start time of the job corresponding to var and the job corresponding to vbdvar */
    )
 {
    SCIP_CONS* cons;
 
    SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, var, vbdvar, -1.0, -SCIPinfinity(scip), -(SCIP_Real)distance,
          TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -11290,6 +11304,102 @@ SCIP_RETCODE removeRedundantConss(
          }
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** strength the variable bounds using the cumulative condition */
+static
+SCIP_RETCODE strengthVarbaounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to propagate */
+   int*                  nchgbds,            /**< pointer to store the number of changed bounds */
+   int*                  naddconss           /**< pointer to store the number of added constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   int* durations;
+   int* demands;
+   int capacity;
+   int nvars;
+   int nconss;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check if the variable bounds got already strengthen by the cumulative constraint */
+   if( consdata->varbounds )
+      return SCIP_OKAY;
+
+   vars = consdata->vars;
+   durations = consdata->durations;
+   demands = consdata->demands;
+   capacity = consdata->capacity;
+   nvars = consdata->nvars;
+
+   nconss = 0;
+
+   for( i = 0; i < nvars && !SCIPisStopped(scip); ++i )
+   {
+      SCIP_VAR** vbdvars;
+      SCIP_VAR* var;
+      SCIP_Real* vbdcoefs;
+      SCIP_Real* vbdconsts;
+      int nvbdvars;
+      int b;
+      int j;
+
+      var = consdata->vars[i];
+      assert(var != NULL);
+
+      vbdvars = SCIPvarGetVlbVars(var);
+      vbdcoefs = SCIPvarGetVlbCoefs(var);
+      vbdconsts = SCIPvarGetVlbConstants(var);
+      nvbdvars = SCIPvarGetNVlbs(var);
+
+      for( b = 0; b < nvbdvars; ++b )
+      {
+         if( SCIPisEQ(scip, vbdcoefs[b], 1.0) )
+         {
+            if( SCIPisGT(scip, vbdconsts[b], -durations[i]) )
+            {
+               for( j = 0; j < nvars; ++j )
+               {
+                  if( vars[j] == vbdvars[b] )
+                     break;
+               }
+               if( j == nvars )
+                  continue;
+
+               if( demands[i] +  demands[j] > capacity &&  SCIPisLT(scip, vbdconsts[b], durations[j]) )
+               {
+                  SCIP_Bool infeasible;
+                  char name[SCIP_MAXSTRLEN];
+                  int nlocalbdchgs;
+
+                  SCIPdebugMessage("<%s>[%d] + %g <= <%s>[%d]\n", SCIPvarGetName(vbdvars[b]), durations[j], vbdconsts[b], SCIPvarGetName(var), durations[i]);
+
+                  /* construct constraint name */
+                  (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "varbound_%d_%d", SCIPgetNRuns(scip), nconss);
+
+                  SCIP_CALL( createPrecedenceCons(scip, name, vars[j], vars[i], durations[j]) );
+                  nconss++;
+
+                  SCIP_CALL( SCIPaddVarVlb(scip, var, vbdvars[b], 1.0, (SCIP_Real) durations[j], &infeasible, &nlocalbdchgs) );
+                  assert(!infeasible);
+
+                  (*nchgbds) += nlocalbdchgs;
+               }
+            }
+         }
+      }
+   }
+
+   (*naddconss) += nconss;
+
+   consdata->varbounds = TRUE;
 
    return SCIP_OKAY;
 }
@@ -11943,6 +12053,9 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
       {
          SCIP_CALL( createDisjuctiveCons(scip, cons, naddconss) );
       }
+
+      /* strength existing variable bounds using the cumulative condition */
+      SCIP_CALL( strengthVarbaounds(scip, cons, nchgbds, naddconss) );
 
       /* propagate cumulative constraint */
       SCIP_CALL( propagateCons(scip, cons, conshdlrdata, nchgbds, ndelconss, &cutoff) );
