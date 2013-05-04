@@ -1384,11 +1384,11 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
 
    assert(primal != NULL);
 
-   for( i = 0; i < primal->nexistingsols; ++i )
+   for( i = 0; i < primal->nsols; ++i )
    {
-      if( SCIPsolGetOrigin(primal->existingsols[i]) == SCIP_SOLORIGIN_ZERO )
+      if( SCIPsolGetOrigin(primal->sols[i]) == SCIP_SOLORIGIN_ZERO )
       {
-         SCIP_CALL( SCIPsolRetransform(primal->existingsols[i], set, stat, origprob, transprob) );
+         SCIP_CALL( SCIPsolRetransform(primal->sols[i], set, stat, origprob, transprob) );
       }
    }
 
