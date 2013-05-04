@@ -18498,6 +18498,17 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       return SCIP_OKAY;
    }
 
+   /* early abort when no clique and implications are existing */
+   if( SCIPgetNCliques(scip) == 0 && SCIPgetNImplications(scip) == 0 )
+   {
+      for( i = nvars - 1; i >= 0; --i )
+         cliquepartition[i] = i;
+
+      *ncliques = nvars;
+
+      return SCIP_OKAY;
+   }
+
    /* allocate temporary memory for storing the variables of the current clique */
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevars, nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevalues, nvars) );
@@ -18508,7 +18519,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    /* initialize the cliquepartition array with -1 */
    /* initialize the tmpvalues array */
    for( i = nvars - 1; i >= 0; --i )
-   {  
+   {
       tmpvalues[i] = TRUE;
       cliquepartition[i] = -1;
    }
@@ -18533,7 +18544,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
          ncliquevars = 1;
 
          /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-         if( SCIPvarIsActive(tmpvars[i]) )
+         if( SCIPvarIsActive(tmpvars[i]) && SCIPvarGetNCliques(tmpvars[i], tmpvalues[i]) + SCIPvarGetNBinImpls(tmpvars[i], tmpvalues[i]) > 0 )
          {
             /* greedily fill up the clique */
             for( j = i+1; j < nvars; ++j )
@@ -18543,13 +18554,13 @@ SCIP_RETCODE SCIPcalcCliquePartition(
                {
                   int k;
 
-                  /* check if every variable in the actual clique is in clique with the new variable */ 
+                  /* check if every variable in the current clique can be extended by tmpvars[j] */
                   for( k = ncliquevars - 1; k >= 0; --k )
                   {
                      if( !SCIPvarsHaveCommonClique(tmpvars[j], tmpvalues[j], cliquevars[k], cliquevalues[k], TRUE) )
                         break;
                   }
-                                    
+
                   if( k == -1 )
                   {
                      /* put the variable into the same clique */
