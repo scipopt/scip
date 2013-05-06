@@ -648,7 +648,10 @@ SCIP_RETCODE initMatrix(
 
       col = lpcols[j];
       if( SCIPcolIsIntegral(col) )
+      {
+         matrix->transformshiftvals[j] = 0.0;
          transformVariable(scip, matrix, heurdata, j);
+      }
       else
       {
          SCIP_VAR* var;
@@ -1435,6 +1438,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    *result = SCIP_DIDNOTFIND;
    initialized = FALSE;
 
+   /* allocate or resize lp column array */
    if( heurdata->lpcols == NULL )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(heurdata->lpcols), nlpcols) );
