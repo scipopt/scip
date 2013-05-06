@@ -101,7 +101,7 @@
 #define DEFAULT_SKIPMULTBOUNDS     TRUE /**< Skip the upper bounds on the multipliers in the sub-MIP? */
 #define DEFAULT_OBJLONE           FALSE /**< Should the objective of the sub-MIP only minimize the l1-norm of the multipliers? */
 #define DEFAULT_OBJWEIGHT         1e-03 /**< objective weight for artificial variables */
-#define DEFAULT_OBJWEIGHSIZE      FALSE /**< Weigh each row by its size? */
+#define DEFAULT_OBJWEIGHSIZE       TRUE /**< Weigh each row by its size? */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< Should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_USECMIR            TRUE /**< Use CMIR-generator (otherwise add cut directly)? */
 #define DEFAULT_USESTRONGCG       FALSE /**< Use strong CG-function to strengthen cut? */
@@ -112,8 +112,8 @@
 #define DEFAULT_ADDVIOLATIONCONS  FALSE /**< Add constraint to subscip that only allows violated cuts (otherwise add obj. limit)?*/
 #define DEFAULT_ADDVIOLCONSHDLR   FALSE /**< Add constraint handler to filter out violated cuts? */
 #define DEFAULT_CONSHDLRUSENORM    TRUE /**< Should the violation constraint handler use the norm of a cut to check for feasibility? */
-#define DEFAULT_USEOBJUB          FALSE /**< Use upper bound on objective function (via primal solution)? */
-#define DEFAULT_USEOBJLB          FALSE /**< Use lower bound on objective function (via lower bound)? */
+#define DEFAULT_USEOBJUB           TRUE /**< Use upper bound on objective function (via primal solution)? */
+#define DEFAULT_USEOBJLB           TRUE /**< Use lower bound on objective function (via lower bound)? */
 #define DEFAULT_SUBSCIPFAST        TRUE /**< Should the settings for the sub-MIP be optimized for speed? */
 #define DEFAULT_OUTPUT            FALSE /**< Should information about the sub-MIP and cuts be displayed? */
 
@@ -123,7 +123,7 @@
 #define EPSILONVALUE              1e-03 /**< epsilon value needed to model strict-inequalities */
 #define BETAEPSILONVALUE          1e-02 /**< epsilon value for fracbeta - is larger than EPSILONVALUE for numerical stability */
 #define STALLNODELIMIT           1000LL /**< number of stalling nodes if earlyterm is true */
-#define CONSHDLRFULLNORM          FALSE /**< compute real cut and compute norm for this */
+#define CONSHDLRFULLNORM          FALSE /**< compute real cut and compute norm for this (if addviolconshdlr and conshdlrusenorm are true) */
 #define MINEFFICACY                0.05 /**< minimum efficacy of a cut - compare set.c */
 
 /* parameters used for CMIR-generation (taken from sepa_gomory) */
@@ -224,7 +224,7 @@ struct CGMIP_MIPData
 
    /* additional redundant data */
    SCIP_Bool             conshdlrusenorm;    /**< copy from sepadata */
-   SCIP_Bool             conshdlrfullnorm;   /**< compute real cut and compute norm for this */
+   SCIP_Bool             conshdlrfullnorm;   /**< compute real cut and compute norm for this (if addviolconshdlr and conshdlrusenorm are true) */
    SCIP*                 scip;               /**< original SCIP */
    SCIP_SEPA*            sepa;               /**< CG-cut separator */
    SCIP_SEPADATA*        sepadata;           /**< CG-cut separator data */
@@ -2008,6 +2008,12 @@ SCIP_RETCODE subscipSetParams(
    SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
 #else
 
+   /* zirounding is often successful, so allow it some more calls */
+   if( !SCIPisParamFixed(subscip, "heuristics/zirounding/minstopncalls") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/zirounding/minstopncalls", 10000) );
+   }
+
    if ( sepadata->subscipfast )
    {
       /* set other heuristics */
@@ -2204,6 +2210,15 @@ SCIP_RETCODE solveSubscip(
       if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT || status == SCIP_STATUS_NODELIMIT ||
          status == SCIP_STATUS_INFEASIBLE || status == SCIP_STATUS_INFORUNBD)
       {
+         /* output statistics before stopping */
+#ifdef SCIP_OUTPUT
+         SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+#else
+         if ( sepadata->output )
+         {
+            SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+         }
+#endif
          *success = FALSE;
          return SCIP_OKAY;
       }
