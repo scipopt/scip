@@ -10736,7 +10736,7 @@ SCIP_RETCODE findCumulativeConss(
          SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
    /* for each variables/job we are ... */
-   for( v = 0; v < nnodes; ++v )
+   for( v = 0; v < nnodes && !SCIPisStopped(scip); ++v )
    {
       char name[SCIP_MAXSTRLEN];
       int c;
@@ -10834,12 +10834,13 @@ SCIP_RETCODE createPrecedenceCons(
 {
    SCIP_CONS* cons;
 
+   /* create variable bound constraint */
    SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, var, vbdvar, -1.0, -SCIPinfinity(scip), -(SCIP_Real)distance,
          TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPdebugPrintCons(scip, cons, NULL);
 
+   /* add constraint to problem and release it */
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
