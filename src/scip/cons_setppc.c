@@ -1027,10 +1027,6 @@ SCIP_RETCODE addCoef(
       }
 #endif
    }
-   else
-   {
-      assert(SCIPvarGetStatus(SCIPvarGetProbvar(var)) != SCIP_VARSTATUS_MULTAGGR);
-   }
 
    /* install the rounding locks for the new variable */
    SCIP_CALL( lockRounding(scip, cons, var) );
