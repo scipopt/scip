@@ -10005,10 +10005,9 @@ SCIP_RETCODE createDisjuctiveCons(
 
    if( nvars > 0 )
    {
-      SCIP_Bool added;
-
-      added = FALSE;
-
+      /* add all jobs which has a demand smaller than one half of the capacity but together with the smallest collected
+       * job is still to large to be scheduled in parallel
+       */
       for( v = 0; v < consdata->nvars; ++v )
       {
          if( consdata->demands[v] > halfcapacity )
@@ -10019,22 +10018,17 @@ SCIP_RETCODE createDisjuctiveCons(
             demands[nvars] = 1;
             durations[nvars] = consdata->durations[v];
             vars[nvars] = consdata->vars[v];
+            nvars++;
 
-            /* creates cumulative constraint and adds it to problem */
-            SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars+1, vars, durations, demands, 1, consdata->hmin, consdata->hmax,
-                  FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-            (*naddconss)++;
-            added = TRUE;
+            /* adjust minimum demand of collected jobs */
+            mindemand = MIN(mindemand, consdata->demands[v]);
          }
       }
 
-      if( !added && nvars > 1 )
-      {
-         /* creates cumulative constraint and adds it to problem */
-         SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars, vars, durations, demands, 1, consdata->hmin, consdata->hmax,
-               FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         (*naddconss)++;
-      }
+      /* creates cumulative constraint and adds it to problem */
+      SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars, vars, durations, demands, 1, consdata->hmin, consdata->hmax,
+            FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      (*naddconss)++;
    }
 
    SCIPfreeBufferArray(scip, &demands);
