@@ -29,6 +29,8 @@ fixed bugs:
 - fixed possible cycling in enforcement of nonlinear constraints due to too early removal of newly added cuts from LP
 - fixed solution collection when counting solutions
 - fixed bug wrongly removing constraints locally while counting
+- fixed bug in Undercover with "pseudo-"quadratic constraints
+- fixed bug with quadratic constraints not being upgraded
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
