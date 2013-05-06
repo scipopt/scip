@@ -127,6 +127,7 @@ struct SCIP_ConsData
    unsigned int          isremovedfixings:1; /**< did we removed fixed/aggr/multiaggr variables ? */
    unsigned int          ispropagated:1;     /**< was the constraint propagated with respect to the current bounds ? */
    unsigned int          ispresolved:1;      /**< did we checked for possibilities of upgrading or implicit integer variables ? */
+   unsigned int          initialmerge:1;     /**< did we perform an initial merge and clean in presolving yet ? */
 #ifdef CHECKIMPLINBILINEAR
    unsigned int          isimpladded:1;      /**< has there been an implication added for a binary variable in a bilinear term? */
 #endif
@@ -1115,6 +1116,7 @@ SCIP_RETCODE consdataCreateEmpty(
 
    (*consdata)->isremovedfixings = TRUE;
    (*consdata)->ispropagated     = TRUE;
+   (*consdata)->initialmerge     = FALSE;
 
    (*consdata)->linvar_maydecrease = -1;
    (*consdata)->linvar_mayincrease = -1;
@@ -2490,6 +2492,7 @@ SCIP_RETCODE mergeAndCleanQuadVarTerms(
        * thus, we do this step only if the variable does not appear in any bilinear term */
       if( quadvarterm->sqrcoef != 0.0 && SCIPvarIsBinary(quadvarterm->var) && quadvarterm->nadjbilin == 0 )
       {
+         SCIPdebugMessage("replace square of binary variable by itself: <%s>^2 --> <%s>\n", SCIPvarGetName(quadvarterm->var), SCIPvarGetName(quadvarterm->var));
          quadvarterm->lincoef += quadvarterm->sqrcoef;
          quadvarterm->sqrcoef = 0.0;
 
@@ -9298,6 +9301,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
       {
          SCIP_CALL( removeFixedVariables(scip, conss[c]) );
       }
+
       /* make sure we do not have duplicate bilinear terms, quad var terms, or linear vars */
       SCIP_CALL( mergeAndCleanBilinearTerms(scip, conss[c]) );
       SCIP_CALL( mergeAndCleanQuadVarTerms(scip, conss[c]) );
@@ -10245,6 +10249,14 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
       SCIPdebugMessage("process constraint <%s>\n", SCIPconsGetName(conss[c]));
       SCIPdebugPrintCons(scip, conss[c], NULL);
+
+      if( !consdata->initialmerge )
+      {
+         SCIP_CALL( mergeAndCleanBilinearTerms(scip, conss[c]) );
+         SCIP_CALL( mergeAndCleanQuadVarTerms(scip, conss[c]) );
+         SCIP_CALL( mergeAndCleanLinearVars(scip, conss[c]) );
+         consdata->initialmerge = TRUE;
+      }
 
       havechange = FALSE;
 #ifdef CHECKIMPLINBILINEAR
