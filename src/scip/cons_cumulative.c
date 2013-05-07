@@ -10129,6 +10129,8 @@ struct TCLIQUE_Graph
    TCLIQUE_Bool**        precedencematrix;   /**< precedence adjacent matrix */
    TCLIQUE_Bool**        demandmatrix;       /**< demand adjacent matrix */
    TCLIQUE_WEIGHT*       weights;            /**< weight of nodes */
+   int*                  ninarcs;            /**< number if in arcs for the precedence graph */
+   int*                  noutarcs;           /**< number if out arcs for the precedence graph */
    int*                  durations;          /**< for each node the duration of the corresponding job */
    int                   nnodes;             /**< number of nodes */
    int                   size;               /**< size of the array */
@@ -10507,10 +10509,12 @@ SCIP_RETCODE projectVbd(
    return SCIP_OKAY;
 }
 
-/** compute the transitive closer of the given graph */
+/** compute the transitive closer of the given graph and the number of in and out arcs */
 static
 void transitiveClosure(
    TCLIQUE_Bool**        adjmatrix,         /**< adjacent matrix */
+   int*                  ninarcs,           /**< array to store the number of in arcs */
+   int*                  noutarcs,          /**< array to store the number of out arcs */
    int                   nnodes             /**< number if nodes */
    )
 {
@@ -10524,6 +10528,9 @@ void transitiveClosure(
       {
          if( adjmatrix[i][j] )
          {
+            ninarcs[j]++;
+            noutarcs[i]++;
+
             for( k = 0; k < nnodes; ++k )
             {
                if( adjmatrix[j][k] )
@@ -10640,8 +10647,8 @@ SCIP_RETCODE constructIncompatibilityGraph(
    /* use the variables bounds of SCIP to project the variables bound graph inot a precedence graph */
    SCIP_CALL( projectVbd(scip, tcliquegraph) );
 
-   /* compute the transitive closure of the precedence graph */
-   transitiveClosure(tcliquegraph->precedencematrix, tcliquegraph->nnodes);
+   /* compute the transitive closure of the precedence graph and the number of in and out arcs */
+   transitiveClosure(tcliquegraph->precedencematrix, tcliquegraph->ninarcs, tcliquegraph->noutarcs, tcliquegraph->nnodes);
 
    /* constraints non-overlapping graph */
    SCIP_CALL( constraintNonOverlappingGraph(scip, tcliquegraph, conss, nconss) );
@@ -10847,6 +10854,103 @@ SCIP_RETCODE createPrecedenceCons(
    return SCIP_OKAY;
 }
 
+/** compute a minimum distance between the start times of the two given jobs and post it as variable bound constraint */
+static
+SCIP_RETCODE computeMinDistance(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TCLIQUE_GRAPH*        tcliquegraph,       /**< conflict set graph */
+   int                   source,             /**< index of the source node */
+   int                   sink,               /**< index of the sink node */
+   int*                  naddconss           /**< pointer to store the number of added constraints */
+   )
+{
+   TCLIQUE_WEIGHT cliqueweight;
+   TCLIQUE_STATUS tcliquestatus;
+   SCIP_VAR** vars;
+   int* cliquenodes;
+   int nnodes;
+   int lct;
+   int est;
+   int i;
+
+   int ntreenodes;
+   int ncliquenodes;
+
+   /* check if source and sink are connencted */
+   if( !tcliquegraph->precedencematrix[source][sink] )
+      return SCIP_OKAY;
+
+   nnodes = tcliquegraph->nnodes;
+   vars = tcliquegraph->vars;
+
+   /* reset the weights to zero */
+   BMSclearMemoryArray(tcliquegraph->weights, nnodes);
+
+   /* get latest completion time (lct) of the source and the earliest start time (est) of sink */
+   lct = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[source])) + tcliquegraph->durations[source];
+   est = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[sink]));
+
+   /* weight all jobs which run for sure between source and sink with their duration */
+   for( i = 0; i < nnodes; ++i )
+   {
+      SCIP_VAR* var;
+      int duration;
+
+      var = vars[i];
+      assert(var != NULL);
+
+      duration = tcliquegraph->durations[i];
+
+      if( i == source || i == sink )
+      {
+         /* source and sink are not weighted */
+         tcliquegraph->weights[i] = 0;
+      }
+      else if( tcliquegraph->precedencematrix[source][i] && tcliquegraph->precedencematrix[i][sink] )
+      {
+         /* job i runs after source and before sink */
+         tcliquegraph->weights[i] = duration;
+      }
+      else if( lct <= convertBoundToInt(scip, SCIPvarGetLbLocal(var))
+         && est >= convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration )
+      {
+         /* job i run in between due the bounds of the start time variables */
+         tcliquegraph->weights[i] = duration;
+      }
+      else
+         tcliquegraph->weights[i] = 0;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, nnodes) );
+
+   /* find (heuristically) maximum cliques */
+   tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique,
+      tcliquegraph, tcliqueNewsolClique, NULL,
+      cliquenodes, &ncliquenodes, &cliqueweight, 1, 1,
+      10000, 1000, 1000, -1, &ntreenodes, &tcliquestatus);
+
+   if( ncliquenodes > 1 )
+   {
+      char name[SCIP_MAXSTRLEN];
+      int distance;
+
+      /* construct constraint name */
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "varbound_%d_%d", SCIPgetNRuns(scip), *naddconss);
+
+      /* the minimum distance between the start times of source job and the sink job is the clique weight plus the
+       * duration of the source job
+       */
+      distance = cliqueweight + tcliquegraph->durations[source];
+
+      SCIP_CALL( createPrecedenceCons(scip, name, vars[source], vars[sink], distance) );
+      (*naddconss)++;
+   }
+
+   SCIPfreeBufferArray(scip, &cliquenodes);
+
+   return SCIP_OKAY;
+}
+
 /** search for precedence constraints
  *
  *  for each arc of the transitive closure of the precedence graph, we are computing a minimum distance between the
@@ -10859,85 +10963,52 @@ SCIP_RETCODE findPrecedenceConss(
    int*                  naddconss           /**< pointer to store the number of added constraints */
    )
 {
-   SCIP_VAR** vars;
+   int* sources;
+   int* sinks;
    int nconss;
-   int nvars;
+   int nnodes;
+   int nsources;
+   int nsinks;
    int i;
-   int j;
 
-   nvars = SCIPgetNVars(scip);
-   vars = SCIPgetVars(scip);
-
+   nnodes = tcliquegraph->nnodes;
    nconss = 0;
 
-   for( i = 0; i < nvars; ++i )
+   nsources = 0;
+   nsinks = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &sources, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sinks, nnodes) );
+
+   /* first collect all sources and sinks */
+   for( i = 0; i < nnodes; ++i )
    {
-      for( j = 0; j < nvars; ++j )
+      if( tcliquegraph->ninarcs[i] == 0 )
+       {
+          sources[nsources] = i;
+          nsources++;
+       }
+
+      if( tcliquegraph->ninarcs[i] == 0 )
+       {
+          sinks[nsinks] = i;
+          nsinks++;
+       }
+   }
+
+   /* compute for each node a minimum distance to each sources and each sink */
+   for( i = 0; i < nnodes && !SCIPisStopped(scip); ++i )
+   {
+      int j;
+
+      for( j = 0; j < nsources; ++j )
       {
-         TCLIQUE_WEIGHT cliqueweight;
-         TCLIQUE_STATUS tcliquestatus;
-         int* cliquenodes;
-         int lct;
-         int est;
-         int k;
+         SCIP_CALL( computeMinDistance(scip, tcliquegraph, sources[j], i, &nconss) );
+      }
 
-         int ntreenodes;
-         int ncliquenodes;
-
-         if( i == j )
-            continue;
-
-         if( !tcliquegraph->precedencematrix[i][j] )
-            continue;
-
-         /* reset the weights to zero */
-         BMSclearMemoryArray(tcliquegraph->weights, nvars);
-
-         lct = convertBoundToInt(scip, SCIPvarGetUbLocal(tcliquegraph->vars[i])) + tcliquegraph->durations[i];
-         est = convertBoundToInt(scip, SCIPvarGetLbLocal(tcliquegraph->vars[j]));
-
-         for( k = 0; k < nvars; ++k )
-         {
-            SCIP_VAR* var;
-            int duration;
-
-            var = tcliquegraph->vars[k];
-            assert(var != NULL);
-
-            duration = tcliquegraph->durations[k];
-
-            if( i == k || j == k )
-               tcliquegraph->weights[k] = 0;
-            else if( tcliquegraph->precedencematrix[i][k] && tcliquegraph->precedencematrix[k][j] )
-               tcliquegraph->weights[k] = duration;
-            else if( lct > convertBoundToInt(scip, SCIPvarGetLbLocal(var)) )
-               tcliquegraph->weights[k] = 0;
-            else if( est < convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration )
-               tcliquegraph->weights[k] = 0;
-            else
-               tcliquegraph->weights[k] = duration;
-         }
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, nvars) );
-
-         /* find (heuristically) maximum cliques */
-         tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique,
-            tcliquegraph, tcliqueNewsolClique, NULL,
-            cliquenodes, &ncliquenodes, &cliqueweight, 1, 1,
-            100000, 0, 0, -1, &ntreenodes, &tcliquestatus);
-
-         if( ncliquenodes > 1 )
-         {
-            char name[SCIP_MAXSTRLEN];
-
-            /* construct constraint name */
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "varbound_%d_%d", SCIPgetNRuns(scip), nconss);
-
-            SCIP_CALL( createPrecedenceCons(scip, name, vars[i], vars[j], cliqueweight + tcliquegraph->durations[i]) );
-            nconss++;
-         }
-
-         SCIPfreeBufferArray(scip, &cliquenodes);
+      for( j = 0; j < nsinks; ++j )
+      {
+         SCIP_CALL( computeMinDistance(scip, tcliquegraph, i, sinks[j], &nconss) );
       }
    }
 
@@ -10945,6 +11016,9 @@ SCIP_RETCODE findPrecedenceConss(
 
    /* for the statistic we count the number added variable constraints */
    SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->naddedvarbounds += nconss );
+
+   SCIPfreeBufferArray(scip, &sinks);
+   SCIPfreeBufferArray(scip, &sources);
 
    return SCIP_OKAY;
 }
@@ -11003,6 +11077,8 @@ SCIP_RETCODE createTcliqueGraph(
    SCIP_HASHMAP* varmap;
    TCLIQUE_Bool** precedencematrix;
    TCLIQUE_Bool** demandmatrix;
+   int* ninarcs;
+   int* noutarcs;
    int* durations;
    int* weights;
    int nvars;
@@ -11024,8 +11100,17 @@ SCIP_RETCODE createTcliqueGraph(
    SCIP_CALL( SCIPallocBufferArray(scip, &precedencematrix, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &demandmatrix, nvars) );
 
+   /* array to buffer the weights of the nodes for the maximum weighted clique computation */
    SCIP_CALL( SCIPallocBufferArray(scip, &weights, nvars) );
    BMSclearMemoryArray(weights, nvars);
+
+   /* array to store the number of in arc of the precedence graph */
+   SCIP_CALL( SCIPallocBufferArray(scip, &ninarcs, nvars) );
+   BMSclearMemoryArray(ninarcs, nvars);
+
+   /* array to store the number of out arc of the precedence graph */
+   SCIP_CALL( SCIPallocBufferArray(scip, &noutarcs, nvars) );
+   BMSclearMemoryArray(noutarcs, nvars);
 
    /* array to store the used duration for each node */
    SCIP_CALL( SCIPallocBufferArray(scip, &durations, nvars) );
@@ -11054,6 +11139,8 @@ SCIP_RETCODE createTcliqueGraph(
    (*tcliquegraph)->precedencematrix = precedencematrix;
    (*tcliquegraph)->demandmatrix = demandmatrix;
    (*tcliquegraph)->weights = weights;
+   (*tcliquegraph)->ninarcs = ninarcs;
+   (*tcliquegraph)->noutarcs = noutarcs;
    (*tcliquegraph)->durations = durations;
    (*tcliquegraph)->size = nvars;
 
@@ -11076,6 +11163,8 @@ void freeTcliqueGraph(
    }
 
    SCIPfreeBufferArray(scip, &(*tcliquegraph)->durations);
+   SCIPfreeBufferArray(scip, &(*tcliquegraph)->ninarcs);
+   SCIPfreeBufferArray(scip, &(*tcliquegraph)->noutarcs);
    SCIPfreeBufferArray(scip, &(*tcliquegraph)->weights);
    SCIPfreeBufferArray(scip, &(*tcliquegraph)->demandmatrix);
    SCIPfreeBufferArray(scip, &(*tcliquegraph)->precedencematrix);
@@ -11085,8 +11174,8 @@ void freeTcliqueGraph(
    SCIPfreeBuffer(scip, tcliquegraph);
 }
 
-/** construct an incompatibility graph and search for precedence constaints (variables bounds) and unary cumulative
- *  constrainst (disjunctive constraint
+/** construct an incompatibility graph and search for precedence constraints (variables bounds) and unary cumulative
+ *  constrains (disjunctive constraint)
  */
 static
 SCIP_RETCODE detectRedundantConss(
@@ -12062,7 +12151,9 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
       SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, FALSE, nfixedvars, NULL) );
    }
 
-   if( !cutoff && SCIPgetNRuns(scip) == 1 && nrounds == 2 && (conshdlrdata->detectvarbounds || conshdlrdata->detectdisjunctive) )
+   /* only perform the detection of variable bounds and disjunctive constraint once */
+   if( !cutoff && SCIPgetNRuns(scip) == 1 && nrounds == 2
+      && (conshdlrdata->detectvarbounds || conshdlrdata->detectdisjunctive) )
    {
       /* combine different source and detect disjunctive constraints and variable bound constraints to improve the
        * propagation
