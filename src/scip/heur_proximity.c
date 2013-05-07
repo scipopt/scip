@@ -56,6 +56,8 @@
 #define DEFAULT_WAITINGNODES  100LL      /* default waiting nodes since last incumbent before heuristic is executed    */
 #define DEFAULT_NODESQUOT     0.1        /* default quotient of sub-MIP nodes with respect to number of processed nodes*/
 #define DEFAULT_USELPROWS     FALSE      /* should subproblem be constructed based on LP row information? */
+#define DEFAULT_BINVARQUOT    0.1        /* default threshold for percentage of binary variables required to start     */
+
 /*
  * Data structures
  */
@@ -74,6 +76,8 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;         /**< factor by which proximity should at least improve the incumbent     */
    SCIP_Real             mingap;             /**< minimum primal-dual gap for which the heuristic is executed         */
    SCIP_Real             nodesquot;          /**< quotient of sub-MIP nodes with respect to number of processed nodes */
+   SCIP_Real             binvarquot;         /**<  threshold for percantage of binary variables required to start     */
+
    SCIP*                 subscip;            /**< the subscip used by the heuristic                                   */
    SCIP_HASHMAP*         varmapfw;           /**< map between scip variables and subscip variables                    */
    SCIP_VAR**            subvars;            /**< variables in subscip                                                */
@@ -438,6 +442,10 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   /* do not run heuristic when there are only few binary varables */
+   if( SCIPgetNBinVars(scip) < heurdata->binvarquot * SCIPgetNVars(scip) )
+      return SCIP_OKAY;
+
    /* calculate branching node limit for sub problem */
    /* todo maybe treat root node differently */
    nnodes = (SCIP_Longint) (heurdata->nodesquot * SCIPgetNNodes(scip));
@@ -586,6 +594,10 @@ SCIP_RETCODE SCIPapplyProximity(
    solidx = SCIPsolGetIndex(incumbent);
 
    if( heurdata->lastsolidx == solidx )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the best solution does not come from trivial heuristic */
+   if( SCIPsolGetHeur(incumbent) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(incumbent)), "trivial") == 0 )
       return SCIP_OKAY;
 
    /* waitingnodes parameter defines the minimum number of nodes to wait before a new incumbent is processed */
@@ -937,6 +949,10 @@ SCIP_RETCODE SCIPincludeHeurProximity(
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nodesquot", "sub-MIP node limit w.r.t number of original nodes",
          &heurdata->nodesquot, TRUE, DEFAULT_NODESQUOT, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/binvarquot",
+         "threshold for percentage of binary variables required to start",
+         &heurdata->binvarquot, TRUE, DEFAULT_BINVARQUOT, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/mingap",
          "minimum primal-dual gap for which the heuristic is executed",
