@@ -6858,7 +6858,6 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613*/
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
          SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-         assert( ! infeasible );
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -6915,7 +6914,6 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
             SCIP_Bool infeasible;
 
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-            assert( ! infeasible );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
@@ -6930,7 +6928,6 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
             SCIP_Bool infeasible;
 
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-            assert( ! infeasible );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
