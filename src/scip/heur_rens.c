@@ -45,9 +45,10 @@
 #define DEFAULT_MAXNODES      5000LL    /* maximum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MINFIXINGRATE 0.5       /* minimum percentage of integer variables that have to be fixed       */
 #define DEFAULT_MINIMPROVE    0.01      /* factor by which RENS should at least improve the incumbent          */
-#define DEFAULT_MINNODES      500LL     /* minimum number of nodes to regard in the subproblem                 */
+#define DEFAULT_MINNODES      50LL      /* minimum number of nodes to regard in the subproblem                 */
 #define DEFAULT_NODESOFS      500LL     /* number of nodes added to the contingent of the total nodes          */
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem       */
+#define DEFAULT_LPLIMFAC      2.0       /* factor by which the limit on the number of LP depends on the node limit  */
 #define DEFAULT_STARTSOL      'l'       /* solution that is used for fixing values                             */
 #define STARTSOL_CHOICES      "nl"      /* possible values for startsol ('l'p relaxation, 'n'lp relaxation)    */
 #define DEFAULT_USELPROWS    FALSE      /* should subproblem be created out of the rows in the LP rows,
@@ -66,6 +67,10 @@
                                          * implemented for testing and not recommended to be used!
                                          */
 
+/* event handler properties */
+#define EVENTHDLR_NAME         "Rens"
+#define EVENTHDLR_DESC         "LP event handler for "HEUR_NAME" heuristic"
+
 /*
  * Data structures
  */
@@ -80,6 +85,8 @@ struct SCIP_HeurData
    SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed       */
    SCIP_Real             minimprove;         /**< factor by which RENS should at least improve the incumbent          */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
+   SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
+   SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
    char                  startsol;           /**< solution used for fixing values ('l'p relaxation, 'n'lp relaxation) */
    SCIP_Bool             binarybounds;       /**< should general integers get binary bounds [floor(.),ceil(.)] ?      */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?        */
@@ -363,6 +370,38 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
+/* ---------------- Callback methods of event handler ---------------- */
+
+/* exec the event handler
+ *
+ * we interrupt the solution process
+ */
+static
+SCIP_DECL_EVENTEXEC(eventExecRens)
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(eventhdlr != NULL);
+   assert(eventdata != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   assert(event != NULL);
+   assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
+
+   heurdata = (SCIP_HEURDATA*)eventdata;
+   assert(heurdata != NULL);
+
+   /* interrupt solution process of sub-SCIP */
+   if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
+   {
+      SCIPdebugMessage("interrupt after %"SCIP_LONGINT_FORMAT" LPs\n",SCIPgetNLPs(scip));
+      SCIP_CALL( SCIPinterruptSolve(scip) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/* ---------------- external methods of RENS heuristic ---------------- */
+
 /** main procedure of the RENS heuristic, creates and solves a sub-SCIP */
 SCIP_RETCODE SCIPapplyRens(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
@@ -382,6 +421,7 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_VAR** vars;                          /* original problem's variables                    */
    SCIP_VAR** subvars;                       /* subproblem's variables                          */
    SCIP_HEURDATA* heurdata;                  /* heuristic's private data structure              */
+   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
 
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
    SCIP_Real timelimit;                      /* time limit for RENS subproblem                  */
@@ -485,6 +525,15 @@ SCIP_RETCODE SCIPapplyRens(
       }
 
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+
+      /* create event handler for LP events */
+      eventhdlr = NULL;
+      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecRens, NULL) );
+      if( eventhdlr == NULL )
+      {
+         SCIPerrorMessage("event handler for "HEUR_NAME" heuristic not found.\n");
+         return SCIP_PLUGINNOTFOUND;
+      }
    }
 
    for( i = 0; i < nvars; i++ )
@@ -504,6 +553,7 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
    /* set limits for the subproblem */
+   heurdata->nodelimit = maxnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
@@ -615,9 +665,22 @@ SCIP_RETCODE SCIPapplyRens(
       SCIP_SOL** subsols;
       int nsubsols;
 
+      /* catch LP events of sub-SCIP */
+      if( !heurdata->uselprows )
+      {
+         SCIP_CALL( SCIPtransformProb(subscip) );
+         SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
+      }
+
       /* solve the subproblem */
       SCIPdebugMessage("solving subproblem: nstallnodes=%"SCIP_LONGINT_FORMAT", maxnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, maxnodes);
       retcode = SCIPsolve(subscip);
+
+      /* drop LP events of sub-SCIP */
+      if( !heurdata->uselprows )
+      {
+         SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
+      }
 
       /* errors in solving the subproblem should not kill the overall solving process;
        * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
@@ -661,6 +724,7 @@ SCIP_RETCODE SCIPapplyRens(
 
    return SCIP_OKAY;
 }
+
 
 /*
  * Callback methods of primal heuristic
@@ -838,6 +902,10 @@ SCIP_RETCODE SCIPincludeHeurRens(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
          "factor by which RENS should at least improve the incumbent",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/lplimfac",
+         "factor by which the limit on the number of LP depends on the node limit",
+         &heurdata->lplimfac, TRUE, DEFAULT_LPLIMFAC, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/startsol",
          "solution that is used for fixing values ('l'p relaxation, 'n'lp relaxation)",

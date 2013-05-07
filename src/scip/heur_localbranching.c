@@ -45,12 +45,17 @@
 #define DEFAULT_MINIMPROVE    0.01      /* factor by which localbranching should at least improve the incumbent     */
 #define DEFAULT_MINNODES      1000      /* minimum number of nodes required to start the subproblem                 */
 #define DEFAULT_NODESQUOT     0.05      /* contingent of sub problem nodes in relation to original nodes            */
+#define DEFAULT_LPLIMFAC      1.5       /* factor by which the limit on the number of LP depends on the node limit  */
 #define DEFAULT_NWAITINGNODES 200       /* number of nodes without incumbent change that heuristic should wait      */
 #define DEFAULT_USELPROWS    FALSE      /* should subproblem be created out of the rows in the LP rows,
                                          * otherwise, the copy constructors of the constraints handlers are used    */
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip
                                          */
+
+/* event handler properties */
+#define EVENTHDLR_NAME         "Localbranching"
+#define EVENTHDLR_DESC         "LP event handler for "HEUR_NAME" heuristic"
 
 
 #define EXECUTE               0
@@ -71,6 +76,8 @@ struct SCIP_HeurData
    SCIP_Longint          usednodes;          /**< amount of nodes local branching used during all calls                */
    SCIP_Real             nodesquot;          /**< contingent of sub problem nodes in relation to original nodes        */
    SCIP_Real             minimprove;         /**< factor by which localbranching should at least improve the incumbent */
+   SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
+   SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
    int                   neighborhoodsize;   /**< radius of the incumbent's neighborhood to be searched                */
    int                   callstatus;         /**< current status of localbranching heuristic                           */
    SCIP_SOL*             lastsol;            /**< the last incumbent localbranching used as reference point            */
@@ -263,6 +270,37 @@ SCIP_RETCODE createNewSol(
 }
 
 
+/* ---------------- Callback methods of event handler ---------------- */
+
+/* exec the event handler
+ *
+ * we interrupt the solution process
+ */
+static
+SCIP_DECL_EVENTEXEC(eventExecLocalbranching)
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(eventhdlr != NULL);
+   assert(eventdata != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   assert(event != NULL);
+   assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
+
+   heurdata = (SCIP_HEURDATA*)eventdata;
+   assert(heurdata != NULL);
+
+   /* interrupt solution process of sub-SCIP */
+   if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
+   {
+      SCIPdebugMessage("interrupt after  %"SCIP_LONGINT_FORMAT" LPs\n",SCIPgetNLPs(scip));
+      SCIP_CALL( SCIPinterruptSolve(scip) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of primal heuristic
  */
@@ -338,6 +376,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP* subscip;                            /* the subproblem created by localbranching              */
    SCIP_VAR** subvars;                       /* subproblem's variables                                */
    SCIP_SOL* bestsol;                        /* best solution so far                                  */
+   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
 
    SCIP_Real timelimit;                      /* timelimit for subscip (equals remaining time of scip) */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                   */
@@ -372,19 +411,24 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    /* only call heuristic, if an IP solution is at hand */
    if( SCIPgetNSols(scip) <= 0  )
-         return SCIP_OKAY;
+      return SCIP_OKAY;
+
+   bestsol = SCIPgetBestSol(scip);
+   assert(bestsol != NULL);
 
    /* only call heuristic, if the best solution comes from transformed problem */
-   assert( SCIPgetBestSol(scip) != NULL );
-   if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
+   if( SCIPsolIsOriginal(bestsol) )
       return SCIP_OKAY;
 
    /* only call heuristic, if enough nodes were processed since last incumbent */
-   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip))  < heurdata->nwaitingnodes)
+   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip, bestsol)  < heurdata->nwaitingnodes)
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the best solution does not come from trivial heuristic */
+   if( SCIPsolGetHeur(bestsol) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "trivial") == 0 )
       return SCIP_OKAY;
 
    /* reset neighborhood and minnodes, if new solution was found */
-   bestsol = SCIPgetBestSol(scip);
    if( heurdata->lastsol != bestsol )
    {
       heurdata->curneighborhoodsize = heurdata->neighborhoodsize;
@@ -459,6 +503,15 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
          /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
       }
+
+      /* create event handler for LP events */
+      eventhdlr = NULL;
+      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLocalbranching, NULL) );
+      if( eventhdlr == NULL )
+      {
+         SCIPerrorMessage("event handler for "HEUR_NAME" heuristic not found.\n");
+         return SCIP_PLUGINNOTFOUND;
+      }
    }
    SCIPdebugMessage("Copying the plugins was %ssuccessful.\n", success ? "" : "not ");
 
@@ -501,6 +554,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       goto TERMINATE;
 
    /* set limits for the subproblem */
+   heurdata->nodelimit = nsubnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nsubnodes/10)) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
@@ -587,10 +641,23 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    cutoff = MIN(upperbound, cutoff );
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
+   /* catch LP events of sub-SCIP */
+   if( !heurdata->uselprows )
+   {
+      SCIP_CALL( SCIPtransformProb(subscip) );
+      SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
+   }
+
    /* solve the subproblem */
    SCIPdebugMessage("solving local branching subproblem with neighborhoodsize %d and maxnodes %"SCIP_LONGINT_FORMAT"\n",
       heurdata->curneighborhoodsize, nsubnodes);
    retcode = SCIPsolve(subscip);
+
+   /* drop LP events of sub-SCIP */
+   if( !heurdata->uselprows )
+   {
+      SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
+   }
 
    /* Errors in solving the subproblem should not kill the overall solving process
     * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
@@ -728,6 +795,10 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/lplimfac",
+         "factor by which the limit on the number of LP depends on the node limit",
+         &heurdata->lplimfac, TRUE, DEFAULT_LPLIMFAC, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/minnodes",
          "minimum number of nodes required to start the subproblem",
