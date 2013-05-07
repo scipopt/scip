@@ -2750,6 +2750,9 @@ SCIP_RETCODE analyzeEnergyRequirement(
          else
             requiredenergy -= (overlap + 1) * demands[v] - 1;
 
+         if( explanation != NULL )
+            explanation[v] = TRUE;
+
          continue;
       }
 
@@ -2769,6 +2772,9 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
          /* remove the globally available energy form the required energy */
          requiredenergy -= glbenergy;
+
+         if( explanation != NULL )
+            explanation[v] = TRUE;
       }
 
       /* local time points */
