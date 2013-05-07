@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_STATISTIC
 /**@file   heur_proximity.c
  * @brief  improvement heuristic which uses an auxiliary objective instead of the original objective function which
  *         is itself added as a constraint to a sub-SCIP instance. The heuristic was presented by Matteo Fischetti
@@ -57,6 +57,7 @@
 #define DEFAULT_NODESQUOT     0.1        /* default quotient of sub-MIP nodes with respect to number of processed nodes*/
 #define DEFAULT_USELPROWS     FALSE      /* should subproblem be constructed based on LP row information? */
 #define DEFAULT_BINVARQUOT    0.1        /* default threshold for percentage of binary variables required to start     */
+#define DEFAULT_RESTART       TRUE       /* should the heuristic immediately run again on its newly found solution? */
 
 /*
  * Data structures
@@ -88,6 +89,7 @@ struct SCIP_HeurData
    int                   subprobidx;         /**< counter for the subproblem index to be solved by proximity */
 
    SCIP_Bool             uselprows;          /**< should subproblem be constructed based on LP row information? */
+   SCIP_Bool             restart;            /* should the heuristic immediately run again on its newly found solution? */
 };
 
 
@@ -478,6 +480,7 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    {
       /* main loop of proximity: in every iteration, a new subproblem is set up and solved until no improved solution
        * is found or one of the heuristic limits on nodes or LP iterations is hit
+       * heuristic performs only one iteration if restart parameter is set to FALSE
        */
       SCIP_Longint nusednodes;
       SCIP_Longint nusedlpiters;
@@ -502,7 +505,7 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
       if( *result == SCIP_FOUNDSOL )
          foundsol = TRUE;
    }
-   while( *result == SCIP_FOUNDSOL && !SCIPisStopped(scip) && nnodes > 0 );
+   while( *result == SCIP_FOUNDSOL && heurdata->restart && !SCIPisStopped(scip) && nnodes > 0 );
 
    /* reset result pointer if solution has been found in previous iteration */
    if( foundsol )
@@ -920,6 +923,9 @@ SCIP_RETCODE SCIPincludeHeurProximity(
    /* add proximity primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows", "should subproblem be constructed based on LP row information?",
          &heurdata->uselprows, TRUE, DEFAULT_USELPROWS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/restart", "should the heuristic immediately run again on its newly found solution?",
+         &heurdata->restart, TRUE, DEFAULT_RESTART, NULL, NULL) );
+
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/maxnodes",
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes, TRUE,DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
