@@ -5323,7 +5323,7 @@ SCIP_RETCODE multiAggregateBinvar(
  *  we can also aggregate a variable in a set-packing constraint with only two variables when the uplocks are equal to
  *  one and then delete this constraint
  *
- *  5. f1: x + y <= 1,  uplocks(x) = 1                                    =>  x = 1 - y and delete f1
+ *  5. f1: x + y <= 1,  uplocks(x) = 1, obj(x) <= 0                       =>  x = 1 - y and delete f1
  *
  */
 static
