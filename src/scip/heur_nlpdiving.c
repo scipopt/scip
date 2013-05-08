@@ -2237,8 +2237,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
             /* get LP solution status, objective value, and fractional variables, that should be integral */
             lpsolstat = SCIPgetLPSolstat(scip);
-            assert(cutoff == (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE ||
-                  (lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))));
+            assert(cutoff || (lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT && lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE &&
+                  (lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))));
 
             if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
             {
