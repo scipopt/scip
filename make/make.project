@@ -312,6 +312,16 @@ ifeq ($(GMP_LDFLAGS),)
 GMP		=	false
 endif
 
+ifeq ($(ZIMPL),true)
+ifeq ($(ZLIB),false)
+$(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true)
+endif
+ifeq ($(GMP),false)
+$(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=auto)
+endif
+LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
+endif
+
 ifeq ($(GMP),true)
 FLAGS		+=	-DWITH_GMP $(GMP_FLAGS)
 LDFLAGS		+=	$(GMP_LDFLAGS)
@@ -324,16 +334,6 @@ endif
 ifeq ($(READLINE),true)
 FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
 LDFLAGS		+=	$(READLINE_LDFLAGS)
-endif
-
-ifeq ($(ZIMPL),true)
-ifeq ($(ZLIB),false)
-$(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true)
-endif
-ifeq ($(GMP),false)
-$(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=auto)
-endif
-LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
 endif
 
 ifeq ($(IPOPT),true)
