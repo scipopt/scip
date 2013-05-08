@@ -11453,7 +11453,7 @@ SCIP_RETCODE strengthVarbaounds(
       {
          if( SCIPisEQ(scip, vbdcoefs[b], 1.0) )
          {
-            if( SCIPisGT(scip, vbdconsts[b], -durations[i]) )
+            if( convertBoundToInt(scip, vbdconsts[b]) > -durations[i] )
             {
                for( j = 0; j < nvars; ++j )
                {
@@ -11463,7 +11463,7 @@ SCIP_RETCODE strengthVarbaounds(
                if( j == nvars )
                   continue;
 
-               if( demands[i] +  demands[j] > capacity &&  SCIPisLT(scip, vbdconsts[b], durations[j]) )
+               if( demands[i] +  demands[j] > capacity && convertBoundToInt(scip, vbdconsts[b]) < durations[j] )
                {
                   SCIP_Bool infeasible;
                   char name[SCIP_MAXSTRLEN];
