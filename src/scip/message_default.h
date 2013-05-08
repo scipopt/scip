@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   type_message.h
+/**@file   message_default.h
  * @ingroup PUBLICMETHODS
  * @brief  default message handler
  * @author Stefan Heinz
