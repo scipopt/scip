@@ -8662,7 +8662,7 @@ SCIP_RETCODE SCIPsetObjlimit(
       break;
 
    default:
-      SCIPerrorMessage("methed is not callable in SCIP stage <%d>\n", scip->set->stage);
+      SCIPerrorMessage("method is not callable in SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
    } /*lint !e788*/
 
@@ -8726,7 +8726,7 @@ SCIP_RETCODE SCIPsetObjIntegral(
       return SCIP_OKAY;
 
    default:
-      SCIPerrorMessage("methed is not callable in SCIP stage <%d>\n", scip->set->stage);
+      SCIPerrorMessage("method is not callable in SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
    } /*lint !e788*/
 }
@@ -21524,7 +21524,7 @@ SCIP_RETCODE SCIPgetConsVars(
    return SCIP_OKAY;
 }
 
-/** methed to collect the number of variables of a constraint
+/** method to collect the number of variables of a constraint
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
