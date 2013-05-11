@@ -440,7 +440,7 @@ SCIP_RETCODE getFixedVariable(
    if( cipinput->section != CIP_FIXEDVARS )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("parse fixed variables\n");
+   SCIPdebugMessage("parse fixed variable\n");
 
    /* parse the variable */
    SCIP_CALL( SCIPparseVar(scip, &var, buf, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL, &endptr, &success) );
@@ -502,13 +502,78 @@ SCIP_RETCODE getFixedVariable(
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
    }
+   else if ( strncmp(buf, "aggregated:", 11) == 0 )
+   {
+      /* handle (multi-)aggregated variables */
+      SCIP_CONS* lincons;
+      SCIP_Real* vals;
+      SCIP_VAR** vars;
+      SCIP_Real rhs = 0.0;
+      char* str;
+      int nvarssize = 20;
+      int requsize;
+      int nvars;
+
+      buf += 11;
+
+      SCIPdebugMessage("parsing aggregated variable <%s> ...\n", SCIPvarGetName(var));
+
+      /* first parse constant */
+      if ( ! SCIPstrToRealValue(buf, &rhs, &endptr) )
+      {
+         SCIPerrorMessage("expected constant when aggregated variable information (line: %d):\n%s\n", cipinput->linenumber, buf);
+         cipinput->haserror = TRUE;
+         return SCIP_OKAY;
+      }
+
+      /* check whether constant is 0.0 */
+      str = endptr;
+      while ( *str != '\0' && isspace(*str) )
+         ++str;
+      /* if next char is '<' we found a variable -> constant is 0 */
+      if ( *str != '<' )
+      {
+         SCIPdebugMessage("constant: %f\n", rhs);
+         buf = endptr;
+      }
+      /* otherwise keep buf */
+
+      /* initialize buffers for storing the variables and values */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvarssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvarssize) );
+
+      /* parse linear sum to get variables and coefficients */
+      SCIP_CALL( SCIPparseVarsLinearsum(scip, buf, vars, vals, &nvars, nvarssize, &requsize, &endptr, &success) );
+
+      if ( success && requsize > nvarssize )
+      {
+         /* realloc buffers and try again */
+         nvarssize = requsize;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, nvarssize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vals, nvarssize) );
+
+         SCIP_CALL( SCIPparseVarsLinearsum(scip, buf, vars, vals, &nvars, nvarssize, &requsize, &endptr, &success) );
+         assert( ! success || requsize <= nvarssize); /* if successful, then should have had enough space now */
+      }
+
+      /* add aggregated variable */
+      SCIP_CALL( SCIPaddVar(scip, var) );
+
+      /* add linear constraint for (multi-)aggregation */
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "aggr_%s", SCIPvarGetName(var) );
+      SCIPdebugMessage("coupling constraint:\n");
+      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, nvars, vars, vals, -rhs, -rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+      SCIPdebugPrintCons(scip, lincons, NULL);
+      SCIP_CALL( SCIPaddCons(scip, lincons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+
+      cipinput->aggregatedvars = TRUE;
+   }
    else
    {
-      if ( ! cipinput->aggregatedvars )
-      {
-         cipinput->aggregatedvars = TRUE;
-         SCIPwarningMessage(scip, "the CIP-input contains (multi-)aggregated variables - this is not supported yet. Note that this might lead to parsing errors later.\n");
-      }
+      SCIPerrorMessage("unknown section when parsing variables (line: %d):\n%s\n", cipinput->linenumber, buf);
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
    }
    SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
