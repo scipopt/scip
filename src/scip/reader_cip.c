@@ -509,7 +509,7 @@ SCIP_RETCODE getFixedVariable(
       SCIP_Real* vals;
       SCIP_VAR** vars;
       SCIP_Real rhs = 0.0;
-      char* str;
+      const char* str;
       int nvarssize = 20;
       int requsize;
       int nvars;
@@ -559,15 +559,31 @@ SCIP_RETCODE getFixedVariable(
       /* add aggregated variable */
       SCIP_CALL( SCIPaddVar(scip, var) );
 
+      /* special handling of variables that seem to be slack variables of indicator constraints */
+      str = SCIPvarGetName(var);
+      if ( strncmp(str, "indslack", 8) == 0 )
+      {
+         (void) strcpy(name, "indlin");
+         (void) strcat(name, str+8);
+      }
+      else if ( strncmp(str, "t_indslack", 10) == 0 )
+      {
+         (void) strcpy(name, "indlin");
+         (void) strcat(name, str+10);
+      }
+      else
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var) );
+
       /* add linear constraint for (multi-)aggregation */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "aggr_%s", SCIPvarGetName(var) );
       SCIPdebugMessage("coupling constraint:\n");
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, nvars, vars, vals, -rhs, -rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
       SCIPdebugPrintCons(scip, lincons, NULL);
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-
       cipinput->aggregatedvars = TRUE;
+
+      SCIPfreeBufferArray(scip, &vals);
+      SCIPfreeBufferArray(scip, &vars);
    }
    else
    {
