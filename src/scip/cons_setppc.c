@@ -5266,10 +5266,24 @@ SCIP_RETCODE multiAggregateBinvar(
 
    assert(scip != NULL);
    assert(vars != NULL);
-   assert(nvars > 2);
+   assert(nvars > 1);
    assert(0 <= pos && pos < nvars);
    assert(infeasible != NULL);
    assert(aggregated != NULL);
+
+   if( nvars == 2 )
+   {
+      SCIP_Bool redundant;
+
+      SCIPdebugMessage("aggregating %s = 1 - %s\n", SCIPvarGetName(vars[pos]), SCIPvarGetName(vars[nvars - pos - 1]));
+
+      /* perform aggregation on variables resulting from a set-packing constraint */
+      SCIP_CALL( SCIPaggregateVars(scip, vars[pos], vars[nvars - pos - 1], 1.0, 1.0, 1.0, infeasible, &redundant, aggregated) );
+      assert(!(*infeasible));
+      assert(*aggregated);
+
+      return SCIP_OKAY;
+   }
 
    /* if the last variable will be multi-aggregated, we do not need to copy the variables */
    if( pos == nvars - 1 )
@@ -5579,7 +5593,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
          SCIPdebugMessage("aggregating %s + %s = 1, in set-partition constraint %s\n", SCIPvarGetName(consdata->vars[0]), SCIPvarGetName(consdata->vars[1]), SCIPconsGetName(cons));
 
-         /* perform aggregation on variables resulting from a set-packing constraint */
+         /* perform aggregation on variables resulting from a set-partitioning constraint */
          SCIP_CALL( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[1], 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
          assert(!infeasible);
          assert(aggregated);
