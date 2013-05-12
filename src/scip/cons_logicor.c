@@ -63,9 +63,12 @@
 #define HASHSIZE_LOGICORCONS     131101 /**< minimal size of hash table in logicor constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
-#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
+#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise
+                                             comparison round */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 #define DEFAULT_NEGATEDCLIQUE      TRUE /**< should negated clique information be used in presolving */
+#define DEFAULT_IMPLICATIONS       TRUE /**< should we try to shrink the variables and derive global boundchanges by
+                                         *   using clique and implications */
 
 /* @todo make this a parameter setting */
 #if 1 /* @todo test which AGEINCREASE formula is better! */
@@ -90,6 +93,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
    SCIP_Bool             usenegatedclique;   /**< should negated clique information be used in presolving */
+   SCIP_Bool             useimplications;    /**< should we try to shrink the variables and derive global boundchanges
+                                              *   by using clique and implications */
    int                   nlastcliques;       /**< number of cliques after last negated clique presolving round */
    int                   nlastimpls;         /**< number of implications after last negated clique presolving round */
 };
@@ -2086,6 +2091,178 @@ SCIP_RETCODE removeRedundantConstraints(
    return SCIP_OKAY;
 }
 
+/** try to tighten constraints by reducing the number of variables in the constraints using implications and cliques,
+ *  also derive fixations through them, @see SCIPshrinkDisjunctiveVarSet()
+ */
+static
+SCIP_RETCODE shortenConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   SCIP_CONS**           conss,              /**< all constraints */
+   int                   nconss,             /**< number of constraints */
+   int*                  nfixedvars,         /**< pointer to count number of fixings */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
+   int*                  nchgcoefs           /**< pointer to count number of changed/deleted coefficients */
+   )
+{
+   SCIP_VAR** probvars;
+   SCIP_VAR* var;
+   SCIP_Real* bounds;
+   SCIP_Bool* boundtypes;
+   SCIP_Bool* redundants;
+   unsigned char* entries;
+   int nvars;
+   int nredvars;
+   int c;
+   int v;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(nfixedvars != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgcoefs != NULL);
+
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   nvars = SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip);
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &probvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redundants, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &entries, nvars) );
+
+#if 0
+   BMSclearMemoryArray(boundtypes, nvars);
+
+   for( v = nvars - 1; v >= 0; --v)
+      bounds[v] = 1.0;
+#endif
+
+   for( c = nconss - 1; c >= 0; --c )
+   {
+      SCIP_Bool redundant = FALSE;
+      SCIP_CONS* cons = conss[c];
+      SCIP_CONSDATA* consdata;
+
+      assert(cons != NULL);
+
+      if( SCIPconsIsDeleted(cons) )
+         continue;
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      /* remove old fixings */
+      if( !consdata->presolved )
+      {
+         int naddconss = 0;
+
+         /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
+         SCIP_CALL( applyFixings(scip, cons, eventhdlr, &redundant, nchgcoefs, &naddconss, ndelconss) );
+         assert(naddconss == 0);
+
+         if( redundant )
+         {
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
+
+            continue;
+         }
+         else if( SCIPconsIsDeleted(cons) )
+            continue;
+      }
+
+      consdata->presolved = TRUE;
+
+      /* merge constraint */
+      SCIP_CALL( mergeMultiples(scip, cons, eventhdlr, &entries, &nvars, &redundant, nchgcoefs) );
+      if( redundant )
+      {
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+
+         continue;
+      }
+
+      /* form necessary data */
+      for( v = consdata->nvars - 1; v >= 0; --v)
+      {
+         var = consdata->vars[v];
+         assert(var != NULL);
+         assert(SCIPvarIsActive(var) || (SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(var))));
+
+         if( SCIPvarIsActive(var) )
+         {
+            probvars[v] = var;
+            bounds[v] = 1.0;
+            boundtypes[v] = FALSE;
+         }
+         else
+         {
+            probvars[v] = SCIPvarGetNegationVar(var);
+            bounds[v] = 0.0;
+            boundtypes[v] = TRUE;
+         }
+      }
+
+      /* use implications and cliques to derive global fixings and to shrink the number of variables in this constraints */
+      SCIP_CALL( SCIPshrinkDisjunctiveVarSet(scip, probvars, bounds, boundtypes, redundants, consdata->nvars, &nredvars, nfixedvars, &redundant, TRUE ) );
+
+      /* remove redundant constraint */
+      if( redundant )
+      {
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+
+         continue;
+      }
+
+      /* remove redundant variables */
+      if( nredvars > 0 )
+      {
+         for( v = consdata->nvars - 1; v >= 0; --v )
+         {
+            if( redundants[v] )
+            {
+               SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+            }
+         }
+         *nchgcoefs += nredvars;
+
+         /* if only one variable is left over fix it */
+         if( consdata->nvars == 1 )
+         {
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
+
+            SCIPdebugMessage(" -> fix last remaining variable and delete constraint\n");
+
+            SCIP_CALL( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible, &fixed) );
+            assert(!infeasible);
+            assert(fixed);
+            ++(*nfixedvars);
+
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
+         }
+         /* @todo might also upgrade a two variable constraint to a set-packing constraint */
+      }
+   }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &entries);
+   SCIPfreeBufferArray(scip, &redundants);
+   SCIPfreeBufferArray(scip, &boundtypes);
+   SCIPfreeBufferArray(scip, &bounds);
+   SCIPfreeBufferArray(scip, &probvars);
+
+   return SCIP_OKAY;
+}
+
 #define MAXCOMPARISONS 1000000
 
 /* try to find a negated clique in a constraint which makes this constraint redundant but we need to keep the negated
@@ -3207,6 +3384,14 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          }
       }
 
+      /* try to tighten constraints by reducing the number of variables in the constraints using implications and
+       * cliques, also derive fixations through them, @see SCIPshrinkDisjunctiveVarSet()
+       */
+      if( conshdlrdata->useimplications )
+      {
+         SCIP_CALL( shortenConss(scip, conshdlrdata->eventhdlr, conss, nconss, nfixedvars, ndelconss, nchgcoefs) );
+      }
+
       /* check for redundant constraints due to negated clique information */
       if( conshdlrdata->usenegatedclique )
       {
@@ -3727,6 +3912,10 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          "constraints/logicor/negatedclique",
          "should negated clique information be used in presolving",
          &conshdlrdata->usenegatedclique, TRUE, DEFAULT_NEGATEDCLIQUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/logicor/implications",
+         "should implications/cliques be used in presolving",
+         &conshdlrdata->useimplications, TRUE, DEFAULT_IMPLICATIONS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
