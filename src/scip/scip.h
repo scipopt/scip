@@ -94,6 +94,8 @@
 #include "scip/lpi.h"
 #include "nlpi/pub_expr.h"
 
+/* include global presolving methods */
+#include "scip/presolve.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
