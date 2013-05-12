@@ -875,15 +875,8 @@ void collectBinaryCliqueData(
 
       for( w = SCIPcliqueGetNVars(cliques[c]) - 1; w >= 0; --w )
       {
-         /* already handle self-implication */
-         if( clqvars[w] == var )
-         {
-            /* the negation of the variable itself should not appears in the same clique */
-            assert(clqvalues[w] == value);
-            continue;
-         }
-         /* do not look at fixed variables */
-         else if( SCIPvarGetLbGlobal(clqvars[w]) > 0.5 || SCIPvarGetUbGlobal(clqvars[w]) < 0.5 )
+         /* already handle self-implication and do not look at fixed variables */
+         if( clqvars[w] == var || SCIPvarGetLbGlobal(clqvars[w]) > 0.5 || SCIPvarGetUbGlobal(clqvars[w]) < 0.5 )
             continue;
 
          idx = SCIPvarGetProbindex(clqvars[w]);
