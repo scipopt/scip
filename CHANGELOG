@@ -54,6 +54,7 @@ features:
 - generalized the linking constraint handler
 - in verblevel SCIP_VERBLEVEL_FULL the number of non-zeros will be computed for the original and presolved model
 - new presolving step for tightening logicor constraints using implication and clique information
+- can now read and write CIP-files with (multi-)aggregated variables
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor

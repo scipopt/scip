@@ -536,19 +536,21 @@ SCIP_RETCODE getFixedVariable(
          SCIPdebugMessage("constant: %f\n", rhs);
          buf = endptr;
       }
+      else
+         rhs = 0.0;
       /* otherwise keep buf */
 
       /* initialize buffers for storing the variables and values */
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvarssize) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvarssize) );
 
-      /* parse linear sum to get variables and coefficients */
-      SCIP_CALL( SCIPparseVarsLinearsum(scip, buf, vars, vals, &nvars, nvarssize, &requsize, &endptr, &success) );
+      /* parse linear sum to get variables and coefficients (save one position for variable) */
+      SCIP_CALL( SCIPparseVarsLinearsum(scip, buf, vars, vals, &nvars, nvarssize-1, &requsize, &endptr, &success) );
 
       if ( success && requsize > nvarssize )
       {
          /* realloc buffers and try again */
-         nvarssize = requsize;
+         nvarssize = requsize + 1;
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, nvarssize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &vals, nvarssize) );
 
@@ -568,6 +570,10 @@ SCIP_RETCODE getFixedVariable(
       /* add aggregated variable */
       SCIP_CALL( SCIPaddVar(scip, var) );
 
+      /* add aggregated variable to linear constraint */
+      vars[nvars] = var;
+      vals[nvars] = -1.0;
+
       /* special handling of variables that seem to be slack variables of indicator constraints */
       str = SCIPvarGetName(var);
       if ( strncmp(str, "indslack", 8) == 0 )
@@ -581,11 +587,11 @@ SCIP_RETCODE getFixedVariable(
          (void) strcat(name, str+10);
       }
       else
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var) );
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "aggr_%s", SCIPvarGetName(var) );
 
       /* add linear constraint for (multi-)aggregation */
       SCIPdebugMessage("coupling constraint:\n");
-      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, nvars, vars, vals, -rhs, -rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, nvars+1, vars, vals, -rhs, -rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
       SCIPdebugPrintCons(scip, lincons, NULL);
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
