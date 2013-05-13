@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   type_message.h
+/**@file   message_default.c
  * @ingroup PUBLICMETHODS
  * @brief  default message handler
  * @author Stefan Heinz
@@ -69,7 +69,7 @@ SCIP_DECL_MESSAGEINFO(messageInfoDefault)
    logMessage(file, msg);
 }
 
-/** Create default message handler. To free the message handler use SCIPmessagehdlrFree() */
+/** Create default message handler. To free the message handler use SCIPmessagehdlrRelease(). */
 SCIP_RETCODE SCIPcreateMessagehdlrDefault(
    SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store message handler */
    SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
