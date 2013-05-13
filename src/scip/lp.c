@@ -16674,7 +16674,7 @@ SCIP_RETCODE SCIPlpWriteMip(
       SCIPmessageFPrintInfo(messagehdlr, file, "Maximize");
    
    /* print objective */
-   SCIPmessageFPrintInfo(messagehdlr, file, "\n Obj:");
+   SCIPmessageFPrintInfo(messagehdlr, file, "\nObj:");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
@@ -16697,11 +16697,12 @@ SCIP_RETCODE SCIPlpWriteMip(
             SCIPmessageFPrintInfo(messagehdlr, file,"\n     ");
       }
    }
-   if( origobj && objoffset != 0.0 ) 
+   /* add artificial variable 'objoffset' to transfer objective offset */
+   if( origobj && objoffset != 0.0 )
       SCIPmessageFPrintInfo(messagehdlr, file," %+.15g objoffset", objoffset * (SCIP_Real) objsense * objscale);
 
    /* print constraint section */
-   SCIPmessageFPrintInfo(messagehdlr, file,"\n\nSubject to\n");
+   SCIPmessageFPrintInfo(messagehdlr, file,"\nSubject to\n");
    for( i = 0; i < lp->nrows; i++ )
    {
       char type;
@@ -16736,7 +16737,7 @@ SCIP_RETCODE SCIPlpWriteMip(
             SCIPmessageFPrintInfo(messagehdlr, file, "%s: ", rowname);
          break;
       case 'i':
-         SCIPmessageFPrintInfo(messagehdlr, file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>",lp->rows[i]->name); 
+         SCIPmessageFPrintInfo(messagehdlr, file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>", lp->rows[i]->name);
          SCIPmessageFPrintInfo(messagehdlr, file,"are not in a valid range. The following two constraints may be corrupted!\n");
          SCIPmessagePrintWarning(messagehdlr, "The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
          type = 'b';
@@ -16768,18 +16769,18 @@ SCIP_RETCODE SCIPlpWriteMip(
       switch( type )
       {
       case 'b':
-         SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);         
+         SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
          type = 'B';
          goto WRITEROW;
       case 'l':
-         SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       case 'B':
       case 'r':
-         SCIPmessageFPrintInfo(messagehdlr, file," <= %.15g\n",lp->rows[i]->rhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file," <= %.15g\n", lp->rows[i]->rhs - lp->rows[i]->constant);
          break;
       case 'e':
-         SCIPmessageFPrintInfo(messagehdlr, file," = %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file," = %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       default:
          SCIPerrorMessage("Undefined row type!\n");
@@ -16788,7 +16789,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    }
 
    /* print variable bounds */
-   SCIPmessageFPrintInfo(messagehdlr, file,"\n\nBounds\n");
+   SCIPmessageFPrintInfo(messagehdlr, file,"Bounds\n");
    for( i = 0; i < lp->ncols; ++i )
    {
       if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) || !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
@@ -16806,14 +16807,14 @@ SCIP_RETCODE SCIPlpWriteMip(
          /* print upper bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
             SCIPmessageFPrintInfo(messagehdlr, file,"<= %.15g", lp->cols[i]->ub);
-         SCIPmessageFPrintInfo(messagehdlr, file,"\n");
+         SCIPmessageFPrintInfo(messagehdlr, file, "\n");
       }
    }
    if( origobj && objoffset != 0.0 )
-      SCIPmessageFPrintInfo(messagehdlr, file," objoffset = 1");
+      SCIPmessageFPrintInfo(messagehdlr, file, " objoffset = 1\n");
 
    /* print integer variables */
-   SCIPmessageFPrintInfo(messagehdlr, file,"\n\nGenerals\n ");
+   SCIPmessageFPrintInfo(messagehdlr, file,"Generals\n");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
@@ -16827,13 +16828,13 @@ SCIP_RETCODE SCIPlpWriteMip(
 
          j++;
          if( j % 10 == 0 )
-            SCIPmessageFPrintInfo(messagehdlr, file,"\n ");
+            SCIPmessageFPrintInfo(messagehdlr, file,"\n");
       }
    }
-   
-   SCIPmessageFPrintInfo(messagehdlr, file,"\n\nEnd");
+
+   SCIPmessageFPrintInfo(messagehdlr, file,"\nEnd");
    fclose(file);
-   
+
    return SCIP_OKAY;
 }
 
