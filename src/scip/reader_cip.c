@@ -556,6 +556,15 @@ SCIP_RETCODE getFixedVariable(
          assert( ! success || requsize <= nvarssize); /* if successful, then should have had enough space now */
       }
 
+      if ( ! success )
+      {
+         SCIPerrorMessage("Could not parse aggregated information (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
+         cipinput->haserror = TRUE;
+         SCIPfreeBufferArray(scip, &vals);
+         SCIPfreeBufferArray(scip, &vars);
+         return SCIP_OKAY;
+      }
+
       /* add aggregated variable */
       SCIP_CALL( SCIPaddVar(scip, var) );
 
