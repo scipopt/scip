@@ -1408,7 +1408,8 @@ SCIP_RETCODE SCIPlpWriteMip(
    SCIP_Bool             origobj,            /**< should the original objective function be used? */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
    SCIP_Real             objscale,           /**< objective scaling factor */
-   SCIP_Real             objoffset           /**< objective offset, e.g., caused by variable fixings in presolving */
+   SCIP_Real             objoffset,          /**< objective offset, e.g., caused by variable fixings in presolving */
+   SCIP_Bool             lazyconss           /**< output removable rows as lazy constraints? */
 );
 
 /** recalculates Euclidean norm of objective function vector of column variables if it have gotten unreliable during calculation */

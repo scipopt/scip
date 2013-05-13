@@ -16829,7 +16829,8 @@ SCIP_RETCODE SCIPlpWriteMip(
    SCIP_Bool             origobj,            /**< should the original objective function be used? */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
    SCIP_Real             objscale,           /**< objective scaling factor */
-   SCIP_Real             objoffset           /**< objective offset, e.g., caused by variable fixings in presolving */
+   SCIP_Real             objoffset,          /**< objective offset, e.g., caused by variable fixings in presolving */
+   SCIP_Bool             lazyconss           /**< output removable rows as lazy constraints? */
    )
 {
    FILE* file;
@@ -16905,8 +16906,11 @@ SCIP_RETCODE SCIPlpWriteMip(
    SCIPmessageFPrintInfo(messagehdlr, file,"\nSubject to\n");
    for( i = 0; i < lp->nrows; i++ )
    {
-      char type;
-      type = 'i';
+      char type = 'i';
+
+      /* skip removable rows if we want to write them as lazy constraints */
+      if ( lazyconss && SCIProwIsRemovable(lp->rows[i]) )
+         continue;
 
       /* constraint types: 'l' means: only lhs exists, 'r' means: only rhs exists, 'e' means: both sides exist and are
        * equal, 'b' and 'B' mean: both sides exist, if the type is 'b', the lhs will be written, if the type is 'B', 
@@ -16985,6 +16989,99 @@ SCIP_RETCODE SCIPlpWriteMip(
       default:
          SCIPerrorMessage("Undefined row type!\n");
          return SCIP_ERROR;
+      }
+   }
+
+   if ( lazyconss )
+   {
+      /* print lazy constraint section */
+      SCIPmessageFPrintInfo(messagehdlr, file,"\nlazy constraints\n");
+      for( i = 0; i < lp->nrows; i++ )
+      {
+         char type = 'i';
+
+         /* skip non-removable rows if we want to write them as lazy constraints */
+         if ( ! SCIProwIsRemovable(lp->rows[i]) )
+            continue;
+
+         /* constraint types: 'l' means: only lhs exists, 'r' means: only rhs exists, 'e' means: both sides exist and are
+          * equal, 'b' and 'B' mean: both sides exist, if the type is 'b', the lhs will be written, if the type is 'B', 
+          * the rhs will be written. Ergo: set type to b first, change it to 'B' afterwards and go back to WRITEROW.
+          * type 'i' means: lhs and rhs are both infinite */      
+         if( SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
+            type = 'r';
+         else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
+            type = 'l';
+         else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && SCIPsetIsEQ(set, lp->rows[i]->lhs, lp->rows[i]->rhs) )
+            type = 'e';
+         else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
+            type = 'b';
+
+         /* print name of row */
+         if( genericnames )
+            (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "row_%d", lp->rows[i]->lppos);
+         else
+            (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s", lp->rows[i]->name);
+
+      WRITELAZYROW:
+         switch( type )
+         {
+         case 'r':
+         case 'l':
+         case 'e':
+            if( strlen(rowname) > 0 )
+               SCIPmessageFPrintInfo(messagehdlr, file, "%s: ", rowname);
+            break;
+         case 'i':
+            SCIPmessageFPrintInfo(messagehdlr, file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>", lp->rows[i]->name);
+            SCIPmessageFPrintInfo(messagehdlr, file,"are not in a valid range. The following two constraints may be corrupted!\n");
+            SCIPmessagePrintWarning(messagehdlr, "The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
+            type = 'b';
+            /*lint -fallthrough*/
+         case 'b':
+            SCIPmessageFPrintInfo(messagehdlr, file,"%s_lhs: ", rowname);
+            break;
+         case 'B':
+            SCIPmessageFPrintInfo(messagehdlr, file,"%s_rhs: ", rowname);
+            break;
+         default:
+            SCIPerrorMessage("Undefined row type!\n");
+            return SCIP_ERROR;
+         }
+
+         /* print coefficients and variables */
+         for( j = 0; j < lp->rows[i]->nlpcols; ++j )
+         {
+            if( genericnames )
+               SCIPmessageFPrintInfo(messagehdlr, file," %+.15g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
+            else
+               SCIPmessageFPrintInfo(messagehdlr, file," %+.15g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
+
+            if( (j+1) % 10 == 0 )
+               SCIPmessageFPrintInfo(messagehdlr, file,"\n          ");
+         }
+
+         /* print right hand side */
+         switch( type )
+         {
+         case 'b':
+            SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
+            type = 'B';
+            goto WRITELAZYROW;
+         case 'l':
+            SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
+            break;
+         case 'B':
+         case 'r':
+            SCIPmessageFPrintInfo(messagehdlr, file," <= %.15g\n", lp->rows[i]->rhs - lp->rows[i]->constant);
+            break;
+         case 'e':
+            SCIPmessageFPrintInfo(messagehdlr, file," = %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
+            break;
+         default:
+            SCIPerrorMessage("Undefined row type!\n");
+            return SCIP_ERROR;
+         }
       }
    }
 

@@ -105,6 +105,7 @@ interface
 - added method SCIPconsIsMarkedPropagate() to ask whether a constraint was explicitly added for propagation
 - SCIPgetConsCopy() now always captures the created constraint
 - SCIPaddCut() has an additional parameter that determines whether the cut to be added is infeasible
+- SCIPwriteMIP() has an additional parameter that allows to write removable rows as lazy constraints
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
