@@ -2975,7 +2975,7 @@ SCIP_RETCODE SCIPvarPrint(
 
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPmessageFPrintInfo(messagehdlr, file, ", aggregated:");
-      if( !SCIPsetIsZero(set, var->data.multaggr.constant) )
+      if( var->data.multaggr.nvars == 0 || !SCIPsetIsZero(set, var->data.multaggr.constant) )
          SCIPmessageFPrintInfo(messagehdlr, file, " %.15g", var->data.multaggr.constant);
       for( i = 0; i < var->data.multaggr.nvars; ++i )
          SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g<%s>", var->data.multaggr.scalars[i], SCIPvarGetName(var->data.multaggr.vars[i]));
