@@ -5720,9 +5720,31 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
                aggrconsdata = SCIPconsGetData(usefulconss[consindex]);
                assert(aggrconsdata != NULL);
-
-               assert(0 <= varindex && varindex < aggrconsdata->nvars);
                assert((SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PACKING);
+               assert(0 <= varindex);
+
+               /* it might be that due to other multi-aggregations the constraint has fewer variables than when we
+                * remembered the position, therefore we need to find the variable again
+                */
+               if( varindex >= aggrconsdata->nvars || aggrconsdata->vars[varindex] != negvar )
+               {
+                  int v2;
+
+                  /* if the following assert is raised, then the constraint is redundant and we do not need to aggregate
+                   * anymore and can delete this constraint
+                   */
+                  assert(aggrconsdata->nvars >= 2);
+
+                  for( v2 = aggrconsdata->nvars - 1; v2 >= 0; --v2 )
+                  {
+                     if( aggrconsdata->vars[v2] == negvar )
+                        break;
+                  }
+                  assert(v2 >= 0);
+
+                  varindex = v2;
+               }
+               assert(0 <= varindex && varindex < aggrconsdata->nvars);
                assert(aggrconsdata->vars[varindex] == negvar);
                assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(negvar) == SCIP_VARSTATUS_NEGATED);
 
