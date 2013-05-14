@@ -14381,6 +14381,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    }
 
    case SCIPPARSEPOLYNOMIAL_STATE_ERROR:
+      assert(!*success);
       break;
    }
 
