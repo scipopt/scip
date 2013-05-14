@@ -133,6 +133,7 @@ parameters:
 - new parameters "heuristics/shiftandpropagate/preferbinaries" and "heuristics/shiftandpropagate/stopafterfeasible",
   which decide whether binaries should be shifted first and the shifting should be stopped when no violations are left
 - new parameters "heuristics/"<heurname>"/lplimfac" for LNS heuristics to limit the number of LPs solved in a subproblem
+- new parameter "reading/cipreader/writefixedvars" for disabling printing of fixed variables in CIP format
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
