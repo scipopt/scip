@@ -4510,7 +4510,7 @@ SCIP_Bool canTightenBounds(
       + consdata->maxactivityneghuge
       + consdata->maxactivityposhuge;
 
-   if( infcountmin > 1 || infcountmax > 1 )
+   if( infcountmin > 1 && infcountmax > 1 )
       return FALSE;
 
    return TRUE;
@@ -4549,8 +4549,12 @@ SCIP_RETCODE tightenVarUb(
 
    if( force || SCIPisUbBetter(scip, newub, lb, oldub) )
    {
+      SCIP_VARTYPE vartype;
+
       SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
          SCIPconsGetName(cons), SCIPvarGetName(var), lb, oldub, consdata->vals[pos], consdata->minactivity, consdata->maxactivity, consdata->lhs, consdata->rhs, newub);
+
+      vartype = SCIPvarGetType(var);
 
       /* tighten upper bound */
       SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(proprule, pos), force, &infeasible, &tightened) );
@@ -4572,6 +4576,10 @@ SCIP_RETCODE tightenVarUb(
             SCIPconsGetName(cons), SCIPvarGetName(var), lb, SCIPvarGetUbLocal(var));
 
          (*nchgbds)++;
+
+         /* if variable type was changed we might be able to upgrade the constraint */
+         if( vartype != SCIPvarGetType(var) )
+            consdata->upgradetried = FALSE;
       }
    }
    return SCIP_OKAY;
@@ -4610,8 +4618,12 @@ SCIP_RETCODE tightenVarLb(
 
    if( force || SCIPisLbBetter(scip, newlb, oldlb, ub) )
    {
+      SCIP_VARTYPE vartype;
+
       SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
          SCIPconsGetName(cons), SCIPvarGetName(var), oldlb, ub, consdata->vals[pos], consdata->minactivity, consdata->maxactivity, consdata->lhs, consdata->rhs, newlb);
+
+      vartype = SCIPvarGetType(var);
 
       /* tighten lower bound */
       SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(proprule, pos), force, &infeasible, &tightened) );
@@ -4633,6 +4645,10 @@ SCIP_RETCODE tightenVarLb(
             SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetLbLocal(var), ub);
 
          (*nchgbds)++;
+
+         /* if variable type was changed we might be able to upgrade the constraint */
+         if( vartype != SCIPvarGetType(var) )
+            consdata->upgradetried = FALSE;
       }
    }
    return SCIP_OKAY;
