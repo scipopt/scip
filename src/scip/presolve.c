@@ -693,6 +693,7 @@ void collectNonBinaryImplicationData(
    }
 }
 
+#define MAX_NIMPLICATIONS 100
 /** collect binary implication data for variable set reduction and global bound implications; only variable which have
  *  the vartype SCIP_VARTYPE_BINARY have binary implications, otherwise the implications are saved as variable bounds
  */
@@ -751,7 +752,7 @@ void collectBinaryImplicationData(
 
       implvars = SCIPvarGetImplVars(var, value);
       implboundtypes = SCIPvarGetImplTypes(var, value);
-      nbinimplsvar = SCIPvarGetNBinImpls(var, value);
+      nbinimplsvar = MIN(SCIPvarGetNBinImpls(var, value), MAX_NIMPLICATIONS);;
 
       /* update implication counter on all by binary implication implied variables */
       for( w = nbinimplsvar - 1; w >= 0; --w )
@@ -795,6 +796,7 @@ void collectBinaryImplicationData(
    }
 }
 
+#define MAX_CLIQUELENGTH 80
 
 /** collect clique data on binary variables for variable set reduction and global bound implications */
 static
@@ -870,6 +872,10 @@ void collectBinaryCliqueData(
    /* update implication counter on all by cliques implied variables */
    for( c = SCIPvarGetNCliques(var, value) - 1; c >= 0; --c )
    {
+      /* discard big cliques */
+      if( SCIPcliqueGetNVars(cliques[c]) > MAX_CLIQUELENGTH )
+         continue;
+
       clqvars = SCIPcliqueGetVars(cliques[c]);
       clqvalues = SCIPcliqueGetValues(cliques[c]);
 
@@ -1019,6 +1025,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    assert(scip->transprob != NULL);
    nprobvars = SCIPprobGetNVars(scip->transprob);
 
+   /* @todo need global memory because allocating and clearing can be expensive in presolving */
    /* allocate temporary memory */
    SCIP_ALLOC( BMSallocClearMemoryArray(&issetvar, 2*nprobvars) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&counts, 2*nprobvars) );
@@ -1261,7 +1268,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
             {
                SCIPdebugMessage("can tighten lower bound variable %s [%g, %g] to %g\n", SCIPvarGetName(probvar), SCIPvarGetLbGlobal(probvar), SCIPvarGetUbGlobal(probvar), newbounds[v]);
 
-               if( SCIPvarGetLbGlobal(probvar) < newbounds[v] )
+               if( SCIPisLT(scip, SCIPvarGetLbGlobal(probvar), newbounds[v]) )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
                         scip->transprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar,
@@ -1300,7 +1307,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
 
                SCIPdebugMessage("can tighten upper bound variable %s [%g, %g] to %g\n", SCIPvarGetName(probvar), SCIPvarGetLbGlobal(probvar), SCIPvarGetUbGlobal(probvar), newbounds[idx]);
 
-               if( SCIPvarGetUbGlobal(probvar) > newbounds[idx] )
+               if( SCIPisGT(scip, SCIPvarGetUbGlobal(probvar), newbounds[idx]) )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
                         scip->transprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar,
