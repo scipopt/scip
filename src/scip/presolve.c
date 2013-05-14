@@ -752,7 +752,8 @@ void collectBinaryImplicationData(
 
       implvars = SCIPvarGetImplVars(var, value);
       implboundtypes = SCIPvarGetImplTypes(var, value);
-      nbinimplsvar = MIN(SCIPvarGetNBinImpls(var, value), MAX_NIMPLICATIONS);;
+      nbinimplsvar = SCIPvarGetNBinImpls(var, value);
+      nbinimplsvar = MIN(nbinimplsvar, MAX_NIMPLICATIONS);
 
       /* update implication counter on all by binary implication implied variables */
       for( w = nbinimplsvar - 1; w >= 0; --w )

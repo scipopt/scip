@@ -264,10 +264,11 @@ SCIP_RETCODE computeCut(
 
 /** check whether cut corresponding to solution is violated */
 static
-SCIP_Bool solCutIsViolated(
+SCIP_RETCODE solCutIsViolated(
    SCIP*                 scip,               /**< SCIP data structure */
    CGMIP_MIPDATA*        mipdata,            /**< data of separating sub-MIP */
-   SCIP_SOL*             sol                 /**< solution to be checked */
+   SCIP_SOL*             sol,                /**< solution to be checked */
+   SCIP_Bool*            violated            /**< pointer to store if the cut is violated */
    )
 {
    SCIP_Real cutsqrnorm = 0.0;
@@ -283,10 +284,12 @@ SCIP_Bool solCutIsViolated(
    assert( mipdata != NULL );
    subscip = mipdata->subscip;
    assert( subscip != NULL );
+   assert(violated != NULL);
 
    /* initialize activity and norm */
    act = 0.0;
    norm = 1.0;
+   *violated = FALSE;
 
    /* compute activity and norm  */
    if ( mipdata->conshdlrusenorm )
@@ -319,7 +322,7 @@ SCIP_Bool solCutIsViolated(
 
          /* ignore solution if cut was not valid */
          if ( ! success )
-            return FALSE;
+            return SCIP_OKAY;
 
          /* compute activity and Euclidean norm (todo: use arbitrary norm) */
          cutsqrnorm = 0.0;
@@ -414,7 +417,7 @@ SCIP_Bool solCutIsViolated(
 
       /* if norm is 0, the cut is trivial */
       if ( SCIPisZero(subscip, norm) )
-         return FALSE;
+         return SCIP_OKAY;
    }
    else
    {
@@ -444,7 +447,9 @@ SCIP_Bool solCutIsViolated(
    }
 #endif
 
-   return SCIPisEfficacious(subscip, (act - rhs)/norm);
+   *violated = SCIPisEfficacious(subscip, (act - rhs)/norm);
+
+   return SCIP_OKAY;
 }
 
 
@@ -481,7 +486,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpViolatedCuts)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   violated = solCutIsViolated(scip, conshdlrdata->mipdata, NULL);
+   SCIP_CALL( solCutIsViolated(scip, conshdlrdata->mipdata, NULL, &violated) );
 
    if ( violated )
       *result = SCIP_FEASIBLE;
@@ -521,7 +526,7 @@ SCIP_DECL_CONSCHECK(consCheckViolatedCuts)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   violated = solCutIsViolated(scip, conshdlrdata->mipdata, sol);
+   SCIP_CALL( solCutIsViolated(scip, conshdlrdata->mipdata, sol, &violated) );
 
    if ( violated )
       *result = SCIP_FEASIBLE;

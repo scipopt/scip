@@ -2126,6 +2126,8 @@ SCIP_RETCODE shortenConss(
    if( nconss == 0 )
       return SCIP_OKAY;
 
+   assert(conss != NULL);
+
    nvars = SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip);
 
    /* allocate temporary memory */
@@ -2134,13 +2136,6 @@ SCIP_RETCODE shortenConss(
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &redundants, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &entries, nvars) );
-
-#if 0
-   BMSclearMemoryArray(boundtypes, nvars);
-
-   for( v = nvars - 1; v >= 0; --v)
-      bounds[v] = 1.0;
-#endif
 
    for( c = nconss - 1; c >= 0; --c )
    {

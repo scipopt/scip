@@ -477,6 +477,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
    success = FALSE;
+   eventhdlr = NULL;
 
    if( heurdata->uselprows )
    {
@@ -505,7 +506,6 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       }
 
       /* create event handler for LP events */
-      eventhdlr = NULL;
       SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLocalbranching, NULL) );
       if( eventhdlr == NULL )
       {
@@ -644,6 +644,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* catch LP events of sub-SCIP */
    if( !heurdata->uselprows )
    {
+      assert(eventhdlr != NULL);
+
       SCIP_CALL( SCIPtransformProb(subscip) );
       SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
    }
@@ -656,6 +658,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* drop LP events of sub-SCIP */
    if( !heurdata->uselprows )
    {
+      assert(eventhdlr != NULL);
+
       SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
    }
 

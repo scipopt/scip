@@ -174,7 +174,7 @@ SCIP_RETCODE solveLp(
    SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
    if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
-      SCIPlinkLPSol(scip, sol);
+      SCIP_CALL( SCIPlinkLPSol(scip, sol) );
       SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, TRUE, TRUE, success) );
    }
 
@@ -259,7 +259,7 @@ SCIP_RETCODE createNewSol(
          {
             for( v = nvars - 1; v >= nvars - ncontvars; --v )
             {
-               SCIPsetSolVal(scip, newsol, vars[v], subsolvals[v]);
+               SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], subsolvals[v]) );
             }
 
          }
