@@ -255,7 +255,7 @@ SCIP_RETCODE createNewSol(
          SCIPstatisticMessage("Solution Value before LP resolve: %g\n", SCIPgetSolOrigObj(scip, newsol));
          SCIP_CALL( solveLp(scip, newsol, success) );
 
-         if( !success )
+         if( !*success )
          {
             for( v = nvars - 1; v >= nvars - ncontvars; --v )
             {
@@ -267,7 +267,7 @@ SCIP_RETCODE createNewSol(
    }
 
    /* try to add new solution to SCIP and free it immediately */
-   if( !success )
+   if( !*success )
    {
       SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, TRUE, TRUE, success) );
    }
