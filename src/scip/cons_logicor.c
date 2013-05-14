@@ -3384,21 +3384,27 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          }
       }
 
-      /* try to tighten constraints by reducing the number of variables in the constraints using implications and
-       * cliques, also derive fixations through them, @see SCIPshrinkDisjunctiveVarSet()
-       */
-      if( conshdlrdata->useimplications )
+      if( SCIPisPresolveFinished(scip) )
       {
-         SCIP_CALL( shortenConss(scip, conshdlrdata->eventhdlr, conss, nconss, nfixedvars, ndelconss, nchgcoefs) );
-      }
+         /* try to tighten constraints by reducing the number of variables in the constraints using implications and
+          * cliques, also derive fixations through them, @see SCIPshrinkDisjunctiveVarSet()
+          */
+         if( conshdlrdata->useimplications && (SCIPgetNCliques(scip) != conshdlrdata->nlastcliques || SCIPgetNImplications(scip) > conshdlrdata->nlastimpls) )
+         {
+            SCIP_CALL( shortenConss(scip, conshdlrdata->eventhdlr, conss, nconss, nfixedvars, ndelconss, nchgcoefs) );
+         }
 
-      /* check for redundant constraints due to negated clique information */
-      if( conshdlrdata->usenegatedclique )
-      {
-         SCIP_CALL( removeConstraintsDueToNegCliques(scip, conshdlr, conshdlrdata->eventhdlr, conss, nconss, nupgdconss, nchgcoefs) );
+         /* check for redundant constraints due to negated clique information */
+         if( conshdlrdata->usenegatedclique )
+         {
+            SCIP_CALL( removeConstraintsDueToNegCliques(scip, conshdlr, conshdlrdata->eventhdlr, conss, nconss, nupgdconss, nchgcoefs) );
+         }
 
-         conshdlrdata->nlastcliques = SCIPgetNCliques(scip);
-         conshdlrdata->nlastimpls = SCIPgetNImplications(scip);
+         if( conshdlrdata->useimplications || conshdlrdata->usenegatedclique )
+         {
+            conshdlrdata->nlastcliques = SCIPgetNCliques(scip);
+            conshdlrdata->nlastimpls = SCIPgetNImplications(scip);
+         }
       }
    }
 
