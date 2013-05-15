@@ -546,8 +546,10 @@ SCIP_RETCODE getFixedVariable(
          buf = endptr;
       }
       else
+      {
          /* otherwise keep buf */
          rhs = 0.0;
+      }
 
       /* initialize buffers for storing the variables and values */
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvarssize) );
@@ -562,10 +564,9 @@ SCIP_RETCODE getFixedVariable(
       if ( success && requsize > nvarssize )
       {
          /* realloc buffers and try again */
-         nvarssize = requsize + 1;
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, nvarssize) );
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vals, nvarssize) );
-         --nvarssize;
+         nvarssize = requsize;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, nvarssize + 1) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vals, nvarssize + 1) );
 
          SCIP_CALL( SCIPparseVarsLinearsum(scip, buf, &(vars[1]), &(vals[1]), &nvars, nvarssize, &requsize, &endptr, &success) );
          assert( ! success || requsize <= nvarssize); /* if successful, then should have had enough space now */
@@ -597,6 +598,11 @@ SCIP_RETCODE getFixedVariable(
          SCIPdebugPrintCons(scip, lincons, NULL);
          SCIP_CALL( SCIPaddCons(scip, lincons) );
          SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+      }
+      else
+      {
+         SCIPwarningMessage(scip, "Could not read (multi-)aggregated variable <%s>: dependent variables unkown - consider changing the order (line: %d):\n%s\n",
+            SCIPvarGetName(var), cipinput->linenumber, buf);
       }
 
       SCIPfreeBufferArray(scip, &vals);
