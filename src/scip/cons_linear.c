@@ -1191,14 +1191,14 @@ void consdataRecomputeMaxActivityDelta(
    SCIP_Real delta;
    SCIP_Real lb;
    SCIP_Real ub;
-   int i;
+   int v;
 
    consdata->maxactdelta = 0.0;
 
-   for( i = 0; i < consdata->nvars; ++i )
+   for( v = consdata->nvars - 1; v >= 0; --v )
    {
-      lb = SCIPvarGetLbLocal(consdata->vars[i]);
-      ub = SCIPvarGetUbLocal(consdata->vars[i]);
+      lb = SCIPvarGetLbLocal(consdata->vars[v]);
+      ub = SCIPvarGetUbLocal(consdata->vars[v]);
 
       if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
       {
@@ -1206,8 +1206,8 @@ void consdataRecomputeMaxActivityDelta(
          break;
       }
 
-      domain = SCIPvarGetUbLocal(consdata->vars[i]) - SCIPvarGetLbLocal(consdata->vars[i]);
-      delta = REALABS(consdata->vals[i]) * domain;
+      domain = ub - lb;
+      delta = REALABS(consdata->vals[v]) * domain;
 
       consdata->maxactdelta = MAX(delta, consdata->maxactdelta);
    }
