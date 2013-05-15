@@ -16857,7 +16857,7 @@ SCIP_RETCODE SCIPlpWriteMip(
       SCIPmessageFPrintInfo(messagehdlr, file, "\\ Original Variable and Constraint Names have been replaced by generic names.\n"); 
    else
    {
-      SCIPmessageFPrintInfo(messagehdlr, file,"\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.\n");
+      SCIPmessageFPrintInfo(messagehdlr, file, "\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.\n");
       SCIPmessageFPrintInfo(messagehdlr, file, "\\ If this is the case, the model may be corrupted!\n");
    }
 
@@ -16889,21 +16889,21 @@ SCIP_RETCODE SCIPlpWriteMip(
          }
 
          if( genericnames )
-            SCIPmessageFPrintInfo(messagehdlr, file," %+.15g x_%d", coeff, lp->cols[i]->lppos);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g x_%d", coeff, lp->cols[i]->lppos);
          else
-            SCIPmessageFPrintInfo(messagehdlr, file," %+.15g %s", coeff, lp->cols[i]->var->name);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g %s", coeff, lp->cols[i]->var->name);
          
          ++j;
          if( j % 10 == 0 )
-            SCIPmessageFPrintInfo(messagehdlr, file,"\n     ");
+            SCIPmessageFPrintInfo(messagehdlr, file, "\n     ");
       }
    }
    /* add artificial variable 'objoffset' to transfer objective offset */
    if( origobj && objoffset != 0.0 )
-      SCIPmessageFPrintInfo(messagehdlr, file," %+.15g objoffset", objoffset * (SCIP_Real) objsense * objscale);
+      SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g objoffset", objoffset * (SCIP_Real) objsense * objscale);
 
    /* print constraint section */
-   SCIPmessageFPrintInfo(messagehdlr, file,"\nSubject to\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "\nSubject to\n");
    for( i = 0; i < lp->nrows; i++ )
    {
       char type = 'i';
@@ -16916,13 +16916,13 @@ SCIP_RETCODE SCIPlpWriteMip(
        * equal, 'b' and 'B' mean: both sides exist, if the type is 'b', the lhs will be written, if the type is 'B', 
        * the rhs will be written. Ergo: set type to b first, change it to 'B' afterwards and go back to WRITEROW.
        * type 'i' means: lhs and rhs are both infinite */      
-      if( SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
+      if( SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
          type = 'r';
-      else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
+      else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
          type = 'l';
-      else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && SCIPsetIsEQ(set, lp->rows[i]->lhs, lp->rows[i]->rhs) )
+      else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && SCIPsetIsEQ(set, lp->rows[i]->lhs, lp->rows[i]->rhs) )
          type = 'e';
-      else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
+      else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
          type = 'b';
 
       /* print name of row */
@@ -16941,16 +16941,16 @@ SCIP_RETCODE SCIPlpWriteMip(
             SCIPmessageFPrintInfo(messagehdlr, file, "%s: ", rowname);
          break;
       case 'i':
-         SCIPmessageFPrintInfo(messagehdlr, file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>", lp->rows[i]->name);
-         SCIPmessageFPrintInfo(messagehdlr, file,"are not in a valid range. The following two constraints may be corrupted!\n");
-         SCIPmessagePrintWarning(messagehdlr, "The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
+         SCIPmessageFPrintInfo(messagehdlr, file, "\\\\ WARNING: The lhs and the rhs of the row with original name <%s>", lp->rows[i]->name);
+         SCIPmessageFPrintInfo(messagehdlr, file, "are not in a valid range. The following two constraints may be corrupted!\n");
+         SCIPmessagePrintWarning(messagehdlr, "The lhs and rhs of row <%s> are not in a valid range.\n", lp->rows[i]->name);
          type = 'b';
          /*lint -fallthrough*/
       case 'b':
-         SCIPmessageFPrintInfo(messagehdlr, file,"%s_lhs: ", rowname);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s_lhs: ", rowname);
          break;
       case 'B':
-         SCIPmessageFPrintInfo(messagehdlr, file,"%s_rhs: ", rowname);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s_rhs: ", rowname);
          break;
       default:
          SCIPerrorMessage("Undefined row type!\n");
@@ -16961,30 +16961,30 @@ SCIP_RETCODE SCIPlpWriteMip(
       for( j = 0; j < lp->rows[i]->nlpcols; ++j )
       {
          if( genericnames )
-            SCIPmessageFPrintInfo(messagehdlr, file," %+.15g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
          else
-            SCIPmessageFPrintInfo(messagehdlr, file," %+.15g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
          
          if( (j+1) % 10 == 0 )
-            SCIPmessageFPrintInfo(messagehdlr, file,"\n          ");
+            SCIPmessageFPrintInfo(messagehdlr, file, "\n          ");
       }
       
       /* print right hand side */
       switch( type )
       {
       case 'b':
-         SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
          type = 'B';
          goto WRITEROW;
       case 'l':
-         SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       case 'B':
       case 'r':
-         SCIPmessageFPrintInfo(messagehdlr, file," <= %.15g\n", lp->rows[i]->rhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " <= %.15g\n", lp->rows[i]->rhs - lp->rows[i]->constant);
          break;
       case 'e':
-         SCIPmessageFPrintInfo(messagehdlr, file," = %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " = %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       default:
          SCIPerrorMessage("Undefined row type!\n");
@@ -16995,12 +16995,12 @@ SCIP_RETCODE SCIPlpWriteMip(
    if ( lazyconss )
    {
       /* print lazy constraint section */
-      SCIPmessageFPrintInfo(messagehdlr, file,"\nlazy constraints\n");
+      SCIPmessageFPrintInfo(messagehdlr, file, "lazy constraints\n");
       for( i = 0; i < lp->nrows; i++ )
       {
          char type = 'i';
 
-         /* skip non-removable rows if we want to write them as lazy constraints */
+         /* skip non-removable rows if we want to write lazy constraints */
          if ( ! SCIProwIsRemovable(lp->rows[i]) )
             continue;
 
@@ -17008,13 +17008,13 @@ SCIP_RETCODE SCIPlpWriteMip(
           * equal, 'b' and 'B' mean: both sides exist, if the type is 'b', the lhs will be written, if the type is 'B', 
           * the rhs will be written. Ergo: set type to b first, change it to 'B' afterwards and go back to WRITEROW.
           * type 'i' means: lhs and rhs are both infinite */      
-         if( SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
+         if( SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
             type = 'r';
-         else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
+         else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
             type = 'l';
-         else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && SCIPsetIsEQ(set, lp->rows[i]->lhs, lp->rows[i]->rhs) )
+         else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && SCIPsetIsEQ(set, lp->rows[i]->lhs, lp->rows[i]->rhs) )
             type = 'e';
-         else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
+         else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
             type = 'b';
 
          /* print name of row */
@@ -17033,16 +17033,16 @@ SCIP_RETCODE SCIPlpWriteMip(
                SCIPmessageFPrintInfo(messagehdlr, file, "%s: ", rowname);
             break;
          case 'i':
-            SCIPmessageFPrintInfo(messagehdlr, file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>", lp->rows[i]->name);
-            SCIPmessageFPrintInfo(messagehdlr, file,"are not in a valid range. The following two constraints may be corrupted!\n");
+            SCIPmessageFPrintInfo(messagehdlr, file, "\\\\ WARNING: The lhs and the rhs of the row with original name <%s>", lp->rows[i]->name);
+            SCIPmessageFPrintInfo(messagehdlr, file, "are not in a valid range. The following two constraints may be corrupted!\n");
             SCIPmessagePrintWarning(messagehdlr, "The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
             type = 'b';
             /*lint -fallthrough*/
          case 'b':
-            SCIPmessageFPrintInfo(messagehdlr, file,"%s_lhs: ", rowname);
+            SCIPmessageFPrintInfo(messagehdlr, file, "%s_lhs: ", rowname);
             break;
          case 'B':
-            SCIPmessageFPrintInfo(messagehdlr, file,"%s_rhs: ", rowname);
+            SCIPmessageFPrintInfo(messagehdlr, file, "%s_rhs: ", rowname);
             break;
          default:
             SCIPerrorMessage("Undefined row type!\n");
@@ -17053,30 +17053,30 @@ SCIP_RETCODE SCIPlpWriteMip(
          for( j = 0; j < lp->rows[i]->nlpcols; ++j )
          {
             if( genericnames )
-               SCIPmessageFPrintInfo(messagehdlr, file," %+.15g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
+               SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
             else
-               SCIPmessageFPrintInfo(messagehdlr, file," %+.15g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
+               SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
 
             if( (j+1) % 10 == 0 )
-               SCIPmessageFPrintInfo(messagehdlr, file,"\n          ");
+               SCIPmessageFPrintInfo(messagehdlr, file, "\n          ");
          }
 
          /* print right hand side */
          switch( type )
          {
          case 'b':
-            SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
+            SCIPmessageFPrintInfo(messagehdlr, file, " >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
             type = 'B';
             goto WRITELAZYROW;
          case 'l':
-            SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
+            SCIPmessageFPrintInfo(messagehdlr, file, " >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
             break;
          case 'B':
          case 'r':
-            SCIPmessageFPrintInfo(messagehdlr, file," <= %.15g\n", lp->rows[i]->rhs - lp->rows[i]->constant);
+            SCIPmessageFPrintInfo(messagehdlr, file, " <= %.15g\n", lp->rows[i]->rhs - lp->rows[i]->constant);
             break;
          case 'e':
-            SCIPmessageFPrintInfo(messagehdlr, file," = %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
+            SCIPmessageFPrintInfo(messagehdlr, file, " = %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
             break;
          default:
             SCIPerrorMessage("Undefined row type!\n");
@@ -17086,24 +17086,24 @@ SCIP_RETCODE SCIPlpWriteMip(
    }
 
    /* print variable bounds */
-   SCIPmessageFPrintInfo(messagehdlr, file,"Bounds\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "Bounds\n");
    for( i = 0; i < lp->ncols; ++i )
    {
       if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) || !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
       {
          /* print lower bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) )
-            SCIPmessageFPrintInfo(messagehdlr, file," %.15g <=", lp->cols[i]->lb);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %.15g <=", lp->cols[i]->lb);
          
          /* print variable name */
          if( genericnames )
-            SCIPmessageFPrintInfo(messagehdlr, file," x_%d ", lp->cols[i]->lppos);
+            SCIPmessageFPrintInfo(messagehdlr, file, " x_%d ", lp->cols[i]->lppos);
          else
-            SCIPmessageFPrintInfo(messagehdlr, file," %s ", lp->cols[i]->var->name);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %s ", lp->cols[i]->var->name);
          
          /* print upper bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
-            SCIPmessageFPrintInfo(messagehdlr, file,"<= %.15g", lp->cols[i]->ub);
+            SCIPmessageFPrintInfo(messagehdlr, file, "<= %.15g", lp->cols[i]->ub);
          SCIPmessageFPrintInfo(messagehdlr, file, "\n");
       }
    }
@@ -17111,7 +17111,7 @@ SCIP_RETCODE SCIPlpWriteMip(
       SCIPmessageFPrintInfo(messagehdlr, file, " objoffset = 1\n");
 
    /* print integer variables */
-   SCIPmessageFPrintInfo(messagehdlr, file,"Generals\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "Generals\n");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
@@ -17119,17 +17119,17 @@ SCIP_RETCODE SCIPlpWriteMip(
       {
          /* print variable name */
          if( genericnames )
-            SCIPmessageFPrintInfo(messagehdlr, file," x_%d ", lp->cols[i]->lppos);
+            SCIPmessageFPrintInfo(messagehdlr, file, " x_%d ", lp->cols[i]->lppos);
          else
-            SCIPmessageFPrintInfo(messagehdlr, file," %s ", lp->cols[i]->var->name);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %s ", lp->cols[i]->var->name);
 
          j++;
          if( j % 10 == 0 )
-            SCIPmessageFPrintInfo(messagehdlr, file,"\n");
+            SCIPmessageFPrintInfo(messagehdlr, file, "\n");
       }
    }
 
-   SCIPmessageFPrintInfo(messagehdlr, file,"\nEnd");
+   SCIPmessageFPrintInfo(messagehdlr, file, "\nEnd");
    fclose(file);
 
    return SCIP_OKAY;
