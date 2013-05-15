@@ -2216,7 +2216,7 @@ SCIP_RETCODE solveSubscip(
 
       /* if the solution process was terminated or the problem is infeasible (can happen because of violation constraint) */
       if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT || status == SCIP_STATUS_NODELIMIT ||
-         status == SCIP_STATUS_INFEASIBLE || status == SCIP_STATUS_INFORUNBD)
+           status == SCIP_STATUS_INFEASIBLE || status == SCIP_STATUS_INFORUNBD || status == SCIP_STATUS_MEMLIMIT )
       {
          /* output statistics before stopping */
 #ifdef SCIP_OUTPUT
