@@ -1118,7 +1118,7 @@ SCIP_RETCODE createSubscip(
    {
       assert( mipdata->ntotalrows == mipdata->nrows + 1 );
       rhs[mipdata->nrows] = SCIPgetUpperbound(scip);
-      assert( ! SCIPisObjIntegral(scip) || SCIPisIntegral(scip, SCIPgetUpperbound(scip)) );
+      assert( ! SCIPisObjIntegral(scip) || SCIPisFeasIntegral(scip, SCIPgetUpperbound(scip)) );
 
       if ( ! SCIPisInfinity(scip, SCIPgetUpperbound(scip)) && SCIPgetNObjVars(scip) > maxrowsize )
          maxrowsize = SCIPgetNObjVars(scip);
