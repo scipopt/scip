@@ -2714,6 +2714,8 @@ SCIP_RETCODE SCIPcopyCuts(
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyCuts", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyCuts", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
+   if ( ncutsadded != NULL )
+      *ncutsadded = 0;
    nlocalcutsadded = 0;
 
    /* if we do not have any cuts, nothing can be converted */
@@ -13813,7 +13815,7 @@ SCIP_RETCODE SCIPparseVarName(
       SCIPerrorMessage("invalid variable name string given: could not find '<'\n");
       return SCIP_INVALIDDATA;
    }
-   
+
    /* check if we have a negated variable */
    if( *varname == '~' )
    {
@@ -13836,13 +13838,12 @@ SCIP_RETCODE SCIPparseVarName(
    }
 
    str = *endptr;
-   
+
    /* skip additional variable type marker */
-   if( *str == '[' &&
-      (str[1] == SCIP_VARTYPE_BINARY_CHAR || str[1] == SCIP_VARTYPE_INTEGER_CHAR || 
-         str[1] == SCIP_VARTYPE_IMPLINT_CHAR || str[1] == SCIP_VARTYPE_CONTINUOUS_CHAR )  && str[2] == ']' )
+   if( *str == '[' && (str[1] == SCIP_VARTYPE_BINARY_CHAR || str[1] == SCIP_VARTYPE_INTEGER_CHAR ||
+       str[1] == SCIP_VARTYPE_IMPLINT_CHAR || str[1] == SCIP_VARTYPE_CONTINUOUS_CHAR )  && str[2] == ']' )
       (*endptr) += 3;
-      
+
    return SCIP_OKAY;
 }
 
