@@ -19,8 +19,6 @@
  * @author Marc Pfetsch
  * @author Michael Winkler
  *
- * @todo Ensure order of fixed/(multi-)aggregated/negated variables in output to ensure correct reading; all used
- * variables in aggregations have to be defined previously.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -76,7 +74,6 @@ struct CipInput
    CIPSECTION            section;            /**< current section */
    SCIP_Bool             haserror;           /**< some error occurred */
    SCIP_Bool             endfile;            /**< we have reached the end of the file */
-   SCIP_Bool             aggregatedvars;     /**< whether there are (multi-)aggregated variables in the input */
 };
 typedef struct CipInput CIPINPUT;            /**< CIP reading data */
 
@@ -600,7 +597,6 @@ SCIP_RETCODE getFixedVariable(
          SCIPdebugPrintCons(scip, lincons, NULL);
          SCIP_CALL( SCIPaddCons(scip, lincons) );
          SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-         cipinput->aggregatedvars = TRUE;
       }
 
       SCIPfreeBufferArray(scip, &vals);
@@ -766,7 +762,6 @@ SCIP_DECL_READERREAD(readerReadCip)
    cipinput.haserror = FALSE;
    cipinput.endfile = FALSE;
    cipinput.readingsize = 65535;
-   cipinput.aggregatedvars = FALSE;
 
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
