@@ -322,111 +322,6 @@ SCIP_RETCODE sortVariables(
    return SCIP_OKAY;
 }
 
-/** applies and evaluates probing of a single variable in the given direction */
-static
-SCIP_RETCODE applyProbingVar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROPDATA*        propdata,           /**< propagator data */
-   SCIP_VAR**            vars,               /**< problem variables */
-   int                   nvars,              /**< number of problem variables */
-   int                   probingpos,         /**< variable number to apply probing on */
-   SCIP_Bool             probingdir,         /**< value to fix probing variable to */
-   SCIP_Real*            impllbs,            /**< array to store lower bounds after applying implications and cliques */
-   SCIP_Real*            implubs,            /**< array to store upper bounds after applying implications and cliques */
-   SCIP_Real*            proplbs,            /**< array to store lower bounds after full propagation */
-   SCIP_Real*            propubs,            /**< array to store upper bounds after full propagation */
-   SCIP_Bool*            cutoff              /**< pointer to store whether the probing direction is infeasible */
-   )
-{
-   assert(propdata != NULL);
-   assert(impllbs != NULL);
-   assert(implubs != NULL);
-   assert(proplbs != NULL);
-   assert(propubs != NULL);
-   assert(cutoff != NULL);
-   assert(0 <= probingpos && probingpos < nvars);
-   assert(SCIPvarIsBinary(vars[probingpos]));
-   assert(SCIPvarGetLbLocal(vars[probingpos]) < 0.5);
-   assert(SCIPvarGetUbLocal(vars[probingpos]) > 0.5);
-
-   SCIPdebugMessage("applying probing on variable <%s> == %u (nlocks=%d/%d, impls=%d/%d, clqs=%d/%d)\n",
-      SCIPvarGetName(vars[probingpos]), probingdir,
-      SCIPvarGetNLocksDown(vars[probingpos]), SCIPvarGetNLocksUp(vars[probingpos]),
-      SCIPvarGetNImpls(vars[probingpos], FALSE), SCIPvarGetNImpls(vars[probingpos], TRUE),
-      SCIPvarGetNCliques(vars[probingpos], FALSE), SCIPvarGetNCliques(vars[probingpos], TRUE));
-
-   /* start probing mode */
-   SCIP_CALL( SCIPstartProbing(scip) );
-
-   /* enables collection of variable statistics during probing */
-   SCIPenableVarHistory(scip);
-
-   /* fix variable */
-   if( probingdir == FALSE )
-   {
-      SCIP_CALL( SCIPchgVarUbProbing(scip, vars[probingpos], 0.0) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPchgVarLbProbing(scip, vars[probingpos], 1.0) );
-   }
-
-   /* @todo it might pay off to catch the bounds-tightened event on all variables and then only get the implied and
-    *       propagated bounds on those variables which where really changed on propagation
-    */
-
-   /* apply propagation of implication graph and clique table */
-   SCIP_CALL( SCIPpropagateProbingImplications(scip, cutoff) );
-   if( !(*cutoff) )
-   {
-      int i;
-
-      for( i = 0; i < nvars; ++i )
-      {
-         impllbs[i] = SCIPvarGetLbLocal(vars[i]);
-         implubs[i] = SCIPvarGetUbLocal(vars[i]);
-      }
-   }
-
-   /* apply propagation */
-   if( !(*cutoff) )
-   {
-      SCIP_CALL( SCIPpropagateProbing(scip, propdata->proprounds, cutoff, NULL) );
-   }
-
-   /* evaluate propagation */
-   if( !(*cutoff) )
-   {
-      int i;
-
-      for( i = 0; i < nvars; ++i )
-      {
-         proplbs[i] = SCIPvarGetLbLocal(vars[i]);
-         propubs[i] = SCIPvarGetUbLocal(vars[i]);
-#if 0
-#ifdef SCIP_DEBUG
-         if( SCIPisGT(scip, proplbs[i], SCIPvarGetLbGlobal(vars[i])) )
-         {
-            SCIPdebugMessage(" -> <%s>[%g,%g] >= %g\n", SCIPvarGetName(vars[i]),
-               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), proplbs[i]);
-         }
-         if( SCIPisLT(scip, propubs[i], SCIPvarGetUbGlobal(vars[i])) )
-         {
-            SCIPdebugMessage(" -> <%s>[%g,%g] <= %g\n", SCIPvarGetName(vars[i]),
-               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), propubs[i]);
-         }
-#endif
-#endif
-      }
-   }
-
-   /* exit probing mode */
-   SCIP_CALL( SCIPendProbing(scip) );
-
-   return SCIP_OKAY;
-}
-
-
 /** the main probing loop */
 static
 SCIP_RETCODE applyProbing(
@@ -578,8 +473,8 @@ SCIP_RETCODE applyProbing(
          if( probingone )
          {
             /* apply probing for fixing the variable to one */
-            SCIP_CALL( applyProbingVar(scip, propdata, vars, nvars, i, TRUE, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
-               &localcutoff) );
+            SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, i, SCIP_BOUNDTYPE_LOWER, 1.0, propdata->proprounds,
+                  oneimpllbs, oneimplubs, oneproplbs, onepropubs, &localcutoff) );
 
             if( localcutoff )
             {
@@ -624,8 +519,8 @@ SCIP_RETCODE applyProbing(
          if( probingzero )
          {
             /* apply probing for fixing the variable to zero */
-            SCIP_CALL( applyProbingVar(scip, propdata, vars, nvars, i, FALSE, zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs,
-               &localcutoff) );
+            SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, i, SCIP_BOUNDTYPE_UPPER, 0.0, propdata->proprounds,
+                  zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs, &localcutoff) );
 
             if( localcutoff )
             {
@@ -1283,6 +1178,109 @@ SCIP_RETCODE SCIPincludePropProbing(
 }
 
 
+/** applies and evaluates probing of a single variable in the given direction and bound */
+SCIP_RETCODE SCIPapplyProbingVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   nvars,              /**< number of problem variables */
+   int                   probingpos,         /**< variable number to apply probing on */
+   SCIP_BOUNDTYPE        boundtype,          /**< which bound should be changed */
+   SCIP_Real             bound,              /**< whioch bound should be set */
+   int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
+   SCIP_Real*            impllbs,            /**< array to store lower bounds after applying implications and cliques */
+   SCIP_Real*            implubs,            /**< array to store upper bounds after applying implications and cliques */
+   SCIP_Real*            proplbs,            /**< array to store lower bounds after full propagation */
+   SCIP_Real*            propubs,            /**< array to store upper bounds after full propagation */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the probing direction is infeasible */
+   )
+{
+   assert(impllbs != NULL);
+   assert(implubs != NULL);
+   assert(proplbs != NULL);
+   assert(propubs != NULL);
+   assert(cutoff != NULL);
+   assert(0 <= probingpos && probingpos < nvars);
+   assert(SCIPisGE(scip, bound, SCIPvarGetLbLocal(vars[probingpos])));
+   assert(SCIPisLE(scip, bound, SCIPvarGetUbLocal(vars[probingpos])));
+
+   SCIPdebugMessage("applying probing on variable <%s> %s %g (nlocks=%d/%d, impls=%d/%d, clqs=%d/%d)\n",
+      SCIPvarGetName(vars[probingpos]), boundtype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", bound,
+      SCIPvarGetNLocksDown(vars[probingpos]), SCIPvarGetNLocksUp(vars[probingpos]),
+      SCIPvarGetNImpls(vars[probingpos], FALSE), SCIPvarGetNImpls(vars[probingpos], TRUE),
+      SCIPvarGetNCliques(vars[probingpos], FALSE), SCIPvarGetNCliques(vars[probingpos], TRUE));
+
+   /* start probing mode */
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+   /* enables collection of variable statistics during probing */
+   SCIPenableVarHistory(scip);
+
+   /* fix variable */
+   if( boundtype == SCIP_BOUNDTYPE_UPPER )
+   {
+      SCIP_CALL( SCIPchgVarUbProbing(scip, vars[probingpos], bound) );
+   }
+   else
+   {
+      assert(boundtype == SCIP_BOUNDTYPE_LOWER);
+      SCIP_CALL( SCIPchgVarLbProbing(scip, vars[probingpos], bound) );
+   }
+
+   /* @todo it might pay off to catch the bounds-tightened event on all variables and then only get the implied and
+    *       propagated bounds on those variables which where really changed on propagation
+    */
+
+   /* apply propagation of implication graph and clique table */
+   SCIP_CALL( SCIPpropagateProbingImplications(scip, cutoff) );
+   if( !(*cutoff) )
+   {
+      int i;
+
+      for( i = 0; i < nvars; ++i )
+      {
+         impllbs[i] = SCIPvarGetLbLocal(vars[i]);
+         implubs[i] = SCIPvarGetUbLocal(vars[i]);
+      }
+   }
+
+   /* apply propagation */
+   if( !(*cutoff) )
+   {
+      SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, cutoff, NULL) );
+   }
+
+   /* evaluate propagation */
+   if( !(*cutoff) )
+   {
+      int i;
+
+      for( i = 0; i < nvars; ++i )
+      {
+         proplbs[i] = SCIPvarGetLbLocal(vars[i]);
+         propubs[i] = SCIPvarGetUbLocal(vars[i]);
+#if 0
+#ifdef SCIP_DEBUG
+         if( SCIPisGT(scip, proplbs[i], SCIPvarGetLbGlobal(vars[i])) )
+         {
+            SCIPdebugMessage(" -> <%s>[%g,%g] >= %g\n", SCIPvarGetName(vars[i]),
+               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), proplbs[i]);
+         }
+         if( SCIPisLT(scip, propubs[i], SCIPvarGetUbGlobal(vars[i])) )
+         {
+            SCIPdebugMessage(" -> <%s>[%g,%g] <= %g\n", SCIPvarGetName(vars[i]),
+               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), propubs[i]);
+         }
+#endif
+#endif
+      }
+   }
+
+   /* exit probing mode */
+   SCIP_CALL( SCIPendProbing(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** analyses boundchanges resulting from probing on a variable and performs deduced fixations, aggregations, and domain tightenings
  * Given a variable probingvar with domain [l,u] and bound tightening results from reducing the domain
  * once to [l,leftub] and once to [rightlb,u], the method computes and applies resulting variable fixations, aggregations,
@@ -1341,8 +1339,6 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
       /* adjust bounds to actually used ones */
       leftub  = SCIPfloor(scip, leftub);
       rightlb = SCIPceil(scip, rightlb);
-      /* assert dichotomy in case of discrete var: leftub >= rightlb - 1.0 */
-      assert(SCIPisGE(scip, leftub, rightlb - 1.0));
 
       probingvarisinteger = TRUE;
       probingvarisbinary = SCIPvarIsBinary(probingvar);
