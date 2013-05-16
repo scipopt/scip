@@ -1973,6 +1973,11 @@ SCIP_RETCODE subscipSetParams(
    /* do not abort subscip on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
+   /* disable memory saving mode: this is likely to result in the maximal depth being reached. This is because DFS
+    * results in a repeated branching on the alpha-variables, which often have large bounds resulting in deep levels of
+    * the tree. */
+   SCIP_CALL( SCIPsetRealParam(subscip, "memory/savefac", 2.0) );
+
    /* determine output to console */
 #ifdef SCIP_OUTPUT
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
