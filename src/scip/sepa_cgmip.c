@@ -1034,6 +1034,7 @@ SCIP_RETCODE createSubscip(
       SCIP_CALL( SCIPincludeConshdlrViolatedCut(subscip, mipdata) );
    }
 
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sepa_cgmip separating MIP (%s)", SCIPgetProbName(scip));
    SCIP_CALL( SCIPcreateProb(subscip, "sepa_cgmip separating MIP", NULL, NULL , NULL , NULL , NULL , NULL , NULL) );
    SCIP_CALL( SCIPsetObjsense(subscip, SCIP_OBJSENSE_MAXIMIZE) );
 
@@ -1929,18 +1930,12 @@ SCIP_RETCODE createSubscip(
 
 #ifdef SCIP_WRITEPROB
    {
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgsepa");
-      if ( sepadata->objlone )
-         (void) strncat(name, "_l1", SCIP_MAXSTRLEN);
-      if ( sepadata->addviolationcons )
-         (void) strncat(name, "_vc", SCIP_MAXSTRLEN);
-      if ( sepadata->skipmultbounds )
-         (void) strncat(name, "_ub", SCIP_MAXSTRLEN);
-      if ( sepadata->primalseparation )
-         (void) strncat(name, "_ps", SCIP_MAXSTRLEN);
-      (void) strncat(name, "_", SCIP_MAXSTRLEN);
-      (void) strncat(name, SCIPgetProbName(scip), SCIP_MAXSTRLEN);
-      (void) strncat(name, ".lp", SCIP_MAXSTRLEN);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgsepa%s%s%s%s_%s.lp",
+         sepadata->objlone ? "_l1" : "",
+         sepadata->addviolationcons ? "_vc" : "",
+         sepadata->skipmultbounds ? "_ub" : "",
+         sepadata->primalseparation ? "_ps" : "",
+         SCIPgetProbName(scip));
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, "lp", FALSE) );
       SCIPinfoMessage(scip, NULL, "Wrote subscip to file <%s>.\n", name);
    }
@@ -2150,6 +2145,8 @@ SCIP_RETCODE solveSubscip(
    }
    assert( nodelimit >= 0 );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
+
+   SCIPdebugMessage("Solving sub-SCIP (time limit: %f  mem limit: %f  node limit: %"SCIP_LONGINT_FORMAT") ...\n", timelimit, memorylimit, nodelimit);
 
    /* check whether we want a complete solve */
    if ( ! sepadata->earlyterm )
