@@ -753,7 +753,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
     * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
     * made for the original SCIP
     */
-   if( !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
    }
