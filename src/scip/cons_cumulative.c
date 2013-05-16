@@ -361,6 +361,8 @@ int convertBoundToInt(
 {
    assert(SCIPisFeasIntegral(scip, bound));
    assert(SCIPisFeasEQ(scip, bound, (SCIP_Real)(int)(bound < 0 ? bound - 0.5 : bound + 0.5)));
+   assert(bound < INT_MAX);
+   assert(bound > INT_MIN);
 
    return (int)(bound < 0 ? (bound - 0.5) : (bound + 0.5));
 }
@@ -3000,12 +3002,14 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
+      SCIP_Real objval;
 
       var = vars[v];
       assert(var != NULL);
 
+      objval = SCIPvarGetObj(var);
 
-      if( SCIPvarGetNLocksDown(var) == downlocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
+      if( SCIPvarGetNLocksDown(var) == downlocks[v] && !SCIPisNegative(scip, objval) )
       {
          int ub;
 
@@ -3023,7 +3027,7 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
          }
       }
 
-      if( SCIPvarGetNLocksUp(var) == uplocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_UPPER )
+      if( SCIPvarGetNLocksUp(var) == uplocks[v] && !SCIPisPositive(scip, objval) )
       {
          int lb;
 
@@ -6924,6 +6928,12 @@ SCIP_RETCODE propagateCons(
    initialized = FALSE;
    redundant = FALSE;
 
+   if( SCIPconsIsDeleted(cons) )
+   {
+      assert(SCIPinProbing(scip));
+      return SCIP_OKAY;
+   }
+
    /* if the constraint marked to be propagated, do nothing */
    if( consdata->propagated && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING )
       return SCIP_OKAY;
@@ -6938,8 +6948,11 @@ SCIP_RETCODE propagateCons(
       SCIPdebugMessage("%s deletes cumulative constraint <%s> since it is redundant\n",
          SCIPgetDepth(scip) == 0 ? "globally" : "locally", SCIPconsGetName(cons));
 
-      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-      (*ndelconss)++;
+      if( !SCIPinProbing(scip) )
+      {
+         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+         (*ndelconss)++;
+      }
    }
    else
    {
@@ -7044,17 +7057,22 @@ SCIP_RETCODE computeAlternativeBounds(
    int*                  uplocks             /**< number of constraints with up lock participating by the computation */
    )
 {
+   int minect;
+   int maxlst;
+   int nvars;
    int c;
+   int v;
+
+   minect = INT_MAX;
+   maxlst = INT_MIN;
 
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
       SCIP_VAR* var;
-      int nvars;
       int hmin;
       int hmax;
-      int v;
 
       cons = conss[c];
       assert(cons != NULL);
@@ -7133,27 +7151,44 @@ SCIP_RETCODE computeAlternativeBounds(
                alternativelbs[idx] = (hmin + 1 - constant) / scalar;
                downlocks[idx]++;
             }
+
+            if( ect < minect )
+               minect = ect;
          }
 
          /* second check upper bound fixing */
          if( consdata->uplocks[v] )
          {
+            int duration;
             int lct;
             int lst;
 
+            duration =  consdata->durations[v];
+
             /* the variable has a up lock locked */
             lst = scalar * convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + constant;
-            lct = lst + consdata->durations[v];
+            lct = lst + duration;
 
             if( lst >= hmax || hmin >= hmax  )
                uplocks[idx]++;
-            else if( lct > hmax && alternativeubs[idx] <= (hmax - 1 - constant) / scalar )
+            else if( lct > hmax && alternativeubs[idx] <= ((hmax - 1 - constant) / scalar) - duration )
             {
-               alternativeubs[idx] = (hmax - 1 - constant) / scalar;
+               alternativeubs[idx] = ((hmax - 1 - constant) / scalar)  - duration;
                uplocks[idx]++;
             }
+
+            if( lst > maxlst )
+               maxlst = lst;
          }
       }
+   }
+
+   nvars = SCIPgetNVars(scip);
+
+   for( v = 0; v < nvars; ++v )
+   {
+      alternativelbs[v] = MAX(alternativelbs[v], minect);
+      alternativeubs[v] = MIN(alternativeubs[v], maxlst);
    }
 
    return SCIP_OKAY;
@@ -7169,21 +7204,46 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
    int*                  alternativeubs,     /**< alternative lower bounds */
    int*                  downlocks,          /**< number of constraints with down lock participating by the computation */
    int*                  uplocks,            /**< number of constraints with up lock participating by the computation */
-   int*                  nfixedvars          /**< pointer to store the number of fixed variables */
+   int*                  nfixedvars,         /**< pointer to counter which is increased by the number of deduced variable fixations */
+   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
+   int*                  nimplications,      /**< pointer to counter which is increased by the number of deduced implications */
+   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
+   SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    )
 {
+   SCIP_Real* downimpllbs;
+   SCIP_Real* downimplubs;
+   SCIP_Real* downproplbs;
+   SCIP_Real* downpropubs;
+   SCIP_Real* upimpllbs;
+   SCIP_Real* upimplubs;
+   SCIP_Real* upproplbs;
+   SCIP_Real* uppropubs;
    int v;
+
+   /* get temporary memory for storing probing results */
+   SCIP_CALL( SCIPallocBufferArray(scip, &downimpllbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &downimplubs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &downproplbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &downpropubs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &upimpllbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &upimplubs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &upproplbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &uppropubs, nvars) );
 
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
       SCIP_Bool infeasible;
       SCIP_Bool fixed;
+      SCIP_Real objval;
       int ub;
       int lb;
 
       var = vars[v];
       assert(var != NULL);
+
+      objval = SCIPvarGetObj(var);
 
       lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
       ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
@@ -7192,7 +7252,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
       if( ub - lb <= 0 )
          continue;
 
-      if( SCIPvarGetNLocksDown(var) == downlocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
+      if( SCIPvarGetNLocksDown(var) == downlocks[v] && !SCIPisNegative(scip, objval) )
       {
 
          if( alternativelbs[v] > ub )
@@ -7207,10 +7267,54 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
              * constraints
              */
             SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
+
+            continue;
+         }
+         else
+         {
+            SCIP_Bool localcutoff;
+
+            /* apply probing for the lower bound of the variable (x <= lb) */
+            SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, v, SCIP_BOUNDTYPE_UPPER, (SCIP_Real)lb, -1,
+                  downimpllbs, downimplubs, downproplbs, downpropubs, &localcutoff) );
+
+            if( localcutoff )
+            {
+               SCIP_CALL( SCIPtightenVarLb(scip, vars[v], (SCIP_Real)alternativelbs[v], TRUE, cutoff, &fixed) );
+
+               if( fixed )
+                  (*nfixedvars)++;
+
+               if( *cutoff )
+                  break;
+            }
+            else
+            {
+               /* apply probing for the alternative lower bound of the variable (x >= alternativelbs[v]) */
+               SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, v, SCIP_BOUNDTYPE_LOWER, (SCIP_Real)alternativelbs[v], -1,
+                     upimpllbs, upimplubs, upproplbs, uppropubs, &localcutoff) );
+
+               if( localcutoff )
+               {
+                  SCIP_CALL( SCIPtightenVarUb(scip, vars[v], (SCIP_Real)lb, TRUE, cutoff, &fixed) );
+                  if( fixed )
+                     (*nfixedvars)++;
+
+                  if( *cutoff )
+                     break;
+               }
+               else
+               {
+                  /* analyze both probings */
+                  SCIP_CALL( SCIPanalyzeDeductionsProbing(scip, vars[v], (SCIP_Real)lb, (SCIP_Real)alternativelbs[v],
+                        nvars, vars, downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
+                        nfixedvars, naggrvars, nimplications, nchgbds, cutoff) );
+               }
+            }
          }
       }
 
-      if( SCIPvarGetNLocksUp(var) == uplocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_UPPER )
+      if( SCIPvarGetNLocksUp(var) == uplocks[v] && !SCIPisPositive(scip, objval) )
       {
          if( alternativeubs[v] < lb )
          {
@@ -7225,8 +7329,62 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
              */
             SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
          }
+         else
+         {
+            SCIP_Bool localcutoff;
+
+            /* apply probing for the lower bound of the variable (x >= ub) */
+            SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, v, SCIP_BOUNDTYPE_LOWER, (SCIP_Real)ub, -1,
+                  downimpllbs, downimplubs, downproplbs, downpropubs, &localcutoff) );
+
+            if( localcutoff )
+            {
+               SCIP_CALL( SCIPtightenVarUb(scip, vars[v], (SCIP_Real)alternativeubs[v], TRUE, cutoff, &fixed) );
+
+               if( fixed )
+                  (*nfixedvars)++;
+
+               if( *cutoff )
+                  break;
+            }
+            else
+            {
+               /* apply probing for the alternative lower bound of the variable (x <= alternativeubs[v]) */
+               SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, v, SCIP_BOUNDTYPE_UPPER, (SCIP_Real)alternativeubs[v], -1,
+                     upimpllbs, upimplubs, upproplbs, uppropubs, &localcutoff) );
+
+               if( localcutoff )
+               {
+                  SCIP_CALL( SCIPtightenVarLb(scip, vars[v], (SCIP_Real)ub, TRUE, cutoff, &fixed) );
+
+                  if( fixed )
+                     (*nfixedvars)++;
+
+                  if( *cutoff )
+                     break;
+               }
+               else
+               {
+                  /* analyze both probings */
+                  SCIP_CALL( SCIPanalyzeDeductionsProbing(scip, vars[v], (SCIP_Real)alternativeubs[v], (SCIP_Real)ub,
+                        nvars, vars, downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
+                        nfixedvars, naggrvars, nimplications, nchgbds, cutoff) );
+               }
+            }
+         }
+
       }
    }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &uppropubs);
+   SCIPfreeBufferArray(scip, &upproplbs);
+   SCIPfreeBufferArray(scip, &upimplubs);
+   SCIPfreeBufferArray(scip, &upimpllbs);
+   SCIPfreeBufferArray(scip, &downpropubs);
+   SCIPfreeBufferArray(scip, &downproplbs);
+   SCIPfreeBufferArray(scip, &downimplubs);
+   SCIPfreeBufferArray(scip, &downimpllbs);
 
    return SCIP_OKAY;
 }
@@ -7239,7 +7397,11 @@ SCIP_RETCODE propagateAllConss(
    SCIP_CONS**           conss,              /**< all cumulative constraint */
    int                   nconss,             /**< number of cumulative constraints */
    SCIP_Bool             local,              /**< use local bounds effective horizon? */
-   int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
+   int*                  nfixedvars,         /**< pointer to counter which is increased by the number of deduced variable fixations */
+   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
+   int*                  nimplications,      /**< pointer to counter which is increased by the number of deduced implications */
+   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
+   SCIP_Bool*            cutoff,             /**< buffer to store whether a cutoff is detected */
    SCIP_Bool*            branched            /**< pointer to store if a branching was applied, or NULL to avoid branching */
    )
 {  /*lint --e{715}*/
@@ -7277,9 +7439,10 @@ SCIP_RETCODE propagateAllConss(
    SCIP_CALL( computeAlternativeBounds(scip, conss, nconss, local, alternativelbs, alternativeubs, downlocks, uplocks) );
 
    /* apply fixing which result of the alternative bounds directly */
-   SCIP_CALL( applyAlternativeBoundsFixing(scip, vars, nvars, alternativelbs, alternativeubs, downlocks, uplocks, nfixedvars) );
+   SCIP_CALL( applyAlternativeBoundsFixing(scip, vars, nvars, alternativelbs, alternativeubs, downlocks, uplocks,
+         nfixedvars, naggrvars, nimplications, nchgbds, cutoff) );
 
-   if( oldnfixedvars == *nfixedvars && branched != NULL )
+   if( !(*cutoff) && oldnfixedvars == *nfixedvars && branched != NULL )
    {
       SCIP_CALL( applyAlternativeBoundsBranching(scip, vars, nvars, alternativelbs, alternativeubs, downlocks, uplocks, branched) );
    }
@@ -12154,7 +12317,11 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
 
    if( !cutoff && !unbounded && conshdlrdata->dualpresolve )
    {
-      SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, FALSE, nfixedvars, NULL) );
+      int nimplications;
+
+      nimplications = 0;
+
+      SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, FALSE, nfixedvars, naggrvars, &nimplications, nchgbds, &cutoff, NULL) );
    }
 
    /* only perform the detection of variable bounds and disjunctive constraint once */
