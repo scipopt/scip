@@ -125,6 +125,7 @@
 #define STALLNODELIMIT           1000LL /**< number of stalling nodes if earlyterm is true */
 #define CONSHDLRFULLNORM          FALSE /**< compute real cut and compute norm for this (if addviolconshdlr and conshdlrusenorm are true) */
 #define MINEFFICACY                0.05 /**< minimum efficacy of a cut - compare set.c */
+#define MAXNSOLS                   1000 /**< maximal number of solutions stored in sub-SCIP */
 
 /* parameters used for CMIR-generation (taken from sepa_gomory) */
 #define BOUNDSWITCH              0.9999
@@ -1977,6 +1978,9 @@ SCIP_RETCODE subscipSetParams(
     * results in a repeated branching on the alpha-variables, which often have large bounds resulting in deep levels of
     * the tree. */
    SCIP_CALL( SCIPsetRealParam(subscip, "memory/savefac", 1.0) );
+
+   /* set number of solutions stored */
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/maxsol", MAXNSOLS) );
 
    /* determine output to console */
 #ifdef SCIP_OUTPUT
