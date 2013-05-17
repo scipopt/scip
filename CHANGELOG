@@ -31,6 +31,7 @@ fixed bugs:
 - fixed bug wrongly removing constraints locally while counting
 - fixed bug in Undercover with "pseudo-"quadratic constraints
 - fixed bug with quadratic constraints not being upgraded
+- fixed bug with storing original solutions
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
