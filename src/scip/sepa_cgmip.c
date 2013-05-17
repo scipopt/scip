@@ -1976,7 +1976,7 @@ SCIP_RETCODE subscipSetParams(
    /* disable memory saving mode: this is likely to result in the maximal depth being reached. This is because DFS
     * results in a repeated branching on the alpha-variables, which often have large bounds resulting in deep levels of
     * the tree. */
-   SCIP_CALL( SCIPsetRealParam(subscip, "memory/savefac", 2.0) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "memory/savefac", 1.0) );
 
    /* determine output to console */
 #ifdef SCIP_OUTPUT
