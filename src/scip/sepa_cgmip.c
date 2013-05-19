@@ -126,6 +126,7 @@
 #define CONSHDLRFULLNORM          FALSE /**< compute real cut and compute norm for this (if addviolconshdlr and conshdlrusenorm are true) */
 #define MINEFFICACY                0.05 /**< minimum efficacy of a cut - compare set.c */
 #define MAXNSOLS                   1000 /**< maximal number of solutions stored in sub-SCIP */
+#define OBJWEIGHTRANGE             0.01 /**< maximal range of scaling of objective w.r.t. size of rows */
 
 /* parameters used for CMIR-generation (taken from sepa_gomory) */
 #define BOUNDSWITCH              0.9999
@@ -827,6 +828,29 @@ SCIP_RETCODE transformColumn(
 }
 
 
+/** compute objective coefficient for rows that are weighted by size */
+static
+SCIP_Real computeObjWeightSize(
+   int                   rowsize,            /**< size of rows */
+   int                   minrowsize,         /**< maximal size of rows */
+   int                   maxrowsize          /**< minimal size of rows */
+   )
+{
+   SCIP_Real a;
+   SCIP_Real b;
+
+   assert( maxrowsize > 0 );
+   assert( minrowsize < INT_MAX );
+   assert( minrowsize <= maxrowsize );
+   assert( minrowsize <= rowsize && rowsize <= maxrowsize );
+
+   a = (1.0 - OBJWEIGHTRANGE)/((SCIP_Real) (maxrowsize - minrowsize));
+   b = 1.0 - a * ((SCIP_Real) maxrowsize);
+
+   return a * ((SCIP_Real) rowsize) + b;
+}
+
+
 /** Creates a subscip representing the separating MIP.
  *
  *  Let the constraints of the original MIP be of the following form:
@@ -980,11 +1004,6 @@ SCIP_RETCODE createSubscip(
    SCIP_Real* primsol;
    SCIP_Real multvarub;
 
-   int ncols;
-   int nrows;
-   int ntotalrows;
-   int maxrowsize;
-   int i, j;
    unsigned int cnt;
    unsigned int ucnt;
    unsigned int nshifted;
@@ -999,6 +1018,13 @@ SCIP_RETCODE createSubscip(
    SCIP_CONS* cons;
    int nconsvars;
    char name[SCIP_MAXSTRLEN];
+
+   int ncols;
+   int nrows;
+   int ntotalrows;
+   int maxrowsize = 0;
+   int minrowsize = INT_MAX;
+   int i, j;
 
    assert( scip != NULL );
    assert( sepadata != NULL );
@@ -1057,7 +1083,6 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPallocBufferArray(scip, &primsol, ncols) );
 
    /* store lhs/rhs for complementing (see below) and compute maximal nonzeros of candidate rows */
-   maxrowsize = 0;
    for (i = 0; i < nrows; ++i)
    {
       SCIP_Real val;
@@ -1099,6 +1124,8 @@ SCIP_RETCODE createSubscip(
          {
             if ( SCIProwGetNLPNonz(row) > maxrowsize )
                maxrowsize = SCIProwGetNLPNonz(row);
+            if ( SCIProwGetNLPNonz(row) < minrowsize )
+               minrowsize = SCIProwGetNLPNonz(row);
          }
       }
       else
@@ -1109,11 +1136,14 @@ SCIP_RETCODE createSubscip(
             {
                if ( SCIProwGetNLPNonz(row) > maxrowsize )
                   maxrowsize = SCIProwGetNLPNonz(row);
+               if ( SCIProwGetNLPNonz(row) < minrowsize )
+                  minrowsize = SCIProwGetNLPNonz(row);
             }
          }
       }
    }
    assert( maxrowsize > 0 );
+   assert( minrowsize < INT_MAX );
 
    /* add cuts for objective function if required */
    if ( sepadata->useobjub )
@@ -1124,6 +1154,8 @@ SCIP_RETCODE createSubscip(
 
       if ( ! SCIPisInfinity(scip, SCIPgetUpperbound(scip)) && SCIPgetNObjVars(scip) > maxrowsize )
          maxrowsize = SCIPgetNObjVars(scip);
+      if ( ! SCIPisInfinity(scip, SCIPgetUpperbound(scip)) && SCIPgetNObjVars(scip) < minrowsize )
+         minrowsize = SCIPgetNObjVars(scip);
    }
    if ( sepadata->useobjlb )
    {
@@ -1136,6 +1168,8 @@ SCIP_RETCODE createSubscip(
 
       if ( ! SCIPisInfinity(scip, -SCIPgetLowerbound(scip)) && SCIPgetNObjVars(scip) > maxrowsize )
          maxrowsize = SCIPgetNObjVars(scip);
+      if ( ! SCIPisInfinity(scip, -SCIPgetLowerbound(scip)) && SCIPgetNObjVars(scip) < minrowsize )
+         minrowsize = SCIPgetNObjVars(scip);
    }
 
    /* store lb/ub for complementing and perform preprocessing */
@@ -1357,7 +1391,7 @@ SCIP_RETCODE createSubscip(
          assert( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row)) );
 
          if ( sepadata->objweighsize )
-            weight = - (sepadata->objweight * SCIProwGetNLPNonz(row)/((SCIP_Real) maxrowsize));
+            weight = - sepadata->objweight * computeObjWeightSize(SCIProwGetNLPNonz(row), minrowsize, maxrowsize);
 
          /* create two variables for each equation */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq1_%d", i);
@@ -1393,7 +1427,7 @@ SCIP_RETCODE createSubscip(
             {
                isactive = TRUE;
                if ( sepadata->objweighsize )
-                  weight = -(sepadata->objweight * SCIProwGetNLPNonz(row)/((SCIP_Real) maxrowsize));
+                  weight = -sepadata->objweight * computeObjWeightSize(SCIProwGetNLPNonz(row), minrowsize, maxrowsize);
                else
                   weight = -sepadata->objweight;
             }
@@ -1424,7 +1458,7 @@ SCIP_RETCODE createSubscip(
             {
                isactive = TRUE;
                if ( sepadata->objweighsize )
-                  weight = -(sepadata->objweight * SCIProwGetNLPNonz(row)/((SCIP_Real) maxrowsize));
+                  weight = -sepadata->objweight * computeObjWeightSize(SCIProwGetNLPNonz(row), minrowsize, maxrowsize);
                else
                   weight = -sepadata->objweight;
             }
@@ -1458,7 +1492,7 @@ SCIP_RETCODE createSubscip(
       cnt = 0;
 
       if ( sepadata->objweighsize )
-         weight = -(sepadata->objweight * SCIPgetNObjVars(scip)/((SCIP_Real) maxrowsize));
+         weight = -sepadata->objweight * computeObjWeightSize(SCIPgetNObjVars(scip), minrowsize, maxrowsize);
       else
          weight = -sepadata->objweight;
 
