@@ -693,7 +693,6 @@ void collectNonBinaryImplicationData(
    }
 }
 
-#define MAX_NIMPLICATIONS 100
 /** collect binary implication data for variable set reduction and global bound implications; only variable which have
  *  the vartype SCIP_VARTYPE_BINARY have binary implications, otherwise the implications are saved as variable bounds
  */
@@ -753,7 +752,6 @@ void collectBinaryImplicationData(
       implvars = SCIPvarGetImplVars(var, value);
       implboundtypes = SCIPvarGetImplTypes(var, value);
       nbinimplsvar = SCIPvarGetNBinImpls(var, value);
-      nbinimplsvar = MIN(nbinimplsvar, MAX_NIMPLICATIONS);
 
       /* update implication counter on all by binary implication implied variables */
       for( w = nbinimplsvar - 1; w >= 0; --w )
@@ -796,8 +794,6 @@ void collectBinaryImplicationData(
       }
    }
 }
-
-#define MAX_CLIQUELENGTH 80
 
 /** collect clique data on binary variables for variable set reduction and global bound implications */
 static
@@ -873,10 +869,6 @@ void collectBinaryCliqueData(
    /* update implication counter on all by cliques implied variables */
    for( c = SCIPvarGetNCliques(var, value) - 1; c >= 0; --c )
    {
-      /* discard big cliques */
-      if( SCIPcliqueGetNVars(cliques[c]) > MAX_CLIQUELENGTH )
-         continue;
-
       clqvars = SCIPcliqueGetVars(cliques[c]);
       clqvalues = SCIPcliqueGetValues(cliques[c]);
 
