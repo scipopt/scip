@@ -56,6 +56,7 @@ features:
 - new presolving step for tightening logicor constraints using implication and clique information
 - can now read and write CIP-files with (multi-)aggregated variables
 - new method SCIPapplyProbingVar() in prop_probing.h
+- added first implication detection in cons_linear
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor

@@ -211,6 +211,7 @@ struct SCIP_ConsData
    unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
    unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
    unsigned int          cliquesadded:1;     /**< were the cliques of the constraint already extracted? */
+   unsigned int          implsadded:1;       /**< were the implications of the constraint already extracted? */
    unsigned int          binvarssorted:1;    /**< are binary variables sorted w.r.t. the absolute of their coefficient? */
    unsigned int          varsdeleted:1;      /**< were variables deleted after last cleanup? */
 };
@@ -888,6 +889,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->sorted = (nvars <= 1);
    (*consdata)->merged = (nvars <= 1);
    (*consdata)->cliquesadded = FALSE;
+   (*consdata)->implsadded = FALSE;
    (*consdata)->binvarssorted = FALSE;
    (*consdata)->nbinvars = -1;
    (*consdata)->varsdeleted = FALSE;
@@ -3071,6 +3073,7 @@ SCIP_RETCODE chgLhs(
       consdata->propagated = FALSE;
       consdata->presolved = FALSE;
       consdata->cliquesadded = FALSE;
+      consdata->implsadded = FALSE;
    }
 
    /* new left hand side */
@@ -3185,6 +3188,7 @@ SCIP_RETCODE chgRhs(
       consdata->propagated = FALSE;
       consdata->presolved = FALSE;
       consdata->cliquesadded = FALSE;
+      consdata->implsadded = FALSE;
    }
 
    /* set new right hand side */
@@ -3275,12 +3279,16 @@ SCIP_RETCODE addCoef(
    consdata->boundstightened = FALSE;
    consdata->presolved = FALSE;
    consdata->removedfixings = consdata->removedfixings && SCIPvarIsActive(var);
+
    if( consdata->validsignature )
       consdataUpdateSignatures(consdata, consdata->nvars-1);
+
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
    consdata->cliquesadded = FALSE;
+   consdata->implsadded = FALSE;
+
    if( consdata->nvars == 1 )
    {
       consdata->binvarssorted = TRUE;
@@ -3388,6 +3396,7 @@ SCIP_RETCODE delCoefPos(
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
    consdata->cliquesadded = FALSE;
+   consdata->implsadded = FALSE;
 
    /* delete coefficient from the LP row */
    if( consdata->row != NULL )
@@ -3457,6 +3466,7 @@ SCIP_RETCODE chgCoefPos(
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
    consdata->cliquesadded = FALSE;
+   consdata->implsadded = FALSE;
 
    return SCIP_OKAY;
 }
@@ -3540,6 +3550,7 @@ SCIP_RETCODE scaleCons(
 
    consdataInvalidateActivities(consdata);
    consdata->cliquesadded = FALSE;
+   consdata->implsadded = FALSE;
 
    return SCIP_OKAY;
 }
@@ -5642,6 +5653,76 @@ SCIP_RETCODE propagateCons(
  * Presolving methods
  */
 
+/** converts all variables with fixed domain into FIXED variables */
+static
+SCIP_RETCODE fixVariables(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
+   int*                  nfixedvars          /**< pointer to count the total number of fixed variables */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
+   SCIP_VARSTATUS varstatus;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Bool fixed;
+   SCIP_Bool infeasible;
+   int v;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(cutoff != NULL);
+   assert(nfixedvars != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      assert(consdata->vars != NULL);
+      var = consdata->vars[v];
+      varstatus = SCIPvarGetStatus(var);
+
+      if( varstatus != SCIP_VARSTATUS_FIXED )
+      {
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
+         if( SCIPisEQ(scip, lb, ub) )
+         {
+            SCIP_Real fixval;
+
+            fixval = SCIPselectSimpleValue(lb - 0.9 * SCIPepsilon(scip), ub + 0.9 * SCIPepsilon(scip), MAXDNOM);
+            SCIPdebugMessage("converting variable <%s> with fixed bounds [%.15g,%.15g] into fixed variable fixed at %.15g\n",
+               SCIPvarGetName(var), lb, ub, fixval);
+            SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
+            if( infeasible )
+            {
+               SCIPdebugMessage(" -> infeasible fixing\n");
+               *cutoff = TRUE;
+               return SCIP_OKAY;
+            }
+            if( fixed )
+               (*nfixedvars)++;
+         }
+      }
+   }
+
+   SCIP_CALL( applyFixings(scip, cons, &infeasible) );
+
+   if( infeasible )
+   {
+      SCIPdebugMessage(" -> infeasible fixing\n");
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
+   assert(consdata->removedfixings);
+
+   return SCIP_OKAY;
+}
+
 /** extracts cliques of the constraint and adds them to SCIP
  *
  *  The following clique extraction mechanism are implemeneted
@@ -5710,8 +5791,10 @@ static
 SCIP_RETCODE extractCliques(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
-   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
-   int*                  nchgbds             /**< pointer to count the total number of tightened bounds */
+   SCIP_Bool             sortvars,           /**< should variables be used in sorted order? */
+   int*                  nfixedvars,         /**< pointer to count number of fixed variables */
+   int*                  nchgbds,            /**< pointer to count the total number of tightened bounds */
+   SCIP_Bool*            cutoff              /**< pointer to store TRUE, if a cutoff was found */
    )
 {
    SCIP_VAR** vars;
@@ -5727,6 +5810,8 @@ SCIP_RETCODE extractCliques(
    SCIP_Bool finitenegmaxact;
    SCIP_Bool finiteposminact;
    SCIP_Bool finiteposmaxact;
+   SCIP_Bool infeasible;
+   int v;
    int i;
    int nposcoefs;
    int nnegcoefs;
@@ -5734,11 +5819,211 @@ SCIP_RETCODE extractCliques(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(cutoff != NULL);
+   assert(nfixedvars != NULL);
    assert(nchgbds != NULL);
+   assert(cutoff != NULL);
+   assert(!SCIPconsIsDeleted(cons));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   if( consdata->nvars < 2 )
+      return SCIP_OKAY;
+
+   /* add implications if posiible */
+   if( !consdata->implsadded )
+   {
+      /* sort variables by variable type */
+      SCIP_CALL( consdataSort(scip, consdata) );
+
+      /* @todo we might extract implications/cliques if SCIPvarIsBinary() variables exist and we have integer variables
+       *       up front, might change sorting correspondingly
+       */
+      /* fast abort if no binaries exist */
+      if( !SCIPvarIsBinary(consdata->vars[0]) )
+         return SCIP_OKAY;
+
+      nvars = consdata->nvars;
+      vars = consdata->vars;
+      vals = consdata->vals;
+
+      /* recompute activities if needed */
+      if( !consdata->validactivities )
+         consdataCalcActivities(scip, consdata);
+      assert(consdata->validactivities);
+
+      finitelhs = !SCIPisInfinity(scip, -consdata->lhs);
+      finiterhs = !SCIPisInfinity(scip, consdata->rhs);
+      finitenegminact = (consdata->glbminactivityneginf == 0 && consdata->glbminactivityneghuge == 0);
+      finitenegmaxact = (consdata->glbmaxactivityneginf == 0 && consdata->maxactivityneghuge == 0);
+      finiteposminact = (consdata->glbminactivityposinf == 0 && consdata->glbminactivityposhuge == 0);
+      finiteposmaxact = (consdata->glbmaxactivityposinf == 0 && consdata->glbmaxactivityposhuge == 0);
+      finiteminact = (finitenegminact && finiteposminact);
+      finitemaxact = (finitenegmaxact && finiteposmaxact);
+
+      if( (finiterhs || finitelhs) && (finitenegminact || finiteposminact || finitenegmaxact || finiteposmaxact) )
+      {
+         SCIP_Real maxabscontrib = -1.0;
+         SCIP_Bool posval = FALSE;
+         SCIP_Bool allbinary = TRUE;
+         int oldnchgbds = *nchgbds;
+         int nbdchgs = 0;
+         int nimpls = 0;
+         int position = -1;
+
+         /* we need a valid minimal/maximal activity to add cliques */
+         if( (finitenegminact || finiteposminact) && !consdata->validglbminact )
+         {
+            consdataRecomputeGlbMinactivity(scip, consdata);
+            assert(consdata->validglbminact);
+         }
+
+         if( (finitenegmaxact || finiteposmaxact) && !consdata->validglbmaxact )
+         {
+            consdataRecomputeGlbMaxactivity(scip, consdata);
+            assert(consdata->validglbmaxact);
+         }
+         assert(consdata->validglbminact || consdata->validglbmaxact);
+
+         /* @todo extend this to local/constraint probing */
+
+         /* determine maximal contribution to the activity */
+         for( v = nvars - 1; v >= 0; --v )
+         {
+            if( SCIPvarIsBinary(vars[v]) )
+            {
+               if( vals[v] > 0 )
+               {
+                  SCIP_Real value = vals[v] * SCIPvarGetUbGlobal(vars[v]);
+
+                  if( value > maxabscontrib )
+                  {
+                     maxabscontrib = value;
+                     position = v;
+                     posval = TRUE;
+                  }
+               }
+               else
+               {
+                  SCIP_Real value = vals[v] * SCIPvarGetLbGlobal(vars[v]);
+
+                  value = REALABS(value);
+
+                  if( value > maxabscontrib )
+                  {
+                     maxabscontrib = value;
+                     position = v;
+                     posval = FALSE;
+                  }
+               }
+            }
+            else
+               allbinary = FALSE;
+         }
+         assert(0 <= position && position < nvars);
+
+         if( !SCIPisEQ(scip, maxabscontrib, 1.0) || !allbinary )
+         {
+            /* if the right hand side and the minimal activity is finite and the changing the variable with the biggest
+             * influence to their bound forces all other varaibels to be at their minimal contribution, we can add these
+             * implications
+             */
+            if( finiterhs && finiteminact && SCIPisEQ(scip, consdata->glbminactivity, consdata->rhs - maxabscontrib) )
+            {
+               for( v = nvars - 1; v >= 0; --v )
+               {
+                  if( v != position )
+                  {
+                     if( vals[v] > 0 )
+                     {
+                        /* add implications */
+                        SCIP_CALL( SCIPaddVarImplication(scip, vars[position], posval, vars[v], SCIP_BOUNDTYPE_UPPER, SCIPvarGetLbGlobal(vars[v]), &infeasible, &nbdchgs) );
+                        ++nimpls;
+                        *nchgbds += nbdchgs;
+                     }
+                     else
+                     {
+                        /* add implications */
+                        SCIP_CALL( SCIPaddVarImplication(scip, vars[position], posval, vars[v], SCIP_BOUNDTYPE_LOWER, SCIPvarGetUbGlobal(vars[v]), &infeasible, &nbdchgs) );
+                        ++nimpls;
+                        *nchgbds += nbdchgs;
+                     }
+
+                     if( infeasible )
+                     {
+                        *cutoff = TRUE;
+                        break;
+                     }
+                  }
+               }
+            }
+
+            /* if the left hand side and the maximal activity is finite and the changing the variable with the biggest
+             * influence to their bound forces all other varaibels to be at their minimal contribution, we can add these
+             * implications
+             */
+            if( finitelhs && finitemaxact && SCIPisEQ(scip, consdata->glbmaxactivity, consdata->lhs - maxabscontrib) )
+            {
+               for( v = nvars - 1; v >= 0; --v )
+               {
+                  if( v != position )
+                  {
+                     if( vals[v] > 0 )
+                     {
+                        /* add implications */
+                        SCIP_CALL( SCIPaddVarImplication(scip, vars[position], posval, vars[v], SCIP_BOUNDTYPE_LOWER, SCIPvarGetUbGlobal(vars[v]), &infeasible, &nbdchgs) );
+                        ++nimpls;
+                        *nchgbds += nbdchgs;
+                     }
+                     else
+                     {
+                        /* add implications */
+                        SCIP_CALL( SCIPaddVarImplication(scip, vars[position], posval, vars[v], SCIP_BOUNDTYPE_UPPER, SCIPvarGetLbGlobal(vars[v]), &infeasible, &nbdchgs) );
+                        ++nimpls;
+                        *nchgbds += nbdchgs;
+                     }
+
+                     if( infeasible )
+                     {
+                        *cutoff = TRUE;
+                        break;
+                     }
+                  }
+               }
+            }
+
+            /* did we find some implications */
+            if( nimpls > 0 )
+            {
+               SCIPdebugMessage("extracted %d implications from constraint %s which led to %d bound changes, %scutoff detetcted\n", nimpls, SCIPconsGetName(cons), *nchgbds - oldnchgbds, *cutoff ? "" : "no ");
+
+               if( *cutoff )
+                  return SCIP_OKAY;
+
+               /* did we find some boundchanges, then we need to remove fixings and tighten the bounds further */
+               if( *nchgbds - oldnchgbds > 0 )
+               {
+                  /* check for fixed variables */
+                  SCIP_CALL( fixVariables(scip, cons, cutoff, nfixedvars) );
+                  if( *cutoff )
+                     return SCIP_OKAY;
+
+                  /* tighten variable's bounds */
+                  SCIP_CALL( tightenBounds(scip, cons, sortvars, cutoff, nchgbds) );
+                  if( *cutoff )
+                     return SCIP_OKAY;
+
+                  /* check for fixed variables */
+                  SCIP_CALL( fixVariables(scip, cons, cutoff, nfixedvars) );
+                  if( *cutoff )
+                     return SCIP_OKAY;
+               }
+            }
+         }
+      }
+
+      consdata->implsadded = TRUE;
+   }
 
    /* check if we already added the cliques of this constraint */
    if( consdata->cliquesadded )
@@ -5810,7 +6095,6 @@ SCIP_RETCODE extractCliques(
       if( allonebinary < nvars && (nposbinvars >= 2 || nnegbinvars >= 2) )
       {
          SCIP_Real threshold;
-         SCIP_Bool infeasible;
          int nbdchgs;
          int jstart;
          int j;
@@ -6156,7 +6440,6 @@ SCIP_RETCODE extractCliques(
    if( lhsclique || rhsclique )
    {
       SCIP_Bool* values;
-      SCIP_Bool infeasible;
       int nbdchgs;
 
       SCIPdebugMessage("linear constraint <%s>: adding clique with %d vars (%d pos, %d neg)\n",
@@ -8145,76 +8428,6 @@ SCIP_RETCODE dualPresolve(
          SCIPdebugMessage("aggregation non successful!\n");
       }
    }
-
-   return SCIP_OKAY;
-}
-
-/** converts all variables with fixed domain into FIXED variables */
-static
-SCIP_RETCODE fixVariables(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< linear constraint */
-   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
-   int*                  nfixedvars          /**< pointer to count the total number of fixed variables */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_VAR* var;
-   SCIP_VARSTATUS varstatus;
-   SCIP_Real lb;
-   SCIP_Real ub;
-   SCIP_Bool fixed;
-   SCIP_Bool infeasible;
-   int v;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(cutoff != NULL);
-   assert(nfixedvars != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      assert(consdata->vars != NULL);
-      var = consdata->vars[v];
-      varstatus = SCIPvarGetStatus(var);
-
-      if( varstatus != SCIP_VARSTATUS_FIXED )
-      {
-         lb = SCIPvarGetLbGlobal(var);
-         ub = SCIPvarGetUbGlobal(var);
-         if( SCIPisEQ(scip, lb, ub) )
-         {
-            SCIP_Real fixval;
-
-            fixval = SCIPselectSimpleValue(lb - 0.9 * SCIPepsilon(scip), ub + 0.9 * SCIPepsilon(scip), MAXDNOM);
-            SCIPdebugMessage("converting variable <%s> with fixed bounds [%.15g,%.15g] into fixed variable fixed at %.15g\n",
-               SCIPvarGetName(var), lb, ub, fixval);
-            SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
-            if( infeasible )
-            {
-               SCIPdebugMessage(" -> infeasible fixing\n");
-               *cutoff = TRUE;
-               return SCIP_OKAY;
-            }
-            if( fixed )
-               (*nfixedvars)++;
-         }
-      }
-   }
-
-   SCIP_CALL( applyFixings(scip, cons, &infeasible) );
-
-   if( infeasible )
-   {
-      SCIPdebugMessage(" -> infeasible fixing\n");
-      *cutoff = TRUE;
-      return SCIP_OKAY;
-   }
-
-   assert(consdata->removedfixings);
 
    return SCIP_OKAY;
 }
@@ -11404,7 +11617,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          assert(consdata->nvars >= 1); /* otherwise, it should be redundant or infeasible */
 
          /* extract cliques from constraint */
-         SCIP_CALL( extractCliques(scip, cons, &cutoff, nchgbds) );
+         SCIP_CALL( extractCliques(scip, cons, conshdlrdata->sortvars, nfixedvars, nchgbds, &cutoff) );
          if( cutoff )
             break;
 
