@@ -22,3 +22,15 @@
 =opt= SfOMIP_001             71.4663684
 =opt= stha                     40355.82
 =opt= SRtest                -11126.3198
+=opt= value_6497547             6497547
+=opt= pckInstMip_0_cpx            361.5
+=opt= pckInstMip_0_scip           361.5
+=opt= ilaser0                         0
+=opt= d3s0                          729
+=opt= ModelScip               415947434
+=opt= neos4.mps.cuts    -1.17250584e+10
+=opt= bug_502                         3
+=opt= bug_503                         7
+=unkn= bug486
+=opt= je2A                   7217766.92
+=unkn= bug490
