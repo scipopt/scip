@@ -11931,7 +11931,7 @@ SCIP_RETCODE presolveRound(
          /* only presolving methods which have non-negative priority will be called before constraint handlers */
          if( prioprop < 0 )
             break;
-         
+
          if( onlydelayed && !SCIPpropWasPresolDelayed(scip->set->props[j]) )
          {
             ++j;
@@ -12001,8 +12001,10 @@ SCIP_RETCODE presolveRound(
       SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp,
             scip->branchcand) );
 
+      SCIPdebugMessage("presolving callback return with result <%d>\n", result);
+
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
-      if( onlydelayed && result == SCIP_SUCCESS )
+      if( onlydelayed && (result == SCIP_SUCCESS || (result == SCIP_DELAYED && !SCIPisPresolveFinished(scip))) )
       {
          *delayed = TRUE;
          aborted = TRUE;
@@ -12043,8 +12045,10 @@ SCIP_RETCODE presolveRound(
       SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp,
             scip->branchcand) );
 
+      SCIPdebugMessage("presolving callback return with result <%d>\n", result);
+
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
-      if( onlydelayed && result == SCIP_SUCCESS )
+      if( onlydelayed && (result == SCIP_SUCCESS || (result == SCIP_DELAYED && !SCIPisPresolveFinished(scip))) )
       {
          *delayed = TRUE;
          aborted = TRUE;
@@ -12134,8 +12138,10 @@ SCIP_RETCODE presolveRound(
       SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp,
             scip->branchcand) );
 
+      SCIPdebugMessage("presolving callback return with result <%d>\n", result);
+
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
-      if( onlydelayed && result == SCIP_SUCCESS )
+      if( onlydelayed && (result == SCIP_SUCCESS || (result == SCIP_DELAYED && !SCIPisPresolveFinished(scip))) )
       {
          *delayed = TRUE;
          aborted = TRUE;
