@@ -540,6 +540,8 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->signature = 0;
    (*consdata)->row = NULL;
+   (*consdata)->existmultaggr = FALSE;
+
    if( nvars > 0 )
    {
       int v;
@@ -552,22 +554,24 @@ SCIP_RETCODE consdataCreate(
       {
          /* get transformed variables */
          SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
-#ifndef NDEBUG
+
+         /* check for multi-aggregations and capture variables */
          for( v = 0; v < (*consdata)->nvars; v++ )
          {
             SCIP_VAR* var = SCIPvarGetProbvar((*consdata)->vars[v]);
             assert(var != NULL);
-            assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR);
+            (*consdata)->existmultaggr = (*consdata)->existmultaggr || (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+            SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
          }
-#endif
       }
-
-
-      /* capture variables */
-      for( v = 0; v < (*consdata)->nvars; v++ )
+      else
       {
-         assert((*consdata)->vars[v] != NULL);
-         SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
+         /* capture variables */
+         for( v = 0; v < (*consdata)->nvars; v++ )
+         {
+            assert((*consdata)->vars[v] != NULL);
+            SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
+         }
       }
 
    }
@@ -587,7 +591,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->varsdeleted = FALSE;
    (*consdata)->merged = FALSE;
    (*consdata)->propagated = FALSE;
-   (*consdata)->existmultaggr = FALSE;
 
    return SCIP_OKAY;
 }
@@ -5446,6 +5449,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
    {
       SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;
+      int oldnfixedvars;
 
       cons = usefulconss[c];
       assert(cons != NULL);
@@ -5481,6 +5485,8 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
       if( SCIPconsIsDeleted(cons) )
          continue;
 
+      oldnfixedvars = *nfixedvars;
+
       /* merging unmerged constraints */
       SCIP_CALL( mergeMultiples(scip, cons, nfixedvars, ndelconss, nchgcoefs, cutoff) );
 
@@ -5490,11 +5496,21 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
       if( SCIPconsIsDeleted(cons) )
          continue;
 
+      if( oldnfixedvars < *nfixedvars )
+      {
+         /* update the variables */
+         SCIP_CALL( applyFixings(scip, cons, &nlocaladdconss, ndelconss, nfixedvars, cutoff) );
+         assert(!SCIPconsIsDeleted(cons));
+         assert(nlocaladdconss == 0);
+         assert(!*cutoff);
+
+         if( SCIPconsIsDeleted(cons) )
+            continue;
+      }
+
       /* if the constraint was not merged and consists of a variable with its negation, the constraint is redundant */
       if( consdata->nvars < 2 )
       {
-         assert(consdata->nvars == 1);
-
          /* deleting redundant set-packing constraint */
          if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
          {
@@ -5510,6 +5526,14 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             SCIP_Bool fixed;
 
             assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
+
+            if( consdata->nvars == 0 )
+            {
+               SCIPdebugMessage("empty set partition constraint <%s> led to infeasibility\n", SCIPconsGetName(cons));
+
+               *cutoff = TRUE;
+               break;
+            }
 
 	    SCIPdebugMessage("fixing <%s> to 1 because this variable is the last variable in a set partition constraint <%s>\n", SCIPvarGetName(consdata->vars[0]), SCIPconsGetName(cons));
 

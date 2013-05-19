@@ -265,21 +265,23 @@ SCIP_RETCODE consdataCreate(
    {
       SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
 
-#ifndef NDEBUG
+      /* check for multi-aggregations and capture variables */
       for( v = 0; v < (*consdata)->nvars; v++ )
       {
          SCIP_VAR* var = SCIPvarGetProbvar((*consdata)->vars[v]);
          assert(var != NULL);
-         assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR);
+         (*consdata)->existmultaggr = (*consdata)->existmultaggr || (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+         SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
       }
-#endif
    }
-
-   /* capture variables */
-   for( v = 0; v < (*consdata)->nvars; v++ )
+   else
    {
-      assert((*consdata)->vars[v] != NULL);
-      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
+      /* capture variables */
+      for( v = 0; v < (*consdata)->nvars; v++ )
+      {
+         assert((*consdata)->vars[v] != NULL);
+         SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
+      }
    }
 
    return SCIP_OKAY;
@@ -2091,6 +2093,8 @@ SCIP_RETCODE removeRedundantConstraints(
    return SCIP_OKAY;
 }
 
+#define MAX_CONSLENGTH 100
+
 /** try to tighten constraints by reducing the number of variables in the constraints using implications and cliques,
  *  also derive fixations through them, @see SCIPshrinkDisjunctiveVarSet()
  */
@@ -2183,6 +2187,10 @@ SCIP_RETCODE shortenConss(
          continue;
       }
 
+      /* do not try to shorten too long constraints */
+      if( consdata->nvars > MAX_CONSLENGTH )
+         continue;
+
       /* form necessary data */
       for( v = consdata->nvars - 1; v >= 0; --v)
       {
@@ -2205,7 +2213,7 @@ SCIP_RETCODE shortenConss(
       }
 
       /* use implications and cliques to derive global fixings and to shrink the number of variables in this constraints */
-      SCIP_CALL( SCIPshrinkDisjunctiveVarSet(scip, probvars, bounds, boundtypes, redundants, consdata->nvars, &nredvars, nfixedvars, &redundant, TRUE ) );
+      SCIP_CALL( SCIPshrinkDisjunctiveVarSet(scip, probvars, bounds, boundtypes, redundants, consdata->nvars, &nredvars, nfixedvars, &redundant, TRUE) );
 
       /* remove redundant constraint */
       if( redundant )
