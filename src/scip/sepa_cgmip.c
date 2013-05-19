@@ -1062,7 +1062,7 @@ SCIP_RETCODE createSubscip(
    }
 
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sepa_cgmip separating MIP (%s)", SCIPgetProbName(scip));
-   SCIP_CALL( SCIPcreateProb(subscip, "sepa_cgmip separating MIP", NULL, NULL , NULL , NULL , NULL , NULL , NULL) );
+   SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL , NULL , NULL , NULL , NULL , NULL) );
    SCIP_CALL( SCIPsetObjsense(subscip, SCIP_OBJSENSE_MAXIMIZE) );
 
    /* alloc memory for subscipdata elements */
@@ -1684,21 +1684,21 @@ SCIP_RETCODE createSubscip(
          /* check for lower and upper objective bounds */
          if ( (sepadata->useobjub || sepadata->useobjlb) && ! SCIPisZero(scip, SCIPcolGetObj(cols[j])) )
          {
-            /* add upper objective bound */
-            if ( mipdata->yrhs[mipdata->nrows] != NULL )
-            {
-               assert( sepadata->useobjub );
-               consvars[nconsvars] = mipdata->yrhs[mipdata->nrows];
-               consvals[nconsvars] = -sigma * SCIPcolGetObj(cols[j]);
-               ++nconsvars;
-            }
-
             /* add lower objective bound */
             if ( mipdata->ylhs[mipdata->nrows] != NULL )
             {
                assert( sepadata->useobjlb );
                consvars[nconsvars] = mipdata->ylhs[mipdata->nrows];
                consvals[nconsvars] = -sigma * SCIPcolGetObj(cols[j]);
+               ++nconsvars;
+            }
+
+            /* add upper objective bound */
+            if ( mipdata->yrhs[mipdata->nrows] != NULL )
+            {
+               assert( sepadata->useobjub );
+               consvars[nconsvars] = mipdata->yrhs[mipdata->nrows];
+               consvals[nconsvars] = sigma * SCIPcolGetObj(cols[j]);
                ++nconsvars;
             }
          }
@@ -1761,21 +1761,21 @@ SCIP_RETCODE createSubscip(
          /* check for lower and upper objective bounds */
          if ( (sepadata->useobjub || sepadata->useobjlb) && ! SCIPisZero(scip, SCIPcolGetObj(cols[j])) )
          {
-            /* add upper objective bound */
-            if ( mipdata->yrhs[mipdata->nrows] )
-            {
-               assert( sepadata->useobjub );
-               consvars[nconsvars] = mipdata->yrhs[mipdata->nrows];
-               consvals[nconsvars] = -sigma * SCIPcolGetObj(cols[j]);
-               ++nconsvars;
-            }
-
             /* add lower objective bound */
             if ( mipdata->ylhs[mipdata->nrows] )
             {
                assert( sepadata->useobjlb );
                consvars[nconsvars] = mipdata->ylhs[mipdata->nrows];
                consvals[nconsvars] = -sigma * SCIPcolGetObj(cols[j]);
+               ++nconsvars;
+            }
+
+            /* add upper objective bound */
+            if ( mipdata->yrhs[mipdata->nrows] )
+            {
+               assert( sepadata->useobjub );
+               consvars[nconsvars] = mipdata->yrhs[mipdata->nrows];
+               consvals[nconsvars] = sigma * SCIPcolGetObj(cols[j]);
                ++nconsvars;
             }
          }
@@ -1833,6 +1833,16 @@ SCIP_RETCODE createSubscip(
 
    if ( sepadata->useobjub || sepadata->useobjlb )
    {
+      /* add lower objective bound */
+      if ( mipdata->ylhs[mipdata->nrows] != NULL && ! SCIPisZero(scip, lhs[mipdata->nrows]) )
+      {
+         assert( sepadata->useobjlb );
+         assert( ! SCIPisInfinity(scip, -lhs[mipdata->nrows]) );
+         consvars[nconsvars] = mipdata->ylhs[mipdata->nrows];
+         consvals[nconsvars] = -lhs[mipdata->nrows];
+         ++nconsvars;
+      }
+
       /* add upper objective bound */
       if ( mipdata->yrhs[mipdata->nrows] != NULL && ! SCIPisZero(scip, rhs[mipdata->nrows]) )
       {
@@ -1840,16 +1850,6 @@ SCIP_RETCODE createSubscip(
          assert( ! SCIPisInfinity(scip, rhs[mipdata->nrows]) );
          consvars[nconsvars] = mipdata->yrhs[mipdata->nrows];
          consvals[nconsvars] = rhs[mipdata->nrows];
-         ++nconsvars;
-      }
-
-      /* add lower objective bound */
-      if ( mipdata->ylhs[mipdata->nrows] != NULL && ! SCIPisZero(scip, lhs[mipdata->nrows]) )
-      {
-         assert( sepadata->useobjlb );
-         assert( ! SCIPisInfinity(scip, -lhs[mipdata->nrows]) );
-         consvars[nconsvars] = mipdata->ylhs[mipdata->nrows];
-         consvals[nconsvars] = lhs[mipdata->nrows];
          ++nconsvars;
       }
       assert( nconsvars <= (int) mipdata->n );
@@ -2433,7 +2433,7 @@ SCIP_RETCODE computeCut(
          continue;
       }
 
-      /* get weight from solution */
+      /* get weight from solution (take larger of the values of lhs/rhs) */
       if ( mipdata->ylhs[i] != NULL )
       {
          val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
@@ -2468,7 +2468,7 @@ SCIP_RETCODE computeCut(
    /* get weight from objective cuts */
    if ( sepadata->useobjub || sepadata->useobjlb )
    {
-      SCIP_Real weight = 0.0;
+      SCIP_Real absweight = 0.0;
 
       assert( mipdata->ntotalrows == mipdata->nrows + 1 );
 
@@ -2478,7 +2478,7 @@ SCIP_RETCODE computeCut(
          val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          if ( SCIPisFeasPositive(scip, val) )
-            weight = -val;
+            absweight = val;
       }
       if ( mipdata->yrhs[mipdata->nrows] != NULL )
       {
@@ -2486,13 +2486,12 @@ SCIP_RETCODE computeCut(
          val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
-         if ( SCIPisFeasGT(scip, val, ABS(weight)) )
-            weight = val;
+         if ( SCIPisFeasGT(scip, val, absweight) )
+            absweight = val;
       }
 
-      weight = REALABS(weight);
-      if ( weight > maxabsweight )
-         maxabsweight = weight;
+      if ( absweight > maxabsweight )
+         maxabsweight = absweight;
    }
 
    /* calculate the row summation */
@@ -2539,7 +2538,7 @@ SCIP_RETCODE computeCut(
          val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
-         if ( SCIPisFeasGT(scip, val, ABS(weight)) )
+         if ( SCIPisFeasGT(scip, val, REALABS(weight)) )
             weight = val;
       }
 
@@ -2628,7 +2627,7 @@ SCIP_RETCODE computeCut(
          val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
-         if ( SCIPisFeasGT(scip, val, ABS(weight)) )
+         if ( SCIPisFeasGT(scip, val, REALABS(weight)) )
             weight = val;
       }
 
