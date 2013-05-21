@@ -637,11 +637,14 @@ SCIP_RETCODE dualPresolving(
       /* variables with varstatus not equal to SCIP_VARSTATUS_FIXED can also have fixed bounds, but were not removed yet */
       if( SCIPvarGetUbGlobal(var) < 0.5 )
       {
+#ifndef NDEBUG
          SCIP_VAR* bestvar = NULL;
-
+#endif
          if( idx == consdata->nvars - 1 )
          {
+#ifndef NDEBUG
             bestvar = consdata->vars[idx];
+#endif
             idx = v;
          }
 
