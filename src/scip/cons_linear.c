@@ -6040,6 +6040,11 @@ SCIP_RETCODE extractCliques(
 
    /**@todo extract more cliques, implications and variable bounds from linear constraints */
 
+   /* recompute activities if needed */
+   if( !consdata->validactivities )
+      consdataCalcActivities(scip, consdata);
+   assert(consdata->validactivities);
+
    finitelhs = !SCIPisInfinity(scip, -consdata->lhs);
    finiterhs = !SCIPisInfinity(scip, consdata->rhs);
    finitenegminact = (consdata->glbminactivityneginf == 0 && consdata->glbminactivityneghuge == 0);
@@ -6095,6 +6100,7 @@ SCIP_RETCODE extractCliques(
       if( allonebinary < nvars && (nposbinvars >= 2 || nnegbinvars >= 2) )
       {
          SCIP_Real threshold;
+         int oldnchgbds = *nchgbds;
          int nbdchgs;
          int jstart;
          int j;
@@ -6183,6 +6189,71 @@ SCIP_RETCODE extractCliques(
             }
          }
 
+         /* did we find some boundchanges, then we need to remove fixings and tighten the bounds further */
+         if( !*cutoff && *nchgbds - oldnchgbds > 0 )
+         {
+            /* check for fixed variables */
+            SCIP_CALL( fixVariables(scip, cons, cutoff, nfixedvars) );
+
+            if( !*cutoff )
+            {
+               /* tighten variable's bounds */
+               SCIP_CALL( tightenBounds(scip, cons, sortvars, cutoff, nchgbds) );
+
+               if( !*cutoff )
+               {
+                  /* check for fixed variables */
+                  SCIP_CALL( fixVariables(scip, cons, cutoff, nfixedvars) );
+
+                  if( !*cutoff )
+                  {
+                     /* sort variables by variable type */
+                     SCIP_CALL( consdataSort(scip, consdata) );
+
+                     /* recompute activities if needed */
+                     if( !consdata->validactivities )
+                        consdataCalcActivities(scip, consdata);
+                     assert(consdata->validactivities);
+
+                     nvars = consdata->nvars;
+                     vars = consdata->vars;
+                     vals = consdata->vals;
+                     nposbinvars = 0;
+                     nnegbinvars = 0;
+                     allonebinary = 0;
+
+                     /* update binary variables */
+                     for( i = 0; i < nvars; ++i )
+                     {
+                        if( SCIPvarIsBinary(vars[i]) )
+                        {
+                           assert(!SCIPisZero(scip, vals[i]));
+
+                           if( SCIPisEQ(scip, REALABS(vals[i]), 1.0) )
+                              ++allonebinary;
+
+                           binvars[nposbinvars + nnegbinvars] = vars[i];
+                           binvarvals[nposbinvars + nnegbinvars] = vals[i];
+
+                           if( SCIPisPositive(scip, vals[i]) )
+                              ++nposbinvars;
+                           else
+                              ++nnegbinvars;
+
+                           assert(nposbinvars + nnegbinvars <= nvars);
+                        }
+                        /* stop searching for binary variables, because the constraint data is sorted */
+                        else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS )
+                           break;
+                     }
+                     assert(nposbinvars + nnegbinvars <= nvars);
+                  }
+               }
+            }
+
+            oldnchgbds = *nchgbds;
+         }
+
          /* case b) */
          if( !(*cutoff) && finitelhs && finiteposmaxact && nnegbinvars >= 2 )
          {
@@ -6247,6 +6318,71 @@ SCIP_RETCODE extractCliques(
                   }
                }
             }
+         }
+
+         /* did we find some boundchanges, then we need to remove fixings and tighten the bounds further */
+         if( !*cutoff && *nchgbds - oldnchgbds > 0 )
+         {
+            /* check for fixed variables */
+            SCIP_CALL( fixVariables(scip, cons, cutoff, nfixedvars) );
+
+            if( !*cutoff )
+            {
+               /* tighten variable's bounds */
+               SCIP_CALL( tightenBounds(scip, cons, sortvars, cutoff, nchgbds) );
+
+               if( !*cutoff )
+               {
+                  /* check for fixed variables */
+                  SCIP_CALL( fixVariables(scip, cons, cutoff, nfixedvars) );
+
+                  if( !*cutoff )
+                  {
+                     /* sort variables by variable type */
+                     SCIP_CALL( consdataSort(scip, consdata) );
+
+                     /* recompute activities if needed */
+                     if( !consdata->validactivities )
+                        consdataCalcActivities(scip, consdata);
+                     assert(consdata->validactivities);
+
+                     nvars = consdata->nvars;
+                     vars = consdata->vars;
+                     vals = consdata->vals;
+                     nposbinvars = 0;
+                     nnegbinvars = 0;
+                     allonebinary = 0;
+
+                     /* update binary variables */
+                     for( i = 0; i < nvars; ++i )
+                     {
+                        if( SCIPvarIsBinary(vars[i]) )
+                        {
+                           assert(!SCIPisZero(scip, vals[i]));
+
+                           if( SCIPisEQ(scip, REALABS(vals[i]), 1.0) )
+                              ++allonebinary;
+
+                           binvars[nposbinvars + nnegbinvars] = vars[i];
+                           binvarvals[nposbinvars + nnegbinvars] = vals[i];
+
+                           if( SCIPisPositive(scip, vals[i]) )
+                              ++nposbinvars;
+                           else
+                              ++nnegbinvars;
+
+                           assert(nposbinvars + nnegbinvars <= nvars);
+                        }
+                        /* stop searching for binary variables, because the constraint data is sorted */
+                        else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS )
+                           break;
+                     }
+                     assert(nposbinvars + nnegbinvars <= nvars);
+                  }
+               }
+            }
+
+            oldnchgbds = *nchgbds;
          }
 
          /* case c) */
@@ -6326,6 +6462,71 @@ SCIP_RETCODE extractCliques(
             }
 
             SCIPfreeBufferArray(scip, &values);
+         }
+
+         /* did we find some boundchanges, then we need to remove fixings and tighten the bounds further */
+         if( !*cutoff && *nchgbds - oldnchgbds > 0 )
+         {
+            /* check for fixed variables */
+            SCIP_CALL( fixVariables(scip, cons, cutoff, nfixedvars) );
+
+            if( !*cutoff )
+            {
+               /* tighten variable's bounds */
+               SCIP_CALL( tightenBounds(scip, cons, sortvars, cutoff, nchgbds) );
+
+               if( !*cutoff )
+               {
+                  /* check for fixed variables */
+                  SCIP_CALL( fixVariables(scip, cons, cutoff, nfixedvars) );
+
+                  if( !*cutoff )
+                  {
+                     /* sort variables by variable type */
+                     SCIP_CALL( consdataSort(scip, consdata) );
+
+                     /* recompute activities if needed */
+                     if( !consdata->validactivities )
+                        consdataCalcActivities(scip, consdata);
+                     assert(consdata->validactivities);
+
+                     nvars = consdata->nvars;
+                     vars = consdata->vars;
+                     vals = consdata->vals;
+                     nposbinvars = 0;
+                     nnegbinvars = 0;
+                     allonebinary = 0;
+
+                     /* update binary variables */
+                     for( i = 0; i < nvars; ++i )
+                     {
+                        if( SCIPvarIsBinary(vars[i]) )
+                        {
+                           assert(!SCIPisZero(scip, vals[i]));
+
+                           if( SCIPisEQ(scip, REALABS(vals[i]), 1.0) )
+                              ++allonebinary;
+
+                           binvars[nposbinvars + nnegbinvars] = vars[i];
+                           binvarvals[nposbinvars + nnegbinvars] = vals[i];
+
+                           if( SCIPisPositive(scip, vals[i]) )
+                              ++nposbinvars;
+                           else
+                              ++nnegbinvars;
+
+                           assert(nposbinvars + nnegbinvars <= nvars);
+                        }
+                        /* stop searching for binary variables, because the constraint data is sorted */
+                        else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS )
+                           break;
+                     }
+                     assert(nposbinvars + nnegbinvars <= nvars);
+                  }
+               }
+            }
+
+            oldnchgbds = *nchgbds;
          }
 
          /* case d) */
@@ -6587,7 +6788,7 @@ SCIP_RETCODE consdataTightenCoefs(
 
    /* @todo Is this still needed with automatic recomputation of activities? */
    /* if the maximal coefficient is too large, recompute the activities */
-   if( consdata->maxabsval > MAXVALRECOMP )
+   if( consdata->validmaxabsval && consdata->maxabsval > MAXVALRECOMP )
    {
       consdataRecomputeMinactivity(scip, consdata);
       consdataRecomputeMaxactivity(scip, consdata);
@@ -11620,6 +11821,27 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          SCIP_CALL( extractCliques(scip, cons, conshdlrdata->sortvars, nfixedvars, nchgbds, &cutoff) );
          if( cutoff )
             break;
+
+         if( consdata->nvars == 0 )
+         {
+            if( SCIPisFeasGT(scip, consdata->lhs, consdata->rhs) )
+            {
+               SCIPdebugMessage("empty linear constraint <%s> is infeasible: sides=[%.15g,%.15g]\n",
+                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+               cutoff = TRUE;
+            }
+            else
+            {
+               SCIPdebugMessage("empty linear constraint <%s> is redundant: sides=[%.15g,%.15g]\n",
+                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               assert(!SCIPconsIsActive(cons));
+
+               if( !consdata->upgraded )
+                  (*ndelconss)++;
+            }
+            break;
+         }
 
          /* reduce big-M coefficients, that make the constraint redundant if the variable is on a bound */
          SCIP_CALL( consdataTightenCoefs(scip, cons, nchgcoefs, nchgsides) );
