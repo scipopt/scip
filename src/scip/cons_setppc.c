@@ -97,6 +97,7 @@
 struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
+   SCIP_CONSHDLR*        conshdlrlinear;     /**< pointer to linear constraint handler or NULL if not included */
 #ifdef VARUSES
    SCIP_INTARRAY*        varuses;            /**< number of times a var is used in the active setppc constraints */
 #endif
@@ -5254,6 +5255,9 @@ SCIP_RETCODE preprocessCliques(
 static
 SCIP_RETCODE multiAggregateBinvar(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             linearconshdlrexist,/**< does the linear constraint handler exist, necessaray for
+                                              *   multi-aggregations
+                                              */
    SCIP_VAR**            vars,               /**< all variables including the variable to which will be
                                               *   multi-aggregated
                                               */
@@ -5287,6 +5291,9 @@ SCIP_RETCODE multiAggregateBinvar(
 
       return SCIP_OKAY;
    }
+
+   if( !linearconshdlrexist )
+      return SCIP_OKAY;
 
    /* if the last variable will be multi-aggregated, we do not need to copy the variables */
    if( pos == nvars - 1 )
@@ -5349,6 +5356,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
    SCIP_CONS**           conss,              /**< constraint set */
    int                   nconss,             /**< number of constraints in constraint set */
    SCIP_Bool             dualpresolvingenabled,/**< is dual presolving enabled */
+   SCIP_Bool             linearconshdlrexist,/**< does the linear constraint handler exist, necessaray for
+                                              *   multi-aggregations
+                                              */
    int*                  nfixedvars,         /**< pointer to count number of deleted variables */
    int*                  naggrvars,          /**< pointer to count number of aggregated variables */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints */
@@ -5684,7 +5694,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                   SCIPdebugMessage("multi-aggregating in set-packing constraint\n");
 
                   /* perform aggregation on variables resulting from a set-packing constraint */
-                  SCIP_CALL( multiAggregateBinvar(scip, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
+                  SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
                   assert(!infeasible);
                }
 
@@ -5794,11 +5804,11 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                   /* perform aggregation on variables resulting from a set-packing constraint */
                   if( multaggridx == c )
                   {
-                     SCIP_CALL( multiAggregateBinvar(scip, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
+                     SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
                   }
                   else
                   {
-                     SCIP_CALL( multiAggregateBinvar(scip, aggrconsdata->vars, aggrconsdata->nvars, varindex, &infeasible, &aggregated) );
+                     SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, aggrconsdata->vars, aggrconsdata->nvars, varindex, &infeasible, &aggregated) );
                   }
                   deleteconsindex = multaggridx;
                }
@@ -5807,11 +5817,11 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                   /* perform aggregation on variables resulting from a set-packing constraint */
                   if( multaggridx == c )
                   {
-                     SCIP_CALL( multiAggregateBinvar(scip, aggrconsdata->vars, aggrconsdata->nvars, varindex, &infeasible, &aggregated) );
+                     SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, aggrconsdata->vars, aggrconsdata->nvars, varindex, &infeasible, &aggregated) );
                   }
                   else
                   {
-                     SCIP_CALL( multiAggregateBinvar(scip, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
+                     SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
                   }
                   deleteconsindex = notmultaggridx;
                }
@@ -5825,7 +5835,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             SCIPdebugMessage("multi-aggregating in set-partitioning constraint\n");
 
             /* perform aggregation on variables resulting from a set-partitioning constraint */
-            SCIP_CALL( multiAggregateBinvar(scip, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
+            SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
             assert(!infeasible);
 
             ++ndecs;
@@ -5928,7 +5938,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                SCIPdebugMessage("multi-aggregating in one set-partitioning or one set-packing constraint\n");
 
                /* perform aggregation on variables resulting from a set-partitioning constraint */
-               SCIP_CALL( multiAggregateBinvar(scip, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
+               SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
                assert(!infeasible);
                assert(deleteconsindex == -1);
             }
@@ -5937,14 +5947,21 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                aggrconsdata = SCIPconsGetData(usefulconss[consindex]);
                assert(aggrconsdata != NULL);
 
+               /* @note it might have happened that we hav a variable at hand which exists actually in a set-packing
+                *       constraint and due to some other aggregation we increased the number of locks and reached this
+                *       part of the code, where we would expect only set-partitioning constraint in generally, so in
+                *       such a strange case we cannot aggregate anything
+                */
+               if( (SCIP_SETPPCTYPE)aggrconsdata->setppctype != SCIP_SETPPCTYPE_PARTITIONING )
+                  continue;
+
                assert(0 <= varindex && varindex < aggrconsdata->nvars);
-               assert((SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
                assert(aggrconsdata->vars[varindex] == SCIPvarGetNegatedVar(var));
 
                SCIPdebugMessage("multi-aggregating in two set-partitioning or one set-partitioning and -packing constraint\n");
 
                /* perform aggregation on variables resulting from a set-partitioning constraint */
-               SCIP_CALL( multiAggregateBinvar(scip, aggrconsdata->vars, aggrconsdata->nvars, varindex, &infeasible, &aggregated) );
+               SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, aggrconsdata->vars, aggrconsdata->nvars, varindex, &infeasible, &aggregated) );
                assert(!infeasible);
 
                /* change pointer for deletion */
@@ -7914,9 +7931,9 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    /* determine singleton variables in set-partitioning/-packing constraints, or doubleton variables (active and
     * negated) in any combination of set-partitioning and set-packing constraints
     */
-   if( nconss > 1 && ((conshdlrdata->nsetpart > 0 && !SCIPdoNotMultaggr(scip)) || (conshdlrdata->dualpresolving && conshdlrdata->nsetpart < nconss && !SCIPdoNotAggr(scip))) )
+   if( nconss > 1 && ((conshdlrdata->nsetpart > 0 && !SCIPdoNotMultaggr(scip) && conshdlrdata->conshdlrlinear != NULL) || (conshdlrdata->dualpresolving && conshdlrdata->nsetpart < nconss && !SCIPdoNotAggr(scip))) )
    {
-      SCIP_CALL( removeDoubleAndSingletonsAndPerformDualpresolve(scip, conss, nconss, conshdlrdata->dualpresolving, nfixedvars, naggrvars, ndelconss, nchgcoefs, nchgsides, &cutoff) );
+      SCIP_CALL( removeDoubleAndSingletonsAndPerformDualpresolve(scip, conss, nconss, conshdlrdata->dualpresolving, conshdlrdata->conshdlrlinear != NULL, nfixedvars, naggrvars, ndelconss, nchgcoefs, nchgsides, &cutoff) );
 
       if( cutoff )
       {
@@ -8712,7 +8729,9 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSetppc) );
 
-   if( SCIPfindConshdlr(scip, "linear") != NULL )
+   conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");
+
+   if( conshdlrdata->conshdlrlinear != NULL )
    {
       /* include the linear constraint to setppc constraint upgrade in the linear constraint handler */
       SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdSetppc, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
