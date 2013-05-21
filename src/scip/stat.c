@@ -258,6 +258,7 @@ void SCIPstatReset(
 
    SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat);
+   SCIPstatResetPrimalIntegral(stat);
 }
 
 /** reset implication counter */
@@ -290,6 +291,83 @@ void SCIPstatResetPresolving(
    stat->npresolchgsides = 0;
 
    SCIPstatResetCurrentRun(stat);
+}
+
+/* reset primal integral */
+void SCIPstatResetPrimalIntegral(
+   SCIP_STAT*           stat                 /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+
+   stat->primalintegralval = 0.0;
+   stat->previousgap = 100.0;
+   stat->previntegralevaltime = 0.0;
+   stat->lastprimalbound = SCIP_DEFAULT_INFINITY;
+   stat->lastdualbound = -SCIP_DEFAULT_INFINITY;
+
+   stat->objoffset = 0.0;
+}
+
+/** retransform objective value for primal integral calculation */
+static
+SCIP_Real transformObjval(
+   SCIP_STAT*           stat,               /** problem statistics */
+   SCIP_SET*            set,                /** global SCIP settings */
+   SCIP_Real            value               /** value to be transformed */
+   )
+{
+   if( SCIPsetIsInfinity(set, REALABS(value)) )
+      return SCIP_DEFAULT_INFINITY;
+
+   return value + stat->objoffset;
+}
+
+/** update the primal dual integral statistic. method accepts + and - SCIPsetInfinity() as values for
+ *  primal and dual bound, respectively
+ */
+void SCIPstatUpdatePrimalIntegral(
+   SCIP_STAT*           stat,                /**< problem statistics data */
+   SCIP_SET*            set,                 /**< global SCIP settings */
+   SCIP_Real            primalbound,         /**< current primal bound in transformed problem, or infinity */
+   SCIP_Real            dualbound            /**< current lower bound in transformed space, or -infinity */
+   )
+{
+   SCIP_Real currentgap;
+   SCIP_Real solvingtime;
+   SCIP_Real origprimal;
+   SCIP_Real origdual;
+
+   assert(stat != NULL);
+   assert(set != NULL);
+
+   solvingtime = SCIPclockGetTime(stat->solvingtime);
+
+	/* primal and dual bound are allowed to have infinite values. Take stored values from last evaluation instead */
+   primalbound = MIN(primalbound, stat->lastprimalbound);
+   dualbound = MAX(dualbound, stat->lastdualbound);
+
+	/* transformation does not respect objective sense and scaling because these cancel out in the gap calculation */
+   origprimal = transformObjval(stat, set, primalbound);
+   origdual = transformObjval(stat, set, dualbound);
+
+   assert(solvingtime >= stat->previntegralevaltime);
+   stat->primalintegralval += (solvingtime - stat->previntegralevaltime) * stat->previousgap;
+
+	/* gap in the definition of the primal-dual integral differs from default SCIP gap function; Here, the MAX(origprimal, origdual) is taken 
+	 * for gap quotient
+	 */
+   if( SCIPsetIsEQ(set, origprimal, origdual) )
+      currentgap = 0.0;
+   else if( !SCIPsetIsInfinity(set, origprimal) && !SCIPsetIsInfinity(set, REALABS(origdual)) )
+      currentgap = 100.0 * MIN(1.0, REALABS(origprimal - origdual) / MAX(REALABS(origprimal), REALABS(origdual)));
+   else currentgap = 100.0;
+
+	/* update all relevant information for next evaluation */
+   stat->previousgap = currentgap;
+   stat->previntegralevaltime = solvingtime;
+   stat->lastprimalbound = primalbound;
+   stat->lastdualbound = dualbound;
 }
 
 /** reset current branch and bound run specific statistics */

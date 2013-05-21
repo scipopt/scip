@@ -1271,7 +1271,7 @@ SCIP_RETCODE solveNodeInitialLP(
 	    || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT)
 	 && SCIPprobAllColsInLP(prob, set, lp) && SCIPlpIsRelax(lp) )
       {
-	 SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, prob, lp) );
+	 SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, prob, lp) );
 
          /* if this is the first LP solved at the root, store its iteration count and solution value */
          if( stat->nnodelps == 0 && focusnode->depth == 0 )
@@ -1840,7 +1840,7 @@ SCIP_RETCODE SCIPpriceLoop(
          *aborted = ( (*aborted) || (result == SCIP_DIDNOTRUN) );
 
          /* update lower bound w.r.t. the lower bound given by the pricer */
-         SCIPnodeUpdateLowerbound(focusnode, stat, lb);
+         SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, lb);
          SCIPdebugMessage(" -> new lower bound given by pricer %s: %g\n", SCIPpricerGetName(set->pricers[p]), lb);
       }
 
@@ -2085,7 +2085,7 @@ SCIP_RETCODE priceAndCutLoop(
          /* update lower bound w.r.t. the LP solution */
          if( !(*lperror) && !(*pricingaborted) && SCIPlpIsRelax(lp) )
          {
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, prob, lp) );
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, prob, lp) );
             SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
                SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, prob));
 
@@ -2388,7 +2388,7 @@ SCIP_RETCODE priceAndCutLoop(
    /* update lower bound w.r.t. the LP solution */
    if( *cutoff )
    {
-      SCIPnodeUpdateLowerbound(focusnode, stat, SCIPsetInfinity(set));
+      SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, SCIPsetInfinity(set));
    }
    else if( !(*lperror) )
    {
@@ -2397,7 +2397,7 @@ SCIP_RETCODE priceAndCutLoop(
 
       if( SCIPlpIsRelax(lp) )
       {
-         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, prob, lp) );
+         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, prob, lp) );
       }
 
       /* update node estimate */
@@ -2468,7 +2468,7 @@ SCIP_RETCODE applyBounding(
 
       /* update lower bound w.r.t. the pseudo solution */
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set, prob);
-      SCIPnodeUpdateLowerbound(focusnode, stat, pseudoobjval);
+      SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, pseudoobjval);
       SCIPdebugMessage(" -> lower bound: %g [%g] (pseudoobj: %g [%g]), cutoff bound: %g [%g]\n",
          SCIPnodeGetLowerbound(focusnode), SCIPprobExternObjval(prob, set, SCIPnodeGetLowerbound(focusnode)),
          pseudoobjval, SCIPprobExternObjval(prob, set, pseudoobjval),
@@ -2480,7 +2480,7 @@ SCIP_RETCODE applyBounding(
       {
          SCIPdebugMessage("node is cut off by bounding (lower=%g, upper=%g)\n",
             SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
-         SCIPnodeUpdateLowerbound(focusnode, stat, SCIPsetInfinity(set));
+         SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, SCIPsetInfinity(set));
          *cutoff = TRUE;
 
          /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
@@ -2762,7 +2762,7 @@ SCIP_RETCODE solveNodeRelax(
          assert(SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
          
          /* update lower bound w.r.t. the lower bound given by the relaxator */
-         SCIPnodeUpdateLowerbound(focusnode, stat, lowerbound);
+         SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, lowerbound);
          SCIPdebugMessage(" -> new lower bound given by relaxator %s: %g\n", 
             SCIPrelaxGetName(set->relaxs[r]), lowerbound);
       }
@@ -3888,7 +3888,7 @@ SCIP_RETCODE solveNode(
    if( *cutoff )
    {
       SCIPdebugMessage("node is cut off\n");
-      SCIPnodeUpdateLowerbound(focusnode, stat, SCIPsetInfinity(set));
+      SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, SCIPsetInfinity(set));
       *infeasible = TRUE;
    }
 

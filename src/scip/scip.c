@@ -630,12 +630,8 @@ void SCIPstoreSolutionGap(
    dualbound = getDualbound(scip);
 
    if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
-   {
       scip->stat->lastsolgap = 0.0;
 
-      if( scip->primal->nsols == 1 )
-         scip->stat->firstsolgap = 0.0;
-   }
    else if( SCIPsetIsZero(scip->set, dualbound)
       || SCIPsetIsZero(scip->set, primalbound)
       || SCIPsetIsInfinity(scip->set, REALABS(primalbound))
@@ -643,17 +639,12 @@ void SCIPstoreSolutionGap(
       || primalbound * dualbound < 0.0 )
    {
       scip->stat->lastsolgap = SCIPsetInfinity(scip->set);
-
-      if( scip->primal->nsols == 1 )
-         scip->stat->firstsolgap = scip->stat->lastsolgap;
    }
    else
-   {
       scip->stat->lastsolgap = REALABS((primalbound - dualbound)/MIN(REALABS(dualbound), REALABS(primalbound)));
 
-      if( scip->primal->nsols == 1 )
-         scip->stat->firstsolgap = scip->stat->lastsolgap;
-   }
+   if( scip->primal->nsols == 1 )
+      scip->stat->firstsolgap = scip->stat->lastsolgap;
 }
 
 /*
@@ -9042,6 +9033,7 @@ SCIP_RETCODE SCIPaddObjoffset(
    SCIP_CALL( SCIPprimalUpdateObjoffset(scip->primal, SCIPblkmem(scip), scip->set, scip->stat,
          scip->eventqueue, scip->transprob, scip->tree, scip->lp) );
 
+   scip->stat->objoffset += addval;
    return SCIP_OKAY;
 }
 
@@ -11279,7 +11271,7 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
 {
    SCIP_CALL( checkStage(scip, "SCIPupdateNodeLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeUpdateLowerbound(node, scip->stat, newbound);
+   SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->tree, newbound);
 
    /* if lowerbound exceeds the cutoffbound the node will be marked to be cutoff
     *
@@ -12540,7 +12532,7 @@ SCIP_RETCODE initSolve(
    /* update dual bound of the root node if a valid dual bound is at hand */
    if( scip->transprob->dualbound < SCIP_INVALID )
    {
-      SCIPnodeUpdateLowerbound(SCIPtreeGetRootNode(scip->tree), scip->stat,
+      SCIPnodeUpdateLowerbound(SCIPtreeGetRootNode(scip->tree), scip->stat, scip->set, scip->tree,
          SCIPprobInternObjval(scip->transprob, scip->set, scip->transprob->dualbound));
    }
 
@@ -27447,7 +27439,7 @@ SCIP_RETCODE SCIPendDive(
    if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL && SCIPlpIsRelax(scip->lp) && SCIPlpIsSolved(scip->lp) )
    {
       assert(SCIPtreeIsFocusNodeLPConstructed(scip->tree));
-      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->transprob, scip->lp) );
+      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->tree, scip->transprob, scip->lp) );
    }
    /* reset the probably changed LP's cutoff bound */
    SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->transprob, scip->primal->cutoffbound) );
@@ -31104,10 +31096,12 @@ SCIP_RETCODE SCIPaddSol(
       SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, scip->tree,
             scip->lp, scip->eventqueue, scip->eventfilter, sol, stored) );
 
-      if( *stored )
+
+      if( *stored && (bestsol != SCIPgetBestSol(scip)) )
       {
-         if( bestsol != SCIPgetBestSol(scip) )
-            SCIPstoreSolutionGap(scip);
+         SCIPstoreSolutionGap(scip);
+         assert(SCIPisEQ(scip, scip->stat->objoffset, scip->transprob->objoffset));
+         SCIPstatUpdatePrimalIntegral(scip->stat, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob), SCIPgetLowerbound(scip) );
       }
 
       return SCIP_OKAY;
@@ -31177,7 +31171,12 @@ SCIP_RETCODE SCIPaddSolFree(
       if( *stored )
       {
          if( bestsol != SCIPgetBestSol(scip) )
+         {
+            assert(SCIPgetBestSol(scip) != NULL);
             SCIPstoreSolutionGap(scip);
+            assert(SCIPisEQ(scip, scip->stat->objoffset, scip->transprob->objoffset));
+            SCIPstatUpdatePrimalIntegral(scip->stat, scip->set,  SCIPsolGetObj(SCIPgetBestSol(scip), scip->set, scip->transprob), SCIPgetLowerbound(scip) );
+         }
       }
 
       return SCIP_OKAY;
@@ -34867,6 +34866,7 @@ void printTreeStatistics(
       scip->stat->nnodes > 0
       ? (SCIP_Real)(scip->stat->nactivatednodes + scip->stat->ndeactivatednodes) / (SCIP_Real)scip->stat->nnodes : 0.0);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  primal integral  : %16.9f\n", scip->stat->primalintegralval);
 }
 
 /** display solution statistics */

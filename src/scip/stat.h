@@ -90,6 +90,22 @@ void SCIPstatResetPresolving(
    SCIP_STAT*            stat                /**< problem statistics data */
    );
 
+/* reset primal integral */
+extern
+void SCIPstatResetPrimalIntegral(
+   SCIP_STAT*           stat                 /**< problem statistics data */
+   );
+
+/** update the primal dual integral statistic. method accepts + and - SCIPsetInfinity() as values for
+ *  primal and dual bound, respectively
+ */
+extern
+void SCIPstatUpdatePrimalIntegral(
+   SCIP_STAT*           stat,                /**< problem statistics data */
+   SCIP_SET*            set,                 /**< global SCIP settings */
+   SCIP_Real            primalbound,         /**< current primal bound in transformed problem, or infinity */
+   SCIP_Real            dualbound            /**< current lower bound in transformed space, or -infinity */
+   );
 /** reset current branch and bound run specific statistics */
 extern
 void SCIPstatResetCurrentRun(

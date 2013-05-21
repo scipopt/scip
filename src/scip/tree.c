@@ -1812,7 +1812,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
          newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
       else
          newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, prob, var, oldbound, newbound, boundtype);
-      SCIPnodeUpdateLowerbound(node, stat, newpseudoobjval);
+      SCIPnodeUpdateLowerbound(node, stat, set, tree, newpseudoobjval);
    }
    else
    {
@@ -2116,6 +2116,8 @@ SCIP_RETCODE treeApplyPendingBdchgs(
 void SCIPnodeUpdateLowerbound(
    SCIP_NODE*            node,               /**< node to update lower bound for */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    )
 {
@@ -2127,7 +2129,19 @@ void SCIPnodeUpdateLowerbound(
       node->lowerbound = newbound;
       node->estimate = MAX(node->estimate, newbound);
       if( node->depth == 0 )
+      {
          stat->rootlowerbound = newbound;
+         SCIPstatUpdatePrimalIntegral(stat, set, SCIPsetInfinity(set), newbound);
+      }
+      else if( newbound > stat->lastdualbound )
+      {
+         SCIP_Real dualbound;
+         dualbound = SCIPtreeGetLowerbound(tree, set);
+         assert( newbound >= dualbound );
+       	/* updating the primal integral is only necessary if dual bound has increased since last evaluation */
+         if( dualbound > stat->lastdualbound )
+            SCIPstatUpdatePrimalIntegral(stat, set, SCIPsetInfinity(set), dualbound);
+      }
    }
 }
 
@@ -2136,6 +2150,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_NODE*            node,               /**< node to set lower bound for */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_LP*              lp                  /**< LP data */
    )
@@ -2151,7 +2166,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    else
       lpobjval = SCIPlpGetObjval(lp, set, prob);
 
-   SCIPnodeUpdateLowerbound(node, stat, lpobjval);
+   SCIPnodeUpdateLowerbound(node, stat, set, tree, lpobjval);
 
    return SCIP_OKAY;
 }
@@ -6107,7 +6122,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          }
          else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) )
          {
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, prob, lp) );
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, prob, lp) );
          }
       }
    }
