@@ -10355,26 +10355,26 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdKnapsack)
    SCIP_Bool upgrade;
 
    assert(upgdcons != NULL);
-   
+
    /* check, if linear constraint can be upgraded to a knapsack constraint
     * - all variables must be binary
     * - all coefficients must be integral
     * - exactly one of the sides must be infinite
     */
-   upgrade = (nposbin + nnegbin == nvars)
+   upgrade = (nposbin + nnegbin + nposimplbin + nnegimplbin == nvars)
       && (ncoeffspone + ncoeffsnone + ncoeffspint + ncoeffsnint == nvars)
       && (SCIPisInfinity(scip, -lhs) != SCIPisInfinity(scip, rhs));
 
    if( upgrade )
    {
       SCIPdebugMessage("upgrading constraint <%s> to knapsack constraint\n", SCIPconsGetName(cons));
-      
+
       /* create the knapsack constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       SCIP_CALL( createNormalizedKnapsack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
             SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
    }
 

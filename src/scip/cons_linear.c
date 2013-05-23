@@ -13681,6 +13681,8 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    int nnegint;
    int nposimpl;
    int nnegimpl;
+   int nposimplbin;
+   int nnegimplbin;
    int nposcont;
    int nnegcont;
    int ncoeffspone;
@@ -13751,6 +13753,8 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    nnegint = 0;
    nposimpl = 0;
    nnegimpl = 0;
+   nposimplbin = 0;
+   nnegimplbin = 0;
    nposcont = 0;
    nnegcont = 0;
    ncoeffspone = 0;
@@ -13762,6 +13766,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    integral = TRUE;
    poscoeffsum = 0.0;
    negcoeffsum = 0.0;
+
    for( i = 0; i < consdata->nvars; ++i )
    {
       var = consdata->vars[i];
@@ -13789,6 +13794,13 @@ SCIP_RETCODE SCIPupgradeConsLinear(
             nnegint++;
          break;
       case SCIP_VARTYPE_IMPLINT:
+         if( SCIPvarIsBinary(var) )
+         {
+            if( val >= 0.0 )
+               nposimplbin++;
+            else
+               nnegimplbin++;
+         }
          if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
             integral = integral && SCIPisIntegral(scip, val);
          if( val >= 0.0 )
@@ -13850,7 +13862,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
       {
          SCIP_CALL( conshdlrdata->linconsupgrades[i]->linconsupgd(scip, cons, consdata->nvars,
                consdata->vars, consdata->vals, consdata->lhs, consdata->rhs,
-               nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
+               nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposimplbin, nnegimplbin, nposcont, nnegcont,
                ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac,
                poscoeffsum, negcoeffsum, integral,
                upgdcons) );

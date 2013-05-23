@@ -6791,7 +6791,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
     * - a set covering constraint has left hand side of +1.0, and right hand side of +infinity: x(S) >= 1.0
     *    -> without negations:  (lhs == 1 - n  and  rhs == +inf)  or  (lhs == -inf  and  rhs = p - 1)
     */
-   if( nposbin + nnegbin == nvars && ncoeffspone + ncoeffsnone == nvars )
+   if( nposbin + nnegbin + nposimplbin + nnegimplbin == nvars && ncoeffspone + ncoeffsnone == nvars )
    {
       int mult;
 
