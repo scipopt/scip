@@ -5286,8 +5286,7 @@ SCIP_RETCODE multiAggregateBinvar(
 
       /* perform aggregation on variables resulting from a set-packing constraint */
       SCIP_CALL( SCIPaggregateVars(scip, vars[pos], vars[nvars - pos - 1], 1.0, 1.0, 1.0, infeasible, &redundant, aggregated) );
-      assert(!(*infeasible));
-      assert(*aggregated);
+      assert(*infeasible || *aggregated);
 
       return SCIP_OKAY;
    }
@@ -5585,7 +5584,13 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
             /* perform aggregation on variables resulting from a set-packing constraint */
             SCIP_CALL( SCIPaggregateVars(scip, var, consdata->vars[1], 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
-            assert(!infeasible);
+
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               break;
+            }
+
             assert(aggregated);
             ++(*naggrvars);
 
@@ -5610,7 +5615,12 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
                /* perform aggregation on variables resulting from a set-packing constraint */
                SCIP_CALL( SCIPaggregateVars(scip, var, consdata->vars[0], 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
-               assert(!infeasible);
+
+               if( infeasible )
+               {
+                  *cutoff = TRUE;
+                  break;
+               }
                assert(aggregated);
                ++(*naggrvars);
 
@@ -5629,7 +5639,13 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
          /* perform aggregation on variables resulting from a set-partitioning constraint */
          SCIP_CALL( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[1], 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
-         assert(!infeasible);
+
+         if( infeasible )
+         {
+            *cutoff = TRUE;
+            break;
+         }
+
          assert(aggregated);
          ++(*naggrvars);
 
@@ -5695,7 +5711,12 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
                   /* perform aggregation on variables resulting from a set-packing constraint */
                   SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
-                  assert(!infeasible);
+
+                  if( infeasible )
+                  {
+                     *cutoff = TRUE;
+                     break;
+                  }
                }
 
                ++ndecs;
@@ -5825,7 +5846,13 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                   }
                   deleteconsindex = notmultaggridx;
                }
-               assert(!infeasible);
+
+               if( infeasible )
+               {
+                  *cutoff = TRUE;
+                  break;
+               }
+
                assert(deleteconsindex >= 0 && deleteconsindex <= c);
             }
          }
@@ -5836,7 +5863,12 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
             /* perform aggregation on variables resulting from a set-partitioning constraint */
             SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
-            assert(!infeasible);
+
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               break;
+            }
 
             ++ndecs;
          }
@@ -5939,7 +5971,12 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
                /* perform aggregation on variables resulting from a set-partitioning constraint */
                SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, consdata->vars, consdata->nvars, v, &infeasible, &aggregated) );
-               assert(!infeasible);
+
+               if( infeasible )
+               {
+                  *cutoff = TRUE;
+                  break;
+               }
                assert(deleteconsindex == -1);
             }
             else
@@ -5962,7 +5999,12 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
                /* perform aggregation on variables resulting from a set-partitioning constraint */
                SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, aggrconsdata->vars, aggrconsdata->nvars, varindex, &infeasible, &aggregated) );
-               assert(!infeasible);
+
+               if( infeasible )
+               {
+                  *cutoff = TRUE;
+                  break;
+               }
 
                /* change pointer for deletion */
                cons = usefulconss[consindex];
@@ -6749,7 +6791,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
     * - a set covering constraint has left hand side of +1.0, and right hand side of +infinity: x(S) >= 1.0
     *    -> without negations:  (lhs == 1 - n  and  rhs == +inf)  or  (lhs == -inf  and  rhs = p - 1)
     */
-   if( nposbin + nnegbin == nvars && ncoeffspone + ncoeffsnone == nvars )
+   if( nposbin + nnegbin + nposimplbin + nnegimplbin == nvars && ncoeffspone + ncoeffsnone == nvars )
    {
       int mult;
 

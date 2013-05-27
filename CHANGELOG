@@ -72,6 +72,7 @@ performance improvements:
   already exceeds the cutoff bound
 - improved performance of method SCIPsolRetransform() when called during presolving with many aggregations
 - minor presolving performance improvements in cons_logicor.c and cons_knapsack.c
+- added upgradability for implicit binary variable cases for linear constraints
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()

@@ -11714,7 +11714,13 @@ SCIP_RETCODE SCIPtransformProb(
 
    if( scip->set->misc_estimexternmem )
    {
-      scip->set->mem_externestim = SCIPgetMemUsed(scip);
+      if ( ! SCIPisInfinity(scip, scip->set->limit_memory) )
+      {
+         /* if the memory limit is set, we take 1% as the minimum external memory storage */
+         scip->set->mem_externestim = MAX(SCIPgetMemUsed(scip), 0.01 * scip->set->limit_memory * 1048576.0);
+      }
+      else
+         scip->set->mem_externestim = SCIPgetMemUsed(scip);
       SCIPdebugMessage("external memory usage estimated to %"SCIP_LONGINT_FORMAT" byte\n", scip->set->mem_externestim);
    }
    return SCIP_OKAY;

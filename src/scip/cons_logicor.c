@@ -2800,23 +2800,23 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdLogicor)
     * - logic or constraints have left hand side of +1.0, and right hand side of +infinity: x(S) >= 1.0
     *    -> without negations:  (lhs == 1 - n  and  rhs == +inf)  or  (lhs == -inf  and  rhs = p - 1)
     */
-   if( nvars > 2 && nposbin + nnegbin == nvars && ncoeffspone + ncoeffsnone == nvars
+   if( nvars > 2 && nposbin + nnegbin + nposimplbin + nnegimplbin == nvars && ncoeffspone + ncoeffsnone == nvars
       && ((SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
          || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0))) )
    {
       int mult;
 
       SCIPdebugMessage("upgrading constraint <%s> to logic or constraint\n", SCIPconsGetName(cons));
-      
+
       /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
       mult = SCIPisInfinity(scip, rhs) ? +1 : -1;
-      
+
       /* create the logic or constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       SCIP_CALL( createNormalizedLogicor(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
             SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
    }
 
