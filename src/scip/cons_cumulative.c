@@ -10295,8 +10295,8 @@ struct TCLIQUE_Graph
 {
    SCIP_VAR**            vars;               /**< start time variables each of them is a node */
    SCIP_HASHMAP*         varmap;             /**< variable map, mapping variable to indux in vars array */
-   TCLIQUE_Bool**        precedencematrix;   /**< precedence adjacent matrix */
-   TCLIQUE_Bool**        demandmatrix;       /**< demand adjacent matrix */
+   SCIP_Bool**           precedencematrix;   /**< precedence adjacent matrix */
+   SCIP_Bool**           demandmatrix;       /**< demand adjacent matrix */
    TCLIQUE_WEIGHT*       weights;            /**< weight of nodes */
    int*                  ninarcs;            /**< number if in arcs for the precedence graph */
    int*                  noutarcs;           /**< number if out arcs for the precedence graph */
@@ -10681,7 +10681,7 @@ SCIP_RETCODE projectVbd(
 /** compute the transitive closer of the given graph and the number of in and out arcs */
 static
 void transitiveClosure(
-   TCLIQUE_Bool**        adjmatrix,         /**< adjacent matrix */
+   SCIP_Bool**           adjmatrix,         /**< adjacent matrix */
    int*                  ninarcs,           /**< array to store the number of in arcs */
    int*                  noutarcs,          /**< array to store the number of out arcs */
    int                   nnodes             /**< number if nodes */
@@ -10879,10 +10879,10 @@ SCIP_RETCODE findCumulativeConss(
    )
 {
    TCLIQUE_STATUS tcliquestatus;
-   TCLIQUE_Bool* precedencerow;
-   TCLIQUE_Bool* precedencecol;
-   TCLIQUE_Bool* demandrow;
-   TCLIQUE_Bool* demandcol;
+   SCIP_Bool* precedencerow;
+   SCIP_Bool* precedencecol;
+   SCIP_Bool* demandrow;
+   SCIP_Bool* demandcol;
    SCIP_HASHTABLE* covered;
    int* cliquenodes;
    int ncliquenodes;
@@ -11244,8 +11244,8 @@ SCIP_RETCODE createTcliqueGraph(
 {
    SCIP_VAR** vars;
    SCIP_HASHMAP* varmap;
-   TCLIQUE_Bool** precedencematrix;
-   TCLIQUE_Bool** demandmatrix;
+   SCIP_Bool** precedencematrix;
+   SCIP_Bool** demandmatrix;
    int* ninarcs;
    int* noutarcs;
    int* durations;
