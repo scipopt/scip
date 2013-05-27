@@ -28,6 +28,7 @@ LOCK=${12}
 VERSION=${13}
 LPS=${14}
 VALGRIND=${15}
+EXECCOMMAND=${16}
 
 SETDIR=../settings
 
@@ -128,76 +129,103 @@ then
    VALGRINDCMD="valgrind --log-fd=1 --leak-check=full"
 fi
 
-for i in `cat testset/$TSTNAME.test` DONE
-do
-    if test "$i" = "DONE"
-    then
-        date > $DONEFILE
-        break
-    fi
+if test "$TSTNAME" = "NOTEST"
+then
+    for i in 1 DONE
+    do
+	if test "$i" = "DONE"
+	then
+            date > $DONEFILE
+            break
+	fi
 
-    if test "$LASTPROB" = ""
-    then
-        LASTPROB=""
-        if test -f $i
-        then
-            echo @01 $i ===========
-            echo @01 $i ===========                >> $ERRFILE
-            echo > $TMPFILE
-            if test "$SETNAME" != "default"
-            then
-                echo set load $SETTINGS            >>  $TMPFILE
-            fi
-            if test "$FEASTOL" != "default"
-            then
-                echo set numerics feastol $FEASTOL >> $TMPFILE
-            fi
-            echo set limits time $TIMELIMIT        >> $TMPFILE
-            echo set limits nodes $NODELIMIT       >> $TMPFILE
-            echo set limits memory $MEMLIMIT       >> $TMPFILE
-            echo set lp advanced threads $THREADS  >> $TMPFILE
-            echo set timing clocktype 1            >> $TMPFILE
-            echo set display verblevel 4           >> $TMPFILE
-            echo set display freq $DISPFREQ        >> $TMPFILE
-            echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
-            if test "$LPS" = "none"
-            then
-                echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
-            fi
-            echo set save $SETFILE                 >> $TMPFILE
-            echo read $i                           >> $TMPFILE
-#            echo write genproblem cipreadparsetest.cip >> $TMPFILE
-#            echo read cipreadparsetest.cip         >> $TMPFILE
-            echo testslack                         >> $TMPFILE
-            echo display statistics                >> $TMPFILE
-#           echo display solution                  >> $TMPFILE
-            echo checksol                          >> $TMPFILE
-            echo quit                              >> $TMPFILE
-            echo -----------------------------
-            date
-            date >>$ERRFILE
-            echo -----------------------------
-            date +"@03 %s"
-            bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; $VALGRINDCMD ../$BINNAME < $TMPFILE" 2>>$ERRFILE
-            date +"@04 %s"
-            echo -----------------------------
-            date
-            date >>$ERRFILE
-            echo -----------------------------
-            echo
-            echo =ready=
-        else
-            echo @02 FILE NOT FOUND: $i ===========
-            echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
-        fi
-    else
-        echo skipping $i
-        if test "$LASTPROB" = "$i"
-        then
+	echo @01 RUNNING SINGLE EXECUTABLE ===========
+        echo @01 RUNNING SINGLE EXECUTABLE ===========                >> $ERRFILE
+        date
+        date >>$ERRFILE
+        echo -----------------------------
+        date +"@03 %s"
+        bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; $VALGRINDCMD ../$BINNAME " 2>>$ERRFILE
+        date +"@04 %s"
+        echo -----------------------------
+        date
+        date >>$ERRFILE
+        echo -----------------------------
+        echo
+        echo =ready=
+    done | tee -a $OUTFILE
+else
+    for i in `cat testset/$TSTNAME.test` DONE
+    do
+	if test "$i" = "DONE"
+	then
+            date > $DONEFILE
+            break
+	fi
+
+	if test "$LASTPROB" = ""
+	then
             LASTPROB=""
-        fi
-    fi
-done | tee -a $OUTFILE
+            if test -f $i
+            then
+		echo @01 $i ===========
+		echo @01 $i ===========                >> $ERRFILE
+		echo > $TMPFILE
+		if test "$SETNAME" != "default"
+		then
+                    echo set load $SETTINGS            >>  $TMPFILE
+		fi
+		if test "$FEASTOL" != "default"
+		then
+                    echo set numerics feastol $FEASTOL >> $TMPFILE
+		fi
+		echo set limits time $TIMELIMIT        >> $TMPFILE
+		echo set limits nodes $NODELIMIT       >> $TMPFILE
+		echo set limits memory $MEMLIMIT       >> $TMPFILE
+		echo set lp advanced threads $THREADS  >> $TMPFILE
+		echo set timing clocktype 1            >> $TMPFILE
+		echo set display verblevel 4           >> $TMPFILE
+		echo set display freq $DISPFREQ        >> $TMPFILE
+		echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+		if test "$LPS" = "none"
+		then
+                    echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
+		fi
+		echo set save $SETFILE                 >> $TMPFILE
+		echo read $i                           >> $TMPFILE
+#               echo write genproblem cipreadparsetest.cip >> $TMPFILE
+#               echo read cipreadparsetest.cip         >> $TMPFILE
+		echo $EXECCOMMAND                      >> $TMPFILE
+		echo display statistics                >> $TMPFILE
+#               echo display solution                  >> $TMPFILE
+		echo checksol                          >> $TMPFILE
+		echo quit                              >> $TMPFILE
+		echo -----------------------------
+		date
+		date >>$ERRFILE
+		echo -----------------------------
+		date +"@03 %s"
+		bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; $VALGRINDCMD ../$BINNAME < $TMPFILE" 2>>$ERRFILE
+		date +"@04 %s"
+		echo -----------------------------
+		date
+		date >>$ERRFILE
+		echo -----------------------------
+		echo
+		echo =ready=
+            else
+		echo @02 FILE NOT FOUND: $i ===========
+		echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+            fi
+	else
+            echo skipping $i
+            if test "$LASTPROB" = "$i"
+            then
+		LASTPROB=""
+            fi
+	fi
+    done | tee -a $OUTFILE
+fi
 
 rm -f $TMPFILE
 rm -f cipreadparsetest.cip

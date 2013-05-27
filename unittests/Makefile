@@ -36,27 +36,40 @@ BASESUFFIX	=	.$(BASE).$(LPS)$(EXEEXTENSION)
 
 
 #-----------------------------------------------------------------------------
+# Main Program
+#-----------------------------------------------------------------------------
+
+VERSION		=	example
+
+#-----------------------------------------------------------------------------
 # Unit test definitions
 #-----------------------------------------------------------------------------
 
+# UNITTESTS, EXECCOMMANDS, and TESTCASES depend on each other
 UNITTESTS	=	unittest-slack unittest-depthlevel
+# command which should be used to start the unittest, e.g. optimize or presolve
+EXECCOMMANDS    =       testslack NOEXEC
+# testsets or NOTEST if there is no testset
+TESTCASES       =       short NOTEST
 
 UNITTESTSSRC	=	$(addprefix $(SRCDIR)/, $(addsuffix .c, $(UNITTESTS)))
 UNITTESTSOBJ	=	$(addprefix $(OBJDIR)/, $(addsuffix .o, $(UNITTESTS)))
-UNITTESTSFILES	=	$(addprefix $(BINDIR)/, $(addsuffix $(BASESUFFIX), $(UNITTESTS)))
+UNITTESTSEXECS	=	$(addsuffix $(BASESUFFIX), $(UNITTESTS))
 UNITTESTSDEP	=	$(SRCDIR)/depend.$(OPT)
 
+# number of test cases in the whole unittest
+NUMBERS        :=       $(shell seq 1 $(words $(UNITTESTSEXECS)))
 
 #-----------------------------------------------------------------------------
 # Rules
 #-----------------------------------------------------------------------------
 
 ifeq ($(VERBOSE),false)
-.SILENT:	$(UNITTESTSFILES) $(UNITTESTSOBJ)
+.SILENT:	$(UNITTESTSEXECS) $(UNITTESTSOBJ)
 endif
 
 .PHONY: all
-all:            $(SCIPDIR) $(UNITTESTSFILES)
+all:            $(SCIPDIR) $(UNITTESTSEXECS)
 
 .PHONY: lint
 lint:		$(UNITTESTSSRC)
@@ -75,12 +88,16 @@ $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
 .PHONY: test
-test:           $(UNITTESTSFILES)
+test:           $(UNITTESTSEXECS)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
+
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND);
+		$(foreach var,$(NUMBERS), \
+		  echo "running test $(var) with executable $(word $(var),$(UNITTESTSEXECS))"; \
+		  $(SHELL) -ec './check.sh $(word $(var),$(TESTCASES)) $(BINDIR)/$(word $(var),$(UNITTESTSEXECS)) $(SETTINGS) $(word $(var),$(UNITTESTSEXECS)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(word $(var),$(EXECCOMMANDS))')
+
 
 .PHONY: clean
 clean:		$(OBJDIR)
@@ -88,7 +105,7 @@ ifneq ($(OBJDIR),)
 		@-(rm -f $(OBJDIR)/*.o && rmdir $(OBJDIR));
 		@echo "-> remove main objective files"
 endif
-		@-rm -f $(UNITTESTSFILES)
+		@-rm -f $(BINDIR)/$(UNITTESTSEXECS)
 		@echo "-> remove binary"
 
 .PHONY: tags
@@ -103,7 +120,7 @@ depend:		$(SCIPDIR)
 
 -include	$(UNITTESTSDEP)
 
-$(UNITTESTSFILES): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(UNITTESTSOBJ)
+$(UNITTESTSEXECS): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(UNITTESTSOBJ)
 		@echo "-> linking $@"
 		$(LINKCXX) $(OBJDIR)/$(notdir $(patsubst %$(BASESUFFIX),%,$@)).o \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
