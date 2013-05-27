@@ -55,7 +55,9 @@
 #define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY                TRUE     /**< should presolver be delayed, if other presolvers found reductions? */
 
-#define DEFAULT_MAXPAIRS         1000000     /**< maximal number of pair comparisons for at least one variable fixing */
+#define DEFAULT_NUMMINPAIRS         1024     /**< minimal number of pair comparisons */
+#define DEFAULT_NUMMAXPAIRS      1048576     /**< maximal number of pair comparisons */
+
 #define DEFAULT_PREDBNDSTR         FALSE     /**< should predictive bound strengthening be applied? */
 #define DEFAULT_SINGCOLSTUFF        TRUE     /**< should singleton columns stuffing be applied? */
 
@@ -66,7 +68,10 @@
 /** control parameters */
 struct SCIP_PresolData
 {
-   int                   maxpairs;           /**< maximal number of pair comparisons for at least one variable fixing */
+   int                   numminpairs;        /**< minimal number of pair comparisons */
+   int                   nummaxpairs;        /**< maximal number of pair comparisons */
+   int                   numcurrentpairs;    /**< current number of pair comparisons */
+
    SCIP_Bool             predbndstr;         /**< flag indicating if predictive bound strengthening should be applied */
    SCIP_Bool             singcolstuffing;    /**< flag indicating if singleton columns stuffing should be applied */
 #ifdef DOMCOL_STATISTIC
@@ -98,6 +103,8 @@ struct ConstraintMatrix
    int                   ncols;              /**< complete number of columns */
    SCIP_Real*            lb;                 /**< lower bound per variable */
    SCIP_Real*            ub;                 /**< upper bound per variable */
+   int*                  nuplocks;           /**< number uplocks per variable */
+   int*                  ndownlocks;         /**< number downlocks per variable */
 
    SCIP_VAR**            vars;               /**< variables pointer */
 
@@ -176,11 +183,13 @@ SCIP_RETCODE addRow(
    int probindex;
    int rowidx;
    SCIP_Real factor;
+   SCIP_Bool rangedorequality;
 
    assert(vars != NULL);
    assert(vals != NULL);
 
    rowidx = matrix->nrows;
+   rangedorequality = FALSE;
 
    if( SCIPisInfinity(scip, -lhs) )
    {
@@ -195,6 +204,9 @@ SCIP_RETCODE addRow(
       matrix->lhs[rowidx] = lhs;
       matrix->rhs[rowidx] = rhs;
       matrix->isrhsinfinite[rowidx] = SCIPisInfinity(scip, matrix->rhs[rowidx]);
+
+      if( !SCIPisInfinity(scip, rhs) )
+         rangedorequality = TRUE;
    }
    assert(!SCIPisInfinity(scip, -matrix->lhs[rowidx]));
 
@@ -205,15 +217,63 @@ SCIP_RETCODE addRow(
 
    matrix->rowmatbeg[rowidx] = matrix->nnonzs;
 
-   for( j = 0; j < nvars; j++ )
+   if( factor < 0 )
    {
-      matrix->rowmatval[matrix->nnonzs] = factor * vals[j];
-      probindex = SCIPvarGetProbindex(vars[j]);
-      assert(matrix->vars[probindex] == vars[j]);
+      /* transform <= to >= */
+      for( j = 0; j < nvars; j++ )
+      {
+         matrix->rowmatval[matrix->nnonzs] = factor * vals[j];
+         probindex = SCIPvarGetProbindex(vars[j]);
+         assert(matrix->vars[probindex] == vars[j]);
 
-      assert(0 <= probindex && probindex < matrix->ncols);
-      matrix->rowmatind[matrix->nnonzs] = probindex;
-      (matrix->nnonzs)++;
+         if( vals[j] > 0 )
+            matrix->nuplocks[probindex]++;
+         if( vals[j] < 0 )
+            matrix->ndownlocks[probindex]++;
+
+         assert(0 <= probindex && probindex < matrix->ncols);
+         matrix->rowmatind[matrix->nnonzs] = probindex;
+         (matrix->nnonzs)++;
+      }
+   }
+   else
+   {
+      if( rangedorequality )
+      {
+         /* = or ranged */
+         for( j = 0; j < nvars; j++ )
+         {
+            matrix->rowmatval[matrix->nnonzs] = factor * vals[j];
+            probindex = SCIPvarGetProbindex(vars[j]);
+            assert(matrix->vars[probindex] == vars[j]);
+
+            matrix->nuplocks[probindex]++;
+            matrix->ndownlocks[probindex]++;
+
+            assert(0 <= probindex && probindex < matrix->ncols);
+            matrix->rowmatind[matrix->nnonzs] = probindex;
+            (matrix->nnonzs)++;
+         }
+      }
+      else
+      {
+         /* >= */
+         for( j = 0; j < nvars; j++ )
+         {
+            matrix->rowmatval[matrix->nnonzs] = factor * vals[j];
+            probindex = SCIPvarGetProbindex(vars[j]);
+            assert(matrix->vars[probindex] == vars[j]);
+
+            if( vals[j] < 0 )
+               matrix->nuplocks[probindex]++;
+            if( vals[j] > 0 )
+               matrix->ndownlocks[probindex]++;
+
+            assert(0 <= probindex && probindex < matrix->ncols);
+            matrix->rowmatind[matrix->nnonzs] = probindex;
+            (matrix->nnonzs)++;
+         }
+      }
    }
 
    matrix->rowmatcnt[rowidx] = matrix->nnonzs - matrix->rowmatbeg[rowidx];
@@ -544,6 +604,11 @@ SCIP_RETCODE initMatrix(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatcnt, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->lb, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->ub, matrix->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->nuplocks, matrix->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->ndownlocks, matrix->ncols) );
+
+   BMSclearMemoryArray(matrix->nuplocks, matrix->ncols);
+   BMSclearMemoryArray(matrix->ndownlocks, matrix->ncols);
 
    for( v = 0; v < matrix->ncols; v++ )
    {
@@ -783,6 +848,8 @@ void freeMatrix(
       assert((*matrix)->colmatcnt != NULL);
       assert((*matrix)->lb != NULL);
       assert((*matrix)->ub != NULL);
+      assert((*matrix)->nuplocks != NULL);
+      assert((*matrix)->ndownlocks != NULL);
 
       assert((*matrix)->rowmatval != NULL);
       assert((*matrix)->rowmatind != NULL);
@@ -814,6 +881,8 @@ void freeMatrix(
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatind));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatval));
 
+      SCIPfreeBufferArray(scip, &((*matrix)->ndownlocks));
+      SCIPfreeBufferArray(scip, &((*matrix)->nuplocks));
       SCIPfreeBufferArray(scip, &((*matrix)->ub));
       SCIPfreeBufferArray(scip, &((*matrix)->lb));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatcnt));
@@ -2265,6 +2334,7 @@ SCIP_RETCODE findFixings(
    return SCIP_OKAY;
 }
 
+
 /** find dominance relation between variable pairs */
 static
 SCIP_RETCODE findDominancePairs(
@@ -2313,7 +2383,7 @@ SCIP_RETCODE findDominancePairs(
    int r1;
    int r2;
    int paircnt;
-   int nlastpossiblefixings;
+   int ntmppossiblefixings;
 
    assert(scip != NULL);
    assert(matrix != NULL);
@@ -2322,9 +2392,10 @@ SCIP_RETCODE findDominancePairs(
    assert(varstofix != NULL);
    assert(npossiblefixings != NULL);
    assert(ndomrelations != NULL);
+   assert(nchgbds != NULL);
 
    paircnt = 0;
-   nlastpossiblefixings = *npossiblefixings;
+   ntmppossiblefixings = *npossiblefixings;
 
    /* pair comparisons */
    for( cnt1 = 0; cnt1 < searchsize; cnt1++ )
@@ -2342,7 +2413,7 @@ SCIP_RETCODE findDominancePairs(
          /* get index of the second variable */
          col2 = searchcols[cnt2];
 
-         onlyoneone = FALSE;
+          onlyoneone = FALSE;
 
          /* we always have minimize as obj sense */
 
@@ -2367,15 +2438,26 @@ SCIP_RETCODE findDominancePairs(
             }
          }
 
-         if( paircnt == presoldata->maxpairs )
+         /* pair comparison control */
+         if( paircnt == presoldata->numcurrentpairs )
          {
-            if( *npossiblefixings <= nlastpossiblefixings )
+            if( *npossiblefixings <= ntmppossiblefixings )
             {
-               /* not enough fixings found, stop searching */
+               /* not enough fixings found, decrement number of comparisons */
+               presoldata->numcurrentpairs >>= 1;
+               if( presoldata->numcurrentpairs < presoldata->numminpairs )
+                  presoldata->numcurrentpairs = presoldata->numminpairs;
+
+               /* stop searching in this row */
                return SCIP_OKAY;
             }
-            nlastpossiblefixings = *npossiblefixings;
+            ntmppossiblefixings = *npossiblefixings;
             paircnt = 0;
+
+            /* increment number of comparisons */
+            presoldata->numcurrentpairs <<= 1;
+            if( presoldata->numcurrentpairs > presoldata->nummaxpairs )
+               presoldata->numcurrentpairs = presoldata->nummaxpairs;
          }
          paircnt++;
 
@@ -3079,6 +3161,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          varineq[v] = FALSE;
       }
 
+      /* init pair comparision control */
+      presoldata->numcurrentpairs = presoldata->nummaxpairs;
+
+
       /* before doing dominated column presolving we stuff singleton continuous columns.
        * this sometimes helps to do a more effective predictive bound analysis.
        */
@@ -3089,6 +3175,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          presoldata->nfixingsstuffing += npossiblefixingsstuffing;
 #endif
       }
+
 
       /* 1.stage: we search for dominance relations only within parallel columns
        *          concerning equalities and ranged rows
@@ -3191,6 +3278,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
             break;
       }
 
+
       /* 2.stage: we search for dominance relations of the left columns
        *          by row-sparsity order
        */
@@ -3286,6 +3374,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
             break;
       }
 
+
 #ifdef DOMCOL_STATISTIC
       presoldata->nfixingsdomcol += npossiblefixings;
 #endif
@@ -3300,6 +3389,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
             SCIP_Bool infeasible;
             SCIP_Bool fixed;
             SCIP_VAR* var;
+
+            if( SCIPvarGetNLocksUp(matrix->vars[v]) != matrix->nuplocks[v] ||
+               SCIPvarGetNLocksDown(matrix->vars[v]) != matrix->ndownlocks[v] )
+            {
+               /* no fixing, maybe countsols constraint handler did additional locks */
+               continue;
+            }
 
             if( varstofix[v] == FIXATLB )
             {
@@ -3433,9 +3529,14 @@ SCIP_RETCODE SCIPincludePresolDomcol(
 #endif
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "presolving/domcol/maxpairs",
-         "maximal number of pair comparisons for at least one variable fixing",
-         &presoldata->maxpairs, FALSE, DEFAULT_MAXPAIRS, 10, INT_MAX, NULL, NULL) );
+         "presolving/domcol/numminpairs",
+         "minimal number of pair comparisons ",
+         &presoldata->numminpairs, FALSE, DEFAULT_NUMMINPAIRS, 100, DEFAULT_NUMMAXPAIRS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/domcol/nummaxpairs",
+         "maximal number of pair comparisons ",
+         &presoldata->nummaxpairs, FALSE, DEFAULT_NUMMAXPAIRS, DEFAULT_NUMMINPAIRS, 1000000000, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/domcol/predbndstr",
