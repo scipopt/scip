@@ -89,11 +89,12 @@
 #define DEFAULT_SEPAOLD                 TRUE /**< shall old sepa algo be applied? */
 
 /* propagation */
-#define DEFAULT_CORETIMES               TRUE /**< should core-times be propagated (time tabling)? */
-#define DEFAULT_OVERLOAD                TRUE /**< should edge finding be used to detect an overload? */
-#define DEFAULT_EDGEFINDING            FALSE /**< should edge-finding be executed? */
+#define DEFAULT_TTINFER                 TRUE /**< should time-table (core-times) propagator be used to infer bounds? */
+#define DEFAULT_EFCHECK                 TRUE /**< should edge-finding be used to detect an overload? */
+#define DEFAULT_EFINFER                FALSE /**< should edge-finding be used to infer bounds? */
 #define DEFAULT_USEADJUSTEDJOBS        FALSE /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
-#define DEFAULT_TTEF                    TRUE /**< should time-table edge-finding propagator be used */
+#define DEFAULT_TTEFCHECK               TRUE /**< should time-table edge-finding be used to detect an overload? */
+#define DEFAULT_TTEFINFER               TRUE /**< should time-table edge-finding be used to infer bounds? */
 
 /* presolving */
 #define DEFAULT_DUALPRESOLVE            TRUE /**< should dual presolving be applied? */
@@ -179,11 +180,12 @@ struct SCIP_ConshdlrData
 
    SCIP_Bool             usebinvars;         /**< should the binary variables be used? */
    SCIP_Bool             cutsasconss;        /**< should the cumulative constraint create cuts as knapsack constraints? */
-   SCIP_Bool             coretimes;          /**< should core-times be propagated (time tabling)? */
-   SCIP_Bool             overload;           /**< should edge finding be used to detect an overload? */
-   SCIP_Bool             edgefinding;        /**< should edge-finding be executed? */
+   SCIP_Bool             ttinfer;            /**< should time-table (core-times) propagator be used to infer bounds? */
+   SCIP_Bool             efcheck;            /**< should edge-finding be used to detect an overload? */
+   SCIP_Bool             efinfer;            /**< should edge-finding be used to infer bounds? */
    SCIP_Bool             useadjustedjobs;    /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
-   SCIP_Bool             ttef;                /**< should time-table edge-finding propagator be used */
+   SCIP_Bool             ttefcheck;          /**< should time-table edge-finding be used to detect an overload? */
+   SCIP_Bool             ttefinfer;          /**< should time-table edge-finding be used to infer bounds? */
    SCIP_Bool             localcuts;          /**< should cuts be added only locally? */
    SCIP_Bool             usecovercuts;       /**< should covering cuts be added? */
    SCIP_Bool             sepaold;            /**< shall old sepa algo be applied? */
@@ -4001,6 +4003,7 @@ void collectDataTTEF(
 static
 SCIP_RETCODE tightenLbTTEF(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
@@ -4019,7 +4022,6 @@ SCIP_RETCODE tightenLbTTEF(
    int                   energy,             /**< available energy for the flexible part of the hob within the time window */
    int*                  bestlb,             /**< pointer to strope the best lower bound change */
    int*                  inferinfos,         /**< pointer to store the inference information which is need for the (best) lower bound change */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -4029,6 +4031,10 @@ SCIP_RETCODE tightenLbTTEF(
 
    assert(begin >= hmin);
    assert(end <= hmax);
+
+   /* check if the time-table edge-finding should infer bounds */
+   if( !conshdlrdata->ttefinfer )
+      return SCIP_OKAY;
 
    /* if the job can be processed completely before or after the time window, nothing can be tightened */
    if( est >= end || ect <= begin )
@@ -4083,7 +4089,7 @@ SCIP_RETCODE tightenLbTTEF(
 
          /* analyze the infeasible */
          SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-               begin, end, var, SCIP_BOUNDTYPE_LOWER, NULL, relaxedbd, usebdwidening, explanation) );
+               begin, end, var, SCIP_BOUNDTYPE_LOWER, NULL, relaxedbd, conshdlrdata->usebdwidening, explanation) );
 
          (*initialized) = TRUE;
       }
@@ -4110,6 +4116,7 @@ SCIP_RETCODE tightenLbTTEF(
 static
 SCIP_RETCODE tightenUbTTEF(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
@@ -4128,7 +4135,6 @@ SCIP_RETCODE tightenUbTTEF(
    int                   energy,             /**< available energy for the flexible part of the hob within the time window */
    int*                  bestub,             /**< pointer to strope the best upper bound change */
    int*                  inferinfos,         /**< pointer to store the inference information which is need for the (best) upper bound change */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -4139,6 +4145,10 @@ SCIP_RETCODE tightenUbTTEF(
    assert(begin >= hmin);
    assert(end <= hmax);
    assert(est < begin);
+
+   /* check if the time-table edge-finding should infer bounds */
+   if( !conshdlrdata->ttefinfer )
+      return SCIP_OKAY;
 
    /* if flexible part of the job can be processed completely before or after the time window, nothing can be tightened */
    if( lst >= end || lct <= begin )
@@ -4193,7 +4203,7 @@ SCIP_RETCODE tightenUbTTEF(
 
          /* analyze the infeasible */
          SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-               begin, end, var, SCIP_BOUNDTYPE_UPPER, NULL, relaxedbd, usebdwidening, explanation) );
+               begin, end, var, SCIP_BOUNDTYPE_UPPER, NULL, relaxedbd, conshdlrdata->usebdwidening, explanation) );
 
          (*initialized) = TRUE;
       }
@@ -4220,6 +4230,7 @@ SCIP_RETCODE tightenUbTTEF(
 static
 SCIP_RETCODE propagateUbTTEF(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
@@ -4238,7 +4249,6 @@ SCIP_RETCODE propagateUbTTEF(
    int*                  lcts,               /**< array with latest completion times sorted in non-decreasing order */
    int*                  coreEnergyAfterEst, /**< core energy after the earliest start times */
    int*                  coreEnergyAfterLct, /**< core energy after the latest completion times */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -4300,14 +4310,11 @@ SCIP_RETCODE propagateUbTTEF(
 
       assert(lct < end);
 
-#if 0
       /* In case we only want to detect an overload (meaning no bound propagation) we can skip the interval; this is
        * the case if the free energy (the energy which is not occupied by any core) is smaller than the previous minimum
        * free energy; if so it means that in the next iterate the free-energy cannot be negative
-       *
-       * ???????????????????????????
        */
-      if( end <= hmax && minavailable < maxavailable )
+      if( !conshdlrdata->ttefinfer && end <= hmax && minavailable < maxavailable )
       {
          int freeenergy;
 
@@ -4323,7 +4330,6 @@ SCIP_RETCODE propagateUbTTEF(
             continue;
          }
       }
-#endif
 
       SCIPdebugMessage("check intervals ending with <%d>\n", lct);
 
@@ -4397,9 +4403,9 @@ SCIP_RETCODE propagateUbTTEF(
             assert(!(*cutoff));
 
             /* try to tighten the upper bound */
-            SCIP_CALL( tightenUbTTEF(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
+            SCIP_CALL( tightenUbTTEF(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
                   var, duration, demand, est, lst, lct, minbegin, end, minavailable, &(newubs[idx]), &(ubinferinfos[idx]),
-                  usebdwidening, initialized, explanation, cutoff) );
+                  initialized, explanation, cutoff) );
 
             if( *cutoff )
                break;
@@ -4473,7 +4479,8 @@ SCIP_RETCODE propagateUbTTEF(
                SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
                SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-                     begin, end, NULL, SCIP_BOUNDTYPE_UPPER, NULL, SCIP_UNKNOWN, usebdwidening, explanation) );
+                     begin, end, NULL, SCIP_BOUNDTYPE_UPPER, NULL, SCIP_UNKNOWN,
+                     conshdlrdata->usebdwidening, explanation) );
 
                (*initialized) = TRUE;
             }
@@ -4517,7 +4524,8 @@ SCIP_RETCODE propagateUbTTEF(
                   SCIP_CALL( SCIPaddConflictUb(scip, vars[lbcand], NULL) );
 
                   SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-                        begin, end, vars[lbcand], SCIP_BOUNDTYPE_LOWER, NULL, relaxedbd, usebdwidening, explanation) );
+                        begin, end, vars[lbcand], SCIP_BOUNDTYPE_LOWER, NULL, relaxedbd,
+                        conshdlrdata->usebdwidening, explanation) );
 
                   (*initialized) = TRUE;
                }
@@ -4555,6 +4563,7 @@ SCIP_RETCODE propagateUbTTEF(
 static
 SCIP_RETCODE propagateLbTTEF(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
@@ -4573,7 +4582,6 @@ SCIP_RETCODE propagateLbTTEF(
    int*                  lcts,               /**< array with latest completion times sorted in non-decreasing order */
    int*                  coreEnergyAfterEst, /**< core energy after the earliest start times */
    int*                  coreEnergyAfterLct, /**< core energy after the latest completion times */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -4706,9 +4714,9 @@ SCIP_RETCODE propagateLbTTEF(
             assert(!(*cutoff));
 
             /* try to tighten the upper bound */
-            SCIP_CALL( tightenLbTTEF(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
+            SCIP_CALL( tightenLbTTEF(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
                   var, duration, demand, est, ect, lct, begin, minend, minavailable, &(newlbs[idx]), &(lbinferinfos[idx]),
-                  usebdwidening, initialized, explanation, cutoff) );
+                  initialized, explanation, cutoff) );
 
             if( *cutoff )
                return SCIP_OKAY;
@@ -4782,7 +4790,8 @@ SCIP_RETCODE propagateLbTTEF(
                SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
                SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-                     begin, end, NULL, SCIP_BOUNDTYPE_UPPER, NULL, SCIP_UNKNOWN, usebdwidening, explanation) );
+                     begin, end, NULL, SCIP_BOUNDTYPE_UPPER, NULL, SCIP_UNKNOWN,
+                     conshdlrdata->usebdwidening, explanation) );
 
                (*initialized) = TRUE;
             }
@@ -4828,7 +4837,8 @@ SCIP_RETCODE propagateLbTTEF(
                   SCIP_CALL( SCIPaddConflictUb(scip, vars[ubcand], NULL) );
 
                   SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-                        begin, end, vars[ubcand], SCIP_BOUNDTYPE_UPPER, NULL, relaxedbd, usebdwidening, explanation) );
+                        begin, end, vars[ubcand], SCIP_BOUNDTYPE_UPPER, NULL, relaxedbd,
+                        conshdlrdata->usebdwidening, explanation) );
 
                   (*initialized) = TRUE;
                }
@@ -4875,6 +4885,7 @@ SCIP_RETCODE propagateLbTTEF(
 static
 SCIP_RETCODE propagateTTEF(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_PROFILE*         profile,            /**< current core profile */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
@@ -4885,7 +4896,6 @@ SCIP_RETCODE propagateTTEF(
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated (needed to SCIPinferVar**Cons()) */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -4908,7 +4918,13 @@ SCIP_RETCODE propagateTTEF(
 
    int v;
 
-   assert(!(*cutoff));
+   /* check if a cutoff was already detected */
+   if( (*cutoff) )
+      return SCIP_OKAY;
+
+   /* check if at least the basic overload checking should be perfomed */
+   if( !conshdlrdata->ttefcheck )
+      return SCIP_OKAY;
 
    SCIPdebugMessage("run time-table edge-finding overload checking\n");
 
@@ -4949,14 +4965,14 @@ SCIP_RETCODE propagateTTEF(
    SCIP_CALL( computeCoreEngeryAfter(scip, profile, nvars, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct) );
 
    /* propagate the upper bounds and "opportunistically" the lower bounds */
-   SCIP_CALL( propagateUbTTEF(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
+   SCIP_CALL( propagateUbTTEF(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
          newlbs, newubs, lbinferinfos, ubinferinfos, lsts, flexenergies,
-         permests, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct, usebdwidening, initialized, explanation, cutoff) );
+         permests, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct, initialized, explanation, cutoff) );
 
    /* propagate the lower bounds and "opportunistically" the upper bounds */
-   SCIP_CALL( propagateLbTTEF(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
+   SCIP_CALL( propagateLbTTEF(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
          newlbs, newubs, lbinferinfos, ubinferinfos, ects, flexenergies,
-         permlcts, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct, usebdwidening, initialized, explanation, cutoff) );
+         permlcts, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct, initialized, explanation, cutoff) );
 
    /* apply the buffer bound changes */
    for( v = 0; v < nvars && !(*cutoff); ++v )
@@ -5010,7 +5026,8 @@ SCIP_RETCODE propagateTTEF(
 
             /* analysis the upper bound change */
             SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-                  begin, end, var, SCIP_BOUNDTYPE_UPPER, NULL, SCIPvarGetLbLocal(vars[v]) - 1.0, usebdwidening, explanation) );
+                  begin, end, var, SCIP_BOUNDTYPE_UPPER, NULL, SCIPvarGetLbLocal(vars[v]) - 1.0,
+                  conshdlrdata->usebdwidening, explanation) );
 
             (*initialized) = TRUE;
          }
@@ -5055,8 +5072,9 @@ SCIP_RETCODE propagateTTEF(
  *  time table propagator
  */
 static
-SCIP_RETCODE propagateCoretimes(
+SCIP_RETCODE propagateTimetable(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_PROFILE*         profile,            /**< core profile */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
@@ -5067,7 +5085,6 @@ SCIP_RETCODE propagateCoretimes(
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated (needed to SCIPinferVar**Cons()) */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -5080,7 +5097,15 @@ SCIP_RETCODE propagateCoretimes(
    assert(nvars > 0);
    assert(cons != NULL);
    assert(cutoff !=  NULL);
-   assert(*cutoff ==  FALSE);
+
+   /* check if already a cutoff was detected */
+   if( (*cutoff) )
+      return SCIP_OKAY;
+
+   /* check if the time tabling should infer bounds */
+   if( !conshdlrdata->ttinfer )
+      return SCIP_OKAY;
+
    assert(*initialized ==  FALSE);
 
    SCIPdebugMessage("propagate cores of cumulative condition of constraint <%s>[%d,%d) <= %d\n",
@@ -5139,7 +5164,7 @@ SCIP_RETCODE propagateCoretimes(
 
       /* first try to update the earliest start time */
       SCIP_CALL( coretimesUpdateLb(scip, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            profile, v, nchgbds, usebdwidening, initialized, explanation, cutoff) );
+            profile, v, nchgbds, conshdlrdata->usebdwidening, initialized, explanation, cutoff) );
 
       if( *cutoff )
          break;
@@ -5173,7 +5198,7 @@ SCIP_RETCODE propagateCoretimes(
          {
             /* use conflict analysis to analysis the core insertion which was infeasible */
             SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-                  var, duration, demand, SCIPprofileGetTime(profile, pos), usebdwidening, initialized, explanation) );
+                  var, duration, demand, SCIPprofileGetTime(profile, pos), conshdlrdata->usebdwidening, initialized, explanation) );
 
             if( explanation != NULL )
                explanation[v] = TRUE;
@@ -6106,8 +6131,9 @@ int computeEstOmegaset(
  *       Resources in O(kn log n)".  *I.P. Gent (Ed.): CP 2009, LNCS 5732, pp. 802–816, 2009.
  */
 static
-SCIP_RETCODE propagateEdgeFinder(
+SCIP_RETCODE inferboundsEdgeFinding(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_BT*              tree,               /**< binary tree constaining the theta and lambda sets */
    SCIP_BTNODE**         leaves,             /**< array of all leaves for each job one */
@@ -6115,7 +6141,6 @@ SCIP_RETCODE propagateEdgeFinder(
    int                   ncands,             /**< number of candidates */
    SCIP_Bool             propest,            /**< should the earliest start times be propagated, otherwise the latest completion times */
    int                   shift,              /**< shift applied to all jobs before adding them to the tree */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
@@ -6199,7 +6224,8 @@ SCIP_RETCODE propagateEdgeFinder(
             SCIPdebugMessage("an overload was detected duration edge-finder propagattion\n");
 
             /* analyze over load */
-            SCIP_CALL( analyzeConflictOverload(scip, omegaset, capacity, nelements,  est, lct, 0, propest, shift, usebdwidening, initialized, explanation) );
+            SCIP_CALL( analyzeConflictOverload(scip, omegaset, capacity, nelements,  est, lct, 0, propest, shift,
+                  conshdlrdata->usebdwidening, initialized, explanation) );
             (*cutoff) = TRUE;
 
             /* for the statistic we count the number of times a cutoff was detected due the edge-finder */
@@ -6315,6 +6341,7 @@ SCIP_RETCODE propagateEdgeFinder(
 static
 SCIP_RETCODE checkOverloadViaThetaTree(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
@@ -6323,10 +6350,7 @@ SCIP_RETCODE checkOverloadViaThetaTree(
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
-   SCIP_Bool             useadjustedjobs,    /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
    SCIP_Bool             propest,            /**< should the earliest start times be propagated, otherwise the latest completion times */
-   SCIP_Bool             edgefinding,        /**< complete edge-finding, otherwise only overload */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
@@ -6409,7 +6433,7 @@ SCIP_RETCODE checkOverloadViaThetaTree(
       /* adjust the duration, earliest start time, and latest completion time of jobs which do not lie completely in the
        * effective horizon [hmin,hmax)
        */
-      if( useadjustedjobs )
+      if( conshdlrdata->useadjustedjobs )
       {
          if( est < hmin )
          {
@@ -6586,13 +6610,13 @@ SCIP_RETCODE checkOverloadViaThetaTree(
 
       /* analyze the overload */
       SCIP_CALL( analyzeConflictOverload(scip, leaves, capacity, ninsertcands, est, lct, glbenery, propest, shift,
-            usebdwidening, initialized, explanation) );
+            conshdlrdata->usebdwidening, initialized, explanation) );
    }
-   else if( ninsertcands > 1 && edgefinding )
+   else if( ninsertcands > 1 && conshdlrdata->efinfer )
    {
       /* if we have more than one job insterted and edge-finding should be performed we do it */
-      SCIP_CALL( propagateEdgeFinder(scip, cons, tree, leaves, capacity, ninsertcands,
-            propest, shift, usebdwidening, initialized, explanation, nchgbds, cutoff) );
+      SCIP_CALL( inferboundsEdgeFinding(scip, conshdlrdata, cons, tree, leaves, capacity, ninsertcands,
+            propest, shift, initialized, explanation, nchgbds, cutoff) );
    }
 
    /* free the search nodes data */
@@ -6607,6 +6631,57 @@ SCIP_RETCODE checkOverloadViaThetaTree(
    /* free buffer arrays */
    SCIPfreeBufferArray(scip, &leaves);
    SCIPfreeBufferArray(scip, &nodedatas);
+
+   return SCIP_OKAY;
+}
+
+/** checks whether the instance is infeasible due to a overload within a certain time frame using the idea of theta trees
+ *
+ *  @note The algorithm is based on the paper: Petr Vilim, "Max Energy Filtering Algorithm for Discrete Cumulative
+ *        Resources". In: Willem Jan van Hoeve and John N. Hooker (Eds.), Integration of AI and OR Techniques in
+ *        Constraint Programming for Combinatorial Optimization Problems (CPAIOR 2009), LNCS 5547, pp 294--308
+ */
+static
+SCIP_RETCODE propagateEdgeFinding(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_CONS*            cons,               /**< constraint which is propagated */
+   SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
+   int*                  nchgbds,            /**< pointer to store the number of bound changes */
+   SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
+   )
+{
+   /* check if a cutoff was already detected */
+   if( (*cutoff) )
+      return SCIP_OKAY;
+
+   /* check if at least the basic overload checking should be preformed */
+   if( !conshdlrdata->efcheck )
+      return SCIP_OKAY;
+
+   /* check for overload, which may result in a cutoff */
+   SCIP_CALL( checkOverloadViaThetaTree(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
+         cons, TRUE, initialized, explanation, nchgbds, cutoff) );
+
+   /* check if a cutoff was detected */
+   if( (*cutoff) )
+      return SCIP_OKAY;
+
+   /* check if bound should be infer */
+   if( !conshdlrdata->efinfer )
+      return SCIP_OKAY;
+
+   /* check for overload, which may result in a cutoff */
+   SCIP_CALL( checkOverloadViaThetaTree(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
+         cons, FALSE, initialized, explanation, nchgbds, cutoff) );
 
    return SCIP_OKAY;
 }
@@ -6737,6 +6812,7 @@ SCIP_RETCODE consCheckRedundancy(
 static
 SCIP_RETCODE createCoreProfile(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_PROFILE*         profile,            /**< resource profile */
    int                   nvars,              /**< number of variables (jobs) */
    SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
@@ -6745,7 +6821,6 @@ SCIP_RETCODE createCoreProfile(
    int                   capacity,           /**< cumulative capacity */
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -6807,7 +6882,7 @@ SCIP_RETCODE createCoreProfile(
 
          /* use conflict analysis to analysis the core insertion which was infeasible */
          SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-               var, duration, demand, SCIPprofileGetTime(profile, pos), usebdwidening, initialized, explanation) );
+               var, duration, demand, SCIPprofileGetTime(profile, pos), conshdlrdata->usebdwidening, initialized, explanation) );
 
          if( explanation != NULL )
             explanation[v] = TRUE;
@@ -6837,7 +6912,6 @@ SCIP_RETCODE propagateCumulativeCondition(
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated (needed to SCIPinferVar**Cons()) */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
    SCIP_Bool*            redundant,          /**< pointer to store if the constraint is redundant */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
@@ -6863,38 +6937,21 @@ SCIP_RETCODE propagateCumulativeCondition(
    /* create an empty resource profile for profiling the cores of the jobs */
    SCIP_CALL( SCIPprofileCreate(&profile, capacity) );
 
-   /* create core profile */
-   SCIP_CALL( createCoreProfile(scip, profile, nvars, vars, durations, demands, capacity, hmin, hmax,
-         usebdwidening, initialized, explanation, cutoff) );
+   /* create core profile (compulsory parts) */
+   SCIP_CALL( createCoreProfile(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax,
+         initialized, explanation, cutoff) );
 
    /* propagate the job cores until nothing else can be detected */
-   if( !(*cutoff) && conshdlrdata->coretimes )
-   {
-      SCIP_CALL( propagateCoretimes(scip, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            nchgbds, usebdwidening, initialized, explanation, cutoff) );
-   }
+   SCIP_CALL( propagateTimetable(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
+            nchgbds, initialized, explanation, cutoff) );
 
-   if( !(*cutoff) && conshdlrdata->overload )
-   {
-      /* check for overload, which may result in a cutoff */
-      SCIP_CALL( checkOverloadViaThetaTree(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-            cons, usebdwidening, conshdlrdata->useadjustedjobs, TRUE, conshdlrdata->edgefinding,
-            initialized, explanation, nchgbds, cutoff) );
-   }
+   /* run edge finding propagator */
+   SCIP_CALL( propagateEdgeFinding(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
+         cons, initialized, explanation, nchgbds, cutoff) );
 
-   if( !(*cutoff) && conshdlrdata->edgefinding )
-   {
-      /* check for overload, which may result in a cutoff */
-      SCIP_CALL( checkOverloadViaThetaTree(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-            cons, usebdwidening, conshdlrdata->useadjustedjobs, FALSE, TRUE, initialized, explanation, nchgbds, cutoff) );
-   }
-
-   /* run time-table edge finding propagator */
-   if( !(*cutoff) && conshdlrdata->ttef )
-   {
-      SCIP_CALL( propagateTTEF(scip, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            nchgbds, usebdwidening, initialized, explanation, cutoff) );
-   }
+   /* run time-table edge-finding propagator */
+   SCIP_CALL( propagateTTEF(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
+         nchgbds, initialized, explanation, cutoff) );
 
    /* free resource profile */
    SCIPprofileFree(&profile);
@@ -6940,7 +6997,7 @@ SCIP_RETCODE propagateCons(
 
    SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata,
          consdata->nvars, consdata->vars, consdata->durations, consdata->demands, consdata->capacity,
-         consdata->hmin, consdata->hmax, cons, conshdlrdata->usebdwidening,
+         consdata->hmin, consdata->hmax, cons,
          nchgbds, &redundant, &initialized, NULL, cutoff) );
 
    if( redundant )
@@ -12728,20 +12785,28 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
 
    /* add cumulative constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/coretimes", "should core-times be propagated (time tabling)?",
-         &conshdlrdata->coretimes, FALSE, DEFAULT_CORETIMES, NULL, NULL) );
+         "constraints/"CONSHDLR_NAME"/ttinfer",
+         "should time-table (core-times) propagator be used to infer bounds?",
+         &conshdlrdata->ttinfer, FALSE, DEFAULT_TTINFER, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/overload", "should edge finding be used to detect an overload?",
-         &conshdlrdata->overload, FALSE, DEFAULT_OVERLOAD, NULL, NULL) );
+         "constraints/"CONSHDLR_NAME"/efcheck",
+         "should edge-finding be used to detect an overload?",
+         &conshdlrdata->efcheck, FALSE, DEFAULT_EFCHECK, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/edgefinding", "should edge-finding be executed?",
-         &conshdlrdata->edgefinding, FALSE, DEFAULT_EDGEFINDING, NULL, NULL) );
+         "constraints/"CONSHDLR_NAME"/efinfer",
+         "should edge-finding be used to infer bounds? ",
+         &conshdlrdata->efinfer, FALSE, DEFAULT_EFINFER, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/useadjustedjobs", "should edge-finding be executed?",
          &conshdlrdata->useadjustedjobs, TRUE, DEFAULT_USEADJUSTEDJOBS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/ttef", "should time-table edge-finding propagator be executed?",
-         &conshdlrdata->ttef, FALSE, DEFAULT_TTEF, NULL, NULL) );
+         "constraints/"CONSHDLR_NAME"/ttefcheck",
+         "should time-table edge-finding be used to detect an overload?",
+         &conshdlrdata->ttefcheck, FALSE, DEFAULT_TTEFCHECK, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/ttefinfer",
+         "should time-table edge-finding be used to infer bounds?",
+         &conshdlrdata->ttefinfer, FALSE, DEFAULT_TTEFINFER, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/usebinvars", "should the binary representation be used?",
@@ -13226,7 +13291,7 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
    redundant = FALSE;
 
    SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata,
-         nvars, vars, durations, demands, capacity,  hmin, hmax, cons, TRUE,
+         nvars, vars, durations, demands, capacity,  hmin, hmax, cons,
          nchgbds, &redundant, initialized, explanation, cutoff) );
 
    return SCIP_OKAY;
