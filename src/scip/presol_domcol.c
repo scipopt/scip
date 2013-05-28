@@ -250,7 +250,7 @@ SCIP_RETCODE addRow(
             matrix->nuplocks[probindex]++;
          else
          {
-            assert(matrix->rowmatval[matrix->nnonzs] < 0)
+            assert(matrix->rowmatval[matrix->nnonzs] < 0);
             matrix->ndownlocks[probindex]++;
          }
 
@@ -2426,7 +2426,7 @@ SCIP_RETCODE findDominancePairs(
          if( paircnt == presoldata->numcurrentpairs )
          {
             assert(*nfixings >= oldnfixings);
-            if( *nfixings - oldnfixings <= 0.05 * xyz )
+            if( *nfixings == oldnfixings )
             {
                /* not enough fixings found, decrement number of comparisons */
                presoldata->numcurrentpairs >>= 1;
