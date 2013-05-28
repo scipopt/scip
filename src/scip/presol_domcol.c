@@ -217,62 +217,46 @@ SCIP_RETCODE addRow(
 
    matrix->rowmatbeg[rowidx] = matrix->nnonzs;
 
-   if( factor < 0 )
+   /* = or ranged */
+   if( rangedorequality )
    {
-      /* transform <= to >= */
+      assert(factor > 0);
+
       for( j = 0; j < nvars; j++ )
       {
          matrix->rowmatval[matrix->nnonzs] = factor * vals[j];
          probindex = SCIPvarGetProbindex(vars[j]);
          assert(matrix->vars[probindex] == vars[j]);
 
-         if( vals[j] > 0 )
-            matrix->nuplocks[probindex]++;
-         if( vals[j] < 0 )
-            matrix->ndownlocks[probindex]++;
+         matrix->nuplocks[probindex]++;
+         matrix->ndownlocks[probindex]++;
 
          assert(0 <= probindex && probindex < matrix->ncols);
          matrix->rowmatind[matrix->nnonzs] = probindex;
          (matrix->nnonzs)++;
       }
    }
+   /* >= or <= */
    else
    {
-      if( rangedorequality )
+      for( j = 0; j < nvars; j++ )
       {
-         /* = or ranged */
-         for( j = 0; j < nvars; j++ )
-         {
-            matrix->rowmatval[matrix->nnonzs] = factor * vals[j];
-            probindex = SCIPvarGetProbindex(vars[j]);
-            assert(matrix->vars[probindex] == vars[j]);
+         /* due to the factor, <= constraints will be transfered to >= */
+         matrix->rowmatval[matrix->nnonzs] = factor * vals[j];
+         probindex = SCIPvarGetProbindex(vars[j]);
+         assert(matrix->vars[probindex] == vars[j]);
 
+         if( matrix->rowmatval[matrix->nnonzs] > 0 )
             matrix->nuplocks[probindex]++;
-            matrix->ndownlocks[probindex]++;
-
-            assert(0 <= probindex && probindex < matrix->ncols);
-            matrix->rowmatind[matrix->nnonzs] = probindex;
-            (matrix->nnonzs)++;
-         }
-      }
-      else
-      {
-         /* >= */
-         for( j = 0; j < nvars; j++ )
+         else
          {
-            matrix->rowmatval[matrix->nnonzs] = factor * vals[j];
-            probindex = SCIPvarGetProbindex(vars[j]);
-            assert(matrix->vars[probindex] == vars[j]);
-
-            if( vals[j] < 0 )
-               matrix->nuplocks[probindex]++;
-            if( vals[j] > 0 )
-               matrix->ndownlocks[probindex]++;
-
-            assert(0 <= probindex && probindex < matrix->ncols);
-            matrix->rowmatind[matrix->nnonzs] = probindex;
-            (matrix->nnonzs)++;
+            assert(matrix->rowmatval[matrix->nnonzs] < 0)
+            matrix->ndownlocks[probindex]++;
          }
+
+         assert(0 <= probindex && probindex < matrix->ncols);
+         matrix->rowmatind[matrix->nnonzs] = probindex;
+         (matrix->nnonzs)++;
       }
    }
 
@@ -2212,7 +2196,7 @@ SCIP_RETCODE findFixings(
    FIXINGDIRECTION*      varstofix,          /**< array holding fixing information */
    SCIP_Bool             onlybinvars,        /**< flag indicating only binary variables are present */
    SCIP_Bool             onlyoneone,         /**< when onlybinvars is TRUE, flag indicates if both binary variables are in clique */
-   int*                  npossiblefixings    /**< counter for possible fixings */
+   int*                  nfixings            /**< counter for possible fixings */
    )
 {
    /* we compare only variables from the same type */
@@ -2239,7 +2223,7 @@ SCIP_RETCODE findFixings(
          SCIPisInfinity(scip, SCIPvarGetUbGlobal(dominatingvar)) )
       {
          varstofix[dominatedidx] = FIXATLB;
-         (*npossiblefixings)++;
+         (*nfixings)++;
 
          return SCIP_OKAY;
       }
@@ -2258,7 +2242,7 @@ SCIP_RETCODE findFixings(
           * infinity too.
           */
          varstofix[dominatedidx] = FIXATLB;
-         (*npossiblefixings)++;
+         (*nfixings)++;
       }
    }
 
@@ -2276,7 +2260,7 @@ SCIP_RETCODE findFixings(
        * where y is not at their lower bound.
        */
       varstofix[dominatedidx] = FIXATLB;
-      (*npossiblefixings)++;
+      (*nfixings)++;
    }
 
    if( varstofix[dominatingidx] == NOFIX && !SCIPisPositive(scip, SCIPvarGetObj(dominatingvar)) )
@@ -2289,7 +2273,7 @@ SCIP_RETCODE findFixings(
          SCIPisGE(scip, dominatingwcub, SCIPvarGetUbGlobal(dominatingvar)) )
       {
          varstofix[dominatingidx] = FIXATUB;
-         (*npossiblefixings)++;
+         (*nfixings)++;
       }
    }
 
@@ -2301,7 +2285,7 @@ SCIP_RETCODE findFixings(
         * equal than upper bound, we fix x at the upper bound.
         */
       varstofix[dominatingidx] = FIXATUB;
-      (*npossiblefixings)++;
+      (*nfixings)++;
    }
 
    if( onlybinvars )
@@ -2314,7 +2298,7 @@ SCIP_RETCODE findFixings(
           * but in both cases y has the value 0 => y=0.
           */
          varstofix[dominatedidx] = FIXATLB;
-         (*npossiblefixings)++;
+         (*nfixings)++;
       }
 
       if( varstofix[dominatingidx] == NOFIX && SCIPvarsHaveCommonClique(dominatingvar, FALSE, dominatedvar, FALSE, TRUE) )
@@ -2325,7 +2309,7 @@ SCIP_RETCODE findFixings(
           * but in both cases x has the value 1 => x=1
           */
          varstofix[dominatingidx] = FIXATUB;
-         (*npossiblefixings)++;
+         (*nfixings)++;
       }
    }
    else
@@ -2345,7 +2329,7 @@ SCIP_RETCODE findDominancePairs(
    int                   searchsize,         /**< number of variables for pair comparisons */
    SCIP_Bool             onlybinvars,        /**< flag indicating searchcols has only binary variable indexes */
    FIXINGDIRECTION*      varstofix,          /**< array holding information for later upper/lower bound fixing */
-   int*                  npossiblefixings,   /**< found number of possible fixings */
+   int*                  nfixings,           /**< found number of possible fixings */
    SCIP_Longint*         ndomrelations,      /**< found number of dominance relations */
    int*                  nchgbds             /**< number of changed bounds */
    )
@@ -2383,19 +2367,19 @@ SCIP_RETCODE findDominancePairs(
    int r1;
    int r2;
    int paircnt;
-   int ntmppossiblefixings;
+   int oldnfixings;
 
    assert(scip != NULL);
    assert(matrix != NULL);
    assert(presoldata != NULL);
    assert(searchcols != NULL);
    assert(varstofix != NULL);
-   assert(npossiblefixings != NULL);
+   assert(nfixings != NULL);
    assert(ndomrelations != NULL);
    assert(nchgbds != NULL);
 
    paircnt = 0;
-   ntmppossiblefixings = *npossiblefixings;
+   oldnfixings = *nfixings;
 
    /* pair comparisons */
    for( cnt1 = 0; cnt1 < searchsize; cnt1++ )
@@ -2441,7 +2425,8 @@ SCIP_RETCODE findDominancePairs(
          /* pair comparison control */
          if( paircnt == presoldata->numcurrentpairs )
          {
-            if( *npossiblefixings <= ntmppossiblefixings )
+            assert(*nfixings >= oldnfixings);
+            if( *nfixings - oldnfixings <= 0.05 * xyz )
             {
                /* not enough fixings found, decrement number of comparisons */
                presoldata->numcurrentpairs >>= 1;
@@ -2451,7 +2436,7 @@ SCIP_RETCODE findDominancePairs(
                /* stop searching in this row */
                return SCIP_OKAY;
             }
-            ntmppossiblefixings = *npossiblefixings;
+            oldnfixings = *nfixings;
             paircnt = 0;
 
             /* increment number of comparisons */
@@ -2678,7 +2663,7 @@ SCIP_RETCODE findDominancePairs(
                   tmpupperbounddominatingcol1, tmpwclowerbounddominatingcol1,
                   tmplowerbounddominatingcol1, tmpwcupperbounddominatingcol1,
                   matrix->vars[col2], col2,
-                  varstofix, onlybinvars, onlyoneone, npossiblefixings) );
+                  varstofix, onlybinvars, onlyoneone, nfixings) );
 
             if( presoldata->predbndstr )
             {
@@ -2697,7 +2682,7 @@ SCIP_RETCODE findDominancePairs(
                   tmpupperbounddominatingcol2, tmpwclowerbounddominatingcol2,
                   tmplowerbounddominatingcol2, tmpwcupperbounddominatingcol2,
                   matrix->vars[col1], col1,
-                  varstofix, onlybinvars, onlyoneone, npossiblefixings) );
+                  varstofix, onlybinvars, onlyoneone, nfixings) );
 
             if( presoldata->predbndstr )
             {
@@ -2725,7 +2710,7 @@ SCIP_RETCODE singletonColumnStuffing(
    CONSTRAINTMATRIX*     matrix,             /**< matrix containing the constraints */
    SCIP_Bool*            varsprocessed,      /**< array indicating that this variable has been processed */
    FIXINGDIRECTION*      varstofix,          /**< array holding fixing information */
-   int*                  npossiblefixings    /**< number of possible fixings */
+   int*                  nfixings            /**< number of possible fixings */
    )
 {
    SCIP_VAR* var;
@@ -2754,7 +2739,7 @@ SCIP_RETCODE singletonColumnStuffing(
    assert(matrix != NULL);
    assert(varsprocessed != NULL);
    assert(varstofix != NULL);
-   assert(npossiblefixings != NULL);
+   assert(nfixings != NULL);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &colindices, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &colratios, matrix->ncols) );
@@ -2868,13 +2853,13 @@ SCIP_RETCODE singletonColumnStuffing(
                      {
                         varstofix[idx] = FIXATUB;
                         varsprocessed[idx] = TRUE;
-                        (*npossiblefixings)++;
+                        (*nfixings)++;
                      }
                      else if( SCIPisGE(scip, matrix->lhs[row], constant2) )
                      {
                         varstofix[idx] = FIXATLB;
                         varsprocessed[idx] = TRUE;
-                        (*npossiblefixings)++;
+                        (*nfixings)++;
                      }
 
                      constant1 += value;
@@ -2982,13 +2967,13 @@ SCIP_RETCODE singletonColumnStuffing(
                      {
                         varstofix[idx] = FIXATUB;
                         varsprocessed[idx] = TRUE;
-                        (*npossiblefixings)++;
+                        (*nfixings)++;
                      }
                      else if( SCIPisLE(scip, matrix->lhs[row], constant2) )
                      {
                         varstofix[idx] = FIXATLB;
                         varsprocessed[idx] = TRUE;
-                        (*npossiblefixings)++;
+                        (*nfixings)++;
                      }
 
                      constant1 += value;
@@ -3098,8 +3083,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 
    if( initialized )
    {
-      int npossiblefixings;
-      int npossiblefixingsstuffing;
+      int nfixings;
+      int nfixingsstuffing;
       SCIP_Longint ndomrelations;
       int v;
       int r;
@@ -3129,8 +3114,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 
       assert(SCIPgetNVars(scip) == matrix->ncols);
 
-      npossiblefixings = 0;
-      npossiblefixingsstuffing = 0;
+      nfixings = 0;
+      nfixingsstuffing = 0;
       ndomrelations = 0;
       nvars = matrix->ncols;
       nrows = matrix->nrows;
@@ -3170,9 +3155,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
        */
       if( presoldata->singcolstuffing )
       {
-         SCIP_CALL( singletonColumnStuffing(scip, matrix, varsprocessed, varstofix, &npossiblefixingsstuffing) );
+         SCIP_CALL( singletonColumnStuffing(scip, matrix, varsprocessed, varstofix, &nfixingsstuffing) );
 #ifdef DOMCOL_STATISTIC
-         presoldata->nfixingsstuffing += npossiblefixingsstuffing;
+         presoldata->nfixingsstuffing += nfixingsstuffing;
 #endif
       }
 
@@ -3226,7 +3211,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          if( nconfill > 1 )
          {
             SCIP_CALL( findDominancePairs(scip, matrix, presoldata, consearchcols, nconfill, FALSE,
-                  varstofix, &npossiblefixings, &ndomrelations, nchgbds) );
+                  varstofix, &nfixings, &ndomrelations, nchgbds) );
 
             for( v = 0; v < nconfill; ++v )
                varsprocessed[consearchcols[v]] = TRUE;
@@ -3243,7 +3228,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          if( nintfill > 1 )
          {
             SCIP_CALL( findDominancePairs(scip, matrix, presoldata, intsearchcols, nintfill, FALSE,
-                  varstofix, &npossiblefixings, &ndomrelations, nchgbds) );
+                  varstofix, &nfixings, &ndomrelations, nchgbds) );
 
             for( v = 0; v < nintfill; ++v )
                varsprocessed[intsearchcols[v]] = TRUE;
@@ -3260,7 +3245,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          if( nbinfill > 1 )
          {
             SCIP_CALL( findDominancePairs(scip, matrix, presoldata, binsearchcols, nbinfill, TRUE,
-                  varstofix, &npossiblefixings, &ndomrelations, nchgbds) );
+                  varstofix, &nfixings, &ndomrelations, nchgbds) );
 
             for( v = 0; v < nbinfill; ++v )
                varsprocessed[binsearchcols[v]] = TRUE;
@@ -3337,7 +3322,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          if( nconfill > 1 )
          {
             SCIP_CALL( findDominancePairs(scip, matrix, presoldata, consearchcols, nconfill, FALSE,
-                  varstofix, &npossiblefixings, &ndomrelations, nchgbds) );
+                  varstofix, &nfixings, &ndomrelations, nchgbds) );
 
             for( v = 0; v < nconfill; ++v )
                varsprocessed[consearchcols[v]] = TRUE;
@@ -3349,7 +3334,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          if( nintfill > 1 )
          {
             SCIP_CALL( findDominancePairs(scip, matrix, presoldata, intsearchcols, nintfill, FALSE,
-                  varstofix, &npossiblefixings, &ndomrelations, nchgbds) );
+                  varstofix, &nfixings, &ndomrelations, nchgbds) );
 
             for( v = 0; v < nintfill; ++v )
                varsprocessed[intsearchcols[v]] = TRUE;
@@ -3361,7 +3346,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          if( nbinfill > 1 )
          {
             SCIP_CALL( findDominancePairs(scip, matrix, presoldata, binsearchcols, nbinfill, TRUE,
-                  varstofix, &npossiblefixings, &ndomrelations, nchgbds) );
+                  varstofix, &nfixings, &ndomrelations, nchgbds) );
 
             for( v = 0; v < nbinfill; ++v )
                varsprocessed[binsearchcols[v]] = TRUE;
@@ -3376,10 +3361,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 
 
 #ifdef DOMCOL_STATISTIC
-      presoldata->nfixingsdomcol += npossiblefixings;
+      presoldata->nfixingsdomcol += nfixings;
 #endif
 
-      if( (npossiblefixings + npossiblefixingsstuffing) > 0 )
+      if( (nfixings + nfixingsstuffing) > 0 )
       {
          int oldnfixedvars = *nfixedvars;
 
