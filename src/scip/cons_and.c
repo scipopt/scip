@@ -1061,11 +1061,13 @@ SCIP_RETCODE checkCons(
             break;
       }
 
-      /* if all operator variables are TRUE, the resultant has to be TRUE, otherwise, the resultant has to be FALSE */
+      /* if all operator variables are TRUE, the resultant has to be TRUE, otherwise, the resultant has to be FALSE;
+       * in case of an implicit integer resultant variable, we need to ensure the integrality of the solution value
+       */
       solval = SCIPgetSolVal(scip, sol, consdata->resvar);
-      assert(SCIPisFeasIntegral(scip, solval));
+      assert(SCIPvarGetType(consdata->resvar) == SCIP_VARTYPE_IMPLINT || SCIPisFeasIntegral(scip, solval));
 
-      if( (i == consdata->nvars) != (solval > 0.5) )
+      if( !SCIPisFeasIntegral(scip, solval) || (i == consdata->nvars) != (solval > 0.5) )
       {
          *violated = TRUE;
 
@@ -1080,7 +1082,12 @@ SCIP_RETCODE checkCons(
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 
             SCIPinfoMessage(scip, NULL, ";\nviolation:");
-            if( i == consdata->nvars )
+            if( !SCIPisFeasIntegral(scip, solval) )
+            {
+               SCIPinfoMessage(scip, NULL, " Resultant variable <%s> has fractional solution value %"SCIP_REAL_FORMAT"\n",
+                     SCIPvarGetName(consdata->resvar), solval);
+            }
+            else if( i == consdata->nvars )
             {
                SCIPinfoMessage(scip, NULL, " all operands are TRUE and resultant <%s> = FALSE\n",
                   SCIPvarGetName(consdata->resvar));
