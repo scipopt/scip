@@ -91,6 +91,7 @@ SCIP_RETCODE getInputString(
 {
    char* endline;
    char* endcharacter;
+   char* windowsendlinechar;
 
    assert(cipinput != NULL);
 
@@ -146,6 +147,14 @@ SCIP_RETCODE getInputString(
    assert(endline != NULL);
 
    /*SCIPdebugMessage("read line: %s\n", cipinput->strbuf);*/
+
+   /* check for windows "carriage return" endline character */
+   windowsendlinechar = strrchr(cipinput->strbuf, '\r');
+   if( windowsendlinechar != NULL && windowsendlinechar + 1 == endline )
+      --endline;
+   else
+      /* if the assert should not hold we found a windows "carriage return" which was not at the end of the line */
+      assert(windowsendlinechar == NULL);
 
    if( cipinput->section == CIP_CONSTRAINTS && endcharacter != NULL && endline - endcharacter != 1 )
    {
