@@ -2151,7 +2151,13 @@ void SCIPintervalPowerScalarInverse(
       SCIPintervalSetBounds(&tmp, MAX(image.inf, 0.0), image.sup);
       SCIPintervalPower(infinity, resultant, tmp, exprecip);
       if( basedomain.inf <= -resultant->inf && EPSISINT(exponent, 0.0) && (int)exponent % 2 == 0 )  /*lint !e835 */
-         SCIPintervalSetBounds(resultant, -resultant->sup, resultant->sup);
+      {
+         if( basedomain.sup < resultant->inf )
+            SCIPintervalSetBounds(resultant, -resultant->sup, -resultant->inf);
+         else
+            SCIPintervalSetBounds(resultant, -resultant->sup, resultant->sup);
+      }
+
       SCIPintervalIntersect(resultant, *resultant, basedomain);
    }
    else
