@@ -92,6 +92,8 @@ SCIP_RETCODE runUnittest(void)
    /* use DFS */
    SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/dfs/stdpriority", 10000000) );
 
+   SCIP_CALL( SCIPsetIntParam(scip, "display/freq", 10000) );
+
    /* solve */
    retcode = SCIPsolve(scip);
 
@@ -101,7 +103,7 @@ SCIP_RETCODE runUnittest(void)
    }
 
    /* print statistics */
-   SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+   /* SCIP_CALL( SCIPprintStatistics(scip, NULL) ); */
 
    /* free transformed problem */
    SCIP_CALL( SCIPfreeTransform(scip) );
