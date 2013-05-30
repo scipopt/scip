@@ -39,18 +39,20 @@ BASESUFFIX	=	.$(BASE).$(LPS)$(EXEEXTENSION)
 # Main Program
 #-----------------------------------------------------------------------------
 
-VERSION		=	example
+VERSION		=	unittests
 
 #-----------------------------------------------------------------------------
 # Unit test definitions
 #-----------------------------------------------------------------------------
 
-# UNITTESTS, EXECCOMMANDS, and TESTCASES depend on each other
+# add new unit tests here:
 UNITTESTS	=	unittest-slack unittest-depthlevel
+
+# UNITTESTS, EXECCOMMANDS, and TESTCASES depend on each other
 # command which should be used to start the unittest, e.g. optimize or presolve
 EXECCOMMANDS    =       testslack NOEXEC
 # testsets or NOTEST if there is no testset
-TESTCASES       =       short NOTEST
+TESTCASES       =       short nofile
 
 UNITTESTSSRC	=	$(addprefix $(SRCDIR)/, $(addsuffix .c, $(UNITTESTS)))
 UNITTESTSOBJ	=	$(addprefix $(OBJDIR)/, $(addsuffix .o, $(UNITTESTS)))
@@ -90,13 +92,14 @@ $(BINDIR):
 .PHONY: test
 test:           $(UNITTESTSEXECS)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
 
-		cd check; \
+		@cd check; \
 		$(foreach var,$(NUMBERS), \
-		  echo "running test $(var) with executable $(word $(var),$(UNITTESTSEXECS))"; \
-		  $(SHELL) -ec './check.sh $(word $(var),$(TESTCASES)) $(BINDIR)/$(word $(var),$(UNITTESTSEXECS)) $(SETTINGS) $(word $(var),$(UNITTESTSEXECS)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(word $(var),$(EXECCOMMANDS))')
+			echo; \
+			echo "--------------------------------------------------------------------"; \
+			echo "running test $(var) with executable $(word $(var),$(UNITTESTSEXECS))"; \
+			$(SHELL) -ec './check.sh $(word $(var),$(TESTCASES)) $(BINDIR)/$(word $(var),$(UNITTESTSEXECS)) $(SETTINGS) $(word $(var),$(UNITTESTSEXECS)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(word $(var),$(EXECCOMMANDS))')
 
 
 .PHONY: clean
@@ -126,7 +129,7 @@ $(UNITTESTSEXECS): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFIL
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
                 $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
                 $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LDFLAGS) $(LINKCXX_o)$(BINDIR)/$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
