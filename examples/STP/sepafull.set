@@ -1,0 +1,13 @@
+# SCIP version 3.0.1.2
+
+# maximal number of restarts (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/maxrestarts = 0
+
+# maximal number of separation rounds per node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 5]
+separating/maxrounds = -1
+
+# maximal number of consecutive separation rounds without objective or integrality improvement (-1: no additional restriction)
+# [type: int, range: [-1,2147483647], default: 5]
+separating/maxstallrounds = -1
