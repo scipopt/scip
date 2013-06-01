@@ -32,6 +32,7 @@ fixed bugs:
 - fixed bug in Undercover with "pseudo-"quadratic constraints
 - fixed bug with quadratic constraints not being upgraded
 - fixed bug with storing original solutions
+- fixed bug in cons_and.c when a constraint was not correctly propagated which led to wrong dual-presolve reductions
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
