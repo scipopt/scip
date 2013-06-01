@@ -1366,7 +1366,7 @@ SCIP_RETCODE propagateCons(
       if( SCIPvarGetLbLocal(vars[watchedvar2]) > 0.5 )
          watchedvar2 = -1;
    }
-   
+
    /* if only one watched variable is still unfixed, make it the first one */
    if( watchedvar1 == -1 )
    {
@@ -1402,7 +1402,7 @@ SCIP_RETCODE propagateCons(
    if( watchedvar1 == -1 )
    {
       assert(watchedvar2 == -1);
-      
+
       SCIPdebugMessage("constraint <%s>: all operator vars fixed to 1.0 -> fix resultant <%s> to 1.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar));
       SCIP_CALL( SCIPinferBinvarCons(scip, resvar, TRUE, cons, (int)PROPRULE_3, &infeasible, &tightened) );
@@ -1434,7 +1434,7 @@ SCIP_RETCODE propagateCons(
       if( watchedvar2 == -1 )
       {
          assert(watchedvar1 != -1);
-         
+
          SCIPdebugMessage("constraint <%s>: resultant <%s> fixed to 0.0, only one unfixed operand -> fix operand <%s> to 0.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[watchedvar1]));
          SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], FALSE, cons, (int)PROPRULE_4, &infeasible, &tightened) );
@@ -1454,7 +1454,7 @@ SCIP_RETCODE propagateCons(
                (*nfixedvars)++;
             }
          }
-         
+
          return SCIP_OKAY;
       }
       else if( SCIPgetDepth(scip) <= 0 )
@@ -1468,14 +1468,14 @@ SCIP_RETCODE propagateCons(
           *
           * create, add, and release the logicor constraint and remove the and constraint globally 
           */
-         
+
          SCIP_VAR** consvars;
          SCIP_CONS* lincons;
-         
+
          assert(SCIPvarGetUbGlobal(resvar) < 0.5);
-         
+
          SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
-         
+
          /* collect negated variables */
          for( i = 0; i < nvars; ++i )
          {
@@ -1502,8 +1502,10 @@ SCIP_RETCODE propagateCons(
    /* switch to the new watched variables */
    SCIP_CALL( consdataSwitchWatchedvars(scip, consdata, eventhdlr, watchedvar1, watchedvar2) );
 
-   /* mark the constraint propagated */
-   consdata->propagated = TRUE;
+   /* mark the constraint propagated if we have an unfixed resultant or are not in probing, it is necessary that a fixed
+    * resulting in probing mode does not lead to a propagated constraint, because the constraint upgrade needs to be performed
+    */
+   consdata->propagated = (!SCIPinProbing(scip) || (SCIPvarGetLbLocal(consdata->resvar) < 0.5 && SCIPvarGetUbLocal(consdata->resvar) > 0.5)) ;
 
    return SCIP_OKAY;
 }
@@ -1602,7 +1604,6 @@ SCIP_RETCODE resolvePropagation(
 
 /** perform dual presolving on and-constraints */
 static
-
 SCIP_RETCODE dualPresolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< and-constraints to perform dual presolving on */
@@ -1690,6 +1691,8 @@ SCIP_RETCODE dualPresolve(
 
       resvar = consdata->resvar;
       assert(resvar != NULL);
+      /* a fixed resultant needs to be removed, otherwise we might fix operands to a wrong value later on */
+      assert(SCIPvarGetLbGlobal(resvar) < 0.5 && SCIPvarGetUbGlobal(resvar) > 0.5);
       assert(SCIPvarGetNLocksUp(resvar) >= 1 && SCIPvarGetNLocksDown(resvar) >= 1);
 
       if( SCIPvarGetNLocksUp(resvar) == 1 && SCIPvarGetNLocksDown(resvar) == 1 )
@@ -1804,7 +1807,7 @@ SCIP_RETCODE dualPresolve(
 
 	       if( *nfixedvars - oldnfixedvars == nvars )
 	       {
-		  SCIPdebugMessage("all operands are fixed in constraint <%s> are fixed (and some of them to 0), fix resultant <%s> to 0\n", SCIPconsGetName(cons), SCIPvarGetName(resvar));
+		  SCIPdebugMessage("all operands in constraint <%s> are fixed (and some of them to 0), fix resultant <%s> to 0\n", SCIPconsGetName(cons), SCIPvarGetName(resvar));
 
 		  SCIP_CALL( SCIPfixVar(scip, resvar, 0.0, &infeasible, &fixed) );
 
@@ -3880,7 +3883,7 @@ SCIP_DECL_CONSPROP(consPropAnd)
    int nfixedvars;
    int nupgdconss;
    int c;
-   
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
