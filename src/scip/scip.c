@@ -795,6 +795,9 @@ SCIP_STAGE SCIPgetStage(
  *
  *  @note If the message handler is set to a NULL pointer nothing will be printed
  *
+ *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
+ *        thus may to correspond to the original status.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -10439,12 +10442,16 @@ SCIP_RETCODE SCIPaddCons(
 {
    assert(cons != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       SCIP_CALL( SCIPprobAddCons(scip->origprob, scip->set, scip->stat, cons) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMED:
+      SCIP_CALL( SCIPprobAddCons(scip->transprob, scip->set, scip->stat, cons) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITPRESOLVE:
@@ -21055,7 +21062,7 @@ SCIP_RETCODE SCIPcreateCons(
    assert(name != NULL);
    assert(conshdlr != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPcreateCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -21065,6 +21072,7 @@ SCIP_RETCODE SCIPcreateCons(
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
@@ -35090,6 +35098,9 @@ void printTimingStatistics(
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
+ *        thus may to correspond to the original status.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
