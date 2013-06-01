@@ -247,11 +247,11 @@ SCIP_RETCODE addRow(
          assert(matrix->vars[probindex] == vars[j]);
 
          if( matrix->rowmatval[matrix->nnonzs] > 0 )
-            matrix->nuplocks[probindex]++;
+            matrix->ndownlocks[probindex]++;
          else
          {
             assert(matrix->rowmatval[matrix->nnonzs] < 0);
-            matrix->ndownlocks[probindex]++;
+            matrix->nuplocks[probindex]++;
          }
 
          assert(0 <= probindex && probindex < matrix->ncols);
