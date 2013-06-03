@@ -1,0 +1,13 @@
+# SCIP version 3.0.1.2
+
+# maximum age a dynamic row can reach before it is deleted from the LP (-1: don't delete rows due to aging)
+# [type: int, range: [-1,2147483647], default: 10]
+lp/rowagelimit = -1
+
+# maximal number of separation rounds per node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 5]
+separating/maxrounds = -1
+
+# maximal number of consecutive separation rounds without objective or integrality improvement (-1: no additional restriction)
+# [type: int, range: [-1,2147483647], default: 5]
+separating/maxstallrounds = -1
