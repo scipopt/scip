@@ -2604,13 +2604,8 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
    SCIPdebugMessage("analysis energy load in [%d,%d) (capacity %d)\n", begin, end, capacity);
 
+   /* energy which needs be explained */
    requiredenergy = (end - begin) * capacity;
-
-   /* in case the inference variable is NULL, an overload needs to be analysis; therefore, we need to prove that the
-    * available energy is not enough
-    */
-   if( infervar == NULL )
-      requiredenergy += 1;
 
    /* collect global contribution and adjusted the required energy by the amount of energy the inference variable
     * takes
@@ -2641,6 +2636,8 @@ SCIP_RETCODE analyzeEnergyRequirement(
       if( infervar == var )
       {
          int overlap;
+         int right;
+         int left;
 
          assert(relaxedbd != SCIP_UNKNOWN); /*lint !e777*/
 
@@ -2653,47 +2650,35 @@ SCIP_RETCODE analyzeEnergyRequirement(
           */
          if( boundtype == SCIP_BOUNDTYPE_UPPER )
          {
-            int before;
+            int lct;
 
-            /* in case the bdchgidx is NULL we can not evaluated SCIPvarGetUbAtIndex() w.r.t. the after case since the
-             * corresponding bound change was not performed; during the propagation an infeasibility was detected
-             */
-            assert(bdchgidx == NULL || convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)) < begin);
+            /* get the latest start time of the infer start time variable before the propagation took place */
+            lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, 0));
 
-            /* in case we are not performing bound widening we ignore the relaxed bound; if bdchgidx is NULL, we are in
-             * the phase of initialization of the conflict analysis and the relaxed bound defines the bound which was
-             * not applicable
+            /* the latest start time of the inference start time variable before the propagation needs to be smaller as
+             * the end of the time interval; meaning the job needs be overlap with the time interval in case the job is
+             * scheduled w.r.t. its latest start time
              */
-            if( !usebdwidening && bdchgidx != NULL )
-            {
-               relaxedbd = SCIPvarGetUbAtIndex(var, bdchgidx, TRUE);
-            }
+            assert(lst < end);
 
-            /* we need to adjusted the relaxed bound; due to the propagation algorithm we can only explain an upper
-             * bound change which is at least one time step smaller as begin; meaning at least one time step of the
-             * job has to lie outside of the time window
+            /* compute the overlap of the job in case it would be scheduled w.r.t. its latest start time and the time
+             * interval (before the propagation)
              */
-            relaxedbd = MIN(relaxedbd, begin - 1.0);
+            right = MIN(end - lst, end - begin);
 
-            /* in case the bdchgidx is NULL we can not evaluated SCIPvarGetUbAtIndex() w.r.t. the after case since
-             * the corresponding bound change was not performed; during the propagation an infeasibility was detected
-             */
-            assert(bdchgidx == NULL || SCIPvarGetUbAtIndex(var, bdchgidx, TRUE) <= relaxedbd);
-            assert(relaxedbd + duration >= begin);
+            lct = convertBoundToInt(scip, relaxedbd) + duration;
+            assert(begin <= lct);
 
-            /* knowing the bound which needs/can be explained we can compute the upper bound of the inference
-             * variable before the propagation; knowing the number of time steps before "begin" we need to ensure
-             * that a smaller number of time steps were available before the propagation after the time
-             * window. Meaning that these time step after plus the available of time steps within the time interval
-             * is not enough for the propagated job
-             */
-            before = begin - convertBoundToInt(scip, relaxedbd);
-            overlap = duration - before;
+            /* compute the overlap of the job after the propagation but considering the relaxed bound */
+            left = MIN(lct - begin, end - begin);
+
+            /* compute the minimum overlap; */
+            overlap = MIN3(left, right, duration);
 
             if( usebdwidening )
             {
-               SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, (SCIP_Real)(end - duration + before - 1)) );
-               assert(bdchgidx == NULL || convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)) <= end - duration + before - 1);
+               assert(convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, 0)) <= (end - overlap));
+               SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, (SCIP_Real)(end - overlap)) );
             }
             else
             {
@@ -2702,57 +2687,47 @@ SCIP_RETCODE analyzeEnergyRequirement(
          }
          else
          {
-            int after;
+            int ect;
 
-            assert(bdchgidx == NULL || convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)) > end - duration);
+            /* get the earliest completion time of the infer start time variable before the propagation took place */
+            ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, 0)) + duration;
 
-            /* in case we are not performing bound widening we ignore the relaxed bound; if bdchgidx is NULL, we are in
-             * the phase of initialization of the conflict analysis and the relaxed bound defines the bound which was
-             * not applicable
+            /* the earliest start time of the inference start time variable before the propagation needs to be larger as
+             * than the beginning of the time interval; meaning the job needs be overlap with the time interval in case
+             * the job is scheduled w.r.t. its earliest start time
              */
-            if( !usebdwidening && bdchgidx != NULL )
-            {
-               relaxedbd = SCIPvarGetLbAtIndex(var, bdchgidx, TRUE);
-            }
+            assert(ect > begin);
 
-            /* we need to adjusted the relaxed bound; at least one time step of the job does not fit into the time
-             * window
+            /* compute the overlap of the job in case it would be scheduled w.r.t. its earliest start time and the time
+             * interval (before the propagation)
              */
-            relaxedbd = MAX(relaxedbd, end - duration + 1.0);
-            assert(relaxedbd <= end);
+            left = MIN(ect - begin, end - begin);
 
-            /* in case the bdchgidx is NULL we can not evaluated SCIPvarGetUbAtIndex() w.r.t. the after case since
-             * the corresponding bound change was not performed; during the propagation an infeasibility was detected
-             */
-            assert(bdchgidx == NULL || SCIPvarGetLbAtIndex(var, bdchgidx, TRUE) >= relaxedbd);
+            est = convertBoundToInt(scip, relaxedbd);
+            assert(end >= est);
 
-            after = convertBoundToInt(scip, relaxedbd) + duration - end;
-            overlap = duration - after;
+            /* compute the overlap of the job after the propagation but considering the relaxed bound */
+            right = MIN(end - est, end - begin);
+
+            /* compute the minimum overlap */
+            overlap = MIN3(left, right, durations[v]);
 
             if( usebdwidening )
             {
-               SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, (SCIP_Real)begin - after + 1) );
-               assert(bdchgidx == NULL || convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)) >=  begin - after + 1);
+               assert(convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, 0)) >= (begin + overlap - duration));
+               SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, (SCIP_Real)(begin + overlap - duration)) );
             }
             else
             {
                SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
             }
          }
-         overlap = MIN(overlap, end - begin);
-         assert(overlap >= 0);
 
-         /* adjust the required energy by the amount the inference variable overlaps */
-         if( overlap >= end - begin )
-         {
-            /* the inference variable overlaps completely with time window; the get a proper reason we need to make sure
-             * that at least one unit of is blocked by on other job; meaning the inference job cannot run through the
-             * time window
-             */
-            requiredenergy -= (end - begin) * demands[v] - 1;
-         }
-         else
-            requiredenergy -= (overlap + 1) * demands[v] - 1;
+         /* subtract the amount of energy which is available due to the overlap of the inference start time */
+         requiredenergy -=  overlap * demand;
+
+         /* we can further reduce the required energy by the demand of the job since the start times are integers */
+         requiredenergy -= demand;
 
          if( explanation != NULL )
             explanation[v] = TRUE;
@@ -2802,7 +2777,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
    SCIPsortDownIntIntInt(locenergies, overlaps, idxs, nvars);
 
    /* add local energy contributions until an overload is implied */
-   for( v = 0; v < nvars && requiredenergy > 0; ++v )
+   for( v = 0; v < nvars && requiredenergy >= 0; ++v )
    {
       SCIP_VAR* var;
       int duration;
@@ -2822,6 +2797,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
       assert(duration > 0);
 
       overlap = overlaps[v];
+      assert(overlap > 0);
 
       requiredenergy -= locenergies[v];
 
@@ -12435,7 +12411,7 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("resolve propagation: variable <%s>, cumulative constraint <%s> (capacity %d, propagation %d, [%d,%d))\n",
+   SCIPdebugMessage("resolve propagation: variable <%s>, cumulative constraint <%s> (capacity %d, propagation %d, H=[%d,%d))\n",
       SCIPvarGetName(infervar), SCIPconsGetName(cons), consdata->capacity, inferInfoGetProprule(intToInferInfo(inferinfo)),
       SCIPgetHminCumulative(scip, cons), SCIPgetHmaxCumulative(scip, cons));
 
