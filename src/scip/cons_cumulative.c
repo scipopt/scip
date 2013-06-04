@@ -2602,10 +2602,10 @@ SCIP_RETCODE analyzeEnergyRequirement(
    SCIP_CALL( SCIPallocBufferArray(scip, &overlaps, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &idxs, nvars) );
 
-   SCIPdebugMessage("analysis energy load in [%d,%d) (capacity %d)\n", begin, end, capacity);
-
    /* energy which needs be explained */
    requiredenergy = (end - begin) * capacity;
+
+   SCIPdebugMessage("analysis energy load in [%d,%d) (capacity %d, energy %d)\n", begin, end, capacity, requiredenergy);
 
    /* collect global contribution and adjusted the required energy by the amount of energy the inference variable
     * takes
@@ -2666,14 +2666,20 @@ SCIP_RETCODE analyzeEnergyRequirement(
              */
             right = MIN(end - lst, end - begin);
 
+            /* the job needs to overlap with the interval; otherwise the propagation w.r.t. this time window is not valid */
+            assert(right > 0);
+
             lct = convertBoundToInt(scip, relaxedbd) + duration;
             assert(begin <= lct);
 
             /* compute the overlap of the job after the propagation but considering the relaxed bound */
-            left = MIN(lct - begin, end - begin);
+            left = MIN(lct - begin + 1, end - begin);
+            assert(left > 0);
 
             /* compute the minimum overlap; */
             overlap = MIN3(left, right, duration);
+            assert(overlap > 0);
+            assert(overlap <= end - begin);
 
             if( usebdwidening )
             {
@@ -2689,6 +2695,8 @@ SCIP_RETCODE analyzeEnergyRequirement(
          {
             int ect;
 
+            assert(boundtype == SCIP_BOUNDTYPE_LOWER);
+
             /* get the earliest completion time of the infer start time variable before the propagation took place */
             ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, 0)) + duration;
 
@@ -2703,14 +2711,20 @@ SCIP_RETCODE analyzeEnergyRequirement(
              */
             left = MIN(ect - begin, end - begin);
 
+            /* the job needs to overlap with the interval; otherwise the propagation w.r.t. this time window is not valid */
+            assert(left > 0);
+
             est = convertBoundToInt(scip, relaxedbd);
             assert(end >= est);
 
             /* compute the overlap of the job after the propagation but considering the relaxed bound */
-            right = MIN(end - est, end - begin);
+            right = MIN(end - est + 1, end - begin);
+            assert(right > 0);
 
             /* compute the minimum overlap */
-            overlap = MIN3(left, right, durations[v]);
+            overlap = MIN3(left, right, duration);
+            assert(overlap > 0);
+            assert(overlap <= end - begin);
 
             if( usebdwidening )
             {
@@ -2725,9 +2739,6 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
          /* subtract the amount of energy which is available due to the overlap of the inference start time */
          requiredenergy -=  overlap * demand;
-
-         /* we can further reduce the required energy by the demand of the job since the start times are integers */
-         requiredenergy -= demand;
 
          if( explanation != NULL )
             explanation[v] = TRUE;
@@ -2801,14 +2812,20 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
       requiredenergy -= locenergies[v];
 
-      if( requiredenergy < 0 )
+      if( requiredenergy < -1 )
       {
          int demand;
 
          demand = demands[idx];
          assert(demand > 0);
 
-         overlap -= (int)((requiredenergy + 1) / demand);
+         overlap += (int)((requiredenergy + 1) / demand);
+
+#ifndef NDEBUG
+         requiredenergy += locenergies[v];
+         requiredenergy -= overlap * demand;
+         assert(requiredenergy < 0);
+#endif
       }
       assert(overlap > 0);
 
@@ -2829,7 +2846,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
          explanation[idx] = TRUE;
    }
 
-   assert(requiredenergy <= 0);
+   assert(requiredenergy < 0);
 
    SCIPfreeBufferArray(scip, &idxs);
    SCIPfreeBufferArray(scip, &overlaps);
