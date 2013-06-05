@@ -645,6 +645,13 @@ void SCIPstoreSolutionGap(
 
    if( scip->primal->nsols == 1 )
       scip->stat->firstsolgap = scip->stat->lastsolgap;
+
+   if( scip->set->stage == SCIP_STAGE_SOLVING )
+   {
+      assert(SCIPisEQ(scip, scip->stat->objoffset, scip->transprob->objoffset));
+      SCIPstatUpdatePrimalIntegral(scip->stat, scip->set, SCIPsolGetObj(SCIPgetBestSol(scip), scip->set, scip->transprob), SCIPgetLowerbound(scip) );
+      SCIPinfoMessage(scip, NULL, "New Primal integral is %f\n", scip->stat->primalintegralval);
+   }
 }
 
 /*
@@ -9033,7 +9040,6 @@ SCIP_RETCODE SCIPaddObjoffset(
    SCIP_CALL( SCIPprimalUpdateObjoffset(scip->primal, SCIPblkmem(scip), scip->set, scip->stat,
          scip->eventqueue, scip->transprob, scip->tree, scip->lp) );
 
-   scip->stat->objoffset += addval;
    return SCIP_OKAY;
 }
 
@@ -31100,8 +31106,8 @@ SCIP_RETCODE SCIPaddSol(
       if( *stored && (bestsol != SCIPgetBestSol(scip)) )
       {
          SCIPstoreSolutionGap(scip);
-         assert(SCIPisEQ(scip, scip->stat->objoffset, scip->transprob->objoffset));
-         SCIPstatUpdatePrimalIntegral(scip->stat, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob), SCIPgetLowerbound(scip) );
+
+
       }
 
       return SCIP_OKAY;
@@ -31174,8 +31180,6 @@ SCIP_RETCODE SCIPaddSolFree(
          {
             assert(SCIPgetBestSol(scip) != NULL);
             SCIPstoreSolutionGap(scip);
-            assert(SCIPisEQ(scip, scip->stat->objoffset, scip->transprob->objoffset));
-            SCIPstatUpdatePrimalIntegral(scip->stat, scip->set,  SCIPsolGetObj(SCIPgetBestSol(scip), scip->set, scip->transprob), SCIPgetLowerbound(scip) );
          }
       }
 

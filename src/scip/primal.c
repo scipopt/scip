@@ -355,6 +355,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
 
    assert(primal != NULL);
 
+   stat->objoffset = prob->objoffset;
+
    /* recalculate internal objective limit */
    upperbound = SCIPprobInternObjval(prob, set, SCIPprobGetObjlim(prob, set));
    inf = SCIPsetInfinity(set);
