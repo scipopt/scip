@@ -2202,6 +2202,7 @@ SCIP_RETCODE resolvePropagationCoretimes(
    int                   relaxedpeak,        /**< relaxed time point which would be sufficient to be proved */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
    SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
+   int*                  provedpeak,         /**< pointer to store the actually proved peak, or NULL */
    SCIP_Bool*            explanation         /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    )
 {
@@ -2425,6 +2426,9 @@ SCIP_RETCODE resolvePropagationCoretimes(
    }
 
    SCIPfreeBufferArray(scip, &reported);
+
+   if( provedpeak != NULL )
+      *provedpeak = inferpeak;
 
    return SCIP_OKAY;
 }
@@ -2885,6 +2889,7 @@ SCIP_RETCODE respropCumulativeCondition(
       int inferpos;
       int inferpeak;
       int relaxedpeak;
+      int provedpeak;
 
       /* get the position of the inferred variable in the vars array */
       inferpos = inferInfoGetData1(inferinfo);
@@ -2903,7 +2908,7 @@ SCIP_RETCODE respropCumulativeCondition(
       if( boundtype == SCIP_BOUNDTYPE_UPPER )
       {
          /* we propagated the latest start time (upper bound) step wise with a step length of at most the duration of
-          *  the inference variable
+          * the inference variable
           */
          assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) - SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < inferduration + 0.5);
 
@@ -2915,9 +2920,6 @@ SCIP_RETCODE respropCumulativeCondition(
          inferpeak = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE)) + inferduration;
          relaxedpeak = convertBoundToInt(scip, relaxedbd) + inferduration;
          assert(relaxedpeak >= inferpeak);
-
-         /* old upper bound of variable itself is part of the explanation */
-         SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
       }
       else
       {
@@ -2931,13 +2933,38 @@ SCIP_RETCODE respropCumulativeCondition(
          inferpeak = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE)) - 1;
          relaxedpeak = convertBoundToInt(scip, relaxedbd) - 1;
          assert(relaxedpeak <= inferpeak);
-
-         /* old lower bound of variable itself is part of the explanation */
-         SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
       }
 
+      /* resolves the propagation of the core time algorithm */
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-            infervar, inferdemand, inferpeak, relaxedpeak, bdchgidx, usebdwidening, explanation) );
+            infervar, inferdemand, inferpeak, relaxedpeak, bdchgidx, usebdwidening, &provedpeak, explanation) );
+
+      if( boundtype == SCIP_BOUNDTYPE_UPPER )
+      {
+         if( usebdwidening )
+         {
+            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, infervar, NULL,  (SCIP_Real)provedpeak) );
+         }
+         else
+         {
+            /* old upper bound of variable itself is part of the explanation */
+            SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
+         }
+      }
+      else
+      {
+         assert(boundtype == SCIP_BOUNDTYPE_LOWER);
+
+         if( usebdwidening )
+         {
+            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, infervar, bdchgidx, (SCIP_Real)(provedpeak - inferduration + 1)) );
+         }
+         else
+         {
+            /* old lower bound of variable itself is part of the explanation */
+            SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
+         }
+      }
 
       if( explanation != NULL )
          explanation[inferpos] = TRUE;
@@ -3540,7 +3567,7 @@ SCIP_RETCODE analyseInfeasibelCoreInsertion(
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-            infervar, inferdemand, inferpeak, inferpeak, NULL, usebdwidening, explanation) );
+            infervar, inferdemand, inferpeak, inferpeak, NULL, usebdwidening, NULL, explanation) );
 
       SCIPdebugMessage("add lower and upper bounds of variable <%s>\n", SCIPvarGetName(infervar));
 
