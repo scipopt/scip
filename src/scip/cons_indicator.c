@@ -1739,14 +1739,18 @@ SCIP_RETCODE scaleFirstRow(
 
       SCIP_CALL( SCIPlpiGetRows(altlp, 0, 0, NULL, NULL, &cnt, &beg, ind, val) );
 
-      /* compute sum */
-      for (j = 0; j < cnt; ++j)
-         sum += REALABS(val[j]);
+      /* if there are nonzeros */
+      if ( cnt > 0 )
+      {
+         /* compute sum */
+         for (j = 0; j < cnt; ++j)
+            sum += REALABS(val[j]);
 
-      /* set rhs */
-      sum = - REALABS(sum) / ((double) cnt);
-      j = 0;
-      SCIP_CALL( SCIPlpiChgSides(altlp, 1, &j, &sum, &sum) );
+         /* set rhs */
+         sum = - REALABS(sum) / ((double) cnt);
+         beg = 0;
+         SCIP_CALL( SCIPlpiChgSides(altlp, 1, &beg, &sum, &sum) );
+      }
 
       SCIPfreeBufferArray(scip, &val);
       SCIPfreeBufferArray(scip, &ind);
