@@ -838,7 +838,9 @@ SCIP_RETCODE checkCons(
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
       SCIP_Real sum;
-      int i;
+      SCIP_Longint integralsum;
+      SCIP_Bool ishuge;
+      int v;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
        * enforcement
@@ -849,12 +851,31 @@ SCIP_RETCODE checkCons(
       }
 
       sum = 0.0;
-      for( i = 0; i < consdata->nvars; ++i )
+      integralsum = 0;
+      /* we perform an more exact comparison if the capacity does not exceed the huge value */
+      if( SCIPisHugeValue(scip, consdata->capacity) )
       {
-         sum += consdata->weights[i] * SCIPgetSolVal(scip, sol, consdata->vars[i]);
+         ishuge = TRUE;
+
+         /* sum over all weight times the corresponding solution value */
+         for( v = consdata->nvars - 1; v >= 0; --v )
+         {
+            sum += consdata->weights[v] * SCIPgetSolVal(scip, sol, consdata->vars[v]);
+         }
+      }
+      else
+      {
+         ishuge = FALSE;
+
+         /* sum over all weight for which the variable has a solution value of 1 in feastol */
+         for( v = consdata->nvars - 1; v >= 0; --v )
+         {
+            if( SCIPgetSolVal(scip, sol, consdata->vars[v]) > 0.5 )
+               integralsum += consdata->weights[v];
+         }
       }
 
-      if( SCIPisFeasGT(scip, sum, (SCIP_Real)consdata->capacity) )
+       if( (!ishuge && integralsum > consdata->capacity) || (ishuge && SCIPisFeasGT(scip, sum, (SCIP_Real)consdata->capacity)) )
       {
          *violated = TRUE;
 
@@ -866,14 +887,14 @@ SCIP_RETCODE checkCons(
 
          if( printreason )
          {
+            SCIP_Real viol = ishuge ? sum : (SCIP_Real)integralsum;
+
+            viol -= consdata->capacity;
+            assert(viol > 0);
+
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 
-            /* complete the activity computation to discover the violation */
-            for( ; i < consdata->nvars; ++i )
-            {
-               sum += consdata->weights[i] * SCIPgetSolVal(scip, sol, consdata->vars[i]);
-            }
-            SCIPinfoMessage(scip, NULL, ";\nviolation: the capacity is violated by %.15g\n", sum - consdata->capacity);
+            SCIPinfoMessage(scip, NULL, ";\nviolation: the capacity is violated by %.15g\n", viol);
          }
       }
    }
