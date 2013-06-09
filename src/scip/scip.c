@@ -8100,7 +8100,7 @@ SCIP_RETCODE SCIPstartInteraction(
 {
    SCIP_CALL( checkStage(scip, "SCIPstartInteraction", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
-   /** includes or updates the default dialog menus in SCIP */
+   /* includes or updates the default dialog menus in SCIP */
    SCIP_CALL( SCIPincludeDialogDefault(scip) );
 
    SCIP_CALL( SCIPdialoghdlrExec(scip->dialoghdlr, scip->set) );
@@ -11831,7 +11831,7 @@ SCIP_RETCODE exitPresolve(
 
 	 if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
 	 {
-	    /** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
+	    /* flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
 	    SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set) );
 
 #ifndef NDEBUG
@@ -18426,7 +18426,7 @@ SCIP_RETCODE SCIPaddClique(
                scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, val1, vars[0],
                val0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER, val0 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
       }
-      /** in case one both variables are not of binary type we have to add the implication as variable bounds */
+      /* in case one both variables are not of binary type we have to add the implication as variable bounds */
       else
       {
          /* both variables are not of binary type but are implicit binary; in that case we can only add this
@@ -34360,7 +34360,7 @@ void printConstraintStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   /** Add maximal number of constraints of the same type? So far this information is not added because of lack of space. */
+   /* Add maximal number of constraints of the same type? So far this information is not added because of lack of space. */
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraints        :     Number  MaxNumber  #Separate #Propagate    #EnfoLP    #EnfoPS     #Check   #ResProp    Cutoffs    DomReds       Cuts    Applied      Conss   Children\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )

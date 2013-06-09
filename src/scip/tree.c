@@ -1045,9 +1045,9 @@ SCIP_RETCODE SCIPnodeFree(
       SCIP_CALL( pseudoforkFree(&((*node)->data.pseudofork), blkmem, set, lp) );
       break;
    case SCIP_NODETYPE_FORK:
-      
-      /** release special root LPI state capture which is used to keep the root LPI state over the whole solving
-       *  process 
+
+      /* release special root LPI state capture which is used to keep the root LPI state over the whole solving
+       * process
        */
       if( isroot )
       {
@@ -4549,7 +4549,7 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    assert(tree->focusnode == NULL);
    assert(tree->pathlen == 0);
 
-   /** reset tree data structure */
+   /* reset tree data structure */
    SCIP_CALL( SCIPtreeClear(tree, blkmem, set, stat, eventqueue, lp) );
 
    return SCIP_OKAY;

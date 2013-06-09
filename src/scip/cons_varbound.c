@@ -3796,7 +3796,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       if( !SCIPconsIsActive(cons) )
          continue;
 
-      /** informs once variable x about a globally valid variable lower or upper bound */
+      /* informs once variable x about a globally valid variable lower or upper bound */
       if( !consdata->varboundsadded )
       {
          SCIP_Bool infeasible;

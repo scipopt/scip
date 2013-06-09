@@ -4189,7 +4189,7 @@ SCIP_RETCODE sequentialUpAndDownLiftingGUB(
          }
          ngubconsGNC1--;
 
-         /** computes minweights table by combining unfished and fished tables */
+         /* computes minweights table by combining unfished and fished tables */
          computeMinweightsGUB(minweights, finished, unfinished, minweightslen);
          assert(minweights[0] == 0);
       }

@@ -3208,7 +3208,7 @@ SCIP_RETCODE propAndSolve(
    /* solve external relaxations with non-negative priority */
    if( solverelax && !(*cutoff) )
    {
-      /** clear the storage of external branching candidates */
+      /* clear the storage of external branching candidates */
       SCIPbranchcandClearExternCands(branchcand);
 
       SCIP_CALL( solveNodeRelax(set, stat, tree, actdepth, TRUE, cutoff, propagateagain, solvelpagain, solverelaxagain) );
@@ -3419,10 +3419,10 @@ SCIP_RETCODE solveNode(
    assert(SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
    actdepth = SCIPnodeGetDepth(focusnode);
 
-   /** invalidate relaxation solution */
+   /* invalidate relaxation solution */
    SCIPrelaxationSetSolValid(relaxation, FALSE);
 
-   /** clear the storage of external branching candidates */
+   /* clear the storage of external branching candidates */
    SCIPbranchcandClearExternCands(branchcand);
 
    SCIPdebugMessage("Processing node %"SCIP_LONGINT_FORMAT" in depth %d, %d siblings\n",

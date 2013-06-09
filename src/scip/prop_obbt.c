@@ -1079,7 +1079,7 @@ unsigned int getScore(
    int                   maxnlcount          /**< maximal number of nonlinear constraints a variable appears in */
    )
 {
-   unsigned int score;                       /**< score to be computed */
+   unsigned int score;                       /* score to be computed */
 
    assert(scip != NULL);
    assert(bound != NULL);

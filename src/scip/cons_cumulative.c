@@ -1976,7 +1976,7 @@ SCIP_RETCODE consdataCollectLinkingCons(
 
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "link(%s)", SCIPvarGetName(var));
 
-         /** creates and captures an linking constraint */
+         /* creates and captures an linking constraint */
          SCIP_CALL( SCIPcreateConsLinking(scip, &cons, name, var, NULL, 0, 0,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE /*TRUE*/, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );

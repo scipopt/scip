@@ -7870,13 +7870,13 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
             continue;
       }
 
-      /** find pairs of negated variables in constraint:
-       *  partitioning/packing: all other variables must be zero, constraint is redundant
-       *  covering: constraint is redundant
+      /* find pairs of negated variables in constraint:
+       * partitioning/packing: all other variables must be zero, constraint is redundant
+       * covering: constraint is redundant
        *
-       *  find sets of equal variables in constraint:
-       *  partitioning/packing: variable must be zero
-       *  covering: multiple entries of variable can be replaced by single entry
+       * find sets of equal variables in constraint:
+       * partitioning/packing: variable must be zero
+       * covering: multiple entries of variable can be replaced by single entry
        */
       SCIP_CALL( mergeMultiples(scip, cons, nfixedvars, ndelconss, nchgcoefs, &cutoff) );
 
