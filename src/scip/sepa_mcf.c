@@ -2271,8 +2271,7 @@ SCIP_RETCODE extractCapacities(
    for( r = 0; r < nrows; r++ )
       rowarcid[r] = -1;
 
-   /**  ->  loop through the list of capacity cands in non-increasing score order
-   */
+   /* ->  loop through the list of capacity cands in non-increasing score order  */
    for( i = 0; i < ncapacitycands; i++ )
    {
 

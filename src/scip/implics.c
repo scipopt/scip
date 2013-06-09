@@ -1915,7 +1915,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
          }
          else
          {
-            /** in case the variable are not of binary type we have to add the implication as variable bound */
+            /* in case the variable are not of binary type we have to add the implication as variable bound */
 
             assert(SCIPvarGetType(clique->vars[0]) != SCIP_VARTYPE_BINARY && SCIPvarIsBinary(clique->vars[0]));
 

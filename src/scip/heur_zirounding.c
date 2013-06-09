@@ -210,7 +210,7 @@ void calculateBounds(
 
       assert(0 <= rowpos && rowpos < nslacks);
 
-      /** all bounds and slacks as they are calculated in zirounding always have to be greater equal zero.
+      /* all bounds and slacks as they are calculated in zirounding always have to be greater equal zero.
        * It might however be due to numerical issues, e.g. with scaling, that they are not. Better abort in this case.
        */
       if( SCIPisFeasLT(scip, *lowerbound, 0.0) || SCIPisFeasLT(scip, *upperbound, 0.0)
@@ -278,10 +278,10 @@ SCIP_RETCODE updateSlacks(
    int                   nslacks             /**< size of the arrays */
    )
 {
-   SCIP_COL*    col;        /** the corresponding column of variable var */
-   SCIP_ROW**   rows;       /** pointer to the nonzero coefficient rows for variable var */
-   int          nrows;      /** the number of nonzeros */
-   SCIP_Real*   colvals;    /** array to store the nonzero coefficients */
+   SCIP_COL*    col;        /* the corresponding column of variable var */
+   SCIP_ROW**   rows;       /* pointer to the nonzero coefficient rows for variable var */
+   int          nrows;      /* the number of nonzeros */
+   SCIP_Real*   colvals;    /* array to store the nonzero coefficients */
    int i;
 
    assert(scip != NULL);
@@ -834,7 +834,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             down = MAX(down, floorx);
          }
 
-         /** calculate necessary values */
+         /* calculate necessary values */
          ziup      = getZiValue(scip, up);
          zidown    = getZiValue(scip, down);
          zicurrent = getZiValue(scip, oldsolval);

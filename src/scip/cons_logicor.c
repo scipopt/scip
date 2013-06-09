@@ -926,7 +926,7 @@ SCIP_RETCODE mergeMultiples(
    /* get active or negation of active variables */
    SCIP_CALL( SCIPgetBinvarRepresentatives(scip, nvars, consdata->vars, vars, negarray) );
 
-   /** initialize entries array */
+   /* initialize entries array */
    for( v = nvars - 1; v >= 0; --v )
    {
       assert(negarray[v] ? SCIPvarIsNegated(vars[v]) : TRUE);
@@ -943,11 +943,11 @@ SCIP_RETCODE mergeMultiples(
       if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
 	 pos -= nintvars;
 
-      /** var is not active yet */
+      /* var is not active yet */
       (*entries)[pos] = 0;
    }
 
-   /** check all vars for multiple entries, do necessary backwards loop because deletion only affect rear items */
+   /* check all vars for multiple entries, do necessary backwards loop because deletion only affect rear items */
    for( v = nvars - 1; v >= 0; --v )
    {
       var = negarray[v] ? SCIPvarGetNegationVar(vars[v]) : vars[v];
@@ -958,10 +958,10 @@ SCIP_RETCODE mergeMultiples(
       if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
 	 pos -= nintvars;
 
-      /** if var occurs first time in constraint init entries array */
+      /* if var occurs first time in constraint init entries array */
       if( (*entries)[pos] == 0 )
          (*entries)[pos] = negarray[v] ? 2 : 1;
-      /** if var occurs second time in constraint, first time it was not negated */
+      /* if var occurs second time in constraint, first time it was not negated */
       else if( (*entries)[pos] == 1 )
       {
          if( negarray[v] )
@@ -975,7 +975,7 @@ SCIP_RETCODE mergeMultiples(
 	    ++(*nchgcoefs);
          }
       }
-      /** if var occurs second time in constraint, first time it was negated */
+      /* if var occurs second time in constraint, first time it was negated */
       else
       {
          if( !negarray[v] )

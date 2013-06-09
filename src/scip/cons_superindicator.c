@@ -1834,7 +1834,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSuperindicator)
    /* get number of variables in slack constraint */
    SCIP_CALL( SCIPgetConsNVars(scip, consdata->slackcons, nvars, success) );
 
-   /** add binary variable */
+   /* add binary variable */
    if( *success )
       (*nvars)++;
 

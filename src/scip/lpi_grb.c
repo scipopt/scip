@@ -1686,7 +1686,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
    /* get the column */
    SCIP_CALL( SCIPlpiGetCols(lpi, col, col, &lb, &ub, &nnonz, &beg, lpi->indarray, lpi->valarray) );
 
-   /** get objective coefficient */
+   /* get objective coefficient */
    SCIP_CALL( SCIPlpiGetObj(lpi, col, col, &obj) );
 
    /* scale column coefficients */

@@ -444,7 +444,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       /* get name of the original problem and add the string "_localbranchsub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_localbranchsub", SCIPgetProbName(scip));
 
-         /* create the subproblem */
+      /* create the subproblem */
       SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
       /* copy all variables */
@@ -456,7 +456,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
       if( heurdata->copycuts )
       {
-         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
       }
    }

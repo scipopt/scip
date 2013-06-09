@@ -9924,7 +9924,7 @@ SCIP_RETCODE SCIPvarAddImplic(
          SCIP_CALL( SCIPvarAddImplic(var->negatedvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
                !varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
       }
-      /** in case one both variables are not of binary type we have to add the implication as variable bounds */
+      /* in case one both variables are not of binary type we have to add the implication as variable bounds */
       else
       {
          /* if the implied variable is of binary type exchange the variables */

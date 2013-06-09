@@ -1639,7 +1639,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
    /* get the column */
    SCIP_CALL( SCIPlpiGetCols(lpi, col, col, &lb, &ub, &nnonz, &beg, lpi->indarray, lpi->valarray) );
 
-   /** get objective coefficient */
+   /* get objective coefficient */
    SCIP_CALL( SCIPlpiGetObj(lpi, col, col, &obj) );
 
    /* scale column coefficients */
@@ -3771,8 +3771,8 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_THREADS:
 #if (CPX_VERSION == 1100 || (CPX_VERSION == 1220 && (CPX_SUBVERSION == 0 || CPX_SUBVERSION == 2)))
-      /** Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
-       *  return the value set by SCIP and not the real thread count */
+      /* Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
+       * return the value set by SCIP and not the real thread count */
       *ival = lpi->pseudonthreads;
       assert(getIntParam(lpi, CPX_PARAM_THREADS) == 1);
 #else
@@ -3870,8 +3870,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_THREADS:
 #if (CPX_VERSION == 1100 || (CPX_VERSION == 1220 && (CPX_SUBVERSION == 0 || CPX_SUBVERSION == 2)))
-      /** Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
-       *  store the value set by SCIP and return it later instead of the real thread count */
+      /* Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
+       * store the value set by SCIP and return it later instead of the real thread count */
       lpi->pseudonthreads = ival;
       ival = 1;
 #else
