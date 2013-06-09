@@ -484,13 +484,13 @@ SCIP_RETCODE deleteVarSOS2(
  *  - All variables fixed to zero, that are at the beginning or end of the constraint can be removed. Otherwise we
  *    cannot exploit this information.
  *  - We substitute appregated variables.
- *  - If a constraint has not more then two variables, we delete it.
+ *  - If a constraint has at most two variables, we delete it.
  *
  *  We currently do not handle the following:
- *  - If a variable appears twice not next to eachother, it can be fixed to 0, or if one variable is already non-zero
- *    and next to this one exists the same variable twice, we can fix all variables.
- *  - If a variable and its negation appear in the constraint we might fix variables to zero or can forbid a zero value
- *    for them.
+ *  - If a variable appears twice not next to eachother, it can be fixed to 0. If one variable appears next to eachother
+ *    and is already certain to be nonzero, we can fix all variables.
+ *  - If a binary variable and its negation appear in the constraint, we might fix variables to zero or can forbid a zero
+ *    value for them.
  *  - If a constraint has not more then two not to zero fixed variables, only one variable can be nonzero, because they
  *    need to be the "border" variables of this constraint. The same holds if we have exactly three variables and the
  *    middle variable is fixed to 0 or is certain to be nonzero; here we can also upgrade this constraint to an sos1.
@@ -535,7 +535,7 @@ SCIP_RETCODE presolRoundSOS2(
 
    SCIPdebugMessage("Presolving SOS2 constraint <%s>.\n", SCIPconsGetName(cons) );
 
-   /* if the number of variables is less than 3 */
+   /* if the number of variables is at most 2 */
    if( consdata->nvars <= 2 )
    {
       SCIPdebugMessage("Deleting constraint with <= 2 variables.\n");
@@ -555,7 +555,7 @@ SCIP_RETCODE presolRoundSOS2(
    lastzero = consdata->nvars;
    localnremovedvars = 0;
 
-   /* check for variables fixed to 0 and bounds that guaranty a variable to be nonzero, downward loop is important */
+   /* check for variables fixed to 0 and bounds that guarantee a variable to be nonzero; downward loop is important */
    for( j = consdata->nvars - 1; j >= 0; --j )
    {
       SCIP_VAR* var;
@@ -570,7 +570,7 @@ SCIP_RETCODE presolRoundSOS2(
       scalar = 1.0;
       constant = 0.0;
 
-      /* check aggregation: if the constant is zero the variable is zero iff the aggregated variable is 0 */
+      /* check aggregation: if the constant is zero, the variable is zero iff the aggregated variable is 0 */
       var = vars[j];
       SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
 
@@ -600,7 +600,7 @@ SCIP_RETCODE presolRoundSOS2(
          /* two variables certain to be nonzero which are not next to each other, so we are infeasible */
          if( lastFixedNonzero != -1 && lastFixedNonzero != j + 1 )
          {
-            SCIPdebugMessage("The problem is infeasible: two non-consecutive variables have bounds that keep it from being 0.\n");
+            SCIPdebugMessage("The problem is infeasible: two non-consecutive variables have bounds that keep them from being 0.\n");
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
@@ -608,7 +608,7 @@ SCIP_RETCODE presolRoundSOS2(
          /* if more than two variables are fixed to be nonzero, we are infeasible */
          if( nfixednonzeros > 2 )
          {
-            SCIPdebugMessage("The problem is infeasible: more than two variables have bounds that keep it from being 0.\n");
+            SCIPdebugMessage("The problem is infeasible: more than two variables have bounds that keep them from being 0.\n");
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
@@ -617,7 +617,7 @@ SCIP_RETCODE presolRoundSOS2(
       }
 
       /* if the variable is fixed to 0 we may delete it from our constraint */
-      if( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub ) )
+      if( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) )
       {
          /* all rear variable fixed to 0 can be deleted */
          if( j == consdata->nvars - 1 )
@@ -670,7 +670,7 @@ SCIP_RETCODE presolRoundSOS2(
       assert(SCIPisFeasPositive(scip, SCIPvarGetLbGlobal(vars[lastFixedNonzero])) || SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero])));
    }
 
-   /* if the number of variables is less than 3 */
+   /* if the number of variables is at most 2 */
    if( consdata->nvars <= 2 )
    {
       SCIPdebugMessage("Deleting constraint with <= 2 variables.\n");
