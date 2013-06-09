@@ -481,21 +481,27 @@ SCIP_RETCODE deleteVarSOS2(
  *
  *  - If the bounds of one variable force it to be nonzero, we can fix all other variables with distance at least two to
  *    zero. If two variables are certain to be nonzero, we can fix all other variables to 0 and remove the constraint.
- *  - All variables fixed to zero, that are at the beginning or end of the constraint can be removed. Otherwise we
- *    cannot exploit this information.
+ *  - All variables fixed to zero, that are at the beginning or end of the constraint can be removed.
  *  - We substitute appregated variables.
  *  - If a constraint has at most two variables, we delete it.
  *
  *  We currently do not handle the following:
- *  - If a variable appears twice not next to eachother, it can be fixed to 0. If one variable appears next to eachother
- *    and is already certain to be nonzero, we can fix all variables.
+ *
+ *  - If we have at least two variables fixed to zero next to each-other, that are positioned in the inner part of this
+ *    constraint, we can delete all but one of these variables.
+ *  - If a variable appears twice not next to each-other, it can be fixed to 0. If one variable appears next to
+ *    each-other and is already certain to be nonzero, we can fix all variables.
  *  - If a binary variable and its negation appear in the constraint, we might fix variables to zero or can forbid a zero
  *    value for them.
- *  - If a constraint has not more then two not to zero fixed variables, only one variable can be nonzero, because they
- *    need to be the "border" variables of this constraint. The same holds if we have exactly three variables and the
- *    middle variable is fixed to 0 or is certain to be nonzero; here we can also upgrade this constraint to an sos1.
- *  - If the constraint again has only three variables, the middle one is fixed to 0 or certain to be nonzero and the
- *    "border" variables are negations of each other, we can delete the constraint.
+ *  - When, after removing all zero "border" variables, a constraint with more than two variables has at most two
+ *    variables that are not fixed to 0, only one of these can take a nonzero value, because these variables need to be
+ *    the "border" variables of this constraint. The same holds if we have exactly three variables in one constraint and
+ *    the middle variable is certain to be not zero. In both cases we can upgrade this constraint constraint to an sos1
+ *    consisting only of the "border" variables. If these "border" variables are negations of each other, we can delete
+ *    this constraint.
+ *  - When, after removing all variables fixed to 0, that are possible, in a constraint each even positioned variable is
+ *    fixed to 0, we can upgrade this constraint to an sos1 that holds all non-fixed variables.
+ *  - A constraint only with binary variables can be upgraded to a linear constraint.
  */
 static
 SCIP_RETCODE presolRoundSOS2(
