@@ -61,8 +61,8 @@ SCIP_RETCODE fromCommandLine(
     * Problem Creation *
     ********************/
 
-   /* @note The message handler should be only fed line by line such the message has the chance to add string in front
-    *       of each message
+   /** @note The message handler should be only fed line by line such the message has the chance to add string in front
+    *        of each message
     */
    SCIPinfoMessage(scip, NULL, "\n");
    SCIPinfoMessage(scip, NULL, "read problem <%s>\n", filename);

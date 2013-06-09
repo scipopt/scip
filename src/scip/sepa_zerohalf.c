@@ -190,6 +190,7 @@ typedef enum cutseparatedby CUTSEPARATEDBY;
 #define MOD(value1, powerof2value) (((unsigned int)(value1)) % ((unsigned int)(powerof2value)))     /**< remainder of integer division using a power of 2
                                                                                                        as divisor */
 #ifndef BMSmoveMemoryArray                                      
+/** moves array at source with size num to ptr */
 #define BMSmoveMemoryArray(ptr, source, num)                    \
    {                                                            \
       size_t size__ = (num) * sizeof(*(ptr));                   \
@@ -199,7 +200,7 @@ typedef enum cutseparatedby CUTSEPARATEDBY;
          assert((void*)(source) != NULL);                       \
          memmove((void*)(ptr), (void*)(source), size__);        \
       }                                                         \
-   } /** moves array at source with size num to ptr */
+   }
 #endif
 
 #ifdef  ZEROHALF__PRINT_STATISTICS
@@ -4322,8 +4323,8 @@ SCIP_RETCODE preprocessConsiderMinSlack(
    SCIP_SEPADATA*        sepadata,           /**< separator data */  
    ZEROHALF_LPDATA*      lpdata,             /**< data of current LP relaxation */
    ZEROHALF_MOD2DATA*    mod2data,           /**< considered (preprocessed) subproblem mod 2 */ 
-   SCIP_Bool             removelargeslackrows,     /**< should rows with slack + minslack > maxslack be removed? */
-   SCIP_Bool             removelargecolrows        /**< should rows with "large valued" columns that cannot be negated be removed? */
+   SCIP_Bool             removelargeslackrows, /**< should rows with slack + minslack > maxslack be removed? */
+   SCIP_Bool             removelargecolrows  /**< should rows with "large valued" columns that cannot be negated be removed? */
    )
 {
    int                   first;
