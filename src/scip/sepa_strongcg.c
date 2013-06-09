@@ -485,9 +485,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                 *  -> leads to an integral slack variable that can later be used for other cuts
                 */
                {
-                  int k;
-                  for( k = 0; k < cutlen && SCIPvarIsIntegral(cutvars[k]); ++k )
-                  {}
+                  int k = 0;
+                  while ( k < cutlen && SCIPvarIsIntegral(cutvars[k]) )
+                     ++k;
                   if( k == cutlen )
                   {
                      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
