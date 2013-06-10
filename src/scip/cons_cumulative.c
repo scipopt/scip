@@ -2668,22 +2668,24 @@ SCIP_RETCODE analyzeEnergyRequirement(
             /* compute the overlap of the job in case it would be scheduled w.r.t. its latest start time and the time
              * interval (before the propagation)
              */
-            right = MIN(end - lst, end - begin);
+            right = MIN3(end - lst, end - begin, duration);
 
             /* the job needs to overlap with the interval; otherwise the propagation w.r.t. this time window is not valid */
             assert(right > 0);
 
             lct = convertBoundToInt(scip, relaxedbd) + duration;
             assert(begin <= lct);
+            assert(lct - begin < duration);
 
             /* compute the overlap of the job after the propagation but considering the relaxed bound */
             left = MIN(lct - begin + 1, end - begin);
             assert(left > 0);
 
             /* compute the minimum overlap; */
-            overlap = MIN3(left, right, duration);
+            overlap = MIN(left, right);
             assert(overlap > 0);
             assert(overlap <= end - begin);
+            assert(overlap <= duration);
 
             if( usebdwidening )
             {
@@ -2713,22 +2715,24 @@ SCIP_RETCODE analyzeEnergyRequirement(
             /* compute the overlap of the job in case it would be scheduled w.r.t. its earliest start time and the time
              * interval (before the propagation)
              */
-            left = MIN(ect - begin, end - begin);
+            left = MIN3(ect - begin, end - begin, duration);
 
             /* the job needs to overlap with the interval; otherwise the propagation w.r.t. this time window is not valid */
             assert(left > 0);
 
             est = convertBoundToInt(scip, relaxedbd);
             assert(end >= est);
+            assert(end - est < duration);
 
             /* compute the overlap of the job after the propagation but considering the relaxed bound */
             right = MIN(end - est + 1, end - begin);
             assert(right > 0);
 
             /* compute the minimum overlap */
-            overlap = MIN3(left, right, duration);
+            overlap = MIN(left, right);
             assert(overlap > 0);
             assert(overlap <= end - begin);
+            assert(overlap <= duration);
 
             if( usebdwidening )
             {
