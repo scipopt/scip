@@ -97,8 +97,8 @@ struct LpInput
    int                   linepos;
    LPSECTION             section;
    SCIP_OBJSENSE         objsense;
-   SCIP_Bool             inlazyconstraints;
-   SCIP_Bool             inusercuts;
+   SCIP_Bool             inlazyconstraints;  /**< whether we are currently reading the section for lazy constraints */
+   SCIP_Bool             inusercuts;         /**< whether we are currently reading the section for user cuts */
    SCIP_Bool             initialconss;       /**< should model constraints be marked as initial? */
    SCIP_Bool             dynamicconss;       /**< should model constraints be subject to aging? */
    SCIP_Bool             dynamiccols;        /**< should columns be added and removed dynamically to the LP? */
