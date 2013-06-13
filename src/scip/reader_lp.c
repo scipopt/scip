@@ -2048,7 +2048,7 @@ SCIP_RETCODE readSos(
 
    /* standard settings for SOS constraints: */
    initial = TRUE;
-   separate = FALSE;
+   separate = TRUE;
    enforce = TRUE;
    check = TRUE;
    propagate = TRUE;
