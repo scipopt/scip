@@ -1840,7 +1840,7 @@ SCIP_RETCODE SCIPpriceLoop(
          *aborted = ( (*aborted) || (result == SCIP_DIDNOTRUN) );
 
          /* update lower bound w.r.t. the lower bound given by the pricer */
-         SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, lb);
+         SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, prob, lb);
          SCIPdebugMessage(" -> new lower bound given by pricer %s: %g\n", SCIPpricerGetName(set->pricers[p]), lb);
       }
 
@@ -2388,7 +2388,7 @@ SCIP_RETCODE priceAndCutLoop(
    /* update lower bound w.r.t. the LP solution */
    if( *cutoff )
    {
-      SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, SCIPsetInfinity(set));
+      SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, prob, SCIPsetInfinity(set));
    }
    else if( !(*lperror) )
    {
@@ -2468,7 +2468,7 @@ SCIP_RETCODE applyBounding(
 
       /* update lower bound w.r.t. the pseudo solution */
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set, prob);
-      SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, pseudoobjval);
+      SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, prob, pseudoobjval);
       SCIPdebugMessage(" -> lower bound: %g [%g] (pseudoobj: %g [%g]), cutoff bound: %g [%g]\n",
          SCIPnodeGetLowerbound(focusnode), SCIPprobExternObjval(prob, set, SCIPnodeGetLowerbound(focusnode)),
          pseudoobjval, SCIPprobExternObjval(prob, set, pseudoobjval),
@@ -2480,7 +2480,7 @@ SCIP_RETCODE applyBounding(
       {
          SCIPdebugMessage("node is cut off by bounding (lower=%g, upper=%g)\n",
             SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
-         SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, SCIPsetInfinity(set));
+         SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, prob, SCIPsetInfinity(set));
          *cutoff = TRUE;
 
          /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
@@ -2687,6 +2687,7 @@ SCIP_RETCODE solveNodeRelax(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    int                   depth,              /**< depth of current node */
    SCIP_Bool             beforelp,           /**< should the relaxators with non-negative or negative priority be called? */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
@@ -2762,7 +2763,7 @@ SCIP_RETCODE solveNodeRelax(
          assert(SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
          
          /* update lower bound w.r.t. the lower bound given by the relaxator */
-         SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, lowerbound);
+         SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, prob, lowerbound);
          SCIPdebugMessage(" -> new lower bound given by relaxator %s: %g\n", 
             SCIPrelaxGetName(set->relaxs[r]), lowerbound);
       }
@@ -3211,7 +3212,7 @@ SCIP_RETCODE propAndSolve(
       /** clear the storage of external branching candidates */
       SCIPbranchcandClearExternCands(branchcand);
 
-      SCIP_CALL( solveNodeRelax(set, stat, tree, actdepth, TRUE, cutoff, propagateagain, solvelpagain, solverelaxagain) );
+      SCIP_CALL( solveNodeRelax(set, stat, tree, transprob, actdepth, TRUE, cutoff, propagateagain, solvelpagain, solverelaxagain) );
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
       /* check, if the path was cutoff */
@@ -3309,7 +3310,7 @@ SCIP_RETCODE propAndSolve(
    /* solve external relaxations with negative priority */
    if( solverelax && !(*cutoff) )
    {
-      SCIP_CALL( solveNodeRelax(set, stat, tree, actdepth, FALSE, cutoff, propagateagain, solvelpagain, solverelaxagain) );
+      SCIP_CALL( solveNodeRelax(set, stat, tree, transprob, actdepth, FALSE, cutoff, propagateagain, solvelpagain, solverelaxagain) );
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
       /* check, if the path was cutoff */
@@ -3888,7 +3889,7 @@ SCIP_RETCODE solveNode(
    if( *cutoff )
    {
       SCIPdebugMessage("node is cut off\n");
-      SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, SCIPsetInfinity(set));
+      SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, SCIPsetInfinity(set));
       *infeasible = TRUE;
    }
 

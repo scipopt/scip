@@ -648,9 +648,7 @@ void SCIPstoreSolutionGap(
 
    if( scip->set->stage == SCIP_STAGE_SOLVING )
    {
-      assert(SCIPisEQ(scip, scip->stat->objoffset, scip->transprob->objoffset));
-      SCIPstatUpdatePrimalIntegral(scip->stat, scip->set, SCIPsolGetObj(SCIPgetBestSol(scip), scip->set, scip->transprob), SCIPgetLowerbound(scip) );
-      SCIPinfoMessage(scip, NULL, "New Primal integral is %f\n", scip->stat->primalintegralval);
+      SCIPstatUpdatePrimalDualIntegral(scip->stat, scip->set, scip->transprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
    }
 }
 
@@ -11277,7 +11275,7 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
 {
    SCIP_CALL( checkStage(scip, "SCIPupdateNodeLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->tree, newbound);
+   SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->tree, scip->transprob, newbound);
 
    /* if lowerbound exceeds the cutoffbound the node will be marked to be cutoff
     *
@@ -12538,7 +12536,7 @@ SCIP_RETCODE initSolve(
    /* update dual bound of the root node if a valid dual bound is at hand */
    if( scip->transprob->dualbound < SCIP_INVALID )
    {
-      SCIPnodeUpdateLowerbound(SCIPtreeGetRootNode(scip->tree), scip->stat, scip->set, scip->tree,
+      SCIPnodeUpdateLowerbound(SCIPtreeGetRootNode(scip->tree), scip->stat, scip->set, scip->tree, scip->transprob,
          SCIPprobInternObjval(scip->transprob, scip->set, scip->transprob->dualbound));
    }
 
@@ -12750,7 +12748,7 @@ SCIP_RETCODE freeTransform(
    if( scip->set->misc_resetstat )
    {
       /* reset statistics to the point before the problem was transformed */
-      SCIPstatReset(scip->stat);
+      SCIPstatReset(scip->stat, scip->set);
    }
 
    /* switch stage to PROBLEM */
@@ -34870,7 +34868,6 @@ void printTreeStatistics(
       scip->stat->nnodes > 0
       ? (SCIP_Real)(scip->stat->nactivatednodes + scip->stat->ndeactivatednodes) / (SCIP_Real)scip->stat->nnodes : 0.0);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  primal integral  : %16.9f\n", scip->stat->primalintegralval);
 }
 
 /** display solution statistics */
@@ -34987,6 +34984,10 @@ void printSolutionStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap              :   infinite\n");
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap              : %10.2f %%\n", 100.0 * gap);
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         : %10.2f %% (%6.2f primal integral)\n",
+         SCIPisFeasZero(scip, SCIPgetSolvingTime(scip)) ? 0.0 : scip->stat->primalintegralval/SCIPgetSolvingTime(scip),
+               scip->stat->primalintegralval);
 }
 
 /** display first LP statistics */

@@ -610,7 +610,6 @@ SCIP_VAR** SCIPprobGetVars(
 #define SCIPprobGetNImplVars(prob)      ((prob)->nimplvars)
 #define SCIPprobGetNContVars(prob)      ((prob)->ncontvars)
 #define SCIPprobGetVars(prob)           ((prob)->vars)
-
 #endif
 
 

@@ -101,9 +101,9 @@ struct SCIP_Stat
    SCIP_Real             primalintegralval;  /**< current primal-dual integral value */
    SCIP_Real             previousgap;        /**< primal dual gap preceding the current gap */
    SCIP_Real             previntegralevaltime;/**< last time of primal-dual integral evaluation */
-   SCIP_Real             objoffset;          /**< objective offset of transformed problem */
    SCIP_Real             lastprimalbound;    /**< last (non-infinite) primal bound (in transformed space) for integral evaluation */
    SCIP_Real             lastdualbound;      /**< last (non-infinite) dual bound (in transformed space) for integral evaluation */
+   SCIP_Real             lastlowerbound;     /**< last lower bound (in transformed space) for integral evaluation */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    SCIP_CLOCK*           primallptime;       /**< primal LP solution time */

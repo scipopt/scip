@@ -250,6 +250,7 @@ void SCIPnodeUpdateLowerbound(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    );
 
