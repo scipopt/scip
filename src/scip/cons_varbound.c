@@ -2633,6 +2633,8 @@ SCIP_RETCODE applyFixings(
             consdata->rhs -= consdata->vbdcoef * vbdvarconstant;
          consdata->vbdcoef *= vbdvarscalar;
 
+         consdata->tightened = FALSE;
+
          /* release old variable */
          SCIP_CALL( SCIPreleaseVar(scip, &(consdata->vbdvar)) );
          consdata->vbdvar = vbdvar;
