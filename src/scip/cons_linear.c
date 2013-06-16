@@ -9148,7 +9148,7 @@ SCIP_RETCODE simplifyInequalities(
    vals = consdata->vals;
    assert(vars != NULL);
    assert(vals != NULL);
-   assert(consdata->validmaxabsval ? (SCIPisEQ(scip, consdata->maxabsval, REALABS(vals[0])) || SCIPvarGetType(vars[nvars - 1]) == SCIP_VARTYPE_CONTINUOUS) : TRUE);
+   assert(consdata->validmaxabsval ? (SCIPisFeasEQ(scip, consdata->maxabsval, REALABS(vals[0])) || SCIPvarGetType(vars[nvars - 1]) == SCIP_VARTYPE_CONTINUOUS) : TRUE);
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &perm);
@@ -9409,7 +9409,7 @@ SCIP_RETCODE simplifyInequalities(
                tmpmaxactsub += lb * vals[w];
                tmpminactsub += ub * vals[w];
             }
-            assert(tmpmaxactsub > tmpminactsub);
+            assert(tmpmaxactsub >= tmpminactsub);
          }
 
          if( hasrhs )
@@ -9467,6 +9467,9 @@ SCIP_RETCODE simplifyInequalities(
             lhs = consdata->lhs;
          }
          ++(*nchgsides);
+
+         assert(!hasrhs || !SCIPisNegative(scip, rhs));
+         assert(!haslhs || !SCIPisNegative(scip, lhs));
 
          /* get new constraint data */
          nvars = consdata->nvars;
@@ -9638,6 +9641,8 @@ SCIP_RETCODE simplifyInequalities(
 
                lhs = consdata->lhs;
                rhs = consdata->rhs;
+               assert(!hasrhs || !SCIPisNegative(scip, rhs));
+               assert(!haslhs || !SCIPisNegative(scip, lhs));
             }
          }
       }
@@ -9766,8 +9771,8 @@ SCIP_RETCODE simplifyInequalities(
       {
          if( allcoefintegral )
          {
-            /* replace old with new right hand side */
-            SCIP_CALL( chgLhs(scip, cons, SCIPfloor(scip, lhs)) );
+            /* replace old with new left hand side */
+            SCIP_CALL( chgLhs(scip, cons, SCIPceil(scip, lhs)) );
             ++(*nchgsides);
          }
          else
@@ -9798,6 +9803,10 @@ SCIP_RETCODE simplifyInequalities(
                      val *= -1;
                   }
 
+                  /* cannot floor to zero */
+                  if( SCIPisLT(scip, val, 1.0) )
+                     return SCIP_OKAY;
+
                   /* the fractional part on each variable need to exceed the fractional part on the left hand side */
                   if( SCIPisLT(scip, val - SCIPfloor(scip, val), siderest) )
                      return SCIP_OKAY;
@@ -9809,8 +9818,8 @@ SCIP_RETCODE simplifyInequalities(
                   /* if we exceed the fractional part of the left hand side plus one by summing up all maximal
                    * fractional parts of the variables, we cannot tighten the coefficients
                    *
-                   * e.g. 4.3x1 + 1.3x2 + 1.3x3 + 1.3x4 + 1.3x5 >= 4.2, here we cannot floor all fractionals because
-                   *      x2-x5 set to 1 would be feasible but not after flooring
+                   * e.g. 4.3x1 + 1.3x2 + 1.3x3 + 1.6x4 >= 4.2, here we cannot floor all fractionals because
+                   *      x2-x4 set to 1 would be feasible but not after flooring
                    */
                   if( SCIPisGE(scip, frac, 1 + siderest) )
                      return SCIP_OKAY;
@@ -9856,7 +9865,7 @@ SCIP_RETCODE simplifyInequalities(
                }
             }
 
-            /* replace old with new right hand side */
+            /* replace old with new left hand side */
             SCIP_CALL( chgLhs(scip, cons, SCIPfloor(scip, lhs)) );
             ++(*nchgsides);
          }
@@ -9869,6 +9878,17 @@ SCIP_RETCODE simplifyInequalities(
 
       rhs = consdata->rhs;
       lhs = consdata->lhs;
+
+      /* if the left hand side got changed to zero, the normalization changed the constraint by multiplying it by -1 */
+      if( haslhs && SCIPisZero(scip, rhs) )
+      {
+         assert(SCIPisInfinity(scip, -lhs));
+
+         haslhs = FALSE;
+         hasrhs = TRUE;
+      }
+      assert(!hasrhs || !SCIPisNegative(scip, rhs));
+      assert(!haslhs || !SCIPisNegative(scip, lhs));
 
       SCIPdebugPrintCons(scip, cons, NULL);
 
@@ -10115,6 +10135,9 @@ SCIP_RETCODE simplifyInequalities(
 
       rhs = consdata->rhs;
       lhs = consdata->lhs;
+      assert(!hasrhs || !SCIPisNegative(scip, rhs));
+      assert(!haslhs || !SCIPisNegative(scip, lhs));
+
       nvars = consdata->nvars;
 
       SCIPdebugMessage("we did %d coefficient changes and %d side changes on constraint %s when applying one round of the gcd algorithm\n", *nchgcoefs - oldnchgcoefs, *nchgsides - oldnchgsides, SCIPconsGetName(cons));
