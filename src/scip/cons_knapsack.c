@@ -9719,12 +9719,14 @@ SCIP_RETCODE tightenWeights(
    int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
    int*                  nchgsides,          /**< pointer to count number of side changes */
    int*                  naddconss,          /**< pointer to count number of added constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Longint minweight;
+   int pos;
    int i;
 
    assert(nchgcoefs != NULL);
@@ -9782,8 +9784,99 @@ SCIP_RETCODE tightenWeights(
    if( consdata->weightsum <= consdata->capacity )
       return SCIP_OKAY;
 
+   pos = 0;
+   while( pos < consdata->nvars && consdata->weights[pos] == consdata->capacity )
+      ++pos;
+
    /* apply rule (2) (don't apply, if the knapsack has too many items for applying this costly method) */
-   if( consdata->nvars <= MAX_USECLIQUES_SIZE || (consdata->cliquepartitioned && consdata->ncliques <= MAX_USECLIQUES_SIZE) ) 
+   if( conshdlrdata->disaggregation && consdata->nvars - pos <= MAX_USECLIQUES_SIZE && consdata->nvars >= 2 && pos > 0 && consdata->nvars - pos <= consdata->capacity && consdata->weights[pos - 1] == consdata->capacity && (pos == consdata->nvars || consdata->weights[pos] == 1) )
+   {
+      SCIP_VAR** clqvars;
+      SCIP_CONS* cliquecons;
+      char name[SCIP_MAXSTRLEN];
+      int* clqpart;
+      int nclqvars;
+      int nclq;
+      int len;
+      int c;
+      int w;
+
+      assert(!SCIPconsIsDeleted(cons));
+
+      if( pos == consdata->nvars )
+      {
+         SCIPdebugMessage("upgrading knapsack constraint <%s> to a set-packing constraint", SCIPconsGetName(cons));
+
+         SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, SCIPconsGetName(cons), pos, consdata->vars,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+               SCIPconsIsStickingAtNode(cons)) );
+
+         SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+         ++(*naddconss);
+
+         /* delete old constraint */
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+
+         return SCIP_OKAY;
+      }
+
+      len = consdata->nvars - pos;
+
+      /* allocate temporary memory */
+      SCIP_CALL( SCIPallocBufferArray(scip, &clqpart, len) );
+
+      /* calculate clique partition */
+      SCIP_CALL( SCIPcalcCliquePartition(scip, &(consdata->vars[pos]), len, clqpart, &nclq) );
+
+      SCIPdebugMessage("Disaggregating knapsack constraint <%s> due to clique information.\n", SCIPconsGetName(cons));
+
+      /* allocate temporary memory */
+      SCIP_CALL( SCIPallocBufferArray(scip, &clqvars, len - nclq + 2) );
+
+      for( w = pos - 1; w >= 0; --w )
+         clqvars[w] = consdata->vars[w];
+
+      for( c = 0; c < nclq; ++c )
+      {
+         nclqvars = pos;
+         for( w = 0; w < len; ++w )
+         {
+            if( clqpart[w] == c )
+            {
+               clqvars[nclqvars] = consdata->vars[w + pos];
+               ++nclqvars;
+            }
+         }
+
+         assert(nclqvars > 1);
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clq_%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons), consdata->capacity, c);
+         SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, name, nclqvars, clqvars,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+               SCIPconsIsStickingAtNode(cons)) );
+         SCIPdebugMessage(" -> adding clique constraint: ");
+         SCIPdebugPrintCons(scip, cliquecons, NULL);
+         SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+         ++(*naddconss);
+      }
+
+      /* delete old constraint */
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+
+      SCIPfreeBufferArray(scip, &clqvars);
+      SCIPfreeBufferArray(scip, &clqpart);
+
+      return SCIP_OKAY;
+   }
+   else if( consdata->nvars <= MAX_USECLIQUES_SIZE || (consdata->cliquepartitioned && consdata->ncliques <= MAX_USECLIQUES_SIZE) )
    {
       SCIP_Longint* maxcliqueweights;
       SCIP_Longint* newweightvals;
@@ -11683,7 +11776,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          }
 
          /* tighten capacity and weights */
-         SCIP_CALL( tightenWeights(scip, cons, nchgcoefs, nchgsides, naddconss, &cutoff) );
+         SCIP_CALL( tightenWeights(scip, cons, nchgcoefs, nchgsides, naddconss, ndelconss, &cutoff) );
          if( cutoff )
             break;
 
