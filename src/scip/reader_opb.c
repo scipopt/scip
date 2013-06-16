@@ -3760,6 +3760,7 @@ SCIP_RETCODE SCIPreadOpb(
    )
 {  /*lint --e{715}*/
    OPBINPUT opbinput;
+   SCIP_RETCODE retcode;
    int i;
 
    /* initialize OPB input data */
@@ -3792,7 +3793,7 @@ SCIP_RETCODE SCIPreadOpb(
 #endif
 
    /* read the file */
-   SCIP_CALL( readOPBFile(scip, &opbinput, filename) );
+   retcode = readOPBFile(scip, &opbinput, filename);
 
    /* free dynamically allocated memory */
    for( i = OPB_MAX_PUSHEDTOKENS - 1; i >= 0; --i )
@@ -3801,6 +3802,8 @@ SCIP_RETCODE SCIPreadOpb(
    }
    SCIPfreeBufferArrayNull(scip, &opbinput.tokenbuf);
    SCIPfreeBufferArrayNull(scip, &opbinput.token);
+
+   SCIP_CALL( retcode );
 
    if( opbinput.nproblemcoeffs > 0 )
    {
