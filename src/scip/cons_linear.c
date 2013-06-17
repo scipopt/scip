@@ -9777,6 +9777,10 @@ SCIP_RETCODE simplifyInequalities(
          }
          else
          {
+            /* cannot floor left hand side to zero */
+            if( SCIPisLT(scip, lhs, 1.0) )
+               return SCIP_OKAY;
+
             siderest = lhs - SCIPfloor(scip, lhs);
 
             /* try to round down all non-integral coefficients */
@@ -9879,14 +9883,6 @@ SCIP_RETCODE simplifyInequalities(
       rhs = consdata->rhs;
       lhs = consdata->lhs;
 
-      /* if the left hand side got changed to zero, the normalization changed the constraint by multiplying it by -1 */
-      if( haslhs && SCIPisZero(scip, rhs) )
-      {
-         assert(SCIPisInfinity(scip, -lhs));
-
-         haslhs = FALSE;
-         hasrhs = TRUE;
-      }
       assert(!hasrhs || !SCIPisNegative(scip, rhs));
       assert(!haslhs || !SCIPisNegative(scip, lhs));
 
