@@ -2312,7 +2312,7 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
          /* the point lies on the segment between (xlb,yub) and (xub,ylb)
           * due to numerics, we get into this case here instead in the LowerLeft
           */
-         assert(SCIPisRelLE(scip, yval, (ylb-yub) / (xub-xlb) * (xval-xlb) + yub));
+         assert(SCIPisFeasLE(scip, yval, (ylb-yub) / (xub-xlb) * (xval-xlb) + yub));
          if( !finite(grad_sval[0]) || !finite(grad_rval[0]) )
          {
             /* FIXME maybe it is sufficient to have one of them finite, using that one for the MIN below? */
