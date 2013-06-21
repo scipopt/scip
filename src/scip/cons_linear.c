@@ -9669,7 +9669,7 @@ SCIP_RETCODE simplifyInequalities(
     *
     * @todo there are some steps missing ....
     */
-   if( (hasrhs && !SCIPisIntegral(scip, rhs)) || (haslhs && !SCIPisIntegral(scip, lhs)) )
+   if( (hasrhs && !SCIPisFeasIntegral(scip, rhs)) || (haslhs && !SCIPisFeasIntegral(scip, lhs)) )
    {
       SCIP_Real val;
       SCIP_Real newval;
@@ -9903,6 +9903,10 @@ SCIP_RETCODE simplifyInequalities(
    /* @todo following can also work on non integral coefficients, need more investigation */
    /* only check constraints with integral coefficients on all integral variables */
    if( !allcoefintegral )
+      return SCIP_OKAY;
+
+   /* we want to avoid numerical troubles, therefore we do not change non-integral sides */
+   if( (hasrhs && !SCIPisIntegral(scip, rhs)) || (haslhs && !SCIPisIntegral(scip, lhs)) )
       return SCIP_OKAY;
 
    /* maximal absolute value of coefficients in constraint is one, so we cannot tighten it further */
