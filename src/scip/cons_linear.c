@@ -9302,6 +9302,7 @@ SCIP_RETCODE simplifyInequalities(
       }
 
       siderest = -SCIP_INVALID;
+      allcoefintegral = TRUE;
 
       /* check if some variables always fit into the given constraint */
       for( ; v < nvars - 1; ++v )
@@ -9310,7 +9311,10 @@ SCIP_RETCODE simplifyInequalities(
             break;
 
          if( !SCIPisIntegral(scip, vals[v]) )
+         {
+            allcoefintegral = FALSE;
             break;
+         }
 
          /* calculate greatest common divisor for all general and binary variables */
          gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[v]) + feastol));
@@ -9463,8 +9467,13 @@ SCIP_RETCODE simplifyInequalities(
          }
          else
          {
-            SCIP_CALL( chgLhs(scip, cons, SCIPfeasCeil(scip, consdata->lhs)) );
-            lhs = consdata->lhs;
+            if( SCIPisFeasGT(scip, oldcoef/vals[w], 1.0) )
+            {
+               SCIP_CALL( chgLhs(scip, cons, SCIPfeasCeil(scip, consdata->lhs)) );
+               lhs = consdata->lhs;
+            }
+            else
+               assert(offsetv == -1 || SCIPisEQ(scip, vals[offsetv], consdata->lhs));
          }
          ++(*nchgsides);
 
@@ -9475,6 +9484,15 @@ SCIP_RETCODE simplifyInequalities(
          nvars = consdata->nvars;
          assert(nvars >= 2);
 
+         allcoefintegral = TRUE;
+
+#ifndef NDEBUG
+         /* check integrality */
+         for( w = offsetv + 1; w < nvars; ++w )
+         {
+            assert(SCIPisIntegral(scip, vals[w]));
+         }
+#endif
          SCIPdebugPrintCons(scip, cons, NULL);
       }
 
@@ -9496,7 +9514,10 @@ SCIP_RETCODE simplifyInequalities(
                   break;
 
                if( !SCIPisIntegral(scip, vals[v]) )
+               {
+                  allcoefintegral = FALSE;
                   break;
+               }
 
                oldgcd = gcd;
 
@@ -9532,18 +9553,29 @@ SCIP_RETCODE simplifyInequalities(
             }
             assert(v > offsetv || candpos > offsetv);
          }
+         else
+            candpos = -1;
       }
       else
          candpos = nvars - 1;
 
       /* check for further necessary coefficient adjustments */
-      if( offsetv >= 0 && gcd > 1 )
+      if( offsetv >= 0 && gcd > 1 && allcoefintegral )
       {
          assert(offsetv + 1 < nvars);
+         assert(0 <= candpos && candpos < nvars);
 
-         if( SCIPvarGetType(vars[candpos]) != SCIP_VARTYPE_CONTINUOUS && SCIPisIntegral(scip, vals[candpos]) )
+         if( SCIPvarGetType(vars[candpos]) != SCIP_VARTYPE_CONTINUOUS )
          {
             SCIP_Bool notchangable = FALSE;
+
+#ifndef NDEBUG
+            /* check integrality */
+            for( w = offsetv + 1; w < nvars; ++w )
+            {
+               assert(SCIPisIntegral(scip, vals[w]));
+            }
+#endif
 
             if( vals[candpos] > 0 && SCIPvarIsBinary(vars[candpos]) && SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol)) < gcd )
             {
@@ -9596,7 +9628,7 @@ SCIP_RETCODE simplifyInequalities(
                gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol));
             }
 
-            /* @todo do this for the rhs too */
+            /* correct side and big coefficients */
             if( (!notchangable && hasrhs && ((!SCIPisFeasIntegral(scip, rhs) || SCIPcalcGreComDiv(gcd, (SCIP_Longint)(rhs + feastol)) < gcd) && (SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol)) == gcd))) ||
                ( haslhs && (!SCIPisFeasIntegral(scip, lhs) || SCIPcalcGreComDiv(gcd, (SCIP_Longint)(lhs + feastol)) < gcd) && (SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol)) == gcd)) )
             {
