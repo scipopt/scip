@@ -1088,6 +1088,8 @@ void updateTransformation(
          *transformshiftval = lb;
          if( !SCIPisInfinity(scip, ub) )
             matrix->upperbounds[varindex] = ub - lb;
+         else
+            matrix->upperbounds[varindex] = SCIPinfinity(scip);
       }
    }
 
