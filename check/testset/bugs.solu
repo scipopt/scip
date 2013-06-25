@@ -11,6 +11,7 @@
 =opt= SfoLP60                    1316.7
 =opt= monotonic              141.273104
 =opt= PPMIP156         259.303361105563
+=inf= propagation_bug
 =opt= SfOMIP002                   21.85
 =best= SfOMIP070             22.7649691
 =opt= SfOMIP073              71.4663718
