@@ -14336,16 +14336,23 @@ void getObjvalDeltaLb(
 {
    assert(!SCIPsetIsInfinity(set, REALABS(obj)));
    assert(!SCIPsetIsInfinity(set, oldlb));
-   assert(!SCIPsetIsInfinity(set, newlb));
    assert(!SCIPsetIsInfinity(set, -oldlb) || !SCIPsetIsInfinity(set, -newlb));
    assert(SCIPsetIsPositive(set, obj)); /* we only need to update if the objective is positive */
 
    if( SCIPsetIsInfinity(set, -oldlb) )
    {
-      (*deltainf) = -1;
-      (*deltaval) = newlb * obj;
+      if( !SCIPsetIsInfinity(set, newlb) )
+      {
+         (*deltainf) = -1;
+         (*deltaval) = newlb * obj;
+      }
+      else
+      {
+         (*deltainf) = 0;
+         (*deltaval) = 0.0;
+      }
    }
-   else if( SCIPsetIsInfinity(set, -newlb) )
+   else if( SCIPsetIsInfinity(set, REALABS(newlb)) )
    {
       (*deltainf) = 1;
       (*deltaval) = -oldlb * obj;
@@ -14370,16 +14377,23 @@ void getObjvalDeltaUb(
 {
    assert(!SCIPsetIsInfinity(set, REALABS(obj)));
    assert(!SCIPsetIsInfinity(set, -oldub));
-   assert(!SCIPsetIsInfinity(set, -newub));
    assert(!SCIPsetIsInfinity(set, oldub) || !SCIPsetIsInfinity(set, newub));
    assert(SCIPsetIsNegative(set, obj)); /* we only need to update if the objective is negative */
 
    if( SCIPsetIsInfinity(set, oldub) )
    {
-      (*deltainf) = -1;
-      (*deltaval) = newub * obj;
+      if( !SCIPsetIsInfinity(set, -newub) )
+      {
+         (*deltainf) = -1;
+         (*deltaval) = newub * obj;
+      }
+      else
+      {
+         (*deltainf) = 0;
+         (*deltaval) = 0.0;
+      }
    }
-   else if( SCIPsetIsInfinity(set, newub) )
+   else if( SCIPsetIsInfinity(set, REALABS(newub)) )
    {
       (*deltainf) = 1;
       (*deltaval) = -oldub * obj;
