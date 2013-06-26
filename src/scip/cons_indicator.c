@@ -240,6 +240,7 @@
 #define DEFAULT_SEPACOUPLINGLOCAL   FALSE    /**< Allow to use local bounds in order to separated coupling inequalities? */
 #define DEFAULT_SEPACOUPLINGVALUE     1e4    /**< maximum coefficient for binary variable in separated coupling constraint */
 #define DEFAULT_SEPAALTERNATIVELP   FALSE    /**< Separate using the alternative LP? */
+#define DEFAULT_TRYSOLFROMCOVER     FALSE    /**< Try to construct a feasible solution from a cover? */
 #define DEFAULT_USEOTHERCONSS       FALSE    /**< Collect other constraints to alternative LP? */
 #define DEFAULT_UPDATEBOUNDS        FALSE    /**< Update bounds of original variables for separation? */
 #define DEFAULT_MAXCONDITIONALTLP     0.0    /**< max. estimated condition of the solution basis matrix of the alt. LP to be trustworthy (0.0 to disable check) */
@@ -329,6 +330,7 @@ struct SCIP_ConshdlrData
    int                   naddlincons;        /**< number of additional constraints */
    int                   maxaddlincons;      /**< maximal number of additional constraints */
    SCIP_Bool             useotherconss;      /**< Collect other constraints to alternative LP? */
+   SCIP_Bool             trysolfromcover;    /**< Try to construct a feasible solution from a cover? */
    /* parameters that should not be changed after problem stage: */
    SCIP_Bool             sepaalternativelp;  /**< Separate using the alternative LP? */
    SCIP_Bool             sepaalternativelp_; /**< used to store the sepaalternativelp parameter */
@@ -2680,8 +2682,96 @@ SCIP_RETCODE extendToCover(
       if ( *error )
          break;
 
+      /* if the alternative polyhedron is infeasible, we found a cover */
       if ( infeasible )
+      {
+         if ( conshdlrdata->trysolfromcover )
+         {
+            /* Check whether we want to try to construct a feasible solution: there should be no integer/binary variables
+             * except the indicator variables. Thus, there should be no integral variables and the number of indicator
+             * variables should at least (actually equal to) the number of binary variables. */
+            if ( SCIPgetNIntVars(scip) == 0 && nconss >= SCIPgetNBinVars(scip) )
+            {
+               SCIP_Bool lperror;
+               SCIP_Bool cutoff;
+
+               SCIP_CALL( SCIPstartProbing(scip) );
+
+               /* fix variables */
+               for (j = 0; j < nconss; ++j)
+               {
+                  SCIP_CONSDATA* consdata;
+                  SCIP_VAR* binvar;
+
+                  assert( SCIPconsIsActive(conss[j]) );
+                  consdata = SCIPconsGetData(conss[j]);
+                  assert( consdata != NULL );
+                  binvar = consdata->binvar;
+                  assert( binvar != NULL );
+
+                  /* Fix binary variables in cover to 1 and corresponding slack variables to 0. The other binary variables
+                   * are fixed to 0 */
+                  if ( S[j] )
+                  {
+                     SCIP_VAR* slackvar;
+
+                     /* to be sure check for non-fixed variables */
+                     if ( SCIPvarGetLbLocal(binvar) < 0.5 && SCIPvarGetUbLocal(binvar) > 0.5 )
+                     {
+                        SCIP_CALL( SCIPchgVarLbProbing(scip, binvar, 1.0) );
+                     }
+
+                     /* also fix slack variables to 0, because we cannot propagate below */
+                     slackvar = consdata->slackvar;
+                     assert( slackvar != NULL );
+                     if ( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(slackvar)) )
+                     {
+                        SCIP_CALL( SCIPchgVarUbProbing(scip, slackvar, 0.0) );
+                     }
+                  }
+                  else
+                  {
+                     if ( SCIPvarGetUbLocal(binvar) > 0.5 && SCIPvarGetLbLocal(binvar) < 0.5 )
+                     {
+                        SCIP_CALL( SCIPchgVarUbProbing(scip, binvar, 0.0) );
+                     }
+                  }
+               }
+
+               /* Cannot call SCIPpropagateProbing() within separation - thus, we had to fix the slack variables above. */
+               SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
+
+               /* the lp often reaches the objective limit - we currently do not use such solutions */
+               if ( ! lperror && ! cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+               {
+                  SCIP_HEUR* trysol;
+                  SCIP_Bool stored;
+                  SCIP_SOL* psol;
+
+                  trysol = SCIPfindHeur(scip, "trysol");
+                  SCIP_CALL( SCIPcreateSol(scip, &psol, trysol) );
+
+                  /* copy the current LP solution to the working solution */
+                  SCIP_CALL( SCIPlinkLPSol(scip, psol) );
+
+                  /* check solution for feasibility, and add it to solution store if possible neither integrality nor
+                   * feasibility of LP rows has to be checked, because this is already done in the intshifting heuristic
+                   * itself and due to the LP resolve */
+                  SCIP_CALL( SCIPtrySol(scip, psol, TRUE, FALSE, TRUE, FALSE, &stored) );
+
+                  if ( stored )
+                  {
+                     SCIPdebugMessage("found feasible shifted solution:\n");
+                     SCIPdebug( SCIP_CALL( SCIPprintSol(scip, psol, NULL, FALSE) ) );
+                  }
+                  SCIP_CALL( SCIPfreeSol(scip, &psol) );
+               }
+
+               SCIP_CALL( SCIPendProbing(scip) );
+            }
+         }
          break;
+      }
 
       /* get solution of alternative LP */
       SCIP_CALL( SCIPlpiGetSol(lp, NULL, primsol, NULL, NULL, NULL) );
@@ -3939,10 +4029,7 @@ SCIP_RETCODE separateIISRounding(
          ++rounds;
       }
 
-      /* Possibly check whether the cover is a feasible solution at this point: This only works if
-         all non-indicator variables are continuous. We would need to fix the indicator variables
-         and solve an LP. */
-
+      /* Note: checking for a primal solution is done in extendToCover(). */
       SCIPdebugMessage("Produced cover of size %d with value %f\n", size, value);
 
       /* reset bounds */
@@ -6122,6 +6209,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "constraints/indicator/useotherconss",
          "Collect other constraints to alternative LP?",
          &conshdlrdata->useotherconss, TRUE, DEFAULT_USEOTHERCONSS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/trysolfromcover",
+         "Try to construct a feasible solution from a cover?",
+         &conshdlrdata->trysolfromcover, TRUE, DEFAULT_TRYSOLFROMCOVER, NULL, NULL) );
 
    /* parameters that should not be changed after problem stage: */
    SCIP_CALL( SCIPaddBoolParam(scip,

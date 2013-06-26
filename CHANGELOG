@@ -58,6 +58,7 @@ features:
 - new method SCIPapplyProbingVar() in prop_probing.h
 - added first implication detection in cons_linear
 - several new presolvimng steps for linear and knapsack constraints, using gcd information and many more
+- cons_indicator can now try to construct feasible solutions from a cover
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -138,6 +139,7 @@ parameters:
   which decide whether binaries should be shifted first and the shifting should be stopped when no violations are left
 - new parameters "heuristics/"<heurname>"/lplimfac" for LNS heuristics to limit the number of LPs solved in a subproblem
 - new parameter "reading/cipreader/writefixedvars" for disabling printing of fixed variables in CIP format
+- new parameter "constraints/indicator/trysolfromcover" for trying to construct a feasible solution from a cover
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
