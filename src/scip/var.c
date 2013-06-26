@@ -1624,6 +1624,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
                      SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), 
                      SCIPimplicsGetBounds(var->implics, varfixing)[i]);
                   SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, varfixing) );
+                  implvar->closestvblpcount = -1;
                   var->closestvblpcount = -1;
                }
             }
@@ -1635,6 +1636,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
                      SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), 
                      SCIPimplicsGetBounds(var->implics, varfixing)[i]);
                   SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, !varfixing) );
+                  implvar->closestvblpcount = -1;
                   var->closestvblpcount = -1;
                }
             }
@@ -1718,6 +1720,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             SCIPdebugMessage("deleting variable upper bound from <%s> involving variable %s\n",
                SCIPvarGetName(implvar), SCIPvarGetName(var));
             SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, FALSE) );
+            implvar->closestvblpcount = -1;
             var->closestvblpcount = -1;
          }
          else if( coef < 0.0 && implvar->vlbs != NULL ) /* implvar may have been aggregated in the mean time */
@@ -1725,6 +1728,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             SCIPdebugMessage("deleting variable lower bound from <%s> involving variable %s\n",
                SCIPvarGetName(implvar), SCIPvarGetName(var));
             SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, TRUE) );
+            implvar->closestvblpcount = -1;
             var->closestvblpcount = -1;
          }
       }
@@ -1810,6 +1814,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             SCIPdebugMessage("deleting variable upper bound from <%s> involving variable %s\n",
                SCIPvarGetName(implvar), SCIPvarGetName(var));
             SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, TRUE) );
+            implvar->closestvblpcount = -1;
             var->closestvblpcount = -1;
          }
          else if( coef > 0.0 && implvar->vlbs != NULL ) /* implvar may have been aggregated in the mean time */
@@ -1817,6 +1822,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             SCIPdebugMessage("deleting variable lower bound from <%s> involving variable %s\n",
                SCIPvarGetName(implvar), SCIPvarGetName(var));
             SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, FALSE) );
+            implvar->closestvblpcount = -1;
             var->closestvblpcount = -1;
          }
       }
