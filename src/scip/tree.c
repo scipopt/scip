@@ -4102,8 +4102,8 @@ SCIP_RETCODE SCIPnodeFocus(
       }
       else
       {
-         /* in case the LP was not constructed (do to the parameter settings for example) we have the finally remember the old size
-          * of the LP (if it was constructed in an earlier node) before we change the current node into a junction
+         /* in case the LP was not constructed (due to the parameter settings for example) we have the finally remember the
+          * old size of the LP (if it was constructed in an earlier node) before we change the current node into a junction
           */
          SCIPlpMarkSize(lp);
 
@@ -4113,6 +4113,12 @@ SCIP_RETCODE SCIPnodeFocus(
    }
    else if( tree->focusnode != NULL )
    {
+      /* in case the LP was not constructed (due to the parameter settings for example) we have the finally remember the
+       * old size of the LP (if it was constructed in an earlier node) before we change the current node into a junction
+       */
+      if( !tree->focuslpconstructed )
+         SCIPlpMarkSize(lp);
+
       /* convert old focus node into deadend */
       SCIP_CALL( focusnodeToDeadend(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand) );
    }
