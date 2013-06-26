@@ -46,6 +46,8 @@ fixed bugs:
 - fixed bugs with freeing C++ object data for problem and variables
 - fixed wrong bound calculation in sepa_rapidlearning
 - fixed bug with infinite multi-aggregation constants
+- fixed bug that old LP size was not updated for deadend if no LP was solved
+- fixed bug that removing reverse implication did not reset closestvblpcount
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
