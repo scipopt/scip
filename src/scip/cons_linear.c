@@ -4777,7 +4777,7 @@ SCIP_RETCODE tightenVarBoundsEasy(
          alpha = val * (ub - lb);
          assert(!SCIPisNegative(scip, alpha));
 
-         if( SCIPisSumGT(scip, alpha, slack) )
+         if( SCIPisSumGT(scip, alpha, slack)  || (force && SCIPisGT(scip, alpha, slack)) )
          {
             SCIP_Real newub;
 
@@ -4826,7 +4826,7 @@ SCIP_RETCODE tightenVarBoundsEasy(
          alpha = val * (ub - lb);
          assert(!SCIPisNegative(scip, alpha));
 
-         if( SCIPisSumGT(scip, alpha, slack) )
+         if( SCIPisSumGT(scip, alpha, slack) || (force && SCIPisGT(scip, alpha, slack)) )
          {
             SCIP_Real newlb;
 
@@ -4874,7 +4874,7 @@ SCIP_RETCODE tightenVarBoundsEasy(
          alpha = val * (lb - ub);
          assert(!SCIPisNegative(scip, alpha));
 
-         if( SCIPisSumGT(scip, alpha, slack) )
+         if( SCIPisSumGT(scip, alpha, slack) || (force && SCIPisGT(scip, alpha, slack)) )
          {
             SCIP_Real newlb;
 
@@ -4922,7 +4922,7 @@ SCIP_RETCODE tightenVarBoundsEasy(
          alpha = val * (lb - ub);
          assert(!SCIPisNegative(scip, alpha));
 
-         if( SCIPisSumGT(scip, alpha, slack) )
+         if( SCIPisSumGT(scip, alpha, slack) || (force && SCIPisGT(scip, alpha, slack)) )
          {
             SCIP_Real newub;
 
