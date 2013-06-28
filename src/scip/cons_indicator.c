@@ -6830,10 +6830,12 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
          if ( obj <= 0 )
          {
             /* setting variable to 1 does not increase objective - check whether we can set it to 1 */
-            if ( SCIPvarGetLbLocal(binvar) < 0.5 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
+            if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
             {
-               /* check whether variable only occurs in the current constraint */
-               if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+               assert(  SCIPvarGetLbLocal(binvar) < 0.5 );
+
+               /* check whether variable only occurs in the current constraint and variable is not fixed to 0 */
+               if ( SCIPvarGetNLocksUp(binvar) <= 1 && SCIPvarGetUbLocal(binvar) > 0.5 )
                {
                   SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
                   *changed = TRUE;
@@ -6853,6 +6855,8 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
              * note: binary variables are only locked up */
             if ( SCIPvarGetNLocksDown(binvar) <= 0 && SCIPvarGetUbLocal(binvar) > 0.5 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
             {
+               assert( SCIPvarGetUbLocal(binvar) > 0.5 );
+
                SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
                *changed = TRUE;
             }
