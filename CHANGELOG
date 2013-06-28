@@ -34,6 +34,7 @@ fixed bugs:
 - fixed bug with storing original solutions
 - fixed bug in cons_and.c when a constraint was not correctly propagated which led to wrong dual-presolve reductions
 - fixed bugs in cons_bivariate.c when the nonlinear function is not differentiable on the boundary of the domain
+- fixed bug in cons_indicator.c:SCIPmakeIndicatorFeasible() with handling fixed variables
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
