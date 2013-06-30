@@ -36,7 +36,7 @@
 
 #define PROP_NAME              "pseudoobj"
 #define PROP_DESC              "pseudo objective function propagator"
-#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP | SCIP_PROPTIMING_DURINGLPLOOP
 #define PROP_PRIORITY           3000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -3387,6 +3387,9 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
    (*result) = SCIP_DIDNOTRUN;
 
    if( SCIPinProbing(scip) )
+      return SCIP_OKAY;
+
+   if( proptiming == SCIP_PROPTIMING_DURINGLPLOOP && SCIPgetDepth(scip) != 0 )
       return SCIP_OKAY;
 
    /* do nothing if active pricer are present and force flag is not TRUE */
