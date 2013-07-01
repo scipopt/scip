@@ -33,7 +33,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 /* default parameter values */
