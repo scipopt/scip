@@ -698,7 +698,7 @@ SCIP_RETCODE applyVbounds(
 
       if( heurdata->copycuts )
       {
-         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, FALSE, NULL) );
       }
 
@@ -766,7 +766,7 @@ SCIP_RETCODE applyVbounds(
        * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no decutions shall be
        * made for the original SCIP
        */
-      if( !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+      if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
       }

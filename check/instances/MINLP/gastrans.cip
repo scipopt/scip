@@ -92,6 +92,15 @@ VARIABLES
   [continuous] <prodt_b61*nlreform7>: obj=0, global bounds=[0,547.06975321012], local bounds=[0,547.06975321012]
   [continuous] <prodt_b54*nlreform8>: obj=0, global bounds=[0,2039.53642103035], local bounds=[0,2039.53642103035]
 FIXED
+  [binary] <t_b50>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_b54>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_b55>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_b53>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [binary] <t_b62>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_b63>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_b64>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_b65>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_b66>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
   [continuous] <t_x86>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
   [continuous] <t_x84>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
   [continuous] <t_x83>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
@@ -101,9 +110,9 @@ FIXED
   [continuous] <t_x20>: obj=0, global bounds=[15.616,37.1322212551873], local bounds=[15.616,37.1322212551873], aggregated: -1<t_x71>
   [continuous] <t_x6>: obj=0, global bounds=[0,4.8], local bounds=[0,4.8], aggregated: +1<t_x76>
   [continuous] <t_x24>: obj=0, global bounds=[1.919,2.1061158418814], local bounds=[1.919,2.1061158418814], aggregated: -1<t_x79>
+  [continuous] <t_x23>: obj=0, global bounds=[2.141,2.3281158418814], local bounds=[2.141,2.3281158418814], aggregated: +1<t_x21>
   [continuous] <t_x22>: obj=0, global bounds=[2.141,2.3281158418814], local bounds=[2.141,2.3281158418814], aggregated: +1<t_x23>
   [continuous] <t_x82>: obj=0, global bounds=[20.344,22.012], local bounds=[20.344,22.012], aggregated: +1<t_x10> +1<t_x11>
-  [continuous] <t_x23>: obj=0, global bounds=[2.141,2.3281158418814], local bounds=[2.141,2.3281158418814], aggregated: +1<t_x21>
   [continuous] <t_x25>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b46>
   [continuous] <t_x26>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b47>
   [continuous] <t_x27>: obj=0, global bounds=[-1,1], local bounds=[-1,1], aggregated: -1 +2<t_b48>
@@ -125,9 +134,6 @@ FIXED
   [continuous] <t_x43>: obj=0, global bounds=[1,1], local bounds=[1,1], aggregated: -1 +2<t_b64>
   [continuous] <t_x44>: obj=0, global bounds=[1,1], local bounds=[1,1], aggregated: -1 +2<t_b65>
   [continuous] <t_x45>: obj=0, global bounds=[1,1], local bounds=[1,1], aggregated: -1 +2<t_b66>
-  [binary] <t_b62>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
-  [binary] <t_b63>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
-  [binary] <t_b66>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
   [continuous] <t_x67>: obj=0, global bounds=[0,1.2], local bounds=[0,1.2], aggregated: -1<t_x17> +1<t_x18>
   [continuous] <t_x68>: obj=0, global bounds=[-33.2681669051455,-4.034], local bounds=[-33.2681669051455,-4.034], aggregated: +1<t_x7> -1<t_x76>
   [continuous] <t_x69>: obj=0, global bounds=[-0.66958207745253,-0.222], local bounds=[-0.66958207745253,-0.222], aggregated: -1<t_x21> -1<t_x79>
@@ -135,17 +141,11 @@ FIXED
   [continuous] <t_x73>: obj=0, global bounds=[0,8.4], local bounds=[0,8.4], aggregated: -1<t_x1> -1<t_x2> +1<t_x3> +1<t_x4>
   [continuous] <t_x74>: obj=0, global bounds=[-35.9367558553061,-5.256], local bounds=[-35.9367558553061,-5.256], aggregated: -1<t_x7> +1<t_x8>
   [continuous] <t_x75>: obj=0, global bounds=[-143.83024307551,-6.385], local bounds=[-143.83024307551,-6.385], aggregated: -1<t_x12> -1<t_x13> +1<t_x14> +1<t_x15>
-  [binary] <t_b65>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
   [continuous] <t_x77>: obj=0, global bounds=[-109.925194051115,-6.848], local bounds=[-109.925194051115,-6.848], aggregated: -1<t_x19> -1<t_x71>
   [continuous] <t_x78>: obj=0, global bounds=[-124.028427241822,-2.12], local bounds=[-124.028427241822,-2.12], aggregated: -1<t_x16> +1<t_x17>
-  [binary] <t_b64>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
   [continuous] <t_x80>: obj=0, global bounds=[0,0.96], local bounds=[0,0.96], aggregated: -1<t_x9> -1<t_x18> +1<t_x19>
   [continuous] <t_x85>: obj=0, global bounds=[8.87,11.594], local bounds=[8.87,11.594], aggregated: +1<t_x1> +1<t_x2>
-  [binary] <t_b53>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
   [continuous] <e41_linpart>: obj=0, global bounds=[-5.42012337121913,-4.583880994718], local bounds=[-5.42012337121913,-4.583880994718], aggregated: +1<e40_linpart>
-  [binary] <t_b50>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
-  [binary] <t_b54>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
-  [binary] <t_b55>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
   [continuous] <nlreform4>: obj=0, global bounds=[20.1600999990002,4314.40396756418], local bounds=[20.1600999990002,4314.40396756418], aggregated: +1<prodt_b50*nlreform4>
   [continuous] <nlreform8>: obj=0, global bounds=[0,2039.53642103035], local bounds=[0,2039.53642103035], aggregated: +1<prodt_b54*nlreform8>
   [continuous] <nlreform9>: obj=0, global bounds=[0,1869.62563364922], local bounds=[0,1869.62563364922], aggregated: +1<prodt_b55*nlreform9>

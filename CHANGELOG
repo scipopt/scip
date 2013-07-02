@@ -53,6 +53,12 @@ features:
 - added upgrade from quadratic constraints to set-packing constraints
 - generalized the linking constraint handler
 - in verblevel SCIP_VERBLEVEL_FULL the number of non-zeros will be computed for the original and presolved model
+- new presolving step for tightening logicor constraints using implication and clique information
+- can now read and write CIP-files with (multi-)aggregated variables
+- new method SCIPapplyProbingVar() in prop_probing.h
+- added first implication detection in cons_linear
+- several new presolvimng steps for linear and knapsack constraints, using gcd information and many more
+- cons_indicator can now try to construct feasible solutions from a cover
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -68,6 +74,7 @@ performance improvements:
   already exceeds the cutoff bound
 - improved performance of method SCIPsolRetransform() when called during presolving with many aggregations
 - minor presolving performance improvements in cons_logicor.c and cons_knapsack.c
+- added upgradability for implicit binary variable cases for linear constraints
 
 interface
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
@@ -103,6 +110,7 @@ interface
 - added method SCIPconsIsMarkedPropagate() to ask whether a constraint was explicitly added for propagation
 - SCIPgetConsCopy() now always captures the created constraint
 - SCIPaddCut() has an additional parameter that determines whether the cut to be added is infeasible
+- SCIPwriteMIP() has an additional parameter that allows to write removable rows as lazy constraints
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
@@ -129,6 +137,9 @@ parameters:
 - new parameter "heuristics/shiftandpropagate/collectstats" which decides whether variable statistics are collected
 - new parameters "heuristics/shiftandpropagate/preferbinaries" and "heuristics/shiftandpropagate/stopafterfeasible",
   which decide whether binaries should be shifted first and the shifting should be stopped when no violations are left
+- new parameters "heuristics/"<heurname>"/lplimfac" for LNS heuristics to limit the number of LPs solved in a subproblem
+- new parameter "reading/cipreader/writefixedvars" for disabling printing of fixed variables in CIP format
+- new parameter "constraints/indicator/trysolfromcover" for trying to construct a feasible solution from a cover
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
@@ -171,6 +182,10 @@ fixed bugs:
 - fixed possible cycling in enforcement of nonlinear constraints due to too early removal of newly added cuts from LP
 - fixed solution collection when counting solutions
 - fixed bug wrongly removing constraints locally while counting
+- fixed bug in Undercover with "pseudo-"quadratic constraints
+- fixed bug with quadratic constraints not being upgraded
+- fixed bug with storing original solutions
+- fixed bug in cons_and.c when a constraint was not correctly propagated which led to wrong dual-presolve reductions
 
 features:
 - can now output the solutions in the solution pool in the interactive shell

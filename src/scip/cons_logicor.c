@@ -63,9 +63,12 @@
 #define HASHSIZE_LOGICORCONS     131101 /**< minimal size of hash table in logicor constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
-#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
+#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise
+                                             comparison round */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 #define DEFAULT_NEGATEDCLIQUE      TRUE /**< should negated clique information be used in presolving */
+#define DEFAULT_IMPLICATIONS       TRUE /**< should we try to shrink the variables and derive global boundchanges by
+                                         *   using clique and implications */
 
 /* @todo make this a parameter setting */
 #if 1 /* @todo test which AGEINCREASE formula is better! */
@@ -90,6 +93,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
    SCIP_Bool             usenegatedclique;   /**< should negated clique information be used in presolving */
+   SCIP_Bool             useimplications;    /**< should we try to shrink the variables and derive global boundchanges
+                                              *   by using clique and implications */
    int                   nlastcliques;       /**< number of cliques after last negated clique presolving round */
    int                   nlastimpls;         /**< number of implications after last negated clique presolving round */
 };
@@ -260,21 +265,23 @@ SCIP_RETCODE consdataCreate(
    {
       SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
 
-#ifndef NDEBUG
+      /* check for multi-aggregations and capture variables */
       for( v = 0; v < (*consdata)->nvars; v++ )
       {
          SCIP_VAR* var = SCIPvarGetProbvar((*consdata)->vars[v]);
          assert(var != NULL);
-         assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR);
+         (*consdata)->existmultaggr = (*consdata)->existmultaggr || (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+         SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
       }
-#endif
    }
-
-   /* capture variables */
-   for( v = 0; v < (*consdata)->nvars; v++ )
+   else
    {
-      assert((*consdata)->vars[v] != NULL);
-      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
+      /* capture variables */
+      for( v = 0; v < (*consdata)->nvars; v++ )
+      {
+         assert((*consdata)->vars[v] != NULL);
+         SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
+      }
    }
 
    return SCIP_OKAY;
@@ -630,8 +637,21 @@ SCIP_RETCODE dualPresolving(
       /* variables with varstatus not equal to SCIP_VARSTATUS_FIXED can also have fixed bounds, but were not removed yet */
       if( SCIPvarGetUbGlobal(var) < 0.5 )
       {
+#ifndef NDEBUG
+         SCIP_VAR* bestvar = NULL;
+#endif
+         if( idx == consdata->nvars - 1 )
+         {
+#ifndef NDEBUG
+            bestvar = consdata->vars[idx];
+#endif
+            idx = v;
+         }
+
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          ++(*nchgcoefs);
+
+         assert(bestvar == NULL || bestvar == consdata->vars[v]);
 
          continue;
       }
@@ -1159,7 +1179,7 @@ SCIP_RETCODE mergeMultiples(
       negarray[v] = SCIPvarIsNegated(vars[v]);
    }
 
-   /** initialize entries array */
+   /* initialize entries array */
    for( v = nvars - 1; v >= 0; --v )
    {
       assert(negarray[v] ? SCIPvarIsNegated(vars[v]) : TRUE);
@@ -1176,11 +1196,11 @@ SCIP_RETCODE mergeMultiples(
       if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
 	 pos -= nintvars;
 
-      /** var is not active yet */
+      /* var is not active yet */
       (*entries)[pos] = 0;
    }
 
-   /** check all vars for multiple entries, do necessary backwards loop because deletion only affect rear items */
+   /* check all vars for multiple entries, do necessary backwards loop because deletion only affect rear items */
    for( v = nvars - 1; v >= 0; --v )
    {
       var = negarray[v] ? SCIPvarGetNegationVar(vars[v]) : vars[v];
@@ -1191,10 +1211,10 @@ SCIP_RETCODE mergeMultiples(
       if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
 	 pos -= nintvars;
 
-      /** if var occurs first time in constraint init entries array */
+      /* if var occurs first time in constraint init entries array */
       if( (*entries)[pos] == 0 )
          (*entries)[pos] = negarray[v] ? 2 : 1;
-      /** if var occurs second time in constraint, first time it was not negated */
+      /* if var occurs second time in constraint, first time it was not negated */
       else if( (*entries)[pos] == 1 )
       {
          if( negarray[v] )
@@ -1208,7 +1228,7 @@ SCIP_RETCODE mergeMultiples(
 	    ++(*nchgcoefs);
          }
       }
-      /** if var occurs second time in constraint, first time it was negated */
+      /* if var occurs second time in constraint, first time it was negated */
       else
       {
          if( !negarray[v] )
@@ -2086,10 +2106,183 @@ SCIP_RETCODE removeRedundantConstraints(
    return SCIP_OKAY;
 }
 
+#define MAX_CONSLENGTH 100
+
+/** try to tighten constraints by reducing the number of variables in the constraints using implications and cliques,
+ *  also derive fixations through them, @see SCIPshrinkDisjunctiveVarSet()
+ */
+static
+SCIP_RETCODE shortenConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   SCIP_CONS**           conss,              /**< all constraints */
+   int                   nconss,             /**< number of constraints */
+   int*                  nfixedvars,         /**< pointer to count number of fixings */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
+   int*                  nchgcoefs           /**< pointer to count number of changed/deleted coefficients */
+   )
+{
+   SCIP_VAR** probvars;
+   SCIP_VAR* var;
+   SCIP_Real* bounds;
+   SCIP_Bool* boundtypes;
+   SCIP_Bool* redundants;
+   unsigned char* entries;
+   int nvars;
+   int nredvars;
+   int c;
+   int v;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(nfixedvars != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgcoefs != NULL);
+
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   assert(conss != NULL);
+
+   nvars = SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip);
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &probvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redundants, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &entries, nvars) );
+
+   for( c = nconss - 1; c >= 0; --c )
+   {
+      SCIP_Bool redundant = FALSE;
+      SCIP_CONS* cons = conss[c];
+      SCIP_CONSDATA* consdata;
+
+      assert(cons != NULL);
+
+      if( SCIPconsIsDeleted(cons) )
+         continue;
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      /* remove old fixings */
+      if( !consdata->presolved )
+      {
+         int naddconss = 0;
+
+         /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
+         SCIP_CALL( applyFixings(scip, cons, eventhdlr, &redundant, nchgcoefs, &naddconss, ndelconss) );
+         assert(naddconss == 0);
+
+         if( redundant )
+         {
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
+
+            continue;
+         }
+         else if( SCIPconsIsDeleted(cons) )
+            continue;
+      }
+
+      consdata->presolved = TRUE;
+
+      /* merge constraint */
+      SCIP_CALL( mergeMultiples(scip, cons, eventhdlr, &entries, &nvars, &redundant, nchgcoefs) );
+      if( redundant )
+      {
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+
+         continue;
+      }
+
+      /* do not try to shorten too long constraints */
+      if( consdata->nvars > MAX_CONSLENGTH )
+         continue;
+
+      /* form necessary data */
+      for( v = consdata->nvars - 1; v >= 0; --v)
+      {
+         var = consdata->vars[v];
+         assert(var != NULL);
+         assert(SCIPvarIsActive(var) || (SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(var))));
+
+         if( SCIPvarIsActive(var) )
+         {
+            probvars[v] = var;
+            bounds[v] = 1.0;
+            boundtypes[v] = FALSE;
+         }
+         else
+         {
+            probvars[v] = SCIPvarGetNegationVar(var);
+            bounds[v] = 0.0;
+            boundtypes[v] = TRUE;
+         }
+      }
+
+      /* use implications and cliques to derive global fixings and to shrink the number of variables in this constraints */
+      SCIP_CALL( SCIPshrinkDisjunctiveVarSet(scip, probvars, bounds, boundtypes, redundants, consdata->nvars, &nredvars, nfixedvars, &redundant, TRUE) );
+
+      /* remove redundant constraint */
+      if( redundant )
+      {
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+
+         continue;
+      }
+
+      /* remove redundant variables */
+      if( nredvars > 0 )
+      {
+         for( v = consdata->nvars - 1; v >= 0; --v )
+         {
+            if( redundants[v] )
+            {
+               SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+            }
+         }
+         *nchgcoefs += nredvars;
+
+         /* if only one variable is left over fix it */
+         if( consdata->nvars == 1 )
+         {
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
+
+            SCIPdebugMessage(" -> fix last remaining variable and delete constraint\n");
+
+            SCIP_CALL( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible, &fixed) );
+            assert(!infeasible);
+            assert(fixed);
+            ++(*nfixedvars);
+
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
+         }
+         /* @todo might also upgrade a two variable constraint to a set-packing constraint */
+      }
+   }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &entries);
+   SCIPfreeBufferArray(scip, &redundants);
+   SCIPfreeBufferArray(scip, &boundtypes);
+   SCIPfreeBufferArray(scip, &bounds);
+   SCIPfreeBufferArray(scip, &probvars);
+
+   return SCIP_OKAY;
+}
+
 #define MAXCOMPARISONS 1000000
 
-/* try to find a negated clique in a constraint which makes this constraint redundant but we need to keep the negated
- * clique information alive, so we create a corresponding set-packing constraint
+/** try to find a negated clique in a constraint which makes this constraint redundant but we need to keep the negated
+ *  clique information alive, so we create a corresponding set-packing constraint
  */
 static
 SCIP_RETCODE removeConstraintsDueToNegCliques(
@@ -2334,6 +2527,192 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
    return SCIP_OKAY;
 }
 
+/** handle all cases with less than three variables in a logicor constraint
+ *
+ *  in case a constraint has zero variables left, we detected infeasibility
+ *  in case a constraint has one variables left, we will fix it to one
+ *  in case a constraint has two variables left, we will add the implication and upgrade it to a set-packing constraint
+ */
+static
+SCIP_RETCODE fixDeleteOrUpgradeCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< logic or constraint */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   SCIP_CONSHDLR*        conshdlrlinear,     /**< linear constraint handler, or NULL */
+   int*                  nfixedvars,         /**< pointer to count number of fixings */
+   int*                  nchgbds,            /**< pointer to count number of tightened bounds */
+   int*                  nchgcoefs,          /**< pointer to count number of changed/deleted coefficients */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints  */
+   int*                  naddconss,          /**< pointer to count number of added constraints */
+   int*                  nupgdconss,         /**< pointer to count number of upgraded constraints */
+   SCIP_Bool*            cutoff              /**< pointer to store TRUE, if the node can be cut off */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool infeasible;
+   SCIP_Bool fixed;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(eventhdlr != NULL);
+   assert(nfixedvars != NULL);
+   assert(nchgbds != NULL);
+   assert(nchgcoefs != NULL);
+   assert(ndelconss != NULL);
+   assert(naddconss != NULL);
+   assert(nupgdconss != NULL);
+   assert(cutoff != NULL);
+
+   *cutoff = FALSE;
+
+   if( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* if an unmodifiable logicor constraint has only two variables, we can add an implication and we will upgrade this
+    * constraint to a set-packing constraint
+    */
+   if( consdata->nvars == 2 )
+   {
+      /* add implication if not yet done */
+      if( !consdata->impladded )
+      {
+         SCIP_Bool implinfeasible;
+         int nimplbdchgs;
+         SCIP_Bool values[2];
+
+         values[0] = FALSE;
+         values[1] = FALSE;
+         /* a two-variable logicor constraint x + y >= 1 yields the implication x == 0 -> y == 1, and is represented
+          * by the clique inequality ~x + ~y <= 1
+          */
+         SCIP_CALL( SCIPaddClique(scip, consdata->vars, values, consdata->nvars, &implinfeasible, &nimplbdchgs) );
+         *nchgbds += nimplbdchgs;
+         if( implinfeasible )
+         {
+            *cutoff = TRUE;
+            return SCIP_OKAY;
+         }
+
+         /* adding the above implication could lead to fixings, which render the constraint redundant */
+         if ( nimplbdchgs > 0 )
+         {
+            SCIP_Bool redundant;
+
+            /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
+            SCIP_CALL( applyFixings(scip, cons, eventhdlr, &redundant, nchgcoefs, naddconss, ndelconss) );
+            assert(!SCIPconsIsDeleted(cons));
+
+            if( redundant )
+            {
+               SCIPdebugMessage("logic or constraint <%s> is redundant\n", SCIPconsGetName(cons));
+
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               (*ndelconss)++;
+
+               return SCIP_OKAY;
+            }
+         }
+         consdata->impladded = TRUE;
+      }
+
+      /* still we have two variables left, we will upgrade this constraint */
+      if( consdata->nvars == 2 )
+      {
+         SCIP_CONS* newcons;
+         SCIP_VAR* vars[2];
+
+
+         /* get correct variables */
+         SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[0], &vars[0]) );
+         SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[1], &vars[1]) );
+
+         SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, SCIPconsGetName(cons), 2, vars,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIPdebugPrintCons(scip, newcons, NULL);
+
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+
+         SCIPdebugMessage("logicor constraint <%s> was upgraded to a set-packing constraint\n", SCIPconsGetName(cons));
+
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*nupgdconss);
+      }
+   }
+
+   /* if unmodifiable constraint has no variables, it is infeasible,
+    * if unmodifiable constraint has only one variable, this one can be fixed and the constraint deleted
+    */
+   if( consdata->nvars == 0 )
+   {
+      SCIPdebugMessage("logic or constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+
+      *cutoff = TRUE;
+   }
+   else if( consdata->nvars == 1 )
+   {
+      SCIPdebugMessage("logic or constraint <%s> has only one variable not fixed to 0.0\n",
+         SCIPconsGetName(cons));
+
+      assert(consdata->vars != NULL);
+      assert(consdata->vars[0] != NULL);
+
+      if( SCIPvarGetStatus(consdata->vars[0]) != SCIP_VARSTATUS_MULTAGGR )
+      {
+         SCIPdebugMessage(" -> fix variable and delete constraint\n");
+
+         SCIP_CALL( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible, &fixed) );
+         if( infeasible )
+         {
+            SCIPdebugMessage(" -> infeasible fixing\n");
+
+            *cutoff = TRUE;
+            return SCIP_OKAY;
+         }
+         if( fixed )
+            (*nfixedvars)++;
+
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         (*ndelconss)++;
+      }
+      else if( conshdlrlinear != NULL )
+      {
+         SCIP_Real coef;
+         SCIP_CONS* conslinear;
+         char consname[SCIP_MAXSTRLEN];
+
+         SCIPdebugMessage(" -> variable is multi-aggregated, upgrade to linear constraint <%s> == 1 \n",
+            SCIPvarGetName(consdata->vars[0]));
+
+         coef = 1.0;
+         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "fixmaggr_%s_%s", SCIPconsGetName(cons),SCIPvarGetName(consdata->vars[0]) );
+         SCIP_CALL( SCIPcreateConsLinear(scip, &conslinear, consname, 1, consdata->vars, &coef, 1.0, 1.0,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+               SCIPconsIsStickingAtNode(cons)) );
+
+         /* add constraint */
+         SCIP_CALL( SCIPaddCons(scip, conslinear) );
+         SCIP_CALL( SCIPreleaseCons(scip, &conslinear) );
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+
+         (*ndelconss)++;
+         (*naddconss)++;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * upgrading of linear constraints
  */
@@ -2421,23 +2800,23 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdLogicor)
     * - logic or constraints have left hand side of +1.0, and right hand side of +infinity: x(S) >= 1.0
     *    -> without negations:  (lhs == 1 - n  and  rhs == +inf)  or  (lhs == -inf  and  rhs = p - 1)
     */
-   if( nvars > 2 && nposbin + nnegbin == nvars && ncoeffspone + ncoeffsnone == nvars
+   if( nvars > 2 && nposbin + nnegbin + nposimplbin + nnegimplbin == nvars && ncoeffspone + ncoeffsnone == nvars
       && ((SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
          || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0))) )
    {
       int mult;
 
       SCIPdebugMessage("upgrading constraint <%s> to logic or constraint\n", SCIPconsGetName(cons));
-      
+
       /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
       mult = SCIPisInfinity(scip, rhs) ? +1 : -1;
-      
+
       /* create the logic or constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       SCIP_CALL( createNormalizedLogicor(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
             SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
    }
 
@@ -2973,9 +3352,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    unsigned char* entries;
-   SCIP_Bool infeasible;
    SCIP_Bool redundant;
-   SCIP_Bool fixed;
    int c;
    int firstchange;
    int nentries;
@@ -3052,105 +3429,23 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       }
       else if( !SCIPconsIsModifiable(cons) )
       {
-         /* if unmodifiable constraint has no variables, it is infeasible,
-          * if unmodifiable constraint has only one variable, this one can be fixed and the constraint deleted
-          */
-         if( consdata->nvars == 0 )
+         if( consdata->nvars <= 2 )
          {
-            SCIPdebugMessage("logic or constraint <%s> is infeasible\n", SCIPconsGetName(cons));
-            *result = SCIP_CUTOFF;
-            goto TERMINATE;
-         }
-         else if( consdata->nvars == 1 )
-         {
-            SCIPdebugMessage("logic or constraint <%s> has only one variable not fixed to 0.0\n",
-               SCIPconsGetName(cons));
+            SCIP_Bool cutoff;
 
-            assert(consdata->vars != NULL);
-            assert(consdata->vars[0] != NULL);
+            /* handle all cases with less than three variables in a logicor constraint */
+            SCIP_CALL( fixDeleteOrUpgradeCons(scip, cons, conshdlrdata->eventhdlr, conshdlrdata->conshdlrlinear, nfixedvars, nchgbds, nchgcoefs, ndelconss, naddconss, nupgdconss, &cutoff) );
 
-            if( SCIPvarGetStatus(consdata->vars[0]) != SCIP_VARSTATUS_MULTAGGR )
-            {
-               SCIPdebugMessage(" -> fix variable and delete constraint\n");
-
-               SCIP_CALL( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible, &fixed) );
-               if( infeasible )
-               {
-                  SCIPdebugMessage(" -> infeasible fixing\n");
-                  *result = SCIP_CUTOFF;
-                  goto TERMINATE;
-               }
-               if( fixed )
-                  (*nfixedvars)++;
-
-               SCIP_CALL( SCIPdelCons(scip, cons) );
-               (*ndelconss)++;
-               *result = SCIP_SUCCESS;
-               continue;
-            }
-            else if( conshdlrdata->conshdlrlinear != NULL )
-            {
-               SCIP_Real coef;
-               SCIP_CONS* conslinear;
-               char consname[SCIP_MAXSTRLEN];
-
-               SCIPdebugMessage(" -> variable is multi-aggregated, upgrade to linear constraint <%s> == 1 \n",
-                  SCIPvarGetName(consdata->vars[0]));
-
-               coef = 1.0;
-               (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "fixmaggr_%s_%s", SCIPconsGetName(cons),SCIPvarGetName(consdata->vars[0]) );
-               SCIP_CALL( SCIPcreateConsLinear(scip, &conslinear, consname, 1, consdata->vars, &coef, 1.0, 1.0,
-                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-                     SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-                     SCIPconsIsStickingAtNode(cons)) );
-
-               /* add constraint */
-               SCIP_CALL( SCIPaddCons(scip, conslinear) );
-               SCIP_CALL( SCIPreleaseCons(scip, &conslinear) );
-               SCIP_CALL( SCIPdelCons(scip, cons) );
-
-               (*nupgdconss)++;
-               *result = SCIP_SUCCESS;
-               continue;
-            }
-         }
-         else if( consdata->nvars == 2 && !consdata->impladded )
-         {
-            SCIP_Bool implinfeasible;
-            int nimplbdchgs;
-            SCIP_Bool values[2];
-
-            values[0] = FALSE;
-            values[1] = FALSE;
-            /* a two-variable logicor constraint x + y >= 1 yields the implication x == 0 -> y == 1, and is represented
-             * by the clique inequality ~x + ~y <= 1
-             */
-            SCIP_CALL( SCIPaddClique(scip, consdata->vars, values, consdata->nvars, &implinfeasible, &nimplbdchgs) );
-            *nchgbds += nimplbdchgs;
-            if( implinfeasible )
+            if( cutoff )
             {
                *result = SCIP_CUTOFF;
                goto TERMINATE;
             }
+            else if( *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds || *nchgcoefs > oldnchgcoefs || *ndelconss > oldndelconss  || *nupgdconss > oldnupgdconss )
+               *result = SCIP_SUCCESS;
 
-            /* adding the above implication could lead to fixings, which render the constraint redundant */
-            if ( nimplbdchgs > 0 )
-            {
-               /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
-               SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &redundant, nchgcoefs, naddconss, ndelconss) );
-               assert(!SCIPconsIsDeleted(cons));
-
-               if( redundant )
-               {
-                  SCIPdebugMessage("logic or constraint <%s> is redundant\n", SCIPconsGetName(cons));
-                  SCIP_CALL( SCIPdelCons(scip, cons) );
-                  (*ndelconss)++;
-                  *result = SCIP_SUCCESS;
-                  continue;
-               }
-            }
-            consdata->impladded = TRUE;
+            if( SCIPconsIsDeleted(cons) )
+               continue;
          }
       }
 
@@ -3162,11 +3457,33 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          /* if dual reduction deleted the constraint we take the next */
          if( !SCIPconsIsActive(cons) )
             continue;
+
+         /* in dualpresolving we may have removed variables, so we need to take care of special cases */
+         if( consdata->nvars <= 2 )
+         {
+            SCIP_Bool cutoff;
+
+            /* handle all cases with less than three variables in a logicor constraint */
+            SCIP_CALL( fixDeleteOrUpgradeCons(scip, cons, conshdlrdata->eventhdlr, conshdlrdata->conshdlrlinear, nfixedvars, nchgbds, nchgcoefs, ndelconss, naddconss, nupgdconss, &cutoff) );
+
+            if( cutoff )
+            {
+               *result = SCIP_CUTOFF;
+               goto TERMINATE;
+            }
+            else if( *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds || *nchgcoefs > oldnchgcoefs || *ndelconss > oldndelconss  || *nupgdconss > oldnupgdconss )
+               *result = SCIP_SUCCESS;
+
+            if( SCIPconsIsDeleted(cons) )
+               continue;
+         }
       }
 
       /* remember the first changed constraint to begin the next redundancy round with */
       if( firstchange == INT_MAX && consdata->changed )
          firstchange = c;
+
+      assert(consdata->nvars > 2 || SCIPconsIsModifiable(cons));
    }
 
    assert(*result != SCIP_CUTOFF);
@@ -3207,13 +3524,27 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          }
       }
 
-      /* check for redundant constraints due to negated clique information */
-      if( conshdlrdata->usenegatedclique )
+      if( SCIPisPresolveFinished(scip) )
       {
-         SCIP_CALL( removeConstraintsDueToNegCliques(scip, conshdlr, conshdlrdata->eventhdlr, conss, nconss, nupgdconss, nchgcoefs) );
+         /* try to tighten constraints by reducing the number of variables in the constraints using implications and
+          * cliques, also derive fixations through them, @see SCIPshrinkDisjunctiveVarSet()
+          */
+         if( conshdlrdata->useimplications && (SCIPgetNCliques(scip) != conshdlrdata->nlastcliques || SCIPgetNImplications(scip) > conshdlrdata->nlastimpls) )
+         {
+            SCIP_CALL( shortenConss(scip, conshdlrdata->eventhdlr, conss, nconss, nfixedvars, ndelconss, nchgcoefs) );
+         }
 
-         conshdlrdata->nlastcliques = SCIPgetNCliques(scip);
-         conshdlrdata->nlastimpls = SCIPgetNImplications(scip);
+         /* check for redundant constraints due to negated clique information */
+         if( conshdlrdata->usenegatedclique )
+         {
+            SCIP_CALL( removeConstraintsDueToNegCliques(scip, conshdlr, conshdlrdata->eventhdlr, conss, nconss, nupgdconss, nchgcoefs) );
+         }
+
+         if( conshdlrdata->useimplications || conshdlrdata->usenegatedclique )
+         {
+            conshdlrdata->nlastcliques = SCIPgetNCliques(scip);
+            conshdlrdata->nlastimpls = SCIPgetNImplications(scip);
+         }
       }
    }
 
@@ -3727,6 +4058,10 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          "constraints/logicor/negatedclique",
          "should negated clique information be used in presolving",
          &conshdlrdata->usenegatedclique, TRUE, DEFAULT_NEGATEDCLIQUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/logicor/implications",
+         "should implications/cliques be used in presolving",
+         &conshdlrdata->useimplications, TRUE, DEFAULT_IMPLICATIONS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

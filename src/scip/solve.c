@@ -3208,7 +3208,7 @@ SCIP_RETCODE propAndSolve(
    /* solve external relaxations with non-negative priority */
    if( solverelax && !(*cutoff) )
    {
-      /** clear the storage of external branching candidates */
+      /* clear the storage of external branching candidates */
       SCIPbranchcandClearExternCands(branchcand);
 
       SCIP_CALL( solveNodeRelax(set, stat, tree, actdepth, TRUE, cutoff, propagateagain, solvelpagain, solverelaxagain) );
@@ -3419,10 +3419,10 @@ SCIP_RETCODE solveNode(
    assert(SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
    actdepth = SCIPnodeGetDepth(focusnode);
 
-   /** invalidate relaxation solution */
+   /* invalidate relaxation solution */
    SCIPrelaxationSetSolValid(relaxation, FALSE);
 
-   /** clear the storage of external branching candidates */
+   /* clear the storage of external branching candidates */
    SCIPbranchcandClearExternCands(branchcand);
 
    SCIPdebugMessage("Processing node %"SCIP_LONGINT_FORMAT" in depth %d, %d siblings\n",
@@ -3534,13 +3534,13 @@ SCIP_RETCODE solveNode(
       updateLoopStatus(set, stat, tree, actdepth, cutoff, &propagateagain, &solverelaxagain);
 
       /* call primal heuristics that should be applied after the LP relaxation of the node was solved;
-       * if this is the first loop of the first run's root node, call also AFTERNODE heuristics already here, since
-       * they might help to improve the primal bound, thereby producing additional reduced cost strengthenings and
-       * strong branching bound fixings
+       * if this is the first loop of the root node, call also AFTERNODE heuristics already here, since they might help
+       * to improve the primal bound, thereby producing additional reduced cost strengthenings and strong branching
+       * bound fixings which also might lead to a restart
        */
       if( !(*cutoff) || SCIPtreeGetNNodes(tree) > 0 )
       {
-         if( actdepth == 0 && stat->nruns == 1 && nloops == 1 )
+         if( actdepth == 0 && nloops == 1 )
          {
             SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL,
                   SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE, &foundsol) );
@@ -3551,7 +3551,7 @@ SCIP_RETCODE solveNode(
             SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_AFTERLPLOOP, &foundsol) );
          }
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
-            
+
          /* heuristics might have found a solution or set the cutoff bound such that the current node is cut off */
          SCIP_CALL( applyBounding(blkmem, set, stat, transprob, primal, tree, lp,  branchcand, eventqueue, conflict, cutoff) );
       }
@@ -3571,7 +3571,7 @@ SCIP_RETCODE solveNode(
             "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- using pseudo solution instead (loop %d)\n",
             stat->nnodes, stat->nlps, nlperrors);
       }
-    
+
       /* if an improved solution was found, propagate and solve the relaxations again */
       if( foundsol )
       {
@@ -3580,7 +3580,7 @@ SCIP_RETCODE solveNode(
          solverelaxagain = TRUE;
          markRelaxsUnsolved(set, relaxation);
       }
-    
+
       /* enforce constraints */
       branched = FALSE;
       if( !(*cutoff) && !solverelaxagain && !solvelpagain && !propagateagain )
@@ -3596,7 +3596,7 @@ SCIP_RETCODE solveNode(
             lastlpcount = stat->lpcount;
             *infeasible = FALSE;
          }
-        
+
          /* call constraint enforcement */
          SCIP_CALL( enforceConstraints(blkmem, set, stat, transprob, tree, lp, relaxation, sepastore, branchcand,
                &branched, cutoff, infeasible, &propagateagain, &solvelpagain, &solverelaxagain, forcedenforcement) );
@@ -3705,7 +3705,7 @@ SCIP_RETCODE solveNode(
                assert(SCIPbufferGetNUsed(set->buffer) == 0);
             }
          }
-         
+
          switch( result )
          {
          case SCIP_CUTOFF:

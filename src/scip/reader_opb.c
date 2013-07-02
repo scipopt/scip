@@ -1667,8 +1667,8 @@ SCIP_RETCODE getBinVarsRepresentatives(
    {
       for( v = nvars - 1; v >= 0; --v )
       {
-         /** gets a binary variable that is equal to the given binary variable, and that is either active, fixed, or
-          *  multi-aggregated, or the negated variable of an active, fixed, or multi-aggregated variable
+         /* gets a binary variable that is equal to the given binary variable, and that is either active, fixed, or
+          * multi-aggregated, or the negated variable of an active, fixed, or multi-aggregated variable
           */
          SCIP_CALL( SCIPgetBinvarRepresentative( scip, vars[v], &vars[v], &negated) );
       }
@@ -1683,9 +1683,8 @@ SCIP_RETCODE getBinVarsRepresentatives(
          scalar = 1.0;
          constant = 0.0;
 
-         /** retransforms given variable, scalar and constant to the corresponding original variable, scalar and constant,
-          *  if possible;
-          *  if the retransformation is impossible, NULL is returned as variable
+         /* retransforms given variable, scalar and constant to the corresponding original variable, scalar and constant,
+          * if possible; if the retransformation is impossible, NULL is returned as variable
           */
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalar, &constant) );
 
@@ -3760,6 +3759,7 @@ SCIP_RETCODE SCIPreadOpb(
    )
 {  /*lint --e{715}*/
    OPBINPUT opbinput;
+   SCIP_RETCODE retcode;
    int i;
 
    /* initialize OPB input data */
@@ -3792,7 +3792,7 @@ SCIP_RETCODE SCIPreadOpb(
 #endif
 
    /* read the file */
-   SCIP_CALL( readOPBFile(scip, &opbinput, filename) );
+   retcode = readOPBFile(scip, &opbinput, filename);
 
    /* free dynamically allocated memory */
    for( i = OPB_MAX_PUSHEDTOKENS - 1; i >= 0; --i )
@@ -3801,6 +3801,8 @@ SCIP_RETCODE SCIPreadOpb(
    }
    SCIPfreeBufferArrayNull(scip, &opbinput.tokenbuf);
    SCIPfreeBufferArrayNull(scip, &opbinput.token);
+
+   SCIP_CALL( retcode );
 
    if( opbinput.nproblemcoeffs > 0 )
    {

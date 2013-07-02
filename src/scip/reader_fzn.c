@@ -95,7 +95,7 @@ struct FznConstant
 };
 typedef struct FznConstant FZNCONSTANT;
 
-/* structure to store information for an array variable */
+/** structure to store information for an array variable */
 struct ConstArray
 {
    FZNCONSTANT**         constants;          /**< array of constants */
@@ -105,7 +105,7 @@ struct ConstArray
 };
 typedef struct ConstArray CONSTARRAY;
 
-/* structure to store information for an array variable */
+/** structure to store information for an array variable */
 struct VarArray
 {
    SCIP_VAR**            vars;               /**< variable belonging to the variable array */

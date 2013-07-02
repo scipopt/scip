@@ -36,12 +36,12 @@
 
 #define PROP_NAME              "pseudoobj"
 #define PROP_DESC              "pseudo objective function propagator"
-#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP | SCIP_PROPTIMING_DURINGLPLOOP
 #define PROP_PRIORITY           3000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define PROP_PRESOL_PRIORITY   +6000000 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
-#define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
+#define PROP_PRESOL_DELAY         FALSE /**< should presolving be delay, if other presolvers found reductions?  */
 #define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
                                          *   limit) */
 
@@ -793,7 +793,7 @@ SCIP_Real collectMinactImplicVar(
    return REALABS(objval);
 }
 
-#define MAX_CLIQUELENGTH_PERCENTAGE 10
+#define MAX_CLIQUELENGTH 50
 /** returns the objective change provided by the implications of the given variable by fixing it to the given bound
  *  w.r.t. minimum activity of the objective function; additionally it collects all contributors for that objective
  *  change;
@@ -873,7 +873,7 @@ SCIP_RETCODE collectMinactImplicVars(
 
       nbinvars = SCIPcliqueGetNVars(clique);
 
-      if( nbinvars > (SCIPgetNVars(scip) % MAX_CLIQUELENGTH_PERCENTAGE) )
+      if( nbinvars > MAX_CLIQUELENGTH )
       {
          SCIP_CALL( SCIPhashtableInsert(uselesscliques, (void*)clique) );
          continue;
@@ -3333,7 +3333,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
       return SCIP_OKAY;
    }
 
-   /* only propagate if a new cutoff bound or globale pseudo objective value is available */
+   /* only propagate if a new cutoff bound or global pseudo objective value is available */
    if( cutoffbound < propdata->cutoffbound || pseudoobjval > propdata->glbpseudoobjval )
    {
       SCIP_Real objval;
@@ -3387,6 +3387,9 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
    (*result) = SCIP_DIDNOTRUN;
 
    if( SCIPinProbing(scip) )
+      return SCIP_OKAY;
+
+   if( proptiming == SCIP_PROPTIMING_DURINGLPLOOP && SCIPgetDepth(scip) != 0 )
       return SCIP_OKAY;
 
    /* do nothing if active pricer are present and force flag is not TRUE */

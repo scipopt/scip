@@ -614,7 +614,7 @@ SCIP_RETCODE primalAddOrigSol(
    }
 
    /* insert solution at correct position */
-   primal->nsols = MIN(primal->nsols+1, set->limit_maxsol);
+   primal->nsols = MIN(primal->nsols+1, set->limit_maxorigsol);
    for( pos = primal->nsols-1; pos > insertpos; --pos )
       primal->sols[pos] = primal->sols[pos-1];
 

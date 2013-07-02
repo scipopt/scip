@@ -1421,7 +1421,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
          assert( consdata->nvars <= consdata->maxvars );
          assert( ! SCIPconsIsModifiable(cons) );
 
-         /** perform one presolving round */
+         /* perform one presolving round */
          SCIP_CALL( presolRoundSOS1(scip, cons, consdata, eventhdlr, &cutoff, &success, ndelconss, nupgdconss, nfixedvars, &nremovedvars) );
 
          if ( cutoff )

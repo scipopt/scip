@@ -624,10 +624,8 @@ SCIP_RETCODE createCoveringProblem(
          int mapsize;
 
          /* calculate size of hash map */
-         conshdlr = SCIPfindConshdlr(scip, "and");
-         mapsize = SCIPconshdlrGetNActiveConss(conshdlr);
          conshdlr = SCIPfindConshdlr(scip, "quadratic");
-         mapsize += SCIPconshdlrGetNActiveConss(conshdlr);
+         mapsize = SCIPconshdlrGetNActiveConss(conshdlr);
          conshdlr = SCIPfindConshdlr(scip, "soc");
          mapsize += SCIPconshdlrGetNActiveConss(conshdlr);
          mapsize = MAX(mapsize, nnlprows);
@@ -1061,9 +1059,11 @@ SCIP_RETCODE createCoveringProblem(
          /* get nlrow representation and store it in hash map */
          SCIP_CALL( SCIPgetNlRowQuadratic(scip, quadcons, &nlrow) );
          assert(nlrow != NULL);
-         assert(nlrowmap != NULL);
-         assert(!SCIPhashmapExists(nlrowmap, nlrow));
-         SCIP_CALL( SCIPhashmapInsert(nlrowmap, nlrow, quadcons) );
+         if( nlrowmap != NULL )
+         {
+            assert(!SCIPhashmapExists(nlrowmap, nlrow));
+            SCIP_CALL( SCIPhashmapInsert(nlrowmap, nlrow, quadcons) );
+         }
 
          /* if we only want to convexify and curvature and bounds prove already convexity, nothing to do */
          if( onlyconvexify
@@ -2151,7 +2151,7 @@ SCIP_RETCODE solveSubproblem(
 
    if( heurdata->copycuts )
    {
-      /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
       SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, heurdata->globalbounds, NULL) );
    }
 

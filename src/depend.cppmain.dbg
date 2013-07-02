@@ -21,4 +21,5 @@ $(BINOBJDIR)/cppmain.o: src/cppmain.cpp src/scip/scip.h src/scip/def.h \
  src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
  src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h src/scip/lpi.h \
  src/nlpi/pub_expr.h src/scip/intervalarith.h \
- src/nlpi/type_exprinterpret.h src/scip/scipshell.h
+ src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/scip.h \
+ src/scip/scipshell.h

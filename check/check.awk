@@ -634,7 +634,6 @@ BEGIN {
 
       if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
          timeout = 1;
-         aborted = 0;
          tottime = endtime - starttime;
       }
       else if( gapreached || sollimitreached || memlimitreached || nodelimitreached )
@@ -693,7 +692,6 @@ BEGIN {
          failtime += tottime;
          fail++;
       }
-
       else if( checksol && !bestsolfeas ) {
          status = "fail";
          failtime += tottime;

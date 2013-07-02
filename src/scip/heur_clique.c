@@ -40,17 +40,17 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      TRUE                       /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_MAXNODES      5000LL                     /* maximum number of nodes to regard in the subproblem */
-#define DEFAULT_MINFIXINGRATE 0.5                        /* minimum percentage of integer variables that have to be fixed */
-#define DEFAULT_MINIMPROVE    0.01                       /* factor by which clique heuristic should at least improve the
-                                                          * incumbent
+#define DEFAULT_MAXNODES      5000LL                     /**< maximum number of nodes to regard in the subproblem */
+#define DEFAULT_MINFIXINGRATE 0.5                        /**< minimum percentage of integer variables that have to be fixed */
+#define DEFAULT_MINIMPROVE    0.01                       /**< factor by which clique heuristic should at least improve the
+                                                          *   incumbent
                                                           */
-#define DEFAULT_MINNODES      500LL                      /* minimum number of nodes to regard in the subproblem */
-#define DEFAULT_NODESOFS      500LL                      /* number of nodes added to the contingent of the total nodes */
-#define DEFAULT_NODESQUOT     0.1                        /* subproblem nodes in relation to nodes of the original problem */
-#define DEFAULT_MAXPROPROUNDS 2                          /* maximum number of propagation rounds during probing */
+#define DEFAULT_MINNODES      500LL                      /**< minimum number of nodes to regard in the subproblem */
+#define DEFAULT_NODESOFS      500LL                      /**< number of nodes added to the contingent of the total nodes */
+#define DEFAULT_NODESQUOT     0.1                        /**< subproblem nodes in relation to nodes of the original problem */
+#define DEFAULT_MAXPROPROUNDS 2                          /**< maximum number of propagation rounds during probing */
 #define DEFAULT_INITSEED      0                          /**< random seed value to initialize the random permutation
-                                                          * value for variables
+                                                          *   value for variables
                                                           */
 #define DEFAULT_MULTIPLIER    1.1                        /**< value to increase node number to determine the next run */
 #define DEFAULT_COPYCUTS      TRUE                       /**< should all active cuts from the cutpool of the
@@ -810,7 +810,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       if( heurdata->copycuts )
       {
-         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, FALSE, NULL) );
       }
 
@@ -870,7 +870,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
        * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
        * made for the original SCIP
        */
-      if( !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+      if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
       }

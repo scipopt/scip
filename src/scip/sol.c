@@ -1068,8 +1068,8 @@ SCIP_Real SCIPsolGetVal(
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(var != NULL);
 
-   /** if the value of a transformed variable in an original solution is requested, we need to project the variable back
-    *  to the original space, the opposite case is handled below
+   /* if the value of a transformed variable in an original solution is requested, we need to project the variable back
+    * to the original space, the opposite case is handled below
     */
    if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
