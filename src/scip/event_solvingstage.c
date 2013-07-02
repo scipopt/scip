@@ -34,7 +34,8 @@
  */
 #define MAXLINELEN 1024   /**< limit for line length */
 #define DEFAULT_ENABLED TRUE /**< should the event handler be executed? */
-#define DEFAULT_SOLUFILENAME "check//testset//short.solu" /**< default filename to read solution value from */
+#define DEFAULT_SOLUFILENAME "short.solu" /**< default filename to read solution value from */
+#define DEFAULT_SOLUFILEPATH "//nfs//optimi//kombadon//bzfhende//projects//scip-git//check//results//"
 #define EVENTHDLR_EVENT SCIP_EVENTTYPE_BESTSOLFOUND /**< the actual event to be caught */
 /* TODO: fill in the necessary event handler data */
 
@@ -71,8 +72,11 @@ SCIP_RETCODE searchSolufileForProbname(
 {
    SCIP_FILE* file;
    char linebuf[MAXLINELEN];
+   char solufilename[256];
+   sprintf(solufilename, "/optimi/kombadon/bzfhende/projects/scip-git/check/testset/%s", eventhdlrdata->solufilename);
    file = NULL;
-   file = SCIPfopen(eventhdlrdata->solufilename, "r");
+   SCIPdebugMessage("Trying to open %s\n", solufilename);
+   file = SCIPfopen(solufilename, "r");
 
    if( file == NULL )
    {
@@ -118,6 +122,19 @@ SCIP_RETCODE searchSolufileForProbname(
  * Callback methods of event handler
  */
 
+/** copy method for node selector plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_EVENTCOPY(eventCopySolvingstage)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   /* call inclusion method of node selector */
+   SCIP_CALL( SCIPincludeEventHdlrSolvingstage(scip) );
+
+   return SCIP_OKAY;
+}
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_EVENTFREE(eventFreeSolvingstage)
@@ -157,7 +174,7 @@ SCIP_DECL_EVENTINIT(eventInitSolvingstage)
    eventhdlrdata->optimalvalue = SCIPinfinity(scip);
    SCIP_CALL( searchSolufileForProbname(scip, probname, eventhdlrdata) );
 
-   SCIPdebugMessage("Optimal value for problem %s from solufile %s: %16.9g", probname, eventhdlrdata->solufilename, eventhdlrdata->optimalvalue);
+   SCIPdebugMessage("Optimal value for problem %s from solufile %s: %16.9g\n", probname, eventhdlrdata->solufilename, eventhdlrdata->optimalvalue);
    eventhdlrdata->solvingstage = SOLVINGSTAGE_NOSOLUTION;
 
    if( eventhdlrdata->enabled )
@@ -193,9 +210,18 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingstage)
 
    if( !SCIPisInfinity(scip, eventhdlrdata->optimalvalue) && SCIPisFeasEQ(scip, eventhdlrdata->optimalvalue, SCIPgetPrimalbound(scip)) )
    {
+      SCIP_NODESEL* nodeselector;
+
       eventhdlrdata->solvingstage = SOLVINGSTAGE_OPTIMAL;
+
+
+      nodeselector = SCIPfindNodesel(scip, "dfs");
+      assert(nodeselector != NULL);
+
       SCIPdebugMessage("Changed solving stage to OPTIMAL\n");
       SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, FALSE);
+
+      SCIP_CALL( SCIPsetNodeselStdPriority(scip, nodeselector, 1000000) );
    }
 
    return SCIP_OKAY;
@@ -238,6 +264,8 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
    assert(eventhdlrdata != NULL);
 
+   eventhdlrdata->solufilename = NULL;
+
    eventhdlr = NULL;
    /* include event handler into SCIP */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
@@ -245,6 +273,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
    assert(eventhdlr != NULL);
 
    /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopySolvingstage) );
    SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeSolvingstage) );
    SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitSolvingstage) );
    SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventInitsolSolvingstage) );
@@ -252,6 +281,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
    /* add Solvingstage event handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/enabled", "should the event handler be executed?",
          &eventhdlrdata->enabled, FALSE, DEFAULT_ENABLED, paramChgdEnabled, NULL) );
+
    SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/solufilename","file to parse solution information from",
          &eventhdlrdata->solufilename, FALSE, DEFAULT_SOLUFILENAME, NULL, NULL) );
 
