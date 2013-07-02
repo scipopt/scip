@@ -10449,7 +10449,9 @@ SCIP_RETCODE SCIPdeactiveCons(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  *
- *  @note If the message handler is set to a NULL pointer nothing will be printed
+ *  @note If the message handler is set to a NULL pointer nothing will be printed.
+ *  @note The file stream will not be flushed directly, this can be achieved by calling SCIPinfoMessage() printing a
+ *        newline character.
  */
 EXTERN
 SCIP_RETCODE SCIPprintCons(
