@@ -85,7 +85,7 @@ git st
 NEWSCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
 
 # get current git hash
-GITHASH=`git describe --always --dirty`
+GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
 
 # continue testing if makeregression.sh did not change
 while [ $NEWSCRIPTTIMESTAMP -eq $SCRIPTTIMESTAMP ]
@@ -221,7 +221,7 @@ do
 	NEWSCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
         
         # get current git hash
-        GITHASH=`git describe --always --dirty`
+        GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
     done
 done
 

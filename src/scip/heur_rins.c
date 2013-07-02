@@ -40,10 +40,11 @@
 
 #define DEFAULT_NODESOFS      500       /* number of nodes added to the contingent of the total nodes          */
 #define DEFAULT_MAXNODES      5000      /* maximum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINNODES      500       /* minimum number of nodes to regard in the subproblem                 */
+#define DEFAULT_MINNODES      50        /* minimum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MINIMPROVE    0.01      /* factor by which RINS should at least improve the incumbent          */
-#define DEFAULT_MINFIXINGRATE 0.0       /* minimum percentage of integer variables that have to be fixed       */
+#define DEFAULT_MINFIXINGRATE 0.3       /* minimum percentage of integer variables that have to be fixed       */
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem       */
+#define DEFAULT_LPLIMFAC      2.0       /* factor by which the limit on the number of LP depends on the node limit  */
 #define DEFAULT_NWAITINGNODES 200       /* number of nodes without incumbent change that heuristic should wait */
 #define DEFAULT_USELPROWS    FALSE      /* should subproblem be created out of the rows in the LP rows,
                                          * otherwise, the copy constructors of the constraints handlers are used */
@@ -51,6 +52,9 @@
                                          * of the original scip be copied to constraints of the subscip
                                          */
 
+/* event handler properties */
+#define EVENTHDLR_NAME         "Rins"
+#define EVENTHDLR_DESC         "LP event handler for "HEUR_NAME" heuristic"
 
 /*
  * Data structures
@@ -65,6 +69,8 @@ struct SCIP_HeurData
    SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed       */
    int                   nwaitingnodes;      /**< number of nodes without incumbent change that heuristic should wait */
    SCIP_Real             minimprove;         /**< factor by which RINS should at least improve the incumbent          */
+   SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
+   SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
    SCIP_Longint          usednodes;          /**< nodes already used by RINS in earlier calls                         */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?        */
@@ -243,6 +249,37 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
+/* ---------------- Callback methods of event handler ---------------- */
+
+/* exec the event handler
+ *
+ * we interrupt the solution process
+ */
+static
+SCIP_DECL_EVENTEXEC(eventExecRins)
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(eventhdlr != NULL);
+   assert(eventdata != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   assert(event != NULL);
+   assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
+
+   heurdata = (SCIP_HEURDATA*)eventdata;
+   assert(heurdata != NULL);
+
+   /* interrupt solution process of sub-SCIP */
+   if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
+   {
+      SCIPdebugMessage("interrupt after  %"SCIP_LONGINT_FORMAT" LPs\n",SCIPgetNLPs(scip));
+      SCIP_CALL( SCIPinterruptSolve(scip) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of primal heuristic
  */
@@ -306,13 +343,14 @@ SCIP_DECL_HEURINIT(heurInitRins)
 static
 SCIP_DECL_HEUREXEC(heurExecRins)
 {  /*lint --e{715}*/
-   SCIP_Longint nstallnodes;
+   SCIP_Longint nnodes;
 
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
    SCIP* subscip;                            /* the subproblem created by RINS      */
    SCIP_VAR** vars;                          /* original problem's variables        */
    SCIP_VAR** subvars;                       /* subproblem's variables              */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
 
    SCIP_Real timelimit;                      /* timelimit for the subproblem        */
    SCIP_Real memorylimit;
@@ -358,19 +396,19 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    *result = SCIP_DIDNOTRUN;
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
-   nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
+   nnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
 
    /* reward RINS if it succeeded often */
-   nstallnodes = (SCIP_Longint)(nstallnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-   nstallnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
-   nstallnodes += heurdata->nodesofs;
+   nnodes = (SCIP_Longint)(nnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+   nnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
+   nnodes += heurdata->nodesofs;
 
    /* determine the node limit for the current process */
-   nstallnodes -= heurdata->usednodes;
-   nstallnodes = MIN(nstallnodes, heurdata->maxnodes);
+   nnodes -= heurdata->usednodes;
+   nnodes = MIN(nnodes, heurdata->maxnodes);
 
    /* check whether we have enough nodes left to call subproblem solving */
-   if( nstallnodes < heurdata->minnodes )
+   if( nnodes < heurdata->minnodes )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
@@ -390,6 +428,8 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+
+   eventhdlr = NULL;
 
    if( heurdata->uselprows )
    {
@@ -419,11 +459,19 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
       if( heurdata->copycuts )
       {
-         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
       }
 
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+
+      /* create event handler for LP events */
+      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecRins, NULL) );
+      if( eventhdlr == NULL )
+      {
+         SCIPerrorMessage("event handler for "HEUR_NAME" heuristic not found.\n");
+         return SCIP_PLUGINNOTFOUND;
+      }
    }
 
    for( i = 0; i < nvars; i++ )
@@ -446,6 +494,12 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
+#ifdef SCIP_DEBUG
+   /* for debugging RINS, enable MIP output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#endif
+
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
@@ -464,7 +518,9 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       goto TERMINATE;
 
    /* set limits for the subproblem */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nstallnodes) );
+   heurdata->nodelimit = nnodes;
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nnodes/10)) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
@@ -512,6 +568,17 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
    }
 
+   /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
+    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
+    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
+    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
+    * made for the original SCIP
+    */
+   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
+   }
+
    /* add an objective cutoff */
    cutoff = SCIPinfinity(scip);
    assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
@@ -531,8 +598,25 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    cutoff = MIN(upperbound, cutoff );
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
+   /* catch LP events of sub-SCIP */
+   if( !heurdata->uselprows )
+   {
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPtransformProb(subscip) );
+      SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
+   }
+
    /* solve the subproblem */
    retcode = SCIPsolve(subscip);
+
+   /* drop LP events of sub-SCIP */
+   if( !heurdata->uselprows )
+   {
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
+   }
 
    /* Errors in solving the subproblem should not kill the overall solving process
     * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
@@ -544,6 +628,9 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 #endif
       SCIPwarningMessage(scip, "Error while solving subproblem in RINS heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
+
+   /* print solving statistics of subproblem if we are in SCIP's debug mode */
+   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
 
@@ -630,6 +717,10 @@ SCIP_RETCODE SCIPincludeHeurRins(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minfixingrate",
          "minimum percentage of integer variables that have to be fixed",
          &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/lplimfac",
+         "factor by which the limit on the number of LP depends on the node limit",
+         &heurdata->lplimfac, TRUE, DEFAULT_LPLIMFAC, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows",
          "should subproblem be created out of the rows in the LP rows?",

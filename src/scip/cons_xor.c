@@ -1439,6 +1439,7 @@ SCIP_RETCODE addRelaxation(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Bool infeasible;
    int r;
 
    consdata = SCIPconsGetData(cons);
@@ -1453,8 +1454,8 @@ SCIP_RETCODE addRelaxation(
    {
       if( consdata->rows[r] != NULL && !SCIProwIsInLP(consdata->rows[r]) )
       {
-         SCIPdebugMessage("Add relaxation of xor constraint <%s>\n", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE, &infeasible) );
+         assert( ! infeasible );   /* function is only called from initlp -> row should be feasible */
       }
    }
 
@@ -1585,14 +1586,17 @@ SCIP_RETCODE separateCons(
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool             separateparity,     /**< should parity inequalities be separated? */
-   SCIP_Bool*            separated           /**< pointer to store whether a cut was found */
+   SCIP_Bool*            separated,          /**< pointer to store whether a cut was found */
+   SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real feasibility;
    int r;
 
-   assert(separated != NULL);
+   assert( separated != NULL );
+   assert( cutoff != NULL );
+   *cutoff = FALSE;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1614,7 +1618,9 @@ SCIP_RETCODE separateCons(
          feasibility = SCIPgetRowSolFeasibility(scip, consdata->rows[r], sol);
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE, cutoff) );
+            if ( *cutoff )
+               return SCIP_OKAY;
             *separated = TRUE;
          }
       }
@@ -1689,7 +1695,7 @@ SCIP_RETCODE separateCons(
             }
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
             assert( SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real) (cnt-1)) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
             ++ngen;
@@ -1729,7 +1735,7 @@ SCIP_RETCODE separateCons(
             }
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
             assert( SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real) (cnt-2)) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
             ++ngen;
@@ -1765,8 +1771,8 @@ SCIP_RETCODE separateCons(
             }
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
-            assert( SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real) cnt) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
+            assert( *cutoff || SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real)(j-1)) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
             ++ngen;
          }
@@ -3588,6 +3594,7 @@ SCIP_DECL_CONSSEPALP(consSepalpXor)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool separated;
+   SCIP_Bool cutoff;
    int c;
 
    *result = SCIP_DIDNOTFIND;
@@ -3598,8 +3605,10 @@ SCIP_DECL_CONSSEPALP(consSepalpXor)
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->separateparity, &separated) );
-      if( separated )
+      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->separateparity, &separated, &cutoff) );
+      if ( cutoff )
+         *result = SCIP_CUTOFF;
+      else if ( separated )
          *result = SCIP_SEPARATED;
    }
 
@@ -3616,6 +3625,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolXor)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool separated;
+   SCIP_Bool cutoff;
    int c;
 
    *result = SCIP_DIDNOTFIND;
@@ -3626,8 +3636,10 @@ SCIP_DECL_CONSSEPASOL(consSepasolXor)
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], sol, conshdlrdata->separateparity, &separated) );
-      if( separated )
+      SCIP_CALL( separateCons(scip, conss[c], sol, conshdlrdata->separateparity, &separated, &cutoff) );
+      if ( cutoff )
+         *result = SCIP_CUTOFF;
+      else if ( separated )
          *result = SCIP_SEPARATED;
    }
 
@@ -3644,6 +3656,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpXor)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool violated;
+   SCIP_Bool cutoff;
    int i;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3657,9 +3670,14 @@ SCIP_DECL_CONSENFOLP(consEnfolpXor)
       {
          SCIP_Bool separated;
 
-         SCIP_CALL( separateCons(scip, conss[i], NULL, conshdlrdata->separateparity, &separated) );
-         assert(separated); /* because the solution is integral, the separation always finds a cut */
-         *result = SCIP_SEPARATED;
+         SCIP_CALL( separateCons(scip, conss[i], NULL, conshdlrdata->separateparity, &separated, &cutoff) );
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+         {
+            assert(separated); /* because the solution is integral, the separation always finds a cut */
+            *result = SCIP_SEPARATED;
+         }
          return SCIP_OKAY;
       }
    }

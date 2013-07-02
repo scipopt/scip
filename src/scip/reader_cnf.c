@@ -334,13 +334,13 @@ SCIP_RETCODE readCnf(
  TERMINATE:
    /* change objective values and release variables */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
-   if( useobj )
+   for( v = 0; v < nvars; ++v )
    {
-      for( v = 0; v < nvars; ++v )
+      if( useobj )
       {
          SCIP_CALL( SCIPchgVarObj(scip, vars[v], (SCIP_Real)varsign[v]) );
-         SCIP_CALL( SCIPreleaseVar(scip, &vars[v]) );
       }
+      SCIP_CALL( SCIPreleaseVar(scip, &vars[v]) );
    }
 
    /* free temporary memory */

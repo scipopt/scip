@@ -230,7 +230,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    BMScopyMemoryArray(lpcandsfraccopy, lpcandsfrac, nlpcands);
    BMScopyMemoryArray(lpcandscopy, lpcands, nlpcands);
 
-   SCIP_CALL(  SCIPstartClock(scip, branchruledata->cloudclock) );
+   SCIP_CALL( SCIPstartClock(scip, branchruledata->cloudclock) );
    branchruledata->ntried++;
 
    /* start diving to calculate the solution cloud */
@@ -323,13 +323,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
        * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
 #ifdef NDEBUG
-      retcode = SCIPsolveDiveLP(scip, -1, &lperror);
+      retcode = SCIPsolveDiveLP(scip, -1, &lperror, NULL);
       if( retcode != SCIP_OKAY )
       {
          SCIPwarningMessage(scip, "Error while solving LP in "BRANCHRULE_NAME"; LP solve terminated with code <%d>\n",retcode);
       }
 #else
-      SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );
+      SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror, NULL) );
 #endif
 
       if( lperror || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
@@ -402,7 +402,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    /* terminate the diving */
    SCIP_CALL( SCIPendDive(scip) );
 
-   SCIP_CALL(  SCIPstopClock(scip, branchruledata->cloudclock) );
+   SCIP_CALL( SCIPstopClock(scip, branchruledata->cloudclock) );
    ncomplete = nlpcands;
 
    if( counter > 0 )

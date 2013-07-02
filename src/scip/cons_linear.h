@@ -61,8 +61,10 @@ typedef struct SCIP_LinConsUpgrade SCIP_LINCONSUPGRADE; /**< linear constraint u
  *  - nnegbin         : number of binary variables with negative coefficient
  *  - nposint         : number of integer variables with positive coefficient
  *  - nnegint         : number of integer variables with negative coefficient
- *  - nposimpl        : number of implicit integer variables with positive coefficient
- *  - nnegimpl        : number of implicit integer variables with negative coefficient
+ *  - nposimpl        : number of implicit integer variables with positive coefficient (including implicit binary variables)
+ *  - nnegimpl        : number of implicit integer variables with negative coefficient (including implicit binary variables)
+ *  - nposimplbin     : number of implicit binary variables with positive coefficient
+ *  - nnegimplbin     : number of implicit binary variables with negative coefficient
  *  - nposcont        : number of continuous variables with positive coefficient
  *  - nnegcont        : number of continuous variables with negative coefficient
  *  - ncoeffspone     : number of +1 coefficients
@@ -77,9 +79,9 @@ typedef struct SCIP_LinConsUpgrade SCIP_LINCONSUPGRADE; /**< linear constraint u
  *  - upgdcons        : pointer to store the upgraded constraint
  */
 #define SCIP_DECL_LINCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, int nvars, SCIP_VAR** vars, SCIP_Real* vals, SCIP_Real lhs, SCIP_Real rhs, \
-            int nposbin, int nnegbin, int nposint, int nnegint, int nposimpl, int nnegimpl, int nposcont, int nnegcont, \
-            int ncoeffspone, int ncoeffsnone, int ncoeffspint, int ncoeffsnint, int ncoeffspfrac, int ncoeffsnfrac, \
-            SCIP_Real poscoeffsum, SCIP_Real negcoeffsum, SCIP_Bool integral, SCIP_CONS** upgdcons)
+      int nposbin, int nnegbin, int nposint, int nnegint, int nposimpl, int nnegimpl, int nposimplbin, int nnegimplbin, int nposcont, int nnegcont, \
+      int ncoeffspone, int ncoeffsnone, int ncoeffspint, int ncoeffsnint, int ncoeffspfrac, int ncoeffsnfrac, \
+      SCIP_Real poscoeffsum, SCIP_Real negcoeffsum, SCIP_Bool integral, SCIP_CONS** upgdcons)
 
 
 /*

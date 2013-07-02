@@ -632,8 +632,8 @@ SCIP_RETCODE innerPresolve(
    *nblocks = 0;
    *nblockvars = 0;
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*blockstart)), nvars/2) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*blockend)), nvars/2) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, blockstart, nvars/2) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, blockend, nvars/2) );
 
    /* loop over variables and compare neighbors */
    for( v = 1; v < nvars; ++v )
@@ -653,7 +653,7 @@ SCIP_RETCODE innerPresolve(
          }
          startindex = v;
       }
-      else if( v == nvars - 1 && v - startindex >= 2 )
+      else if( v == nvars - 1 && v - startindex >= 1 )
       {
          assert(*nblocks < nvars/2);
          (*nblockvars) += v - startindex + 1;
@@ -664,8 +664,20 @@ SCIP_RETCODE innerPresolve(
       }
    }
 
-   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &((*blockstart)), nvars/2, *nblocks) );
-   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &((*blockend)), nvars/2, *nblocks) );
+   /* reallocate memory with respect to the number of found blocks; if there were none, free the memory */
+   if( *nblocks > 0 )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, blockstart, nvars/2, *nblocks) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, blockend, nvars/2, *nblocks) );
+   }
+   else
+   {
+      SCIPfreeBlockMemoryArray(scip, blockstart, nvars/2);
+      SCIPfreeBlockMemoryArray(scip, blockend, nvars/2);
+
+      *blockstart = NULL;
+      *blockend = NULL;
+   }
 
    return SCIP_OKAY;
 }
@@ -1660,13 +1672,13 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
        * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
 #ifdef NDEBUG
-      retstat = SCIPsolveDiveLP(scip, -1, &lperror);
+      retstat = SCIPsolveDiveLP(scip, -1, &lperror, NULL);
       if( retstat != SCIP_OKAY )
       {
          SCIPwarningMessage(scip, "Error while solving LP in Twoopt heuristic; LP solve terminated with code <%d>\n",retstat);
       }
 #else
-      SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );
+      SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror, NULL) );
 #endif
 
       SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));

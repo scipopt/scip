@@ -127,6 +127,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation */
    int                   ninitlprefpoints;   /**< number of reference points in each direction where to compute linear support for envelope in LP initialization */
+   SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
 
    SCIP_EVENTHDLR*       linvareventhdlr;    /**< handler for linear variable bound change events */
    SCIP_EVENTHDLR*       nonlinvareventhdlr; /**< handler for nonlinear variable bound change events */
@@ -1411,7 +1412,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
    SCIP_Real*            coefx,              /**< coefficient of x in estimator */
    SCIP_Real*            coefy,              /**< coefficient of y in estimator */
    SCIP_Real*            constant,           /**< constant part of estimator */
-   SCIP_Bool*            success             /**< buffer to indicate whether coefficients where successfully computed */
+   SCIP_Bool*            success             /**< pointer to indicate whether coefficients where successfully computed */
    )
 {
    SCIP_VAR*      x;
@@ -1652,7 +1653,7 @@ SCIP_RETCODE generateOverestimatingHyperplaneCut(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real coefs[2];
-   SCIP_Real constant = 0.0;
+   SCIP_Real constant = SCIP_INVALID;
    SCIP_Bool success;
 
    assert(scip != NULL);
@@ -4211,7 +4212,7 @@ SCIP_RETCODE separatePoint(
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    SCIP_Real             minefficacy,        /**< minimal efficacy of a cut if it should be added to the LP */
-   SCIP_Bool             convexalways,       /**< whether to ignore minefficacy criteria for a convex constraint (and use feastol instead) */
+   SCIP_Bool             inenforcement,      /**< whether we are in constraint enforcement */
    SCIP_RESULT*          result,             /**< result of separation */
    SCIP_Real*            bestefficacy        /**< buffer to store best efficacy of a cut that was added to the LP, if found; or NULL if not of interest */
    )
@@ -4275,24 +4276,39 @@ SCIP_RETCODE separatePoint(
 
          /* if cut is strong enough or it's weak but we separate on a convex function and accept weak cuts there, add cut to SCIP */
          if( SCIPisGT(scip, efficacy, minefficacy) ||
-            (convexalways && SCIPisGT(scip, efficacy, SCIPfeastol(scip)) && isConvexLocal(scip, conss[c], violside)) )
+            (inenforcement && SCIPisGT(scip, efficacy, SCIPfeastol(scip)) && isConvexLocal(scip, conss[c], violside)) )
          {
+            SCIP_Bool infeasible;
+
             /* cut cuts off solution sufficiently */
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
-
-            SCIPdebugMessage("added cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), MAX(consdata->lhsviol, consdata->rhsviol));
-
-            *result = SCIP_SEPARATED;
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+            if ( infeasible )
+            {
+               SCIPdebugMessage("cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(conss[c]));
+               *result = SCIP_CUTOFF;
+            }
+            else
+            {
+               SCIPdebugMessage("added cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), MAX(consdata->lhsviol, consdata->rhsviol));
+               *result = SCIP_SEPARATED;
+            }
             if( bestefficacy != NULL && efficacy > *bestefficacy )
                *bestefficacy = efficacy;
+
+            /* mark row as not removable from LP for current node, if in enforcement */
+            if( inenforcement && !conshdlrdata->enfocutsremovable )
+               SCIPmarkRowNotRemovableLocal(scip, row);
          }
          else
          {
             SCIPdebugMessage("abandon cut since efficacy %g is too small\n", efficacy);
          }
 
-         SCIP_CALL( SCIPreleaseRow (scip, &row) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
+
+      if ( *result == SCIP_CUTOFF )
+         break;
 
       /* enforce only useful constraints
        * others are only checked and enforced if we are still feasible or have not found a separating cut yet
@@ -6116,13 +6132,17 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
             /* add to LP */
             if( row1 != NULL )
             {
-               SCIP_CALL( SCIPaddCut(scip, NULL, row1, FALSE /* forcecut */) );
+               SCIP_Bool infeasible;
+               SCIP_CALL( SCIPaddCut(scip, NULL, row1, FALSE /* forcecut */, &infeasible) );
+               assert( ! infeasible );
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row1, NULL) ) );
                SCIP_CALL( SCIPreleaseRow(scip, &row1) );
             }
             if( row2 != NULL )
             {
-               SCIP_CALL( SCIPaddCut(scip, NULL, row2, FALSE /* forcecut */) );
+               SCIP_Bool infeasible;
+               SCIP_CALL( SCIPaddCut(scip, NULL, row2, FALSE /* forcecut */, &infeasible) );
+               assert( ! infeasible );
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row2, NULL) ) );
                SCIP_CALL( SCIPreleaseRow(scip, &row2) );
             }
@@ -7455,6 +7475,10 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/ninitlprefpoints",
          "number of reference points in each direction where to compute linear support for envelope in LP initialization",
          &conshdlrdata->ninitlprefpoints, FALSE, 3, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/enfocutsremovable",
+         "are cuts added during enforcement removable from the LP in the same node?",
+         &conshdlrdata->enfocutsremovable, TRUE, FALSE, NULL, NULL) );
 
    conshdlrdata->linvareventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->linvareventhdlr), CONSHDLR_NAME"_boundchange", "signals a bound tightening in a linear variable to a bivariate constraint",

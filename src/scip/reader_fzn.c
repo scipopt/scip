@@ -95,7 +95,7 @@ struct FznConstant
 };
 typedef struct FznConstant FZNCONSTANT;
 
-/* structure to store information for an array variable */
+/** structure to store information for an array variable */
 struct ConstArray
 {
    FZNCONSTANT**         constants;          /**< array of constants */
@@ -105,7 +105,7 @@ struct ConstArray
 };
 typedef struct ConstArray CONSTARRAY;
 
-/* structure to store information for an array variable */
+/** structure to store information for an array variable */
 struct VarArray
 {
    SCIP_VAR**            vars;               /**< variable belonging to the variable array */
@@ -2818,8 +2818,8 @@ SCIP_RETCODE parseLinking(
    )
 {
    char** names;
-   SCIP_Real lhs = -SCIPinfinity(scip);
-   SCIP_Real rhs = SCIPinfinity(scip);
+   SCIP_Real lhs = SCIP_INVALID;
+   SCIP_Real rhs = SCIP_INVALID;
    int nnames;
 
    nnames = 0;

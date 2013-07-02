@@ -5658,7 +5658,7 @@ void SCIPconsCapture(
    assert(cons != NULL);
    assert(cons->nuses >= 0);
 
-   SCIPdebugMessage("capture constraint <%s> with nuses=%d\n", cons->name, cons->nuses);
+   SCIPdebugMessage("capture constraint <%s> with nuses=%d, cons pointer %p\n", cons->name, cons->nuses, (void*)cons);
    cons->nuses++;
 }
 
@@ -5677,7 +5677,7 @@ SCIP_RETCODE SCIPconsRelease(
    assert(set != NULL);
    assert((*cons)->scip == set->scip);
 
-   SCIPdebugMessage("release constraint <%s> with nuses=%d\n", (*cons)->name, (*cons)->nuses);
+   SCIPdebugMessage("release constraint <%s> with nuses=%d, cons pointer %p\n", (*cons)->name, (*cons)->nuses, (void*)(*cons));
    (*cons)->nuses--;
    if( (*cons)->nuses == 0 )
    {
@@ -5697,7 +5697,7 @@ SCIP_RETCODE SCIPconsRelease(
          SCIP_CALL( SCIPconsFree(cons, blkmem, set) );
       }
    }
-   *cons  = NULL;
+   *cons = NULL;
 
    return SCIP_OKAY;
 }
@@ -7282,7 +7282,7 @@ SCIP_RETCODE SCIPconshdlrsStorePropagationStatus(
 
    for( c = nconshdlrs - 1; c >= 0; --c )
    {
-      conshdlr = conshdlrs[c];
+      conshdlr = conshdlrs[c]; /*lint !e613*/
       assert(conshdlr != NULL);
       assert(conshdlr->storednmarkedpropconss == 0);
 
@@ -7324,11 +7324,14 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 
    for( c = nconshdlrs - 1; c >= 0; --c )
    {
-      conshdlr = conshdlrs[c];
+      conshdlr = conshdlrs[c]; /*lint !e613*/
       assert(conshdlr != NULL);
 
       if( conshdlr->storednmarkedpropconss > 0 )
       {
+#ifndef NDEBUG
+         int ndisabled = 0;
+#endif
          int v;
 
          assert(conshdlr->storednmarkedpropconss <= conshdlr->npropconss);
@@ -7336,13 +7339,20 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
          /* mark all previously marked constraint, which were marked before probing */
          for( v = conshdlr->storednmarkedpropconss - 1; v >= 0; --v )
          {
-            if( !SCIPconsIsDeleted(conshdlr->storedpropconss[v]) )
+            SCIP_CONS* cons = conshdlr->storedpropconss[v];
+            assert(cons != NULL);
+
+            if( cons->enabled && cons->propagate && cons->propenabled )
             {
-               SCIP_CALL( SCIPconsMarkPropagate(conshdlr->storedpropconss[v], set) );
+               SCIP_CALL( SCIPconsMarkPropagate(cons, set) );
             }
-            SCIP_CALL( SCIPconsRelease(&(conshdlr->storedpropconss[v]), blkmem, set) );
+#ifndef NDEBUG
+            else
+               ++ndisabled;
+#endif
+            SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
          }
-         assert(conshdlr->nmarkedpropconss >= conshdlr->storednmarkedpropconss);
+         assert(conshdlr->nmarkedpropconss + ndisabled >= conshdlr->storednmarkedpropconss || (conshdlrAreUpdatesDelayed(conshdlr) && conshdlr->nupdateconss + ndisabled >= conshdlr->storednmarkedpropconss));
 
          conshdlr->storednmarkedpropconss = 0;
       }

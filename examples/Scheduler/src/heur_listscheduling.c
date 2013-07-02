@@ -56,7 +56,7 @@
 #define HEUR_DESC             "scheduling specific primal heuristic which is based on bidirectional serial generation scheme"
 #define HEUR_DISPCHAR         'x'
 #define HEUR_PRIORITY         10000
-#define HEUR_FREQ             1
+#define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         100000
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_BEFOREPRESOL

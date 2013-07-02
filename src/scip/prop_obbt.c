@@ -137,7 +137,7 @@ SCIP_RETCODE solveLP(
    *optimal = FALSE;
    *error = FALSE;
 
-   retcode = SCIPsolveDiveLP(scip, itlimit, error);
+   retcode = SCIPsolveDiveLP(scip, itlimit, error, NULL);
    lpsolstat = SCIPgetLPSolstat(scip);
 
    /* an error should not kill the overall solving process */
@@ -963,7 +963,7 @@ SCIP_RETCODE findNewBounds(
                bound->newval = SCIPvarGetLPSol(var);
                bound->found = TRUE;
 
-               SCIPdebugMessage("      LP value: %f\n", bound->newval);
+               SCIPdebugMessage("      var <%s>, LP value: %f\n", SCIPvarGetName(var), bound->newval);
 
                /* in root node we may want to create a genvbound (independent of tightening success) */
                if( SCIPgetDepth(scip) == 0 && propdata->genvboundprop != NULL )
@@ -1079,7 +1079,7 @@ unsigned int getScore(
    int                   maxnlcount          /**< maximal number of nonlinear constraints a variable appears in */
    )
 {
-   unsigned int score;                       /**< score to be computed */
+   unsigned int score;                       /* score to be computed */
 
    assert(scip != NULL);
    assert(bound != NULL);

@@ -94,6 +94,8 @@
 #include "scip/lpi.h"
 #include "nlpi/pub_expr.h"
 
+/* include global presolving methods */
+#include "scip/presolve.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
@@ -258,6 +260,9 @@ SCIP_STAGE SCIPgetStage(
 /** outputs SCIP stage and solution status if applicable via the message handler
  *
  *  @note If the message handler is set to a NULL pointer nothing will be printed
+ *
+ *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
+ *        thus may to correspond to the original status.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -753,6 +758,9 @@ SCIP_RETCODE SCIPcopyOrigVars(
  *  @note The constraint is not added to the target SCIP. You can check whether a constraint is added by calling
  *        SCIPconsIsAdded(). (If you mix SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add
  *        explicitly and what is already added.)
+ *
+ *  @note The constraint is always captured, either during the creation of the copy or after finding the copy of the
+ *        constraint in the constraint hash map
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
@@ -4567,7 +4575,9 @@ SCIP_Real SCIPgetTransObjscale(
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
@@ -10439,7 +10449,9 @@ SCIP_RETCODE SCIPdeactiveCons(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  *
- *  @note If the message handler is set to a NULL pointer nothing will be printed
+ *  @note If the message handler is set to a NULL pointer nothing will be printed.
+ *  @note The file stream will not be flushed directly, this can be achieved by calling SCIPinfoMessage() printing a
+ *        newline character.
  */
 EXTERN
 SCIP_RETCODE SCIPprintCons(
@@ -11107,7 +11119,8 @@ SCIP_RETCODE SCIPwriteMIP(
    const char*           filename,           /**< file name */
    SCIP_Bool             genericnames,       /**< should generic names like x_i and row_j be used in order to avoid
                                               *   troubles with reserved symbols? */
-   SCIP_Bool             origobj             /**< should the original objective function be used? */
+   SCIP_Bool             origobj,            /**< should the original objective function be used? */
+   SCIP_Bool             lazyconss           /**< output removable rows as lazy constraints? */
    );
 
 /** gets the LP interface of SCIP;
@@ -11235,6 +11248,17 @@ SCIP_Real SCIPgetColRedcost(
  */
 EXTERN
 SCIP_Real SCIPgetColFarkasCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COL*             col                 /**< LP column */
+   );
+
+/** marks a column to be not removable from the LP in the current node
+ *
+ *  @pre this method can be called in the following stage of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+void SCIPmarkColNotRemovableLocal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COL*             col                 /**< LP column */
    );
@@ -11644,6 +11668,17 @@ SCIP_RETCODE SCIPmakeRowIntegral(
    SCIP_Real             maxscale,           /**< maximal value to scale row with */
    SCIP_Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
    SCIP_Bool*            success             /**< stores whether row could be made rational */
+   );
+
+/** marks a row to be not removable from the LP in the current node
+ *
+ *  @pre this method can be called in the following stage of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+void SCIPmarkRowNotRemovableLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
    );
 
 /** returns minimal absolute value of row vector's non-zero coefficients
@@ -13194,7 +13229,8 @@ SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
-   SCIP_Bool             forcecut            /**< should the cut be forced to enter the LP? */
+   SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
    );
 
 /** if not already existing, adds row to global cut pool
@@ -13759,7 +13795,9 @@ EXTERN
 SCIP_RETCODE SCIPsolveDiveLP(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the probing LP was infeasible or the objective
+                                              *   limit was reached (or NULL, if not needed) */
    );
 
 /** returns the number of the node in the current branch and bound run, where the last LP was solved in diving
@@ -14030,7 +14068,9 @@ EXTERN
 SCIP_RETCODE SCIPsolveProbingLP(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the probing LP was infeasible or the objective
+                                              *   limit was reached (or NULL, if not needed) */
    );
 
 /** solves the LP at the current probing node (cannot be applied at preprocessing stage) and applies pricing
@@ -14049,7 +14089,10 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
    SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
    int                   maxpricerounds,     /**< maximal number of pricing rounds (-1: no limit);
                                               *   a finite limit means that the LP might not be solved to optimality! */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the probing LP was infeasible or the objective
+                                              *   limit was reached (or NULL, if not needed) */
+
    );
 
 /**@} */
@@ -17674,6 +17717,9 @@ SCIP_RETCODE SCIPprintTransProblem(
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
+ *        thus may to correspond to the original status.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT

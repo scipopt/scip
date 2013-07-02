@@ -878,6 +878,12 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 	    initial, enforce, check, local, modifiable, dynamic) );
    }
 
+   /* free parsed constraints */
+   for( --nconss; nconss >= 0; --nconss )
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[nconss]) );
+   }
+
  TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &copystr);
@@ -945,7 +951,16 @@ SCIP_DECL_CONSCOPY(consCopyDisjunction)
       {
 	 SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, name, nconss, conss, relaxcons,
 	       initial, enforce, check, local, modifiable, dynamic) );
+
+         SCIP_CALL( SCIPreleaseCons(scip, &relaxcons) );
       }
+   }
+
+   /* release the copied constraints */
+   for(; c >= 0; --c )
+   {
+      assert(conss[c] != NULL);
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[c]) );
    }
 
    SCIPfreeBufferArray(scip, &conss);

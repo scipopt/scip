@@ -127,6 +127,7 @@ struct SCIP_ConsData
    unsigned int          isremovedfixings:1; /**< did we removed fixed/aggr/multiaggr variables ? */
    unsigned int          ispropagated:1;     /**< was the constraint propagated with respect to the current bounds ? */
    unsigned int          ispresolved:1;      /**< did we checked for possibilities of upgrading or implicit integer variables ? */
+   unsigned int          initialmerge:1;     /**< did we perform an initial merge and clean in presolving yet ? */
 #ifdef CHECKIMPLINBILINEAR
    unsigned int          isimpladded:1;      /**< has there been an implication added for a binary variable in a bilinear term? */
 #endif
@@ -178,13 +179,18 @@ struct SCIP_ConshdlrData
    SCIP_Bool             disaggregate;       /**< whether to disaggregate quadratic constraints */
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve */
    int                   maxproproundspresolve; /**< limit on number of propagation rounds for a single constraint within one presolving round */
-   SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
-
+   SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
+   SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
+   int                   enfolplimit;        /**< maximum number of enforcement round before declaring the LP relaxation
+                                              * infeasible (-1: no limit); WARNING: if this parameter is not set to -1,
+                                              * SCIP might declare sub-optimal solutions optimal or feasible instances
+                                              * infeasible; thus, the result returned by SCIP might be incorrect!
+                                              */
    SCIP_HEUR*            subnlpheur;         /**< a pointer to the subnlp heuristic, if available */
    SCIP_HEUR*            trysolheur;         /**< a pointer to the trysol heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;          /**< our handler for variable bound change events */
    int                   newsoleventfilterpos; /**< filter position of new solution event handler, if caught */
-   SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
+   SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
    SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
    int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
    SCIP_QUADCONSUPGRADE** quadconsupgrades;  /**< quadratic constraint upgrade methods for specializing quadratic constraints */
@@ -1110,6 +1116,7 @@ SCIP_RETCODE consdataCreateEmpty(
 
    (*consdata)->isremovedfixings = TRUE;
    (*consdata)->ispropagated     = TRUE;
+   (*consdata)->initialmerge     = FALSE;
 
    (*consdata)->linvar_maydecrease = -1;
    (*consdata)->linvar_mayincrease = -1;
@@ -2485,6 +2492,7 @@ SCIP_RETCODE mergeAndCleanQuadVarTerms(
        * thus, we do this step only if the variable does not appear in any bilinear term */
       if( quadvarterm->sqrcoef != 0.0 && SCIPvarIsBinary(quadvarterm->var) && quadvarterm->nadjbilin == 0 )
       {
+         SCIPdebugMessage("replace square of binary variable by itself: <%s>^2 --> <%s>\n", SCIPvarGetName(quadvarterm->var), SCIPvarGetName(quadvarterm->var));
          quadvarterm->lincoef += quadvarterm->sqrcoef;
          quadvarterm->sqrcoef = 0.0;
 
@@ -6921,7 +6929,7 @@ SCIP_RETCODE separatePoint(
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    SCIP_Real             minefficacy,        /**< minimal efficacy of a cut if it should be added to the LP */
-   SCIP_Bool             convexalways,       /**< whether to ignore minefficacy criteria for a convex constraint (and use feastol instead) */
+   SCIP_Bool             inenforcement,      /**< whether we are in constraint enforcement */
    SCIP_RESULT*          result,             /**< result of separation */
    SCIP_Real*            bestefficacy        /**< buffer to store best efficacy of a cut that was added to the LP, if found; or NULL if not of interest */
    )
@@ -6963,7 +6971,7 @@ SCIP_RETCODE separatePoint(
          violside = SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT;
 
          /* actual minimal efficacy */
-         actminefficacy = convexalways && ((violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex ) || (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave)) ? SCIPfeastol(scip) : minefficacy;
+         actminefficacy = inenforcement && ((violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex ) || (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave)) ? SCIPfeastol(scip) : minefficacy;
 
          /* generate cut */
          if( sol == NULL && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
@@ -7013,12 +7021,26 @@ SCIP_RETCODE separatePoint(
 
          if( SCIPisGT(scip, efficacy, actminefficacy) )  /*lint !e644 */
          {
+            SCIP_Bool infeasible;
+
             /* cut cuts off solution */
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
-            *result = SCIP_SEPARATED;
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */, &infeasible) );
+            if ( infeasible )
+            {
+               SCIPdebugMessage("cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(conss[c]));
+               *result = SCIP_CUTOFF;
+            }
+            else
+            {
+               SCIPdebugMessage("add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy,
+                  SCIPconsGetName(conss[c]), consdata->lhsviol+consdata->rhsviol);
+               *result = SCIP_SEPARATED;
+            }
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-            SCIPdebugMessage("add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy,
-               SCIPconsGetName(conss[c]), consdata->lhsviol+consdata->rhsviol);
+
+            /* mark row as not removable from LP for current node, if in enforcement */
+            if( inenforcement && !conshdlrdata->enfocutsremovable )
+               SCIPmarkRowNotRemovableLocal(scip, row);
          }
          if( bestefficacy != NULL && efficacy > *bestefficacy )
             *bestefficacy = efficacy;
@@ -7026,9 +7048,12 @@ SCIP_RETCODE separatePoint(
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
       }
 
+      if ( *result == SCIP_CUTOFF )
+         break;
+
       /* enforce only useful constraints
        * others are only checked and enforced if we are still feasible or have not found a separating cut yet
-       */ 
+       */
       if( c >= nusefulconss && *result == SCIP_SEPARATED )
          break;
    }
@@ -7107,9 +7132,12 @@ SCIP_RETCODE addLinearizationCuts(
 
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
          {
+            SCIP_Bool infeasible;
+
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, &infeasible) );
+            assert( ! infeasible );
             SCIPdebugMessage("added linearization cut <%s> to LP, efficacy = %g\n", SCIProwGetName(row), -feasibility / MAX(1.0, norm));
          }
       }
@@ -9273,6 +9301,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
       {
          SCIP_CALL( removeFixedVariables(scip, conss[c]) );
       }
+
       /* make sure we do not have duplicate bilinear terms, quad var terms, or linear vars */
       SCIP_CALL( mergeAndCleanBilinearTerms(scip, conss[c]) );
       SCIP_CALL( mergeAndCleanQuadVarTerms(scip, conss[c]) );
@@ -9561,11 +9590,14 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
 
       if( consdata->nquadvars == 0 )
       {
+         SCIP_Bool infeasible;
+
          /* if we are actually linear, add the constraint as row to the LP */
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613 */
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         assert( ! infeasible );
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -9611,7 +9643,10 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
             SCIP_CALL( generateCut(scip, conss[c], x, NULL, consdata->isconvex ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, &row, NULL, conshdlrdata->cutmaxrange, FALSE, -SCIPinfinity(scip)) );  /*lint !e613 */
             if( row != NULL )
             {
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+               SCIP_Bool infeasible;
+
+               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+               assert( ! infeasible );
                SCIPdebugMessage("initlp adds row <%s> for lambda = %g of conss <%s>\n", SCIProwGetName(row), lambda, SCIPconsGetName(conss[c]));  /*lint !e613 */
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
                SCIP_CALL( SCIPreleaseRow (scip, &row) );
@@ -9678,7 +9713,10 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                SCIP_CALL( generateCut(scip, conss[c], x, NULL, SCIP_SIDETYPE_RIGHT, &row, NULL, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
                if( row != NULL )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIP_Bool infeasible;
+
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                  assert( ! infeasible );
                   SCIPdebugMessage("initlp adds row <%s> for rhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);  /*lint !e613 */
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
@@ -9689,7 +9727,10 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                SCIP_CALL( generateCut(scip, conss[c], x, NULL, SCIP_SIDETYPE_LEFT, &row, NULL, conshdlrdata->cutmaxrange, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
                if( row != NULL )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
+                  SCIP_Bool infeasible;
+
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+                  assert( ! infeasible );
                   SCIPdebugMessage("initlp adds row <%s> for lhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);  /*lint !e613 */
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
@@ -9944,8 +9985,20 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
             return SCIP_OKAY;
          }
       }
-      else
-         ++conshdlrdata->nenfolprounds;
+
+      ++conshdlrdata->nenfolprounds;
+
+      /* cut off the current subtree, if a limit on the enforcement rounds should be applied. At this point, feasible
+       * solutions might get cut off; the enfolplimit parameter should therefore only be set if SCIP is used as a
+       * heuristic solver and when the returned result (infeasible, optimal, the gap) can be ignored
+       */
+      if( conshdlrdata->enfolplimit != -1 && conshdlrdata->nenfolprounds > conshdlrdata->enfolplimit )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+            "cut off subtree because enforcement limit was reached; this might lead to incorrect results\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
    }
    else
    {
@@ -9971,6 +10024,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666 */
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666 */
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, TRUE, &separateresult, &sepaefficacy) );
+   if ( separateresult == SCIP_CUTOFF )
+   {
+      SCIPdebugMessage("separation found cutoff.)\n");
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
    if( separateresult == SCIP_SEPARATED )
    {
       SCIPdebugMessage("separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
@@ -9991,6 +10050,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
       SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
+      if ( separateresult == SCIP_CUTOFF )
+      {
+         SCIPdebugMessage("separation found cutoff.)\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
       if( separateresult == SCIP_SEPARATED )
       {
          SCIPdebugMessage("separation fallback succeeded, efficacy = %g\n", sepaefficacy);
@@ -10184,6 +10249,14 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
       SCIPdebugMessage("process constraint <%s>\n", SCIPconsGetName(conss[c]));
       SCIPdebugPrintCons(scip, conss[c], NULL);
+
+      if( !consdata->initialmerge )
+      {
+         SCIP_CALL( mergeAndCleanBilinearTerms(scip, conss[c]) );
+         SCIP_CALL( mergeAndCleanQuadVarTerms(scip, conss[c]) );
+         SCIP_CALL( mergeAndCleanLinearVars(scip, conss[c]) );
+         consdata->initialmerge = TRUE;
+      }
 
       havechange = FALSE;
 #ifdef CHECKIMPLINBILINEAR
@@ -11148,9 +11221,17 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "limit on number of propagation rounds for a single constraint within one round of SCIP presolve",
          &conshdlrdata->maxproproundspresolve, TRUE, 10, 0, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/enfolplimit",
+         "maximum number of enforcement rounds before declaring the LP relaxation infeasible (-1: no limit); WARNING: changing this parameter might lead to incorrect results!",
+         &conshdlrdata->enfolplimit, TRUE, -1, -1, INT_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sepanlpmincont",
          "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",
          &conshdlrdata->sepanlpmincont, FALSE, 1.0, 0.0, 2.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/enfocutsremovable",
+         "are cuts added during enforcement removable from the LP in the same node?",
+         &conshdlrdata->enfocutsremovable, TRUE, FALSE, NULL, NULL) );
 
    conshdlrdata->eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",

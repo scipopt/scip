@@ -46,7 +46,7 @@
 #define DEFAULT_PPM_RGB_RELATIVE    TRUE
 #define DEFAULT_PPM_RGB_ASCII       TRUE
 
-/** LP reading data */
+/** PPM reading data */
 struct SCIP_ReaderData
 {
    SCIP_Bool             rgb_relativ;
@@ -430,7 +430,7 @@ SCIP_DECL_READERCOPY(readerCopyPpm)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderPpm(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -491,7 +491,7 @@ SCIP_RETCODE SCIPincludeReaderPpm(
    SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreePpm) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWritePpm) );
 
-   /* add lp reader parameters */
+   /* add ppm reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/ppmreader/rgbrelativ", "should the coloring values be relativ or absolute",
          &readerdata->rgb_relativ, FALSE, DEFAULT_PPM_RGB_RELATIVE, NULL, NULL) );

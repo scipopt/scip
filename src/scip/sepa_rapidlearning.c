@@ -272,7 +272,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    if( sepadata->copycuts )
    {
-      /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
       SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, FALSE, NULL) );
    }
 
@@ -393,8 +393,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       SCIP_CALL( SCIPhashmapInsert(varmapbw, SCIPvarGetTransVar(subvars[i]), vars[i]) );
    }
 
-   /** allocate memory for constraints storage. Each constraint that will be created from now on will be a conflict.
-    *  Therefore, we need to remember oldnconss to get the conflicts from the FD search. 
+   /* allocate memory for constraints storage. Each constraint that will be created from now on will be a conflict.
+    * Therefore, we need to remember oldnconss to get the conflicts from the FD search.
     */
    nconshdlrs = 4;
    SCIP_CALL( SCIPallocBufferArray(scip, &conshdlrs, nconshdlrs) );

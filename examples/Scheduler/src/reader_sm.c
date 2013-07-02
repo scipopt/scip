@@ -450,15 +450,39 @@ SCIP_RETCODE getPrecedence(
 static
 int computeUbmakespan(
    int*                  durations,          /**< array of durations */
-   int                   njobs               /**< number og jobs */
+   int                   njobs,              /**< number og jobs */
+   SCIP_DIGRAPH*         precedencegraph     /**< direct graph to store the precedence conditions */
    )
 {
-   int j;
    int ub;
+   int j;
 
    ub = 0;
+
    for( j = 0; j < njobs; ++j )
-      ub += durations[j];
+   {
+      void** distances;
+      int nsuccessors;
+      int duration;
+      int i;
+
+      nsuccessors = SCIPdigraphGetNSuccessors(precedencegraph, j);
+      distances = SCIPdigraphGetSuccessorsDatas(precedencegraph, j);
+
+      duration = durations[j];
+
+      for( i = 0; i < nsuccessors; ++i )
+      {
+         int distance;
+
+         distance = (int)(size_t)distances[i];
+
+         if( distance != INT_MAX )
+            duration = MAX(duration, distance);
+      }
+
+      ub += duration;
+   }
 
    return ub;
 }
@@ -751,10 +775,8 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
    /* create SCIP data structure */
    SCIP_CALL( SCIPcreateProb(scip, problemname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
-
    /* compute a feasible upper bound on the makespan */
-   ubmakespan = computeUbmakespan(durations, njobs);
-   ubmakespan *= 10;
+   ubmakespan = computeUbmakespan(durations, njobs, precedencegraph);
 
    /* allocate buffer for jobs and precedence constraints */
    SCIP_CALL( SCIPallocBufferArray(scip, &jobs, njobs) );

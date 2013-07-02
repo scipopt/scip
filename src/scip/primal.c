@@ -614,7 +614,7 @@ SCIP_RETCODE primalAddOrigSol(
    }
 
    /* insert solution at correct position */
-   primal->nsols = MIN(primal->nsols+1, set->limit_maxsol);
+   primal->nsols = MIN(primal->nsols+1, set->limit_maxorigsol);
    for( pos = primal->nsols-1; pos > insertpos; --pos )
       primal->sols[pos] = primal->sols[pos-1];
 
@@ -1384,11 +1384,11 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
 
    assert(primal != NULL);
 
-   for( i = 0; i < primal->nexistingsols; ++i )
+   for( i = 0; i < primal->nsols; ++i )
    {
-      if( SCIPsolGetOrigin(primal->existingsols[i]) == SCIP_SOLORIGIN_ZERO )
+      if( SCIPsolGetOrigin(primal->sols[i]) == SCIP_SOLORIGIN_ZERO )
       {
-         SCIP_CALL( SCIPsolRetransform(primal->existingsols[i], set, stat, origprob, transprob) );
+         SCIP_CALL( SCIPsolRetransform(primal->sols[i], set, stat, origprob, transprob) );
       }
    }
 

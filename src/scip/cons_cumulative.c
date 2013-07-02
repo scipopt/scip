@@ -89,11 +89,12 @@
 #define DEFAULT_SEPAOLD                 TRUE /**< shall old sepa algo be applied? */
 
 /* propagation */
-#define DEFAULT_CORETIMES               TRUE /**< should core-times be propagated (time tabling)? */
-#define DEFAULT_OVERLOAD                TRUE /**< should edge finding be used to detect an overload? */
-#define DEFAULT_EDGEFINDING            FALSE /**< should edge-finding be executed? */
+#define DEFAULT_TTINFER                 TRUE /**< should time-table (core-times) propagator be used to infer bounds? */
+#define DEFAULT_EFCHECK                 TRUE /**< should edge-finding be used to detect an overload? */
+#define DEFAULT_EFINFER                FALSE /**< should edge-finding be used to infer bounds? */
 #define DEFAULT_USEADJUSTEDJOBS        FALSE /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
-#define DEFAULT_TTEF                    TRUE /**< should time-table edge-finding propagator be used */
+#define DEFAULT_TTEFCHECK               TRUE /**< should time-table edge-finding be used to detect an overload? */
+#define DEFAULT_TTEFINFER               TRUE /**< should time-table edge-finding be used to infer bounds? */
 
 /* presolving */
 #define DEFAULT_DUALPRESOLVE            TRUE /**< should dual presolving be applied? */
@@ -164,6 +165,7 @@ struct SCIP_ConsData
    unsigned int          normalized:1;       /**< is the constraint normalized */
    unsigned int          covercuts:1;        /**< cover cuts are created? */
    unsigned int          propagated:1;       /**< is constraint propagted */
+   unsigned int          varbounds:1;        /**< bool to store if variable bound strengthening was already preformed */
    unsigned int          triedsolving:1;     /**< bool to store if we tried already to solve that constraint as independent subproblem */
 
 #ifdef SCIP_STATISTIC
@@ -178,11 +180,12 @@ struct SCIP_ConshdlrData
 
    SCIP_Bool             usebinvars;         /**< should the binary variables be used? */
    SCIP_Bool             cutsasconss;        /**< should the cumulative constraint create cuts as knapsack constraints? */
-   SCIP_Bool             coretimes;          /**< should core-times be propagated (time tabling)? */
-   SCIP_Bool             overload;           /**< should edge finding be used to detect an overload? */
-   SCIP_Bool             edgefinding;        /**< should edge-finding be executed? */
+   SCIP_Bool             ttinfer;            /**< should time-table (core-times) propagator be used to infer bounds? */
+   SCIP_Bool             efcheck;            /**< should edge-finding be used to detect an overload? */
+   SCIP_Bool             efinfer;            /**< should edge-finding be used to infer bounds? */
    SCIP_Bool             useadjustedjobs;    /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
-   SCIP_Bool             ttef;                /**< should time-table edge-finding propagator be used */
+   SCIP_Bool             ttefcheck;          /**< should time-table edge-finding be used to detect an overload? */
+   SCIP_Bool             ttefinfer;          /**< should time-table edge-finding be used to infer bounds? */
    SCIP_Bool             localcuts;          /**< should cuts be added only locally? */
    SCIP_Bool             usecovercuts;       /**< should covering cuts be added? */
    SCIP_Bool             sepaold;            /**< shall old sepa algo be applied? */
@@ -360,6 +363,8 @@ int convertBoundToInt(
 {
    assert(SCIPisFeasIntegral(scip, bound));
    assert(SCIPisFeasEQ(scip, bound, (SCIP_Real)(int)(bound < 0 ? bound - 0.5 : bound + 0.5)));
+   assert(bound < INT_MAX);
+   assert(bound > INT_MIN);
 
    return (int)(bound < 0 ? (bound - 0.5) : (bound + 0.5));
 }
@@ -616,17 +621,8 @@ SCIP_RETCODE collectBinaryVars(
    int                   nfinished           /**< number of jobs that finished before curtime or at curtime */
    )
 {
-   SCIP_VAR** binvars;
-   SCIP_VAR* var;
-   int nbinvars;
    int nrowvars;
    int startindex;
-   int endtime;
-   int duration;
-   int demand;
-   int varidx;
-   int offset;
-   int minub;
    int size;
 
    size = 10;
@@ -639,6 +635,12 @@ SCIP_RETCODE collectBinaryVars(
    /* search for the (nstarted - nfinished) jobs which are active at curtime */
    while( nstarted - nfinished > nrowvars )
    {
+      SCIP_VAR* var;
+      int endtime;
+      int duration;
+      int demand;
+      int varidx;
+
       /* collect job information */
       varidx = startindices[startindex];
       assert(varidx >= 0 && varidx < consdata->nvars);
@@ -653,7 +655,12 @@ SCIP_RETCODE collectBinaryVars(
       /* check the end time of this job is larger than the curtime; in this case the job is still running */
       if( endtime > curtime )
       {
-         int tau;  /* counter from curtime - duration + 1 to curtime */
+         SCIP_VAR** binvars;
+         int* vals;
+         int nbinvars;
+         int start;
+         int end;
+         int b;
 
          /* check if the linking constraints exists */
          assert(SCIPexistsConsLinking(scip, var));
@@ -662,14 +669,20 @@ SCIP_RETCODE collectBinaryVars(
 
          /* collect linking constraint information */
          SCIP_CALL( SCIPgetBinvarsLinking(scip, consdata->linkingconss[varidx], &binvars, &nbinvars) );
-         offset = SCIPgetOffsetLinking(scip, consdata->linkingconss[varidx]);
+         vals = SCIPgetValsLinking(scip, consdata->linkingconss[varidx]);
 
-         minub = MIN(curtime, endtime - duration);
+         start = curtime - duration + 1;
+         end = MIN(curtime, endtime - duration);
 
-         for (tau = MAX(curtime - duration + 1, offset); tau <= minub; ++tau )
+         for( b = 0; b < nbinvars; ++b )
          {
-            assert(tau >= offset && tau < nbinvars + offset);
-            assert(binvars[tau-offset] != NULL);
+            if( vals[b] < start )
+               continue;
+
+            if( vals[b] > end )
+               break;
+
+            assert(binvars[b] != NULL);
 
             /* ensure array proper array size */
             if( size == *nvars )
@@ -679,7 +692,7 @@ SCIP_RETCODE collectBinaryVars(
                SCIP_CALL( SCIPreallocBufferArray(scip, coefs, size) );
             }
 
-            (*vars)[*nvars] = binvars[tau-offset];
+            (*vars)[*nvars] = binvars[b];
             (*coefs)[*nvars] = demand;
             (*nvars)++;
          }
@@ -1267,8 +1280,6 @@ SCIP_RETCODE getActiveVar(
          (*scalar) = -convertBoundToInt(scip, -realscalar);
       else
          (*scalar) = convertBoundToInt(scip, realscalar);
-
-
    }
    else
    {
@@ -1279,6 +1290,25 @@ SCIP_RETCODE getActiveVar(
    assert(*scalar != 0);
 
    return SCIP_OKAY;
+}
+
+/** computes the total energy of all jobs */
+static
+int computeTotalEnergy(
+   int*                  durations,          /**< array of job durations */
+   int*                  demands,            /**< array of job demands */
+   int                   njobs               /**< number of jobs */
+   )
+{
+   int energy;
+   int j;
+
+   energy = 0;
+
+   for( j = 0; j < njobs; ++j )
+      energy += durations[j] * demands[j];
+
+   return energy;
 }
 
 /**@} */
@@ -1649,6 +1679,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->normalized = FALSE;
    (*consdata)->covercuts = FALSE;
    (*consdata)->propagated = FALSE;
+   (*consdata)->varbounds = FALSE;
    (*consdata)->triedsolving = FALSE;
 
    if( nvars > 0 )
@@ -1945,7 +1976,7 @@ SCIP_RETCODE consdataCollectLinkingCons(
 
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "link(%s)", SCIPvarGetName(var));
 
-         /** creates and captures an linking constraint */
+         /* creates and captures an linking constraint */
          SCIP_CALL( SCIPcreateConsLinking(scip, &cons, name, var, NULL, 0, 0,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE /*TRUE*/, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -2171,6 +2202,7 @@ SCIP_RETCODE resolvePropagationCoretimes(
    int                   relaxedpeak,        /**< relaxed time point which would be sufficient to be proved */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
    SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
+   int*                  provedpeak,         /**< pointer to store the actually proved peak, or NULL */
    SCIP_Bool*            explanation         /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    )
 {
@@ -2395,6 +2427,9 @@ SCIP_RETCODE resolvePropagationCoretimes(
 
    SCIPfreeBufferArray(scip, &reported);
 
+   if( provedpeak != NULL )
+      *provedpeak = inferpeak;
+
    return SCIP_OKAY;
 }
 
@@ -2571,15 +2606,10 @@ SCIP_RETCODE analyzeEnergyRequirement(
    SCIP_CALL( SCIPallocBufferArray(scip, &overlaps, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &idxs, nvars) );
 
-   SCIPdebugMessage("analysis energy load in [%d,%d) (capacity %d)\n", begin, end, capacity);
-
+   /* energy which needs be explained */
    requiredenergy = (end - begin) * capacity;
 
-   /* in case the inference variable is NULL, an overload needs to be analysis; therefore, we need to prove that the
-    * available energy is not enough
-    */
-   if( infervar == NULL )
-      requiredenergy += 1;
+   SCIPdebugMessage("analysis energy load in [%d,%d) (capacity %d, energy %d)\n", begin, end, capacity, requiredenergy);
 
    /* collect global contribution and adjusted the required energy by the amount of energy the inference variable
     * takes
@@ -2610,6 +2640,8 @@ SCIP_RETCODE analyzeEnergyRequirement(
       if( infervar == var )
       {
          int overlap;
+         int right;
+         int left;
 
          assert(relaxedbd != SCIP_UNKNOWN); /*lint !e777*/
 
@@ -2622,47 +2654,43 @@ SCIP_RETCODE analyzeEnergyRequirement(
           */
          if( boundtype == SCIP_BOUNDTYPE_UPPER )
          {
-            int before;
+            int lct;
 
-            /* in case the bdchgidx is NULL we can not evaluated SCIPvarGetUbAtIndex() w.r.t. the after case since the
-             * corresponding bound change was not performed; during the propagation an infeasibility was detected
-             */
-            assert(bdchgidx == NULL || convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)) < begin);
+            /* get the latest start time of the infer start time variable before the propagation took place */
+            lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, 0));
 
-            /* in case we are not performing bound widening we ignore the relaxed bound; if bdchgidx is NULL, we are in
-             * the phase of initialization of the conflict analysis and the relaxed bound defines the bound which was
-             * not applicable
+            /* the latest start time of the inference start time variable before the propagation needs to be smaller as
+             * the end of the time interval; meaning the job needs be overlap with the time interval in case the job is
+             * scheduled w.r.t. its latest start time
              */
-            if( !usebdwidening && bdchgidx != NULL )
-            {
-               relaxedbd = SCIPvarGetUbAtIndex(var, bdchgidx, TRUE);
-            }
+            assert(lst < end);
 
-            /* we need to adjusted the relaxed bound; due to the propagation algorithm we can only explain an upper
-             * bound change which is at least one time step smaller as begin; meaning at least one time step of the
-             * job has to lie outside of the time window
+            /* compute the overlap of the job in case it would be scheduled w.r.t. its latest start time and the time
+             * interval (before the propagation)
              */
-            relaxedbd = MIN(relaxedbd, begin - 1.0);
+            right = MIN3(end - lst, end - begin, duration);
 
-            /* in case the bdchgidx is NULL we can not evaluated SCIPvarGetUbAtIndex() w.r.t. the after case since
-             * the corresponding bound change was not performed; during the propagation an infeasibility was detected
-             */
-            assert(bdchgidx == NULL || SCIPvarGetUbAtIndex(var, bdchgidx, TRUE) <= relaxedbd);
-            assert(relaxedbd + duration >= begin);
+            /* the job needs to overlap with the interval; otherwise the propagation w.r.t. this time window is not valid */
+            assert(right > 0);
 
-            /* knowing the bound which needs/can be explained we can compute the upper bound of the inference
-             * variable before the propagation; knowing the number of time steps before "begin" we need to ensure
-             * that a smaller number of time steps were available before the propagation after the time
-             * window. Meaning that these time step after plus the available of time steps within the time interval
-             * is not enough for the propagated job
-             */
-            before = begin - convertBoundToInt(scip, relaxedbd);
-            overlap = duration - before;
+            lct = convertBoundToInt(scip, relaxedbd) + duration;
+            assert(begin <= lct);
+            assert(lct - begin < duration);
+
+            /* compute the overlap of the job after the propagation but considering the relaxed bound */
+            left = MIN(lct - begin + 1, end - begin);
+            assert(left > 0);
+
+            /* compute the minimum overlap; */
+            overlap = MIN(left, right);
+            assert(overlap > 0);
+            assert(overlap <= end - begin);
+            assert(overlap <= duration);
 
             if( usebdwidening )
             {
-               SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, (SCIP_Real)(end - duration + before - 1)) );
-               assert(bdchgidx == NULL || convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)) <= end - duration + before - 1);
+               assert(convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, 0)) <= (end - overlap));
+               SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, (SCIP_Real)(end - overlap)) );
             }
             else
             {
@@ -2671,57 +2699,57 @@ SCIP_RETCODE analyzeEnergyRequirement(
          }
          else
          {
-            int after;
+            int ect;
 
-            assert(bdchgidx == NULL || convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)) > end - duration);
+            assert(boundtype == SCIP_BOUNDTYPE_LOWER);
 
-            /* in case we are not performing bound widening we ignore the relaxed bound; if bdchgidx is NULL, we are in
-             * the phase of initialization of the conflict analysis and the relaxed bound defines the bound which was
-             * not applicable
+            /* get the earliest completion time of the infer start time variable before the propagation took place */
+            ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, 0)) + duration;
+
+            /* the earliest start time of the inference start time variable before the propagation needs to be larger as
+             * than the beginning of the time interval; meaning the job needs be overlap with the time interval in case
+             * the job is scheduled w.r.t. its earliest start time
              */
-            if( !usebdwidening && bdchgidx != NULL )
-            {
-               relaxedbd = SCIPvarGetLbAtIndex(var, bdchgidx, TRUE);
-            }
+            assert(ect > begin);
 
-            /* we need to adjusted the relaxed bound; at least one time step of the job does not fit into the time
-             * window
+            /* compute the overlap of the job in case it would be scheduled w.r.t. its earliest start time and the time
+             * interval (before the propagation)
              */
-            relaxedbd = MAX(relaxedbd, end - duration + 1.0);
-            assert(relaxedbd <= end);
+            left = MIN3(ect - begin, end - begin, duration);
 
-            /* in case the bdchgidx is NULL we can not evaluated SCIPvarGetUbAtIndex() w.r.t. the after case since
-             * the corresponding bound change was not performed; during the propagation an infeasibility was detected
-             */
-            assert(bdchgidx == NULL || SCIPvarGetLbAtIndex(var, bdchgidx, TRUE) >= relaxedbd);
+            /* the job needs to overlap with the interval; otherwise the propagation w.r.t. this time window is not valid */
+            assert(left > 0);
 
-            after = convertBoundToInt(scip, relaxedbd) + duration - end;
-            overlap = duration - after;
+            est = convertBoundToInt(scip, relaxedbd);
+            assert(end >= est);
+            assert(end - est < duration);
+
+            /* compute the overlap of the job after the propagation but considering the relaxed bound */
+            right = MIN(end - est + 1, end - begin);
+            assert(right > 0);
+
+            /* compute the minimum overlap */
+            overlap = MIN(left, right);
+            assert(overlap > 0);
+            assert(overlap <= end - begin);
+            assert(overlap <= duration);
 
             if( usebdwidening )
             {
-               SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, (SCIP_Real)begin - after + 1) );
-               assert(bdchgidx == NULL || convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)) >=  begin - after + 1);
+               assert(convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, 0)) >= (begin + overlap - duration));
+               SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, (SCIP_Real)(begin + overlap - duration)) );
             }
             else
             {
                SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
             }
          }
-         overlap = MIN(overlap, end - begin);
-         assert(overlap >= 0);
 
-         /* adjust the required energy by the amount the inference variable overlaps */
-         if( overlap >= end - begin )
-         {
-            /* the inference variable overlaps completely with time window; the get a proper reason we need to make sure
-             * that at least one unit of is blocked by on other job; meaning the inference job cannot run through the
-             * time window
-             */
-            requiredenergy -= (end - begin) * demands[v] - 1;
-         }
-         else
-            requiredenergy -= (overlap + 1) * demands[v] - 1;
+         /* subtract the amount of energy which is available due to the overlap of the inference start time */
+         requiredenergy -=  overlap * demand;
+
+         if( explanation != NULL )
+            explanation[v] = TRUE;
 
          continue;
       }
@@ -2742,6 +2770,9 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
          /* remove the globally available energy form the required energy */
          requiredenergy -= glbenergy;
+
+         if( explanation != NULL )
+            explanation[v] = TRUE;
       }
 
       /* local time points */
@@ -2765,7 +2796,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
    SCIPsortDownIntIntInt(locenergies, overlaps, idxs, nvars);
 
    /* add local energy contributions until an overload is implied */
-   for( v = 0; v < nvars && requiredenergy > 0; ++v )
+   for( v = 0; v < nvars && requiredenergy >= 0; ++v )
    {
       SCIP_VAR* var;
       int duration;
@@ -2785,17 +2816,24 @@ SCIP_RETCODE analyzeEnergyRequirement(
       assert(duration > 0);
 
       overlap = overlaps[v];
+      assert(overlap > 0);
 
       requiredenergy -= locenergies[v];
 
-      if( requiredenergy < 0 )
+      if( requiredenergy < -1 )
       {
          int demand;
 
          demand = demands[idx];
          assert(demand > 0);
 
-         overlap -= (int)((requiredenergy + 1) / demand);
+         overlap += (int)((requiredenergy + 1) / demand);
+
+#ifndef NDEBUG
+         requiredenergy += locenergies[v];
+         requiredenergy -= overlap * demand;
+         assert(requiredenergy < 0);
+#endif
       }
       assert(overlap > 0);
 
@@ -2816,7 +2854,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
          explanation[idx] = TRUE;
    }
 
-   assert(requiredenergy <= 0);
+   assert(requiredenergy < 0);
 
    SCIPfreeBufferArray(scip, &idxs);
    SCIPfreeBufferArray(scip, &overlaps);
@@ -2855,6 +2893,7 @@ SCIP_RETCODE respropCumulativeCondition(
       int inferpos;
       int inferpeak;
       int relaxedpeak;
+      int provedpeak;
 
       /* get the position of the inferred variable in the vars array */
       inferpos = inferInfoGetData1(inferinfo);
@@ -2873,7 +2912,7 @@ SCIP_RETCODE respropCumulativeCondition(
       if( boundtype == SCIP_BOUNDTYPE_UPPER )
       {
          /* we propagated the latest start time (upper bound) step wise with a step length of at most the duration of
-          *  the inference variable
+          * the inference variable
           */
          assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) - SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < inferduration + 0.5);
 
@@ -2885,9 +2924,6 @@ SCIP_RETCODE respropCumulativeCondition(
          inferpeak = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE)) + inferduration;
          relaxedpeak = convertBoundToInt(scip, relaxedbd) + inferduration;
          assert(relaxedpeak >= inferpeak);
-
-         /* old upper bound of variable itself is part of the explanation */
-         SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
       }
       else
       {
@@ -2901,13 +2937,38 @@ SCIP_RETCODE respropCumulativeCondition(
          inferpeak = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE)) - 1;
          relaxedpeak = convertBoundToInt(scip, relaxedbd) - 1;
          assert(relaxedpeak <= inferpeak);
-
-         /* old lower bound of variable itself is part of the explanation */
-         SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
       }
 
+      /* resolves the propagation of the core time algorithm */
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-            infervar, inferdemand, inferpeak, relaxedpeak, bdchgidx, usebdwidening, explanation) );
+            infervar, inferdemand, inferpeak, relaxedpeak, bdchgidx, usebdwidening, &provedpeak, explanation) );
+
+      if( boundtype == SCIP_BOUNDTYPE_UPPER )
+      {
+         if( usebdwidening )
+         {
+            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, infervar, NULL,  (SCIP_Real)provedpeak) );
+         }
+         else
+         {
+            /* old upper bound of variable itself is part of the explanation */
+            SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
+         }
+      }
+      else
+      {
+         assert(boundtype == SCIP_BOUNDTYPE_LOWER);
+
+         if( usebdwidening )
+         {
+            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, infervar, bdchgidx, (SCIP_Real)(provedpeak - inferduration + 1)) );
+         }
+         else
+         {
+            /* old lower bound of variable itself is part of the explanation */
+            SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
+         }
+      }
 
       if( explanation != NULL )
          explanation[inferpos] = TRUE;
@@ -2967,12 +3028,14 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
+      SCIP_Real objval;
 
       var = vars[v];
       assert(var != NULL);
 
+      objval = SCIPvarGetObj(var);
 
-      if( SCIPvarGetNLocksDown(var) == downlocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
+      if( SCIPvarGetNLocksDown(var) == downlocks[v] && !SCIPisNegative(scip, objval) )
       {
          int ub;
 
@@ -2990,7 +3053,7 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
          }
       }
 
-      if( SCIPvarGetNLocksUp(var) == uplocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_UPPER )
+      if( SCIPvarGetNLocksUp(var) == uplocks[v] && !SCIPisPositive(scip, objval) )
       {
          int lb;
 
@@ -3508,7 +3571,7 @@ SCIP_RETCODE analyseInfeasibelCoreInsertion(
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-            infervar, inferdemand, inferpeak, inferpeak, NULL, usebdwidening, explanation) );
+            infervar, inferdemand, inferpeak, inferpeak, NULL, usebdwidening, NULL, explanation) );
 
       SCIPdebugMessage("add lower and upper bounds of variable <%s>\n", SCIPvarGetName(infervar));
 
@@ -3964,6 +4027,7 @@ void collectDataTTEF(
 static
 SCIP_RETCODE tightenLbTTEF(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
@@ -3982,7 +4046,6 @@ SCIP_RETCODE tightenLbTTEF(
    int                   energy,             /**< available energy for the flexible part of the hob within the time window */
    int*                  bestlb,             /**< pointer to strope the best lower bound change */
    int*                  inferinfos,         /**< pointer to store the inference information which is need for the (best) lower bound change */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -3993,14 +4056,18 @@ SCIP_RETCODE tightenLbTTEF(
    assert(begin >= hmin);
    assert(end <= hmax);
 
-   /* if flexible part runs completely within the time window (assuming it is scheduled on its earliest start time), we
-    * skip since the overload check will do the job
-    */
-   if( est >= begin && ect <= end )
+   /* check if the time-table edge-finding should infer bounds */
+   if( !conshdlrdata->ttefinfer )
       return SCIP_OKAY;
 
    /* if the job can be processed completely before or after the time window, nothing can be tightened */
    if( est >= end || ect <= begin )
+      return SCIP_OKAY;
+
+   /* if flexible part runs completely within the time window (assuming it is scheduled on its earliest start time), we
+    * skip since the overload check will do the job
+    */
+   if( est >= begin && ect <= end )
       return SCIP_OKAY;
 
    /* check if the available energy in the time window is to small to handle the flexible part if it is schedule on its
@@ -4046,7 +4113,7 @@ SCIP_RETCODE tightenLbTTEF(
 
          /* analyze the infeasible */
          SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-               begin, end, var, SCIP_BOUNDTYPE_LOWER, NULL, relaxedbd, usebdwidening, explanation) );
+               begin, end, var, SCIP_BOUNDTYPE_LOWER, NULL, relaxedbd, conshdlrdata->usebdwidening, explanation) );
 
          (*initialized) = TRUE;
       }
@@ -4073,6 +4140,7 @@ SCIP_RETCODE tightenLbTTEF(
 static
 SCIP_RETCODE tightenUbTTEF(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
@@ -4091,7 +4159,6 @@ SCIP_RETCODE tightenUbTTEF(
    int                   energy,             /**< available energy for the flexible part of the hob within the time window */
    int*                  bestub,             /**< pointer to strope the best upper bound change */
    int*                  inferinfos,         /**< pointer to store the inference information which is need for the (best) upper bound change */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -4103,14 +4170,18 @@ SCIP_RETCODE tightenUbTTEF(
    assert(end <= hmax);
    assert(est < begin);
 
-   /* if flexible part runs completely within the time window (assuming it is scheduled on its latest start time), we
-    * skip since the overload check will do the job
-    */
-   if( lst >= begin && lct <= end )
+   /* check if the time-table edge-finding should infer bounds */
+   if( !conshdlrdata->ttefinfer )
       return SCIP_OKAY;
 
    /* if flexible part of the job can be processed completely before or after the time window, nothing can be tightened */
    if( lst >= end || lct <= begin )
+      return SCIP_OKAY;
+
+   /* if flexible part runs completely within the time window (assuming it is scheduled on its latest start time), we
+    * skip since the overload check will do the job
+    */
+   if( lst >= begin && lct <= end )
       return SCIP_OKAY;
 
    /* check if the available energy in the time window is to small to handle the flexible part  of the job */
@@ -4156,7 +4227,7 @@ SCIP_RETCODE tightenUbTTEF(
 
          /* analyze the infeasible */
          SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-               begin, end, var, SCIP_BOUNDTYPE_UPPER, NULL, relaxedbd, usebdwidening, explanation) );
+               begin, end, var, SCIP_BOUNDTYPE_UPPER, NULL, relaxedbd, conshdlrdata->usebdwidening, explanation) );
 
          (*initialized) = TRUE;
       }
@@ -4183,6 +4254,7 @@ SCIP_RETCODE tightenUbTTEF(
 static
 SCIP_RETCODE propagateUbTTEF(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
@@ -4201,7 +4273,6 @@ SCIP_RETCODE propagateUbTTEF(
    int*                  lcts,               /**< array with latest completion times sorted in non-decreasing order */
    int*                  coreEnergyAfterEst, /**< core energy after the earliest start times */
    int*                  coreEnergyAfterLct, /**< core energy after the latest completion times */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -4210,6 +4281,7 @@ SCIP_RETCODE propagateUbTTEF(
    int coreEnergyAfterEnd;
    int maxavailable;
    int minavailable;
+   int totalenergy;
    int nests;
    int end;
    int v;
@@ -4219,6 +4291,11 @@ SCIP_RETCODE propagateUbTTEF(
 
    maxavailable = (hmax - hmin) * capacity;
    minavailable = maxavailable;
+   totalenergy = computeTotalEnergy(durations, demands, nvars);
+
+   /* check if the smallest interval has a size such that the total energy fits, if so we can skip the propagator */
+   if( (lcts[0] - ests[nvars-1]) * capacity >= totalenergy )
+      return SCIP_OKAY;
 
    nests = nvars;
 
@@ -4257,14 +4334,11 @@ SCIP_RETCODE propagateUbTTEF(
 
       assert(lct < end);
 
-#if 0
       /* In case we only want to detect an overload (meaning no bound propagation) we can skip the interval; this is
        * the case if the free energy (the energy which is not occupied by any core) is smaller than the previous minimum
        * free energy; if so it means that in the next iterate the free-energy cannot be negative
-       *
-       * ???????????????????????????
        */
-      if( end <= hmax && minavailable < maxavailable )
+      if( !conshdlrdata->ttefinfer && end <= hmax && minavailable < maxavailable )
       {
          int freeenergy;
 
@@ -4280,7 +4354,6 @@ SCIP_RETCODE propagateUbTTEF(
             continue;
          }
       }
-#endif
 
       SCIPdebugMessage("check intervals ending with <%d>\n", lct);
 
@@ -4325,6 +4398,12 @@ SCIP_RETCODE propagateUbTTEF(
             continue;
          }
 
+         /* check if the interval has a size such that the total energy fits, if so we can skip all intervals with the
+          * current ending time
+          */
+         if( (end - est) * capacity >= totalenergy )
+            break;
+
          var = vars[idx];
          assert(var != NULL);
 
@@ -4348,9 +4427,9 @@ SCIP_RETCODE propagateUbTTEF(
             assert(!(*cutoff));
 
             /* try to tighten the upper bound */
-            SCIP_CALL( tightenUbTTEF(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
+            SCIP_CALL( tightenUbTTEF(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
                   var, duration, demand, est, lst, lct, minbegin, end, minavailable, &(newubs[idx]), &(ubinferinfos[idx]),
-                  usebdwidening, initialized, explanation, cutoff) );
+                  initialized, explanation, cutoff) );
 
             if( *cutoff )
                break;
@@ -4424,7 +4503,8 @@ SCIP_RETCODE propagateUbTTEF(
                SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
                SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-                     begin, end, NULL, SCIP_BOUNDTYPE_UPPER, NULL, SCIP_UNKNOWN, usebdwidening, explanation) );
+                     begin, end, NULL, SCIP_BOUNDTYPE_UPPER, NULL, SCIP_UNKNOWN,
+                     conshdlrdata->usebdwidening, explanation) );
 
                (*initialized) = TRUE;
             }
@@ -4468,7 +4548,8 @@ SCIP_RETCODE propagateUbTTEF(
                   SCIP_CALL( SCIPaddConflictUb(scip, vars[lbcand], NULL) );
 
                   SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-                        begin, end, vars[lbcand], SCIP_BOUNDTYPE_LOWER, NULL, relaxedbd, usebdwidening, explanation) );
+                        begin, end, vars[lbcand], SCIP_BOUNDTYPE_LOWER, NULL, relaxedbd,
+                        conshdlrdata->usebdwidening, explanation) );
 
                   (*initialized) = TRUE;
                }
@@ -4506,6 +4587,7 @@ SCIP_RETCODE propagateUbTTEF(
 static
 SCIP_RETCODE propagateLbTTEF(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
@@ -4524,7 +4606,6 @@ SCIP_RETCODE propagateLbTTEF(
    int*                  lcts,               /**< array with latest completion times sorted in non-decreasing order */
    int*                  coreEnergyAfterEst, /**< core energy after the earliest start times */
    int*                  coreEnergyAfterLct, /**< core energy after the latest completion times */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -4533,6 +4614,7 @@ SCIP_RETCODE propagateLbTTEF(
    int coreEnergyAfterStart;
    int maxavailable;
    int minavailable;
+   int totalenergy;
    int nlcts;
    int begin;
    int v;
@@ -4545,6 +4627,11 @@ SCIP_RETCODE propagateLbTTEF(
 
    maxavailable = (hmax - hmin) * capacity;
    minavailable = maxavailable;
+   totalenergy = computeTotalEnergy(durations, demands, nvars);
+
+   /* check if the smallest interval has a size such that the total energy fits, if so we can skip the propagator */
+   if( (lcts[0] - ests[nvars-1]) * capacity >= totalenergy )
+      return SCIP_OKAY;
 
    nlcts = 0;
 
@@ -4580,7 +4667,7 @@ SCIP_RETCODE propagateLbTTEF(
 
       assert(est > begin);
 
-      SCIPdebugMessage("check intervals ending with <%d>\n", est);
+      SCIPdebugMessage("check intervals starting with <%d>\n", est);
 
       begin = est;
       coreEnergyAfterStart = coreEnergyAfterEst[v];
@@ -4622,6 +4709,12 @@ SCIP_RETCODE propagateLbTTEF(
             continue;
          }
 
+         /* check if the interval has a size such that the total energy fits, if so we can skip all intervals which
+          * start with current beginning time
+          */
+         if( (lct - begin) * capacity >= totalenergy )
+            break;
+
          var = vars[idx];
          assert(var != NULL);
 
@@ -4645,9 +4738,9 @@ SCIP_RETCODE propagateLbTTEF(
             assert(!(*cutoff));
 
             /* try to tighten the upper bound */
-            SCIP_CALL( tightenLbTTEF(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
+            SCIP_CALL( tightenLbTTEF(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
                   var, duration, demand, est, ect, lct, begin, minend, minavailable, &(newlbs[idx]), &(lbinferinfos[idx]),
-                  usebdwidening, initialized, explanation, cutoff) );
+                  initialized, explanation, cutoff) );
 
             if( *cutoff )
                return SCIP_OKAY;
@@ -4721,7 +4814,8 @@ SCIP_RETCODE propagateLbTTEF(
                SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
                SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-                     begin, end, NULL, SCIP_BOUNDTYPE_UPPER, NULL, SCIP_UNKNOWN, usebdwidening, explanation) );
+                     begin, end, NULL, SCIP_BOUNDTYPE_UPPER, NULL, SCIP_UNKNOWN,
+                     conshdlrdata->usebdwidening, explanation) );
 
                (*initialized) = TRUE;
             }
@@ -4767,7 +4861,8 @@ SCIP_RETCODE propagateLbTTEF(
                   SCIP_CALL( SCIPaddConflictUb(scip, vars[ubcand], NULL) );
 
                   SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-                        begin, end, vars[ubcand], SCIP_BOUNDTYPE_UPPER, NULL, relaxedbd, usebdwidening, explanation) );
+                        begin, end, vars[ubcand], SCIP_BOUNDTYPE_UPPER, NULL, relaxedbd,
+                        conshdlrdata->usebdwidening, explanation) );
 
                   (*initialized) = TRUE;
                }
@@ -4814,6 +4909,7 @@ SCIP_RETCODE propagateLbTTEF(
 static
 SCIP_RETCODE propagateTTEF(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_PROFILE*         profile,            /**< current core profile */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
@@ -4824,7 +4920,6 @@ SCIP_RETCODE propagateTTEF(
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated (needed to SCIPinferVar**Cons()) */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -4847,7 +4942,13 @@ SCIP_RETCODE propagateTTEF(
 
    int v;
 
-   assert(!(*cutoff));
+   /* check if a cutoff was already detected */
+   if( (*cutoff) )
+      return SCIP_OKAY;
+
+   /* check if at least the basic overload checking should be perfomed */
+   if( !conshdlrdata->ttefcheck )
+      return SCIP_OKAY;
 
    SCIPdebugMessage("run time-table edge-finding overload checking\n");
 
@@ -4888,14 +4989,14 @@ SCIP_RETCODE propagateTTEF(
    SCIP_CALL( computeCoreEngeryAfter(scip, profile, nvars, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct) );
 
    /* propagate the upper bounds and "opportunistically" the lower bounds */
-   SCIP_CALL( propagateUbTTEF(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
+   SCIP_CALL( propagateUbTTEF(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
          newlbs, newubs, lbinferinfos, ubinferinfos, lsts, flexenergies,
-         permests, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct, usebdwidening, initialized, explanation, cutoff) );
+         permests, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct, initialized, explanation, cutoff) );
 
    /* propagate the lower bounds and "opportunistically" the upper bounds */
-   SCIP_CALL( propagateLbTTEF(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
+   SCIP_CALL( propagateLbTTEF(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
          newlbs, newubs, lbinferinfos, ubinferinfos, ects, flexenergies,
-         permlcts, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct, usebdwidening, initialized, explanation, cutoff) );
+         permlcts, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct, initialized, explanation, cutoff) );
 
    /* apply the buffer bound changes */
    for( v = 0; v < nvars && !(*cutoff); ++v )
@@ -4949,7 +5050,8 @@ SCIP_RETCODE propagateTTEF(
 
             /* analysis the upper bound change */
             SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
-                  begin, end, var, SCIP_BOUNDTYPE_UPPER, NULL, SCIPvarGetLbLocal(vars[v]) - 1.0, usebdwidening, explanation) );
+                  begin, end, var, SCIP_BOUNDTYPE_UPPER, NULL, SCIPvarGetLbLocal(vars[v]) - 1.0,
+                  conshdlrdata->usebdwidening, explanation) );
 
             (*initialized) = TRUE;
          }
@@ -4994,8 +5096,9 @@ SCIP_RETCODE propagateTTEF(
  *  time table propagator
  */
 static
-SCIP_RETCODE propagateCoretimes(
+SCIP_RETCODE propagateTimetable(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_PROFILE*         profile,            /**< core profile */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
@@ -5006,7 +5109,6 @@ SCIP_RETCODE propagateCoretimes(
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated (needed to SCIPinferVar**Cons()) */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -5019,7 +5121,15 @@ SCIP_RETCODE propagateCoretimes(
    assert(nvars > 0);
    assert(cons != NULL);
    assert(cutoff !=  NULL);
-   assert(*cutoff ==  FALSE);
+
+   /* check if already a cutoff was detected */
+   if( (*cutoff) )
+      return SCIP_OKAY;
+
+   /* check if the time tabling should infer bounds */
+   if( !conshdlrdata->ttinfer )
+      return SCIP_OKAY;
+
    assert(*initialized ==  FALSE);
 
    SCIPdebugMessage("propagate cores of cumulative condition of constraint <%s>[%d,%d) <= %d\n",
@@ -5028,7 +5138,7 @@ SCIP_RETCODE propagateCoretimes(
    infeasible = FALSE;
 
    /* if core profile is empty; nothing to do */
-   if( SCIPprofileGetNTimepoints(profile) == 0 )
+   if( SCIPprofileGetNTimepoints(profile) <= 1 )
       return SCIP_OKAY;
 
    /* start checking each job whether the bounds can be improved */
@@ -5078,7 +5188,7 @@ SCIP_RETCODE propagateCoretimes(
 
       /* first try to update the earliest start time */
       SCIP_CALL( coretimesUpdateLb(scip, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            profile, v, nchgbds, usebdwidening, initialized, explanation, cutoff) );
+            profile, v, nchgbds, conshdlrdata->usebdwidening, initialized, explanation, cutoff) );
 
       if( *cutoff )
          break;
@@ -5112,7 +5222,7 @@ SCIP_RETCODE propagateCoretimes(
          {
             /* use conflict analysis to analysis the core insertion which was infeasible */
             SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-                  var, duration, demand, SCIPprofileGetTime(profile, pos), usebdwidening, initialized, explanation) );
+                  var, duration, demand, SCIPprofileGetTime(profile, pos), conshdlrdata->usebdwidening, initialized, explanation) );
 
             if( explanation != NULL )
                explanation[v] = TRUE;
@@ -6045,8 +6155,9 @@ int computeEstOmegaset(
  *       Resources in O(kn log n)".  *I.P. Gent (Ed.): CP 2009, LNCS 5732, pp. 802–816, 2009.
  */
 static
-SCIP_RETCODE propagateEdgeFinder(
+SCIP_RETCODE inferboundsEdgeFinding(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_BT*              tree,               /**< binary tree constaining the theta and lambda sets */
    SCIP_BTNODE**         leaves,             /**< array of all leaves for each job one */
@@ -6054,7 +6165,6 @@ SCIP_RETCODE propagateEdgeFinder(
    int                   ncands,             /**< number of candidates */
    SCIP_Bool             propest,            /**< should the earliest start times be propagated, otherwise the latest completion times */
    int                   shift,              /**< shift applied to all jobs before adding them to the tree */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
@@ -6138,7 +6248,8 @@ SCIP_RETCODE propagateEdgeFinder(
             SCIPdebugMessage("an overload was detected duration edge-finder propagattion\n");
 
             /* analyze over load */
-            SCIP_CALL( analyzeConflictOverload(scip, omegaset, capacity, nelements,  est, lct, 0, propest, shift, usebdwidening, initialized, explanation) );
+            SCIP_CALL( analyzeConflictOverload(scip, omegaset, capacity, nelements,  est, lct, 0, propest, shift,
+                  conshdlrdata->usebdwidening, initialized, explanation) );
             (*cutoff) = TRUE;
 
             /* for the statistic we count the number of times a cutoff was detected due the edge-finder */
@@ -6254,6 +6365,7 @@ SCIP_RETCODE propagateEdgeFinder(
 static
 SCIP_RETCODE checkOverloadViaThetaTree(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
@@ -6262,10 +6374,7 @@ SCIP_RETCODE checkOverloadViaThetaTree(
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
-   SCIP_Bool             useadjustedjobs,    /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
    SCIP_Bool             propest,            /**< should the earliest start times be propagated, otherwise the latest completion times */
-   SCIP_Bool             edgefinding,        /**< complete edge-finding, otherwise only overload */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
@@ -6348,7 +6457,7 @@ SCIP_RETCODE checkOverloadViaThetaTree(
       /* adjust the duration, earliest start time, and latest completion time of jobs which do not lie completely in the
        * effective horizon [hmin,hmax)
        */
-      if( useadjustedjobs )
+      if( conshdlrdata->useadjustedjobs )
       {
          if( est < hmin )
          {
@@ -6525,13 +6634,13 @@ SCIP_RETCODE checkOverloadViaThetaTree(
 
       /* analyze the overload */
       SCIP_CALL( analyzeConflictOverload(scip, leaves, capacity, ninsertcands, est, lct, glbenery, propest, shift,
-            usebdwidening, initialized, explanation) );
+            conshdlrdata->usebdwidening, initialized, explanation) );
    }
-   else if( ninsertcands > 1 && edgefinding )
+   else if( ninsertcands > 1 && conshdlrdata->efinfer )
    {
       /* if we have more than one job insterted and edge-finding should be performed we do it */
-      SCIP_CALL( propagateEdgeFinder(scip, cons, tree, leaves, capacity, ninsertcands,
-            propest, shift, usebdwidening, initialized, explanation, nchgbds, cutoff) );
+      SCIP_CALL( inferboundsEdgeFinding(scip, conshdlrdata, cons, tree, leaves, capacity, ninsertcands,
+            propest, shift, initialized, explanation, nchgbds, cutoff) );
    }
 
    /* free the search nodes data */
@@ -6546,6 +6655,57 @@ SCIP_RETCODE checkOverloadViaThetaTree(
    /* free buffer arrays */
    SCIPfreeBufferArray(scip, &leaves);
    SCIPfreeBufferArray(scip, &nodedatas);
+
+   return SCIP_OKAY;
+}
+
+/** checks whether the instance is infeasible due to a overload within a certain time frame using the idea of theta trees
+ *
+ *  @note The algorithm is based on the paper: Petr Vilim, "Max Energy Filtering Algorithm for Discrete Cumulative
+ *        Resources". In: Willem Jan van Hoeve and John N. Hooker (Eds.), Integration of AI and OR Techniques in
+ *        Constraint Programming for Combinatorial Optimization Problems (CPAIOR 2009), LNCS 5547, pp 294--308
+ */
+static
+SCIP_RETCODE propagateEdgeFinding(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_CONS*            cons,               /**< constraint which is propagated */
+   SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
+   int*                  nchgbds,            /**< pointer to store the number of bound changes */
+   SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
+   )
+{
+   /* check if a cutoff was already detected */
+   if( (*cutoff) )
+      return SCIP_OKAY;
+
+   /* check if at least the basic overload checking should be preformed */
+   if( !conshdlrdata->efcheck )
+      return SCIP_OKAY;
+
+   /* check for overload, which may result in a cutoff */
+   SCIP_CALL( checkOverloadViaThetaTree(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
+         cons, TRUE, initialized, explanation, nchgbds, cutoff) );
+
+   /* check if a cutoff was detected */
+   if( (*cutoff) )
+      return SCIP_OKAY;
+
+   /* check if bound should be infer */
+   if( !conshdlrdata->efinfer )
+      return SCIP_OKAY;
+
+   /* check for overload, which may result in a cutoff */
+   SCIP_CALL( checkOverloadViaThetaTree(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
+         cons, FALSE, initialized, explanation, nchgbds, cutoff) );
 
    return SCIP_OKAY;
 }
@@ -6676,6 +6836,7 @@ SCIP_RETCODE consCheckRedundancy(
 static
 SCIP_RETCODE createCoreProfile(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_PROFILE*         profile,            /**< resource profile */
    int                   nvars,              /**< number of variables (jobs) */
    SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
@@ -6684,7 +6845,6 @@ SCIP_RETCODE createCoreProfile(
    int                   capacity,           /**< cumulative capacity */
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
@@ -6746,7 +6906,7 @@ SCIP_RETCODE createCoreProfile(
 
          /* use conflict analysis to analysis the core insertion which was infeasible */
          SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-               var, duration, demand, SCIPprofileGetTime(profile, pos), usebdwidening, initialized, explanation) );
+               var, duration, demand, SCIPprofileGetTime(profile, pos), conshdlrdata->usebdwidening, initialized, explanation) );
 
          if( explanation != NULL )
             explanation[v] = TRUE;
@@ -6776,7 +6936,6 @@ SCIP_RETCODE propagateCumulativeCondition(
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated (needed to SCIPinferVar**Cons()) */
-   SCIP_Bool             usebdwidening,      /**< should bound widening be used during conflict analysis? */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
    SCIP_Bool*            redundant,          /**< pointer to store if the constraint is redundant */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
@@ -6802,38 +6961,21 @@ SCIP_RETCODE propagateCumulativeCondition(
    /* create an empty resource profile for profiling the cores of the jobs */
    SCIP_CALL( SCIPprofileCreate(&profile, capacity) );
 
-   /* create core profile */
-   SCIP_CALL( createCoreProfile(scip, profile, nvars, vars, durations, demands, capacity, hmin, hmax,
-         usebdwidening, initialized, explanation, cutoff) );
+   /* create core profile (compulsory parts) */
+   SCIP_CALL( createCoreProfile(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax,
+         initialized, explanation, cutoff) );
 
    /* propagate the job cores until nothing else can be detected */
-   if( !(*cutoff) && conshdlrdata->coretimes )
-   {
-      SCIP_CALL( propagateCoretimes(scip, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            nchgbds, usebdwidening, initialized, explanation, cutoff) );
-   }
+   SCIP_CALL( propagateTimetable(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
+            nchgbds, initialized, explanation, cutoff) );
 
-   if( !(*cutoff) && conshdlrdata->overload )
-   {
-      /* check for overload, which may result in a cutoff */
-      SCIP_CALL( checkOverloadViaThetaTree(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-            cons, usebdwidening, conshdlrdata->useadjustedjobs, TRUE, conshdlrdata->edgefinding,
-            initialized, explanation, nchgbds, cutoff) );
-   }
+   /* run edge finding propagator */
+   SCIP_CALL( propagateEdgeFinding(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
+         cons, initialized, explanation, nchgbds, cutoff) );
 
-   if( !(*cutoff) && conshdlrdata->edgefinding )
-   {
-      /* check for overload, which may result in a cutoff */
-      SCIP_CALL( checkOverloadViaThetaTree(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-            cons, usebdwidening, conshdlrdata->useadjustedjobs, FALSE, TRUE, initialized, explanation, nchgbds, cutoff) );
-   }
-
-   /* run time-table edge finding propagator */
-   if( !(*cutoff) && conshdlrdata->ttef )
-   {
-      SCIP_CALL( propagateTTEF(scip, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            nchgbds, usebdwidening, initialized, explanation, cutoff) );
-   }
+   /* run time-table edge-finding propagator */
+   SCIP_CALL( propagateTTEF(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
+         nchgbds, initialized, explanation, cutoff) );
 
    /* free resource profile */
    SCIPprofileFree(&profile);
@@ -6867,13 +7009,19 @@ SCIP_RETCODE propagateCons(
    initialized = FALSE;
    redundant = FALSE;
 
+   if( SCIPconsIsDeleted(cons) )
+   {
+      assert(SCIPinProbing(scip));
+      return SCIP_OKAY;
+   }
+
    /* if the constraint marked to be propagated, do nothing */
    if( consdata->propagated && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING )
       return SCIP_OKAY;
 
    SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata,
          consdata->nvars, consdata->vars, consdata->durations, consdata->demands, consdata->capacity,
-         consdata->hmin, consdata->hmax, cons, conshdlrdata->usebdwidening,
+         consdata->hmin, consdata->hmax, cons,
          nchgbds, &redundant, &initialized, NULL, cutoff) );
 
    if( redundant )
@@ -6881,8 +7029,11 @@ SCIP_RETCODE propagateCons(
       SCIPdebugMessage("%s deletes cumulative constraint <%s> since it is redundant\n",
          SCIPgetDepth(scip) == 0 ? "globally" : "locally", SCIPconsGetName(cons));
 
-      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-      (*ndelconss)++;
+      if( !SCIPinProbing(scip) )
+      {
+         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+         (*ndelconss)++;
+      }
    }
    else
    {
@@ -6987,17 +7138,22 @@ SCIP_RETCODE computeAlternativeBounds(
    int*                  uplocks             /**< number of constraints with up lock participating by the computation */
    )
 {
+   int minect;
+   int maxlst;
+   int nvars;
    int c;
+   int v;
+
+   minect = INT_MAX;
+   maxlst = INT_MIN;
 
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
       SCIP_VAR* var;
-      int nvars;
       int hmin;
       int hmax;
-      int v;
 
       cons = conss[c];
       assert(cons != NULL);
@@ -7076,27 +7232,44 @@ SCIP_RETCODE computeAlternativeBounds(
                alternativelbs[idx] = (hmin + 1 - constant) / scalar;
                downlocks[idx]++;
             }
+
+            if( ect < minect )
+               minect = ect;
          }
 
          /* second check upper bound fixing */
          if( consdata->uplocks[v] )
          {
+            int duration;
             int lct;
             int lst;
 
+            duration =  consdata->durations[v];
+
             /* the variable has a up lock locked */
             lst = scalar * convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + constant;
-            lct = lst + consdata->durations[v];
+            lct = lst + duration;
 
             if( lst >= hmax || hmin >= hmax  )
                uplocks[idx]++;
-            else if( lct > hmax && alternativeubs[idx] <= (hmax - 1 - constant) / scalar )
+            else if( lct > hmax && alternativeubs[idx] <= ((hmax - 1 - constant) / scalar) - duration )
             {
-               alternativeubs[idx] = (hmax - 1 - constant) / scalar;
+               alternativeubs[idx] = ((hmax - 1 - constant) / scalar)  - duration;
                uplocks[idx]++;
             }
+
+            if( lst > maxlst )
+               maxlst = lst;
          }
       }
+   }
+
+   nvars = SCIPgetNVars(scip);
+
+   for( v = 0; v < nvars; ++v )
+   {
+      alternativelbs[v] = MAX(alternativelbs[v], minect);
+      alternativeubs[v] = MIN(alternativeubs[v], maxlst);
    }
 
    return SCIP_OKAY;
@@ -7112,21 +7285,46 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
    int*                  alternativeubs,     /**< alternative lower bounds */
    int*                  downlocks,          /**< number of constraints with down lock participating by the computation */
    int*                  uplocks,            /**< number of constraints with up lock participating by the computation */
-   int*                  nfixedvars          /**< pointer to store the number of fixed variables */
+   int*                  nfixedvars,         /**< pointer to counter which is increased by the number of deduced variable fixations */
+   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
+   int*                  nimplications,      /**< pointer to counter which is increased by the number of deduced implications */
+   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
+   SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    )
 {
+   SCIP_Real* downimpllbs;
+   SCIP_Real* downimplubs;
+   SCIP_Real* downproplbs;
+   SCIP_Real* downpropubs;
+   SCIP_Real* upimpllbs;
+   SCIP_Real* upimplubs;
+   SCIP_Real* upproplbs;
+   SCIP_Real* uppropubs;
    int v;
+
+   /* get temporary memory for storing probing results */
+   SCIP_CALL( SCIPallocBufferArray(scip, &downimpllbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &downimplubs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &downproplbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &downpropubs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &upimpllbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &upimplubs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &upproplbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &uppropubs, nvars) );
 
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
       SCIP_Bool infeasible;
       SCIP_Bool fixed;
+      SCIP_Real objval;
       int ub;
       int lb;
 
       var = vars[v];
       assert(var != NULL);
+
+      objval = SCIPvarGetObj(var);
 
       lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
       ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
@@ -7135,7 +7333,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
       if( ub - lb <= 0 )
          continue;
 
-      if( SCIPvarGetNLocksDown(var) == downlocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
+      if( SCIPvarGetNLocksDown(var) == downlocks[v] && !SCIPisNegative(scip, objval) )
       {
 
          if( alternativelbs[v] > ub )
@@ -7150,10 +7348,54 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
              * constraints
              */
             SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
+
+            continue;
+         }
+         else
+         {
+            SCIP_Bool localcutoff;
+
+            /* apply probing for the lower bound of the variable (x <= lb) */
+            SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, v, SCIP_BOUNDTYPE_UPPER, (SCIP_Real)lb, -1,
+                  downimpllbs, downimplubs, downproplbs, downpropubs, &localcutoff) );
+
+            if( localcutoff )
+            {
+               SCIP_CALL( SCIPtightenVarLb(scip, vars[v], (SCIP_Real)alternativelbs[v], TRUE, cutoff, &fixed) );
+
+               if( fixed )
+                  (*nfixedvars)++;
+
+               if( *cutoff )
+                  break;
+            }
+            else
+            {
+               /* apply probing for the alternative lower bound of the variable (x >= alternativelbs[v]) */
+               SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, v, SCIP_BOUNDTYPE_LOWER, (SCIP_Real)alternativelbs[v], -1,
+                     upimpllbs, upimplubs, upproplbs, uppropubs, &localcutoff) );
+
+               if( localcutoff )
+               {
+                  SCIP_CALL( SCIPtightenVarUb(scip, vars[v], (SCIP_Real)lb, TRUE, cutoff, &fixed) );
+                  if( fixed )
+                     (*nfixedvars)++;
+
+                  if( *cutoff )
+                     break;
+               }
+               else
+               {
+                  /* analyze both probings */
+                  SCIP_CALL( SCIPanalyzeDeductionsProbing(scip, vars[v], (SCIP_Real)lb, (SCIP_Real)alternativelbs[v],
+                        nvars, vars, downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
+                        nfixedvars, naggrvars, nimplications, nchgbds, cutoff) );
+               }
+            }
          }
       }
 
-      if( SCIPvarGetNLocksUp(var) == uplocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_UPPER )
+      if( SCIPvarGetNLocksUp(var) == uplocks[v] && !SCIPisPositive(scip, objval) )
       {
          if( alternativeubs[v] < lb )
          {
@@ -7168,8 +7410,62 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
              */
             SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
          }
+         else
+         {
+            SCIP_Bool localcutoff;
+
+            /* apply probing for the lower bound of the variable (x >= ub) */
+            SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, v, SCIP_BOUNDTYPE_LOWER, (SCIP_Real)ub, -1,
+                  downimpllbs, downimplubs, downproplbs, downpropubs, &localcutoff) );
+
+            if( localcutoff )
+            {
+               SCIP_CALL( SCIPtightenVarUb(scip, vars[v], (SCIP_Real)alternativeubs[v], TRUE, cutoff, &fixed) );
+
+               if( fixed )
+                  (*nfixedvars)++;
+
+               if( *cutoff )
+                  break;
+            }
+            else
+            {
+               /* apply probing for the alternative lower bound of the variable (x <= alternativeubs[v]) */
+               SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, v, SCIP_BOUNDTYPE_UPPER, (SCIP_Real)alternativeubs[v], -1,
+                     upimpllbs, upimplubs, upproplbs, uppropubs, &localcutoff) );
+
+               if( localcutoff )
+               {
+                  SCIP_CALL( SCIPtightenVarLb(scip, vars[v], (SCIP_Real)ub, TRUE, cutoff, &fixed) );
+
+                  if( fixed )
+                     (*nfixedvars)++;
+
+                  if( *cutoff )
+                     break;
+               }
+               else
+               {
+                  /* analyze both probings */
+                  SCIP_CALL( SCIPanalyzeDeductionsProbing(scip, vars[v], (SCIP_Real)alternativeubs[v], (SCIP_Real)ub,
+                        nvars, vars, downimpllbs, downimplubs, downproplbs, downpropubs, upimpllbs, upimplubs, upproplbs, uppropubs,
+                        nfixedvars, naggrvars, nimplications, nchgbds, cutoff) );
+               }
+            }
+         }
+
       }
    }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &uppropubs);
+   SCIPfreeBufferArray(scip, &upproplbs);
+   SCIPfreeBufferArray(scip, &upimplubs);
+   SCIPfreeBufferArray(scip, &upimpllbs);
+   SCIPfreeBufferArray(scip, &downpropubs);
+   SCIPfreeBufferArray(scip, &downproplbs);
+   SCIPfreeBufferArray(scip, &downimplubs);
+   SCIPfreeBufferArray(scip, &downimpllbs);
 
    return SCIP_OKAY;
 }
@@ -7182,7 +7478,11 @@ SCIP_RETCODE propagateAllConss(
    SCIP_CONS**           conss,              /**< all cumulative constraint */
    int                   nconss,             /**< number of cumulative constraints */
    SCIP_Bool             local,              /**< use local bounds effective horizon? */
-   int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
+   int*                  nfixedvars,         /**< pointer to counter which is increased by the number of deduced variable fixations */
+   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
+   int*                  nimplications,      /**< pointer to counter which is increased by the number of deduced implications */
+   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
+   SCIP_Bool*            cutoff,             /**< buffer to store whether a cutoff is detected */
    SCIP_Bool*            branched            /**< pointer to store if a branching was applied, or NULL to avoid branching */
    )
 {  /*lint --e{715}*/
@@ -7220,9 +7520,10 @@ SCIP_RETCODE propagateAllConss(
    SCIP_CALL( computeAlternativeBounds(scip, conss, nconss, local, alternativelbs, alternativeubs, downlocks, uplocks) );
 
    /* apply fixing which result of the alternative bounds directly */
-   SCIP_CALL( applyAlternativeBoundsFixing(scip, vars, nvars, alternativelbs, alternativeubs, downlocks, uplocks, nfixedvars) );
+   SCIP_CALL( applyAlternativeBoundsFixing(scip, vars, nvars, alternativelbs, alternativeubs, downlocks, uplocks,
+         nfixedvars, naggrvars, nimplications, nchgbds, cutoff) );
 
-   if( oldnfixedvars == *nfixedvars && branched != NULL )
+   if( !(*cutoff) && oldnfixedvars == *nfixedvars && branched != NULL )
    {
       SCIP_CALL( applyAlternativeBoundsBranching(scip, vars, nvars, alternativelbs, alternativeubs, downlocks, uplocks, branched) );
    }
@@ -7253,7 +7554,6 @@ SCIP_RETCODE createCoverCutsTimepoint(
    int                   time                /**< at this point in time covering constraints are valid */
    )
 {
-   SCIP_VAR** binvars;    /* binary variables of some integer variable */
    SCIP_CONSDATA* consdata;
    SCIP_ROW* row;
    int* flexibleids;
@@ -7264,14 +7564,11 @@ SCIP_RETCODE createCoverCutsTimepoint(
    int remainingcap;
    int smallcoversize;    /* size of a small cover */
    int bigcoversize;    /* size of a big cover */
-   int nbinvars;
-   int offset;
    int nvars;
 
    int nflexible;
-   int D;            /* demand of all jobs up to a certain index */
+   int sumdemand;            /* demand of all jobs up to a certain index */
    int j;
-   int i;
 
    assert(cons != NULL);
 
@@ -7324,18 +7621,18 @@ SCIP_RETCODE createCoverCutsTimepoint(
     */
 
    /* find maximum number of jobs that can run in parallel (-->coversize = j) */
-   D = 0;
+   sumdemand = 0;
    j = 0;
 
-   while( j < nflexible && D <= remainingcap )
+   while( j < nflexible && sumdemand <= remainingcap )
    {
-      D += demands[j];
-      ++j;
+      sumdemand += demands[j];
+      j++;
    }
 
    /* j jobs form a conflict, set coversize to 'j - 1' */
    bigcoversize = j-1;
-   assert(D > remainingcap);
+   assert(sumdemand > remainingcap);
    assert(bigcoversize < nflexible);
 
    /* - create a row for all jobs and their binary variables.
@@ -7350,32 +7647,43 @@ SCIP_RETCODE createCoverCutsTimepoint(
 
    for( j = 0; j < nflexible; ++j )
    {
+      SCIP_VAR** binvars;
+      int* vals;
+      int nbinvars;
       int idx;
-      int end;
       int start;
+      int end;
       int lb;
       int ub;
+      int b;
 
       idx = flexibleids[j];
 
       /* get and add binvars into var array */
       SCIP_CALL( SCIPgetBinvarsLinking(scip, consdata->linkingconss[idx], &binvars, &nbinvars) );
       assert(nbinvars != 0);
-      offset = SCIPgetOffsetLinking(scip, consdata->linkingconss[idx]);
+
+      vals = SCIPgetValsLinking(scip, consdata->linkingconss[idx]);
+      assert(vals != NULL);
 
       lb = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[idx]));
       ub = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[idx]));
+
       /* compute start and finishing time */
-      start = MAX(lb, time + 1 - consdata->durations[idx]) - offset;
-      end =  MIN(time, ub) + 1 - offset;
+      start = time - consdata->durations[idx] + 1;
+      end =  MIN(time, ub);
 
       /* add all neccessary binary variables */
-      for( i = start; i < end; ++i )
+      for( b = 0; b < nbinvars; ++b )
       {
-         assert(i >= 0);
-         assert(i < nbinvars);
-         assert(binvars[i] != NULL);
-         SCIP_CALL( SCIPaddVarToRow(scip, row, binvars[i], 1.0) );
+         if( vals[b] < start || vals[b] < lb )
+            continue;
+
+         if( vals[b] > end )
+            break;
+
+         assert(binvars[b] != NULL);
+         SCIP_CALL( SCIPaddVarToRow(scip, row, binvars[b], 1.0) );
       }
    }
 
@@ -7402,13 +7710,13 @@ SCIP_RETCODE createCoverCutsTimepoint(
     * erzeuge cover constraint und fuege alle jobs i hinzu, mit d_i = d_largest
     */
    /* find maximum number of jobs that can run in parallel (= coversize -1) */
-   D = 0;
+   sumdemand = 0;
    j = nflexible -1;
-   while( D <= remainingcap )
+   while( sumdemand <= remainingcap )
    {
       assert(j >= 0);
-      D += demands[j];
-      --j;
+      sumdemand += demands[j];
+      j--;
    }
 
    smallcoversize = nflexible - (j + 1) - 1;
@@ -7428,32 +7736,43 @@ SCIP_RETCODE createCoverCutsTimepoint(
       /* filter binary variables for each unfixed job */
       for( j = j + 1; j < nflexible; ++j )
       {
+         SCIP_VAR** binvars;
+         int* vals;
+         int nbinvars;
          int idx;
-         int end;
          int start;
+         int end;
          int lb;
          int ub;
+         int b;
 
          idx = flexibleids[j];
 
          /* get and add binvars into var array */
          SCIP_CALL( SCIPgetBinvarsLinking(scip, consdata->linkingconss[idx], &binvars, &nbinvars) );
          assert(nbinvars != 0);
-         offset = SCIPgetOffsetLinking(scip, consdata->linkingconss[idx]);
+
+         vals = SCIPgetValsLinking(scip, consdata->linkingconss[idx]);
+         assert(vals != NULL);
 
          lb = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[idx]));
          ub = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[idx]));
-         /* compute start and finishing time */
-         start = MAX(lb, time + 1 - consdata->durations[idx]) - offset;
-         end =  MIN(time, ub) + 1 - offset;
 
-         /* add  all neccessary binary variables */
-         for( i = start; i < end; ++i )
+         /* compute start and finishing time */
+         start = time - consdata->durations[idx] + 1;
+         end =  MIN(time, ub);
+
+         /* add all neccessary binary variables */
+         for( b = 0; b < nbinvars; ++b )
          {
-            assert(i >= 0);
-            assert(i < nbinvars);
-            assert(binvars[i] != NULL);
-            SCIP_CALL( SCIPaddVarToRow(scip, row, binvars[i], 1.0) );
+            if( vals[b] < start || vals[b] < lb )
+               continue;
+
+            if( vals[b] > end )
+               break;
+
+            assert(binvars[b] != NULL);
+            SCIP_CALL( SCIPaddVarToRow(scip, row, binvars[b], 1.0) );
          }
       }
 
@@ -7910,8 +8229,11 @@ SCIP_RETCODE addRelaxation(
    {
       if( !SCIProwIsInLP(consdata->demandrows[r]) )
       {
+         SCIP_Bool infeasible;
+
          assert(consdata->demandrows[r] != NULL);
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->demandrows[r], FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->demandrows[r], FALSE, &infeasible) );
+         assert( ! infeasible );  /* this function is only called by initlp -> the cut should be feasible */
       }
    }
 
@@ -7924,7 +8246,8 @@ SCIP_RETCODE separateConsBinaryRepresentation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< cumulative constraint to be separated */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   SCIP_Bool*            separated           /**< pointer to store TRUE, if a cut was found */
+   SCIP_Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
+   SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
@@ -7933,6 +8256,11 @@ SCIP_RETCODE separateConsBinaryRepresentation(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(separated != NULL);
+   assert(cutoff != NULL);
+
+   *separated = FALSE;
+   *cutoff = FALSE;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7960,7 +8288,13 @@ SCIP_RETCODE separateConsBinaryRepresentation(
 
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol,  consdata->demandrows[r], FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, sol,  consdata->demandrows[r], FALSE, cutoff) );
+            if ( *cutoff )
+            {
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+               return SCIP_OKAY;
+            }
+            *separated = TRUE;
             ncuts++;
          }
       }
@@ -7984,7 +8318,8 @@ SCIP_RETCODE separateCoverCutsCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< logic or constraint to be separated */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   SCIP_Bool*            separated           /**< pointer to store TRUE, if a cut was found */
+   SCIP_Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
+   SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -7994,6 +8329,11 @@ SCIP_RETCODE separateCoverCutsCons(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(separated != NULL);
+   assert(cutoff != NULL);
+
+   *separated = FALSE;
+   *cutoff = FALSE;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -8041,10 +8381,10 @@ SCIP_RETCODE separateCoverCutsCons(
          SCIPconsGetName(cons), minfeasibility);
 
       assert(row != NULL);
-      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
-
-      /* if successful, reset age of constraint */
+      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
+      if ( *cutoff )
+         return SCIP_OKAY;
       (*separated) = TRUE;
    }
 
@@ -8078,17 +8418,17 @@ SCIP_RETCODE separateCoverCutsCons(
          SCIPconsGetName(cons), minfeasibility);
 
       assert(row != NULL);
-      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
-
-      /* if successful, reset age of constraint */
+      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
+      if ( *cutoff )
+         return SCIP_OKAY;
       (*separated) = TRUE;
    }
 
    return SCIP_OKAY;
 }
 
-/** this method creats a row for time point curtime which ensures the capacity restriction of the cumulative constraint */
+/** this method creates a row for time point @p curtime which ensures the capacity restriction of the cumulative constraint */
 static
 SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8103,6 +8443,7 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
 {
    SCIP_CONSDATA* consdata;
    char name[SCIP_MAXSTRLEN];
+   SCIP_Bool infeasible;
    int lhs; /* left hand side of constraint */
 
    SCIP_VAR** activevars;
@@ -8145,7 +8486,8 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
    SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
 
-   SCIP_CALL( SCIPaddCut(scip, sol, row, TRUE) );
+   SCIP_CALL( SCIPaddCut(scip, sol, row, TRUE, &infeasible) );
+   assert( ! infeasible );
 
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
@@ -8582,7 +8924,24 @@ SCIP_RETCODE fixIntegerVariableUb(
    if( SCIPvarGetNLocksUp(var) > (int)(uplock) )
       return SCIP_OKAY;
 
-   objval = SCIPvarGetObj(var);
+   /* in case the variable is not active we need to check the object coefficient of the active variable */
+   if( !SCIPvarIsActive(var) )
+   {
+      SCIP_VAR* actvar;
+      int scalar;
+      int constant;
+
+      actvar = var;
+
+      SCIP_CALL( getActiveVar(scip, &actvar, &scalar, &constant) );
+      assert(scalar != 0);
+
+      objval = scalar * SCIPvarGetObj(actvar);
+   }
+   else
+   {
+      objval = SCIPvarGetObj(var);
+   }
 
    /* rounding the integer variable up is only a valid dual reduction if the object coefficient is zero or negative
     * (the transformed problem is always a minimization problem)
@@ -8634,8 +8993,24 @@ SCIP_RETCODE fixIntegerVariableLb(
    if( SCIPvarGetNLocksDown(var) > (int)(downlock) )
       return SCIP_OKAY;
 
-   objval = SCIPvarGetObj(var);
+   /* in case the variable is not active we need to check the object coefficient of the active variable */
+   if( !SCIPvarIsActive(var) )
+   {
+      SCIP_VAR* actvar;
+      int scalar;
+      int constant;
 
+      actvar = var;
+
+      SCIP_CALL( getActiveVar(scip, &actvar, &scalar, &constant) );
+      assert(scalar != 0);
+
+      objval = scalar * SCIPvarGetObj(actvar);
+   }
+   else
+   {
+      objval = SCIPvarGetObj(var);
+   }
    /* rounding the integer variable down is only a valid dual reduction if the object coefficient is zero or positive
     * (the transformed problem is always a minimization problem)
     */
@@ -8740,6 +9115,7 @@ SCIP_RETCODE normalizeDemands(
    )
 {
    SCIP_CONSDATA* consdata;
+   int capacity;
 
    assert(nchgcoefs != NULL);
    assert(nchgsides != NULL);
@@ -8751,12 +9127,17 @@ SCIP_RETCODE normalizeDemands(
    if( consdata->normalized )
       return SCIP_OKAY;
 
+   capacity = consdata->capacity;
+
    /**@todo sort items w.r.t. the demands, because we can stop earlier if the smaller weights are evaluated first */
 
    SCIP_CALL( normalizeCumulativeCondition(scip, consdata->nvars, consdata->vars, consdata->durations,
          consdata->demands, &consdata->capacity, nchgcoefs, nchgsides) );
 
    consdata->normalized = TRUE;
+
+   if( capacity > consdata->capacity )
+      consdata->varbounds = FALSE;
 
    return SCIP_OKAY;
 }
@@ -9343,6 +9724,8 @@ SCIP_RETCODE presolveConsEffectiveHorizon(
             }
 
             consdata->capacity -= consdata->demands[v];
+
+            consdata->varbounds = FALSE;
          }
 
          SCIP_CALL( consdataDeletePos(scip, consdata, cons, v) );
@@ -9610,6 +9993,7 @@ SCIP_RETCODE tightenCapacity(
 
       SCIPdebugPrintf("; changed additionally %d coefficients\n", (*nchgcoefs)-oldnchgcoefs);
 
+      consdata->varbounds = FALSE;
    }
 
    return SCIP_OKAY;
@@ -9871,10 +10255,9 @@ SCIP_RETCODE createDisjuctiveCons(
 
    if( nvars > 0 )
    {
-      SCIP_Bool added;
-
-      added = FALSE;
-
+      /* add all jobs which has a demand smaller than one half of the capacity but together with the smallest collected
+       * job is still to large to be scheduled in parallel
+       */
       for( v = 0; v < consdata->nvars; ++v )
       {
          if( consdata->demands[v] > halfcapacity )
@@ -9885,22 +10268,17 @@ SCIP_RETCODE createDisjuctiveCons(
             demands[nvars] = 1;
             durations[nvars] = consdata->durations[v];
             vars[nvars] = consdata->vars[v];
+            nvars++;
 
-            /* creates cumulative constraint and adds it to problem */
-            SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars+1, vars, durations, demands, 1, consdata->hmin, consdata->hmax,
-                  FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-            (*naddconss)++;
-            added = TRUE;
+            /* adjust minimum demand of collected jobs */
+            mindemand = MIN(mindemand, consdata->demands[v]);
          }
       }
 
-      if( !added && nvars > 1 )
-      {
-         /* creates cumulative constraint and adds it to problem */
-         SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars, vars, durations, demands, 1, consdata->hmin, consdata->hmax,
-               FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         (*naddconss)++;
-      }
+      /* creates cumulative constraint and adds it to problem */
+      SCIP_CALL( createConsCumulative(scip, SCIPconsGetName(cons), nvars, vars, durations, demands, 1, consdata->hmin, consdata->hmax,
+            FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      (*naddconss)++;
    }
 
    SCIPfreeBufferArray(scip, &demands);
@@ -9928,6 +10306,12 @@ SCIP_RETCODE presolveCons(
 {
    assert(!SCIPconsIsDeleted(cons));
 
+   /* computes the effective horizon and checks if the constraint can be decomposed */
+   SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
+
+   if( SCIPconsIsDeleted(cons) )
+      return SCIP_OKAY;
+
    /* only perform dual reductions on model constraints */
    if( conshdlrdata->dualpresolve )
    {
@@ -9937,12 +10321,6 @@ SCIP_RETCODE presolveCons(
       SCIP_CALL( solveIndependentCons(scip, cons, conshdlrdata->maxnodes, nchgbds, nfixedvars, ndelconss, cutoff, unbounded) );
 
       if( *cutoff || *unbounded )
-         return SCIP_OKAY;
-
-      /* computes the effective horizon and checks if the constraint can be decomposed */
-      SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
-
-      if( SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
 
       SCIP_CALL( presolveConsEffectiveHorizon(scip, cons, nfixedvars, nchgcoefs, nchgsides, cutoff) );
@@ -9998,9 +10376,11 @@ struct TCLIQUE_Graph
 {
    SCIP_VAR**            vars;               /**< start time variables each of them is a node */
    SCIP_HASHMAP*         varmap;             /**< variable map, mapping variable to indux in vars array */
-   TCLIQUE_Bool**        precedencematrix;   /**< precedence adjacent matrix */
-   TCLIQUE_Bool**        demandmatrix;       /**< demand adjacent matrix */
+   SCIP_Bool**           precedencematrix;   /**< precedence adjacent matrix */
+   SCIP_Bool**           demandmatrix;       /**< demand adjacent matrix */
    TCLIQUE_WEIGHT*       weights;            /**< weight of nodes */
+   int*                  ninarcs;            /**< number if in arcs for the precedence graph */
+   int*                  noutarcs;           /**< number if out arcs for the precedence graph */
    int*                  durations;          /**< for each node the duration of the corresponding job */
    int                   nnodes;             /**< number of nodes */
    int                   size;               /**< size of the array */
@@ -10049,8 +10429,6 @@ TCLIQUE_ISEDGE(tcliqueIsedgeClique)
 static
 TCLIQUE_SELECTADJNODES(tcliqueSelectadjnodesClique)
 {
-   TCLIQUE_Bool** precedencematrix;
-   TCLIQUE_Bool** demandmatrix;
    int nadjnodes;
    int i;
 
@@ -10061,17 +10439,14 @@ TCLIQUE_SELECTADJNODES(tcliqueSelectadjnodesClique)
 
    nadjnodes = 0;
 
-   /* check for each node in given nodes set, if it is adjacent to the given node or shares a common clique */
-   precedencematrix = tcliquegraph->precedencematrix;
-   demandmatrix = tcliquegraph->demandmatrix;
-
    for( i = 0; i < nnodes; i++ )
    {
       /* check if the node is adjacent to the given node (nodes and adjacent nodes are ordered by node index) */
       assert(0 <= nodes[i] && nodes[i] < tcliquegraph->nnodes);
       assert(i == 0 || nodes[i-1] < nodes[i]);
 
-      if( precedencematrix[node][nodes[i]] || demandmatrix[node][nodes[i]] )
+      /* check if an edge exists */
+      if( tcliqueIsedgeClique(tcliquegraph, node, nodes[i]) )
       {
          /* current node is adjacent to given node */
          adjnodes[nadjnodes] = nodes[i];
@@ -10384,10 +10759,12 @@ SCIP_RETCODE projectVbd(
    return SCIP_OKAY;
 }
 
-/** compute the transitive closer of the given graph */
+/** compute the transitive closer of the given graph and the number of in and out arcs */
 static
 void transitiveClosure(
-   TCLIQUE_Bool**        adjmatrix,         /**< adjacent matrix */
+   SCIP_Bool**           adjmatrix,         /**< adjacent matrix */
+   int*                  ninarcs,           /**< array to store the number of in arcs */
+   int*                  noutarcs,          /**< array to store the number of out arcs */
    int                   nnodes             /**< number if nodes */
    )
 {
@@ -10401,6 +10778,9 @@ void transitiveClosure(
       {
          if( adjmatrix[i][j] )
          {
+            ninarcs[j]++;
+            noutarcs[i]++;
+
             for( k = 0; k < nnodes; ++k )
             {
                if( adjmatrix[j][k] )
@@ -10517,8 +10897,8 @@ SCIP_RETCODE constructIncompatibilityGraph(
    /* use the variables bounds of SCIP to project the variables bound graph inot a precedence graph */
    SCIP_CALL( projectVbd(scip, tcliquegraph) );
 
-   /* compute the transitive closure of the precedence graph */
-   transitiveClosure(tcliquegraph->precedencematrix, tcliquegraph->nnodes);
+   /* compute the transitive closure of the precedence graph and the number of in and out arcs */
+   transitiveClosure(tcliquegraph->precedencematrix, tcliquegraph->ninarcs, tcliquegraph->noutarcs, tcliquegraph->nnodes);
 
    /* constraints non-overlapping graph */
    SCIP_CALL( constraintNonOverlappingGraph(scip, tcliquegraph, conss, nconss) );
@@ -10580,36 +10960,27 @@ SCIP_RETCODE findCumulativeConss(
    )
 {
    TCLIQUE_STATUS tcliquestatus;
-   TCLIQUE_Bool* precedencerow;
-   TCLIQUE_Bool* precedencecol;
-   TCLIQUE_Bool* demandrow;
-   TCLIQUE_Bool* demandcol;
-   int** allcliques;
-   int* nallcliques;
+   SCIP_Bool* precedencerow;
+   SCIP_Bool* precedencecol;
+   SCIP_Bool* demandrow;
+   SCIP_Bool* demandcol;
+   SCIP_HASHTABLE* covered;
    int* cliquenodes;
    int ncliquenodes;
-   int sumduration;
    int cliqueweight;
    int ntreenodes;
-   int ncliques;
    int nnodes;
    int nconss;
    int v;
 
    nnodes = tcliquegraph->nnodes;
-   sumduration = 0;
-
    nconss = 0;
 
    /* initialize the weight of each job with its duration */
    for( v = 0; v < nnodes; ++v )
    {
       tcliquegraph->weights[v] = tcliquegraph->durations[v];
-      sumduration += tcliquegraph->durations[v];
    }
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &allcliques, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nallcliques, nnodes) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &precedencerow, nnodes) );
@@ -10617,17 +10988,25 @@ SCIP_RETCODE findCumulativeConss(
    SCIP_CALL( SCIPallocBufferArray(scip, &demandrow, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &demandcol, nnodes) );
 
-   ncliques = 0;
+   /* create a hash table to store all start time variables which are already covered by at least one clique */
+   SCIP_CALL( SCIPhashtableCreate(&covered, SCIPblkmem(scip), SCIPcalcHashtableSize(nnodes),
+         SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
    /* for each variables/job we are ... */
-   for( v = 0; v < nnodes; ++v )
+   for( v = 0; v < nnodes && !SCIPisStopped(scip); ++v )
    {
+      char name[SCIP_MAXSTRLEN];
       int c;
 
-      SCIPdebugMessage("********** variable <%s>\n", SCIPvarGetName(tcliquegraph->vars[v]));
+      /* jobs with zero durations are skipped */
+      if( tcliquegraph->durations[v] == 0 )
+         continue;
 
-      /* set the weights of the variable to maximum such that the clique contains that variable for sure */
-      tcliquegraph->weights[v] = 2*sumduration;
+      /* check if the start time variable is already covered by at least one clique */
+      if( SCIPhashtableExists(covered, tcliquegraph->vars[v]) )
+         continue;
+
+      SCIPdebugMessage("********** variable <%s>\n", SCIPvarGetName(tcliquegraph->vars[v]));
 
       /* temporarily remove the connection via the precedence graph */
       for( c = 0; c < nnodes; ++c )
@@ -10650,62 +11029,27 @@ SCIP_RETCODE findCumulativeConss(
          tcliquegraph->precedencematrix[v][c] = FALSE;
       }
 
-      /* find (heuristically) maximum cliques */
+      /* find (heuristically) maximum cliques which includes node v */
       tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique,
          tcliquegraph, tcliqueNewsolClique, NULL,
          cliquenodes, &ncliquenodes, &cliqueweight, 1, 1,
-         100000, 0, 0, -1, &ntreenodes, &tcliquestatus);
+         10000, 1000, 1000, v, &ntreenodes, &tcliquestatus);
 
       SCIPdebugMessage("tree nodes %d clique size %d (weight %d, status %d)\n", ntreenodes, ncliquenodes, cliqueweight, tcliquestatus);
 
       if( ncliquenodes == 1 )
          continue;
 
-      SCIPsortInt(cliquenodes, ncliquenodes);
+      /* construct constraint name */
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "nooverlap_%d_%d", SCIPgetNRuns(scip), nconss);
 
-      /* check if we found a new clique */
-      for( c = 0; c < ncliques; ++c )
+      SCIP_CALL( createCumulativeCons(scip, name, tcliquegraph, cliquenodes, ncliquenodes) );
+      nconss++;
+
+      /* all start time variable to covered hash table */
+      for( c = 0; c < ncliquenodes; ++c )
       {
-         int clique1;
-         int clique2;
-         int nequals;
-
-         clique1 = 0;
-         clique2 = 0;
-         nequals = 0;
-
-         while( clique1 < ncliquenodes && clique2 < nallcliques[c] )
-         {
-            if( allcliques[c][clique2] < cliquenodes[clique1] )
-               clique2++;
-            else if( allcliques[c][clique2] > cliquenodes[clique1] )
-               clique1++;
-            else
-            {
-               clique1++;
-               clique2++;
-               nequals++;
-            }
-         }
-
-         if( nequals == nallcliques[c] )
-         {
-            if( nallcliques[c] < ncliquenodes )
-            {
-               SCIPfreeBufferArray(scip, &allcliques[c]);
-               SCIP_CALL( SCIPduplicateBufferArray(scip, &allcliques[c], cliquenodes, ncliquenodes) );
-               nallcliques[ncliques] = ncliquenodes;
-            }
-
-            break;
-         }
-      }
-
-      if( c == ncliques )
-      {
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &allcliques[ncliques], cliquenodes, ncliquenodes) );
-         nallcliques[ncliques] = ncliquenodes;
-         ncliques++;
+         SCIP_CALL( SCIPhashtableInsert(covered, tcliquegraph->vars[cliquenodes[c]]) );
       }
 
       /* copy the precedence relations back */
@@ -10717,33 +11061,15 @@ SCIP_RETCODE findCumulativeConss(
          tcliquegraph->demandmatrix[v][c] = demandrow[c];
          tcliquegraph->demandmatrix[c][v] = demandcol[c];
       }
-
-      /* reset the weights of the job with ist duration */
-      tcliquegraph->weights[v] = tcliquegraph->durations[v];
    }
 
-   /* create for each clique a disjunctive constraints */
-   for( v = 0; v < ncliques; ++v )
-   {
-      char name[SCIP_MAXSTRLEN];
-
-      /* construct constraint name */
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "nooverlap_%d_%d", SCIPgetNRuns(scip), nconss);
-
-      SCIP_CALL( createCumulativeCons(scip, name, tcliquegraph, allcliques[v], nallcliques[v]) );
-      nconss++;
-
-      SCIPfreeBufferArray(scip, &allcliques[v]);
-   }
+   SCIPhashtableFree(&covered);
 
    SCIPfreeBufferArray(scip, &demandcol);
    SCIPfreeBufferArray(scip, &demandrow);
    SCIPfreeBufferArray(scip, &precedencecol);
    SCIPfreeBufferArray(scip, &precedencerow);
    SCIPfreeBufferArray(scip, &cliquenodes);
-
-   SCIPfreeBufferArray(scip, &nallcliques);
-   SCIPfreeBufferArray(scip, &allcliques);
 
    (*naddconss) += nconss;
 
@@ -10757,19 +11083,120 @@ SCIP_RETCODE findCumulativeConss(
 static
 SCIP_RETCODE createPrecedenceCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,
+   const char*           name,               /**< constraint name */
    SCIP_VAR*             var,                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar,             /**< binary, integer or implicit integer bounding variable y */
-   int                   distance            /**< minimum distance between the start time of the jib corresponding to var and the jib corresponding to vbdvar */
+   int                   distance            /**< minimum distance between the start time of the job corresponding to var and the job corresponding to vbdvar */
    )
 {
    SCIP_CONS* cons;
 
+   /* create variable bound constraint */
    SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, var, vbdvar, -1.0, -SCIPinfinity(scip), -(SCIP_Real)distance,
          TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   SCIPdebugPrintCons(scip, cons, NULL);
+
+   /* add constraint to problem and release it */
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   return SCIP_OKAY;
+}
+
+/** compute a minimum distance between the start times of the two given jobs and post it as variable bound constraint */
+static
+SCIP_RETCODE computeMinDistance(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TCLIQUE_GRAPH*        tcliquegraph,       /**< conflict set graph */
+   int                   source,             /**< index of the source node */
+   int                   sink,               /**< index of the sink node */
+   int*                  naddconss           /**< pointer to store the number of added constraints */
+   )
+{
+   TCLIQUE_WEIGHT cliqueweight;
+   TCLIQUE_STATUS tcliquestatus;
+   SCIP_VAR** vars;
+   int* cliquenodes;
+   int nnodes;
+   int lct;
+   int est;
+   int i;
+
+   int ntreenodes;
+   int ncliquenodes;
+
+   /* check if source and sink are connencted */
+   if( !tcliquegraph->precedencematrix[source][sink] )
+      return SCIP_OKAY;
+
+   nnodes = tcliquegraph->nnodes;
+   vars = tcliquegraph->vars;
+
+   /* reset the weights to zero */
+   BMSclearMemoryArray(tcliquegraph->weights, nnodes);
+
+   /* get latest completion time (lct) of the source and the earliest start time (est) of sink */
+   lct = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[source])) + tcliquegraph->durations[source];
+   est = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[sink]));
+
+   /* weight all jobs which run for sure between source and sink with their duration */
+   for( i = 0; i < nnodes; ++i )
+   {
+      SCIP_VAR* var;
+      int duration;
+
+      var = vars[i];
+      assert(var != NULL);
+
+      duration = tcliquegraph->durations[i];
+
+      if( i == source || i == sink )
+      {
+         /* source and sink are not weighted */
+         tcliquegraph->weights[i] = 0;
+      }
+      else if( tcliquegraph->precedencematrix[source][i] && tcliquegraph->precedencematrix[i][sink] )
+      {
+         /* job i runs after source and before sink */
+         tcliquegraph->weights[i] = duration;
+      }
+      else if( lct <= convertBoundToInt(scip, SCIPvarGetLbLocal(var))
+         && est >= convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration )
+      {
+         /* job i run in between due the bounds of the start time variables */
+         tcliquegraph->weights[i] = duration;
+      }
+      else
+         tcliquegraph->weights[i] = 0;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, nnodes) );
+
+   /* find (heuristically) maximum cliques */
+   tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique,
+      tcliquegraph, tcliqueNewsolClique, NULL,
+      cliquenodes, &ncliquenodes, &cliqueweight, 1, 1,
+      10000, 1000, 1000, -1, &ntreenodes, &tcliquestatus);
+
+   if( ncliquenodes > 1 )
+   {
+      char name[SCIP_MAXSTRLEN];
+      int distance;
+
+      /* construct constraint name */
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "varbound_%d_%d", SCIPgetNRuns(scip), *naddconss);
+
+      /* the minimum distance between the start times of source job and the sink job is the clique weight plus the
+       * duration of the source job
+       */
+      distance = cliqueweight + tcliquegraph->durations[source];
+
+      SCIP_CALL( createPrecedenceCons(scip, name, vars[source], vars[sink], distance) );
+      (*naddconss)++;
+   }
+
+   SCIPfreeBufferArray(scip, &cliquenodes);
 
    return SCIP_OKAY;
 }
@@ -10786,85 +11213,52 @@ SCIP_RETCODE findPrecedenceConss(
    int*                  naddconss           /**< pointer to store the number of added constraints */
    )
 {
-   SCIP_VAR** vars;
+   int* sources;
+   int* sinks;
    int nconss;
-   int nvars;
+   int nnodes;
+   int nsources;
+   int nsinks;
    int i;
-   int j;
 
-   nvars = SCIPgetNVars(scip);
-   vars = SCIPgetVars(scip);
-
+   nnodes = tcliquegraph->nnodes;
    nconss = 0;
 
-   for( i = 0; i < nvars; ++i )
+   nsources = 0;
+   nsinks = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &sources, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sinks, nnodes) );
+
+   /* first collect all sources and sinks */
+   for( i = 0; i < nnodes; ++i )
    {
-      for( j = 0; j < nvars; ++j )
+      if( tcliquegraph->ninarcs[i] == 0 )
+       {
+          sources[nsources] = i;
+          nsources++;
+       }
+
+      if( tcliquegraph->ninarcs[i] == 0 )
+       {
+          sinks[nsinks] = i;
+          nsinks++;
+       }
+   }
+
+   /* compute for each node a minimum distance to each sources and each sink */
+   for( i = 0; i < nnodes && !SCIPisStopped(scip); ++i )
+   {
+      int j;
+
+      for( j = 0; j < nsources; ++j )
       {
-         TCLIQUE_WEIGHT cliqueweight;
-         TCLIQUE_STATUS tcliquestatus;
-         int* cliquenodes;
-         int lct;
-         int est;
-         int k;
+         SCIP_CALL( computeMinDistance(scip, tcliquegraph, sources[j], i, &nconss) );
+      }
 
-         int ntreenodes;
-         int ncliquenodes;
-
-         if( i == j )
-            continue;
-
-         if( !tcliquegraph->precedencematrix[i][j] )
-            continue;
-
-         /* reset the weights to zero */
-         BMSclearMemoryArray(tcliquegraph->weights, nvars);
-
-         lct = convertBoundToInt(scip, SCIPvarGetUbLocal(tcliquegraph->vars[i])) + tcliquegraph->durations[i];
-         est = convertBoundToInt(scip, SCIPvarGetLbLocal(tcliquegraph->vars[j]));
-
-         for( k = 0; k < nvars; ++k )
-         {
-            SCIP_VAR* var;
-            int duration;
-
-            var = tcliquegraph->vars[k];
-            assert(var != NULL);
-
-            duration = tcliquegraph->durations[k];
-
-            if( i == k || j == k )
-               tcliquegraph->weights[k] = 0;
-            else if( tcliquegraph->precedencematrix[i][k] && tcliquegraph->precedencematrix[k][j] )
-               tcliquegraph->weights[k] = duration;
-            else if( lct > convertBoundToInt(scip, SCIPvarGetLbLocal(var)) )
-               tcliquegraph->weights[k] = 0;
-            else if( est < convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration )
-               tcliquegraph->weights[k] = 0;
-            else
-               tcliquegraph->weights[k] = duration;
-         }
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, nvars) );
-
-         /* find (heuristically) maximum cliques */
-         tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique,
-            tcliquegraph, tcliqueNewsolClique, NULL,
-            cliquenodes, &ncliquenodes, &cliqueweight, 1, 1,
-            100000, 0, 0, -1, &ntreenodes, &tcliquestatus);
-
-         if( ncliquenodes > 1 )
-         {
-            char name[SCIP_MAXSTRLEN];
-
-            /* construct constraint name */
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "varbound_%d_%d", SCIPgetNRuns(scip), nconss);
-
-            SCIP_CALL( createPrecedenceCons(scip, name, vars[i], vars[j], cliqueweight + tcliquegraph->durations[i]) );
-            nconss++;
-         }
-
-         SCIPfreeBufferArray(scip, &cliquenodes);
+      for( j = 0; j < nsinks; ++j )
+      {
+         SCIP_CALL( computeMinDistance(scip, tcliquegraph, i, sinks[j], &nconss) );
       }
    }
 
@@ -10872,6 +11266,9 @@ SCIP_RETCODE findPrecedenceConss(
 
    /* for the statistic we count the number added variable constraints */
    SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->naddedvarbounds += nconss );
+
+   SCIPfreeBufferArray(scip, &sinks);
+   SCIPfreeBufferArray(scip, &sources);
 
    return SCIP_OKAY;
 }
@@ -10928,8 +11325,10 @@ SCIP_RETCODE createTcliqueGraph(
 {
    SCIP_VAR** vars;
    SCIP_HASHMAP* varmap;
-   TCLIQUE_Bool** precedencematrix;
-   TCLIQUE_Bool** demandmatrix;
+   SCIP_Bool** precedencematrix;
+   SCIP_Bool** demandmatrix;
+   int* ninarcs;
+   int* noutarcs;
    int* durations;
    int* weights;
    int nvars;
@@ -10951,8 +11350,17 @@ SCIP_RETCODE createTcliqueGraph(
    SCIP_CALL( SCIPallocBufferArray(scip, &precedencematrix, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &demandmatrix, nvars) );
 
+   /* array to buffer the weights of the nodes for the maximum weighted clique computation */
    SCIP_CALL( SCIPallocBufferArray(scip, &weights, nvars) );
    BMSclearMemoryArray(weights, nvars);
+
+   /* array to store the number of in arc of the precedence graph */
+   SCIP_CALL( SCIPallocBufferArray(scip, &ninarcs, nvars) );
+   BMSclearMemoryArray(ninarcs, nvars);
+
+   /* array to store the number of out arc of the precedence graph */
+   SCIP_CALL( SCIPallocBufferArray(scip, &noutarcs, nvars) );
+   BMSclearMemoryArray(noutarcs, nvars);
 
    /* array to store the used duration for each node */
    SCIP_CALL( SCIPallocBufferArray(scip, &durations, nvars) );
@@ -10981,6 +11389,8 @@ SCIP_RETCODE createTcliqueGraph(
    (*tcliquegraph)->precedencematrix = precedencematrix;
    (*tcliquegraph)->demandmatrix = demandmatrix;
    (*tcliquegraph)->weights = weights;
+   (*tcliquegraph)->ninarcs = ninarcs;
+   (*tcliquegraph)->noutarcs = noutarcs;
    (*tcliquegraph)->durations = durations;
    (*tcliquegraph)->size = nvars;
 
@@ -11003,6 +11413,8 @@ void freeTcliqueGraph(
    }
 
    SCIPfreeBufferArray(scip, &(*tcliquegraph)->durations);
+   SCIPfreeBufferArray(scip, &(*tcliquegraph)->ninarcs);
+   SCIPfreeBufferArray(scip, &(*tcliquegraph)->noutarcs);
    SCIPfreeBufferArray(scip, &(*tcliquegraph)->weights);
    SCIPfreeBufferArray(scip, &(*tcliquegraph)->demandmatrix);
    SCIPfreeBufferArray(scip, &(*tcliquegraph)->precedencematrix);
@@ -11012,8 +11424,8 @@ void freeTcliqueGraph(
    SCIPfreeBuffer(scip, tcliquegraph);
 }
 
-/** construct an incompatibility graph and search for precedence constaints (variables bounds) and unary cumulative
- *  constrainst (disjunctive constraint
+/** construct an incompatibility graph and search for precedence constraints (variables bounds) and unary cumulative
+ *  constrains (disjunctive constraint)
  */
 static
 SCIP_RETCODE detectRedundantConss(
@@ -11226,6 +11638,102 @@ SCIP_RETCODE removeRedundantConss(
          }
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** strength the variable bounds using the cumulative condition */
+static
+SCIP_RETCODE strengthVarbaounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to propagate */
+   int*                  nchgbds,            /**< pointer to store the number of changed bounds */
+   int*                  naddconss           /**< pointer to store the number of added constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   int* durations;
+   int* demands;
+   int capacity;
+   int nvars;
+   int nconss;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check if the variable bounds got already strengthen by the cumulative constraint */
+   if( consdata->varbounds )
+      return SCIP_OKAY;
+
+   vars = consdata->vars;
+   durations = consdata->durations;
+   demands = consdata->demands;
+   capacity = consdata->capacity;
+   nvars = consdata->nvars;
+
+   nconss = 0;
+
+   for( i = 0; i < nvars && !SCIPisStopped(scip); ++i )
+   {
+      SCIP_VAR** vbdvars;
+      SCIP_VAR* var;
+      SCIP_Real* vbdcoefs;
+      SCIP_Real* vbdconsts;
+      int nvbdvars;
+      int b;
+      int j;
+
+      var = consdata->vars[i];
+      assert(var != NULL);
+
+      vbdvars = SCIPvarGetVlbVars(var);
+      vbdcoefs = SCIPvarGetVlbCoefs(var);
+      vbdconsts = SCIPvarGetVlbConstants(var);
+      nvbdvars = SCIPvarGetNVlbs(var);
+
+      for( b = 0; b < nvbdvars; ++b )
+      {
+         if( SCIPisEQ(scip, vbdcoefs[b], 1.0) )
+         {
+            if( convertBoundToInt(scip, vbdconsts[b]) > -durations[i] )
+            {
+               for( j = 0; j < nvars; ++j )
+               {
+                  if( vars[j] == vbdvars[b] )
+                     break;
+               }
+               if( j == nvars )
+                  continue;
+
+               if( demands[i] +  demands[j] > capacity && convertBoundToInt(scip, vbdconsts[b]) < durations[j] )
+               {
+                  SCIP_Bool infeasible;
+                  char name[SCIP_MAXSTRLEN];
+                  int nlocalbdchgs;
+
+                  SCIPdebugMessage("<%s>[%d] + %g <= <%s>[%d]\n", SCIPvarGetName(vbdvars[b]), durations[j], vbdconsts[b], SCIPvarGetName(var), durations[i]);
+
+                  /* construct constraint name */
+                  (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "varbound_%d_%d", SCIPgetNRuns(scip), nconss);
+
+                  SCIP_CALL( createPrecedenceCons(scip, name, vars[j], vars[i], durations[j]) );
+                  nconss++;
+
+                  SCIP_CALL( SCIPaddVarVlb(scip, var, vbdvars[b], 1.0, (SCIP_Real) durations[j], &infeasible, &nlocalbdchgs) );
+                  assert(!infeasible);
+
+                  (*nchgbds) += nlocalbdchgs;
+               }
+            }
+         }
+      }
+   }
+
+   (*naddconss) += nconss;
+
+   consdata->varbounds = TRUE;
 
    return SCIP_OKAY;
 }
@@ -11498,14 +12006,14 @@ SCIP_DECL_CONSSEPALP(consSepalpCumulative)
       /* check all useful cumulative constraints for feasibility  */
       for( c = 0; c < nusefulconss && !reducedom && !cutoff; ++c )
       {
-         SCIP_CALL( separateConsBinaryRepresentation(scip, conss[c], NULL, &separated) );
+         SCIP_CALL( separateConsBinaryRepresentation(scip, conss[c], NULL, &separated, &cutoff) );
       }
 
       if( !cutoff && !reducedom && conshdlrdata->usecovercuts )
       {
          for( c = 0; c < nusefulconss; ++c )
          {
-            SCIP_CALL( separateCoverCutsCons(scip, conss[c], NULL, &separated) );
+            SCIP_CALL( separateCoverCutsCons(scip, conss[c], NULL, &separated, &cutoff) );
          }
       }
    }
@@ -11563,14 +12071,14 @@ SCIP_DECL_CONSSEPASOL(consSepasolCumulative)
       /* check all useful cumulative constraints for feasibility  */
       for( c = 0; c < nusefulconss && !cutoff && !reducedom; ++c )
       {
-         SCIP_CALL( separateConsBinaryRepresentation(scip, conss[c], NULL, &separated) );
+         SCIP_CALL( separateConsBinaryRepresentation(scip, conss[c], NULL, &separated, &cutoff) );
       }
 
       if( !cutoff && !reducedom && conshdlrdata->usecovercuts )
       {
          for( c = 0; c < nusefulconss; ++c )
          {
-            SCIP_CALL( separateCoverCutsCons(scip, conss[c], sol, &separated) );
+            SCIP_CALL( separateCoverCutsCons(scip, conss[c], sol, &separated, &cutoff) );
          }
       }
    }
@@ -11621,6 +12129,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpCumulative)
    if( conshdlrdata->usebinvars )
    {
       SCIP_Bool separated;
+      SCIP_Bool cutoff;
       int c;
 
       separated = FALSE;
@@ -11639,7 +12148,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpCumulative)
          if( !violated )
             continue;
 
-         SCIP_CALL( separateConsBinaryRepresentation(scip, cons, NULL, &separated) );
+         SCIP_CALL( separateConsBinaryRepresentation(scip, cons, NULL, &separated, &cutoff) );
+         if ( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
       }
 
       for( ; c < nconss && !separated; ++c )
@@ -11655,7 +12169,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpCumulative)
          if( !violated )
             continue;
 
-         SCIP_CALL( separateConsBinaryRepresentation(scip, cons, NULL, &separated) );
+         SCIP_CALL( separateConsBinaryRepresentation(scip, cons, NULL, &separated, &cutoff) );
+         if ( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
       }
 
       if( separated )
@@ -11869,6 +12388,9 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
          SCIP_CALL( createDisjuctiveCons(scip, cons, naddconss) );
       }
 
+      /* strength existing variable bounds using the cumulative condition */
+      SCIP_CALL( strengthVarbaounds(scip, cons, nchgbds, naddconss) );
+
       /* propagate cumulative constraint */
       SCIP_CALL( propagateCons(scip, cons, conshdlrdata, nchgbds, ndelconss, &cutoff) );
       assert(checkDemands(scip, cons) || cutoff);
@@ -11876,10 +12398,16 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
 
    if( !cutoff && !unbounded && conshdlrdata->dualpresolve )
    {
-      SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, FALSE, nfixedvars, NULL) );
+      int nimplications;
+
+      nimplications = 0;
+
+      SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, FALSE, nfixedvars, naggrvars, &nimplications, nchgbds, &cutoff, NULL) );
    }
 
-   if( !cutoff && nrounds == 2 && (conshdlrdata->detectvarbounds || conshdlrdata->detectdisjunctive) )
+   /* only perform the detection of variable bounds and disjunctive constraint once */
+   if( !cutoff && SCIPgetNRuns(scip) == 1 && nrounds == 2
+      && (conshdlrdata->detectvarbounds || conshdlrdata->detectdisjunctive) )
    {
       /* combine different source and detect disjunctive constraints and variable bound constraints to improve the
        * propagation
@@ -11931,7 +12459,7 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("resolve propagation: variable <%s>, cumulative constraint <%s> (capacity %d, propagation %d, [%d,%d))\n",
+   SCIPdebugMessage("resolve propagation: variable <%s>, cumulative constraint <%s> (capacity %d, propagation %d, H=[%d,%d))\n",
       SCIPvarGetName(infervar), SCIPconsGetName(cons), consdata->capacity, inferInfoGetProprule(intToInferInfo(inferinfo)),
       SCIPgetHminCumulative(scip, cons), SCIPgetHmaxCumulative(scip, cons));
 
@@ -12281,20 +12809,28 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
 
    /* add cumulative constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/coretimes", "should core-times be propagated (time tabling)?",
-         &conshdlrdata->coretimes, FALSE, DEFAULT_CORETIMES, NULL, NULL) );
+         "constraints/"CONSHDLR_NAME"/ttinfer",
+         "should time-table (core-times) propagator be used to infer bounds?",
+         &conshdlrdata->ttinfer, FALSE, DEFAULT_TTINFER, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/overload", "should edge finding be used to detect an overload?",
-         &conshdlrdata->overload, FALSE, DEFAULT_OVERLOAD, NULL, NULL) );
+         "constraints/"CONSHDLR_NAME"/efcheck",
+         "should edge-finding be used to detect an overload?",
+         &conshdlrdata->efcheck, FALSE, DEFAULT_EFCHECK, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/edgefinding", "should edge-finding be executed?",
-         &conshdlrdata->edgefinding, FALSE, DEFAULT_EDGEFINDING, NULL, NULL) );
+         "constraints/"CONSHDLR_NAME"/efinfer",
+         "should edge-finding be used to infer bounds? ",
+         &conshdlrdata->efinfer, FALSE, DEFAULT_EFINFER, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/useadjustedjobs", "should edge-finding be executed?",
          &conshdlrdata->useadjustedjobs, TRUE, DEFAULT_USEADJUSTEDJOBS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/ttef", "should time-table edge-finding propagator be executed?",
-         &conshdlrdata->ttef, FALSE, DEFAULT_TTEF, NULL, NULL) );
+         "constraints/"CONSHDLR_NAME"/ttefcheck",
+         "should time-table edge-finding be used to detect an overload?",
+         &conshdlrdata->ttefcheck, FALSE, DEFAULT_TTEFCHECK, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/ttefinfer",
+         "should time-table edge-finding be used to infer bounds?",
+         &conshdlrdata->ttefinfer, FALSE, DEFAULT_TTEFINFER, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/usebinvars", "should the binary representation be used?",
@@ -12779,7 +13315,7 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
    redundant = FALSE;
 
    SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata,
-         nvars, vars, durations, demands, capacity,  hmin, hmax, cons, TRUE,
+         nvars, vars, durations, demands, capacity,  hmin, hmax, cons,
          nchgbds, &redundant, initialized, explanation, cutoff) );
 
    return SCIP_OKAY;

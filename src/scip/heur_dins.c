@@ -15,6 +15,7 @@
 
 /**@file   heur_dins.c
  * @brief  DINS primal heuristic (according to Ghosh)
+ * @author Timo Berthold
  * @author Robert Waniek
  */
 
@@ -39,9 +40,11 @@
 
 #define DEFAULT_NODESOFS      5000LL    /* number of nodes added to the contingent of the total nodes          */
 #define DEFAULT_MAXNODES      5000LL    /* maximum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINNODES      500LL     /* minimum number of nodes to regard in the subproblem                 */
+#define DEFAULT_MINNODES      50LL      /* minimum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MINIMPROVE    0.01      /* factor by which DINS should at least improve the incumbent          */
 #define DEFAULT_NODESQUOT     0.05      /* subproblem nodes in relation to nodes of the original problem       */
+#define DEFAULT_LPLIMFAC      1.5       /* factor by which the limit on the number of LP depends on the node limit  */
+#define DEFAULT_MINFIXINGRATE 0.3       /* minimum percentage of integer variables that have to be fixed       */
 #define DEFAULT_NWAITINGNODES 0LL       /* number of nodes without incumbent change that heuristic should wait */
 #define DEFAULT_NEIGHBORHOODSIZE  18    /* radius of the incumbents neighborhood to be searched                */
 #define DEFAULT_SOLNUM        5         /* number of pool-solutions to be checked for flag array update        */
@@ -50,6 +53,9 @@
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip        */
 
+/* event handler properties */
+#define EVENTHDLR_NAME         "Dins"
+#define EVENTHDLR_DESC         "LP event handler for "HEUR_NAME" heuristic"
 
 /*
  * Data structures
@@ -61,10 +67,13 @@ struct SCIP_HeurData
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes          */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem                 */
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem                 */
+   SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed       */
    SCIP_Longint          nwaitingnodes;      /**< number of nodes without incumbent change that heuristic should wait */
    SCIP_Real             minimprove;         /**< factor by which DINS should at least improve the incumbent          */
    SCIP_Longint          usednodes;          /**< nodes already used by DINS in earlier calls                         */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
+   SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
+   SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
    int                   neighborhoodsize;   /**< radius of the incumbent's neighborhood to be searched               */
    SCIP_Bool*            delta;              /**< stores whether a variable kept its value from root LP all the time  */
    int                   deltalength;        /**< if there are no binary variables, we need no flag array             */
@@ -90,11 +99,11 @@ SCIP_RETCODE createSubproblem(
    SCIP_VAR**            subvars,            /**< variables of the subproblem                                    */
    int                   nbinvars,           /**< number of binary variables of problem and subproblem           */
    int                   nintvars,           /**< number of general integer variables of problem and subproblem  */
+   int*                  fixingcounter,      /**< number of integer variables that get fixed */
    SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?   */
    )
 {
    SCIP_SOL* bestsol;
-
    int i;
 
    assert(scip != NULL);
@@ -168,6 +177,9 @@ SCIP_RETCODE createSubproblem(
          /* perform the bound change */
          SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], lb) );
          SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], ub) );
+
+         if( ub-lb < 0.5 )
+            (*fixingcounter)++;
       }
       else
       {
@@ -178,6 +190,7 @@ SCIP_RETCODE createSubproblem(
          /* hard fixing for general integer variables with abs(mipsol-lpsol) < 0.5 */
          SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], mipsol) );
          SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], mipsol) );
+         (*fixingcounter)++;
       }
    }
 
@@ -364,6 +377,37 @@ SCIP_RETCODE createNewSol(
 }
 
 
+/* ---------------- Callback methods of event handler ---------------- */
+
+/* exec the event handler
+ *
+ * we interrupt the solution process
+ */
+static
+SCIP_DECL_EVENTEXEC(eventExecRins)
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(eventhdlr != NULL);
+   assert(eventdata != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   assert(event != NULL);
+   assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
+
+   heurdata = (SCIP_HEURDATA*)eventdata;
+   assert(heurdata != NULL);
+
+   /* interrupt solution process of sub-SCIP */
+   if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
+   {
+      SCIPdebugMessage("interrupt after  %"SCIP_LONGINT_FORMAT" LPs\n",SCIPgetNLPs(scip));
+      SCIP_CALL( SCIPinterruptSolve(scip) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of primal heuristic
  */
@@ -463,9 +507,10 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIP* subscip;                            /* the subproblem created by DINS                               */
    SCIP_VAR** subvars;                       /* subproblem's variables                                       */
    SCIP_VAR** vars;                          /* variables of the original problem                            */
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables              */
    SCIP_SOL* bestsol;                        /* best solution known so far                                   */
    SCIP_SOL** sols;                          /* list of known solutions                                      */
+   SCIP_EVENTHDLR* eventhdlr;                /* event handler for LP events                                  */
 
    SCIP_Bool* fixed;                         /* fixing flag array                                            */
    SCIP_Bool* delta;                         /* flag array if variable value changed during solution process */
@@ -491,6 +536,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    int nsols;                                /* number of known solutions                                    */
    int nsubsols;
    int checklength;
+   int fixingcounter;
    int i;
    int j;
 
@@ -568,6 +614,8 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
    success = FALSE;
+   eventhdlr = NULL;
+
    if( heurdata->uselprows )
    {
       char probname[SCIP_MAXSTRLEN];
@@ -590,8 +638,16 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
       if( heurdata->copycuts )
       {
-         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
+      }
+
+      /* create event handler for LP events */
+      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecRins, NULL) );
+      if( eventhdlr == NULL )
+      {
+         SCIPerrorMessage("event handler for "HEUR_NAME" heuristic not found.\n");
+         return SCIP_PLUGINNOTFOUND;
       }
 
       SCIPdebugMessage("Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
@@ -604,7 +660,8 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIPhashmapFree(&varmapfw);
 
    /* create variables and rebound them if their bounds differ by more than 0.5 */
-   SCIP_CALL( createSubproblem(scip, subscip, vars, subvars, nbinvars, nintvars, heurdata->uselprows) );
+   fixingcounter = 0;
+   SCIP_CALL( createSubproblem(scip, subscip, vars, subvars, nbinvars, nintvars, &fixingcounter, heurdata->uselprows) );
    SCIPdebugMessage("DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
       SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip));
 
@@ -615,6 +672,12 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+
+#ifdef SCIP_DEBUG
+   /* for debugging DINS, enable MIP output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#endif
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -634,8 +697,10 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       goto TERMINATE;
 
    /* set limits for the subproblem */
+   heurdata->nodelimit = nsubnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 1) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nsubnodes/10)) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
@@ -680,6 +745,17 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    if( !SCIPisParamFixed(subscip, "conflict/usepseudo") )
    {
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
+   }
+
+   /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
+    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
+    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
+    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
+    * made for the original SCIP
+    */
+   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
    }
 
    /* get the best MIP-solution known so far */
@@ -745,14 +821,19 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
          /* hard fixing if rootlpsolval=nodelpsolval=mipsolval(s) and delta (is TRUE) */
          if( delta[i] && SCIPisFeasEQ(scip, mipsolval, lpsolval) && SCIPisFeasEQ(scip, mipsolval, rootlpsolval)
-            && SCIPisFeasEQ(scip, rootlpsolval, lpsolval) )
+            && SCIPisFeasEQ(scip, rootlpsolval, lpsolval)
+            && !SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i])) )
          {
             SCIP_CALL( SCIPfixVar(subscip, subvars[i], mipsolval, &infeasible, &success) );
             fixed[i] = !infeasible;
-            if( !success )
+
+            if( success )
+               fixingcounter++;
+            else
             {
                SCIPdebugMessage("variable %d was already fixed\n", i);
             }
+
             if( infeasible )
             {
                SCIPdebugMessage("fixing of variable %d to value %f was infeasible\n", i, mipsolval);
@@ -775,6 +856,16 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    /* free fixing flag array */
    SCIPfreeBufferArray(scip, &fixed);
 
+   /* abort, if all integer variables were fixed (which should not happen for MIP),
+    * but frequently happens for MINLPs using an LP relaxation
+    */
+   if( fixingcounter == nbinvars + nintvars )
+      goto TERMINATE;
+
+   /* abort, if the amount of fixed variables is insufficient */
+   if( fixingcounter / (SCIP_Real)(MAX(nbinvars + nintvars, 1)) < heurdata->minfixingrate )
+      goto TERMINATE;
+
    /* add an objective cutoff */
    cutoff = SCIPinfinity(scip);
    assert(!SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
@@ -796,9 +887,26 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    }
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
+   /* catch LP events of sub-SCIP */
+   if( !heurdata->uselprows )
+   {
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPtransformProb(subscip) );
+      SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
+   }
+
    /* solve the subproblem */
    SCIPdebugMessage("solving DINS sub-MIP with neighborhoodsize %d and maxnodes %"SCIP_LONGINT_FORMAT"\n", heurdata->neighborhoodsize, nsubnodes);
    retcode = SCIPsolve(subscip);
+
+   /* drop LP events of sub-SCIP */
+   if( !heurdata->uselprows )
+   {
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
+   }
 
    /* Errors in solving the subproblem should not kill the overall solving process
     * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
@@ -810,6 +918,9 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 #endif
       SCIPwarningMessage(scip, "Error while solving subproblem in DINS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
    }
+
+   /* print solving statistics of subproblem if we are in SCIP's debug mode */
+   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
    nsubsols = SCIPgetNSols(subscip);
@@ -893,6 +1004,14 @@ SCIP_RETCODE SCIPincludeHeurDins(
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/nwaitingnodes",
          "number of nodes without incumbent change that heuristic should wait",
          &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/lplimfac",
+         "factor by which the limit on the number of LP depends on the node limit",
+         &heurdata->lplimfac, TRUE, DEFAULT_LPLIMFAC, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minfixingrate",
+         "minimum percentage of integer variables that have to be fixable",
+         &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows",
          "should subproblem be created out of the rows in the LP rows?",

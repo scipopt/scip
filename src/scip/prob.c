@@ -1248,7 +1248,7 @@ SCIP_RETCODE SCIPprobAddCons(
    cons->deleted = FALSE;
 
    /* mark constraint to be globally valid */
-   cons->local = FALSE;
+   SCIPconsSetLocal(cons, FALSE);
 
    /* capture constraint */
    SCIPconsCapture(cons);

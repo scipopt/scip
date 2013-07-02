@@ -32,3 +32,5 @@ interfaces/ampl/check/locks
 interfaces/ampl/check/results
 interfaces/ampl/lint
 examples/CallableLibrary/lint
+unittests/check/results
+unittests/check/locks
