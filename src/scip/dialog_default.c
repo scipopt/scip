@@ -4024,7 +4024,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecSetLimitsObjective, NULL, NULL,
-            "objective", "set limit on objective value", FALSE, NULL) );
+            "objective", "set limit on objective function, such that only solutions better than this limit are accepted", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
 

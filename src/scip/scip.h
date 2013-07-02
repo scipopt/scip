@@ -4568,6 +4568,15 @@ SCIP_Real SCIPgetTransObjscale(
 
 /** sets limit on objective function, such that only solutions better than this limit are accepted
  *
+ *  @note SCIP will only look for solutions with a strictly better objective value, thus, e.g., prune
+ *        all branch-and-bound nodes with dual bound equal or worse to the objective limit.
+ *        However, SCIP will also collect solutions with objective value worse than the objective limit and
+ *        use them to run improvement heuristics on them.
+ *  @note If SCIP can prove that there exists no solution with a strictly better objective value, the solving status
+ *        will normally be infeasible (the objective limit is interpreted as part of the problem).
+ *        The only exception is that by chance, SCIP found a solution with the same objective value and thus
+ *        proved the optimality of this solution, resulting in solution status optimal.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
