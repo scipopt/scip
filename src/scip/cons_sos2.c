@@ -501,6 +501,7 @@ SCIP_RETCODE deleteVarSOS2(
  *    this constraint.
  *  - When, after removing all variables fixed to 0, that are possible, in a constraint each even positioned variable is
  *    fixed to 0, we can upgrade this constraint to an sos1 that holds all non-fixed variables.
+ *  - Extract cliques for all odd and also for all even positioned binary variables
  */
 static
 SCIP_RETCODE presolRoundSOS2(
