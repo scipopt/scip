@@ -28,7 +28,7 @@
 =opt=  iis-bupa-cov                     36.000000000		 
 =opt=  iis-pima-cov                     33.000000000		 
 =opt=  lectsched-4-obj                   4.000000000
-=opt=  m100n500k4r1	               -25.00000000
+=opt=  m100n500k4r1               -25.00000000
 =opt=  macrophage                      374.000000000		 
 =opt=  map18                          -847.000000000		 
 =opt=  map20                          -922.000000000		 
@@ -57,7 +57,7 @@
 =opt=  netdiversion                    242.000000000		 
 =opt=  newdano                          65.666667000		 
 =opt=  noswot                          -41.000000000
-=opt=  ns1208400		         2.000000000
+=opt=  ns1208400         2.000000000
 =opt=  ns1688347                        27.000000000		 
 =opt=  ns1758913                     -1454.671755000		 
 =inf= ns1766074         
@@ -82,7 +82,7 @@
 =opt=  tanglegram1                    5182.000000000		 
 =opt=  tanglegram2                     443.000000000		 
 =opt=  timtab1                      764772.000000000		 
-=opt=  triptim1			        22.8681
+=opt=  triptim1        22.8681
 =opt=  unitcal_7                    19635558.244019002		 
 =opt=  vpphard                           5.000000000		 
 =opt=  zib54-UUE                    10334015.820000000          
