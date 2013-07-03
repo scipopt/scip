@@ -4757,7 +4757,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
    int                   nnonmincovervars,   /**< number of nonmincover variables */
    SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
    SCIP_GUBSET*          gubset,             /**< GUB set data structure, NULL if no GUB information should be used */
-   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
