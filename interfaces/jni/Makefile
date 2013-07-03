@@ -517,7 +517,7 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.c $(SRCDIR)/%.h
 
 $(SRCDIR)/%.h:	$(CLASSDIR)/$(JNIPACKAGEDIR)/jni/%.class
 		@echo "-> create C header $@"
-		$(JAVAH) -jni -o $@ -classpath $(CLASSDIR) $(JNIPACKAGENAME).jni.$(notdir $(basename $@))
+		$(JAVAH) -force -jni -o $@ -classpath $(CLASSDIR) $(JNIPACKAGENAME).jni.$(notdir $(basename $@))
 
 $(CLASSDIR)/%.class:	$(JAVASRCDIR)/%.java $(CLASSDIR)
 		@echo "-> compiling $@"
