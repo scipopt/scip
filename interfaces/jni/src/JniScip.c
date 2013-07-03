@@ -6199,7 +6199,7 @@ jlong JNISCIP(createVarBasic)(
       || vartype == JNIPACKAGENAME(JniScipVartype_SCIP_VARTYPE_CONTINUOUS));
 
    JNISCIP_CALL( SCIPcreateVarBasic(scip, &var, name, lb, ub, obj, vartype) );
-   SCIPdebugMessage("created variable <%s> [%g,%g] obj: <%g>, <%p>\n", name, lb, ub, obj, var);
+   SCIPdebugMessage("created variable <%s> [%g,%g] obj: <%g>, <%p>\n", name, lb, ub, obj, (void*)var);
 
    (*env)->ReleaseStringUTFChars(env, jname, name);
 
@@ -12547,33 +12547,35 @@ jdouble JNISCIP(getLPBInvCol)(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-// jdouble JNISCIP(getLPBInvARow)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jscip,              /**< SCIP data structure */
-//    jint                  r,                  /**< row number */
-//    jdoubleArray          jbinvrow,           /**< row in B^-1 from prior call to SCIPgetLPBInvRow(), or NULL */
-//    )
-// {
-//    SCIP* scip;
-//    SCIP_Real* binvrow;
-//    SCIP_Real coef;
+#if 0
+jdouble JNISCIP(getLPBInvARow)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jint                  r,                  /**< row number */
+   jdoubleArray          jbinvrow,           /**< row in B^-1 from prior call to SCIPgetLPBInvRow(), or NULL */
+   )
+{
+   SCIP* scip;
+   SCIP_Real* binvrow;
+   SCIP_Real coef;
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
 
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &binvrow, ?length?) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &binvrow, ?length?) );
 
-//    (*env)->GetDoubleArrayRegion(env, jvals, 0, ?length?, (jdouble*)binvrow);
+   (*env)->GetDoubleArrayRegion(env, jvals, 0, ?length?, (jdouble*)binvrow);
 
-//    JNISCIP_CALL( SCIPgetLPBInvARow(scip, (int)r, binvrow, &coef) );
+   JNISCIP_CALL( SCIPgetLPBInvARow(scip, (int)r, binvrow, &coef) );
 
-//    SCIPfreeBufferArray(scip, &binvrow);
+   SCIPfreeBufferArray(scip, &binvrow);
 
-//    return (jdouble) coef;
-// }
+   return (jdouble) coef;
+}
+#endif
 
 /** gets a column from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A),
  *  i.e., it computes B^-1 * A_c with A_c being the c'th column of A
@@ -12656,7 +12658,8 @@ void JNISCIP(writeMIP)(
    jstring               jfilename,           /**< file name */
    jboolean              genericnames,       /**< should generic names like x_i and row_j be used in order to avoid
                                               *   troubles with reserved symbols? */
-   jboolean              origobj             /**< should the original objective function be used? */
+   jboolean              origobj,            /**< should the original objective function be used? */
+   jboolean              lazyconss           /**< output removable rows as lazy constraints? */
    )
 {
    SCIP* scip;
@@ -12673,7 +12676,7 @@ void JNISCIP(writeMIP)(
    else
       filename = NULL;
 
-   JNISCIP_CALL( SCIPwriteMIP(scip, filename, (SCIP_Bool)genericnames, (SCIP_Bool)origobj) );
+   JNISCIP_CALL( SCIPwriteMIP(scip, filename, (SCIP_Bool)genericnames, (SCIP_Bool)origobj, (SCIP_Bool)lazyconss) );
 }
 
 /** gets the LP interface of SCIP;
@@ -12780,34 +12783,36 @@ void JNISCIP(printLPSolutionQuality)(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-// void JNISCIP(computeLPRelIntPoint)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jscip,              /**< SCIP data structure */
-//    jboolean              relaxrows,          /**< should the rows be relaxed */
-//    jboolean              inclobjcutoff,      /**< should a row for the objective cutoff be included */
-//    jchar                 normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
-//    jdouble               timelimit,          /**< time limit for LP solver */
-//    jint                  iterlimit,          /**< iteration limit for LP solver */
-//    jlongArray            jpoint              /**< relative interior point on exit */
-//    )
-// {
-//    SCIP* scip;
-//    SCIP_SOL** point;
+#if 0
+void JNISCIP(computeLPRelIntPoint)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jboolean              relaxrows,          /**< should the rows be relaxed */
+   jboolean              inclobjcutoff,      /**< should a row for the objective cutoff be included */
+   jchar                 normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
+   jdouble               timelimit,          /**< time limit for LP solver */
+   jint                  iterlimit,          /**< iteration limit for LP solver */
+   jlongArray            jpoint              /**< relative interior point on exit */
+   )
+{
+   SCIP* scip;
+   SCIP_SOL** point;
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &point, ?length?) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &point, ?length?) );
 
-//    (*env)->GetLongArrayRegion(env, jpoint, 0, ?length?, (jlong*)(*point));
+   (*env)->GetLongArrayRegion(env, jpoint, 0, ?length?, (jlong*)(*point));
 
-//    JNISCIP_CALL( SCIPcomputeLPRelIntPoint(scip, (SCIP_Bool)relaxrows, (SCIP_Bool)inclobjcutoff, (char)normtype, (SCIP_Real)timelimit, (int)iterlimit, point) );
+   JNISCIP_CALL( SCIPcomputeLPRelIntPoint(scip, (SCIP_Bool)relaxrows, (SCIP_Bool)inclobjcutoff, (char)normtype, (SCIP_Real)timelimit, (int)iterlimit, point) );
 
-//    SCIPfreeBufferArray(scip, &point);
+   SCIPfreeBufferArray(scip, &point);
 
-// }
+}
+#endif
 
 /** returns the reduced costs of a column in the last (feasible) LP
  *
@@ -13072,38 +13077,39 @@ jlong JNISCIP(createRow)(
    JNISCIP_CALL( SCIP_ERROR );
 
    return 0;
+#if 0
+   SCIP* scip;
+   SCIP_ROW* row;
+   SCIP_COL** cols;
+   SCIP_Real* vals;
+   const char* name;
+   jboolean iscopy;
 
-//    SCIP* scip;
-//    SCIP_ROW* row;
-//    SCIP_COL** cols;
-//    SCIP_Real* vals;
-//    const char* name;
-//    jboolean iscopy;
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI string into C const char* */
+   name = (*env)->GetStringUTFChars(env, jname, &iscopy);
+   if( name == NULL )
+      SCIPABORT();
 
-//    /* convert JNI string into C const char* */
-//    name = (*env)->GetStringUTFChars(env, jname, &iscopy);
-//    if( name == NULL )
-//       SCIPABORT();
+   assert(iscopy);
 
-//    assert(iscopy);
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &cols, (int)len) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)len) );
 
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &cols, (int)len) );
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)len) );
+   (*env)->GetLongArrayRegion(env, jcols, 0, (int)len, (jlong*)(*cols));
+   (*env)->GetDoubleArrayRegion(env, jvals, 0, (int)len, (jdouble*)vals);
 
-//    (*env)->GetLongArrayRegion(env, jcols, 0, (int)len, (jlong*)(*cols));
-//    (*env)->GetDoubleArrayRegion(env, jvals, 0, (int)len, (jdouble*)vals);
+   JNISCIP_CALL( SCIPcreateRow(scip, &row, name, (int)len, cols, vals, (SCIP_Real)lhs, (SCIP_Real)rhs, (SCIP_Bool)local, (SCIP_Bool)modifiable, (SCIP_Bool)removable) );
 
-//    JNISCIP_CALL( SCIPcreateRow(scip, &row, name, (int)len, cols, vals, (SCIP_Real)lhs, (SCIP_Real)rhs, (SCIP_Bool)local, (SCIP_Bool)modifiable, (SCIP_Bool)removable) );
+   SCIPfreeBufferArray(scip, &cols);
+   SCIPfreeBufferArray(scip, &vals);
+   (*env)->ReleaseStringUTFChars(env, jname, name);
 
-//    SCIPfreeBufferArray(scip, &cols);
-//    SCIPfreeBufferArray(scip, &vals);
-//    (*env)->ReleaseStringUTFChars(env, jname, name);
-
-//    return (jlong) row;
+   return (jlong) row;
+#endif
 }
 
 /** creates and captures an LP row without any coefficients from a constraint handler
@@ -14243,28 +14249,30 @@ jint JNISCIP(getNNLPVars)(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-// void JNISCIP(getNLPVarsNonlinearity)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jscip,              /**< SCIP data structure */
-//    jintArray             jnlcount            /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
-//    )
-// {
-//    SCIP* scip;
-//    int* nlcount;
+#if 0
+void JNISCIP(getNLPVarsNonlinearity)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jintArray             jnlcount            /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
+   )
+{
+   SCIP* scip;
+   int* nlcount;
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &nlcount, ?length?) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &nlcount, ?length?) );
 
-//    (*env)->GetIntArrayRegion(env, jnlcount, 0, ?length?, (jlong*)nlcount);
+   (*env)->GetIntArrayRegion(env, jnlcount, 0, ?length?, (jlong*)nlcount);
 
-//    SCIPfreeBufferArray(scip, &nlcount);
+   SCIPfreeBufferArray(scip, &nlcount);
 
-//    return (jint) SCIPgetNLPVarsNonlinearity(scip);
-// }
+   return (jint) SCIPgetNLPVarsNonlinearity(scip);
+}
+#endif
 
 /** returns dual solution values associated with lower bounds of NLP variables
  *
@@ -14459,28 +14467,30 @@ void JNISCIP(flushNLP)(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-// void JNISCIP(setNLPInitialGuess)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jscip,              /**< SCIP data structure */
-//    jdoubleArray          jinitialguess       /**< values of initial guess (corresponding to variables from SCIPgetNLPVarsData), or NULL to use no start point */
-//    )
-// {
-//    SCIP* scip;
-//    SCIP_Real* initialguess;
+#if 0
+void JNISCIP(setNLPInitialGuess)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jdoubleArray          jinitialguess       /**< values of initial guess (corresponding to variables from SCIPgetNLPVarsData), or NULL to use no start point */
+   )
+{
+   SCIP* scip;
+   SCIP_Real* initialguess;
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &initialguess, ?length?) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &initialguess, ?length?) );
 
-//    (*env)->GetDoubleArrayRegion(env, jinitialguessvars, 0, ?length?, (jlong*)initialguess);
+   (*env)->GetDoubleArrayRegion(env, jinitialguessvars, 0, ?length?, (jlong*)initialguess);
 
-//    SCIPfreeBufferArray(scip, &initialguess);
+   SCIPfreeBufferArray(scip, &initialguess);
 
-//    JNISCIP_CALL( SCIPsetNLPInitialGuess(scip, initialguess) );
-// }
+   JNISCIP_CALL( SCIPsetNLPInitialGuess(scip, initialguess) );
+}
+#endif
 
 /** sets initial primal guess for NLP solution (start point for NLP solver)
  *
@@ -15440,33 +15450,35 @@ void JNISCIP(setNlRowExprtreeParam)(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-// void JNISCIP(setNlRowExprtreeParams)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jscip,              /**< SCIP data structure */
-//    jlong                 jnlrow,             /**< NLP row */
-//    jdoubleArray          jparamvals          /**< new values of parameter in expression tree */+
-//    )
-// {
-//    SCIP* scip;
-//    SCIP_NLROW* nlrow;
-//    SCIP_Real* paramvals;
+#if 0
+void JNISCIP(setNlRowExprtreeParams)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jlong                 jnlrow,             /**< NLP row */
+   jdoubleArray          jparamvals          /**< new values of parameter in expression tree */+
+   )
+{
+   SCIP* scip;
+   SCIP_NLROW* nlrow;
+   SCIP_Real* paramvals;
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
-//    nlrow = (SCIP_NLROW*) (size_t) jnlrow;
-//    assert(nlrow != NULL);
+   nlrow = (SCIP_NLROW*) (size_t) jnlrow;
+   assert(nlrow != NULL);
 
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &paramvals, ?length?) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &paramvals, ?length?) );
 
-//    (*env)->GetDoubleArrayRegion(env, jparamvals, 0, ?length?, (jdouble*)paramvals);
+   (*env)->GetDoubleArrayRegion(env, jparamvals, 0, ?length?, (jdouble*)paramvals);
 
-//    JNISCIP_CALL( SCIPsetNlRowExprtreeParams(scip, nlrow, paramvals) );
+   JNISCIP_CALL( SCIPsetNlRowExprtreeParams(scip, nlrow, paramvals) );
 
-//    SCIPfreeBufferArray(scip, &paramvals);
-// }
+   SCIPfreeBufferArray(scip, &paramvals);
+}
+#endif
 
 /** recalculates the activity of a nonlinear row in the last NLP solution
  *
@@ -15972,7 +15984,7 @@ jdouble JNISCIP(getVectorEfficacyNorm)(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-void JNISCIP(addCut)(
+jboolean JNISCIP(addCut)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
    jlong                 jscip,              /**< SCIP data structure */
@@ -15983,6 +15995,7 @@ void JNISCIP(addCut)(
 {
    SCIP* scip;
    SCIP_ROW* cut;
+   SCIP_Bool infeasible;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
@@ -15991,7 +16004,9 @@ void JNISCIP(addCut)(
    cut = (SCIP_ROW*) (size_t) jcut;
    assert(cut != NULL);
 
-   JNISCIP_CALL( SCIPaddCut(scip, (SCIP_SOL*)(size_t)sol, cut, (SCIP_Bool)forcecut) );
+   JNISCIP_CALL( SCIPaddCut(scip, (SCIP_SOL*)(size_t)sol, cut, (SCIP_Bool)forcecut, &infeasible) );
+
+   return (jboolean) infeasible;
 }
 
 /** if not already existing, adds row to global cut pool
@@ -16906,39 +16921,6 @@ jdouble JNISCIP(getVarUbDive)(
    return (jdouble) SCIPgetVarUbDive(scip, var);
 }
 
-/** solves the LP of the current dive; no separation or pricing is applied
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- *
- *  @note be aware that the LP solve may take longer than expected if SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL,
- *  compare the explanation of SCIPstartDive()
- */
-JNIEXPORT
-jboolean JNISCIP(solveDiveLP)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jint                  itlim               /**< maximal number of LP iterations to perform, or -1 for no limit */
-   )
-{
-   SCIP* scip;
-   SCIP_Bool lperror;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   JNISCIP_CALL( SCIPsolveDiveLP(scip, (int)itlim, &lperror) );
-
-   return (jboolean) lperror;
-}
-
 /** returns the number of the node in the current branch and bound run, where the last LP was solved in diving
  *  or probing mode
  *
@@ -17305,69 +17287,6 @@ jboolean JNISCIP(propagateProbingImplications)(
    JNISCIP_CALL( SCIPpropagateProbingImplications(scip, &cutoff) );
 
    return (jboolean) cutoff;
-}
-
-/** solves the LP at the current probing node (cannot be applied at preprocessing stage);
- *  no separation or pricing is applied
- *
- *  The LP has to be constructed before (you can use SCIPisLPConstructed() or SCIPconstructLP()).
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- */
-JNIEXPORT
-jboolean JNISCIP(solveProbingLP)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jint                  itlim               /**< maximal number of LP iterations to perform, or -1 for no limit */
-   )
-{
-   SCIP* scip;
-   SCIP_Bool lperror;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   JNISCIP_CALL( SCIPsolveProbingLP(scip, (int)itlim, &lperror) );
-
-   return (jboolean) lperror;
-}
-
-/** solves the LP at the current probing node (cannot be applied at preprocessing stage) and applies pricing
- *  until the LP is solved to optimality; no separation is applied
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- */
-JNIEXPORT
-jboolean JNISCIP(solveProbingLPWithPricing)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jboolean              pretendroot,        /**< should the pricers be called as if we were at the root node? */
-   jboolean              displayinfo,        /**< should info lines be displayed after each pricing round? */
-   jint                  maxpricerounds      /**< maximal number of pricing rounds (-1: no limit);
-                                              *   a finite limit means that the LP might not be solved to optimality! */
-   )
-{
-   SCIP* scip;
-   SCIP_Bool lperror;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   JNISCIP_CALL( SCIPsolveProbingLPWithPricing(scip, (SCIP_Bool)pretendroot, (SCIP_Bool)displayinfo, (int)maxpricerounds, &lperror) );
-
-   return (jboolean) lperror;
 }
 
 /** gets branching candidates for LP solution branching (fractional variables) along with solution values,
@@ -22979,7 +22898,8 @@ void JNISCIP(printDisplayLine)(
    jobject               jobj,               /**< JNI class pointer */
    jlong                 jscip,              /**< SCIP data structure */
    jlong                 file,               /**< output file (or NULL for standard output) */
-   jint                  verblevel           /**< minimal verbosity level to actually display the information line */
+   jint                  verblevel,          /**< minimal verbosity level to actually display the information line */
+   jboolean              endline             /**< should the line be terminated with a newline symbol? */
    )
 {
    SCIP* scip;
@@ -22988,7 +22908,7 @@ void JNISCIP(printDisplayLine)(
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   JNISCIP_CALL( SCIPprintDisplayLine(scip, (FILE*)(size_t)file, (SCIP_VERBLEVEL)verblevel) );
+   JNISCIP_CALL( SCIPprintDisplayLine(scip, (FILE*)(size_t)file, (SCIP_VERBLEVEL)verblevel, (SCIP_Bool)endline) );
 }
 
 /** gets total number of implications between variables that are stored in the implication graph
@@ -24907,27 +24827,29 @@ jlong JNISCIP(reallocBufferSize)(
 }
 
 /** frees a memory buffer */
-// JNIEXPORT
-// void JNISCIP(freeBufferSize)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jscip,              /**< SCIP data structure */
-//    jlong                 jptr,               /**< pointer to the buffer */
-//    jint                  size                /**< used to get a safer define for SCIPfreeBuffer() and SCIPfreeBufferArray() */
-//    )
-// {
-//    SCIP* scip;
-//    void* ptr;
+#if 0
+JNIEXPORT
+void JNISCIP(freeBufferSize)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jlong                 jptr,               /**< pointer to the buffer */
+   jint                  size                /**< used to get a safer define for SCIPfreeBuffer() and SCIPfreeBufferArray() */
+   )
+{
+   SCIP* scip;
+   void* ptr;
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
-//    ptr = (void*) (size_t) jptr;
-//    assert(ptr != NULL);
+   ptr = (void*) (size_t) jptr;
+   assert(ptr != NULL);
 
-//    SCIPfreeBufferSize(scip, &ptr, (int)size);
-// }
+   SCIPfreeBufferSize(scip, &ptr, (int)size);
+}
+#endif
 
 /** prints output about used memory */
 JNIEXPORT

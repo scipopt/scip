@@ -467,45 +467,6 @@ jlong JNISCIPCONSKNAPSACK(getRowKnapsack)(
    return (jlong)(size_t)row;
 }
 
-/** separates different classes of valid inequalities for the 0-1 knapsack problem */
-JNIEXPORT
-jint JNISCIPCONSKNAPSACK(separateKnapsackCuts)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jlong                 cons,               /**< originating constraint of the knapsack problem, or NULL */
-   jlong                 sepa,               /**< originating separator of the knapsack problem, or NULL */
-   jlongArray            jvars,              /**< variables in knapsack constraint */
-   jint                  nvars,              /**< number of variables in knapsack constraint */
-   jlongArray            jweights,           /**< weights of variables in knapsack constraint */
-   jlong                 capacity,           /**< capacity of knapsack */
-   jlong                 sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
-   jboolean              usegubs             /**< should GUB information be used for separation? */
-   )
-{
-   SCIP* scip;
-   SCIP_VAR** vars;
-   SCIP_Longint* weights;
-   int ncuts;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &weights, (int)nvars) );
-
-   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)(*vars));
-   (*env)->GetLongArrayRegion(env, jweights, 0, (int)nvars, (jlong*)weights);
-
-   JNISCIP_CALL( SCIPseparateKnapsackCuts(scip, (SCIP_CONS*)(size_t)cons, (SCIP_SEPA*)(size_t)sepa, vars, (int)nvars, weights, (SCIP_Longint)capacity, (SCIP_SOL*)(size_t)sol, (SCIP_Bool)usegubs, &ncuts) );
-
-   SCIPfreeBufferArray(scip, &weights);
-   SCIPfreeBufferArray(scip, &vars);
-
-   return (jint) ncuts;
-}
-
 /** separates lifted cover inequalities for given knapsack problem */
 JNIEXPORT
 jint JNISCIPCONSKNAPSACK(separateKnapsackCover)(
