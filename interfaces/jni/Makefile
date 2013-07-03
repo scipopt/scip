@@ -405,7 +405,8 @@ JNILIBSHORTLINK =	$(LIBDIR)/lib$(JNILIBSHORTNAME).$(LIBEXT)
 JNICLASSES	=	$(addprefix $(CLASSDIR)/$(JNIPACKAGEDIR)/jni/,$(JNILIBOBJ:.java=.class))
 JNICLASSES	+=	$(addprefix $(CLASSDIR)/$(JNIPACKAGEDIR)/jni/,$(JNIENUMS:.java=.class))
 
-JARCLASSES	=	$(JNICLASSES)
+JARCLASSES	=	$(addprefix -C $(CLASSDIR) $(JNIPACKAGEDIR)/jni/,$(JNILIBOBJ:.java=.class))
+JARCLASSES	+=	$(addprefix -C $(CLASSDIR) $(JNIPACKAGEDIR)/jni/,$(JNIENUMS:.java=.class))
 JARCLASSES	+=	$(addprefix -C $(CLASSDIR) $(JNIPACKAGEDIR)/,$(NATIVELIBOBJ:.java=.class))
 
 JNILIBRARYLOADER =	$(JAVASRCDIR)/$(JNIPACKAGEDIR)/jni/JniLibraryLoader.java
