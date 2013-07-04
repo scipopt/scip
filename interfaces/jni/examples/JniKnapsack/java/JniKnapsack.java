@@ -113,6 +113,15 @@ public class JniKnapsack {
 	 env.addCons(scip, consKnapsack);
 	 env.addCons(scip, consLinear);
 
+
+	 int nvals =  envConsLinear.getNVarsLinear(scip, consLinear);
+	 double[] vals = envConsLinear.getValsLinear(scip, consLinear);
+
+	 for( int i = 0; i < nvals; ++i )
+	 {
+	    System.out.println("*** " + vals[i]);
+	 }
+
          /* release constraints */
 	 env.releaseCons(scip, consKnapsack);
 	 env.releaseCons(scip, consLinear);
