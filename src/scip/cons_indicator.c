@@ -7022,8 +7022,6 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
       }
       else
       {
-         SCIP_Real obj;
-
          assert( SCIPisFeasGE(scip, val * ((SCIP_Real) sigma), 0.0) );
 
          /* the original constraint is satisfied - we can set the slack variable to 0 (slackvar
@@ -7034,41 +7032,43 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
             *changed = TRUE;
          }
 
-         obj = varGetObjDelta(binvar);
-
-         /* check objective for possibly setting binary variable */
-         if ( obj <= 0 )
+         /* check whether binary variable is fixed or its negated variable is fixed */
+         if ( SCIPvarGetStatus(binvar) != SCIP_VARSTATUS_FIXED &&
+            ( SCIPvarGetStatus(binvar) != SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(SCIPvarGetNegationVar(binvar)) != SCIP_VARSTATUS_FIXED ) )
          {
-            /* setting variable to 1 does not increase objective - check whether we can set it to 1 */
-            if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
-            {
-               assert(  SCIPvarGetLbLocal(binvar) < 0.5 );
+            SCIP_Real obj;
+            obj = varGetObjDelta(binvar);
 
-               /* check whether variable only occurs in the current constraint and variable is not fixed to 0 */
-               if ( SCIPvarGetNLocksUp(binvar) <= 1 && SCIPvarGetUbLocal(binvar) > 0.5 )
+            /* check objective for possibly setting binary variable */
+            if ( obj <= 0 )
+            {
+               /* setting variable to 1 does not increase objective - check whether we can set it to 1 */
+               if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
                {
-                  SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
-                  *changed = TRUE;
+                  /* check whether variable only occurs in the current constraint */
+                  if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+                  {
+                     SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
+                     *changed = TRUE;
+                     /* make sure that the other case does not occur if obj = 0: prefer variables set to 1 */
+                     obj = -1.0;
+                  }
+               }
+               else
+               {
                   /* make sure that the other case does not occur if obj = 0: prefer variables set to 1 */
                   obj = -1.0;
                }
             }
-            else
+            if ( obj >= 0 )
             {
-               /* make sure that the other case does not occur if obj = 0: prefer variables set to 1 */
-               obj = -1.0;
-            }
-         }
-         if ( obj >= 0 )
-         {
-            /* setting variable to 0 does not inrease objective -> check whether variable only occurs in the current constraint
-             * note: binary variables are only locked up */
-            if ( SCIPvarGetNLocksDown(binvar) <= 0 && SCIPvarGetUbLocal(binvar) > 0.5 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
-            {
-               assert( SCIPvarGetUbLocal(binvar) > 0.5 );
-
-               SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
-               *changed = TRUE;
+               /* setting variable to 0 does not inrease objective -> check whether variable only occurs in the current constraint
+                * note: binary variables are only locked up */
+               if ( SCIPvarGetNLocksDown(binvar) <= 0 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+               {
+                  SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
+                  *changed = TRUE;
+               }
             }
          }
       }
