@@ -71,7 +71,7 @@ JNIPACKAGEJAR	=	$(LIBDIR)/$(JNILIBSHORTNAME).jar
 
 JNILIBNAME	=	$(JNILIBSHORTNAME)-$(VERSION)
 
-JNILIBOBJ	=	JniLibraryLoader.java \
+JNILIBOBJ	=	JniScipLibraryLoader.java \
 			JniScipBranchAllfullstrong.java \
 			JniScipBranchFullstrong.java \
 			JniScipBranchInference.java \
@@ -409,7 +409,7 @@ JARCLASSES	=	$(addprefix -C $(CLASSDIR) $(JNIPACKAGEDIR)/jni/,$(JNILIBOBJ:.java=
 JARCLASSES	+=	$(addprefix -C $(CLASSDIR) $(JNIPACKAGEDIR)/jni/,$(JNIENUMS:.java=.class))
 JARCLASSES	+=	$(addprefix -C $(CLASSDIR) $(JNIPACKAGEDIR)/,$(NATIVELIBOBJ:.java=.class))
 
-JNILIBRARYLOADER =	$(JAVASRCDIR)/$(JNIPACKAGEDIR)/jni/JniLibraryLoader.java
+JNILIBRARYLOADER =	$(JAVASRCDIR)/$(JNIPACKAGEDIR)/jni/JniScipLibraryLoader.java
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -496,13 +496,13 @@ $(JNILIBRARYLOADER):
 		@echo "package de.zib.jscip.nativ.jni;"            > $(JNILIBRARYLOADER)
 		@echo ""                                           >> $(JNILIBRARYLOADER)
 		@echo "/** AUTOMATED GENERATED FILE */"            >> $(JNILIBRARYLOADER)
-		@echo "public class JniLibraryLoader {"            >> $(JNILIBRARYLOADER)
+		@echo "public class JniScipLibraryLoader {"        >> $(JNILIBRARYLOADER)
 		@echo ""                                           >> $(JNILIBRARYLOADER)
 		@echo "    public static void loadLibrary() {"     >> $(JNILIBRARYLOADER)
 		@echo "        System.loadLibrary(\"$(JNILIB)\");" >> $(JNILIBRARYLOADER)
 		@echo "    }"                                      >> $(JNILIBRARYLOADER)
 		@echo ""                                           >> $(JNILIBRARYLOADER)
-		@echo "    private JniLibraryLoader() {"           >> $(JNILIBRARYLOADER)
+		@echo "    private JniScipLibraryLoader() {"       >> $(JNILIBRARYLOADER)
 		@echo ""                                           >> $(JNILIBRARYLOADER)
 		@echo "    }"                                      >> $(JNILIBRARYLOADER)
 		@echo "}"                                          >> $(JNILIBRARYLOADER)
