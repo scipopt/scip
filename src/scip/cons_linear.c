@@ -6545,8 +6545,6 @@ SCIP_RETCODE extractCliques(
                   }
                }
             }
-
-            oldnchgbds = *nchgbds;
          }
 
          /* case d) */
@@ -8955,15 +8953,15 @@ SCIP_RETCODE rangedRowSimplify(
    {
       if( SCIPvarIsBinary(vars[v]) )
       {
-         if( minval > vals[v] || minval == SCIP_INVALID )
+         if( minval > vals[v] || minval == SCIP_INVALID ) /*lint !e777*/
          {
             secondminval = minval;
             minval = vals[v];
          }
-         else if( secondminval > vals[v] || secondminval == SCIP_INVALID )
+         else if( secondminval > vals[v] || secondminval == SCIP_INVALID ) /*lint !e777*/
             secondminval = vals[v];
 
-         if( maxval < vals[v] || maxval == -SCIP_INVALID )
+         if( maxval < vals[v] || maxval == -SCIP_INVALID ) /*lint !e777*/
             maxval = vals[v];
       }
       else

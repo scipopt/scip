@@ -4094,6 +4094,10 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
    }
 
    success = FALSE;
+   cutcoeff[0] = SCIP_INVALID;
+   cutcoeff[1] = SCIP_INVALID;
+   cutcoeff[2] = SCIP_INVALID;
+   cutcoeff[3] = SCIP_INVALID;
 
    /* (xval,yval) lie on a boundary */
    if( SCIPisEQ(scip,xyref[0],xlb) || SCIPisEQ(scip,xyref[0],xub) || SCIPisEQ(scip,xyref[1],ylb) || SCIPisEQ(scip,xyref[1],yub) )
@@ -4152,6 +4156,10 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
     * -> alpha/gamma * x + beta/gamma * y - delta/gamma + c*z <= f(x,y) + c*z <= rhs
     */
 
+   assert(cutcoeff[0] != SCIP_INVALID); /*lint !e777*/
+   assert(cutcoeff[1] != SCIP_INVALID); /*lint !e777*/
+   assert(cutcoeff[2] != SCIP_INVALID); /*lint !e777*/
+   assert(cutcoeff[3] != SCIP_INVALID); /*lint !e777*/
    assert(finite(cutcoeff[0]));
    assert(finite(cutcoeff[1]));
    assert(finite(cutcoeff[2]));

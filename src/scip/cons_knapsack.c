@@ -866,7 +866,7 @@ SCIP_RETCODE checkCons(
       sum = 0.0;
       integralsum = 0;
       /* we perform an more exact comparison if the capacity does not exceed the huge value */
-      if( SCIPisHugeValue(scip, consdata->capacity) )
+      if( SCIPisHugeValue(scip, (SCIP_Real) consdata->capacity) )
       {
          ishuge = TRUE;
 
@@ -888,7 +888,7 @@ SCIP_RETCODE checkCons(
          }
       }
 
-       if( (!ishuge && integralsum > consdata->capacity) || (ishuge && SCIPisFeasGT(scip, sum, (SCIP_Real)consdata->capacity)) )
+      if( (!ishuge && integralsum > consdata->capacity) || (ishuge && SCIPisFeasGT(scip, sum, (SCIP_Real)consdata->capacity)) )
       {
          *violated = TRUE;
 
@@ -7853,7 +7853,6 @@ SCIP_RETCODE detectRedundantVars(
    weights = consdata->weights;
    nvars = consdata->nvars;
    capacity = consdata->capacity;
-   v = 0;
    sum = 0;
 
    /* search for maximal fitting items */
@@ -8195,7 +8194,8 @@ SCIP_RETCODE dualWeightsTightening(
       /* all small weights were needed to exceed the capacity */
       if( v == nvars )
       {
-         SCIP_Longint newweight = nvars - vbig - 1;
+         SCIP_Longint newweight = nvars - vbig - 1; /*lint !e776*/
+         assert(newweight > 0);
 
          /* reduce big weights */
          for( v = 0; v < vbig; ++v )
@@ -8212,7 +8212,7 @@ SCIP_RETCODE dualWeightsTightening(
          {
             if( weights[v] > 1 )
             {
-               consdataChgWeight(consdata, v, 1);
+               consdataChgWeight(consdata, v, 1LL);
                ++(*nchgcoefs);
             }
          }
@@ -8269,7 +8269,7 @@ SCIP_RETCODE dualWeightsTightening(
             {
                if( weights[v] > 1 )
                {
-                  consdataChgWeight(consdata, v, 1);
+                  consdataChgWeight(consdata, v, 1LL);
                   ++(*nchgcoefs);
                }
             }
@@ -8304,9 +8304,9 @@ SCIP_RETCODE dualWeightsTightening(
        * 9x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 <= 9
        */
 
-      if( weights[vbig - 1] > nvars - vbig || weights[vbig] > 1 )
+      if( weights[vbig - 1] > nvars - vbig || weights[vbig] > 1 ) /*lint !e776*/
       {
-         SCIP_Longint newweight = nvars - vbig;
+         SCIP_Longint newweight = nvars - vbig; /*lint !e776*/
 #ifndef NDEBUG
          SCIP_Longint resweightsum = consdata->weightsum;
 
@@ -8315,6 +8315,7 @@ SCIP_RETCODE dualWeightsTightening(
 
          assert(exceedsum == resweightsum);
 #endif
+         assert(newweight > 0);
 
          /* reduce big weights */
          for( v = 0; v < vbig; ++v )
@@ -8331,7 +8332,7 @@ SCIP_RETCODE dualWeightsTightening(
          {
             if( weights[v] > 1 )
             {
-               consdataChgWeight(consdata, v, 1);
+               consdataChgWeight(consdata, v, 1LL);
                ++(*nchgcoefs);
             }
          }
@@ -8412,23 +8413,23 @@ SCIP_RETCODE dualWeightsTightening(
             {
                if( weights[w] > 2 )
                {
-                  consdataChgWeight(consdata, w, 2);
+                  consdataChgWeight(consdata, w, 2LL);
                   ++ncoefchg;
                }
                else
                {
                   assert(weights[0] == 2);
                   assert(weights[v - 1] == 2);
-                  w = v;
+                  break;
                }
             }
 
             /* reduce all smaller weights */
-            for( ; w < nvars; ++w )
+            for( w = v; w < nvars; ++w )
             {
                if( weights[w] > 1 )
                {
-                  consdataChgWeight(consdata, w, 1);
+                  consdataChgWeight(consdata, w, 1LL);
                   ++ncoefchg;
                }
             }
@@ -8437,7 +8438,7 @@ SCIP_RETCODE dualWeightsTightening(
             (*nchgcoefs) += ncoefchg;
 
             /* correct the capacity */
-            consdata->capacity = (-2 + v * 2 + nvars - v);
+            consdata->capacity = (-2 + v * 2 + nvars - v); /*lint !e647*/
             assert(consdata->capacity > 0);
             assert(weights[0] <= consdata->capacity);
             assert(consdata->weightsum > consdata->capacity);
@@ -8578,13 +8579,11 @@ SCIP_RETCODE prepareCons(
       sortItems(consdata);
       assert(vars == consdata->vars);
       assert(weights == consdata->weights);
-
-      nvars = consdata->nvars;
    }
    assert(consdata->sorted);
    assert(weights[0] <= capacity);
 
-   if( !SCIPisHugeValue(scip, capacity) && consdata->weightsum <= capacity )
+   if( !SCIPisHugeValue(scip, (SCIP_Real) capacity) && consdata->weightsum <= capacity )
    {
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
@@ -8672,7 +8671,7 @@ SCIP_RETCODE simplifyInequalities(
    if( SCIPconsIsDeleted(cons) )
       return SCIP_OKAY;
 
-   if( !SCIPisHugeValue(scip, consdata->capacity) )
+   if( !SCIPisHugeValue(scip, (SCIP_Real) consdata->capacity) )
    {
       /* 1. dual weights tightening */
       SCIP_CALL( dualWeightsTightening(scip, cons, ndelconss, nchgcoefs, nchgsides, naddconss) );
@@ -9850,7 +9849,7 @@ SCIP_RETCODE tightenWeights(
       ++pos;
 
    /* apply rule (2) (don't apply, if the knapsack has too many items for applying this costly method) */
-   if( conshdlrdata->disaggregation && consdata->nvars - pos <= MAX_USECLIQUES_SIZE && consdata->nvars >= 2 && pos > 0 && consdata->nvars - pos <= consdata->capacity && consdata->weights[pos - 1] == consdata->capacity && (pos == consdata->nvars || consdata->weights[pos] == 1) )
+   if( conshdlrdata->disaggregation && consdata->nvars - pos <= MAX_USECLIQUES_SIZE && consdata->nvars >= 2 && pos > 0 && consdata->nvars - pos <= consdata->capacity && consdata->weights[pos - 1] == consdata->capacity && (pos == consdata->nvars || consdata->weights[pos] == 1) ) /*lint !e776*/
    {
       SCIP_VAR** clqvars;
       SCIP_CONS* cliquecons;
