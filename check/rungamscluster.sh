@@ -70,6 +70,12 @@ if test "$PASSSTARTSOL" = 1 ; then
   done
 fi
 
+if test "$EXAMINER" = 1 ; then
+  ACTSOLVER=EXAMINER2
+else
+  ACTSOLVER=$SOLVER
+fi
+
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
 echo @01 $FILENAME ===========      >> $OUTFILE 
@@ -81,7 +87,7 @@ echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
 
 # run GAMS and check return code
-$GAMSBIN $GMSFILE $GAMSOPTS output=$LSTFILE inputdir=$INPUTDIR $MODTYPE=$SOLVER $GDXFILE traceopt=3 trace=$TRCFILE >> $OUTFILE 2>>$ERRFILE
+$GAMSBIN $GMSFILE $GAMSOPTS output=$LSTFILE inputdir=$INPUTDIR $MODTYPE=$ACTSOLVER $GDXFILE traceopt=3 trace=$TRCFILE >> $OUTFILE 2>>$ERRFILE
 gamsrc=$?
 if test $gamsrc != 0
 then
