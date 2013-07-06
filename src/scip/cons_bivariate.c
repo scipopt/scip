@@ -1220,6 +1220,31 @@ SCIP_RETCODE freeSepaData(
    return SCIP_OKAY;
 }
 
+/** perturbs a value w.r.t. bounds */
+static
+void perturb(
+   SCIP_Real*            val,                /**< value to perturb on input; perturbed value on output */
+   SCIP_Real             lb,                 /**< lower bound */
+   SCIP_Real             ub,                 /**< upper bound */
+   SCIP_Real             amount              /**< relative amount of perturbation */
+   )
+{
+   SCIP_Real range;
+   SCIP_Real mid;
+
+   assert(val != NULL);
+
+   range = ub - lb;
+   mid = 0.5 * (lb + ub);
+
+   if( range < 1e-3 )
+      *val = mid;
+   else if( *val < mid )
+      *val += MIN(1.0, amount * range);
+   else
+      *val -= MIN(1.0, amount * range);
+}
+
 /** solves an equation f'(s) = constant for a univariate convex or concave function f with respect to bounds on s
  * if there is no s between the bounds such that f'(s) = constant, then it returns the closest bound (and still claims success)
  */
@@ -1264,12 +1289,7 @@ SCIP_RETCODE solveDerivativeEquation(
     * we don't want to start at a bound, because we would not recognize if hessian is 0.0 then
     */
    s = MIN(MAX(0.0, lb), ub);
-   if( lb >= 0.0 )
-      s = lb + 0.1 * (SCIPisInfinity(scip,  ub) ?  lb : (ub - lb));
-   else if( ub <= 0.0 )
-      s = ub - 0.1 * (SCIPisInfinity(scip, -lb) ? -ub : (ub - lb));
-   else
-      s = 0.0;
+   perturb(&s, lb, ub, 0.1);
 
    while( ++iter < NEWTONMAXITER )
    {
@@ -1281,10 +1301,8 @@ SCIP_RETCODE solveDerivativeEquation(
           SCIP_Real smod;
           SCIP_Real smodval;
 
-          if( s > 0.5 * (lb + ub) )
-             smod = s - 0.02 * (ub - lb);
-          else
-             smod = s + 0.02 * (ub - lb);
+          smod = s;
+          perturb(&smod, lb, ub, 0.01);
           SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, &smod, TRUE, &smodval, &grad) );
 
           assert(finite(grad));
@@ -1305,10 +1323,8 @@ SCIP_RETCODE solveDerivativeEquation(
           SCIP_Real smodval;
 
           /* if f cannot be two times differentiated at s, take the Hessian from another point close by */
-          if( s > 0.5 * (lb + ub) )
-             smod = s - 0.02 * (ub - lb);
-          else
-             smod = s + 0.02 * (ub - lb);
+          smod = s;
+          perturb(&smod, lb, ub, 0.01);
           SCIP_CALL( SCIPexprintHessianDense(exprinterpreter, f, &smod, TRUE, &smodval, &hess) );
 
           assert(finite(hess));
@@ -1363,10 +1379,8 @@ SCIP_RETCODE generateLinearizationCut(
    SCIP_ROW**            row                 /**< storage for cut */
    )
 {
-#ifndef NDEBUG
    SCIP_VAR*      x;
    SCIP_VAR*      y;
-#endif
    SCIP_CONSDATA* consdata;
    char           rowname[SCIP_MAXSTRLEN];
    SCIP_Real      fval;
@@ -1388,10 +1402,8 @@ SCIP_RETCODE generateLinearizationCut(
       SCIP_CALL( SCIPexprintCompile(exprinterpreter, consdata->f) );
    }
 
-#ifndef NDEBUG
    x = SCIPexprtreeGetVars(consdata->f)[0];
    y = SCIPexprtreeGetVars(consdata->f)[1];
-#endif
 
    assert(consdata->convextype == SCIP_BIVAR_ALLCONVEX ||
       (consdata->convextype == SCIP_BIVAR_1CONVEX_INDEFINITE && (SCIPisEQ(scip, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x)) || SCIPisEQ(scip, SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y)))) ||
@@ -1399,6 +1411,21 @@ SCIP_RETCODE generateLinearizationCut(
 
    /* compute f(x,y) and gradient of f in (x, y) */
    SCIP_CALL( SCIPexprintGrad(exprinterpreter, consdata->f, x0y0, newxy, &fval, fgrad) );
+
+   if( !finite(fval) || !finite(fgrad[0]) || !finite(fgrad[1]) )
+   {
+      perturb(&x0y0[0], SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), 0.001);
+      perturb(&x0y0[1], SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y), 0.001);
+
+      SCIP_CALL( SCIPexprintGrad(exprinterpreter, consdata->f, x0y0, TRUE, &fval, fgrad) );
+
+      if( !finite(fval) || !finite(fgrad[0]) || !finite(fgrad[1]) )
+      {
+         SCIPdebugMessage("could not evaluate f at given reference point and perturbed one");
+         *row = NULL;
+         return SCIP_OKAY;
+      }
+   }
 
    rhs = consdata->rhs - fval + fgrad[0] * x0y0[0] + fgrad[1] * x0y0[1];
 
@@ -1946,11 +1973,20 @@ SCIP_RETCODE generateUnderestimatorParallelYFacets(
          SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &frval, grad) );
       }
    }
-   assert(finite(grad[0]));
 
    /* compute vred(s) = t * f(rval, ylb) + (1-t) * f(s, yub) */
    /* SCIP_CALL( SCIPexprtreeEval(vredtree, &sval, &vredval) ); */
    *convenvvalue = t * frval + (1.0 - t) * fsval;
+
+   SCIPdebugMessage("Parallel: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
+   SCIPdebugMessage("Parallel: r=%g in [%g,%g], s=%g in [%g,%g], f(r,ylb)=%g, f(xlb,s)=%g\n",rval,xlb,xub,sval,ylb,yub,frval,fsval);
+   SCIPdebugMessage("(r,ylb)=(%g,%g), (s,yub)=(%g,%g), vredval=%g\n",rval,ylb,sval,yub,*convenvvalue);
+
+   if( !finite(grad[0]) )
+   {
+      SCIPdebugMessage("f not differentiable in (x0,y0) w.r.t. x\n");
+      return SCIP_OKAY;
+   }
 
    /* compute cut coefficients */
    cutcoeff[0]   = (yub - ylb) * grad[0];
@@ -1958,9 +1994,6 @@ SCIP_RETCODE generateUnderestimatorParallelYFacets(
    cutcoeff[2]   = yub - ylb;
    cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * yval - cutcoeff[2] * *convenvvalue;
 
-   SCIPdebugMessage("Parallel: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-   SCIPdebugMessage("Parallel: r=%g in [%g,%g], s=%g in [%g,%g], f(r,ylb)=%g, f(xlb,s)=%g\n",rval,xlb,xub,sval,ylb,yub,frval,fsval);
-   SCIPdebugMessage("(r,ylb)=(%g,%g), (s,yub)=(%g,%g), vredval=%g\n",rval,ylb,sval,yub,*convenvvalue);
    SCIPdebugMessage("Parallel: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[2]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
 
    *success = TRUE;
@@ -2876,8 +2909,16 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
 
       if( !finite(fval) || !finite(grad[0]) )
       {
-         SCIPdebugMessage("cannot evaluate function or derivative in (xval,ylb)\n");
-         return SCIP_OKAY;
+         perturb(&xval, xlb, xub, 0.001);
+         xy[0] = xval;
+
+         SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, xy, TRUE, &fval, grad) );
+
+         if( !finite(fval) || !finite(grad[0]) )
+         {
+            SCIPdebugMessage("cannot evaluate function or derivative in (xval,ylb), also after perturbation\n");
+            return SCIP_OKAY;
+         }
       }
 
       /* linearization is f(xval,ylb) + df/dx(xval,ylb) * (x - xval) <= f(x,y) */
@@ -2913,25 +2954,27 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
 
       if( !finite(gradylb[0]) || !finite(gradyub[0]) || !finite(fvalylb) || !finite(fvalyub) )
       {
-         SCIPdebugMessage("cannot evaluate function or derivative in (xval,ylb) or (xval,ub)\n");
+         /* move xval inside domain and continue below, hope this will work better */
+         perturb(&xval, xlb, xub, 0.001);
+      }
+      else
+      {
+         /* setup cut coefficients */
+         if( SCIPisEQ(scip, xlb, xval) )
+            cutcoeff[0]   = (yub - ylb) * MIN(gradylb[0], gradyub[0]);/* coefficient of x */
+         else
+            cutcoeff[0]   = (yub - ylb) * MAX(gradylb[0], gradyub[0]);/* coefficient of x */
+         cutcoeff[1]   = fvalyub - fvalylb;                           /* coefficient of y */
+         cutcoeff[2]   = yub - ylb;                                   /* coefficient of f(x,y) */
+         cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * ylb - cutcoeff[2] * fvalylb;   /* constant */
+         *convenvvalue = fvalylb;
+
+         SCIPdebugMessage("alpha: %g, beta: %g, gamma: %g, delta: %g\n",
+            cutcoeff[0]/cutcoeff[2], cutcoeff[1]/cutcoeff[2], cutcoeff[2]/cutcoeff[2], cutcoeff[3]/cutcoeff[2]);
+
+         *success = TRUE;
          return SCIP_OKAY;
       }
-
-      /* setup cut coefficients */
-      if( SCIPisEQ(scip, xlb, xval) )
-         cutcoeff[0]   = (yub - ylb) * MIN(gradylb[0], gradyub[0]);/* coefficient of x */
-      else
-         cutcoeff[0]   = (yub - ylb) * MAX(gradylb[0], gradyub[0]);/* coefficient of x */
-      cutcoeff[1]   = fvalyub - fvalylb;                           /* coefficient of y */
-      cutcoeff[2]   = yub - ylb;                                   /* coefficient of f(x,y) */
-      cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * ylb - cutcoeff[2] * fvalylb;   /* constant */
-      *convenvvalue = fvalylb;
-
-      SCIPdebugMessage("alpha: %g, beta: %g, gamma: %g, delta: %g\n",
-         cutcoeff[0]/cutcoeff[2], cutcoeff[1]/cutcoeff[2], cutcoeff[2]/cutcoeff[2], cutcoeff[3]/cutcoeff[2]);
-
-      *success = TRUE;
-      return SCIP_OKAY;
    }
 
    if( SCIPisEQ(scip, ylb, yval) )
@@ -2955,64 +2998,71 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
 
       if( !finite(fval) || !finite(grad[0]) )
       {
-         SCIPdebugMessage("cannot evaluate function or derivative in (xval,ylb)\n");
-         return SCIP_OKAY;
+         /* move yval inside domain and continue below, hope this will work better */
+         perturb(&yval, ylb, yub, 0.001);
       }
-
-      /* setup f(x,yub) */
-      SCIPexprtreeSetParamVal(f_yfixed, 0, yub);
-      SCIP_CALL( SCIPexprintNewParametrization(exprinterpreter, f_yfixed) );
-
-      SCIPdebugMessage("f(x,yub) = ");
-      SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f_yfixed, SCIPgetMessagehdlr(scip), NULL) ) );
-      SCIPdebugPrintf("\n");
-
-      /* find xtilde in [xlb, xub] such that f'(xtilde,yub) = f'(xval,ylb) */
-      SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, f_yfixed, grad[0], xlb, xub, &xtilde, success) );
-
-      if( !*success )
+      else
       {
-         SCIP_Real fxlb;
-         SCIP_Real fxub;
+         /* setup f(x,yub) */
+         SCIPexprtreeSetParamVal(f_yfixed, 0, yub);
+         SCIP_CALL( SCIPexprintNewParametrization(exprinterpreter, f_yfixed) );
 
-         /* if we could not find an xtilde such that f'(xtilde,yub) = f'(xval,ylb), then probably because f'(x,yub) is constant
-          * in this case, choose xtilde from {xlb, xub} such that it maximizes f'(xtilde, yub) - grad[0]*xtilde
-          */
-         SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
-         SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
+         SCIPdebugMessage("f(x,yub) = ");
+         SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f_yfixed, SCIPgetMessagehdlr(scip), NULL) ) );
+         SCIPdebugPrintf("\n");
 
-         SCIPdebugMessage("couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
-            xlb, ylb, grad[0], xlb, fxlb - grad[0] * xlb,
-            xub, ylb, grad[0], xub, fxub - grad[0] * xub);
+         /* find xtilde in [xlb, xub] such that f'(xtilde,yub) = f'(xval,ylb) */
+         SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, f_yfixed, grad[0], xlb, xub, &xtilde, success) );
 
-         if( finite(fxlb) && finite(fxub) )
+         if( !*success )
          {
-            if( fxlb - grad[0] * xlb > fxub - grad[0] * xub )
-               xtilde = xlb;
+            SCIP_Real fxlb;
+            SCIP_Real fxub;
+
+            /* if we could not find an xtilde such that f'(xtilde,yub) = f'(xval,ylb), then probably because f'(x,yub) is constant
+             * in this case, choose xtilde from {xlb, xub} such that it maximizes f'(xtilde, yub) - grad[0]*xtilde
+             */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
+
+            SCIPdebugMessage("couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
+               xlb, ylb, grad[0], xlb, fxlb - grad[0] * xlb,
+               xub, ylb, grad[0], xub, fxub - grad[0] * xub);
+
+            if( finite(fxlb) && finite(fxub) )
+            {
+               if( fxlb - grad[0] * xlb > fxub - grad[0] * xub )
+                  xtilde = xlb;
+               else
+                  xtilde = xub;
+               *success = TRUE;
+            }
             else
-               xtilde = xub;
-            *success = TRUE;
+            {
+               /* move yval inside domain and continue below, hope this will work better */
+               perturb(&yval, ylb, yub, 0.001);
+            }
+         }
+
+         if( *success )
+         {
+            /* compute f(xtilde, yub) */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );
+
+            SCIPdebugMessage("xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, yub, ftilde);
+
+            /* setup cut coefficients */
+            cutcoeff[0]   = (yub - ylb) * grad[0];                       /* coefficient of x */
+            cutcoeff[1]   = ftilde - fval - grad[0] * (xtilde - xval);   /* coefficient of y */
+            cutcoeff[2]   = yub - ylb;                                   /* coefficient of f(x,y) */
+            cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * ylb - cutcoeff[2] * fval;   /* constant */
+            *convenvvalue = fval;
+
+            SCIPdebugMessage("alpha: %g, beta: %g, gamma: %g, delta: %g\n", cutcoeff[0], cutcoeff[1], cutcoeff[2], cutcoeff[3]);
+
+            return SCIP_OKAY;
          }
       }
-
-      if( *success )
-      {
-         /* compute f(xtilde, yub) */
-         SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );
-
-         SCIPdebugMessage("xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, yub, ftilde);
-
-         /* setup cut coefficients */
-         cutcoeff[0]   = (yub - ylb) * grad[0];                       /* coefficient of x */
-         cutcoeff[1]   = ftilde - fval - grad[0] * (xtilde - xval);   /* coefficient of y */
-         cutcoeff[2]   = yub - ylb;                                   /* coefficient of f(x,y) */
-         cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * ylb - cutcoeff[2] * fval;   /* constant */
-         *convenvvalue = fval;
-
-         SCIPdebugMessage("alpha: %g, beta: %g, gamma: %g, delta: %g\n", cutcoeff[0], cutcoeff[1], cutcoeff[2], cutcoeff[3]);
-      }
-
-      return SCIP_OKAY;
    }
 
    if( SCIPisEQ(scip, yval, yub) )
@@ -3033,60 +3083,67 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
 
       if( !finite(fval) || !finite(grad[0]) )
       {
-         SCIPdebugMessage("cannot evaluate function or derivative in (xval,yub)\n");
-         return SCIP_OKAY;
+         /* move yval inside domain and continue below, hope this will work better */
+         perturb(&yval, ylb, yub, 0.001);
       }
-
-      /* setup f(x,ylb) */
-      SCIPexprtreeSetParamVal(f_yfixed, 0, ylb);
-      SCIP_CALL( SCIPexprintNewParametrization(exprinterpreter, f_yfixed) );
-
-      /* find xtilde in [xlb, xub] such that f'(x,ylb) = f'(xval,yub) */
-      SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, f_yfixed, grad[0], xlb, xub, &xtilde, success) );
-
-      if( !*success )
+      else
       {
-         SCIP_Real fxlb;
-         SCIP_Real fxub;
+         /* setup f(x,ylb) */
+         SCIPexprtreeSetParamVal(f_yfixed, 0, ylb);
+         SCIP_CALL( SCIPexprintNewParametrization(exprinterpreter, f_yfixed) );
 
-         /* if we could not find an xtilde such that f'(xtilde,ylb) = f'(xval,yub), then probably because f'(x,ylb) is constant
-          * in this case, choose xtilde from {xlb, xub} such that it maximizes f'(xtilde, yub) - grad[0]*xtilde
-          */
-         SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
-         SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
+         /* find xtilde in [xlb, xub] such that f'(x,ylb) = f'(xval,yub) */
+         SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, f_yfixed, grad[0], xlb, xub, &xtilde, success) );
 
-         SCIPdebugMessage("couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
-            xlb, yub, grad[0], xlb, fxlb - grad[0] * xlb,
-            xub, yub, grad[0], xub, fxub - grad[0] * xub);
-
-         if( finite(fxlb) && finite(fxub) )
+         if( !*success )
          {
-            if( fxlb - grad[0] * xlb < fxub - grad[0] * xub )
-               xtilde = xlb;
+            SCIP_Real fxlb;
+            SCIP_Real fxub;
+
+            /* if we could not find an xtilde such that f'(xtilde,ylb) = f'(xval,yub), then probably because f'(x,ylb) is constant
+             * in this case, choose xtilde from {xlb, xub} such that it maximizes f'(xtilde, yub) - grad[0]*xtilde
+             */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
+
+            SCIPdebugMessage("couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
+               xlb, yub, grad[0], xlb, fxlb - grad[0] * xlb,
+               xub, yub, grad[0], xub, fxub - grad[0] * xub);
+
+            if( finite(fxlb) && finite(fxub) )
+            {
+               if( fxlb - grad[0] * xlb < fxub - grad[0] * xub )
+                  xtilde = xlb;
+               else
+                  xtilde = xub;
+               *success = TRUE;
+            }
             else
-               xtilde = xub;
-            *success = TRUE;
+            {
+               /* move yval inside domain and continue below, hope this will work better */
+               perturb(&yval, ylb, yub, 0.001);
+            }
+         }
+
+         if( *success )
+         {
+            /* compute f(xtilde, yub) */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );
+
+            SCIPdebugMessage("xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, ylb, ftilde);
+
+            /* set up cut coefficients */
+            cutcoeff[0]   = (yub - ylb) * grad[0];
+            cutcoeff[1]   = grad[0] * (xtilde - xval) - ftilde + fval;
+            cutcoeff[2]   = yub - ylb;
+            cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * yub - cutcoeff[2] * fval;
+            *convenvvalue = fval;
+
+            SCIPdebugMessage("alpha: %g, beta: %g, gamma: %g, delta: %g\n", cutcoeff[0], cutcoeff[1], cutcoeff[2], cutcoeff[3]);
+
+            return SCIP_OKAY;
          }
       }
-
-      if( *success )
-      {
-         /* compute f(xtilde, yub) */
-         SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );
-
-         SCIPdebugMessage("xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, ylb, ftilde);
-
-         /* set up cut coefficients */
-         cutcoeff[0]   = (yub - ylb) * grad[0];
-         cutcoeff[1]   = grad[0] * (xtilde - xval) - ftilde + fval;
-         cutcoeff[2]   = yub - ylb;
-         cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * yub - cutcoeff[2] * fval;
-         *convenvvalue = fval;
-
-         SCIPdebugMessage("alpha: %g, beta: %g, gamma: %g, delta: %g\n", cutcoeff[0], cutcoeff[1], cutcoeff[2], cutcoeff[3]);
-      }
-
-      return SCIP_OKAY;
    }
 
    {
@@ -3202,10 +3259,20 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
                SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &frval, grad) );
             }
          }
-         assert(finite(grad[0]));
 
          /* compute vred(s) = t * f(rval, ylb) + (1-t) * f(sval, yub) */
          *convenvvalue = t * frval + (1.0 - t) * fsval;
+
+         SCIPdebugMessage("Parallel: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
+         SCIPdebugMessage("Parallel: r=%g s=%g in [%g,%g], y in [%g,%g], f(r,ylb)=%g, f(xlb,s)=%g\n",rval,sval,xlb,xub,ylb,yub,frval,fsval);
+         SCIPdebugMessage("(r,ylb)=(%g,%g), (s,yub)=(%g,%g), vredval=%g\n",rval,ylb,sval,yub,*convenvvalue);
+
+         if( !finite(grad[0]) )
+         {
+            SCIPdebugMessage("f not differentiable at (x0,y0) w.r.t. x\n");
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
 
          /* compute cut coefficients */
          cutcoeff[0]   = (yub - ylb) * grad[0];
@@ -3213,9 +3280,6 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          cutcoeff[2]   = yub - ylb;
          cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * yval - cutcoeff[2] * *convenvvalue;
 
-         SCIPdebugMessage("Parallel: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-         SCIPdebugMessage("Parallel: r=%g s=%g in [%g,%g], y in [%g,%g], f(r,ylb)=%g, f(xlb,s)=%g\n",rval,sval,xlb,xub,ylb,yub,frval,fsval);
-         SCIPdebugMessage("(r,ylb)=(%g,%g), (s,yub)=(%g,%g), vredval=%g\n",rval,ylb,sval,yub,*convenvvalue);
          SCIPdebugMessage("Parallel: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[2]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
       }
    }
@@ -4132,16 +4196,8 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
          /* maybe f is not differentiable on boundary, so move reference point into interior
           * we do this here w.r.t. both coordinates
           */
-
-         if( SCIPisEQ(scip,xyref[0],xlb) )
-            xyref[0] += 0.005 * (xlb + xub);
-         else if( SCIPisEQ(scip,xyref[0],xub) )
-            xyref[0] -= 0.005 * (xlb + xub);
-
-         if( SCIPisEQ(scip,xyref[1],ylb) )
-            xyref[1] += 0.005 * (ylb + yub);
-         else if( SCIPisEQ(scip,xyref[1],yub) )
-            xyref[1] -= 0.005 * (ylb + yub);
+         perturb(&xyref[0], xlb, xub, 0.001);
+         perturb(&xyref[1], ylb, yub, 0.001);
       }
    }
 
