@@ -764,6 +764,10 @@ SCIP_RETCODE computeViolation(
 {  /*lint --e{666}*/
    SCIP_CONSDATA* consdata;
    SCIP_Real xyvals[2];
+   SCIP_Real xlb;
+   SCIP_Real xub;
+   SCIP_Real ylb;
+   SCIP_Real yub;
    SCIP_VAR* x;
    SCIP_VAR* y;
 
@@ -784,6 +788,16 @@ SCIP_RETCODE computeViolation(
    xyvals[0] = SCIPgetSolVal(scip, sol, x);
    xyvals[1] = SCIPgetSolVal(scip, sol, y);
 
+   /* project point onto box if very close to bounds to avoid eval error when function is not defined slightly outside bounds */
+   xlb = SCIPvarGetLbGlobal(x);
+   xub = SCIPvarGetUbGlobal(x);
+   ylb = SCIPvarGetLbGlobal(y);
+   yub = SCIPvarGetUbGlobal(y);
+   if( SCIPisEQ(scip, xyvals[0], xlb) || SCIPisEQ(scip, xyvals[0], xub) )
+      xyvals[0] = MAX(xlb, MIN(xub, xyvals[0]));
+   if( SCIPisEQ(scip, xyvals[1], ylb) || SCIPisEQ(scip, xyvals[1], yub) )
+      xyvals[1] = MAX(ylb, MIN(yub, xyvals[1]));
+
    /* @todo proper handling of variables at infinity
     * for now, just say infeasible and keep fingers crossed
     */
@@ -801,6 +815,13 @@ SCIP_RETCODE computeViolation(
 
    /* compute activity of constraint */
    SCIP_CALL( SCIPexprintEval(exprinterpreter, consdata->f, xyvals, &consdata->activity) );
+
+   /* point is outside the domain of f */
+   if( !finite(consdata->activity) )
+   {
+       consdata->lhsviol = consdata->rhsviol = SCIPinfinity(scip);
+       return SCIP_OKAY;
+   }
 
    if( consdata->z != NULL )
       consdata->activity += consdata->zcoef * SCIPgetSolVal(scip, sol, consdata->z);
