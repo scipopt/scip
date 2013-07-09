@@ -14,6 +14,7 @@ fixed bugs:
 
 data structures
 - new data structure for (circular) queues (SCIP_QUEUE)
+- hash tables will now increase dynamically
 
 features:
 - added new dual presolving for setppc-constraints
