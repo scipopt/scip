@@ -87,6 +87,7 @@
 #include "scip/heur_oneopt.h"
 #include "scip/heur_pscostdiving.h"
 #include "scip/heur_proximity.h"
+#include "scip/heur_randrounding.h"
 #include "scip/heur_rens.h"
 #include "scip/heur_rins.h"
 #include "scip/heur_rootsoldiving.h"
