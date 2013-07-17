@@ -1002,8 +1002,17 @@ SCIP_RETCODE readCoefficients(
       /* check if we reached a new section, that will be only allowed when having no current sign and value and if we
        * are not in the qudratic part
        */
-      if( (!havevalue && !havesign) && !inquadpart && isNewSection(scip, lpinput) )
+      if( (isobjective || (!havevalue && !havesign)) && !inquadpart && isNewSection(scip, lpinput) )
       {
+         if( havesign && !havevalue )
+         {
+            SCIPwarningMessage(scip, "skipped single sign %c without value or variable in objective\n", coefsign == 1 ? '+' : '-');
+         }
+         else if( isobjective && havevalue && !SCIPisZero(scip, coef) )
+         {
+            SCIPwarningMessage(scip, "constant term %+g in objective is skipped\n", coef * coefsign);
+         }
+
          *newsection = TRUE;
          return SCIP_OKAY;
       }
