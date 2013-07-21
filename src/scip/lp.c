@@ -6854,7 +6854,7 @@ int SCIProwGetDiscreteScalarProduct(
        */
       i1 = MAX(row1->nlpcols, row1->nunlinked) - 1;
       i2 = MAX(row2->nlpcols, row2->nunlinked) - 1;
-      prod = 0.0;
+      prod = 0;
 
       /* calculate the scalar product */
       while( i1 >= 0 && i2 >= 0 )
@@ -6868,7 +6868,7 @@ int SCIProwGetDiscreteScalarProduct(
             --i1;
          else
          {
-            prod += row1->vals[i1] * row2->vals[i2];
+            ++prod;
             --i1;
             --i2;
          }
@@ -6910,28 +6910,28 @@ int SCIProwGetDiscreteScalarProduct(
          /* rows have the same linked LP columns */
          if( row1colsidx[ilp1] == row2colsidx[ilp2] )
          {
-            prod += row1->vals[ilp1] * row2->vals[ilp2];
+            ++prod;
             ++ilp1;
             ++ilp2;
          }
          /* LP column of row1 is the same as unlinked column of row2 */
          else if( row1colsidx[ilp1] == row2colsidx[inlp2] )
          {
-            prod += row1->vals[ilp1] * row2->vals[inlp2];
+            ++prod;
             ++ilp1;
             ++inlp2;
          }
          /* unlinked column of row1 is the same as LP column of row2 */
          else if( row1colsidx[inlp1] == row2colsidx[ilp2] )
          {
-            prod += row1->vals[inlp1] * row2->vals[ilp2];
+            ++prod;
             ++inlp1;
             ++ilp2;
          }
          /* two unlinked LP columns are the same */
          else if( row1colsidx[inlp1] == row2colsidx[inlp2] && row1->cols[inlp1]->lppos >= 0 )
          {
-            prod += row1->vals[inlp1] * row2->vals[inlp2];
+            ++prod;
             ++inlp1;
             ++inlp2;
          }
@@ -7025,14 +7025,14 @@ int SCIProwGetDiscreteScalarProduct(
          /* current column in row 1 is the same as the current LP column in row 2 */
          if( row1colsidx[i1] == row2colsidx[ilp2] )
          {
-            prod += row1->vals[i1] * row2->vals[ilp2];
+            ++prod;
             ++i1;
             ++ilp2;
          }
          /* linked or unlinked LP column of row1 is the same as unlinked column of row2 */
          else if( row1colsidx[i1] == row2colsidx[inlp2] && (lpcols || row1->cols[i1]->lppos >= 0) )
          {
-            prod += row1->vals[i1] * row2->vals[inlp2];
+            ++prod;
             ++i1;
             ++inlp2;
          }
@@ -7083,7 +7083,7 @@ int SCIProwGetDiscreteScalarProduct(
             /* linked or unlinked LP column of row1 is the same as linked or unlinked LP column of row2 */
             if( row1colsidx[i1] == row2colsidx[i2] && (lpcols || row1->cols[i1]->lppos >= 0) )
             {
-               prod += row1->vals[i1] * row2->vals[i2];
+               ++prod;
                ++i1;
                ++i2;
             }

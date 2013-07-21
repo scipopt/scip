@@ -2996,9 +2996,16 @@ SCIP_RETCODE reformulate(
                      {
                         SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nmonomials) );
                      }
-                     assert(childidxs[0] < childidxs[1]);
-                     quadelems[nquadelems].idx1 = childidxs[0];
-                     quadelems[nquadelems].idx2 = childidxs[1];
+                     if( childidxs[0] < childidxs[1] )
+                     {
+                        quadelems[nquadelems].idx1 = childidxs[0];
+                        quadelems[nquadelems].idx2 = childidxs[1];
+                     }
+                     else
+                     {
+                        quadelems[nquadelems].idx1 = childidxs[1];
+                        quadelems[nquadelems].idx2 = childidxs[0];
+                     }
                      quadelems[nquadelems].coef = coef;
                      ++nquadelems;
                   }

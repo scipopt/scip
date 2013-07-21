@@ -2429,7 +2429,7 @@ SCIP_RETCODE findDominancePairs(
             if( *nfixings == oldnfixings )
             {
                /* not enough fixings found, decrement number of comparisons */
-               presoldata->numcurrentpairs >>= 1;
+               presoldata->numcurrentpairs >>= 1; /*lint !e702*/
                if( presoldata->numcurrentpairs < presoldata->numminpairs )
                   presoldata->numcurrentpairs = presoldata->numminpairs;
 
@@ -2440,7 +2440,7 @@ SCIP_RETCODE findDominancePairs(
             paircnt = 0;
 
             /* increment number of comparisons */
-            presoldata->numcurrentpairs <<= 1;
+            presoldata->numcurrentpairs <<= 1; /*lint !e701*/
             if( presoldata->numcurrentpairs > presoldata->nummaxpairs )
                presoldata->numcurrentpairs = presoldata->nummaxpairs;
          }

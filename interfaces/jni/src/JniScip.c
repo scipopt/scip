@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -750,9 +750,9 @@ void JNISCIP(copyProb)(
    jlong                 jsourcescip,        /**< source SCIP data structure */
    jlong                 jtargetscip,        /**< target SCIP data structure */
    jlong                 jvarmap,            /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
+					      *   target variables, or NULL */
    jlong                 jconsmap,           /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL  */
+					      *   target constraints, or NULL  */
    jboolean              global,             /**< create a global or a local copy? */
    jstring               jname               /**< problem name of target */
    )
@@ -823,9 +823,9 @@ void JNISCIP(copyVars)(
    jlong                 jsourcescip,        /**< source SCIP data structure */
    jlong                 jtargetscip,        /**< target SCIP data structure */
    jlong                 jvarmap,            /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
+					      *   target variables, or NULL */
    jlong                 jconsmap,           /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL  */
+					      *   target constraints, or NULL  */
    jboolean              global              /**< create a global or a local copy? */
    )
 {
@@ -891,12 +891,12 @@ jboolean JNISCIP(copyConss)(
    jlong                 jsourcescip,        /**< source SCIP data structure */
    jlong                 jtargetscip,        /**< target SCIP data structure */
    jlong                 jvarmap,            /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
+					      *   target variables, or NULL */
    jlong                 jconsmap,           /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL  */
+					      *   target constraints, or NULL  */
    jboolean              global,             /**< create a global or a local copy? */
    jboolean              enablepricing       /**< should pricing be enabled in copied SCIP instance?
-                                              *   If TRUE, the modifiable flag of constraints will be copied. */
+					      *   If TRUE, the modifiable flag of constraints will be copied. */
    )
 {
    SCIP* sourcescip;
@@ -945,9 +945,9 @@ jint JNISCIP(convertCutsToConss)(
    jobject               jobj,               /**< JNI class pointer */
    jlong                 jscip,              /**< SCIP data structure */
    jlong                 jvarmap,            /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
+					      *   target variables, or NULL */
    jlong                 jconsmap,           /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL  */
+					      *   target constraints, or NULL  */
    jboolean              global              /**< create a global or a local copy? */
    )
 {
@@ -1008,9 +1008,9 @@ jint JNISCIP(copyCuts)(
    jlong                 jsourcescip,        /**< source SCIP data structure */
    jlong                 jtargetscip,        /**< target SCIP data structure */
    jlong                 jvarmap,            /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
+					      *   target variables, or NULL */
    jlong                 jconsmap,           /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL  */
+					      *   target constraints, or NULL  */
    jboolean              global              /**< create a global or a local copy? */
    )
 {
@@ -1170,15 +1170,15 @@ jboolean JNISCIP(copy)(
    jlong                 jsourcescip,        /**< source SCIP data structure */
    jlong                 jtargetscip,        /**< target SCIP data structure */
    jlong                 jvarmap,            /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
+					      *   target variables, or NULL */
    jlong                 jconsmap,           /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL  */
+					      *   target constraints, or NULL  */
    jstring               jsuffix,            /**< suffix which will be added to the names of the target SCIP, might be empty */
    jboolean              global,             /**< create a global or a local copy? */
    jboolean              enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
-                                              *   plugins will be copied and activated, and the modifiable flag of
-                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
-                                              *   there are pricers present */
+					      *   plugins will be copied and activated, and the modifiable flag of
+					      *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+					      *   there are pricers present */
    jboolean              passmessagehdlr     /**< should the message handler be passed */
    )
 {
@@ -2117,27 +2117,29 @@ jlongArray JNISCIP(getParams)(
    )
 {
    SCIP* scip;
+   int nparams;
+
    jlongArray jparams;
-   int size;
-   SCIP_PARAM** params;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNParams(scip);
+   nparams = SCIPgetNParams(scip);
+   jparams = (*env)->NewLongArray(env, nparams);
 
-   jparams = (*env)->NewLongArray(env, size);
-
-   if (jparams == NULL) {
+   if( jparams == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_PARAM** params;
 
-   params = SCIPgetParams(scip);
-
-   (*env)->SetLongArrayRegion(env, jparams, 0, size, (jlong*)(*params));
+      params = SCIPgetParams(scip);
+      (*env)->SetLongArrayRegion(env, jparams, 0, nparams, (jlong*)params);
+   }
 
    return jparams;
 }
@@ -2230,27 +2232,29 @@ jlongArray JNISCIP(getReaders)(
    )
 {
    SCIP* scip;
+   int nreaders;
+
    jlongArray jreaders;
-   int size;
-   SCIP_READER** readers;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNReaders(scip);
+   nreaders = SCIPgetNReaders(scip);
+   jreaders = (*env)->NewLongArray(env, nreaders);
 
-   jreaders = (*env)->NewLongArray(env, size);
-
-   if (jreaders == NULL) {
+   if( jreaders == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_READER** readers;
 
-   readers = SCIPgetReaders(scip);
-
-   (*env)->SetLongArrayRegion(env, jreaders, 0, size, (jlong*)(*readers));
+      readers = SCIPgetReaders(scip);
+      (*env)->SetLongArrayRegion(env, jreaders, 0, nreaders, (jlong*)readers);
+   }
 
    return jreaders;
 }
@@ -2312,27 +2316,29 @@ jlongArray JNISCIP(getPricers)(
    )
 {
    SCIP* scip;
+   int npricers;
+
    jlongArray jpricers;
-   int size;
-   SCIP_PRICER** pricers;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNPricers(scip);
+   npricers = SCIPgetNPricers(scip);
+   jpricers = (*env)->NewLongArray(env, npricers);
 
-   jpricers = (*env)->NewLongArray(env, size);
-
-   if (jpricers == NULL) {
+   if( jpricers == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_PRICER** pricers;
 
-   pricers = SCIPgetPricers(scip);
-
-   (*env)->SetLongArrayRegion(env, jpricers, 0, size, (jlong*)(*pricers));
+      pricers = SCIPgetPricers(scip);
+      (*env)->SetLongArrayRegion(env, jpricers, 0, npricers, (jlong*)pricers);
+   }
 
    return jpricers;
 }
@@ -2487,27 +2493,29 @@ jlongArray JNISCIP(getConshdlrs)(
    )
 {
    SCIP* scip;
+   int nconshdlrs;
+
    jlongArray jconshdlrs;
-   int size;
-   SCIP_CONSHDLR** conshdlrs;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNPricers(scip);
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+   jconshdlrs = (*env)->NewLongArray(env, nconshdlrs);
 
-   jconshdlrs = (*env)->NewLongArray(env, size);
-
-   if (jconshdlrs == NULL) {
+   if( jconshdlrs == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_CONSHDLR** conshdlrs;
 
-   conshdlrs = SCIPgetConshdlrs(scip);
-
-   (*env)->SetLongArrayRegion(env, jconshdlrs, 0, size, (jlong*)(*conshdlrs));
+      conshdlrs = SCIPgetConshdlrs(scip);
+      (*env)->SetLongArrayRegion(env, jconshdlrs, 0, nconshdlrs, (jlong*)conshdlrs);
+   }
 
    return jconshdlrs;
 }
@@ -2571,27 +2579,30 @@ jlongArray JNISCIP(getConflicthdlrs)(
    )
 {
    SCIP* scip;
+   int nconflicthdlrs;
+
    jlongArray jconflicthdlrs;
-   int size;
-   SCIP_CONFLICTHDLR** conflicthdlrs;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNPricers(scip);
+   nconflicthdlrs = SCIPgetNConflicthdlrs(scip);
+   jconflicthdlrs = (*env)->NewLongArray(env, nconflicthdlrs);
 
-   jconflicthdlrs = (*env)->NewLongArray(env, size);
-
-   if (jconflicthdlrs == NULL) {
+   if (jconflicthdlrs == NULL)
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
+   }
+   else
+   {
+      SCIP_CONFLICTHDLR** conflicthdlrs;
+
+      conflicthdlrs = SCIPgetConflicthdlrs(scip);
+      (*env)->SetLongArrayRegion(env, jconflicthdlrs, 0, nconflicthdlrs, (jlong*)conflicthdlrs);
    }
 
-   conflicthdlrs = SCIPgetConflicthdlrs(scip);
-
-   (*env)->SetLongArrayRegion(env, jconflicthdlrs, 0, size, (jlong*)(*conflicthdlrs));
    return jconflicthdlrs;
 }
 
@@ -2674,27 +2685,29 @@ jlongArray JNISCIP(getPresols)(
    )
 {
    SCIP* scip;
+   int npresols;
+
    jlongArray jpresols;
-   int size;
-   SCIP_PRESOL** presols;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNPresols(scip);
+   npresols = SCIPgetNPresols(scip);
+   jpresols = (*env)->NewLongArray(env, npresols);
 
-   jpresols = (*env)->NewLongArray(env, size);
-
-   if (jpresols == NULL) {
+   if( jpresols == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_PRESOL** presols;
 
-   presols = SCIPgetPresols(scip);
-
-   (*env)->SetLongArrayRegion(env, jpresols, 0, size, (jlong*)(*presols));
+      presols = SCIPgetPresols(scip);
+      (*env)->SetLongArrayRegion(env, jpresols, 0, npresols, (jlong*)presols);
+   }
 
    return jpresols;
 }
@@ -2778,27 +2791,29 @@ jlongArray JNISCIP(getRelaxs)(
    )
 {
    SCIP* scip;
+   int nrelaxs;
+
    jlongArray jrelaxs;
-   int size;
-   SCIP_RELAX** relaxs;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNRelaxs(scip);
+   nrelaxs = SCIPgetNRelaxs(scip);
+   jrelaxs = (*env)->NewLongArray(env, nrelaxs);
 
-   jrelaxs = (*env)->NewLongArray(env, size);
-
-   if (jrelaxs == NULL) {
+   if( jrelaxs == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_RELAX** relaxs;
 
-   relaxs = SCIPgetRelaxs(scip);
-
-   (*env)->SetLongArrayRegion(env, jrelaxs, 0, size, (jlong*)(*relaxs));
+      relaxs = SCIPgetRelaxs(scip);
+      (*env)->SetLongArrayRegion(env, jrelaxs, nrelaxs, nrelaxs, (jlong*)relaxs);
+   }
 
    return jrelaxs;
 }
@@ -2882,27 +2897,29 @@ jlongArray JNISCIP(getSepas)(
    )
 {
    SCIP* scip;
+   int nsepas;
+
    jlongArray jsepas;
-   int size;
-   SCIP_SEPA** sepas;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNSepas(scip);
+   nsepas = SCIPgetNSepas(scip);
+   jsepas = (*env)->NewLongArray(env, nsepas);
 
-   jsepas = (*env)->NewLongArray(env, size);
-
-   if (jsepas == NULL) {
+   if( jsepas == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_SEPA** sepas;
 
-   sepas = SCIPgetSepas(scip);
-
-   (*env)->SetLongArrayRegion(env, jsepas, 0, size, (jlong*)(*sepas));
+      sepas = SCIPgetSepas(scip);
+      (*env)->SetLongArrayRegion(env, jsepas, 0, nsepas, (jlong*)sepas);
+   }
 
    return jsepas;
 }
@@ -2985,27 +3002,29 @@ jlongArray JNISCIP(getProps)(
    )
 {
    SCIP* scip;
+   int nprops;
+
    jlongArray jprops;
-   int size;
-   SCIP_PROP** props;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNProps(scip);
+   nprops = SCIPgetNProps(scip);
+   jprops = (*env)->NewLongArray(env, nprops);
 
-   jprops = (*env)->NewLongArray(env, size);
-
-   if (jprops == NULL) {
+   if( jprops == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_PROP** props;
 
-   props = SCIPgetProps(scip);
-
-   (*env)->SetLongArrayRegion(env, jprops, 0, size, (jlong*)(*props));
+      props = SCIPgetProps(scip);
+      (*env)->SetLongArrayRegion(env, jprops, 0, nprops, (jlong*)props);
+   }
 
    return jprops;
 }
@@ -3108,27 +3127,29 @@ jlongArray JNISCIP(getHeurs)(
    )
 {
    SCIP* scip;
+   int nheurs;
+
    jlongArray jheurs;
-   int size;
-   SCIP_HEUR** heurs;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNHeurs(scip);
+   nheurs = SCIPgetNHeurs(scip);
+   jheurs = (*env)->NewLongArray(env, nheurs);
 
-   jheurs = (*env)->NewLongArray(env, size);
-
-   if (jheurs == NULL) {
+   if( jheurs == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_HEUR** heurs;
 
-   heurs = SCIPgetHeurs(scip);
-
-   (*env)->SetLongArrayRegion(env, jheurs, 0, size, (jlong*)(*heurs));
+      heurs = SCIPgetHeurs(scip);
+      (*env)->SetLongArrayRegion(env, jheurs, 0, nheurs, (jlong*)heurs);
+   }
 
    return jheurs;
 }
@@ -3212,29 +3233,31 @@ jlongArray JNISCIP(getEventhdlrs)(
    )
 {
    SCIP* scip;
-   jlongArray jevents;
-   int size;
-   SCIP_EVENTHDLR** events;
+   int neventhdlrs;
+
+   jlongArray jeventhdlrs;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNEventhdlrs(scip);
+   neventhdlrs = SCIPgetNEventhdlrs(scip);
+   jeventhdlrs = (*env)->NewLongArray(env, neventhdlrs);
 
-   jevents = (*env)->NewLongArray(env, size);
-
-   if (jevents == NULL) {
+   if( jeventhdlrs == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
+   }
+   else
+   {
+      SCIP_EVENTHDLR** eventhdlrs;
+
+      eventhdlrs = SCIPgetEventhdlrs(scip);
+      (*env)->SetLongArrayRegion(env, jeventhdlrs, 0, neventhdlrs, (jlong*)eventhdlrs);
    }
 
-   events = SCIPgetEventhdlrs(scip);
-
-   (*env)->SetLongArrayRegion(env, jevents, 0, size, (jlong*)(*events));
-
-   return jevents;
+   return jeventhdlrs;
 }
 
 /** returns the number of currently available event handlers */
@@ -3297,27 +3320,29 @@ jlongArray JNISCIP(getNodesels)(
    )
 {
    SCIP* scip;
+   int nnodesels;
+
    jlongArray jnodesels;
-   int size;
-   SCIP_NODESEL** nodesels;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNNodesels(scip);
+   nnodesels = SCIPgetNNodesels(scip);
+   jnodesels = (*env)->NewLongArray(env, nnodesels);
 
-   jnodesels = (*env)->NewLongArray(env, size);
-
-   if (jnodesels == NULL) {
+   if( jnodesels == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_NODESEL** nodesels;
 
-   nodesels = SCIPgetNodesels(scip);
-
-   (*env)->SetLongArrayRegion(env, jnodesels, 0, size, (jlong*)(*nodesels));
+      nodesels = SCIPgetNodesels(scip);
+      (*env)->SetLongArrayRegion(env, jnodesels, nnodesels, nnodesels, (jlong*)nodesels);
+   }
 
    return jnodesels;
 }
@@ -3417,8 +3442,8 @@ jlong JNISCIP(includeBranchruleBasic)(
    jint                  priority,           /**< priority of the branching rule */
    jint                  maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
    jdouble               maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
-                                              *   compared to best node's dual bound for applying branching rule
-                                              *   (0.0: only on current best node, 1.0: on all nodes) */
+					      *   compared to best node's dual bound for applying branching rule
+					      *   (0.0: only on current best node, 1.0: on all nodes) */
    jlong                 jbranchruledata     /**< branching rule data */
    )
 {
@@ -3496,27 +3521,29 @@ jlongArray JNISCIP(getBranchrules)(
    )
 {
    SCIP* scip;
+   int nbranchrules;
+
    jlongArray jbranchrules;
-   int size;
-   SCIP_BRANCHRULE** branchrules;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNBranchrules(scip);
+   nbranchrules = SCIPgetNBranchrules(scip);
+   jbranchrules = (*env)->NewLongArray(env, nbranchrules);
 
-   jbranchrules = (*env)->NewLongArray(env, size);
-
-   if (jbranchrules == NULL) {
+   if( jbranchrules == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_BRANCHRULE** branchrules;
 
-   branchrules = SCIPgetBranchrules(scip);
-
-   (*env)->SetLongArrayRegion(env, jbranchrules, 0, size, (jlong*)(*branchrules));
+      branchrules = SCIPgetBranchrules(scip);
+      (*env)->SetLongArrayRegion(env, jbranchrules, 0, nbranchrules, (jlong*)branchrules);
+   }
 
    return jbranchrules;
 }
@@ -3638,27 +3665,29 @@ jlongArray JNISCIP(getDisps)(
    )
 {
    SCIP* scip;
+   int ndisps;
+
    jlongArray jdisps;
-   int size;
-   SCIP_DISP** disps;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNDisps(scip);
+   ndisps = SCIPgetNDisps(scip);
+   jdisps = (*env)->NewLongArray(env, ndisps);
 
-   jdisps = (*env)->NewLongArray(env, size);
-
-   if (jdisps == NULL) {
+   if( jdisps == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_DISP** disps;
 
-   disps = SCIPgetDisps(scip);
-
-   (*env)->SetLongArrayRegion(env, jdisps, 0, size, (jlong*)(*disps));
+      disps = SCIPgetDisps(scip);
+      (*env)->SetLongArrayRegion(env, jdisps, 0, ndisps, (jlong*)disps);
+   }
 
    return jdisps;
 }
@@ -3762,27 +3791,29 @@ jlongArray JNISCIP(getNlpis)(
    )
 {
    SCIP* scip;
+   int nnlpis;
+
    jlongArray jnlpis;
-   int size;
-   SCIP_NLPI** nlpis;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNNlpis(scip);
+   nnlpis = SCIPgetNNlpis(scip);
+   jnlpis = (*env)->NewLongArray(env, nnlpis);
 
-   jnlpis = (*env)->NewLongArray(env, size);
-
-   if (jnlpis == NULL) {
+   if( jnlpis == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_NLPI** nlpis;
 
-   nlpis = SCIPgetNlpis(scip);
-
-   (*env)->SetLongArrayRegion(env, jnlpis, 0, size, (jlong*)(*nlpis));
+      nlpis = SCIPgetNlpis(scip);
+      (*env)->SetLongArrayRegion(env, jnlpis, 0, nnlpis, (jlong*)nlpis);
+   }
 
    return jnlpis;
 }
@@ -4220,7 +4251,7 @@ void JNISCIP(readProb)(
    jlong                 jscip,              /**< SCIP data structure */
    jstring               jfilename,          /**< problem file name */
    jstring               jextension          /**< extension of the desired file reader,
-                                              *   or an empty string if file extension should be used */
+					      *   or an empty string if file extension should be used */
    )
 {
    SCIP* scip;
@@ -4261,7 +4292,7 @@ void JNISCIP(writeOrigProblem)(
    jlong                 jscip,              /**< SCIP data structure */
    jstring               jfilename,          /**< output file (or NULL for standard output) */
    jstring               jextension,         /**< extension of the desired file reader,
-                                              *   or NULL if file extension should be used */
+					      *   or NULL if file extension should be used */
    jboolean              jgenericnames       /**< using generic variable and constraint names? */
    )
 {
@@ -4301,7 +4332,7 @@ void JNISCIP(writeTransProblem)(
    jlong                 jscip,              /**< SCIP data structure */
    jstring               jfilename,          /**< output file (or NULL for standard output) */
    jstring               jextension,         /**< extension of the desired file reader,
-                                              *   or NULL if file extension should be used */
+					      *   or NULL if file extension should be used */
    jboolean              jgenericnames       /**< using generic variable and constraint names? */
    )
 {
@@ -4868,27 +4899,29 @@ jlongArray JNISCIP(getVars)(
    )
 {
    SCIP* scip;
+   int nvars;
+
    jlongArray jvars;
-   int size;
-   SCIP_VAR** vars;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNVars(scip);
+   nvars = SCIPgetNVars(scip);
+   jvars = (*env)->NewLongArray(env, nvars);
 
-   jvars = (*env)->NewLongArray(env, size);
-
-   if (jvars == NULL) {
+   if( jvars == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_VAR** vars;
 
-   vars = SCIPgetVars(scip);
-
-   (*env)->SetLongArrayRegion(env, jvars, 0, size, (jlong*)(*vars));
+      vars = SCIPgetVars(scip);
+      (*env)->SetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
+   }
 
    return jvars;
 }
@@ -4902,15 +4935,15 @@ jint JNISCIP(getNVars)(
    )
 {
    SCIP* scip;
-   int number;
+   int nvars;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   number = SCIPgetNVars(scip);
+   nvars = SCIPgetNVars(scip);
 
-   return (jint)number;
+   return (jint)nvars;
 }
 
 /** gets number of binary active problem variables */
@@ -5004,29 +5037,31 @@ jlongArray JNISCIP(getFixedVars)(
    )
 {
    SCIP* scip;
-   jlongArray jvars;
-   int size;
-   SCIP_VAR** vars;
+   int nfixedvars;
+
+   jlongArray jfixedvars;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNFixedVars(scip);
+   nfixedvars = SCIPgetNFixedVars(scip);
+   jfixedvars = (*env)->NewLongArray(env, nfixedvars);
 
-   jvars = (*env)->NewLongArray(env, size);
-
-   if (jvars == NULL) {
+   if( jfixedvars == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
+   }
+   else
+   {
+      SCIP_VAR** fixedvars;
+
+      fixedvars = SCIPgetFixedVars(scip);
+      (*env)->SetLongArrayRegion(env, jfixedvars, 0, nfixedvars, (jlong*)fixedvars);
    }
 
-   vars = SCIPgetFixedVars(scip);
-
-   (*env)->SetLongArrayRegion(env, jvars, 0, size, (jlong*)(*vars));
-
-   return jvars;
+   return jfixedvars;
 }
 
 /** gets number of fixed or aggregated problem variables */
@@ -5060,27 +5095,29 @@ jlongArray JNISCIP(getOrigVars)(
    )
 {
    SCIP* scip;
+   int nvars;
+
    jlongArray jvars;
-   int size;
-   SCIP_VAR** vars;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNOrigVars(scip);
+   nvars = SCIPgetNOrigVars(scip);
+   jvars = (*env)->NewLongArray(env, nvars);
 
-   jvars = (*env)->NewLongArray(env, size);
-
-   if (jvars == NULL) {
+   if( jvars == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_VAR** vars;
 
-   vars = SCIPgetOrigVars(scip);
-
-   (*env)->SetLongArrayRegion(env, jvars, 0, size, (jlong*)(*vars));
+      vars = SCIPgetOrigVars(scip);
+      (*env)->SetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
+   }
 
    return jvars;
 }
@@ -5457,22 +5494,29 @@ jlongArray JNISCIP(getConss)(
    )
 {
    SCIP* scip;
-   SCIP_CONS** conss;
    int nconss;
+
    jlongArray jconss;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   conss = SCIPgetConss(scip);
    nconss = SCIPgetNConss(scip);
-
-   /* create jlongArray */
    jconss = (*env)->NewLongArray(env, nconss);
 
-   /* fill long array with SCIP variable pointers */
-   (*env)->SetLongArrayRegion(env, jconss, 0, nconss, (jlong*)(*conss));
+   if( jconss == NULL )
+   {
+      SCIPerrorMessage("Out of Memory\n");
+      JNISCIP_CALL( SCIP_ERROR );
+   }
+   else
+   {
+      SCIP_CONS** conss;
+
+      conss = SCIPgetConss(scip);
+      (*env)->SetLongArrayRegion(env, jconss, 0, nconss, (jlong*)conss);
+   }
 
    return jconss;
 }
@@ -5506,22 +5550,29 @@ jlongArray JNISCIP(getOrigConss)(
    )
 {
    SCIP* scip;
-   SCIP_CONS** conss;
    int nconss;
+
    jlongArray jconss;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   conss = SCIPgetOrigConss(scip);
    nconss = SCIPgetNConss(scip);
-
-   /* create jlongArray */
    jconss = (*env)->NewLongArray(env, nconss);
 
-   /* fill long array with SCIP variable pointers */
-   (*env)->SetLongArrayRegion(env, jconss, 0, nconss, (jlong*)(*conss));
+   if( jconss == NULL )
+   {
+      SCIPerrorMessage("Out of Memory\n");
+      JNISCIP_CALL( SCIP_ERROR );
+   }
+   else
+   {
+      SCIP_CONS** conss;
+
+      conss = SCIPgetOrigConss(scip);
+      (*env)->SetLongArrayRegion(env, jconss, 0, nconss, (jlong*)conss);
+   }
 
    return jconss;
 }
@@ -6199,7 +6250,7 @@ jlong JNISCIP(createVarBasic)(
       || vartype == JNIPACKAGENAME(JniScipVartype_SCIP_VARTYPE_CONTINUOUS));
 
    JNISCIP_CALL( SCIPcreateVarBasic(scip, &var, name, lb, ub, obj, vartype) );
-   SCIPdebugMessage("created variable <%s> [%g,%g] obj: <%g>, <%p>\n", name, lb, ub, obj, var);
+   SCIPdebugMessage("created variable <%s> [%g,%g] obj: <%g>, <%p>\n", name, lb, ub, obj, (void*)var);
 
    (*env)->ReleaseStringUTFChars(env, jname, name);
 
@@ -6295,7 +6346,7 @@ void JNISCIP(writeVarsList)(
 
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, nvars, (jlong*)(*vars));
+   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)vars);
 
    JNISCIP_CALL( SCIPwriteVarsList(scip, (FILE*)(size_t)jfile, vars, (int)nvars, (SCIP_Bool)type, (char)delimiter) );
 
@@ -6349,13 +6400,13 @@ void JNISCIP(writeVarsLinearsum)(
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, nvars, (jlong*)(*vars));
-   (*env)->GetDoubleArrayRegion(env, jvals, 0, nvars, (jdouble*)vals);
+   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)vars);
+   (*env)->GetDoubleArrayRegion(env, jvals, 0, (int)nvars, (jdouble*)vals);
 
    JNISCIP_CALL( SCIPwriteVarsLinearsum(scip, (FILE*)(size_t)jfile, vars, vals, (int)nvars, (SCIP_Bool)type) );
 
-   SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
 }
 
 /** TODO: writeVarsPolynomial - array of arrays?  */
@@ -6557,7 +6608,7 @@ jlongArray JNISCIP(transformVars)(
 {
    SCIP* scip;
    SCIP_VAR** vars;
-   SCIP_VAR** transvars;
+
    jlongArray jtransvars;
 
    /* convert JNI pointer into C pointer */
@@ -6565,9 +6616,8 @@ jlongArray JNISCIP(transformVars)(
    assert(scip != NULL);
 
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &transvars, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)(*vars));
+   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)vars);
 
    jtransvars = (*env)->NewLongArray(env, (int)nvars);
 
@@ -6575,14 +6625,19 @@ jlongArray JNISCIP(transformVars)(
    {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
+   }
+   else
+   {
+      SCIP_VAR** transvars;
+
+      JNISCIP_CALL( SCIPallocBufferArray(scip, &transvars, (int)nvars) );
+
+      JNISCIP_CALL( SCIPtransformVars(scip, (int)nvars, vars, transvars) );
+      (*env)->SetLongArrayRegion(env, jtransvars, 0, (int)nvars, (jlong*)transvars);
+
+      SCIPfreeBufferArray(scip, &transvars);
    }
 
-   JNISCIP_CALL( SCIPtransformVars(scip, (int)nvars, vars, transvars) );
-
-   (*env)->SetLongArrayRegion(env, jtransvars, 0, (int)nvars, (jlong*)(*transvars));
-
-   SCIPfreeBufferArray(scip, &transvars);
    SCIPfreeBufferArray(scip, &vars);
 
    return jtransvars;
@@ -6664,7 +6719,7 @@ jlongArray JNISCIP(getTransformedVars)(
 {
    SCIP* scip;
    SCIP_VAR** vars;
-   SCIP_VAR** transvars;
+
    jlongArray jtransvars;
 
    /* convert JNI pointer into C pointer */
@@ -6672,25 +6727,29 @@ jlongArray JNISCIP(getTransformedVars)(
    assert(scip != NULL);
 
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &transvars, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)(*vars));
-
-
+   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)vars);
    jtransvars = (*env)->NewLongArray(env, (int)nvars);
 
    if (jtransvars == NULL)
    {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
+
+      jtransvars = NULL;
+   }
+   else
+   {
+      SCIP_VAR** transvars;
+
+      JNISCIP_CALL( SCIPallocBufferArray(scip, &transvars, (int)nvars) );
+
+      JNISCIP_CALL( SCIPgetTransformedVars(scip, (int)nvars, vars, transvars) );
+      (*env)->SetLongArrayRegion(env, jtransvars, 0, (int)nvars, (jlong*)transvars);
+
+      SCIPfreeBufferArray(scip, &transvars);
    }
 
-   JNISCIP_CALL( SCIPgetTransformedVars(scip, (int)nvars, vars, transvars) );
-
-   (*env)->SetLongArrayRegion(env, jtransvars, 0, (int)nvars, (jlong*)(*transvars));
-
-   SCIPfreeBufferArray(scip, &transvars);
    SCIPfreeBufferArray(scip, &vars);
 
    return jtransvars;
@@ -6770,7 +6829,8 @@ jlongArray JNISCIP(getNegatedVars)(
 {
    SCIP* scip;
    SCIP_VAR** vars;
-   SCIP_VAR** negvars;
+
+
    jlongArray jnegvars;
 
    /* convert JNI pointer into C pointer */
@@ -6778,24 +6838,29 @@ jlongArray JNISCIP(getNegatedVars)(
    assert(scip != NULL);
 
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &negvars, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)(*vars));
-
+   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)vars);
    jnegvars = (*env)->NewLongArray(env, (int)nvars);
 
    if (jnegvars == NULL)
    {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
+
+      jnegvars = NULL;
+   }
+   else
+   {
+      SCIP_VAR** negvars;
+
+      JNISCIP_CALL( SCIPallocBufferArray(scip, &negvars, (int)nvars) );
+
+      JNISCIP_CALL( SCIPgetNegatedVars(scip, (int)nvars, vars, negvars) );
+      (*env)->SetLongArrayRegion(env, jnegvars, 0, (int)nvars, (jlong*)negvars);
+
+      SCIPfreeBufferArray(scip, &negvars);
    }
 
-   JNISCIP_CALL( SCIPgetNegatedVars(scip, (int)nvars, vars, negvars) );
-
-   (*env)->SetLongArrayRegion(env, jnegvars, 0, (int)nvars, (jlong*)(*negvars));
-
-   SCIPfreeBufferArray(scip, &negvars);
    SCIPfreeBufferArray(scip, &vars);
 
    return jnegvars;
@@ -6861,35 +6926,39 @@ jint JNISCIP(getActiveVars)(
    jobject               jobj,               /**< JNI class pointer */
    jlong                 jscip,              /**< SCIP data structure */
    jlongArray            jvars,              /**< variable array with given variables and as output all active
-                                              *   variables, if enough slots exist
-                                              */
+					      *   variables, if enough slots exist
+					      */
    jintArray             jnvars,             /**< number of given variables, and as output number of active variables,
-                                              *   if enough slots exist
-                                              */
+					      *   if enough slots exist
+					      */
    jint                  varssize            /**< available slots in vars array */
    )
 {
+   SCIPerrorMessage("method getActiveVars is not implemented yet (deprecated)\n");
+   JNISCIP_CALL( SCIP_ERROR );
+
+   return 0;
+#if 0
    SCIP* scip;
    SCIP_VAR** vars;
    int* nvars;
-   int num;
+   int requiredsize;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)varssize) );
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &nvars, (int)varssize) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, (int)varssize, (jlong*)(*vars));
+   (*env)->GetLongArrayRegion(env, jvars, 0, (int)varssize, (jlong*)vars);
    (*env)->GetIntArrayRegion(env, jnvars, 0, (int)varssize, (jint*)nvars);
 
-   JNISCIP_CALL( SCIPgetActiveVars(scip, vars, nvars, (int)varssize, &num) );
+   JNISCIP_CALL( SCIPgetActiveVars(scip, vars, nvars, (int)varssize, &requiredsize );
 
    SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &nvars);
 
    return (jint)num;
+#endif
 }
 
 /** returns the reduced costs of the variable in the current node's LP relaxation;
@@ -7032,34 +7101,36 @@ jdoubleArray JNISCIP(getVarSols)(
    )
 {
    SCIP* scip;
-   jdoubleArray jvals;
-   SCIP_Real* vals;
    SCIP_VAR** vars;
+
+   jdoubleArray jvals;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)(*vars));
-
-
+   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)vars);
    jvals = (*env)->NewDoubleArray(env, (int)nvars);
 
    if (jvals == NULL)
    {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
+   }
+   else
+   {
+      SCIP_Real* vals;
+
+      JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)nvars) );
+
+      JNISCIP_CALL( SCIPgetVarSols(scip, (int)nvars, vars, vals) );
+      (*env)->SetDoubleArrayRegion(env, jvals, 0, (int)nvars, (jdouble*)vals);
+
+      SCIPfreeBufferArray(scip, &vals);
    }
 
-   JNISCIP_CALL( SCIPgetVarSols(scip, (int)nvars, vars, vals) );
-
-   (*env)->SetDoubleArrayRegion(env, jvals, 0, (int)nvars, (jdouble*)vals);
-
-   SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
 
    return jvals;
@@ -7158,13 +7229,13 @@ void JNISCIP(setRelaxSolVals)(
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, nvars, (jlong*)(*vars));
+   (*env)->GetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
    (*env)->GetDoubleArrayRegion(env, jvals, 0, nvars, (jdouble*)vals);
 
    JNISCIP_CALL( SCIPsetRelaxSolVals(scip, (int)nvars, vars, vals) );
 
-   SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
 }
 
 /** sets the values of the variables in the global relaxation solution to the values
@@ -8202,7 +8273,7 @@ jint JNISCIP(calcCliquePartition)(
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
    JNISCIP_CALL( SCIPallocBufferArray(scip, &cliquepartition, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, nvars, (jlong*)(*vars));
+   (*env)->GetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
    (*env)->GetIntArrayRegion(env, jcliquepartition, 0, nvars, (jint*)cliquepartition);
 
    JNISCIP_CALL( SCIPcalcCliquePartition(scip, vars, (int)nvars, cliquepartition, &ncliques) );
@@ -8253,7 +8324,7 @@ jint JNISCIP(calcNegatedCliquePartition)(
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
    JNISCIP_CALL( SCIPallocBufferArray(scip, &cliquepartition, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, nvars, (jlong*)(*vars));
+   (*env)->GetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
    (*env)->GetIntArrayRegion(env, jcliquepartition, 0, nvars, (jint*)cliquepartition);
 
    JNISCIP_CALL( SCIPcalcNegatedCliquePartition(scip, vars, (int)nvars, cliquepartition, &ncliques) );
@@ -8318,27 +8389,29 @@ jlongArray JNISCIP(getCliques)(
    )
 {
    SCIP* scip;
+   int ncliques;
+
    jlongArray jcliques;
-   int size;
-   SCIP_CLIQUE** cliques;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNCliques(scip);
+   ncliques = SCIPgetNCliques(scip);
+   jcliques = (*env)->NewLongArray(env, ncliques);
 
-   jcliques = (*env)->NewLongArray(env, size);
-
-   if (jcliques == NULL) {
+   if( jcliques == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_CLIQUE** cliques;
 
-   cliques = SCIPgetCliques(scip);
-
-   (*env)->SetLongArrayRegion(env, jcliques, 0, size, (jlong*)(*cliques));
+      cliques = SCIPgetCliques(scip);
+      (*env)->SetLongArrayRegion(env, jcliques, 0, ncliques, (jlong*)cliques);
+   }
 
    return jcliques;
 }
@@ -9952,7 +10025,7 @@ void JNISCIP(addConflictLb)(
    jlong                 jscip,             /**< SCIP data structure */
    jlong                 jvar,               /**< variable whose lower bound should be added to conflict candidate queue */
    jlong                 jbdchgidx           /**< bound change index representing time on path to current node, when the
-                                              *   conflicting bound was valid, NULL for current local bound */
+					      *   conflicting bound was valid, NULL for current local bound */
    )
 {
    SCIP* scip;
@@ -9993,7 +10066,7 @@ void JNISCIP(addConflictRelaxedLb)(
    jlong                 jscip,              /**< SCIP data structure */
    jlong                 jvar,               /**< variable whose lower bound should be added to conflict candidate queue */
    jlong                 jbdchgidx,          /**< bound change index representing time on path to current node, when the
-                                              *   conflicting bound was valid, NULL for current local bound */
+					      *   conflicting bound was valid, NULL for current local bound */
    jdouble               jrelaxedlb          /**< the relaxed lower bound */
    )
 {
@@ -10033,7 +10106,7 @@ void JNISCIP(addConflictUb)(
    jlong                 jscip,              /**< SCIP data structure */
    jlong                 jvar,               /**< variable whose upper bound should be added to conflict candidate queue */
    jlong                 jbdchgidx           /**< bound change index representing time on path to current node, when the
-                                              *   conflicting bound was valid, NULL for current local bound */
+					      *   conflicting bound was valid, NULL for current local bound */
    )
 {
    SCIP* scip;
@@ -10075,7 +10148,7 @@ void JNISCIP(addConflictRelaxedUb)(
    jlong                 jscip,              /**< SCIP data structure */
    jlong                 jvar,               /**< variable whose upper bound should be added to conflict candidate queue */
    jlong                 jbdchgidx,          /**< bound change index representing time on path to current node, when the
-                                              *   conflicting bound was valid, NULL for current local bound */
+					      *   conflicting bound was valid, NULL for current local bound */
    jdouble               jrelaxedub          /**< the relaxed upper bound */
    )
 {
@@ -10116,7 +10189,7 @@ void JNISCIP(addConflictBd)(
    jlong                 jvar,               /**< variable whose upper bound should be added to conflict candidate queue */
    jint                  jboundtype,         /**< the type of the conflicting bound (lower or upper bound) */
    jlong                 jbdchgidx           /**< bound change index representing time on path to current node, when the
-                                              *   conflicting bound was valid, NULL for current local bound */
+					      *   conflicting bound was valid, NULL for current local bound */
    )
 {
    SCIP* scip;
@@ -10158,7 +10231,7 @@ void JNISCIP(addConflictRelaxedBd)(
    jlong                 jvar,               /**< variable whose upper bound should be added to conflict candidate queue */
    jint                  jboundtype,         /**< the type of the conflicting bound (lower or upper bound) */
    jlong                 jbdchgidx,          /**< bound change index representing time on path to current node, when the
-                                              *   conflicting bound was valid, NULL for current local bound */
+					      *   conflicting bound was valid, NULL for current local bound */
    jdouble               jrelaxedbd          /**< the relaxed bound */
    )
 {
@@ -10232,7 +10305,7 @@ jboolean JNISCIP(isConflictVarUsed)(
    jlong                 jvar,               /**< variable whose upper bound should be added to conflict candidate queue */
    jint                  jboundtype,         /**< the type of the conflicting bound (lower or upper bound) */
    jlong                 jbdchgidx           /**< bound change index representing time on path to current node, when the
-                                              *   conflicting bound was valid, NULL for current local bound */
+					      *   conflicting bound was valid, NULL for current local bound */
    )
 {
    SCIP* scip;
@@ -10414,28 +10487,28 @@ jlong JNISCIP(createCons)(
    jlong                 jconshdlr,          /**< constraint handler for this constraint */
    jlong                 jconsdata,          /**< data for this specific constraint */
    jboolean              initial,            /**< should the LP relaxation of constraint be in the initial LP?
-                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+					      *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    jboolean              separate,           /**< should the constraint be separated during LP processing?
-                                              *   Usually set to TRUE. */
+					      *   Usually set to TRUE. */
    jboolean              enforce,            /**< should the constraint be enforced during node processing?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+					      *   TRUE for model constraints, FALSE for additional, redundant constraints. */
    jboolean              check,              /**< should the constraint be checked for feasibility?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+					      *   TRUE for model constraints, FALSE for additional, redundant constraints. */
    jboolean              propagate,          /**< should the constraint be propagated during node processing?
-                                              *   Usually set to TRUE. */
+					      *   Usually set to TRUE. */
    jboolean              local,              /**< is constraint only valid locally?
-                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+					      *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
    jboolean              modifiable,         /**< is constraint modifiable (subject to column generation)?
-                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
-                                              *   adds coefficients to this constraint. */
+					      *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+					      *   adds coefficients to this constraint. */
    jboolean              dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which
-                                              *   are seperated as constraints. */
+					      *   Usually set to FALSE. Set to TRUE for own cuts which
+					      *   are seperated as constraints. */
    jboolean              removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
-                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+					      *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    jboolean              stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+					      *   if it may be moved to a more global node?
+					      *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
    SCIP* scip;
@@ -10461,8 +10534,8 @@ jlong JNISCIP(createCons)(
 
    /* create empty constraint */
    JNISCIP_CALL( SCIPcreateCons(scip, &cons, name, conshdlr, consdata,
-         (SCIP_Bool) initial, (SCIP_Bool) separate, (SCIP_Bool) enforce, (SCIP_Bool) check, (SCIP_Bool) propagate,
-         (SCIP_Bool) local, (SCIP_Bool) modifiable, (SCIP_Bool) dynamic, (SCIP_Bool) removable, (SCIP_Bool) stickingatnode) );
+	 (SCIP_Bool) initial, (SCIP_Bool) separate, (SCIP_Bool) enforce, (SCIP_Bool) check, (SCIP_Bool) propagate,
+	 (SCIP_Bool) local, (SCIP_Bool) modifiable, (SCIP_Bool) dynamic, (SCIP_Bool) removable, (SCIP_Bool) stickingatnode) );
 
    (*env)->ReleaseStringUTFChars(env, jname, name);
 
@@ -10954,33 +11027,36 @@ jlongArray JNISCIP(transformConss)(
 {
    SCIP* scip;
    SCIP_CONS** conss;
-   SCIP_CONS** transconss;
+
    jlongArray jtransconss;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &transconss, (int)nconss) );
    JNISCIP_CALL( SCIPallocBufferArray(scip, &conss, (int)nconss) );
 
-   (*env)->GetLongArrayRegion(env, jconss, 0, (int)nconss, (jlong*)(*conss));
-
+   (*env)->GetLongArrayRegion(env, jconss, 0, (int)nconss, (jlong*)conss);
    jtransconss = (*env)->NewLongArray(env, (int)nconss);
 
    if (jtransconss == NULL)
    {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
+   }
+   else
+   {
+      SCIP_CONS** transconss;
+
+      JNISCIP_CALL( SCIPallocBufferArray(scip, &transconss, (int)nconss) );
+
+      JNISCIP_CALL( SCIPtransformConss(scip, (int)nconss, conss, transconss) );
+      (*env)->SetLongArrayRegion(env, jtransconss, 0, (int)nconss, (jlong*)transconss);
+
+      SCIPfreeBufferArray(scip, &transconss);
    }
 
-   JNISCIP_CALL( SCIPtransformConss(scip, (int)nconss, conss, transconss) );
-
-   (*env)->SetLongArrayRegion(env, jtransconss, 0, (int)nconss, (jlong*)(*transconss));
-
    SCIPfreeBufferArray(scip, &conss);
-   SCIPfreeBufferArray(scip, &transconss);
 
    return jtransconss;
 }
@@ -11059,7 +11135,7 @@ jlongArray JNISCIP(getTransformedConss)(
 {
    SCIP* scip;
    SCIP_CONS** conss;
-   SCIP_CONS** transconss;
+
    jlongArray jtransconss;
 
    /* convert JNI pointer into C pointer */
@@ -11067,25 +11143,27 @@ jlongArray JNISCIP(getTransformedConss)(
    assert(scip != NULL);
 
    JNISCIP_CALL( SCIPallocBufferArray(scip, &conss, (int)nconss) );
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &transconss, (int)nconss) );
 
-   (*env)->GetLongArrayRegion(env, jconss, 0, (int)nconss, (jlong*)(*conss));
-
-
+   (*env)->GetLongArrayRegion(env, jconss, 0, (int)nconss, (jlong*)conss);
    jtransconss = (*env)->NewLongArray(env, (int)nconss);
 
    if (jtransconss == NULL)
    {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
+   }
+   else
+   {
+      SCIP_CONS** transconss;
+
+      JNISCIP_CALL( SCIPallocBufferArray(scip, &transconss, (int)nconss) );
+
+      JNISCIP_CALL( SCIPgetTransformedConss(scip, (int)nconss, conss, transconss) );
+      (*env)->SetLongArrayRegion(env, jtransconss, 0, (int)nconss, (jlong*)transconss);
+
+      SCIPfreeBufferArray(scip, &transconss);
    }
 
-   JNISCIP_CALL( SCIPgetTransformedConss(scip, (int)nconss, conss, transconss) );
-
-   (*env)->SetLongArrayRegion(env, jtransconss, 0, (int)nconss, (jlong*)(*transconss));
-
-   SCIPfreeBufferArray(scip, &transconss);
    SCIPfreeBufferArray(scip, &conss);
 
    return jtransconss;
@@ -12282,27 +12360,29 @@ jlongArray JNISCIP(getLPCols)(
    )
 {
    SCIP* scip;
+   int ncols;
+
    jlongArray jcols;
-   int size;
-   SCIP_COL** cols;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNLPCols(scip);
+   ncols = SCIPgetNLPCols(scip);
+   jcols = (*env)->NewLongArray(env, ncols);
 
-   jcols = (*env)->NewLongArray(env, size);
-
-   if (jcols == NULL) {
+   if( jcols == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_COL** cols;
 
-   cols = SCIPgetLPCols(scip);
-
-   (*env)->SetLongArrayRegion(env, jcols, 0, size, (jlong*)(*cols));
+      cols = SCIPgetLPCols(scip);
+      (*env)->SetLongArrayRegion(env, jcols, 0, ncols, (jlong*)cols);
+   }
 
    return jcols;
 }
@@ -12347,27 +12427,29 @@ jlongArray JNISCIP(getLPRows)(
    )
 {
    SCIP* scip;
+   int nrows;
+
    jlongArray jrows;
-   int size;
-   SCIP_ROW** rows;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNLPRows(scip);
+   nrows = SCIPgetNLPRows(scip);
+   jrows = (*env)->NewLongArray(env, nrows);
 
-   jrows = (*env)->NewLongArray(env, size);
-
-   if (jrows == NULL) {
+   if( jrows == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_ROW** rows;
 
-   rows = SCIPgetLPRows(scip);
-
-   (*env)->SetLongArrayRegion(env, jrows, 0, size, (jlong*)(*rows));
+      rows = SCIPgetLPRows(scip);
+      (*env)->SetLongArrayRegion(env, jrows, 0, nrows, (jlong*)rows);
+   }
 
    return jrows;
 }
@@ -12518,10 +12600,10 @@ jdouble JNISCIP(getLPBInvCol)(
    jobject               jobj,               /**< JNI class pointer */
    jlong                 jscip,              /**< SCIP data structure */
    jint                  jc                  /**< column number of B^-1; this is NOT the number of the column in the LP
-                                              *   returned by SCIPcolGetLPPos(); you have to call SCIPgetBasisInd()
-                                              *   to get the array which links the B^-1 column numbers to the row and
-                                              *   column numbers of the LP! c must be between 0 and nrows-1, since the
-                                              *   basis has the size nrows * nrows */
+					      *   returned by SCIPcolGetLPPos(); you have to call SCIPgetBasisInd()
+					      *   to get the array which links the B^-1 column numbers to the row and
+					      *   column numbers of the LP! c must be between 0 and nrows-1, since the
+					      *   basis has the size nrows * nrows */
    )
 {
    SCIP* scip;
@@ -12547,33 +12629,35 @@ jdouble JNISCIP(getLPBInvCol)(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-// jdouble JNISCIP(getLPBInvARow)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jscip,              /**< SCIP data structure */
-//    jint                  r,                  /**< row number */
-//    jdoubleArray          jbinvrow,           /**< row in B^-1 from prior call to SCIPgetLPBInvRow(), or NULL */
-//    )
-// {
-//    SCIP* scip;
-//    SCIP_Real* binvrow;
-//    SCIP_Real coef;
+#if 0
+jdouble JNISCIP(getLPBInvARow)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jint                  r,                  /**< row number */
+   jdoubleArray          jbinvrow,           /**< row in B^-1 from prior call to SCIPgetLPBInvRow(), or NULL */
+   )
+{
+   SCIP* scip;
+   SCIP_Real* binvrow;
+   SCIP_Real coef;
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
 
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &binvrow, ?length?) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &binvrow, ?length?) );
 
-//    (*env)->GetDoubleArrayRegion(env, jvals, 0, ?length?, (jdouble*)binvrow);
+   (*env)->GetDoubleArrayRegion(env, jvals, 0, ?length?, (jdouble*)binvrow);
 
-//    JNISCIP_CALL( SCIPgetLPBInvARow(scip, (int)r, binvrow, &coef) );
+   JNISCIP_CALL( SCIPgetLPBInvARow(scip, (int)r, binvrow, &coef) );
 
-//    SCIPfreeBufferArray(scip, &binvrow);
+   SCIPfreeBufferArray(scip, &binvrow);
 
-//    return (jdouble) coef;
-// }
+   return (jdouble) coef;
+}
+#endif
 
 /** gets a column from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A),
  *  i.e., it computes B^-1 * A_c with A_c being the c'th column of A
@@ -12655,8 +12739,9 @@ void JNISCIP(writeMIP)(
    jlong                 jscip,              /**< SCIP data structure */
    jstring               jfilename,           /**< file name */
    jboolean              genericnames,       /**< should generic names like x_i and row_j be used in order to avoid
-                                              *   troubles with reserved symbols? */
-   jboolean              origobj             /**< should the original objective function be used? */
+					      *   troubles with reserved symbols? */
+   jboolean              origobj,            /**< should the original objective function be used? */
+   jboolean              lazyconss           /**< output removable rows as lazy constraints? */
    )
 {
    SCIP* scip;
@@ -12673,7 +12758,7 @@ void JNISCIP(writeMIP)(
    else
       filename = NULL;
 
-   JNISCIP_CALL( SCIPwriteMIP(scip, filename, (SCIP_Bool)genericnames, (SCIP_Bool)origobj) );
+   JNISCIP_CALL( SCIPwriteMIP(scip, filename, (SCIP_Bool)genericnames, (SCIP_Bool)origobj, (SCIP_Bool)lazyconss) );
 }
 
 /** gets the LP interface of SCIP;
@@ -12780,34 +12865,36 @@ void JNISCIP(printLPSolutionQuality)(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-// void JNISCIP(computeLPRelIntPoint)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jscip,              /**< SCIP data structure */
-//    jboolean              relaxrows,          /**< should the rows be relaxed */
-//    jboolean              inclobjcutoff,      /**< should a row for the objective cutoff be included */
-//    jchar                 normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
-//    jdouble               timelimit,          /**< time limit for LP solver */
-//    jint                  iterlimit,          /**< iteration limit for LP solver */
-//    jlongArray            jpoint              /**< relative interior point on exit */
-//    )
-// {
-//    SCIP* scip;
-//    SCIP_SOL** point;
+#if 0
+void JNISCIP(computeLPRelIntPoint)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jboolean              relaxrows,          /**< should the rows be relaxed */
+   jboolean              inclobjcutoff,      /**< should a row for the objective cutoff be included */
+   jchar                 normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
+   jdouble               timelimit,          /**< time limit for LP solver */
+   jint                  iterlimit,          /**< iteration limit for LP solver */
+   jlongArray            jpoint              /**< relative interior point on exit */
+   )
+{
+   SCIP* scip;
+   SCIP_SOL** point;
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &point, ?length?) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &point, ?length?) );
 
-//    (*env)->GetLongArrayRegion(env, jpoint, 0, ?length?, (jlong*)(*point));
+   (*env)->GetLongArrayRegion(env, jpoint, 0, ?length?, (jlong*)(*point));
 
-//    JNISCIP_CALL( SCIPcomputeLPRelIntPoint(scip, (SCIP_Bool)relaxrows, (SCIP_Bool)inclobjcutoff, (char)normtype, (SCIP_Real)timelimit, (int)iterlimit, point) );
+   JNISCIP_CALL( SCIPcomputeLPRelIntPoint(scip, (SCIP_Bool)relaxrows, (SCIP_Bool)inclobjcutoff, (char)normtype, (SCIP_Real)timelimit, (int)iterlimit, point) );
 
-//    SCIPfreeBufferArray(scip, &point);
+   SCIPfreeBufferArray(scip, &point);
 
-// }
+}
+#endif
 
 /** returns the reduced costs of a column in the last (feasible) LP
  *
@@ -12893,6 +12980,7 @@ jlong JNISCIP(createRowCons)(
    SCIP_COL** cols;
    SCIP_Real* vals;
    const char* name;
+
    jboolean iscopy;
 
    /* convert JNI pointer into C pointer */
@@ -12909,17 +12997,17 @@ jlong JNISCIP(createRowCons)(
 
    assert(iscopy);
 
-
    JNISCIP_CALL( SCIPallocBufferArray(scip, &cols, (int)len) );
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)len) );
 
-   (*env)->GetLongArrayRegion(env, jcols, 0, (int)len, (jlong*)(*cols));
+   (*env)->GetLongArrayRegion(env, jcols, 0, (int)len, (jlong*)cols);
    (*env)->GetDoubleArrayRegion(env, jvals, 0, (int)len, (jdouble*)vals);
 
    JNISCIP_CALL( SCIPcreateRowCons(scip, &row, conshdlr, name, (int)len, cols, vals, (SCIP_Real)lhs, (SCIP_Real)rhs, (SCIP_Bool)local, (SCIP_Bool)modifiable, (SCIP_Bool)removable) );
 
-   SCIPfreeBufferArray(scip, &cols);
    SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &cols);
+
    (*env)->ReleaseStringUTFChars(env, jname, name);
 
    return (jlong) row;
@@ -12974,13 +13062,14 @@ jlong JNISCIP(createRowSepa)(
    JNISCIP_CALL( SCIPallocBufferArray(scip, &cols, (int)len) );
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)len) );
 
-   (*env)->GetLongArrayRegion(env, jcols, 0, (int)len, (jlong*)(*cols));
+   (*env)->GetLongArrayRegion(env, jcols, 0, (int)len, (jlong*)cols);
    (*env)->GetDoubleArrayRegion(env, jvals, 0, (int)len, (jdouble*)vals);
 
    JNISCIP_CALL( SCIPcreateRowSepa(scip, &row, sepa, name, (int)len, cols, vals, (SCIP_Real)lhs, (SCIP_Real)rhs, (SCIP_Bool)local, (SCIP_Bool)modifiable, (SCIP_Bool)removable) );
 
-   SCIPfreeBufferArray(scip, &cols);
    SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &cols);
+
    (*env)->ReleaseStringUTFChars(env, jname, name);
 
    return (jlong) row;
@@ -13030,13 +13119,14 @@ jlong JNISCIP(createRowUnspec)(
    JNISCIP_CALL( SCIPallocBufferArray(scip, &cols, (int)len) );
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)len) );
 
-   (*env)->GetLongArrayRegion(env, jcols, 0, (int)len, (jlong*)(*cols));
+   (*env)->GetLongArrayRegion(env, jcols, 0, (int)len, (jlong*)cols);
    (*env)->GetDoubleArrayRegion(env, jvals, 0, (int)len, (jdouble*)vals);
 
    JNISCIP_CALL( SCIPcreateRowUnspec(scip, &row, name, (int)len, cols, vals, (SCIP_Real)lhs, (SCIP_Real)rhs, (SCIP_Bool)local, (SCIP_Bool)modifiable, (SCIP_Bool)removable) );
 
-   SCIPfreeBufferArray(scip, &cols);
    SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &cols);
+
    (*env)->ReleaseStringUTFChars(env, jname, name);
 
    return (jlong) row;
@@ -13072,38 +13162,40 @@ jlong JNISCIP(createRow)(
    JNISCIP_CALL( SCIP_ERROR );
 
    return 0;
+#if 0
+   SCIP* scip;
+   SCIP_ROW* row;
+   SCIP_COL** cols;
+   SCIP_Real* vals;
+   const char* name;
+   jboolean iscopy;
 
-//    SCIP* scip;
-//    SCIP_ROW* row;
-//    SCIP_COL** cols;
-//    SCIP_Real* vals;
-//    const char* name;
-//    jboolean iscopy;
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI string into C const char* */
+   name = (*env)->GetStringUTFChars(env, jname, &iscopy);
+   if( name == NULL )
+      SCIPABORT();
 
-//    /* convert JNI string into C const char* */
-//    name = (*env)->GetStringUTFChars(env, jname, &iscopy);
-//    if( name == NULL )
-//       SCIPABORT();
+   assert(iscopy);
 
-//    assert(iscopy);
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &cols, (int)len) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)len) );
 
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &cols, (int)len) );
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)len) );
+   (*env)->GetLongArrayRegion(env, jcols, 0, (int)len, (jlong*)cols);
+   (*env)->GetDoubleArrayRegion(env, jvals, 0, (int)len, (jdouble*)vals);
 
-//    (*env)->GetLongArrayRegion(env, jcols, 0, (int)len, (jlong*)(*cols));
-//    (*env)->GetDoubleArrayRegion(env, jvals, 0, (int)len, (jdouble*)vals);
+   JNISCIP_CALL( SCIPcreateRow(scip, &row, name, (int)len, cols, vals, (SCIP_Real)lhs, (SCIP_Real)rhs, (SCIP_Bool)local, (SCIP_Bool)modifiable, (SCIP_Bool)removable) );
 
-//    JNISCIP_CALL( SCIPcreateRow(scip, &row, name, (int)len, cols, vals, (SCIP_Real)lhs, (SCIP_Real)rhs, (SCIP_Bool)local, (SCIP_Bool)modifiable, (SCIP_Bool)removable) );
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &cols);
 
-//    SCIPfreeBufferArray(scip, &cols);
-//    SCIPfreeBufferArray(scip, &vals);
-//    (*env)->ReleaseStringUTFChars(env, jname, name);
+   (*env)->ReleaseStringUTFChars(env, jname, name);
 
-//    return (jlong) row;
+   return (jlong) row;
+#endif
 }
 
 /** creates and captures an LP row without any coefficients from a constraint handler
@@ -13543,7 +13635,7 @@ void JNISCIP(addVarsToRow)(
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)(*vars));
+   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)vars);
    (*env)->GetDoubleArrayRegion(env, jvals, 0, (int)nvars, (jdouble*)vals);
 
    JNISCIP_CALL( SCIPaddVarsToRow(scip, row, (int)nvars, vars, vals) );
@@ -13584,7 +13676,7 @@ void JNISCIP(addVarsToRowSameCoef)(
 
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)(*vars));
+   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)vars);
 
    JNISCIP_CALL( SCIPaddVarsToRowSameCoef(scip, row, (int)nvars, vars, (SCIP_Real)val) );
 
@@ -14190,27 +14282,29 @@ jlongArray JNISCIP(getNLPVars)(
    )
 {
    SCIP* scip;
+   int nvars;
+
    jlongArray jvars;
-   int size;
-   SCIP_VAR** vars;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNNLPVars(scip);
+   nvars = SCIPgetNNLPVars(scip);
+   jvars = (*env)->NewLongArray(env, nvars);
 
-   jvars = (*env)->NewLongArray(env, size);
-
-   if (jvars == NULL) {
+   if( jvars == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_VAR** vars;
 
-   vars = SCIPgetNLPVars(scip);
-
-   (*env)->SetLongArrayRegion(env, jvars, 0, size, (jlong*)(*vars));
+      vars = SCIPgetNLPVars(scip);
+      (*env)->SetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
+   }
 
    return jvars;
 }
@@ -14243,28 +14337,30 @@ jint JNISCIP(getNNLPVars)(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-// void JNISCIP(getNLPVarsNonlinearity)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jscip,              /**< SCIP data structure */
-//    jintArray             jnlcount            /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
-//    )
-// {
-//    SCIP* scip;
-//    int* nlcount;
+#if 0
+void JNISCIP(getNLPVarsNonlinearity)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jintArray             jnlcount            /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
+   )
+{
+   SCIP* scip;
+   int* nlcount;
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &nlcount, ?length?) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &nlcount, ?length?) );
 
-//    (*env)->GetIntArrayRegion(env, jnlcount, 0, ?length?, (jlong*)nlcount);
+   (*env)->GetIntArrayRegion(env, jnlcount, 0, ?length?, (jlong*)nlcount);
 
-//    SCIPfreeBufferArray(scip, &nlcount);
+   SCIPfreeBufferArray(scip, &nlcount);
 
-//    return (jint) SCIPgetNLPVarsNonlinearity(scip);
-// }
+   return (jint) SCIPgetNLPVarsNonlinearity(scip);
+}
+#endif
 
 /** returns dual solution values associated with lower bounds of NLP variables
  *
@@ -14279,27 +14375,29 @@ jdoubleArray JNISCIP(getNLPVarsLbDualsol)(
    )
 {
    SCIP* scip;
+   int nvars;
+
    jdoubleArray jsols;
-   int size;
-   SCIP_Real* sols;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNNLPVars(scip);
+   nvars = SCIPgetNNLPVars(scip);
+   jsols = (*env)->NewDoubleArray(env, nvars);
 
-   jsols = (*env)->NewDoubleArray(env, size);
-
-   if (jsols == NULL) {
+   if( jsols == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_Real* sols;
 
-   sols = SCIPgetNLPVarsLbDualsol(scip);
-
-   (*env)->SetDoubleArrayRegion(env, jsols, 0, size, (jdouble*)sols);
+      sols = SCIPgetNLPVarsLbDualsol(scip);
+      (*env)->SetDoubleArrayRegion(env, jsols, 0, nvars, (jdouble*)sols);
+   }
 
    return jsols;
 }
@@ -14317,27 +14415,29 @@ jdoubleArray JNISCIP(getNLPVarsUbDualsol)(
    )
 {
    SCIP* scip;
+   int nvars;
+
    jdoubleArray jsols;
-   int size;
-   SCIP_Real* sols;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNNLPVars(scip);
+   nvars = SCIPgetNNLPVars(scip);
+   jsols = (*env)->NewDoubleArray(env, nvars);
 
-   jsols = (*env)->NewDoubleArray(env, size);
-
-   if (jsols == NULL) {
+   if (jsols == NULL)
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_Real* sols;
 
-   sols = SCIPgetNLPVarsUbDualsol(scip);
-
-   (*env)->SetDoubleArrayRegion(env, jsols, 0, size, (jdouble*)sols);
+      sols = SCIPgetNLPVarsUbDualsol(scip);
+      (*env)->SetDoubleArrayRegion(env, jsols, 0, nvars, (jdouble*)sols);
+   }
 
    return jsols;
 }
@@ -14355,27 +14455,29 @@ jlongArray JNISCIP(getNLPNlRows)(
    )
 {
    SCIP* scip;
+   int nvars;
+
    jlongArray jnlrows;
-   int size;
-   SCIP_NLROW** nlrows;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNNLPNlRows(scip);
+   nvars = SCIPgetNNLPNlRows(scip);
+   jnlrows = (*env)->NewLongArray(env, nvars);
 
-   jnlrows = (*env)->NewLongArray(env, size);
-
-   if (jnlrows == NULL) {
+   if( jnlrows == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_NLROW** nlrows;
 
-   nlrows = SCIPgetNLPNlRows(scip);
-
-   (*env)->SetLongArrayRegion(env, jnlrows, 0, size, (jlong*)(*nlrows));
+      nlrows = SCIPgetNLPNlRows(scip);
+      (*env)->SetLongArrayRegion(env, jnlrows, 0, nvars, (jlong*)nlrows);
+   }
 
    return jnlrows;
 }
@@ -14459,28 +14561,30 @@ void JNISCIP(flushNLP)(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-// void JNISCIP(setNLPInitialGuess)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jscip,              /**< SCIP data structure */
-//    jdoubleArray          jinitialguess       /**< values of initial guess (corresponding to variables from SCIPgetNLPVarsData), or NULL to use no start point */
-//    )
-// {
-//    SCIP* scip;
-//    SCIP_Real* initialguess;
+#if 0
+void JNISCIP(setNLPInitialGuess)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jdoubleArray          jinitialguess       /**< values of initial guess (corresponding to variables from SCIPgetNLPVarsData), or NULL to use no start point */
+   )
+{
+   SCIP* scip;
+   SCIP_Real* initialguess;
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &initialguess, ?length?) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &initialguess, ?length?) );
 
-//    (*env)->GetDoubleArrayRegion(env, jinitialguessvars, 0, ?length?, (jlong*)initialguess);
+   (*env)->GetDoubleArrayRegion(env, jinitialguessvars, 0, ?length?, (jlong*)initialguess);
 
-//    SCIPfreeBufferArray(scip, &initialguess);
+   SCIPfreeBufferArray(scip, &initialguess);
 
-//    JNISCIP_CALL( SCIPsetNLPInitialGuess(scip, initialguess) );
-// }
+   JNISCIP_CALL( SCIPsetNLPInitialGuess(scip, initialguess) );
+}
+#endif
 
 /** sets initial primal guess for NLP solution (start point for NLP solver)
  *
@@ -14978,7 +15082,7 @@ void JNISCIP(chgVarsBoundsDiveNLP)(
    JNISCIP_CALL( SCIPallocBufferArray(scip, &lbs, (int)nvars) );
    JNISCIP_CALL( SCIPallocBufferArray(scip, &ubs, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)(*vars));
+   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)vars);
    (*env)->GetDoubleArrayRegion(env, jlbs, 0, (int)nvars, (jdouble*)lbs);
    (*env)->GetDoubleArrayRegion(env, jubs, 0, (int)nvars, (jdouble*)ubs);
 
@@ -15314,7 +15418,7 @@ void JNISCIP(addLinearCoefsToNlRow)(
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)(*vars));
+   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)vars);
    (*env)->GetDoubleArrayRegion(env, jvals, 0, (int)nvars, (jdouble*)vals);
 
    JNISCIP_CALL( SCIPaddLinearCoefsToNlRow(scip, nlrow, (int)nvars, vars, vals) );
@@ -15440,33 +15544,35 @@ void JNISCIP(setNlRowExprtreeParam)(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-// void JNISCIP(setNlRowExprtreeParams)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jscip,              /**< SCIP data structure */
-//    jlong                 jnlrow,             /**< NLP row */
-//    jdoubleArray          jparamvals          /**< new values of parameter in expression tree */+
-//    )
-// {
-//    SCIP* scip;
-//    SCIP_NLROW* nlrow;
-//    SCIP_Real* paramvals;
+#if 0
+void JNISCIP(setNlRowExprtreeParams)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jlong                 jnlrow,             /**< NLP row */
+   jdoubleArray          jparamvals          /**< new values of parameter in expression tree */+
+   )
+{
+   SCIP* scip;
+   SCIP_NLROW* nlrow;
+   SCIP_Real* paramvals;
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
-//    nlrow = (SCIP_NLROW*) (size_t) jnlrow;
-//    assert(nlrow != NULL);
+   nlrow = (SCIP_NLROW*) (size_t) jnlrow;
+   assert(nlrow != NULL);
 
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &paramvals, ?length?) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &paramvals, ?length?) );
 
-//    (*env)->GetDoubleArrayRegion(env, jparamvals, 0, ?length?, (jdouble*)paramvals);
+   (*env)->GetDoubleArrayRegion(env, jparamvals, 0, ?length?, (jdouble*)paramvals);
 
-//    JNISCIP_CALL( SCIPsetNlRowExprtreeParams(scip, nlrow, paramvals) );
+   JNISCIP_CALL( SCIPsetNlRowExprtreeParams(scip, nlrow, paramvals) );
 
-//    SCIPfreeBufferArray(scip, &paramvals);
-// }
+   SCIPfreeBufferArray(scip, &paramvals);
+}
+#endif
 
 /** recalculates the activity of a nonlinear row in the last NLP solution
  *
@@ -15972,7 +16078,7 @@ jdouble JNISCIP(getVectorEfficacyNorm)(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-void JNISCIP(addCut)(
+jboolean JNISCIP(addCut)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
    jlong                 jscip,              /**< SCIP data structure */
@@ -15983,6 +16089,7 @@ void JNISCIP(addCut)(
 {
    SCIP* scip;
    SCIP_ROW* cut;
+   SCIP_Bool infeasible;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
@@ -15991,7 +16098,9 @@ void JNISCIP(addCut)(
    cut = (SCIP_ROW*) (size_t) jcut;
    assert(cut != NULL);
 
-   JNISCIP_CALL( SCIPaddCut(scip, (SCIP_SOL*)(size_t)sol, cut, (SCIP_Bool)forcecut) );
+   JNISCIP_CALL( SCIPaddCut(scip, (SCIP_SOL*)(size_t)sol, cut, (SCIP_Bool)forcecut, &infeasible) );
+
+   return (jboolean) infeasible;
 }
 
 /** if not already existing, adds row to global cut pool
@@ -16066,27 +16175,29 @@ jlongArray JNISCIP(getPoolCuts)(
    )
 {
    SCIP* scip;
+   int ncuts;
+
    jlongArray jcuts;
-   int size;
-   SCIP_CUT** cuts;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNPoolCuts(scip);
+   ncuts = SCIPgetNPoolCuts(scip);
+   jcuts = (*env)->NewLongArray(env, ncuts);
 
-   jcuts = (*env)->NewLongArray(env, size);
-
-   if (jcuts == NULL) {
+   if (jcuts == NULL)
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_CUT** cuts;
 
-   cuts = SCIPgetPoolCuts(scip);
-
-   (*env)->SetLongArrayRegion(env, jcuts, 0, size, (jlong*)(*cuts));
+      cuts = SCIPgetPoolCuts(scip);
+      (*env)->SetLongArrayRegion(env, jcuts, 0, ncuts, (jlong*)cuts);
+   }
 
    return jcuts;
 }
@@ -16419,27 +16530,29 @@ jlongArray JNISCIP(getDelayedPoolCuts)(
    )
 {
    SCIP* scip;
+   int ncuts;
+
    jlongArray jcuts;
-   int size;
-   SCIP_CUT** cuts;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNDelayedPoolCuts(scip);
+   ncuts = SCIPgetNDelayedPoolCuts(scip);
+   jcuts = (*env)->NewLongArray(env, ncuts);
 
-   jcuts = (*env)->NewLongArray(env, size);
-
-   if (jcuts == NULL) {
+   if( jcuts == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_CUT** cuts;
 
-   cuts = SCIPgetDelayedPoolCuts(scip);
-
-   (*env)->SetLongArrayRegion(env, jcuts, 0, size, (jlong*)(*cuts));
+      cuts = SCIPgetDelayedPoolCuts(scip);
+      (*env)->SetLongArrayRegion(env, jcuts, 0, ncuts, (jlong*)cuts);
+   }
 
    return jcuts;
 }
@@ -16507,27 +16620,29 @@ jlongArray JNISCIP(getCuts)(
    )
 {
    SCIP* scip;
+   int ncuts;
+
    jlongArray jcuts;
-   int size;
-   SCIP_ROW** cuts;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNCuts(scip);
+   ncuts = SCIPgetNCuts(scip);
+   jcuts = (*env)->NewLongArray(env, ncuts);
 
-   jcuts = (*env)->NewLongArray(env, size);
-
-   if (jcuts == NULL) {
+   if( jcuts == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_ROW** cuts;
 
-   cuts = SCIPgetCuts(scip);
-
-   (*env)->SetLongArrayRegion(env, jcuts, 0, size, (jlong*)(*cuts));
+      cuts = SCIPgetCuts(scip);
+      (*env)->SetLongArrayRegion(env, jcuts, 0, ncuts, (jlong*)cuts);
+   }
 
    return jcuts;
 }
@@ -16906,39 +17021,6 @@ jdouble JNISCIP(getVarUbDive)(
    return (jdouble) SCIPgetVarUbDive(scip, var);
 }
 
-/** solves the LP of the current dive; no separation or pricing is applied
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- *
- *  @note be aware that the LP solve may take longer than expected if SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL,
- *  compare the explanation of SCIPstartDive()
- */
-JNIEXPORT
-jboolean JNISCIP(solveDiveLP)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jint                  itlim               /**< maximal number of LP iterations to perform, or -1 for no limit */
-   )
-{
-   SCIP* scip;
-   SCIP_Bool lperror;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   JNISCIP_CALL( SCIPsolveDiveLP(scip, (int)itlim, &lperror) );
-
-   return (jboolean) lperror;
-}
-
 /** returns the number of the node in the current branch and bound run, where the last LP was solved in diving
  *  or probing mode
  *
@@ -17305,69 +17387,6 @@ jboolean JNISCIP(propagateProbingImplications)(
    JNISCIP_CALL( SCIPpropagateProbingImplications(scip, &cutoff) );
 
    return (jboolean) cutoff;
-}
-
-/** solves the LP at the current probing node (cannot be applied at preprocessing stage);
- *  no separation or pricing is applied
- *
- *  The LP has to be constructed before (you can use SCIPisLPConstructed() or SCIPconstructLP()).
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- */
-JNIEXPORT
-jboolean JNISCIP(solveProbingLP)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jint                  itlim               /**< maximal number of LP iterations to perform, or -1 for no limit */
-   )
-{
-   SCIP* scip;
-   SCIP_Bool lperror;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   JNISCIP_CALL( SCIPsolveProbingLP(scip, (int)itlim, &lperror) );
-
-   return (jboolean) lperror;
-}
-
-/** solves the LP at the current probing node (cannot be applied at preprocessing stage) and applies pricing
- *  until the LP is solved to optimality; no separation is applied
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- */
-JNIEXPORT
-jboolean JNISCIP(solveProbingLPWithPricing)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jboolean              pretendroot,        /**< should the pricers be called as if we were at the root node? */
-   jboolean              displayinfo,        /**< should info lines be displayed after each pricing round? */
-   jint                  maxpricerounds      /**< maximal number of pricing rounds (-1: no limit);
-                                              *   a finite limit means that the LP might not be solved to optimality! */
-   )
-{
-   SCIP* scip;
-   SCIP_Bool lperror;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   JNISCIP_CALL( SCIPsolveProbingLPWithPricing(scip, (SCIP_Bool)pretendroot, (SCIP_Bool)displayinfo, (int)maxpricerounds, &lperror) );
-
-   return (jboolean) lperror;
 }
 
 /** gets branching candidates for LP solution branching (fractional variables) along with solution values,
@@ -17903,8 +17922,8 @@ jdouble JNISCIP(calcNodeselPriority)(
    jlong                 jscip,              /**< SCIP data structure */
    jlong                 jvar,               /**< variable on which the branching is applied */
    jint                  branchdir,          /**< type of branching that was performed: upwards, downwards, or fixed;
-                                              *   fixed should only be used, when both bounds changed
-                                              */
+					      *   fixed should only be used, when both bounds changed
+					      */
    jdouble               targetvalue         /**< new value of the variable in the child node */
    )
 {
@@ -18753,7 +18772,7 @@ void JNISCIP(setSolVals)(
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)(*vars));
+   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)vars);
    (*env)->GetDoubleArrayRegion(env, jvals, 0, (int)nvars, (jdouble*)vals);
 
    JNISCIP_CALL( SCIPsetSolVals(scip, sol, (int)nvars, vars, vals) );
@@ -18851,10 +18870,10 @@ jdoubleArray JNISCIP(getSolVals)(
    )
 {
    SCIP* scip;
-   jdoubleArray jvals;
-   SCIP_Real* vals;
-   SCIP_SOL* sol;
    SCIP_VAR** vars;
+   SCIP_SOL* sol;
+
+   jdoubleArray jvals;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
@@ -18864,25 +18883,27 @@ jdoubleArray JNISCIP(getSolVals)(
    sol = (SCIP_SOL*) (size_t) jsol;
 
    JNISCIP_CALL( SCIPallocBufferArray(scip, &vars, (int)nvars) );
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)nvars) );
 
-   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)(*vars));
-
-
+   (*env)->GetLongArrayRegion(env, jvars, 0, (int)nvars, (jlong*)vars);
    jvals = (*env)->NewDoubleArray(env, (int)nvars);
 
    if (jvals == NULL)
    {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
+   }
+   else
+   {
+      SCIP_Real* vals;
+
+      JNISCIP_CALL( SCIPallocBufferArray(scip, &vals, (int)nvars) );
+
+      JNISCIP_CALL( SCIPgetSolVals(scip, sol, (int)nvars, vars, vals) );
+      (*env)->SetDoubleArrayRegion(env, jvals, 0, (int)nvars, (jdouble*)vals);
+
+      SCIPfreeBufferArray(scip, &vals);
    }
 
-   JNISCIP_CALL( SCIPgetSolVals(scip, sol, (int)nvars, vars, vals) );
-
-   (*env)->SetDoubleArrayRegion(env, jvals, 0, (int)nvars, (jdouble*)vals);
-
-   SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
 
    return jvals;
@@ -19391,27 +19412,29 @@ jlongArray JNISCIP(getSols)(
    )
 {
    SCIP* scip;
+   int nsols;
+
    jlongArray jsols;
-   int size;
-   SCIP_SOL** sols;
 
    /* convert JNI pointer into C pointer */
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   size = SCIPgetNSols(scip);
+   nsols = SCIPgetNSols(scip);
+   jsols = (*env)->NewLongArray(env, nsols);
 
-   jsols = (*env)->NewLongArray(env, size);
-
-   if (jsols == NULL) {
+   if( jsols == NULL )
+   {
       SCIPerrorMessage("Out of Memory\n");
       JNISCIP_CALL( SCIP_ERROR );
-      return 0;
    }
+   else
+   {
+      SCIP_SOL** sols;
 
-   sols = SCIPgetSols(scip);
-
-   (*env)->SetLongArrayRegion(env, jsols, 0, size, (jlong*)(*sols));
+      sols = SCIPgetSols(scip);
+      (*env)->SetLongArrayRegion(env, jsols, 0, nsols, (jlong*)sols);
+   }
 
    return jsols;
 }
@@ -22979,7 +23002,8 @@ void JNISCIP(printDisplayLine)(
    jobject               jobj,               /**< JNI class pointer */
    jlong                 jscip,              /**< SCIP data structure */
    jlong                 file,               /**< output file (or NULL for standard output) */
-   jint                  verblevel           /**< minimal verbosity level to actually display the information line */
+   jint                  verblevel,          /**< minimal verbosity level to actually display the information line */
+   jboolean              endline             /**< should the line be terminated with a newline symbol? */
    )
 {
    SCIP* scip;
@@ -22988,7 +23012,7 @@ void JNISCIP(printDisplayLine)(
    scip = (SCIP*) (size_t) jscip;
    assert(scip != NULL);
 
-   JNISCIP_CALL( SCIPprintDisplayLine(scip, (FILE*)(size_t)file, (SCIP_VERBLEVEL)verblevel) );
+   JNISCIP_CALL( SCIPprintDisplayLine(scip, (FILE*)(size_t)file, (SCIP_VERBLEVEL)verblevel, (SCIP_Bool)endline) );
 }
 
 /** gets total number of implications between variables that are stored in the implication graph
@@ -24907,27 +24931,29 @@ jlong JNISCIP(reallocBufferSize)(
 }
 
 /** frees a memory buffer */
-// JNIEXPORT
-// void JNISCIP(freeBufferSize)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jscip,              /**< SCIP data structure */
-//    jlong                 jptr,               /**< pointer to the buffer */
-//    jint                  size                /**< used to get a safer define for SCIPfreeBuffer() and SCIPfreeBufferArray() */
-//    )
-// {
-//    SCIP* scip;
-//    void* ptr;
+#if 0
+JNIEXPORT
+void JNISCIP(freeBufferSize)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jlong                 jptr,               /**< pointer to the buffer */
+   jint                  size                /**< used to get a safer define for SCIPfreeBuffer() and SCIPfreeBufferArray() */
+   )
+{
+   SCIP* scip;
+   void* ptr;
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
-//    ptr = (void*) (size_t) jptr;
-//    assert(ptr != NULL);
+   ptr = (void*) (size_t) jptr;
+   assert(ptr != NULL);
 
-//    SCIPfreeBufferSize(scip, &ptr, (int)size);
-// }
+   SCIPfreeBufferSize(scip, &ptr, (int)size);
+}
+#endif
 
 /** prints output about used memory */
 JNIEXPORT

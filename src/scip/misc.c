@@ -913,7 +913,7 @@ void hashtablelistFree(
 
    assert(hashtablelist != NULL);
    assert(blkmem != NULL);
-   
+
    list = *hashtablelist;
    while( list != NULL )
    {
@@ -949,7 +949,7 @@ SCIP_HASHTABLELIST* hashtablelistFind(
       currentkeyval = hashkeyval(userptr, currentkey);
       if( currentkeyval == keyval && hashkeyeq(userptr, currentkey, key) )
          return hashtablelist;
-      
+
       hashtablelist = hashtablelist->next;
    }
 
@@ -1005,10 +1005,12 @@ void* hashtablelistRetrieve(
 
 
 /** retrieves element with given key from the hash list, or NULL
- * returns pointer to hash table list entry */
+ *  returns pointer to hash table list entry
+ */
 static
 void* hashtablelistRetrieveNext(
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< on input: hash list to search; on exit: hash list entry corresponding to element after retrieved one, or NULL */
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< on input: hash list to search; on exit: hash list entry corresponding
+                                              *   to element after retrieved one, or NULL */
    SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
@@ -1020,7 +1022,7 @@ void* hashtablelistRetrieveNext(
    SCIP_HASHTABLELIST* h;
 
    assert(hashtablelist != NULL);
-   
+
    /* find hash list entry */
    h = hashtablelistFind(*hashtablelist, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key);
 
@@ -1028,18 +1030,18 @@ void* hashtablelistRetrieveNext(
    if( h != NULL )
    {
       *hashtablelist = h->next;
-      
+
       return h->element;
    }
-   
+
    *hashtablelist = NULL;
-   
+
    return NULL;
 }
 
 /** removes element from the hash list */
 static
-SCIP_RETCODE hashtablelistRemove(
+SCIP_Bool hashtablelistRemove(
    SCIP_HASHTABLELIST**  hashtablelist,      /**< pointer to hash list */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    void*                 element             /**< element to remove from the list */
@@ -1059,6 +1061,129 @@ SCIP_RETCODE hashtablelistRemove(
       nextlist = (*hashtablelist)->next;
       BMSfreeBlockMemory(blkmem, hashtablelist);
       *hashtablelist = nextlist;
+
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+#define SCIP_HASHTABLE_MAXSIZE 33554431 /* 2^25 - 1*/
+#define SCIP_HASHTABLE_RESIZE_PERCENTAGE 65
+#define SCIP_HASHTABLE_GROW_FACTOR 1.31
+
+/** resizing(increasing) the given hashtable */
+static
+SCIP_RETCODE hashtableResize(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   SCIP_HASHTABLELIST** newlists;
+   SCIP_HASHTABLELIST* hashtablelist;
+   SCIP_Longint nelements;
+   int nnewlists;
+   int l;
+
+   assert(hashtable != NULL);
+   assert(hashtable->lists != NULL);
+   assert(hashtable->nlists > 0);
+   assert(hashtable->hashgetkey != NULL);
+   assert(hashtable->hashkeyeq != NULL);
+   assert(hashtable->hashkeyval != NULL);
+
+   /* get new memeory for hash table lists */
+   nnewlists = (int) MIN((unsigned int)(hashtable->nlists * SCIP_HASHTABLE_GROW_FACTOR), SCIP_HASHTABLE_MAXSIZE);
+   nnewlists = MAX(nnewlists, hashtable->nlists);
+
+   SCIPdebugMessage("load = %g, nelements = %"SCIP_LONGINT_FORMAT", nlists = %d, nnewlist = %d\n", SCIPhashtableGetLoad(hashtable), hashtable->nelements, hashtable->nlists, nnewlists);
+
+   if( nnewlists > hashtable->nlists )
+   {
+      SCIP_Bool onlyone;
+      void* key;
+      unsigned int keyval;
+      unsigned int hashval;
+
+      SCIP_ALLOC( BMSallocClearMemoryArray(&newlists, nnewlists) );
+
+      /* move all lists */
+      for( l = hashtable->nlists - 1; l >= 0; --l )
+      {
+         hashtablelist = hashtable->lists[l];
+         onlyone = TRUE;
+
+         /* move all elements frmm the old lists into the new lists */
+         while( hashtablelist != NULL )
+         {
+            /* get the hash key and its hash value */
+            key = hashtable->hashgetkey(hashtable->userptr, hashtablelist->element);
+            keyval = hashtable->hashkeyval(hashtable->userptr, key);
+            hashval = keyval % nnewlists; /*lint !e573*/
+
+            /* if the old hash table list consists of only one entry, we still can use this old memory block instead
+             * of creating a new one
+             */
+            if( hashtablelist->next == NULL && onlyone )
+            {
+               /* the new list is also empty, we can directly copy the entry */
+               if( newlists[hashval] == NULL )
+                  newlists[hashval] = hashtablelist;
+               /* the new list is not empty, so we need to find the first empty spot */
+               else
+               {
+                  SCIP_HASHTABLELIST* lastnext = newlists[hashval];
+                  SCIP_HASHTABLELIST* next = lastnext->next;
+
+                  while( next != NULL )
+                  {
+                     lastnext = next;
+                     next = next->next;
+                  }
+
+                  lastnext->next = hashtablelist;
+               }
+
+               hashtable->lists[l] = NULL;
+            }
+            else
+            {
+               /* append old element to the list at the hash position */
+               SCIP_CALL( hashtablelistAppend(&(newlists[hashval]), hashtable->blkmem, hashtablelist->element) );
+            }
+
+            onlyone = FALSE;
+            hashtablelist = hashtablelist->next;
+         }
+      }
+
+      /* remember number of elements */
+      nelements = hashtable->nelements;
+      /* clear old lists */
+      SCIPhashtableClear(hashtable);
+      /* free old lists */
+      BMSfreeMemoryArray(&(hashtable->lists));
+
+      /* set new data */
+      hashtable->lists = newlists;
+      hashtable->nlists = nnewlists;
+      hashtable->nelements = nelements;
+
+#ifdef SCIP_MORE_DEBUG
+      {
+         SCIP_Longint sumslotsize = 0;
+
+         for( l = 0; l < hashtable->nlists; ++l )
+         {
+            hashtablelist = hashtable->lists[i];
+            while( hashtablelist != NULL )
+            {
+               sumslotsize++;
+               hashtablelist = hashtablelist->next;
+            }
+         }
+         assert(sumslotsize == hashtable->nelements);
+      }
+#endif
    }
 
    return SCIP_OKAY;
@@ -1082,15 +1207,14 @@ SCIP_RETCODE SCIPhashtableCreate(
    assert(hashkeyval != NULL);
 
    SCIP_ALLOC( BMSallocMemory(hashtable) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*hashtable)->lists, tablesize) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*hashtable)->lists, tablesize) );
    (*hashtable)->blkmem = blkmem;
    (*hashtable)->nlists = tablesize;
    (*hashtable)->hashgetkey = hashgetkey;
    (*hashtable)->hashkeyeq = hashkeyeq;
    (*hashtable)->hashkeyval = hashkeyval;
    (*hashtable)->userptr = userptr;
-
-   BMSclearMemoryArray((*hashtable)->lists, tablesize);
+   (*hashtable)->nelements = 0;
 
    return SCIP_OKAY;
 }
@@ -1142,9 +1266,15 @@ void SCIPhashtableClear(
    /* free hash lists */
    for( i = hashtable->nlists - 1; i >= 0; --i )
       hashtablelistFree(&lists[i], blkmem);
+
+   hashtable->nelements = 0;
 }
 
-/** inserts element in hash table (multiple inserts of same element possible) */
+/** inserts element in hash table (multiple inserts of same element possible)
+ *
+ *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
+ *        to the hash table, due to dynamic resizing.
+ */
 SCIP_RETCODE SCIPhashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to insert into the table */
@@ -1162,6 +1292,12 @@ SCIP_RETCODE SCIPhashtableInsert(
    assert(hashtable->hashkeyval != NULL);
    assert(element != NULL);
 
+   /* dynamically resizing the hashtables */
+   if( SCIPhashtableGetLoad(hashtable) > SCIP_HASHTABLE_RESIZE_PERCENTAGE )
+   {
+      SCIP_CALL( hashtableResize(hashtable) );
+   }
+
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
@@ -1169,11 +1305,17 @@ SCIP_RETCODE SCIPhashtableInsert(
 
    /* append element to the list at the hash position */
    SCIP_CALL( hashtablelistAppend(&hashtable->lists[hashval], hashtable->blkmem, element) );
-   
+
+   ++(hashtable->nelements);
+
    return SCIP_OKAY;
 }
 
-/** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
+/** inserts element in hash table (multiple insertion of same element is checked and results in an error)
+ *
+ *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
+ *        element to the hash table, due to dynamic resizing.
+ */
 SCIP_RETCODE SCIPhashtableSafeInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to insert into the table */
@@ -1188,7 +1330,7 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
 
    /* insert element in hash table */
    SCIP_CALL( SCIPhashtableInsert(hashtable, element) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1218,10 +1360,15 @@ void* SCIPhashtableRetrieve(
 }
 
 /** retrieve element with key from hash table, returns NULL if not existing
- * can be used to retrieve all entries with the same key (one-by-one) */
+ *  can be used to retrieve all entries with the same key (one-by-one)
+ *
+ *  @note The returned hashtablelist pointer might get invalid when adding a new element to the hash table.
+ */
 void* SCIPhashtableRetrieveNext(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL; output: entry in hash table list corresponding to element after retrieved one, or NULL */
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL
+                                              *   output: entry in hash table list corresponding to element after
+                                              *           retrieved one, or NULL */
    void*                 key                 /**< key to retrieve */
    )
 {
@@ -1241,10 +1388,10 @@ void* SCIPhashtableRetrieveNext(
    if( *hashtablelist == NULL )
    {
       unsigned int hashval;
-      
+
       /* get the hash value of the key */
       hashval = keyval % hashtable->nlists; /*lint !e573*/
-      
+
       *hashtablelist = hashtable->lists[hashval];
    }
 
@@ -1303,9 +1450,30 @@ SCIP_RETCODE SCIPhashtableRemove(
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* remove element from the list at the hash position */
-   SCIP_CALL( hashtablelistRemove(&hashtable->lists[hashval], hashtable->blkmem, element) );
-   
+   if( hashtablelistRemove(&hashtable->lists[hashval], hashtable->blkmem, element) )
+      --(hashtable->nelements);
+
    return SCIP_OKAY;
+}
+
+/** returns number of hash table elements */
+SCIP_Longint SCIPhashtableGetNElemenets(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   assert(hashtable != NULL);
+
+   return hashtable->nelements;
+}
+
+/** returns the load of the given hash table in percentage */
+SCIP_Real SCIPhashtableGetLoad(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   assert(hashtable != NULL);
+
+   return ((SCIP_Real)(hashtable->nelements) / (hashtable->nlists) * 100.0);
 }
 
 /** prints statistics about hash table usage */
@@ -1342,12 +1510,13 @@ void SCIPhashtablePrintStatistics(
          sumslotsize += slotsize;
       }
    }
+   assert(sumslotsize == hashtable->nelements);
 
-   SCIPmessagePrintInfo(messagehdlr, "%d hash entries, used %d/%d slots (%.1f%%)",
-      sumslotsize, usedslots, hashtable->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashtable->nlists));
+   SCIPmessagePrintInfo(messagehdlr, "%"SCIP_LONGINT_FORMAT" hash entries, used %d/%d slots (%.1f%%)",
+      hashtable->nelements, usedslots, hashtable->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashtable->nlists));
    if( usedslots > 0 )
       SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot",
-         (SCIP_Real)sumslotsize/(SCIP_Real)usedslots, maxslotsize);
+         (SCIP_Real)(hashtable->nelements)/(SCIP_Real)usedslots, maxslotsize);
    SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
@@ -1365,19 +1534,18 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqString)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 {  /*lint --e{715}*/
    const char* str;
-   unsigned int sum;
+   unsigned int hash;
 
    str = (const char*)key;
-   sum = 0;
-
+   hash = 37;
    while( *str != '\0' )
    {
-      sum *= 31;
-      sum += (unsigned int)(*str); /*lint !e571*/
+      hash *= 11;
+      hash += (unsigned int)(*str); /*lint !e571*/
       str++;
    }
 
-   return sum;
+   return hash;
 }
 
 

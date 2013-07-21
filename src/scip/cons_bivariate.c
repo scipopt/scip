@@ -1247,7 +1247,22 @@ SCIP_RETCODE solveDerivativeEquation(
    while( ++iter < NEWTONMAXITER )
    {
       SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, &s, TRUE, &fval, &grad) );
-      if( SCIPisRelEQ(scip, grad, targetvalue) )
+
+      if( !finite(grad) )
+      {
+          /* if f cannot be differentiated at s, take the gradient from another point close by */
+          SCIP_Real smod;
+          SCIP_Real smodval;
+
+          if( s > 0.5 * (lb + ub) )
+             smod = s - 0.02 * (ub - lb);
+          else
+             smod = s + 0.02 * (ub - lb);
+          SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, &smod, TRUE, &smodval, &grad) );
+
+          assert(finite(grad));
+      }
+      else if( SCIPisRelEQ(scip, grad, targetvalue) )
       {
          /* if grad is targetvalue (w.r.t. epsilon), then we are done */
          *val = s;
@@ -1256,6 +1271,21 @@ SCIP_RETCODE solveDerivativeEquation(
       }
 
       SCIP_CALL( SCIPexprintHessianDense(exprinterpreter, f, &s, FALSE, &fval, &hess) );
+
+      if( !finite(hess) )
+      {
+          SCIP_Real smod;
+          SCIP_Real smodval;
+
+          /* if f cannot be two times differentiated at s, take the Hessian from another point close by */
+          if( s > 0.5 * (lb + ub) )
+             smod = s - 0.02 * (ub - lb);
+          else
+             smod = s + 0.02 * (ub - lb);
+          SCIP_CALL( SCIPexprintHessianDense(exprinterpreter, f, &smod, TRUE, &smodval, &hess) );
+
+          assert(finite(hess));
+      }
 
       /* next iterate would be s - (grad - targetvalue) / hess */
 
@@ -1670,6 +1700,9 @@ SCIP_RETCODE generateOverestimatingHyperplaneCut(
    if( success )
    {
       assert(!SCIPisInfinity(scip, -consdata->lhs));
+      assert(finite(coefs[0]));
+      assert(finite(coefs[1]));
+      assert(finite(constant));
 
       SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), "bivaroveresthyperplanecut", 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
@@ -1725,7 +1758,6 @@ SCIP_RETCODE generateUnderestimatorParallelYFacets(
    SCIP_Real      sub;
    SCIP_Real      rval;
 
-   SCIP_Real      vredval;
    SCIP_Real      frval;
    SCIP_Real      fsval;
    SCIP_Real      x0y0[2];
@@ -1827,14 +1859,19 @@ SCIP_RETCODE generateUnderestimatorParallelYFacets(
    /* find s in [slb, sub] such that vred'(s) = 0 */
    SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, vredtree, 0.0, slb, sub, &sval, success) );
 
+   SCIP_CALL( SCIPexprtreeFree(&vredtree) );
+
    if( *success == FALSE )
-   { /* something went wrong when computing s */
-      SCIP_CALL( SCIPexprtreeFree(&vredtree) );
+   {
+      /* something went wrong when computing s */
       return SCIP_OKAY;
    }
 
    /* compute r from s */
    rval = 1.0 / t * xval + (1.0 - 1.0 / t) * sval;
+   assert(SCIPisFeasGE(scip, rval, xlb));
+   assert(SCIPisFeasLE(scip, rval, xub));
+   rval = MAX(xlb, MIN(rval, xub));
 
    /* compute f(sval, yub) */
    x0y0[0] = sval;
@@ -1866,30 +1903,38 @@ SCIP_RETCODE generateUnderestimatorParallelYFacets(
    {
       /* rare case
        * both points (sval, yub) and (rval, ylb) should yield valid inequality
-       * for now, just take the first one */
+       * for now, just take the first one, if differentiable, otherwise second one */
       x0y0[0] = sval;
       x0y0[1] = yub;
 
       /* compute f'(xbar, ybar) */
       SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &fsval, grad) );
-   }
 
-   /* compute vred(s) */
-   SCIP_CALL( SCIPexprtreeEval(vredtree, &sval, &vredval) );
+      if( !finite(grad[0]) )
+      {
+         x0y0[0] = rval;
+         x0y0[1] = ylb;
+
+         /* compute f'(xbar, ybar) */
+         SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &frval, grad) );
+      }
+   }
+   assert(finite(grad[0]));
+
+   /* compute vred(s) = t * f(rval, ylb) + (1-t) * f(s, yub) */
+   /* SCIP_CALL( SCIPexprtreeEval(vredtree, &sval, &vredval) ); */
+   *convenvvalue = t * frval + (1.0 - t) * fsval;
 
    /* compute cut coefficients */
    cutcoeff[0]   = (yub - ylb) * grad[0];
    cutcoeff[1]   = fsval - frval - (sval - rval) * grad[0];
    cutcoeff[2]   = yub - ylb;
-   cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * yval - cutcoeff[2] * vredval;
-   *convenvvalue = vredval;
+   cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * yval - cutcoeff[2] * *convenvvalue;
 
    SCIPdebugMessage("Parallel: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
    SCIPdebugMessage("Parallel: r=%g in [%g,%g], s=%g in [%g,%g], f(r,ylb)=%g, f(xlb,s)=%g\n",rval,xlb,xub,sval,ylb,yub,frval,fsval);
-   SCIPdebugMessage("(r,ylb)=(%g,%g), (s,yub)=(%g,%g), vredval=%g\n",rval,ylb,sval,yub,vredval);
+   SCIPdebugMessage("(r,ylb)=(%g,%g), (s,yub)=(%g,%g), vredval=%g\n",rval,ylb,sval,yub,*convenvvalue);
    SCIPdebugMessage("Parallel: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[2]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
-
-   SCIP_CALL( SCIPexprtreeFree(&vredtree) );
 
    *success = TRUE;
 
@@ -2054,19 +2099,24 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
 
       /* computing the cut coefficients */
       if( *success == FALSE )
-      { /* something went wrong when computing s */
+      {
+         /* something went wrong when computing s */
          SCIP_CALL( SCIPexprtreeFree(&vredtree) );
          return SCIP_OKAY;
       }
 
       /* compute r and s from tval */
       rval = (yval-(1-tval)*ylb)/tval;
+      rval = MAX(ylb, MIN(yub, rval));
       sval = (xval-xlb*tval)/(1-tval);
+      sval = MAX(xlb, MIN(xub, sval));
 
       SCIPdebugMessage("LowerLeft: t[%g,%g] = %g -> r = %g, s = %g\n",tlb,tub,tval,rval,sval);
 
       /* compute vred(tval) */
       SCIP_CALL( SCIPexprtreeEval(vredtree, &tval, convenvvalue) );
+
+      SCIP_CALL( SCIPexprtreeFree(&vredtree) );
 
       /* compute f(s, ylb) and f'(s, ylb) */
       x0y0[0] = sval;
@@ -2079,10 +2129,17 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
       SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &frval, grad_rval) );
 
       /* generate coefficients cutcoeff = (alpha, beta, gamma, delta), such that
-       * alpha * x + beta * y - delta <= gamma * f(x,y) */
+       * alpha * x + beta * y - delta <= gamma * f(x,y)
+       * cf. Section 2.5.2 Aux.prob. 2 case (ii)
+       */
       if( !(SCIPisEQ(scip,sval,xub)) )
       {
          /* use the x-axis to determine the second direction */
+         if( !finite(grad_sval[0]) )
+         {
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
          cutcoeff[0] = (rval-ylb)* grad_sval[0];
          cutcoeff[1] = (sval-xlb)* grad_sval[0]+frval-fsval;
          cutcoeff[2] = rval-ylb;
@@ -2091,6 +2148,11 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
       else if( !(SCIPisEQ(scip,rval,yub)) )
       {
          /* use the y-axis to determine the second direction */
+         if( !finite(grad_rval[1]) )
+         {
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
          cutcoeff[0] = (rval-ylb)*grad_rval[1]+fsval-frval;
          cutcoeff[1] = (sval-xlb)*grad_rval[1];
          cutcoeff[2] = sval-xlb;
@@ -2099,6 +2161,12 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
       else
       {
          /* the point lies on the segment between (xlb,yub) and (xub,ylb) */
+         if( !finite(grad_sval[0]) || !finite(grad_rval[0]) )
+         {
+            /* FIXME maybe it is sufficient to have one of them finite, using that one for the MIN below? */
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
          cutcoeff[0] = (rval-ylb)* MIN(grad_sval[0],grad_rval[0]);
          cutcoeff[1] = (sval-xlb)* MIN(grad_sval[0],grad_rval[0])+frval-fsval;
          cutcoeff[2] = (rval-ylb);
@@ -2109,11 +2177,10 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
       SCIPdebugMessage("LowerLeft: r=%g in [%g,%g], s=%g in [%g,%g], f(s,ylb)=%g, f(xlb,r)=%g\n",rval,xlb,xub,sval,ylb,yub,fsval,frval);
       SCIPdebugMessage("(s,ylb)=(%g,%g) (xlb,r)=(%g,%g) t=%g, vredval=%g\n",sval,ylb,xlb,rval,tval,*convenvvalue);
       SCIPdebugMessage("LowerLeft: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
-
-      SCIP_CALL( SCIPexprtreeFree(&vredtree) );
    }
    else
-   { /* (xval,yval) lies in the upper right triangle, i.e region A_2 */
+   {
+      /* (xval,yval) lies in the upper right triangle, i.e region A_2 */
       /* construct v_red(t) := t f( xub, yub + (yval-yub)/t ) + (1-t)*f((xval-xub*t)/(1-t), yub) */
 
       /* construct e1 := f(xub, yub+(yval-yub)/t) */
@@ -2181,7 +2248,8 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
       SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, vredtree, 0.0, tlb, tub, &tval, success) );
 
       if( *success == FALSE )
-      { /* something went wrong when computing s */
+      {
+         /* something went wrong when computing s */
          SCIP_CALL( SCIPexprtreeFree(&vredtree) );
          return SCIP_OKAY;
       }
@@ -2190,10 +2258,14 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
 
       /* compute r and s from tval */
       rval = (yval-(1-tval)*yub)/tval;
+      rval = MAX(ylb, MIN(yub, rval));
       sval = (xval-xub*tval)/(1-tval);
+      sval = MAX(xlb, MIN(xub, sval));
 
       /* compute vred(tval) */
       SCIP_CALL( SCIPexprtreeEval(vredtree, &tval, convenvvalue) );
+
+      SCIP_CALL( SCIPexprtreeFree(&vredtree) );
 
       /* compute f(xub,r) and f'(xub,r) */
       x0y0[0] = xub;
@@ -2209,14 +2281,27 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
        * alpha * x + beta * y - delta <= gamma * f(x,y) */
 
       if( !(SCIPisEQ(scip,sval,xlb)) )
-      { /* use the x-axis to determine the second direction */
+      {
+         /* use the x-axis to determine the second direction */
+         if( !finite(grad_sval[0]) )
+         {
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
+
          cutcoeff[0] = (yub-rval)*grad_sval[0];
          cutcoeff[1] = (xub-sval)*grad_sval[0]+fsval-frval;
          cutcoeff[2] = yub-rval;
          cutcoeff[3] = cutcoeff[0]*sval+cutcoeff[1]*yub-cutcoeff[2]*fsval;
       }
       else if( !(SCIPisEQ(scip,rval,ylb)) )
-      { /* use the y-axis to determine the second direction */
+      {
+         /* use the y-axis to determine the second direction */
+         if( !finite(grad_rval[1]) )
+         {
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
          cutcoeff[0] = (yub-rval)*grad_rval[1]+frval-fsval;
          cutcoeff[1] = (xub-sval)*grad_rval[1];
          cutcoeff[2] = xub-sval;
@@ -2227,7 +2312,13 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
          /* the point lies on the segment between (xlb,yub) and (xub,ylb)
           * due to numerics, we get into this case here instead in the LowerLeft
           */
-         assert(SCIPisRelLE(scip, yval, (ylb-yub) / (xub-xlb) * (xval-xlb) + yub));
+         assert(SCIPisFeasLE(scip, yval, (ylb-yub) / (xub-xlb) * (xval-xlb) + yub));
+         if( !finite(grad_sval[0]) || !finite(grad_rval[0]) )
+         {
+            /* FIXME maybe it is sufficient to have one of them finite, using that one for the MIN below? */
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
 
          cutcoeff[0] = (yub-rval)*MIN(grad_sval[0],grad_rval[0]);
          cutcoeff[1] = (xub-sval)*MIN(grad_sval[0],grad_rval[0])+fsval-frval;
@@ -2239,8 +2330,6 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
       SCIPdebugMessage("UpperRight: r=%g in [%g,%g], s=%g in [%g,%g], f(r,yub)=%g, f(xub,s)=%g\n",rval,xlb,xub,sval,ylb,yub,frval,fsval);
       SCIPdebugMessage("(s,yub)=(%g,%g) (xub,r)=(%g,%g) t=%g, vredval=%g\n",sval,yub,xub,rval,tval,*convenvvalue);
       SCIPdebugMessage("UpperRight: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
-
-      SCIP_CALL( SCIPexprtreeFree(&vredtree) );
    }
 
    return SCIP_OKAY;
@@ -2403,7 +2492,8 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, vredtree, 0.0, tlb, tub, &tval, success) );
 
       if( *success == FALSE )
-      { /* something went wrong when computing t */
+      {
+         /* something went wrong when computing t */
          SCIP_CALL( SCIPexprtreeFree(&vredtree) );
          return SCIP_OKAY;
       }
@@ -2412,10 +2502,14 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
 
       /* compute r and s from tval */
       rval = xub+(xval-xub)/tval;
+      rval = MAX(xlb, MIN(xub, rval));
       sval = (yval-tval*ylb)/(1-tval);
+      sval = MAX(ylb, MIN(yub, sval));
 
       /* compute vred(tval) */
       SCIP_CALL( SCIPexprtreeEval(vredtree, &tval, convenvvalue) );
+
+      SCIP_CALL( SCIPexprtreeFree(&vredtree) );
 
       /* compute f(r, ylb) and f'(r, ylb) */
       x0y0[0] = rval;
@@ -2432,6 +2526,11 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       if( !(SCIPisEQ(scip,rval,xlb)) )
       {
          /* take the slope along the x-axis and the slope between the points */
+         if( !finite(grad_rval[0]) )
+         {
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
          cutcoeff[0] = (sval-ylb)*grad_rval[0];
          cutcoeff[1] = (rval-xub)*grad_rval[0]-frval+fsval;
          cutcoeff[2] = sval-ylb;
@@ -2440,6 +2539,11 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       else if( !(SCIPisEQ(scip,sval,yub)) )
       {
          /* take the slope along the y-axis and the slope between the points */
+         if( !finite(grad_sval[1]) )
+         {
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
          cutcoeff[0] = (ylb-sval)*grad_sval[1]-frval+fsval;
          cutcoeff[1] = (xub-rval)*grad_sval[1];
          cutcoeff[2] = xub-rval;
@@ -2448,6 +2552,12 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       else
       {
          /* the point lies on the segment between (xlb,yub) and (xub,ylb) */
+         if( !finite(grad_sval[0]) || !finite(grad_rval[0]) )
+         {
+            /* FIXME maybe it is sufficient to have one of them finite, using that one for the MIN below? */
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
          cutcoeff[0] = (sval-ylb)*MIN(grad_sval[0],grad_rval[0]);
          cutcoeff[1] = (rval-xub)*MIN(grad_sval[0],grad_rval[0])+fsval-frval;
          cutcoeff[2] = sval-ylb;
@@ -2459,8 +2569,6 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       SCIPdebugMessage("LowerRight: t=%g in [%g,%g], r=%g in [%g,%g], s=%g in [%g,%g]\n",tval,tlb,tub,rval,xlb,xub,sval,ylb,yub);
       SCIPdebugMessage("LowerRight: (r,ylb)=(%g,%g) (xub,sval)=(%g,%g) vredval=%g\n",rval,ylb,xub,sval,*convenvvalue);
       SCIPdebugMessage("LowerRight: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[2]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
-
-      SCIP_CALL( SCIPexprtreeFree(&vredtree) );
 
    }
    else
@@ -2536,7 +2644,8 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, vredtree, 0.0, tlb, tub, &tval, success) );
 
       if( *success == FALSE )
-      { /* something went wrong when computing s */
+      {
+         /* something went wrong when computing s */
          SCIP_CALL( SCIPexprtreeFree(&vredtree) );
          return SCIP_OKAY;
       }
@@ -2545,10 +2654,14 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
 
       /* compute r and s from tval */
       rval = xlb+(xval-xlb)/tval;
+      rval = MAX(xlb, MIN(xub, rval));
       sval = (yval-tval*yub)/(1-tval);
+      sval = MAX(ylb, MIN(yub, sval));
 
       /* compute vred(tval) */
       SCIP_CALL( SCIPexprtreeEval(vredtree, &tval, convenvvalue) );
+
+      SCIP_CALL( SCIPexprtreeFree(&vredtree) );
 
       /* compute f(r, yub) and f'(r, yub) */
       x0y0[0] = rval;
@@ -2563,21 +2676,40 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       /* generate coefficients cutcoeff = (alpha, beta, gamma, delta), such that
        * alpha * x + beta * y - delta <= gamma * f(x,y) */
       if( !(SCIPisEQ(scip,rval,xub)) )
-      {/* take the slope along the x-axis and the slope between the points */
+      {
+         /* take the slope along the x-axis and the slope between the points */
+         if( !finite(grad_rval[0]) )
+         {
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
          cutcoeff[0] = (yub-sval)*grad_rval[0];
          cutcoeff[1] = (xlb-rval)*grad_rval[0]-fsval+frval;
          cutcoeff[2] = yub-sval;
          cutcoeff[3] = cutcoeff[0]*xlb+cutcoeff[1]*sval-cutcoeff[2]*fsval;
       }
       else if( !(SCIPisEQ(scip,sval,ylb)) )
-      {/* take the slope along the y-axis and the slope between the points */
+      {
+         /* take the slope along the y-axis and the slope between the points */
+         if( !finite(grad_sval[1]) )
+         {
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
          cutcoeff[0] = (sval-yub)*grad_sval[1]-fsval+frval;
          cutcoeff[1] = (rval-xlb)*grad_sval[1];
          cutcoeff[2] = rval-xlb;
          cutcoeff[3] = cutcoeff[0]*xlb+cutcoeff[1]*sval-cutcoeff[2]*fsval;
       }
       else
-      {/* the point lies on the segment between (xlb,yub) and (xub,ylb) */
+      {
+         /* the point lies on the segment between (xlb,yub) and (xub,ylb) */
+         if( !finite(grad_sval[0]) || !finite(grad_rval[0]) )
+         {
+            /* FIXME maybe it is sufficient to have one of them finite, using that one for the MIN below? */
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
          cutcoeff[0] = (yub-sval)*MIN(grad_rval[0],grad_sval[0]);
          cutcoeff[1] = (xlb-rval)*MIN(grad_rval[0],grad_sval[0])-fsval+frval;
          cutcoeff[2] = yub-sval;
@@ -2588,8 +2720,6 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       SCIPdebugMessage("UpperLeft: r=%g in [%g,%g], s=%g in [%g,%g], f(r,yub)=%g, f(xlb,s)=%g\n",rval,xlb,xub,sval,ylb,yub,frval,fsval);
       SCIPdebugMessage("t=%g in [%g,%g], (r,yub)=(%g,%g) (xlb,sval)=(%g,%g) vredval=%g\n",tval,tlb,tub,rval,yub,xlb,sval,*convenvvalue);
       SCIPdebugMessage("UpperLeft: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[2]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
-
-      SCIP_CALL( SCIPexprtreeFree(&vredtree) );
    }
 
    return SCIP_OKAY;
@@ -2994,6 +3124,9 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       {
          /* compute r from s */
          rval = xval / t + (1.0 - 1.0 / t) * sval;
+         assert(SCIPisFeasGE(scip, rval, xlb));
+         assert(SCIPisFeasLE(scip, rval, xub));
+         rval = MAX(xlb, MIN(rval, xub));
 
          /* compute f(sval, yub) */
          x0y0[0] = sval;
@@ -3025,16 +3158,27 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          {
             /* rare case
              * both points (sval, yub) and (rval, ylb) should yield valid inequality
-             * for now, just take the first one */
+             * for now, just take the first one, if differentiable, otherwise second one
+             */
             x0y0[0] = sval;
             x0y0[1] = yub;
 
             /* compute f'(xbar, ybar) */
             SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &fsval, grad) );
-         }
 
-         /* compute vred(s) */
-         SCIP_CALL( SCIPexprtreeEval(vred, &sval, convenvvalue) );
+            if( !finite(grad[0]) )
+            {
+               x0y0[0] = rval;
+               x0y0[1] = ylb;
+
+               /* compute new f'(xbar, ybar) */
+               SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &frval, grad) );
+            }
+         }
+         assert(finite(grad[0]));
+
+         /* compute vred(s) = t * f(rval, ylb) + (1-t) * f(sval, yub) */
+         *convenvvalue = t * frval + (1.0 - t) * fsval;
 
          /* compute cut coefficients */
          cutcoeff[0]   = (yub - ylb) * grad[0];
@@ -3043,7 +3187,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * yval - cutcoeff[2] * *convenvvalue;
 
          SCIPdebugMessage("Parallel: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-         SCIPdebugMessage("Parallel: r=%g in [%g,%g], s=%g in [%g,%g], f(r,ylb)=%g, f(xlb,s)=%g\n",rval,xlb,xub,sval,ylb,yub,frval,fsval);
+         SCIPdebugMessage("Parallel: r=%g s=%g in [%g,%g], y in [%g,%g], f(r,ylb)=%g, f(xlb,s)=%g\n",rval,sval,xlb,xub,ylb,yub,frval,fsval);
          SCIPdebugMessage("(r,ylb)=(%g,%g), (s,yub)=(%g,%g), vredval=%g\n",rval,ylb,sval,yub,*convenvvalue);
          SCIPdebugMessage("Parallel: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[2]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
       }
@@ -3101,6 +3245,10 @@ SCIP_RETCODE generateConvexConcaveEstimator(
 
          if( success )
          {
+            assert(finite(coefs[0]));
+            assert(finite(coefs[1]));
+            assert(finite(constant));
+
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_overesthyperplanecut_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
             SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
@@ -3124,6 +3272,10 @@ SCIP_RETCODE generateConvexConcaveEstimator(
 
          if( success )
          {
+            assert(finite(cutcoeff[0]));
+            assert(finite(cutcoeff[1]));
+            assert(finite(cutcoeff[2]));
+            assert(finite(cutcoeff[3]));
             assert(SCIPisPositive(scip, cutcoeff[2])); /* assert gamma > 0 */
 
             /* construct row from cut coefficients (alpha, beta, gamma, delta)
@@ -3159,6 +3311,10 @@ SCIP_RETCODE generateConvexConcaveEstimator(
 
          if( success )
          {
+            assert(finite(coefs[0]));
+            assert(finite(coefs[1]));
+            assert(finite(constant));
+
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_underesthyperplanecut_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
             SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, 0, NULL, NULL, -SCIPinfinity(scip), consdata->rhs - constant, TRUE, FALSE, TRUE) );
 
@@ -3178,6 +3334,10 @@ SCIP_RETCODE generateConvexConcaveEstimator(
 
          if( success )
          {
+            assert(finite(cutcoeff[0]));
+            assert(finite(cutcoeff[1]));
+            assert(finite(cutcoeff[2]));
+            assert(finite(cutcoeff[3]));
             assert(SCIPisPositive(scip, cutcoeff[2])); /* assert gamma > 0 */
 
             /* construct row from cut coefficients (alpha, beta, gamma, delta)
@@ -3218,7 +3378,8 @@ SCIP_RETCODE lifting(
    SCIP_Real             yub,                /**< upper bound y */
    int                   min_max,            /**< min=-1  max=1 */
    SCIP_Real             cutcoeff[4],        /**< returns the lifting coefficient*/
-   SCIP_Real*            convenvvalue        /**< value of the convex envelope at (xval,yval) */
+   SCIP_Real*            convenvvalue,       /**< value of the convex envelope at (xval,yval) */
+   SCIP_Bool*            success             /**< buffer to indicate whether lifting was successful */
    )
 {
    int idx; /* indicates which variable is at the boundary */
@@ -3234,7 +3395,9 @@ SCIP_RETCODE lifting(
    SCIP_Real grad_ub[2];
 
    assert(SCIPisEQ(scip,xlb,xub) || SCIPisEQ(scip,ylb,yub));
+   assert(success != NULL);
 
+   *success = FALSE;
    idx = SCIPisEQ(scip, xlb, xub) ? 0 : 1;
 
    /* determine mu
@@ -3244,10 +3407,14 @@ SCIP_RETCODE lifting(
    x0y0[0] = xlb;
    x0y0[1] = ylb;
    SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &f_lb, grad_lb) );
+   if( !finite(grad_lb[idx]) )
+      return SCIP_OKAY;
 
    x0y0[0] = xub;
    x0y0[1] = yub;
    SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, x0y0, TRUE, &f_ub, grad_ub) );
+   if( !finite(grad_ub[idx]) )
+      return SCIP_OKAY;
 
    /* if min_max=-1 choose min( grad_lb[idx], grad_ub[idx] )
     * if min_max= 1 choose max( grad_lb[idx], grad_ub[idx] )
@@ -3264,18 +3431,23 @@ SCIP_RETCODE lifting(
 
    if( idx == 0 )
    {
+      if( !finite(grad[1]) )
+         return SCIP_OKAY;
       cutcoeff[0] = mu;
       cutcoeff[1] = grad[1];
    }
    else
    {
       assert(idx == 1);
+      if( !finite(grad[0]) )
+         return SCIP_OKAY;
       cutcoeff[0] = grad[0];
       cutcoeff[1] = mu;
    }
    cutcoeff[2] = 1;
    cutcoeff[3] = -(fval-cutcoeff[0]*xval-cutcoeff[1]*yval);
-   *convenvvalue= fval;
+   *convenvvalue = fval;
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -3339,6 +3511,8 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorAtBoundary(
       xy[0] = xval;
       xy[1] = ylb;
       SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, xy, TRUE, &fval, grad) );
+      if( !finite(grad[0]) )
+         return SCIP_OKAY;
 
       /* linearization is f(xval,ylb) + df/dx(xval,ylb) * (x - xval) <= f(x,y) */
 
@@ -3361,6 +3535,8 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorAtBoundary(
       xy[0] = xlb;
       xy[1] = yval;
       SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, xy, TRUE, &fval, grad) );
+      if( !finite(grad[1]) )
+         return SCIP_OKAY;
 
       /* linearization is f(xlb,yval) + df/dy(xlb,yval) * (y - yval) <= f(x,y) */
 
@@ -3384,27 +3560,31 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorAtBoundary(
        * mu (x-lb) + f_y(xlb,yval) * y <= f(x,y)
        */
 
-      SCIP_CALL( lifting(scip,exprinterpreter,f,xval,yval,xlb,xlb,ylb,yub,-1,cutcoeff,convenvvalue) );
+      SCIP_CALL( lifting(scip,exprinterpreter,f,xval,yval,xlb,xlb,ylb,yub,-1,cutcoeff,convenvvalue,success) );
+
+      if( !*success )
+         return SCIP_OKAY;
 
       SCIPdebugMessage("Boundary x=lb: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
       SCIPdebugMessage("convenvvalue = %g\n",*convenvvalue);
       SCIPdebugMessage("cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",
          cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
 
-      *success = TRUE;
       return SCIP_OKAY;
    }
 
    if( SCIPisEQ(scip, ylb, yval) )
    {
-      SCIP_CALL( lifting(scip,exprinterpreter,f,xval,yval,xlb,xub,ylb,ylb,-1,cutcoeff,convenvvalue) );
+      SCIP_CALL( lifting(scip,exprinterpreter,f,xval,yval,xlb,xub,ylb,ylb,-1,cutcoeff,convenvvalue,success) );
+
+      if( !*success )
+         return SCIP_OKAY;
 
       SCIPdebugMessage("Boundary y=lb: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
       SCIPdebugMessage("convenvvalue = %g\n",*convenvvalue);
       SCIPdebugMessage("cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",
          cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
 
-      *success = TRUE;
       return SCIP_OKAY;
    }
 
@@ -3419,27 +3599,31 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorAtBoundary(
        * -mu*x -mu*xub + f_y(xub,yval) * y <= f(x,y)
        */
 
-      SCIP_CALL( lifting(scip,exprinterpreter,f,xval,yval,xub,xub,ylb,yub,1,cutcoeff,convenvvalue) );
+      SCIP_CALL( lifting(scip,exprinterpreter,f,xval,yval,xub,xub,ylb,yub,1,cutcoeff,convenvvalue,success) );
+
+      if( !*success )
+         return SCIP_OKAY;
 
       SCIPdebugMessage("Boundary x=ub: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
       SCIPdebugMessage("convenvvalue = %g\n",*convenvvalue);
       SCIPdebugMessage("cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",
          cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
 
-      *success = TRUE;
       return SCIP_OKAY;
    }
 
    if( SCIPisEQ(scip, yub, yval) )
    {
-      SCIP_CALL( lifting(scip,exprinterpreter,f,xval,yval,xlb,xub,yub,yub,1,cutcoeff,convenvvalue) );
+      SCIP_CALL( lifting(scip,exprinterpreter,f,xval,yval,xlb,xub,yub,yub,1,cutcoeff,convenvvalue,success) );
+
+      if( !*success )
+         return SCIP_OKAY;
 
       SCIPdebugMessage("Boundary y=ub: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
       SCIPdebugMessage("convenvvalue = %g\n",*convenvvalue);
       SCIPdebugMessage("cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",
          cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
 
-      *success = TRUE;
       return SCIP_OKAY;
    }
 
@@ -3533,6 +3717,12 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(
       return SCIP_OKAY;
    }
 
+   if( !finite(grad_xub_ylb[0]) || !finite(grad_xlb_yub[1]) )
+   {
+      SCIPdebugMessage("skip 1-convex underestimator since function cannot be differentiated\n");
+      return SCIP_OKAY;
+   }
+
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
    SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
@@ -3611,6 +3801,11 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(
       *success = TRUE;
       for( i = 0; i < 2; ++i )
       {
+         assert(finite(all_cutcoeff[i][0]));
+         assert(finite(all_cutcoeff[i][1]));
+         assert(finite(all_cutcoeff[i][2]));
+         assert(finite(all_cutcoeff[i][3]));
+
          if( all_convenvvalue[i] < lowest )
          {
             /* if all_convenvvalue[0] == all_convenvalue[1], take all_convenvvalue[0] */
@@ -3712,11 +3907,25 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternB(
    xval = xyref[0];
    yval = xyref[1];
 
-   xlb_ylb[0]=xlb;    xlb_ylb[1]=ylb;
-   xub_yub[0]=xub;    xub_yub[1]=yub;
+   xlb_ylb[0] = xlb;
+   xlb_ylb[1] = ylb;
+   xub_yub[0] = xub;
+   xub_yub[1] = yub;
 
    SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, xlb_ylb, TRUE, &fval_xlb_ylb, grad_xlb_ylb) );
    SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, xub_yub, TRUE, &fval_xub_yub, grad_xub_yub) );
+
+   if( !finite(fval_xlb_ylb) || SCIPisInfinity(scip, REALABS(fval_xlb_ylb)) || !finite(fval_xub_yub) || SCIPisInfinity(scip, REALABS(fval_xub_yub)) )
+   {
+      SCIPdebugMessage("skip 1-convex underestimator since function cannot be evaluated\n");
+      return SCIP_OKAY;
+   }
+
+   if( !finite(grad_xlb_ylb[1]) || !finite(grad_xub_yub[0]) )
+   {
+      SCIPdebugMessage("skip 1-convex underestimator since function cannot be differentiated\n");
+      return SCIP_OKAY;
+   }
 
    SCIPdebugMessage("xval=%g in [%g,%g], yval=%g in [%g,%g]\n",xval,xlb,xub,yval,ylb,yub);
 
@@ -3790,6 +3999,11 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternB(
       *success = TRUE;
       for( i = 0; i < 2; ++i )
       {
+         assert(finite(all_cutcoeff[i][0]));
+         assert(finite(all_cutcoeff[i][1]));
+         assert(finite(all_cutcoeff[i][2]));
+         assert(finite(all_cutcoeff[i][3]));
+
          /* if all_convenvvalue[0]==all_convenvalue[1], take all_convenvvalue[0] */
          if( all_convenvvalue[i] < lowest )
          {
@@ -3839,10 +4053,8 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
 
    SCIP_VAR*      x;
    SCIP_VAR*      y;
-   SCIP_Real      xval;
    SCIP_Real      xlb;
    SCIP_Real      xub;
-   SCIP_Real      yval;
    SCIP_Real      ylb;
    SCIP_Real      yub;
    SCIP_Real      xy_mid[2];
@@ -3874,9 +4086,6 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
    xy_mid[0] = 0.5 * (xlb+xub);
    xy_mid[1] = 0.5 * (ylb+yub);
 
-   xval = xyref[0];
-   yval = xyref[1];
-
    /* assert that the bounds are finite */
    if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) || SCIPisInfinity(scip, -ylb) || SCIPisInfinity(scip, yub) )
    {
@@ -3884,14 +4093,38 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
       return SCIP_OKAY;
    }
 
+   success = FALSE;
+   cutcoeff[0] = SCIP_INVALID;
+   cutcoeff[1] = SCIP_INVALID;
+   cutcoeff[2] = SCIP_INVALID;
+   cutcoeff[3] = SCIP_INVALID;
+
    /* (xval,yval) lie on a boundary */
-   if( SCIPisEQ(scip,xval,xlb) || SCIPisEQ(scip,xval,xub) || SCIPisEQ(scip,yval,ylb) || SCIPisEQ(scip,yval,yub) )
+   if( SCIPisEQ(scip,xyref[0],xlb) || SCIPisEQ(scip,xyref[0],xub) || SCIPisEQ(scip,xyref[1],ylb) || SCIPisEQ(scip,xyref[1],yub) )
    {
       SCIP_CALL( generate1ConvexIndefiniteUnderestimatorAtBoundary(scip, exprinterpreter, f, xyref, cutcoeff, &convenvvalue, &success) );
+
+      if( !success )
+      {
+         /* maybe f is not differentiable on boundary, so move reference point into interior
+          * we do this here w.r.t. both coordinates
+          */
+
+         if( SCIPisEQ(scip,xyref[0],xlb) )
+            xyref[0] += 0.005 * (xlb + xub);
+         else if( SCIPisEQ(scip,xyref[0],xub) )
+            xyref[0] -= 0.005 * (xlb + xub);
+
+         if( SCIPisEQ(scip,xyref[1],ylb) )
+            xyref[1] += 0.005 * (ylb + yub);
+         else if( SCIPisEQ(scip,xyref[1],yub) )
+            xyref[1] -= 0.005 * (ylb + yub);
+      }
    }
-   else
+
+   if( !success )
    {
-      /* (xval,yxal) lies in the interior */
+      /* xyref lies in the interior */
       /* check the pattern of the concave directions */
       SCIP_CALL( SCIPexprintHessianDense(exprinterpreter, f, xy_mid, TRUE, &fval_mid, hess) );
 
@@ -3923,6 +4156,14 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
     * -> alpha/gamma * x + beta/gamma * y - delta/gamma + c*z <= f(x,y) + c*z <= rhs
     */
 
+   assert(cutcoeff[0] != SCIP_INVALID); /*lint !e777*/
+   assert(cutcoeff[1] != SCIP_INVALID); /*lint !e777*/
+   assert(cutcoeff[2] != SCIP_INVALID); /*lint !e777*/
+   assert(cutcoeff[3] != SCIP_INVALID); /*lint !e777*/
+   assert(finite(cutcoeff[0]));
+   assert(finite(cutcoeff[1]));
+   assert(finite(cutcoeff[2]));
+   assert(finite(cutcoeff[3]));
    assert(SCIPisPositive(scip, cutcoeff[2])); /* assert gamma > 0 */
 
    if( SCIPisInfinity(scip, REALABS(cutcoeff[0]/cutcoeff[2])) ||
