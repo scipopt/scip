@@ -48,6 +48,8 @@
 #define DEFAULT_MAXBDCHGS        5      /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
 #define DEFAULT_MAXPROPROUNDS    0      /**< maximum number of propagation rounds to be performed during strong branching
                                          *   before solving the LP (-1: no limit, -2: parameter settings) */
+#define DEFAULT_PROBINGBOUNDS    TRUE   /**< should valid bounds be identified in a probing-like fashion during strong
+                                         *   branching (only with propagation)? */
 
 
 /** branching rule data */
@@ -68,6 +70,8 @@ struct SCIP_BranchruleData
    int                   maxbdchgs;          /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
    int                   maxproprounds;      /**< maximum number of propagation rounds to be performed during strong branching
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
+   SCIP_Bool             probingbounds;      /**< should valid bounds be identified in a probing-like fashion during strong
+                                              *   branching (only with propagation)? */
 };
 
 
@@ -210,7 +214,7 @@ SCIP_RETCODE applyBdchgs(
 
       if( bdchgtypes[i] == SCIP_BOUNDTYPE_LOWER )
       {
-         /* downwards rounding is infeasible -> change lower bound of variable to upward rounding */
+         /* change lower bound of variable to given bound */
          SCIP_CALL( SCIPtightenVarLb(scip, vars[v], bdchgbounds[i], TRUE, &infeasible, &tightened) );
          if( infeasible )
          {
@@ -220,13 +224,12 @@ SCIP_RETCODE applyBdchgs(
 
          /* if we did propagation, the bound change might already have been added */
          assert(tightened || (branchruledata->maxproprounds != 0));
-
       }
       else
       {
          assert(bdchgtypes[i] == SCIP_BOUNDTYPE_UPPER);
 
-         /* upwards rounding is infeasible -> change upper bound of variable to downward rounding */
+         /* change upper bound of variable to given bound */
          SCIP_CALL( SCIPtightenVarUb(scip, vars[v], bdchgbounds[i], TRUE, &infeasible, &tightened) );
          if( infeasible )
          {
@@ -339,6 +342,7 @@ SCIP_RETCODE execRelpscost(
       SCIP_Real lookahead;
       SCIP_Bool initstrongbranching;
       SCIP_Bool propagate;
+      SCIP_Bool probingbounds;
       SCIP_Longint nodenum;
       SCIP_Longint nlpiterationsquot;
       SCIP_Longint nsblpiterations;
@@ -350,6 +354,9 @@ SCIP_RETCODE execRelpscost(
       int nvars;
       int i;
       int c;
+
+      vars = SCIPgetVars(scip);
+      nvars = SCIPgetNVars(scip);
 
       /* get average conflict, inference, and pseudocost scores */
       avgconflictscore = SCIPgetAvgConflictScore(scip);
@@ -364,10 +371,12 @@ SCIP_RETCODE execRelpscost(
       avgpscostscore = MAX(avgpscostscore, 0.1);
 
       initstrongbranching = FALSE;
-      propagate = FALSE;
 
-      vars = SCIPgetVars(scip);
-      nvars = SCIPgetNVars(scip);
+      /* check whether propagation should be performed */
+      propagate = (branchruledata->maxproprounds != 0);
+
+      /* check whether valid bounds should be identified in probing-like fashion */
+      probingbounds = propagate && branchruledata->probingbounds;
 
       /* get maximal number of candidates to initialize with strong branching; if the current solutions is not basic,
        * we cannot warmstart the simplex algorithm and therefore don't initialize any candidates
@@ -435,9 +444,11 @@ SCIP_RETCODE execRelpscost(
          usesb = FALSE;
 
          /* don't use strong branching on variables that have already been initialized at the current node;
-          * instead replace the pseudo cost score with the already calculated one
+          * instead replace the pseudo cost score with the already calculated one;
+          * in case of strong branching with propagation, we want to perform strong branching, anyway
+          * @todo: also use old data for strong branching with propagation?
           */
-         if( FALSE && SCIPgetVarStrongbranchNode(scip, branchcands[c]) == nodenum )
+         if( !propagate && SCIPgetVarStrongbranchNode(scip, branchcands[c]) == nodenum )
          {
             SCIP_Real down;
             SCIP_Real up;
@@ -585,12 +596,12 @@ SCIP_RETCODE execRelpscost(
          /* use strong branching on candidate */
          if( !initstrongbranching )
          {
-            /* check whether propagation should be performed */
-            propagate = (branchruledata->maxproprounds != 0);
             initstrongbranching = TRUE;
+
             SCIP_CALL( SCIPstartStrongbranch(scip, propagate) );
 
-            if( propagate )
+            /* create arrays for probing-like bound tightening */
+            if( probingbounds )
             {
                SCIP_CALL( SCIPallocBufferArray(scip, &newlbs, nvars) );
                SCIP_CALL( SCIPallocBufferArray(scip, &newubs, nvars) );
@@ -633,6 +644,7 @@ SCIP_RETCODE execRelpscost(
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
+         /* @todo: store pseudo cost only for valid bounds? and also if the other sb child was infeasible? */
          if( !downinf && !upinf )
          {
             /* update pseudo cost values */
@@ -648,7 +660,8 @@ SCIP_RETCODE execRelpscost(
             minbound = MIN(down, up);
             provedbound = MAX(provedbound, minbound);
 
-            if( propagate )
+            /* save probing-like bounds detected during strong branching */
+            if( probingbounds )
             {
                int v;
 
@@ -673,7 +686,7 @@ SCIP_RETCODE execRelpscost(
                }
 
                if( maxbdchgs >= 0 && nbdchgs + nbdconflicts >= maxbdchgs )
-                  break; /* terminate initialization loop, because enough roundings are performed */
+                  break; /* terminate initialization loop, because enough bound changes are performed */
             }
          }
 
@@ -1032,6 +1045,10 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "branching/relpscost/maxproprounds",
          "maximum number of propagation rounds to be performed during strong branching before solving the LP (-1: no limit, -2: parameter settings)",
          &branchruledata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -2, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/relpscost/probingbounds",
+         "should valid bounds be identified in a probing-like fashion during strong branching (only with propagation)?",
+         &branchruledata->probingbounds, TRUE, DEFAULT_PROBINGBOUNDS, NULL, NULL) );
 
 
    return SCIP_OKAY;

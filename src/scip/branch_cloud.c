@@ -472,7 +472,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
    /* the second counter should maybe be replaced at some point */
    SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, branchruledata->skipdown, branchruledata->skipup, counter, counter,
-         ncomplete, &branchruledata->lastcand, allowaddcons,
+         ncomplete, &branchruledata->lastcand, allowaddcons, 0, FALSE,
          &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    if( branchruledata->lastcand <= ncomplete )
