@@ -12099,11 +12099,16 @@ SCIP_RETCODE lpPrimalSimplex(
       }
       if( lp->diving || lp->probing )
       {
-         stat->lastdivenode = stat->nnodes;
-         stat->ndivinglps++;
-         stat->ndivinglpiterations += iterations;
          if( lp->strongbranchprobing )
+         {
             stat->nsbdivinglps++;
+         }
+         else
+         {
+            stat->lastdivenode = stat->nnodes;
+            stat->ndivinglps++;
+            stat->ndivinglpiterations += iterations;
+         }
       }
       else
       {
@@ -12222,11 +12227,16 @@ SCIP_RETCODE lpDualSimplex(
       }
       if( lp->diving || lp->probing )
       {
-         stat->lastdivenode = stat->nnodes;
-         stat->ndivinglps++;
-         stat->ndivinglpiterations += iterations;
          if( lp->strongbranchprobing )
+         {
             stat->nsbdivinglps++;
+         }
+         else
+         {
+            stat->lastdivenode = stat->nnodes;
+            stat->ndivinglps++;
+            stat->ndivinglpiterations += iterations;
+         }
       }
       else
       {
@@ -12367,11 +12377,16 @@ SCIP_RETCODE lpLexDualSimplex(
       }
       if( lp->diving || lp->probing )
       {
-         stat->lastdivenode = stat->nnodes;
-         stat->ndivinglps++;
-         stat->ndivinglpiterations += iterations;
          if( lp->strongbranchprobing )
+         {
             stat->nsbdivinglps++;
+         }
+         else
+         {
+            stat->lastdivenode = stat->nnodes;
+            stat->ndivinglps++;
+            stat->ndivinglpiterations += iterations;
+         }
       }
       else
       {
@@ -12950,11 +12965,16 @@ SCIP_RETCODE lpBarrier(
       stat->nlpiterations += iterations;
       if( lp->diving || lp->probing )
       {
-         stat->lastdivenode = stat->nnodes;
-         stat->ndivinglps++;
-         stat->ndivinglpiterations += iterations;
          if( lp->strongbranchprobing )
+         {
             stat->nsbdivinglps++;
+         }
+         else
+         {
+            stat->lastdivenode = stat->nnodes;
+            stat->ndivinglps++;
+            stat->ndivinglpiterations += iterations;
+         }
       }
       else
       {
