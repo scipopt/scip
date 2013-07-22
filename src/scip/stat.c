@@ -207,6 +207,8 @@ void SCIPstatReset(
    stat->nholechgs = 0;
    stat->nprobboundchgs = 0;
    stat->nprobholechgs = 0;
+   stat->nsbdowndomchgs = 0;
+   stat->nsbupdomchgs = 0;
    stat->nruns = 0;
    stat->nconfrestarts = 0;
    stat->nrootboundchgs = 0;
