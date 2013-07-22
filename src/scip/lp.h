@@ -229,8 +229,8 @@ void SCIPcolSetStrongbranchData(
    SCIP_Real             primsol,            /**< primal solution value of the column in the current LP */
    SCIP_Real             sbdown,             /**< dual bound after branching column down */
    SCIP_Real             sbup,               /**< dual bound after branching column up */
-   SCIP_Bool             sbdownvalid,        /**< is the returned down value is a valid dual bound? */
-   SCIP_Bool             sbupvalid,          /**< is the returned up value is a valid dual bound? */
+   SCIP_Bool             sbdownvalid,        /**< is the returned down value a valid dual bound? */
+   SCIP_Bool             sbupvalid,          /**< is the returned up value a valid dual bound? */
    int                   iter,               /**< total number of strong branching iterations */
    int                   itlim               /**< iteration limit applied to the strong branching call */
    );
@@ -1401,7 +1401,7 @@ SCIP_RETCODE SCIPlpEndProbing(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
-/** informs the LP that the probing mode is used for strongbranching */
+/** informs the LP that the probing mode is now used for strongbranching */
 extern
 void SCIPlpStartStrongbranchProbing(
    SCIP_LP*              lp                  /**< current LP data */

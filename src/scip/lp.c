@@ -3785,8 +3785,8 @@ void SCIPcolSetStrongbranchData(
    SCIP_Real             primsol,            /**< primal solution value of the column in the current LP */
    SCIP_Real             sbdown,             /**< dual bound after branching column down */
    SCIP_Real             sbup,               /**< dual bound after branching column up */
-   SCIP_Bool             sbdownvalid,        /**< is the returned down value is a valid dual bound? */
-   SCIP_Bool             sbupvalid,          /**< is the returned up value is a valid dual bound? */
+   SCIP_Bool             sbdownvalid,        /**< is the returned down value a valid dual bound? */
+   SCIP_Bool             sbupvalid,          /**< is the returned up value a valid dual bound? */
    int                   iter,               /**< total number of strong branching iterations */
    int                   itlim               /**< iteration limit applied to the strong branching call */
    )
@@ -12033,7 +12033,7 @@ SCIP_RETCODE lpPrimalSimplex(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving LP %"SCIP_LONGINT_FORMAT" (%d cols, %d rows) with primal simplex (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
+   SCIPdebugMessage("solving LP %"SCIP_LONGINT_FORMAT" (%d cols, %d rows) with primal simplex (diving=%d, nprimallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
       stat->lpcount+1, lp->ncols, lp->nrows, lp->diving || lp->probing, stat->nprimallps, stat->ndivinglps);
 
    *lperror = FALSE;
@@ -12134,7 +12134,7 @@ SCIP_RETCODE lpPrimalSimplex(
       }
    }
 
-   SCIPdebugMessage("solved LP %"SCIP_LONGINT_FORMAT" with primal simplex (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
+   SCIPdebugMessage("solved LP %"SCIP_LONGINT_FORMAT" with primal simplex (diving=%d, nprimallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
       stat->lpcount, lp->diving || lp->probing, stat->nprimallps, stat->ndivinglps);
 
    return SCIP_OKAY;
@@ -12859,7 +12859,7 @@ SCIP_RETCODE lpLexDualSimplex(
       /* stop timing */
       SCIPclockStop(stat->lexduallptime, set);
 
-      SCIPdebugMessage("solving LP %"SCIP_LONGINT_FORMAT" with lex dual simplex (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
+      SCIPdebugMessage("solved LP %"SCIP_LONGINT_FORMAT" with lex dual simplex (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
          stat->lpcount, lp->diving || lp->probing, stat->nduallps, stat->ndivinglps);
    }
    lp->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
@@ -12903,7 +12903,7 @@ SCIP_RETCODE lpBarrier(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving LP %"SCIP_LONGINT_FORMAT" (%d cols, %d rows) with barrier%s (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
+   SCIPdebugMessage("solving LP %"SCIP_LONGINT_FORMAT" (%d cols, %d rows) with barrier%s (diving=%d, nbarrierlps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
       stat->lpcount+1, lp->ncols, lp->nrows, crossover ? "/crossover" : "", lp->diving || lp->probing,
       stat->nbarrierlps, stat->ndivinglps);
 
@@ -13000,7 +13000,7 @@ SCIP_RETCODE lpBarrier(
       }
    }
 
-   SCIPdebugMessage("solving LP %"SCIP_LONGINT_FORMAT" with barrier%s (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", ndivinglps=%"SCIP_LONGINT_FORMAT")\n",
+   SCIPdebugMessage("solved LP %"SCIP_LONGINT_FORMAT" with barrier%s (diving=%d, nduallps=%"SCIP_LONGINT_FORMAT", nbarrierlps=%"SCIP_LONGINT_FORMAT")\n",
       stat->lpcount, crossover ? "/crossover" : "", lp->diving || lp->probing, stat->nbarrierlps, stat->ndivinglps);
 
    return SCIP_OKAY;
@@ -17142,7 +17142,7 @@ SCIP_RETCODE SCIPlpEndProbing(
    return SCIP_OKAY;
 }
 
-/** informs the LP that the probing mode is used for strongbranching */
+/** informs the LP that the probing mode is now used for strongbranching */
 void SCIPlpStartStrongbranchProbing(
    SCIP_LP*              lp                  /**< current LP data */
    )
