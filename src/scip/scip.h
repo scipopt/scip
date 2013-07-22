@@ -6993,7 +6993,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
                                               *   solving process should be stopped (e.g., due to a time limit) */
    );
 
-/** gets strong branching information with previous propagation on column variable
+/** gets strong branching information with previous domain propagation on column variable
  *
  *  Before calling this method, the strong branching mode must have been activated by calling SCIPstartStrongbranch();
  *  after strong branching was done for all candidate variables, the strong branching mode must be ended by
@@ -7033,8 +7033,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
                                               *   infeasible upwards branch, or NULL */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred or the
                                               *   solving process should be stopped (e.g., due to a time limit) */
-   SCIP_Real*            newlbs,             /**< array to store valid lower bounds for the variables */
-   SCIP_Real*            newubs              /**< array to store valid upper bounds for the variables */
+   SCIP_Real*            newlbs,             /**< array to store valid lower bounds for all active variables, or NULL */
+   SCIP_Real*            newubs              /**< array to store valid upper bounds for all active variables, or NULL */
    );
 
 /** gets strong branching information on column variable x with integral LP solution value (val); that is, the down branch

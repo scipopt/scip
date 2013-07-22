@@ -15665,7 +15665,8 @@ SCIP_RETCODE SCIPendStrongbranch(
    SCIP_CALL( checkStage(scip, "SCIPendStrongbranch", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* depending on whether the strong branching mode was started with propagation enabled or not, we end the strong
-    * branching probing mode or the LP strong branching mode */
+    * branching probing mode or the LP strong branching mode
+    */
    if( SCIPtreeProbing(scip->tree) )
    {
       SCIP_NODE* node;
@@ -15682,6 +15683,7 @@ SCIP_RETCODE SCIPendStrongbranch(
        */
       node = SCIPgetCurrentNode(scip);
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+      assert(SCIPgetProbingDepth(scip) == 0);
 
       domchg = SCIPnodeGetDomchg(node);
       nboundchgs = SCIPdomchgGetNBoundchgs(domchg);
@@ -15713,7 +15715,7 @@ SCIP_RETCODE SCIPendStrongbranch(
 
       SCIP_CALL( SCIPendProbing(scip) );
 
-      /* apply the collected boun changes */
+      /* apply the collected bound changes */
       for( i = 0; i < nbnds; ++i )
       {
          if( boundtypes[i] == SCIP_BOUNDTYPE_LOWER )
@@ -15846,7 +15848,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
 {
    SCIP_COL* col;
 
+   assert(scip != NULL);
+   assert(var != NULL);
    assert(lperror != NULL);
+   assert(!SCIPtreeProbing(scip->tree)); /* we should not be in strong branching with propagation mode */
 
    SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchFrac", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -15901,7 +15906,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    return SCIP_OKAY;
 }
 
-/** gets strong branching information with previous propagation on column variable
+/** gets strong branching information with previous domain propagation on column variable
  *
  *  Before calling this method, the strong branching mode must have been activated by calling SCIPstartStrongbranch();
  *  after strong branching was done for all candidate variables, the strong branching mode must be ended by
@@ -15940,8 +15945,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
                                               *   infeasible upwards branch, or NULL */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred or the
                                               *   solving process should be stopped (e.g., due to a time limit) */
-   SCIP_Real*            newlbs,             /**< array to store valid lower bounds for the variables */
-   SCIP_Real*            newubs              /**< array to store valid upper bounds for the variables */
+   SCIP_Real*            newlbs,             /**< array to store valid lower bounds for all active variables, or NULL */
+   SCIP_Real*            newubs              /**< array to store valid upper bounds for all active variables, or NULL */
    )
 {
    SCIP_COL* col;
@@ -15961,8 +15966,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    assert(down != NULL);
    assert(up != NULL);
    assert(lperror != NULL);
-   assert(newlbs != NULL);
-   assert(newubs != NULL);
+   assert((newlbs != NULL) == (newubs != NULL));
    assert(SCIPinProbing(scip));
 
    SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchWithPropagation", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -16176,9 +16180,11 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
     * conflict analysis
     * @todo do this after propagation? should be able to get valid bounds more often, but they might be weaker
     */
-   if( !cutoff )
+   if( !cutoff && newlbs != NULL)
    {
       int v;
+
+      assert(newubs != NULL);
 
       /* initialize the newlbs and newubs to the current local bounds */
       for( v = 0; v < nvars; ++v )
@@ -16308,9 +16314,11 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
     * variables after propagation and (possibly) conflict analysis
     * @todo do this after propagation? should be able to get valid bounds more often, but they might be weaker
     */
-   if( !cutoff )
+   if( !cutoff && newlbs != NULL)
    {
       int v;
+
+      assert(newubs != NULL);
 
       /* the valid bounds are the weaker of the already stored bounds (at the up child) and the local bounds (at the
        * down child) */
