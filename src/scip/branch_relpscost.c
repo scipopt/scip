@@ -445,10 +445,9 @@ SCIP_RETCODE execRelpscost(
 
          /* don't use strong branching on variables that have already been initialized at the current node;
           * instead replace the pseudo cost score with the already calculated one;
-          * in case of strong branching with propagation, we want to perform strong branching, anyway
-          * @todo: also use old data for strong branching with propagation?
+          * @todo: use old data for strong branching with propagation?
           */
-         if( !propagate && SCIPgetVarStrongbranchNode(scip, branchcands[c]) == nodenum )
+         if( SCIPgetVarStrongbranchNode(scip, branchcands[c]) == nodenum )
          {
             SCIP_Real down;
             SCIP_Real up;
