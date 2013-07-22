@@ -41,6 +41,8 @@
 
 #define DEFAULT_ONCEPERNODE   FALSE          /**< should the heuristic only be called once per node? */
 #define DEFAULT_RANDSEED      14081986
+#define DEFAULT_USESIMPLEROUNDING    FALSE
+#define DEFAULT_MAXPROPROUNDS 1
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -49,6 +51,8 @@ struct SCIP_HeurData
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
    SCIP_Bool             oncepernode;        /**< should the heuristic only be called once per node? */
    unsigned int          randseed;
+   SCIP_Bool             usesimplerounding;
+   int                   maxproprounds;
 };
 
 
@@ -93,20 +97,7 @@ SCIP_RETCODE performRandRounding(
       SCIPdebugMessage("rand rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
          SCIPvarGetName(var), oldsolval, mayrounddown, mayroundup);
 
-      /* choose rounding direction */
-      if ( mayrounddown && mayroundup )
-      {
-         /* we can round in both directions: round in objective function direction */
-         if ( SCIPvarGetObj(var) >= 0.0 )
-            newsolval = SCIPfeasFloor(scip, oldsolval);
-         else
-            newsolval = SCIPfeasCeil(scip, oldsolval);
-      }
-      else if ( mayrounddown )
-         newsolval = SCIPfeasFloor(scip, oldsolval);
-      else if ( mayroundup )
-         newsolval = SCIPfeasCeil(scip, oldsolval);
-      else
+      if( !heurdata->usesimplerounding || !(mayroundup && mayrounddown) )
       {
          SCIP_Real randnumber;
 
@@ -115,6 +106,22 @@ SCIP_RETCODE performRandRounding(
             newsolval = SCIPfeasCeil(scip, oldsolval);
          else
             newsolval = SCIPfeasFloor(scip, oldsolval);
+      }
+      /* choose rounding direction */
+      else if( mayrounddown && mayroundup )
+      {
+         /* we can round in both directions: round in objective function direction */
+         if ( SCIPvarGetObj(var) >= 0.0 )
+            newsolval = SCIPfeasFloor(scip, oldsolval);
+         else
+            newsolval = SCIPfeasCeil(scip, oldsolval);
+      }
+      else if( mayrounddown )
+         newsolval = SCIPfeasFloor(scip, oldsolval);
+      else
+      {
+         assert(mayroundup);
+         newsolval = SCIPfeasCeil(scip, oldsolval);
       }
 
       if( SCIPisGT(scip, newsolval, SCIPvarGetLbLocal(var)) )
@@ -161,7 +168,7 @@ SCIP_RETCODE performRandRounding(
 
       cutoff = FALSE;
       ndomreds = 0L;
-      SCIP_CALL( SCIPpropagateProbing(scip, -1, &cutoff, &ndomreds) );
+      SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &cutoff, &ndomreds) );
    }
    SCIP_CALL( SCIPendProbing(scip) );
 
@@ -459,6 +466,10 @@ SCIP_RETCODE SCIPincludeHeurRandrounding(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/oncepernode",
          "should the heuristic only be called once per node?",
          &heurdata->oncepernode, TRUE, DEFAULT_ONCEPERNODE, NULL, NULL) );
-
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/usesimplerounding",
+         "bla?",
+         &heurdata->usesimplerounding, TRUE, DEFAULT_USESIMPLEROUNDING, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxproprounds", "bla", &heurdata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS,
+         -1, INT_MAX, NULL, NULL) );
    return SCIP_OKAY;
 }
