@@ -477,7 +477,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
 
    *start = c;
 
-   if( propagate )
+   if( probingbounds )
    {
       assert(newlbs != NULL);
       assert(newubs != NULL);
