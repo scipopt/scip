@@ -662,10 +662,10 @@ SCIP_RETCODE execRelpscost(
             /* save probing-like bounds detected during strong branching */
             if( probingbounds )
             {
+               int v;
+
                assert(newlbs != NULL);
                assert(newubs != NULL);
-
-               int v;
 
                for( v = 0; v < nvars; ++v )
                {
