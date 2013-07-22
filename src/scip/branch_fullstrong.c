@@ -141,8 +141,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    )
 {
    SCIP_VAR** vars = NULL;
-   SCIP_Real* newlbs;
-   SCIP_Real* newubs;
+   SCIP_Real* newlbs = NULL;
+   SCIP_Real* newubs = NULL;
    SCIP_BRANCHRULE* branchrule;
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_Longint reevalage;
@@ -408,6 +408,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
 
                assert(vars != NULL);
                assert(nvars > 0);
+               assert(newlbs != NULL);
+               assert(newubs != NULL);
 
                nboundchgs = 0;
 
@@ -477,6 +479,9 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
 
    if( propagate )
    {
+      assert(newlbs != NULL);
+      assert(newubs != NULL);
+
       SCIPfreeBufferArray(scip, &newlbs);
       SCIPfreeBufferArray(scip, &newubs);
    }

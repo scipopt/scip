@@ -315,8 +315,8 @@ SCIP_RETCODE execRelpscost(
       SCIP_VAR** vars;
       int* initcands;
       SCIP_Real* initcandscores;
-      SCIP_Real* newlbs;
-      SCIP_Real* newubs;
+      SCIP_Real* newlbs = NULL;
+      SCIP_Real* newubs = NULL;
       int* bdchginds;
       SCIP_BOUNDTYPE* bdchgtypes;
       SCIP_Real* bdchgbounds;
@@ -663,6 +663,9 @@ SCIP_RETCODE execRelpscost(
             /* save probing-like bounds detected during strong branching */
             if( probingbounds )
             {
+               assert(newlbs != NULL);
+               assert(newubs != NULL);
+
                int v;
 
                for( v = 0; v < nvars; ++v )
@@ -792,8 +795,11 @@ SCIP_RETCODE execRelpscost(
 
       if( initstrongbranching )
       {
-         if( propagate )
+         if( probingbounds )
          {
+            assert(newlbs != NULL);
+            assert(newubs != NULL);
+
             SCIPfreeBufferArray(scip, &newubs);
             SCIPfreeBufferArray(scip, &newlbs);
          }
