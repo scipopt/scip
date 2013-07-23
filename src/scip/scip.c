@@ -16340,10 +16340,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
             if( downconflict != NULL )
             {
-               if( *downconflict )
-                  assert((SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts));
-               else if( (SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
-                  *downconflict = TRUE;
+               *downconflict = (SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts);
             }
 
             /* if this is the first call, we do not regard the up branch, its valid pointer is initially set to FALSE */
@@ -16365,10 +16362,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
             if( upconflict != NULL )
             {
-               if( *upconflict )
-                  assert((SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts));
-               else if( (SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
-                  *upconflict = TRUE;
+               *upconflict = (SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts);
             }
 
             /* if this is the first call, we do not regard the down branch, its valid pointer is initially set to FALSE */
