@@ -16020,6 +16020,8 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 
       if( *cutoff )
       {
+         *value = SCIPinfinity(scip);
+
          SCIPdebugMessage("%s branch of var <%s> detected infeasible during propagation\n", down ? "down" : "up", SCIPvarGetName(var));
       }
    }
@@ -16047,6 +16049,8 @@ SCIP_RETCODE performStrongbranchWithPropagation(
             SCIPdebugMessage("%s branch of var <%s> detected infeasible in LP solving: status=%d\n",
                down ? "down" : "up", SCIPvarGetName(var), SCIPgetLPSolstat(scip));
             assert(*cutoff);
+
+            *value = SCIPinfinity(scip);
          }
          break;
       case SCIP_LPSOLSTAT_ITERLIMIT:
@@ -16079,6 +16083,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       case SCIP_LPSOLSTAT_NOTSOLVED:
          assert(*cutoff); /* the LP should only be unsolved if a conflict unflushed the LP */
 
+         *value = SCIPinfinity(scip);
          if( conflict != NULL )
             *conflict = TRUE;
          break;
