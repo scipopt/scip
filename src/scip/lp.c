@@ -3797,7 +3797,6 @@ void SCIPcolSetStrongbranchData(
    assert(SCIPvarIsIntegral(col->var));
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
-   assert(col->primsol < SCIP_INVALID);
    assert(col->lpipos >= 0);
    assert(col->lppos >= 0);
    assert(set != NULL);
@@ -3845,7 +3844,6 @@ void SCIPcolInvalidateStrongbranchData(
    assert(SCIPvarIsIntegral(col->var));
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
-   assert(col->primsol < SCIP_INVALID);
    assert(col->lpipos >= 0);
    assert(col->lppos >= 0);
    assert(set != NULL);
