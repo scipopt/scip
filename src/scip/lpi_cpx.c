@@ -134,7 +134,6 @@ struct SCIP_LPi
    CPXPARAM              curparam;           /**< current CPLEX parameters in the environment */
    CPXLPptr              cpxlp;              /**< CPLEX LP pointer */
    int                   solstat;            /**< solution status of last optimization call */
-   SCIP_Real             objval;             /**< objective value of last optimization call */
    CPXPARAM              cpxparam;           /**< current parameter values for this LP */
    char*                 larray;             /**< array with 'L' entries for changing lower bounds */
    char*                 uarray;             /**< array with 'U' entries for changing upper bounds */
@@ -677,7 +676,6 @@ void invalidateSolution(
 {
    assert(lpi != NULL);
    lpi->solstat = -1;
-   lpi->objval = 0.0;
    lpi->instabilityignored = FALSE;
 }
 
@@ -2100,7 +2098,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    }
 
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
-   CHECK_ZERO( lpi->messagehdlr, CPXgetobjval(lpi->cpxenv, lpi->cpxlp, &lpi->objval) );
    lpi->instabilityignored = FALSE;
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
@@ -2132,7 +2129,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
          lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
          lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
-         CHECK_ZERO( lpi->messagehdlr, CPXgetobjval(lpi->cpxenv, lpi->cpxlp, &lpi->objval) );
          lpi->instabilityignored = FALSE;
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
@@ -2209,7 +2205,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
-   CHECK_ZERO( lpi->messagehdlr, CPXgetobjval(lpi->cpxenv, lpi->cpxlp, &lpi->objval) );
    lpi->instabilityignored = FALSE;
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
@@ -2241,7 +2236,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
          lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
          lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
-         CHECK_ZERO( lpi->messagehdlr, CPXgetobjval(lpi->cpxenv, lpi->cpxlp, &lpi->objval) );
          lpi->instabilityignored = FALSE;
          CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
@@ -2347,7 +2341,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
          lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
          lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
-         CHECK_ZERO( lpi->messagehdlr, CPXgetobjval(lpi->cpxenv, lpi->cpxlp, &lpi->objval) );
          lpi->instabilityignored = FALSE;
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
       }
@@ -2397,7 +2390,6 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
-   CHECK_ZERO( lpi->messagehdlr, CPXgetobjval(lpi->cpxenv, lpi->cpxlp, &lpi->objval) );
    lpi->instabilityignored = FALSE;
    SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
@@ -2426,7 +2418,6 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
       lpi->iterations += CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
       lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
-      CHECK_ZERO( lpi->messagehdlr, CPXgetobjval(lpi->cpxenv, lpi->cpxlp, &lpi->objval) );
       lpi->instabilityignored = FALSE;
       SCIPdebugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
 
@@ -3108,11 +3099,10 @@ SCIP_RETCODE SCIPlpiGetObjval(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
-   assert(lpi->solstat >= 0);
 
    SCIPdebugMessage("getting solution's objective value\n");
 
-   *objval = lpi->objval;
+   CHECK_ZERO( lpi->messagehdlr, CPXgetobjval(lpi->cpxenv, lpi->cpxlp, objval) );
 
    return SCIP_OKAY;
 }
