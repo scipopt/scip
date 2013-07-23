@@ -194,6 +194,7 @@ void SCIPstatReset(
    stat->nnodelpiterations = 0;
    stat->ninitlpiterations = 0;
    stat->ndivinglpiterations = 0;
+   stat->nsbdivinglpiterations = 0;
    stat->nsblpiterations = 0;
    stat->nrootsblpiterations = 0;
    stat->nconflictlpiterations = 0;
