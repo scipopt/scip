@@ -15906,6 +15906,225 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    return SCIP_OKAY;
 }
 
+/** create, solve, and evaluate a single strong branching child (for strong branching with propagation) */
+static
+SCIP_RETCODE performStrongbranchWithPropagation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to get strong branching values for */
+   SCIP_Real             solval,             /**< value of the variable in the current LP solution */
+   SCIP_Real             lpobjval,           /**< LP objective value of the current LP solution */
+   SCIP_Bool             down,               /**< do we regard the down child? */
+   SCIP_Bool             firstchild,         /**< is this the first of the two strong branching children? */
+   SCIP_Bool             propagate,          /**< should domain propagation be performed? */
+   SCIP_Real             newbound,           /**< new bound to apply at the strong branching child */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   int                   maxproprounds,      /**< maximum number of propagation rounds (-1: no limit, -2: parameter
+                                              *   settings) */
+   SCIP_Real*            value,              /**< stores dual bound for strong branching child */
+   SCIP_Bool*            valid,              /**< stores whether the returned value is a valid dual bound, or NULL;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            conflict,           /**< pointer to store whether a conflict constraint was created for an
+                                              *   infeasible strong branching child, or NULL */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred or the
+                                              *   solving process should be stopped (e.g., due to a time limit) */
+   SCIP_VAR**            vars,               /**< active problem variables */
+   int                   nvars,              /**< number of active problem variables */
+   SCIP_Real*            newlbs,             /**< array to store valid lower bounds for all active variables, or NULL */
+   SCIP_Real*            newubs,             /**< array to store valid upper bounds for all active variables, or NULL */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the strong branching child is infeasible */
+   )
+{
+   SCIP_Longint ndomreds;
+
+   /* check whether the strong branching child is already infeasible due to the bound change */
+   if( down )
+   {
+      /* the down branch is infeasible due to the branching bound change; since this means that solval is not within the
+       * bounds, this should only happen if previous strong branching calls on other variables detected bound changes which
+       * are valid for and were already applied at the probing root
+       */
+      if( newbound < SCIPvarGetLbLocal(var) - 0.5 )
+      {
+         *value = SCIPinfinity(scip);
+
+         if( valid != NULL )
+            *valid = TRUE;
+
+         /* bound changes are applied in SCIPendStrongbranch(), which can be seen as a conflict constraint */
+         if( conflict != NULL )
+            *conflict = TRUE;
+
+         *cutoff = TRUE;
+
+         /* we do not regard the up branch; its valid pointer stays set to FALSE */
+         return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      /* the up branch is infeasible due to the branching bound change; since this means that solval is not within the
+       * bounds, this should only happen if previous strong branching calls on other variables detected bound changes which
+       * are valid for and were already applied at the probing root
+       */
+      if( newbound > SCIPvarGetUbLocal(var) + 0.5 )
+      {
+         *value = SCIPinfinity(scip);
+
+         if( valid != NULL )
+            *valid = TRUE;
+
+         /* bound changes are applied in SCIPendStrongbranch(), which can be seen as a conflict constraint */
+         if( conflict != NULL )
+            *conflict = TRUE;
+
+         *cutoff = TRUE;
+
+         /* we do not regard the down branch; its valid pointer stays set to FALSE */
+         return SCIP_OKAY;
+      }
+   }
+
+   /* create a new probing node for the strong branching child and apply the new bound for the variable */
+   SCIP_CALL( SCIPnewProbingNode(scip) );
+
+   if( down )
+   {
+      assert(SCIPisLT(scip, newbound, SCIPvarGetUbLocal(var)));
+      assert(SCIPisGE(scip, newbound, SCIPvarGetLbLocal(var)));
+      SCIP_CALL( SCIPchgVarUbProbing(scip, var, newbound) );
+   }
+   else
+   {
+      assert(SCIPisGT(scip, newbound, SCIPvarGetLbLocal(var)));
+      assert(SCIPisLE(scip, newbound, SCIPvarGetUbLocal(var)));
+      SCIP_CALL( SCIPchgVarLbProbing(scip, var, newbound) );
+   }
+
+   /* propagate domains at the probing node */
+   if( propagate )
+   {
+      /* start time measuring */
+      SCIPclockStart(scip->stat->strongpropclock, scip->set);
+
+      ndomreds = 0;
+      SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, cutoff, &ndomreds) );
+
+      /* store number of domain reductions in strong branching */
+      if( down )
+         scip->stat->nsbdowndomchgs += ndomreds;
+      else
+         scip->stat->nsbupdomchgs += ndomreds;
+
+      /* stop time measuring */
+      SCIPclockStop(scip->stat->strongpropclock, scip->set);
+
+      if( *cutoff )
+      {
+         SCIPdebugMessage("%s branch of var <%s> detected infeasible during propagation\n", down ? "down" : "up", SCIPvarGetName(var));
+      }
+   }
+
+   /* if propagation did not already detect infeasibility, solve the probing LP */
+   if( !(*cutoff) )
+   {
+      SCIP_CALL( SCIPsolveProbingLP(scip, itlim, lperror, cutoff) );
+
+      SCIPdebugMessage("probing LP solution status: %d\n", SCIPgetLPSolstat(scip));
+
+      switch( SCIPgetLPSolstat(scip) )
+      {
+      case SCIP_LPSOLSTAT_OPTIMAL:
+         *value = SCIPgetLPObjval(scip);
+
+         if( valid != NULL )
+            *valid = TRUE;
+
+         break;
+      case SCIP_LPSOLSTAT_OBJLIMIT:
+      case SCIP_LPSOLSTAT_INFEASIBLE:
+         if( SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
+         {
+            SCIPdebugMessage("%s branch of var <%s> detected infeasible in LP solving: status=%d\n",
+               down ? "down" : "up", SCIPvarGetName(var), SCIPgetLPSolstat(scip));
+            assert(*cutoff);
+         }
+         break;
+      case SCIP_LPSOLSTAT_ITERLIMIT:
+      case SCIP_LPSOLSTAT_TIMELIMIT:
+      {
+         /* use LP value as estimate */
+         /* @todo: set valid pointer according to dual feasibility of the LP solution */
+         SCIP_LPI* lpi;
+         SCIP_Real objval;
+         SCIP_Real looseobjval;
+
+         SCIP_CALL( SCIPgetLPI(scip, &lpi) );
+         if( SCIPlpiWasSolved(lpi) )
+         {
+            SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+            looseobjval = SCIPlpGetLooseObjval(scip->lp, scip->set, scip->transprob);
+
+            if( SCIPisInfinity(scip, objval) )
+               *value = SCIPinfinity(scip);
+            else if( SCIPisInfinity(scip, -looseobjval) )
+               *value = -SCIPinfinity(scip);
+            else
+               *value = objval + looseobjval;
+         }
+         break;
+      }
+      case SCIP_LPSOLSTAT_NOTSOLVED:
+         assert(*cutoff); /* the LP should only be unsolved if a conflict unflushed the LP */
+
+         if( conflict != NULL )
+            *conflict = TRUE;
+         break;
+      case SCIP_LPSOLSTAT_ERROR:
+      case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
+         *lperror = TRUE;
+         break;
+      default:
+         SCIPerrorMessage("invalid LP solution status <%d>\n", SCIPgetLPSolstat(scip));
+         return SCIP_INVALIDDATA;
+      }  /*lint !e788*/
+   }
+
+   /* if the subproblem was feasible, we store the local bounds of the variables after propagation and (possibly)
+    * conflict analysis
+    * @todo do this after propagation? should be able to get valid bounds more often, but they might be weaker
+    */
+   if( !(*cutoff) && newlbs != NULL)
+   {
+      int v;
+
+      assert(newubs != NULL);
+
+      /* initialize the newlbs and newubs to the current local bounds */
+      if( firstchild )
+      {
+         for( v = 0; v < nvars; ++v )
+         {
+            newlbs[v] = SCIPvarGetLbLocal(vars[v]);
+            newubs[v] = SCIPvarGetUbLocal(vars[v]);
+         }
+      }
+      /* update newlbs and newubs: take the weaker of the already stored bounds and the current local bounds */
+      else
+      {
+         for( v = 0; v < nvars; ++v )
+         {
+            newlbs[v] = MIN(newlbs[v], SCIPvarGetLbLocal(vars[v]));
+            newubs[v] = MAX(newubs[v], SCIPvarGetUbLocal(vars[v]));
+         }
+      }
+   }
+
+   /* revert all changes at the probing node */
+   SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
+
+   return SCIP_OKAY;
+}
+
 /** gets strong branching information with previous domain propagation on column variable
  *
  *  Before calling this method, the strong branching mode must have been activated by calling SCIPstartStrongbranch();
@@ -15955,7 +16174,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    SCIP_Real newlb;
    SCIP_Bool propagate;
    SCIP_Bool cutoff;
-   SCIP_Longint ndomreds;
+   SCIP_Bool downchild;
+   SCIP_Bool firstchild;
    int oldnconflicts;
    int oldniters;
    int nvars;
@@ -15978,6 +16198,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    if( maxproprounds == -2 )
       maxproprounds = 0;
 
+   *down = lpobjval;
+   *up = lpobjval;
    if( downvalid != NULL )
       *downvalid = FALSE;
    if( upvalid != NULL )
@@ -16020,9 +16242,6 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       return SCIP_INVALIDDATA;
    }
 
-   oldnconflicts = SCIPconflictGetNConflicts(scip->conflict);
-   oldniters = scip->stat->ndivinglpiterations;
-
    newlb = SCIPfeasFloor(scip, solval + 1.0);
    newub = SCIPfeasCeil(scip, solval - 1.0);
 
@@ -16049,7 +16268,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
          *upconflict = TRUE;
 
       SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
-         *down, *up, *downvalid, *upvalid, scip->stat->ndivinglpiterations - oldniters, itlim);
+         *down, *up, *downvalid, *upvalid, 0, INT_MAX);
 
       /* we do not regard the down branch; its valid pointer stays set to FALSE */
       return SCIP_OKAY;
@@ -16075,7 +16294,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
          *downconflict = TRUE;
 
       SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
-         *down, *up, *downvalid, *upvalid, scip->stat->ndivinglpiterations - oldniters, itlim);
+         *down, *up, *downvalid, *upvalid, 0, INT_MAX);
 
       /* we do not regard the up branch; its valid pointer stays set to FALSE */
       return SCIP_OKAY;
@@ -16091,270 +16310,69 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
     *
     * @todo: decide the branch to look at first based on the cutoffs in previous calls
     */
-
-   /* create a new probing node for the up child and apply the new lower bound for the variable */
-   SCIP_CALL( SCIPnewProbingNode(scip) );
-
-   assert(SCIPisGT(scip, newlb, SCIPvarGetLbLocal(var)));
-   SCIP_CALL( SCIPchgVarLbProbing(scip, var, newlb) );
-
-   /* propagate domains at the probing node */
-   if( propagate )
-   {
-      /* start time measuring */
-      SCIPclockStart(scip->stat->strongpropclock, scip->set);
-
-      ndomreds = 0;
-      SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, &ndomreds) );
-      scip->stat->nsbupdomchgs += ndomreds;
-
-      /* stop time measuring */
-      SCIPclockStop(scip->stat->strongpropclock, scip->set);
-
-      if( cutoff )
-      {
-         SCIPdebugMessage("up branch of var <%s> detected infeasible during propagation\n", SCIPvarGetName(var));
-      }
-   }
-
-   /* if propagation did not already detect infeasibility, solve the probing LP */
-   if( !cutoff )
-   {
-      SCIP_CALL( SCIPsolveProbingLP(scip, itlim, lperror, &cutoff) );
-
-      SCIPdebugMessage("probing LP solution status: %d\n", SCIPgetLPSolstat(scip));
-
-      switch( SCIPgetLPSolstat(scip) )
-      {
-      case SCIP_LPSOLSTAT_OPTIMAL:
-         *up = SCIPgetLPObjval(scip);
-
-         if( upvalid != NULL )
-            *upvalid = TRUE;
-
-         break;
-      case SCIP_LPSOLSTAT_OBJLIMIT:
-      case SCIP_LPSOLSTAT_INFEASIBLE:
-         if( SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
-         {
-            SCIPdebugMessage("up branch of var <%s> detected infeasible in LP solving: status=%d\n",
-               SCIPvarGetName(var), SCIPgetLPSolstat(scip));
-            cutoff = TRUE;
-         }
-         break;
-      case SCIP_LPSOLSTAT_ITERLIMIT:
-      case SCIP_LPSOLSTAT_TIMELIMIT:
-      {
-         /* use LP value as estimate */
-         /* @todo: set valid pointer according to dual feasibility of the LP solution */
-         SCIP_LPI* lpi;
-         SCIP_Real objval;
-         SCIP_Real looseobjval;
-
-         SCIP_CALL( SCIPgetLPI(scip, &lpi) );
-         SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-         looseobjval = SCIPlpGetLooseObjval(scip->lp, scip->set, scip->transprob);
-
-         if( SCIPisInfinity(scip, objval) )
-            *up = SCIPinfinity(scip);
-         else if( SCIPisInfinity(scip, -looseobjval) )
-            *up = -SCIPinfinity(scip);
-         else
-            *up = objval + looseobjval;
-         break;
-      }
-      case SCIP_LPSOLSTAT_NOTSOLVED:
-         assert(cutoff); /* the LP should only be unsolved if a conflict unflushed the LP */
-         break;
-      case SCIP_LPSOLSTAT_ERROR:
-      case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-         *lperror = TRUE;
-         break;
-      default:
-         SCIPerrorMessage("invalid LP solution status <%d>\n", SCIPgetLPSolstat(scip));
-         return SCIP_INVALIDDATA;
-      }  /*lint !e788*/
-   }
-
-   /* if the subproblem was feasible, we store the local bounds of the variables after propagation and (possibly)
-    * conflict analysis
-    * @todo do this after propagation? should be able to get valid bounds more often, but they might be weaker
-    */
-   if( !cutoff && newlbs != NULL)
-   {
-      int v;
-
-      assert(newubs != NULL);
-
-      /* initialize the newlbs and newubs to the current local bounds */
-      for( v = 0; v < nvars; ++v )
-      {
-         newlbs[v] = SCIPvarGetLbLocal(vars[v]);
-         newubs[v] = SCIPvarGetUbLocal(vars[v]);
-      }
-   }
-
-   /* revert all changes at the probing node */
-   SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
-
-   /* check for infeasibility */
-   if( cutoff )
-   {
-      *up = SCIPinfinity(scip);
-
-      if( upinf != NULL )
-         *upinf = TRUE;
-
-      if( upvalid != NULL )
-         *upvalid = TRUE;
-
-      if( upconflict != NULL && (SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
-         *upconflict = TRUE;
-
-      /* stop timing */
-      SCIPclockStop(scip->stat->strongbranchtime, scip->set);
-
-      SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
-         *down, *up, *downvalid, *upvalid, scip->stat->ndivinglpiterations - oldniters, itlim);
-
-      /* we do not regard the down branch; its valid pointer stays set to FALSE */
-      return SCIP_OKAY;
-   }
-
-   oldnconflicts = SCIPconflictGetNConflicts(scip->conflict);
+   downchild = FALSE;
+   firstchild = TRUE;
    cutoff = FALSE;
 
-   /* create a new probing node and apply the new upper bound for the variable */
-   SCIP_CALL( SCIPnewProbingNode(scip) );
-
-   /* if the new upper bound is greater equal the current upper bound, the up branch should have been detected
-    * to be infeasible
-    */
-   assert(SCIPisLT(scip, newub, SCIPvarGetUbLocal(var)));
-   SCIP_CALL( SCIPchgVarUbProbing(scip, var, newub) );
-
-   /* propagate domains at the probing node */
-   if( propagate )
+   do
    {
-      /* start time measuring */
-      SCIPclockStart(scip->stat->strongpropclock, scip->set);
+      oldnconflicts = SCIPconflictGetNConflicts(scip->conflict);
+      oldniters = scip->stat->nsbdivinglpiterations;
 
-      ndomreds = 0;
-      SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, &ndomreds) );
-      scip->stat->nsbdowndomchgs += ndomreds;
-
-      /* stop time measuring */
-      SCIPclockStop(scip->stat->strongpropclock, scip->set);
-
-      if( cutoff )
+      if( downchild )
       {
-         SCIPdebugMessage("down branch of var <%s> detected infeasible during propagation\n", SCIPvarGetName(var));
-      }
-   }
+         SCIP_CALL( performStrongbranchWithPropagation(scip, var, solval, lpobjval, downchild, firstchild, propagate, newub, itlim, maxproprounds,
+               down, downvalid, downconflict, lperror, vars, nvars, newlbs, newubs, &cutoff) );
 
-   /* if propagation did not already detect infeasibility, solve the probing LP */
-   if( !cutoff )
-   {
-      SCIP_CALL( SCIPsolveProbingLP(scip, itlim, lperror, &cutoff) );
-
-      SCIPdebugMessage("probing LP solution status: %d\n", SCIPgetLPSolstat(scip));
-
-      switch( SCIPgetLPSolstat(scip) )
-      {
-      case SCIP_LPSOLSTAT_OPTIMAL:
-         *down = SCIPgetLPObjval(scip);
-
-         if( downvalid != NULL )
-            *downvalid = TRUE;
-
-         break;
-      case SCIP_LPSOLSTAT_OBJLIMIT:
-      case SCIP_LPSOLSTAT_INFEASIBLE:
-         if( SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
+         /* check for infeasibility */
+         if( cutoff )
          {
-            SCIPdebugMessage("down branch of var <%s> detected infeasible in LP solving: status=%d\n", SCIPvarGetName(var), SCIPgetLPSolstat(scip));
-            cutoff = TRUE;
+            if( downinf != NULL )
+               *downinf = TRUE;
+
+            if( downconflict != NULL )
+            {
+               if( *downconflict )
+                  assert((SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts));
+               else if( (SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
+                  *downconflict = TRUE;
+            }
+
+            /* if this is the first call, we do not regard the up branch, its valid pointer is initially set to FALSE */
+            break;
          }
-         break;
-      case SCIP_LPSOLSTAT_ITERLIMIT:
-      case SCIP_LPSOLSTAT_TIMELIMIT:
-      {
-         /* use LP value as estimate */
-         /* @todo: set valid pointer according to dual feasibility of the LP solution */
-         SCIP_LPI* lpi;
-         SCIP_Real objval;
-         SCIP_Real looseobjval;
-
-         SCIP_CALL( SCIPgetLPI(scip, &lpi) );
-         SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-         looseobjval = SCIPlpGetLooseObjval(scip->lp, scip->set, scip->transprob);
-
-         if( SCIPisInfinity(scip, objval) )
-            *down = objval;
-         else if( SCIPisInfinity(scip, -looseobjval) )
-            *down = -SCIPinfinity(scip);
-         else
-            *down = objval + looseobjval;
-         break;
       }
-      case SCIP_LPSOLSTAT_NOTSOLVED:
-         assert(cutoff); /* the LP should only be unsolved if a conflict unflushed the LP */
-         break;
-      case SCIP_LPSOLSTAT_ERROR:
-      case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-         *lperror = TRUE;
-         break;
-      default:
-         SCIPerrorMessage("invalid LP solution status <%d>\n", SCIPgetLPSolstat(scip));
-         return SCIP_INVALIDDATA;
-      }  /*lint !e788*/
-   }
-
-   /* if the subproblem was feasible, we update the valid lower and upper bounds w.r.t. the local bounds of the
-    * variables after propagation and (possibly) conflict analysis
-    * @todo do this after propagation? should be able to get valid bounds more often, but they might be weaker
-    */
-   if( !cutoff && newlbs != NULL)
-   {
-      int v;
-
-      assert(newubs != NULL);
-
-      /* the valid bounds are the weaker of the already stored bounds (at the up child) and the local bounds (at the
-       * down child) */
-      for( v = 0; v < nvars; ++v )
+      else
       {
-         newlbs[v] = MIN(newlbs[v], SCIPvarGetLbLocal(vars[v]));
-         newubs[v] = MAX(newubs[v], SCIPvarGetUbLocal(vars[v]));
+         SCIP_CALL( performStrongbranchWithPropagation(scip, var, solval, lpobjval, downchild, firstchild, propagate, newlb, itlim, maxproprounds,
+               up, upvalid, upconflict, lperror, vars, nvars, newlbs, newubs, &cutoff) );
+
+         /* check for infeasibility */
+         if( cutoff )
+         {
+            if( upinf != NULL )
+               *upinf = TRUE;
+
+            assert(upinf == NULL || (*upinf) == TRUE);
+
+            if( upconflict != NULL )
+            {
+               if( *upconflict )
+                  assert((SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts));
+               else if( (SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
+                  *upconflict = TRUE;
+            }
+
+            /* if this is the first call, we do not regard the down branch, its valid pointer is initially set to FALSE */
+            break;
+         }
       }
+
+      downchild = !downchild;
+      firstchild = !firstchild;
    }
+   while( !firstchild );
 
-   /* revert all changes at the probing node */
-   SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
-
-   /* check for infeasibility */
-   if( cutoff )
-   {
-      *down = SCIPinfinity(scip);
-
-      if( downinf != NULL )
-         *downinf = TRUE;
-
-      if( downvalid != NULL )
-         *downvalid = TRUE;
-
-      if( downconflict != NULL && (SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
-         *downconflict = TRUE;
-
-      /* stop timing */
-      SCIPclockStop(scip->stat->strongbranchtime, scip->set);
-
-      SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
-         *down, *up, *downvalid, *upvalid, scip->stat->ndivinglpiterations - oldniters, itlim);
-
-      /* we do not regard the up branch; its valid pointer stays set to FALSE */
-      return SCIP_OKAY;
-   }
 
    /* set strong branching information in column */
    if( *lperror )
@@ -16364,7 +16382,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    else
    {
       SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
-         *down, *up, *downvalid, *upvalid, scip->stat->ndivinglpiterations - oldniters, INT_MAX);
+         *down, *up, *downvalid, *upvalid, scip->stat->nsbdivinglpiterations - oldniters, itlim);
    }
 
    /* stop timing */

@@ -805,7 +805,7 @@ SCIP_RETCODE execRelpscost(
 
          SCIP_CALL( SCIPendStrongbranch(scip) );
       }
-      
+
       /* get the score of the best uninitialized strong branching candidate */
       if( i < ninitcands )
          bestuninitsbscore = initcandscores[i];

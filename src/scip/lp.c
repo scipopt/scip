@@ -12102,6 +12102,7 @@ SCIP_RETCODE lpPrimalSimplex(
          if( lp->strongbranchprobing )
          {
             stat->nsbdivinglps++;
+            stat->nsbdivinglpiterations += iterations;
          }
          else
          {
@@ -12230,6 +12231,7 @@ SCIP_RETCODE lpDualSimplex(
          if( lp->strongbranchprobing )
          {
             stat->nsbdivinglps++;
+            stat->nsbdivinglpiterations += iterations;
          }
          else
          {
@@ -12380,6 +12382,7 @@ SCIP_RETCODE lpLexDualSimplex(
          if( lp->strongbranchprobing )
          {
             stat->nsbdivinglps++;
+            stat->nsbdivinglpiterations += iterations;
          }
          else
          {
@@ -12968,6 +12971,7 @@ SCIP_RETCODE lpBarrier(
          if( lp->strongbranchprobing )
          {
             stat->nsbdivinglps++;
+            stat->nsbdivinglpiterations += iterations;
          }
          else
          {

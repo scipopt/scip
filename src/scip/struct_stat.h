@@ -56,6 +56,7 @@ struct SCIP_Stat
    SCIP_Longint          nnodelpiterations;  /**< number of iterations for totally solving node relaxations */
    SCIP_Longint          ninitlpiterations;  /**< number of iterations for solving nodes' initial relaxations */
    SCIP_Longint          ndivinglpiterations;/**< number of iterations in diving and probing */
+   SCIP_Longint          nsbdivinglpiterations;/**< number of iterations in probing mode for strong branching */
    SCIP_Longint          nsblpiterations;    /**< number of simplex iterations used in strong branching */
    SCIP_Longint          nrootsblpiterations;/**< number of simplex iterations used in strong branching at the root node */
    SCIP_Longint          nconflictlpiterations;/**< number of simplex iterations used in conflict analysis */
