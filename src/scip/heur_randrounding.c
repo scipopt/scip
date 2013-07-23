@@ -13,10 +13,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 //#define SCIP_DEBUG
+#define SCIP_STATISTIC
+
 /**@file   heur_randrounding.c
  * @brief  rand and fast LP rounding heuristic
- * @author Tobias Achterberg
- * @author Marc Pfetsch
+ * @author Gregor Hendel
  *
  * The heuristic also tries to round relaxation solutions if available.
  */
@@ -43,16 +44,19 @@
 #define DEFAULT_RANDSEED      14081986
 #define DEFAULT_USESIMPLEROUNDING    FALSE
 #define DEFAULT_MAXPROPROUNDS 1
+#define DEFAULT_PROPAGATEONLYROOT FALSE
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
-   SCIP_Bool             oncepernode;        /**< should the heuristic only be called once per node? */
    unsigned int          randseed;
-   SCIP_Bool             usesimplerounding;
    int                   maxproprounds;
+   SCIP_Bool             oncepernode;        /**< should the heuristic only be called once per node? */
+   SCIP_Bool             usesimplerounding;
+   int                   ngeneratedconflicts;
+   SCIP_Bool             propagateonlyroot;
 };
 
 
@@ -69,6 +73,7 @@ SCIP_RETCODE performRandRounding(
    SCIP_VAR**            cands,              /**< candidate variables */
    SCIP_Real*            candssol,           /**< solutions of candidate variables */
    int                   ncands,             /**< number of candidates */
+   SCIP_Bool             propagate,          /**< should the rounding be propagated? */
    SCIP_RESULT*          result              /**< pointer to store the result of the heuristic call */
    )
 {
@@ -78,7 +83,10 @@ SCIP_RETCODE performRandRounding(
    assert(heurdata != NULL);
 
    /* round all roundable fractional columns in the corresponding direction as long as no unroundable column was found */
-   SCIP_CALL( SCIPstartProbing(scip) );
+   if( propagate )
+   {
+      SCIP_CALL( SCIPstartProbing(scip) );
+   }
 
    for (c = 0; c < ncands; ++c)
    {
@@ -124,13 +132,16 @@ SCIP_RETCODE performRandRounding(
          newsolval = SCIPfeasCeil(scip, oldsolval);
       }
 
-      if( SCIPisGT(scip, newsolval, SCIPvarGetLbLocal(var)) )
+      if( propagate )
       {
-         SCIP_CALL( SCIPchgVarLbProbing(scip, var, newsolval) );
-      }
-      if( SCIPisLT(scip, newsolval, SCIPvarGetUbLocal(var)) )
-      {
-         SCIP_CALL( SCIPchgVarUbProbing(scip, var, newsolval) );
+         if( SCIPisGT(scip, newsolval, SCIPvarGetLbLocal(var)) )
+         {
+            SCIP_CALL( SCIPchgVarLbProbing(scip, var, newsolval) );
+         }
+         if( SCIPisLT(scip, newsolval, SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_CALL( SCIPchgVarUbProbing(scip, var, newsolval) );
+         }
       }
       /* store new solution value */
       SCIP_CALL( SCIPsetSolVal(scip, sol, var, newsolval) );
@@ -161,16 +172,22 @@ SCIP_RETCODE performRandRounding(
 #endif
       *result = SCIP_FOUNDSOL;
    }
-   else
+   else if( propagate )
    {
       SCIP_Bool cutoff;
       SCIP_Longint ndomreds;
 
       cutoff = FALSE;
       ndomreds = 0L;
+      heurdata->ngeneratedconflicts -= SCIPgetNConflictConssFoundNode(scip);
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &cutoff, &ndomreds) );
+      heurdata->ngeneratedconflicts += SCIPgetNConflictConssFoundNode(scip);
    }
-   SCIP_CALL( SCIPendProbing(scip) );
+
+   if( propagate )
+   {
+      SCIP_CALL( SCIPendProbing(scip) );
+   }
 
    return SCIP_OKAY;
 }
@@ -181,6 +198,7 @@ SCIP_RETCODE performLPRandRounding(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_HEURTIMING       heurtiming,         /**< heuristic timing mask */
+   SCIP_Bool             propagate,
    SCIP_RESULT*          result              /**< pointer to store the result of the heuristic call */
    )
 {
@@ -219,9 +237,10 @@ SCIP_RETCODE performLPRandRounding(
       return SCIP_OKAY;
    heurdata->lastlp = nlps;
 
+
    /* perform rand rounding */
    SCIPdebugMessage("executing rand LP-rounding heuristic: %d fractionals\n", nlpcands);
-   SCIP_CALL( performRandRounding(scip, heurdata, sol, lpcands, lpcandssol, nlpcands, result) );
+   SCIP_CALL( performRandRounding(scip, heurdata, sol, lpcands, lpcandssol, nlpcands, propagate, result) );
 
    return SCIP_OKAY;
 }
@@ -231,6 +250,7 @@ static
 SCIP_RETCODE performRelaxRandRounding(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_Bool             propagate,
    SCIP_RESULT*          result              /**< pointer to store the result of the heuristic call */
    )
 {
@@ -279,7 +299,7 @@ SCIP_RETCODE performRelaxRandRounding(
 
    /* perform rand rounding */
    SCIPdebugMessage("executing rand rounding heuristic on relaxation solution: %d fractionals\n", nrelaxcands);
-   SCIP_CALL( performRandRounding(scip, heurdata, sol, relaxcands, relaxcandssol, nrelaxcands, result) );
+   SCIP_CALL( performRandRounding(scip, heurdata, sol, relaxcands, relaxcandssol, nrelaxcands, propagate, result) );
 
    /* free storage */
    SCIPfreeBufferArray(scip, &relaxcands);
@@ -320,6 +340,7 @@ SCIP_DECL_HEURFREE(heurFreeRandrounding) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+   SCIPstatisticMessage("Random Rounding found a total of %d conflicts \n", heurdata->ngeneratedconflicts);
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
@@ -341,6 +362,7 @@ SCIP_DECL_HEURINIT(heurInitRandrounding) /*lint --e{715}*/
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
    heurdata->randseed = DEFAULT_RANDSEED;
+   heurdata->ngeneratedconflicts = 0;
 
    return SCIP_OKAY;
 }
@@ -375,7 +397,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolRandrounding)
    assert(heurdata != NULL);
    heurdata->lastlp = -1;
 
-   /* change the heuristic's timingmask, if nit should be called only once per node */
+   /* change the heuristic's timingmask, if it should be called only once per node */
    if( heurdata->oncepernode )
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_AFTERLPNODE);
 
@@ -399,6 +421,7 @@ static
 SCIP_DECL_HEUREXEC(heurExecRandrounding) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
+   SCIP_Bool propagate;
 
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(result != NULL);
@@ -425,11 +448,13 @@ SCIP_DECL_HEUREXEC(heurExecRandrounding) /*lint --e{715}*/
 
       *result = SCIP_DIDNOTFIND;
 
+   propagate = !heurdata->propagateonlyroot || SCIPgetDepth(scip) == 0;
+
    /* try to round LP solution */
-   SCIP_CALL( performLPRandRounding(scip, heurdata, heurtiming, result) );
+   SCIP_CALL( performLPRandRounding(scip, heurdata, heurtiming, propagate, result) );
 
    /* try to round relaxation solution */
-   SCIP_CALL( performRelaxRandRounding(scip, heurdata, result) );
+   SCIP_CALL( performRelaxRandRounding(scip, heurdata, propagate, result) );
 
    return SCIP_OKAY;
 }
@@ -466,9 +491,10 @@ SCIP_RETCODE SCIPincludeHeurRandrounding(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/oncepernode",
          "should the heuristic only be called once per node?",
          &heurdata->oncepernode, TRUE, DEFAULT_ONCEPERNODE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/usesimplerounding",
-         "bla?",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/usesimplerounding", "bla?",
          &heurdata->usesimplerounding, TRUE, DEFAULT_USESIMPLEROUNDING, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/propagateonlyroot", "bla?",
+            &heurdata->propagateonlyroot, TRUE, DEFAULT_PROPAGATEONLYROOT, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxproprounds", "bla", &heurdata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS,
          -1, INT_MAX, NULL, NULL) );
    return SCIP_OKAY;
