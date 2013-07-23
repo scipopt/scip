@@ -5863,7 +5863,6 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
       /* set the LP state */
       if( lpistate != NULL )
       {
-         SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
          SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpistate) );
       }
 

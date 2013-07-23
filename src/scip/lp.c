@@ -11891,7 +11891,9 @@ SCIP_RETCODE SCIPlpGetState(
    if( lp->nlpicols == 0 && lp->nlpirows == 0 )
       *lpistate = NULL;
    else
+   {
       SCIP_CALL( SCIPlpiGetState(lp->lpi, blkmem, lpistate) );
+   }
 
    return SCIP_OKAY;
 }
@@ -11912,6 +11914,9 @@ SCIP_RETCODE SCIPlpSetState(
    SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
    assert(lp->flushed);
 
+   if( lp->solved && lp->solisbasic )
+      return SCIP_OKAY;
+
    /* set LPI state in the LP solver */
    if( lpistate == NULL )
    {
@@ -11924,6 +11929,9 @@ SCIP_RETCODE SCIPlpSetState(
       SCIP_CALL( SCIPlpiSetState(lp->lpi, blkmem, lpistate) );
       lp->solisbasic = SCIPlpiHasStateBasis(lp->lpi, lpistate);
    }
+   /* @todo: setting feasibility to TRUE might be wrong because in probing mode, the state is even saved when the LP was
+    *        flushed and solved, also, e.g., when we hit the iteration limit
+    */
    lp->primalfeasible = TRUE;
    lp->dualfeasible = TRUE;
 
