@@ -2984,6 +2984,13 @@ SCIP_RETCODE enforceConstraints(
          *infeasible = TRUE;
          resolved = TRUE;
          SCIPdebugMessage(" -> LP exceeded objective limit\n");
+
+         /* If we used the probing mode during branching, it might happen that we added a constraint or global bound
+          * and returned SCIP_CONSADDED or SCIP_REDUCEDDOM, but when reoptimizing the LP after ending the probing mode,
+          * this leads to hitting the objective limit. In this case, we do not need to propagate or solve the LP again.
+          */
+         *propagateagain = FALSE;
+         *solvelpagain = FALSE;
       }
 
       assert(!(*branched) || (resolved && !(*cutoff) && *infeasible && !(*propagateagain) && !(*solvelpagain)));
