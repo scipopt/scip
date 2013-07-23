@@ -16059,7 +16059,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          SCIP_Real looseobjval;
 
          SCIP_CALL( SCIPgetLPI(scip, &lpi) );
-         if( SCIPlpiWasSolved(lpi) )
+         if( SCIPlpiWasSolved(lpi) && (SCIPlpiIsPrimalFeasible(lpi) || SCIPlpiIsDualFeasible(lpi)) )
          {
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
             looseobjval = SCIPlpGetLooseObjval(scip->lp, scip->set, scip->transprob);
@@ -16070,6 +16070,9 @@ SCIP_RETCODE performStrongbranchWithPropagation(
                *value = -SCIPinfinity(scip);
             else
                *value = objval + looseobjval;
+
+            if( SCIPlpiIsDualFeasible(lpi) )
+               *valid = TRUE;
          }
          break;
       }
