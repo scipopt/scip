@@ -55,7 +55,7 @@ struct SCIP_HeurData
    int                   maxproprounds;
    SCIP_Bool             oncepernode;        /**< should the heuristic only be called once per node? */
    SCIP_Bool             usesimplerounding;
-   int                   ngeneratedconflicts;
+   SCIP_Longint          ngeneratedconflicts;
    SCIP_Bool             propagateonlyroot;
 };
 
@@ -85,7 +85,7 @@ SCIP_RETCODE performRandRounding(
    /* round all roundable fractional columns in the corresponding direction as long as no unroundable column was found */
    if( propagate )
    {
-      SCIP_CALL( SCIPstartProbing(scip) );
+
    }
 
    for (c = 0; c < ncands; ++c)
@@ -134,14 +134,7 @@ SCIP_RETCODE performRandRounding(
 
       if( propagate )
       {
-         if( SCIPisGT(scip, newsolval, SCIPvarGetLbLocal(var)) )
-         {
-            SCIP_CALL( SCIPchgVarLbProbing(scip, var, newsolval) );
-         }
-         if( SCIPisLT(scip, newsolval, SCIPvarGetUbLocal(var)) )
-         {
-            SCIP_CALL( SCIPchgVarUbProbing(scip, var, newsolval) );
-         }
+
       }
       /* store new solution value */
       SCIP_CALL( SCIPsetSolVal(scip, sol, var, newsolval) );
@@ -175,17 +168,48 @@ SCIP_RETCODE performRandRounding(
    else if( propagate )
    {
       SCIP_Bool cutoff;
-      SCIP_Longint ndomreds;
-
+      SCIP_CALL( SCIPstartProbing(scip) );
+      SCIPenableVarHistory(scip);
       cutoff = FALSE;
-      ndomreds = 0L;
-      heurdata->ngeneratedconflicts -= SCIPgetNConflictConssFoundNode(scip);
-      SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &cutoff, &ndomreds) );
-      heurdata->ngeneratedconflicts += SCIPgetNConflictConssFoundNode(scip);
-   }
 
-   if( propagate )
-   {
+
+      for( c = 0; c < ncands &&!cutoff; ++c )
+      {
+         SCIP_Real solval;
+         SCIP_VAR* cand;
+         SCIP_Longint ndomreds;
+         SCIP_Bool lbadjust;
+         SCIP_Bool ubadjust;
+
+         ndomreds = 0L;
+         cand=cands[c];
+         solval = SCIPgetSolVal(scip, sol, cand);
+         assert(SCIPisIntegral(scip, solval));
+         if( SCIPisFeasLT(scip, solval, SCIPvarGetLbLocal(cand)) || SCIPisFeasGT(scip, solval, SCIPvarGetUbLocal(cand)) )
+            continue;
+
+         lbadjust = SCIPisGT(scip, solval, SCIPvarGetLbLocal(cand));
+         ubadjust = SCIPisLT(scip, solval, SCIPvarGetUbLocal(cand));
+
+         if( lbadjust || ubadjust )
+         {
+            SCIP_CALL( SCIPnewProbingNode(scip) );
+
+            if( lbadjust )
+            {
+               SCIP_CALL( SCIPchgVarLbProbing(scip, cand, solval) );
+            }
+            if( ubadjust )
+            {
+               SCIP_CALL( SCIPchgVarUbProbing(scip, cand, solval) );
+            }
+
+            heurdata->ngeneratedconflicts -= SCIPgetNConflictConssFoundNode(scip);
+            SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &cutoff, &ndomreds) );
+            heurdata->ngeneratedconflicts += SCIPgetNConflictConssFoundNode(scip);
+         }
+      }
+
       SCIP_CALL( SCIPendProbing(scip) );
    }
 
@@ -340,7 +364,7 @@ SCIP_DECL_HEURFREE(heurFreeRandrounding) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPstatisticMessage("Random Rounding found a total of %d conflicts \n", heurdata->ngeneratedconflicts);
+   SCIPstatisticMessage("Random Rounding found a total of %"SCIP_LONGINT_FORMAT" conflicts \n", heurdata->ngeneratedconflicts);
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
