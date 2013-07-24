@@ -16077,7 +16077,12 @@ SCIP_RETCODE performStrongbranchWithPropagation(
                *value = objval + looseobjval;
 
             if( SCIPlpiIsDualFeasible(lpi) )
+            {
                *valid = TRUE;
+
+               if( SCIPisGE(scip, *value, SCIPgetCutoffbound(scip)) )
+                  *cutoff = TRUE;
+            }
          }
          break;
       }
