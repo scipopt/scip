@@ -15989,15 +15989,19 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 
    if( down )
    {
-      assert(SCIPisLT(scip, newbound, SCIPvarGetUbLocal(var)));
       assert(SCIPisGE(scip, newbound, SCIPvarGetLbLocal(var)));
-      SCIP_CALL( SCIPchgVarUbProbing(scip, var, newbound) );
+      if( SCIPisLT(scip, newbound, SCIPvarGetUbLocal(var)) )
+      {
+         SCIP_CALL( SCIPchgVarUbProbing(scip, var, newbound) );
+      }
    }
    else
    {
-      assert(SCIPisGT(scip, newbound, SCIPvarGetLbLocal(var)));
       assert(SCIPisLE(scip, newbound, SCIPvarGetUbLocal(var)));
-      SCIP_CALL( SCIPchgVarLbProbing(scip, var, newbound) );
+      if( SCIPisGT(scip, newbound, SCIPvarGetLbLocal(var)) )
+      {
+         SCIP_CALL( SCIPchgVarLbProbing(scip, var, newbound) );
+      }
    }
 
    /* propagate domains at the probing node */
@@ -16323,7 +16327,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
     *
     * @todo: decide the branch to look at first based on the cutoffs in previous calls
     */
-   downchild = FALSE;
+   downchild = !scip->set->branch_upchildfirst;
    firstchild = TRUE;
    cutoff = FALSE;
 
@@ -16348,8 +16352,11 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
                *downconflict = (SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts);
             }
 
-            /* if this is the first call, we do not regard the up branch, its valid pointer is initially set to FALSE */
-            break;
+            if( !scip->set->branch_forceboth )
+            {
+               /* if this is the first call, we do not regard the up branch, its valid pointer is initially set to FALSE */
+               break;
+            }
          }
       }
       else
@@ -16370,8 +16377,11 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
                *upconflict = (SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts);
             }
 
-            /* if this is the first call, we do not regard the down branch, its valid pointer is initially set to FALSE */
-            break;
+            if( !scip->set->branch_forceboth )
+            {
+               /* if this is the first call, we do not regard the down branch, its valid pointer is initially set to FALSE */
+               break;
+            }
          }
       }
 

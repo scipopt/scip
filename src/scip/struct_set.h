@@ -141,6 +141,9 @@ struct SCIP_Set
    SCIP_Real             branch_clamp;       /**< minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
    char                  branch_lpgainnorm;  /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
    SCIP_Bool             branch_delaypscost; /**< whether to delay pseudo costs updates for continuous variables to after separation */
+   SCIP_Bool             branch_forceboth;   /**< should both strong branching children be regarded even if the first
+                                              *   one is detected to be infeasible? (only with propagation) */
+   SCIP_Bool             branch_upchildfirst;/**< should the up child be regarded first during strong branching? (only with propagation) */
 
    /* conflict analysis settings */
    SCIP_Real             conf_maxvarsfac;    /**< maximal fraction of variables involved in a conflict constraint */
