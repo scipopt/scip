@@ -16033,6 +16033,9 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 
       SCIPdebugMessage("probing LP solution status: %d\n", SCIPgetLPSolstat(scip));
 
+      if( *cutoff )
+         *value = SCIPinfinity(scip);
+
       switch( SCIPgetLPSolstat(scip) )
       {
       case SCIP_LPSOLSTAT_OPTIMAL:
@@ -16049,8 +16052,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
             SCIPdebugMessage("%s branch of var <%s> detected infeasible in LP solving: status=%d\n",
                down ? "down" : "up", SCIPvarGetName(var), SCIPgetLPSolstat(scip));
             assert(*cutoff);
-
-            *value = SCIPinfinity(scip);
          }
          break;
       case SCIP_LPSOLSTAT_ITERLIMIT:
@@ -16083,7 +16084,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       case SCIP_LPSOLSTAT_NOTSOLVED:
          assert(*cutoff); /* the LP should only be unsolved if a conflict unflushed the LP */
 
-         *value = SCIPinfinity(scip);
          if( conflict != NULL )
             *conflict = TRUE;
          break;
