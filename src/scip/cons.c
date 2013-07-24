@@ -2102,6 +2102,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->storedpropconss = NULL;
    (*conshdlr)->storedpropconsssize = 0;
    (*conshdlr)->storednmarkedpropconss = 0;
+   (*conshdlr)->storedpropdomchgcount = 0;
 
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -7294,6 +7295,7 @@ SCIP_RETCODE SCIPconshdlrsStorePropagationStatus(
          BMScopyMemoryArray(conshdlr->storedpropconss, conshdlr->propconss, conshdlr->nmarkedpropconss);
 
          conshdlr->storednmarkedpropconss = conshdlr->nmarkedpropconss;
+         conshdlr->storedpropdomchgcount = conshdlr->lastpropdomchgcount;
 
          for( v = conshdlr->storednmarkedpropconss - 1; v >= 0; --v )
          {
@@ -7354,6 +7356,7 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
          }
          assert(conshdlr->nmarkedpropconss + ndisabled >= conshdlr->storednmarkedpropconss || (conshdlrAreUpdatesDelayed(conshdlr) && conshdlr->nupdateconss + ndisabled >= conshdlr->storednmarkedpropconss));
 
+         conshdlr->lastpropdomchgcount = conshdlr->storedpropdomchgcount;
          conshdlr->storednmarkedpropconss = 0;
       }
    }

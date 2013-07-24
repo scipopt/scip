@@ -126,6 +126,7 @@ struct SCIP_Conshdlr
    SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
    SCIP_Longint          nchildren;          /**< number of children the constraint handler created during branching */
    SCIP_Longint          lastpropdomchgcount;/**< last bound change number, where the domain propagation was called */
+   SCIP_Longint          storedpropdomchgcount;/**< bound change number, where the domain propagation was called last before starting probing */
    SCIP_Longint          lastenfolpdomchgcount;/**< last bound change number, where the LP enforcement was called */
    SCIP_Longint          lastenfopsdomchgcount;/**< last bound change number, where the pseudo enforcement was called */
    SCIP_Longint          lastenfolpnode;     /**< last node at which the LP enforcement was called */

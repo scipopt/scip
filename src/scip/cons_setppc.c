@@ -7760,7 +7760,7 @@ SCIP_DECL_CONSPROP(consPropSetppc)
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIPdebugMessage("propagating %d/%d set partitioning / packing / covering constraints\n", nusefulconss, nconss);
+   SCIPdebugMessage("propagating %d/%d set partitioning / packing / covering constraints\n", nmarkedconss, nconss);
 
    cutoff = FALSE;
    inpresolve = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
