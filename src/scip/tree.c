@@ -1730,8 +1730,11 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       int conflictingdepth;
 
       conflictingdepth = SCIPvarGetConflictingBdchgDepth(var, set, boundtype, newbound);
+
       if( conflictingdepth >= 0 )
       {
+         /* 0 would mean the bound change conflicts with a global bound */
+         assert(conflictingdepth > 0);
          assert(conflictingdepth < tree->pathlen);
 
          SCIPdebugMessage(" -> bound change <%s> %s %g violates current local bounds [%g,%g] since depth %d: remember for later application\n",
@@ -2049,7 +2052,9 @@ SCIP_RETCODE treeApplyPendingBdchgs(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
+   SCIP_VAR* var;
    int npendingbdchgs;
+   int conflictdepth;
    int i;
 
    assert(tree != NULL);
@@ -2057,12 +2062,27 @@ SCIP_RETCODE treeApplyPendingBdchgs(
    npendingbdchgs = tree->npendingbdchgs;
    for( i = 0; i < npendingbdchgs; ++i )
    {
-      SCIP_VAR* var;
-
       var = tree->pendingbdchgs[i].var;
       assert(SCIPnodeGetDepth(tree->pendingbdchgs[i].node) < tree->cutoffdepth);
-      assert(SCIPvarGetConflictingBdchgDepth(var, set, tree->pendingbdchgs[i].boundtype,
-            tree->pendingbdchgs[i].newbound) == -1);
+
+      conflictdepth = SCIPvarGetConflictingBdchgDepth(var, set, tree->pendingbdchgs[i].boundtype,
+         tree->pendingbdchgs[i].newbound);
+
+      /* It can happen, that a pending bound change conflicts with the global bounds, because when it was collected, it
+       * just conflicted with the local bounds, but a conflicting global bound change was applied afterwards. In this
+       * case, we can cut off the node where the pending bound change should be applied.
+       */
+      if( conflictdepth == 0 )
+      {
+         SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, tree);
+
+         if( tree->pendingbdchgs[i].node->depth <= tree->effectiverootdepth )
+            return SCIP_OKAY;
+         else
+            continue;
+      }
+
+      assert(conflictdepth == -1);
 
       SCIPdebugMessage("applying pending bound change <%s>[%g,%g] %s %g\n", SCIPvarGetName(var),
          SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 

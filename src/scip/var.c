@@ -564,7 +564,7 @@ SCIP_RETCODE SCIPboundchgApply(
 
    assert(boundchg != NULL);
    assert(stat != NULL);
-   assert(depth >= 0);
+   assert(depth > 0);
    assert(pos >= 0);
    assert(cutoff != NULL);
 
@@ -15295,6 +15295,10 @@ int SCIPvarGetConflictingBdchgDepth(
       /* check if the bound is in conflict with the current local bounds */
       if( SCIPsetIsLE(set, bound, var->locdom.ub) )
          return -1;
+
+      /* check if the bound is in conflict with the global bound */
+      if( SCIPsetIsGT(set, bound, var->glbdom.ub) )
+         return 0;
 
       /* local bounds are in conflict with the given bound -> there must be at least one conflicting change! */
       assert(var->nubchginfos > 0);

@@ -17,9 +17,12 @@
  * @brief  SCIP callable library
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Gerald Gamrath
+ * @author Stefan Heinz
  * @author Thorsten Koch
  * @author Alexander Martin
  * @author Marc Pfetsch
+ * @author Michael Winkler
  * @author Kati Wolter
  *
  * @todo check all checkStage() calls, use bit flags instead of the SCIP_Bool parameters
