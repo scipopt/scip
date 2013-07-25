@@ -16320,9 +16320,6 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       return SCIP_OKAY;
    }
 
-   /* start timing */
-   SCIPclockStart(scip->stat->strongbranchtime, scip->set);
-
    /* We now do strong branching by creating the two potential child nodes as probing nodes and solving them one after
     * the other. We will stop when the first child is detected infeasible, saving the effort we would need for the
     * second child. Since empirically, the up child tends to be infeasible more often, we do strongbranching first on
@@ -16404,9 +16401,6 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       SCIPcolSetStrongbranchData(col, scip->set, scip->stat, scip->transprob, scip->lp, lpobjval, solval,
          *down, *up, *downvalid, *upvalid, scip->stat->nsbdivinglpiterations - oldniters, itlim);
    }
-
-   /* stop timing */
-   SCIPclockStop(scip->stat->strongbranchtime, scip->set);
 
    return SCIP_OKAY;
 }

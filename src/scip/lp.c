@@ -12059,7 +12059,11 @@ SCIP_RETCODE lpPrimalSimplex(
    /* start timing */
    if( lp->diving || lp->probing )
    {
-      SCIPclockStart(stat->divinglptime, set);
+      if( lp->strongbranchprobing )
+         SCIPclockStart(stat->strongbranchtime, set);
+      else
+         SCIPclockStart(stat->divinglptime, set);
+
       timedelta = 0.0;   /* unused for diving or probing */
    }
    else
@@ -12084,7 +12088,12 @@ SCIP_RETCODE lpPrimalSimplex(
 
    /* stop timing */
    if( lp->diving || lp->probing )
-      SCIPclockStop(stat->divinglptime, set);
+   {
+      if( lp->strongbranchprobing )
+         SCIPclockStop(stat->strongbranchtime, set);
+      else
+         SCIPclockStop(stat->divinglptime, set);
+   }
    else
    {
       timedelta += SCIPclockGetTime(stat->primallptime);
@@ -12096,8 +12105,11 @@ SCIP_RETCODE lpPrimalSimplex(
    SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
    if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
    {
-      stat->nlps++;
-      stat->nlpiterations += iterations;
+      if( !lp->strongbranchprobing )
+      {
+         stat->nlps++;
+         stat->nlpiterations += iterations;
+      }
       if( resolve && !lp->lpifromscratch && stat->nlps > 1 )
       {
          stat->nprimalresolvelps++;
@@ -12188,7 +12200,11 @@ SCIP_RETCODE lpDualSimplex(
    /* start timing */
    if( lp->diving || lp->probing )
    {
-      SCIPclockStart(stat->divinglptime, set);
+      if( lp->strongbranchprobing )
+         SCIPclockStart(stat->strongbranchtime, set);
+      else
+         SCIPclockStart(stat->divinglptime, set);
+
       timedelta = 0.0;   /* unused for diving or probing */
    }
    else
@@ -12213,7 +12229,12 @@ SCIP_RETCODE lpDualSimplex(
 
    /* stop timing */
    if( lp->diving || lp->probing )
-      SCIPclockStop(stat->divinglptime, set);
+   {
+      if( lp->strongbranchprobing )
+         SCIPclockStop(stat->strongbranchtime, set);
+      else
+         SCIPclockStop(stat->divinglptime, set);
+   }
    else
    {
       timedelta += SCIPclockGetTime(stat->duallptime);
@@ -12225,8 +12246,11 @@ SCIP_RETCODE lpDualSimplex(
    SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
    if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
    {
-      stat->nlps++;
-      stat->nlpiterations += iterations;
+      if( !lp->strongbranchprobing )
+      {
+         stat->nlps++;
+         stat->nlpiterations += iterations;
+      }
       if( resolve && !lp->lpifromscratch && stat->nlps > 1  )
       {
          stat->ndualresolvelps++;
@@ -12341,7 +12365,11 @@ SCIP_RETCODE lpLexDualSimplex(
    /* start timing */
    if( lp->diving || lp->probing )
    {
-      SCIPclockStart(stat->divinglptime, set);
+      if( lp->strongbranchprobing )
+         SCIPclockStart(stat->strongbranchtime, set);
+      else
+         SCIPclockStart(stat->divinglptime, set);
+
       timedelta = 0.0;   /* unused for diving or probing */
    }
    else
@@ -12366,7 +12394,12 @@ SCIP_RETCODE lpLexDualSimplex(
 
    /* stop timing */
    if( lp->diving || lp->probing )
-      SCIPclockStop(stat->divinglptime, set);
+   {
+      if( lp->strongbranchprobing )
+         SCIPclockStop(stat->strongbranchtime, set);
+      else
+         SCIPclockStop(stat->divinglptime, set);
+   }
    else
    {
       timedelta += SCIPclockGetTime(stat->duallptime);
@@ -12377,7 +12410,10 @@ SCIP_RETCODE lpLexDualSimplex(
    stat->lpcount++;
    if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
    {
-      stat->nlpiterations += iterations;
+      if( lp->strongbranchprobing )
+      {
+         stat->nlpiterations += iterations;
+      }
       if( resolve && !lp->lpifromscratch && stat->nlps > 1  )
       {
          stat->ndualresolvelps++;
@@ -12817,7 +12853,7 @@ SCIP_RETCODE lpLexDualSimplex(
       /* SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) ); */
 
       /* count number of iterations */
-      if( totalIterations == 0 && lexIterations > 0 )
+      if( totalIterations == 0 && lexIterations > 0 && !lp->strongbranchprobing )
          stat->nlps++;
       
       if( lexIterations > 0 ) /* don't count the resolves after removing unused columns/rows */
@@ -12874,7 +12910,7 @@ SCIP_RETCODE lpLexDualSimplex(
    lp->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
    lp->solisbasic = TRUE;
 
-   if( totalIterations > 0 )
+   if( totalIterations > 0 && !lp->strongbranchprobing )
       stat->nlps++;
    else
    {
@@ -12933,7 +12969,11 @@ SCIP_RETCODE lpBarrier(
    /* start timing */
    if( lp->diving || lp->probing )
    {
-      SCIPclockStart(stat->divinglptime, set);
+      if( lp->strongbranchprobing )
+         SCIPclockStart(stat->strongbranchtime, set);
+      else
+         SCIPclockStart(stat->divinglptime, set);
+
       timedelta = 0.0;   /* unused for diving or probing */
    }
    else
@@ -12958,7 +12998,12 @@ SCIP_RETCODE lpBarrier(
 
    /* stop timing */
    if( lp->diving || lp->probing )
-      SCIPclockStop(stat->divinglptime, set);
+   {
+      if( lp->strongbranchprobing )
+         SCIPclockStop(stat->strongbranchtime, set);
+      else
+         SCIPclockStop(stat->divinglptime, set);
+   }
    else
    {
       SCIPclockStop(stat->barrierlptime, set);
@@ -12970,8 +13015,11 @@ SCIP_RETCODE lpBarrier(
    SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
    if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
    {
-      stat->nlps++;
-      stat->nlpiterations += iterations;
+      if( !lp->strongbranchprobing )
+      {
+         stat->nlps++;
+         stat->nlpiterations += iterations;
+      }
       if( lp->diving || lp->probing )
       {
          if( lp->strongbranchprobing )
