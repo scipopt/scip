@@ -779,8 +779,8 @@ SCIP_RETCODE execRelpscost(
             else
                lookahead += 1.0;
 
-            SCIPdebugMessage(" -> variable <%s> (solval=%g, down=%g (%+g), up=%g (%+g), score=%g/ %g/%g %g/%g -> %g)\n",
-               SCIPvarGetName(branchcands[c]), branchcandssol[c], down, downgain, up, upgain, 
+            SCIPdebugMessage(" -> variable <%s> (solval=%g, down=%g (%+g,valid=%u), up=%g (%+g,valid=%u), score=%g/ %g/%g %g/%g -> %g)\n",
+               SCIPvarGetName(branchcands[c]), branchcandssol[c], down, downgain, downvalid, up, upgain, upvalid,
                pscostscore, conflictscore, conflengthscore, inferencescore, cutoffscore,  score);
          }
       }

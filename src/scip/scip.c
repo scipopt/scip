@@ -16338,6 +16338,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
     *
     * @todo: decide the branch to look at first based on the cutoffs in previous calls
     */
+   oldniters = scip->stat->nsbdivinglpiterations;
    downchild = !scip->set->branch_upchildfirst;
    firstchild = TRUE;
    cutoff = FALSE;
@@ -16345,7 +16346,6 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    do
    {
       oldnconflicts = SCIPconflictGetNConflicts(scip->conflict);
-      oldniters = scip->stat->nsbdivinglpiterations;
 
       if( downchild )
       {
