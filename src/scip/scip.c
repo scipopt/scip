@@ -15631,16 +15631,27 @@ SCIP_RETCODE SCIPstartStrongbranch(
     */
    if( enablepropagation )
    {
-      SCIP_CALL( SCIPstartProbing(scip) );
+      if( SCIPtreeProbing(scip->tree) )
+      {
+         SCIPerrorMessage("cannot start strong branching with propagation while in probing mode\n");
+         return SCIP_INVALIDCALL;
+      }
+
+      if( scip->lp != NULL && SCIPlpDiving(scip->lp) )
+      {
+         SCIPerrorMessage("cannot start strong branching with propagation while in diving mode\n");
+         return SCIP_INVALIDCALL;
+      }
+
+      /* other then in SCIPstartProbing(), we do not disable collecting variable statistics during strong branching;
+       * we cannot disable it, because the pseudo costs would not be updated, otherwise,
+       * and reliability branching would end up doing strong branching all the time
+       */
+      SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, TRUE) );
 
       /* inform the LP that the current probing mode is used for strong branching */
       SCIPlpStartStrongbranchProbing(scip->lp);
 
-      /* we want to collect variable statistics during strong branching;
-       * we cannot disable this, because the pseudo costs would not be updated, otherwise,
-       * and reliability branching would end up doing strong branching all the time
-       */
-      SCIPstatEnableVarHistory(scip->stat);
    }
    else
    {
@@ -28619,7 +28630,7 @@ SCIP_RETCODE SCIPstartProbing(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, FALSE) );
 
    /* disables the collection of any statistic for a variable */
    SCIPstatDisableVarHistory(scip->stat);
@@ -35027,7 +35038,7 @@ void printConstraintTimingStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraint Timings :  TotalTime  SetupTime   Separate  Propagate     EnfoLP     EnfoPS      Check    ResProp\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraint Timings :  TotalTime  SetupTime   Separate  Propagate     EnfoLP     EnfoPS      Check    ResProp    SB-Prop\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -35041,6 +35052,7 @@ void printConstraintTimingStatistics(
          SCIP_Real totaltime;
 
          totaltime = SCIPconshdlrGetSepaTime(conshdlr) + SCIPconshdlrGetPropTime(conshdlr)
+            + SCIPconshdlrGetStrongBranchPropTime(conshdlr)
             + SCIPconshdlrGetEnfoLPTime(conshdlr)
             + SCIPconshdlrGetEnfoPSTime(conshdlr)
             + SCIPconshdlrGetCheckTime(conshdlr)
@@ -35048,7 +35060,7 @@ void printConstraintTimingStatistics(
 	    + SCIPconshdlrGetSetupTime(conshdlr);
 
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
             totaltime,
 	    SCIPconshdlrGetSetupTime(conshdlr),
             SCIPconshdlrGetSepaTime(conshdlr),
@@ -35056,7 +35068,8 @@ void printConstraintTimingStatistics(
             SCIPconshdlrGetEnfoLPTime(conshdlr),
             SCIPconshdlrGetEnfoPSTime(conshdlr),
             SCIPconshdlrGetCheckTime(conshdlr),
-            SCIPconshdlrGetRespropTime(conshdlr));
+            SCIPconshdlrGetRespropTime(conshdlr),
+            SCIPconshdlrGetStrongBranchPropTime(conshdlr));
       }
    }
 }
@@ -35091,7 +35104,7 @@ void printPropagatorStatistics(
          SCIPpropGetNDomredsFound(prop));
    }
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Propagator Timings :  TotalTime  SetupTime   Presolve  Propagate    ResProp\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Propagator Timings :  TotalTime  SetupTime   Presolve  Propagate    ResProp    SB-Prop\n");
 
    for( i = 0; i < scip->set->nprops; ++i )
    {
@@ -35100,15 +35113,16 @@ void printPropagatorStatistics(
 
       prop = scip->set->props[i];
       totaltime = SCIPpropGetPresolTime(prop) + SCIPpropGetTime(prop) + SCIPpropGetRespropTime(prop)
-	 + SCIPpropGetSetupTime(prop);
+         + SCIPpropGetStrongBranchPropTime(prop) + SCIPpropGetSetupTime(prop);
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPpropGetName(prop));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10.2f %10.2f %10.2f\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
          totaltime,
 	 SCIPpropGetSetupTime(prop),
 	 SCIPpropGetPresolTime(prop),
 	 SCIPpropGetTime(prop),
-	 SCIPpropGetRespropTime(prop));
+	 SCIPpropGetRespropTime(prop),
+	 SCIPpropGetStrongBranchPropTime(prop));
    }
 }
 

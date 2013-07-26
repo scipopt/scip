@@ -4360,6 +4360,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->probinglpwasrelax = FALSE;
    (*tree)->probingsolvedlp = FALSE;
    (*tree)->forcinglpmessage = FALSE;
+   (*tree)->sbprobing = FALSE;
 
    return SCIP_OKAY;
 }
@@ -5781,7 +5782,8 @@ SCIP_RETCODE SCIPtreeStartProbing(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Bool             strongbranching     /**< is the probing mode used for strongbranching? */
    )
 {
    assert(tree != NULL);
@@ -5804,6 +5806,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
    tree->probingloadlpistate = FALSE;
    tree->probinglpwasrelax = lp->isrelax;
    tree->probingsolvedlp = FALSE;
+   tree->sbprobing = strongbranching;
 
    /* remember the LP state in order to restore the LP solution quickly after probing */
    /**@todo could the lp state be worth storing if the LP is not flushed (and hence not solved)? */
@@ -6173,6 +6176,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    tree->probingloadlpistate = FALSE;
    tree->probinglpwasrelax = FALSE;
    tree->probingsolvedlp = FALSE;
+   tree->sbprobing = FALSE;
 
    /* inform LP about end of probing mode */
    SCIP_CALL( SCIPlpEndProbing(lp) );

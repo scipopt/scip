@@ -547,7 +547,8 @@ SCIP_RETCODE SCIPtreeStartProbing(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Bool             strongbranching     /**< is the probing mode used for strongbranching? */
    );
 
 /** creates a new probing child node in the probing path */

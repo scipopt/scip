@@ -107,6 +107,12 @@ SCIP_Real SCIPpropGetTime(
    SCIP_PROP*            prop                /**< propagator */
    );
 
+/** gets time in seconds used in this propagator during strong branching */
+EXTERN
+SCIP_Real SCIPpropGetStrongBranchPropTime(
+   SCIP_PROP*            prop                /**< propagator */
+   );
+
 /** gets time in seconds used in this propagator for resolve propagation */
 EXTERN
 SCIP_Real SCIPpropGetRespropTime(

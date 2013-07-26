@@ -186,6 +186,7 @@ struct SCIP_Conshdlr
    SCIP_CLOCK*           enfolptime;         /**< time used for LP enforcement of this constraint handler */
    SCIP_CLOCK*           enfopstime;         /**< time used for pseudo enforcement of this constraint handler */
    SCIP_CLOCK*           proptime;           /**< time used for propagation of this constraint handler */
+   SCIP_CLOCK*           sbproptime;         /**< time used for propagation of this constraint handler during strong branching */
    SCIP_CLOCK*           checktime;          /**< time used for feasibility check of this constraint handler */
    SCIP_CLOCK*           resproptime;        /**< time used for resolve propagation of this constraint handler */
    SCIP_Longint          lastsepalpcount;    /**< last LP number, where the separations was called */
