@@ -16057,12 +16057,41 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       switch( SCIPgetLPSolstat(scip) )
       {
       case SCIP_LPSOLSTAT_OPTIMAL:
+      {
          *value = SCIPgetLPObjval(scip);
 
          if( valid != NULL )
             *valid = TRUE;
 
+         /* check the strong branching LP solution for feasibility */
+         if( scip->set->branch_checksbsol )
+         {
+            SCIP_Bool foundsol;
+
+            /* run DURINGPRICINGLOOP heuristics */
+            if( scip->set->branch_heursbsol )
+            {
+               /* call primal heuristics */
+               SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, NULL,
+                     SCIP_HEURTIMING_DURINGPRICINGLOOP, &foundsol) );
+            }
+            /* just check the LP solution */
+            else
+            {
+               SCIP_SOL* sol;
+
+               SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
+               SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, &foundsol) );
+            }
+
+            if( foundsol )
+            {
+               SCIPdebugMessage("found new solution in strong branching\n");
+            }
+         }
+
          break;
+      }
       case SCIP_LPSOLSTAT_OBJLIMIT:
       case SCIP_LPSOLSTAT_INFEASIBLE:
          if( SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
@@ -16172,6 +16201,9 @@ SCIP_RETCODE performStrongbranchWithPropagation(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @warning When using this method, LP banching candidates and solution values must be copied beforehand, because
+ *           they are updated w.r.t. the strong branching LP solution.
  */
 SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -945,8 +945,11 @@ SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 {  /*lint --e{715}*/
+   SCIP_VAR** tmplpcands;
    SCIP_VAR** lpcands;
+   SCIP_Real* tmplpcandssol;
    SCIP_Real* lpcandssol;
+   SCIP_Real* tmplpcandsfrac;
    SCIP_Real* lpcandsfrac;
    int nlpcands;
    
@@ -958,11 +961,22 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    SCIPdebugMessage("Execlp method of relpscost branching\n");
    
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, NULL, &nlpcands) );
    assert(nlpcands > 0);
+
+   /* copy LP banching candidates and solution values, because they will be updated w.r.t. the strong branching LP
+    * solution
+    */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcands, tmplpcands, nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandssol, tmplpcandssol, nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandsfrac, tmplpcandsfrac, nlpcands) );
 
    /* execute branching rule */
    SCIP_CALL( execRelpscost(scip, branchrule, allowaddcons, lpcands, lpcandssol, lpcandsfrac, nlpcands, result) );
+
+   SCIPfreeBufferArray(scip, &lpcandsfrac);
+   SCIPfreeBufferArray(scip, &lpcandssol);
+   SCIPfreeBufferArray(scip, &lpcands);
 
    return SCIP_OKAY;
 }

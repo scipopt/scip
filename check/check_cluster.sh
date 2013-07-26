@@ -347,8 +347,8 @@ do
 		    echo set limits objective $CUTOFF      >> $TMPFILE
 		fi
 		echo set heur emph off                 >> $TMPFILE
-		echo set sepa emph off                 >> $TMPFILE
-		echo set presol components maxro 0     >> $TMPFILE
+#		echo set sepa emph off                 >> $TMPFILE
+#		echo set presol components maxro 0     >> $TMPFILE
 	    fi
 #           echo presolve                          >> $TMPFILE
 	    echo optimize                          >> $TMPFILE

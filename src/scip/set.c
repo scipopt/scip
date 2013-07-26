@@ -69,7 +69,8 @@
 #define SCIP_DEFAULT_BRANCH_FORCEBOTH     FALSE /**< should both strong branching children be regarded even if the first
                                                  *   one is detected to be infeasible? (only with propagation) */
 #define SCIP_DEFAULT_BRANCH_UPCHILDFIRST   TRUE /**< should the up child be regarded first during strong branching? (only with propagation) */
-
+#define SCIP_DEFAULT_BRANCH_CHECKSBSOL     TRUE /**< should LP solutions during strong branching with propagation be checked for feasibility? */
+#define SCIP_DEFAULT_BRANCH_HEURSBSOL      TRUE /**< should fast heuristics be called for LP solutions during strong branching with propagation? (only when checksbsol=TRUE) */
 
 /* Conflict Analysis */
 
@@ -812,6 +813,16 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/upchildfirst",
          "should the up child be regarded first during strong branching? (only with propagation)",
          &(*set)->branch_upchildfirst, FALSE, SCIP_DEFAULT_BRANCH_UPCHILDFIRST,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/checksol",
+         "should LP solutions during strong branching with propagation be checked for feasibility?",
+         &(*set)->branch_checksbsol, FALSE, SCIP_DEFAULT_BRANCH_CHECKSBSOL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/heursbsol",
+         "should fast heuristics be called for LP solutions during strong branching with propagation? (only when checksbsol=TRUE)",
+         &(*set)->branch_heursbsol, FALSE, SCIP_DEFAULT_BRANCH_HEURSBSOL,
          NULL, NULL) );
 
    /* conflict analysis parameters */

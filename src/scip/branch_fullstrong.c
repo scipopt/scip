@@ -494,8 +494,11 @@ static
 SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_VAR** tmplpcands;
    SCIP_VAR** lpcands;
+   SCIP_Real* tmplpcandssol;
    SCIP_Real* lpcandssol;
+   SCIP_Real* tmplpcandsfrac;
    SCIP_Real* lpcandsfrac;
    SCIP_Real bestdown;
    SCIP_Real bestup;
@@ -521,9 +524,16 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
    assert(branchruledata != NULL);
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, &npriolpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, &nlpcands, &npriolpcands) );
    assert(nlpcands > 0);
    assert(npriolpcands > 0);
+
+   /* copy LP banching candidates and solution values, because they will be updated w.r.t. the strong branching LP
+    * solution
+    */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcands, tmplpcands, nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandssol, tmplpcandssol, nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandsfrac, tmplpcandsfrac, nlpcands) );
 
    if( branchruledata->skipdown == NULL )
    {
@@ -583,6 +593,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
       *result = SCIP_BRANCHED;
    }
+
+   SCIPfreeBufferArray(scip, &lpcandsfrac);
+   SCIPfreeBufferArray(scip, &lpcandssol);
+   SCIPfreeBufferArray(scip, &lpcands);
 
    return SCIP_OKAY;
 }

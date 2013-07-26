@@ -129,7 +129,8 @@ SCIP_RETCODE SCIPprimalHeuristics(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree, or NULL if called during presolving */
    SCIP_LP*              lp,                 /**< LP data, or NULL if called during presolving or propagation */
-   SCIP_NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left or called during presolving */
+   SCIP_NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left
+                                              *   (only needed when calling after node heuristics) */
    SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
    SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
    )

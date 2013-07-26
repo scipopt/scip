@@ -7009,6 +7009,9 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @warning When using this method, LP banching candidates and solution values must be copied beforehand, because
+ *           they are updated w.r.t. the strong branching LP solution.
  */
 EXTERN
 SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
