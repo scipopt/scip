@@ -3575,7 +3575,10 @@ SCIP_RETCODE presolveTryAddLinearReform(
             if( SCIPisNegative(scip, SCIPintervalGetInf(xbndsone)) )
             {
                /* add 0 <= z - xbndsone.inf * y constraint (as varbound constraint) */
-               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_1", SCIPvarGetName(y));
+               if( nxvars == 1 )
+                  (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s_%s_1", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
+               else
+                  (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s*more_%s_1", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetInf(xbndsone), 0.0, SCIPinfinity(scip),
                      SCIPconsIsInitial(cons) /*&& conshdlrdata->binreforminitial*/,
                      SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -3590,7 +3593,10 @@ SCIP_RETCODE presolveTryAddLinearReform(
             if( SCIPisPositive(scip, SCIPintervalGetSup(xbndsone)) )
             {
                /* add z - xbndsone.sup * y <= 0 constraint (as varbound constraint) */
-               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_2", SCIPvarGetName(y));
+               if( nxvars == 1 )
+                  (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s_%s_2", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
+               else
+                  (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s*more_%s_2", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetSup(xbndsone), -SCIPinfinity(scip), 0.0,
                      SCIPconsIsInitial(cons) /*&& conshdlrdata->binreforminitial*/,
                      SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -3609,7 +3615,10 @@ SCIP_RETCODE presolveTryAddLinearReform(
             xcoef[nxvars]   = SCIPintervalGetInf(xbndszero);
             xcoef[nxvars+1] = -1;
 
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_3", SCIPvarGetName(y));
+            if( nxvars == 1 )
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s_%s_3", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
+            else
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s*more_%s_3", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, nxvars+2, xvars, xcoef, SCIPintervalGetInf(xbndszero), SCIPinfinity(scip),
                   SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -3624,7 +3633,10 @@ SCIP_RETCODE presolveTryAddLinearReform(
             /* add sum_i a_i*x_i + xbndszero.sup * y - z <= xbndszero.sup constraint */
             xcoef[nxvars] = SCIPintervalGetSup(xbndszero);
 
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s_4", SCIPvarGetName(y));
+            if( nxvars == 1 )
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s_%s_4", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
+            else
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s*more_%s_4", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, nxvars+2, xvars, xcoef, -SCIPinfinity(scip), SCIPintervalGetSup(xbndszero),
                   SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
