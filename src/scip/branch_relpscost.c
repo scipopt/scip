@@ -263,9 +263,6 @@ SCIP_RETCODE execRelpscost(
 {
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_Real lpobjval;
-#ifndef NDEBUG
-   SCIP_Real cutoffbound;
-#endif
    SCIP_Real bestsbdown;
    SCIP_Real bestsbup;
    SCIP_Real provedbound;
@@ -285,9 +282,6 @@ SCIP_RETCODE execRelpscost(
 
    /* get current LP objective bound of the local sub problem and global cutoff bound */
    lpobjval = SCIPgetLPObjval(scip);
-#ifndef NDEBUG
-   cutoffbound = SCIPgetCutoffbound(scip);
-#endif
 
    /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
     * for cutting off sub problems and improving lower bounds of children
@@ -639,8 +633,8 @@ SCIP_RETCODE execRelpscost(
          up = MAX(up, lpobjval);
          downgain = down - lpobjval;
          upgain = up - lpobjval;
-         assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, cutoffbound));
-         assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, cutoffbound));
+         assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, SCIPgetCutoffbound(scip)));
+         assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, SCIPgetCutoffbound(scip)));
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
@@ -865,7 +859,7 @@ SCIP_RETCODE execRelpscost(
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nbranchcands);
       assert(!SCIPisFeasIntegral(scip, branchcandssol[bestcand]));
-      assert(SCIPisLT(scip, provedbound, cutoffbound));
+      assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
 
       var = branchcands[bestcand];
 
@@ -894,8 +888,8 @@ SCIP_RETCODE execRelpscost(
       /* update the lower bounds in the children */
       if( allcolsinlp && !exactsolve )
       {
-         assert(SCIPisLT(scip, proveddown, cutoffbound));
-         assert(SCIPisLT(scip, provedup, cutoffbound));
+         assert(SCIPisLT(scip, proveddown, SCIPgetCutoffbound(scip)));
+         assert(SCIPisLT(scip, provedup, SCIPgetCutoffbound(scip)));
          SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, proveddown) );
          SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, provedup) );
       }

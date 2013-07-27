@@ -16087,6 +16087,9 @@ SCIP_RETCODE performStrongbranchWithPropagation(
             if( foundsol )
             {
                SCIPdebugMessage("found new solution in strong branching\n");
+
+               if( SCIPisGE(scip, *value, SCIPgetCutoffbound(scip)) )
+                  *cutoff = TRUE;
             }
          }
 
