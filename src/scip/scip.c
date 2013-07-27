@@ -15945,6 +15945,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
    int                   nvars,              /**< number of active problem variables */
    SCIP_Real*            newlbs,             /**< array to store valid lower bounds for all active variables, or NULL */
    SCIP_Real*            newubs,             /**< array to store valid upper bounds for all active variables, or NULL */
+   SCIP_Bool*            foundsol,           /**< pointer to store whether a primal solution was found during strong branching */
    SCIP_Bool*            cutoff              /**< pointer to store whether the strong branching child is infeasible */
    )
 {
@@ -16049,8 +16050,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
    {
       SCIP_CALL( SCIPsolveProbingLP(scip, itlim, lperror, cutoff) );
 
-      SCIPdebugMessage("probing LP solution status: %d\n", SCIPgetLPSolstat(scip));
-
       if( *cutoff )
          *value = SCIPinfinity(scip);
 
@@ -16060,20 +16059,20 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       {
          *value = SCIPgetLPObjval(scip);
 
+         SCIPdebugMessage("probing LP solved to optimality, objective value: %16.9g\n", *value);
+
          if( valid != NULL )
             *valid = TRUE;
 
          /* check the strong branching LP solution for feasibility */
          if( scip->set->branch_checksbsol )
          {
-            SCIP_Bool foundsol;
-
             /* run DURINGPRICINGLOOP heuristics */
             if( scip->set->branch_heursbsol )
             {
                /* call primal heuristics */
                SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, NULL,
-                     SCIP_HEURTIMING_DURINGPRICINGLOOP, &foundsol) );
+                     SCIP_HEURTIMING_DURINGPRICINGLOOP, foundsol) );
             }
             /* just check the LP solution */
             else
@@ -16081,10 +16080,10 @@ SCIP_RETCODE performStrongbranchWithPropagation(
                SCIP_SOL* sol;
 
                SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
-               SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, &foundsol) );
+               SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, foundsol) );
             }
 
-            if( foundsol )
+            if( *foundsol )
             {
                SCIPdebugMessage("found new solution in strong branching\n");
 
@@ -16097,6 +16096,8 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       }
       case SCIP_LPSOLSTAT_OBJLIMIT:
       case SCIP_LPSOLSTAT_INFEASIBLE:
+         SCIPdebugMessage("probing LP %s\n", SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OBJLIMIT ? "hit objective limit" : "infeasible");
+
          if( SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
          {
             SCIPdebugMessage("%s branch of var <%s> detected infeasible in LP solving: status=%d\n",
@@ -16112,6 +16113,8 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          SCIP_LPI* lpi;
          SCIP_Real objval;
          SCIP_Real looseobjval;
+
+         SCIPdebugMessage("probing LP hit %s limit\n", SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_ITERLIMIT ? "iteration" : "time");
 
          SCIP_CALL( SCIPgetLPI(scip, &lpi) );
          if( SCIPlpiWasSolved(lpi) && (SCIPlpiIsPrimalFeasible(lpi) || SCIPlpiIsDualFeasible(lpi)) )
@@ -16139,11 +16142,14 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       case SCIP_LPSOLSTAT_NOTSOLVED:
          assert(*cutoff); /* the LP should only be unsolved if a conflict unflushed the LP */
 
+         SCIPdebugMessage("probing LP infeasible\n");
+
          if( conflict != NULL )
             *conflict = TRUE;
          break;
       case SCIP_LPSOLSTAT_ERROR:
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
+         SCIPdebugMessage("error during probing LP solving: status=%d\n", SCIPgetLPSolstat(scip));
          *lperror = TRUE;
          break;
       default:
@@ -16242,6 +16248,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    SCIP_Bool cutoff;
    SCIP_Bool downchild;
    SCIP_Bool firstchild;
+   SCIP_Bool foundsol;
    int oldnconflicts;
    int oldniters;
    int nvars;
@@ -16385,7 +16392,17 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       if( downchild )
       {
          SCIP_CALL( performStrongbranchWithPropagation(scip, var, solval, lpobjval, downchild, firstchild, propagate, newub, itlim, maxproprounds,
-               down, downvalid, downconflict, lperror, vars, nvars, newlbs, newubs, &cutoff) );
+               down, downvalid, downconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
+
+         /* check whether a new solutions rendered the previous child infeasible */
+         if( foundsol && !firstchild )
+         {
+            if( SCIPisGE(scip, *up, SCIPgetCutoffbound(scip)) )
+            {
+               if( upinf != NULL )
+                  *upinf = TRUE;
+            }
+         }
 
          /* check for infeasibility */
          if( cutoff )
@@ -16408,7 +16425,17 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       else
       {
          SCIP_CALL( performStrongbranchWithPropagation(scip, var, solval, lpobjval, downchild, firstchild, propagate, newlb, itlim, maxproprounds,
-               up, upvalid, upconflict, lperror, vars, nvars, newlbs, newubs, &cutoff) );
+               up, upvalid, upconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
+
+         /* check whether a new solutions rendered the previous child infeasible */
+         if( foundsol && !firstchild )
+         {
+            if( SCIPisGE(scip, *down, SCIPgetCutoffbound(scip)) )
+            {
+               if( downinf != NULL )
+                  *downinf = TRUE;
+            }
+         }
 
          /* check for infeasibility */
          if( cutoff )

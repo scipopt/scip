@@ -153,9 +153,6 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_Real upgain;
    SCIP_Real score;
    SCIP_Real lpobjval;
-#ifndef NDEBUG
-   SCIP_Real cutoffbound;
-#endif
    SCIP_Bool exactsolve;
    SCIP_Bool lperror;
    SCIP_Bool allcolsinlp;
@@ -192,10 +189,6 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
     * for cutting off sub problems and improving lower bounds of children
     */
    exactsolve = SCIPisExactSolve(scip);
-
-#ifndef NDEBUG
-   cutoffbound = SCIPgetCutoffbound(scip);
-#endif
 
    /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
    allcolsinlp = SCIPallColsInLP(scip);
@@ -330,8 +323,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          if( !SCIPisFeasZero(scip,downgain) && !SCIPisFeasZero(scip,upgain) )
             bothgains = TRUE;
 
-         assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, cutoffbound));
-         assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, cutoffbound));
+         assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, SCIPgetCutoffbound(scip)));
+         assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, SCIPgetCutoffbound(scip)));
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
