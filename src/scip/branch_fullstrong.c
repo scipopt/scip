@@ -83,6 +83,8 @@ SCIP_DECL_BRANCHFREE(branchFreeFullstrong)
 
    /* free branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
    SCIPfreeMemoryArrayNull(scip, &branchruledata->skipdown);
    SCIPfreeMemoryArrayNull(scip, &branchruledata->skipup);
 
@@ -101,7 +103,32 @@ SCIP_DECL_BRANCHINIT(branchInitFullstrong)
 
    /* initialize branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
    branchruledata->lastcand = 0;
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of branching rule (called before transformed problem is freed) */
+static
+SCIP_DECL_BRANCHEXIT(branchExitFullstrong)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* initialize branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+   assert((branchruledata->skipdown != NULL) == (branchruledata->skipup != NULL));
+
+   if( branchruledata->skipdown != NULL )
+   {
+      SCIPfreeMemoryArray(scip, &branchruledata->skipup);
+      SCIPfreeMemoryArray(scip, &branchruledata->skipdown);
+      branchruledata->skipdown = NULL;
+      branchruledata->skipup = NULL;
+
+   }
 
    return SCIP_OKAY;
 }
@@ -623,6 +650,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyFullstrong) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeFullstrong) );
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitFullstrong) );
+   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitFullstrong) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpFullstrong) );
 
    /* fullstrong branching rule parameters */
