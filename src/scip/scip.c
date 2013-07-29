@@ -16067,6 +16067,9 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          /* check the strong branching LP solution for feasibility */
          if( scip->set->branch_checksbsol )
          {
+            /* start clock for strong branching solutions */
+            SCIPclockStart(scip->stat->sbsoltime, scip->set);
+
             /* run DURINGPRICINGLOOP heuristics */
             if( scip->set->branch_heursbsol )
             {
@@ -16087,9 +16090,14 @@ SCIP_RETCODE performStrongbranchWithPropagation(
             {
                SCIPdebugMessage("found new solution in strong branching\n");
 
+               scip->stat->nsbsolsfound++;
+
                if( SCIPisGE(scip, *value, SCIPgetCutoffbound(scip)) )
                   *cutoff = TRUE;
             }
+
+            /* stop clock for strong branching solutions */
+            SCIPclockStop(scip->stat->sbsoltime, scip->set);
          }
 
          break;
@@ -35393,6 +35401,9 @@ void printHeuristicStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  pseudo solutions : %10.2f          -          - %10"SCIP_LONGINT_FORMAT"\n",
       SCIPclockGetTime(scip->stat->pseudosoltime),
       scip->stat->npssolsfound);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  strong branching : %10.2f          -          - %10"SCIP_LONGINT_FORMAT"\n",
+      SCIPclockGetTime(scip->stat->sbsoltime),
+      scip->stat->nsbsolsfound);
 
    /* sort heuristics w.r.t. their names */
    SCIPsetSortHeursName(scip->set);

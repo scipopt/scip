@@ -62,6 +62,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->conflictlptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->sbsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nlpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->copyclock, SCIP_CLOCKTYPE_DEFAULT) );
@@ -106,6 +107,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->conflictlptime);
    SCIPclockFree(&(*stat)->lpsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
+   SCIPclockFree(&(*stat)->sbsoltime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
    SCIPclockFree(&(*stat)->nlpsoltime);
    SCIPclockFree(&(*stat)->copyclock);
@@ -173,6 +175,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->conflictlptime);
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->pseudosoltime);
+   SCIPclockReset(stat->sbsoltime);
    SCIPclockReset(stat->nodeactivationtime);
    SCIPclockReset(stat->nlpsoltime);
    SCIPclockReset(stat->copyclock);
@@ -203,6 +206,7 @@ void SCIPstatReset(
    stat->ncreatednodes = 0;
    stat->nlpsolsfound = 0;
    stat->npssolsfound = 0;
+   stat->nsbsolsfound = 0;
    stat->domchgcount = 0;
    stat->nboundchgs = 0;
    stat->nholechgs = 0;

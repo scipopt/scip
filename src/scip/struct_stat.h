@@ -75,6 +75,7 @@ struct SCIP_Stat
    SCIP_Longint          nrepropcutoffs;     /**< number of times, a repropagated node was cut off */
    SCIP_Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
    SCIP_Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
+   SCIP_Longint          nsbsolsfound;       /**< number of CIP-feasible solutions found during strong branching so far */
    SCIP_Longint          lastdispnode;       /**< last node for which an information line was displayed */
    SCIP_Longint          lastdivenode;       /**< last node where LP diving was applied */
    SCIP_Longint          lastconflictnode;   /**< last node where conflict analysis was applied */
@@ -112,6 +113,7 @@ struct SCIP_Stat
    SCIP_CLOCK*           conflictlptime;     /**< conflict analysis LP solution time */
    SCIP_CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    SCIP_CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
+   SCIP_CLOCK*           sbsoltime;          /**< time needed for searching and storing feasible strong branching solutions */
    SCIP_CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
    SCIP_CLOCK*           nlpsoltime;         /**< time needed for solving NLPs */
    SCIP_CLOCK*           copyclock;          /**< time needed for copying problems */
