@@ -18228,6 +18228,14 @@ SCIP_Real SCIPinfinity(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity
+ *  computation)
+ */
+EXTERN
+SCIP_Real SCIPgetHugeValue(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** checks, if values are in range of epsilon */
 EXTERN
 SCIP_Bool SCIPisEQ(
@@ -18273,6 +18281,13 @@ EXTERN
 SCIP_Bool SCIPisInfinity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to be compared against infinity */
+   );
+
+/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+EXTERN
+SCIP_Bool SCIPisHugeValue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to be checked whether it is huge */
    );
 
 /** checks, if value is in range epsilon of 0.0 */
@@ -18625,19 +18640,6 @@ SCIP_Bool SCIPisUpdateUnreliable(
    SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
    );
 
-/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
-EXTERN
-SCIP_Bool SCIPisHugeValue(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             val                 /**< value to be checked whether it is huge */
-   );
-
-/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity computation) */
-EXTERN
-SCIP_Real SCIPgetHugeValue(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -18646,6 +18648,8 @@ SCIP_Real SCIPgetHugeValue(
 
 #define SCIPinfinity(scip)                        SCIPsetInfinity((scip)->set)
 #define SCIPisInfinity(scip, val)                 SCIPsetIsInfinity((scip)->set, val)        
+#define SCIPisHugeValue(scip, val)                SCIPsetIsHugeValue((scip)->set, val)
+#define SCIPgetHugeValue(scip)                    SCIPsetGetHugeValue((scip)->set)
 #define SCIPisEQ(scip, val1, val2)                SCIPsetIsEQ((scip)->set, val1, val2)       
 #define SCIPisLT(scip, val1, val2)                SCIPsetIsLT((scip)->set, val1, val2)       
 #define SCIPisLE(scip, val1, val2)                SCIPsetIsLE((scip)->set, val1, val2)       
@@ -18703,8 +18707,6 @@ SCIP_Real SCIPgetHugeValue(
 #define SCIPisSumRelGE(scip, val1, val2)          SCIPsetIsSumRelGE((scip)->set, val1, val2) 
 
 #define SCIPisUpdateUnreliable(scip, newval, oldval) SCIPsetIsUpdateUnreliable((scip)->set, newval, oldval)
-#define SCIPisHugeValue(scip, val) SCIPsetIsHugeValue((scip)->set, val)
-#define SCIPgetHugeValue(scip) SCIPsetGetHugeValue((scip)->set)
 #endif
 
 /** outputs a real number, or "+infinity", or "-infinity" to a file */

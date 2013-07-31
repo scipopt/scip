@@ -36537,6 +36537,31 @@ SCIP_Bool SCIPisInfinity(
    return SCIPsetIsInfinity(scip->set, val);
 }
 
+/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+SCIP_Bool SCIPisHugeValue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to be checked whether it is huge */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsHugeValue(scip->set, val);
+}
+
+/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity
+ *  computation)
+ */
+SCIP_Real SCIPgetHugeValue(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetGetHugeValue(scip->set);
+}
+
 /** checks, if value is in range epsilon of 0.0 */
 SCIP_Bool SCIPisZero(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -37229,31 +37254,6 @@ SCIP_Bool SCIPisUpdateUnreliable(
    SCIP_CALL( checkStage(scip, "SCIPisUpdateUnreliable", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return SCIPsetIsUpdateUnreliable(scip->set, newvalue, oldvalue);
-}
-
-/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
-SCIP_Bool SCIPisHugeValue(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             val                 /**< value to be checked whether it is huge */
-   )
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( checkStage(scip, "SCIPisHugeValue", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-
-   return SCIPsetIsHugeValue(scip->set, val);
-}
-
-/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity computation) */
-SCIP_Real SCIPgetHugeValue(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetHugeValue", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-
-   return SCIPsetGetHugeValue(scip->set);
 }
 
 /** creates a dynamic array of real values
