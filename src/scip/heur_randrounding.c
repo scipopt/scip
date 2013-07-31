@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define SCIP_DEBUG
 #define SCIP_STATISTIC
 
 /**@file   heur_randrounding.c
@@ -79,33 +78,68 @@ SCIP_RETCODE performRandRounding(
 {
    int c;
    SCIP_Bool stored;
+   SCIP_VAR** permutedcands;
+   SCIP_Bool cutoff;
 
    assert(heurdata != NULL);
 
    /* round all roundable fractional columns in the corresponding direction as long as no unroundable column was found */
    if( propagate )
    {
-
+      SCIP_CALL( SCIPstartProbing(scip) );
+      SCIPenableVarHistory(scip);
    }
 
-   for (c = 0; c < ncands; ++c)
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &permutedcands, cands, ncands) );
+
+   assert(permutedcands != NULL);
+
+   SCIPpermuteArray((void **)permutedcands, 0, ncands, &heurdata->randseed);
+   cutoff = FALSE;
+
+   for (c = 0; c < ncands && !cutoff; ++c)
    {
       SCIP_VAR* var;
       SCIP_Real oldsolval;
       SCIP_Real newsolval;
       SCIP_Bool mayrounddown;
       SCIP_Bool mayroundup;
+      SCIP_Longint ndomreds;
+      SCIP_Bool lbadjust;
+      SCIP_Bool ubadjust;
+      SCIP_Real lb;
+      SCIP_Real ub;
 
-      oldsolval = candssol[c];
+
+      var = permutedcands[c];
+      oldsolval = SCIPgetSolVal(scip, sol, var);
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
+
       assert( ! SCIPisFeasIntegral(scip, oldsolval) );
-      var = cands[c];
       assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN );
+
       mayrounddown = SCIPvarMayRoundDown(var);
       mayroundup = SCIPvarMayRoundUp(var);
+
       SCIPdebugMessage("rand rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
          SCIPvarGetName(var), oldsolval, mayrounddown, mayroundup);
 
-      if( !heurdata->usesimplerounding || !(mayroundup && mayrounddown) )
+      if( lb > SCIPfeasCeil(scip, oldsolval) + 0.5 || ub < SCIPfeasFloor(scip, oldsolval) - 0.5 )
+      {
+         cutoff = TRUE;
+         break;
+      } else if( SCIPisFeasEQ(scip, lb, SCIPfeasCeil(scip, oldsolval)) )
+      {
+         assert(SCIPisFeasGE(scip, ub, SCIPfeasCeil(scip, oldsolval)));
+         newsolval = SCIPfeasCeil(scip, oldsolval);
+      }
+      else if( SCIPisFeasEQ(scip, ub, SCIPfeasFloor(scip, oldsolval)) )
+      {
+         assert(SCIPisFeasLE(scip,lb, SCIPfeasFloor(scip, oldsolval)));
+         newsolval = SCIPfeasFloor(scip, oldsolval);
+      }
+      else if( !heurdata->usesimplerounding || !(mayroundup && mayrounddown) )
       {
          SCIP_Real randnumber;
 
@@ -132,64 +166,13 @@ SCIP_RETCODE performRandRounding(
          newsolval = SCIPfeasCeil(scip, oldsolval);
       }
 
+      assert(SCIPisFeasLE(scip, lb, newsolval));
+      assert(SCIPisFeasGE(scip, ub, newsolval));
+
       if( propagate )
       {
-
-      }
-      /* store new solution value */
-      SCIP_CALL( SCIPsetSolVal(scip, sol, var, newsolval) );
-   }
-
-   /* check, if rounding was successful */
-   if( SCIPallColsInLP(scip) )
-   {
-      /* check solution for feasibility, and add it to solution store if possible
-       * neither integrality nor feasibility of LP rows has to be checked, because all fractional
-       * variables were already moved in feasible direction to the next integer
-       */
-      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, &stored) );
-   }
-   else
-   {
-      /* if there are variables which are not present in the LP, e.g., for
-       * column generation, we need to check their bounds
-       */
-      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, TRUE, &stored) );
-   }
-
-   if( stored )
-   {
-#ifdef SCIP_DEBUG
-      SCIPdebugMessage("found feasible rounded solution:\n");
-      SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
-#endif
-      *result = SCIP_FOUNDSOL;
-   }
-   else if( propagate )
-   {
-      SCIP_Bool cutoff;
-      SCIP_CALL( SCIPstartProbing(scip) );
-      SCIPenableVarHistory(scip);
-      cutoff = FALSE;
-
-
-      for( c = 0; c < ncands &&!cutoff; ++c )
-      {
-         SCIP_Real solval;
-         SCIP_VAR* cand;
-         SCIP_Longint ndomreds;
-         SCIP_Bool lbadjust;
-         SCIP_Bool ubadjust;
-
-         ndomreds = 0L;
-         cand=cands[c];
-         solval = SCIPgetSolVal(scip, sol, cand);
-         assert(SCIPisIntegral(scip, solval));
-         if( SCIPisFeasLT(scip, solval, SCIPvarGetLbLocal(cand)) || SCIPisFeasGT(scip, solval, SCIPvarGetUbLocal(cand)) )
-            continue;
-
-         lbadjust = SCIPisGT(scip, solval, SCIPvarGetLbLocal(cand));
-         ubadjust = SCIPisLT(scip, solval, SCIPvarGetUbLocal(cand));
+         lbadjust = SCIPisGT(scip, newsolval, lb);
+         ubadjust = SCIPisLT(scip, newsolval, ub);
 
          if( lbadjust || ubadjust )
          {
@@ -197,11 +180,11 @@ SCIP_RETCODE performRandRounding(
 
             if( lbadjust )
             {
-               SCIP_CALL( SCIPchgVarLbProbing(scip, cand, solval) );
+               SCIP_CALL( SCIPchgVarLbProbing(scip, var, newsolval) );
             }
             if( ubadjust )
             {
-               SCIP_CALL( SCIPchgVarUbProbing(scip, cand, solval) );
+               SCIP_CALL( SCIPchgVarUbProbing(scip, var, newsolval) );
             }
 
             heurdata->ngeneratedconflicts -= SCIPgetNConflictConssFoundNode(scip);
@@ -209,9 +192,46 @@ SCIP_RETCODE performRandRounding(
             heurdata->ngeneratedconflicts += SCIPgetNConflictConssFoundNode(scip);
          }
       }
+      /* store new solution value */
+      SCIP_CALL( SCIPsetSolVal(scip, sol, var, newsolval) );
+   }
 
+   if( !cutoff )
+   {
+      /* check, if rounding was successful */
+      if( SCIPallColsInLP(scip) )
+      {
+         /* check solution for feasibility, and add it to solution store if possible
+          * neither integrality nor feasibility of LP rows has to be checked, because all fractional
+          * variables were already moved in feasible direction to the next integer
+          */
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, &stored) );
+      }
+      else
+      {
+         /* if there are variables which are not present in the LP, e.g., for
+          * column generation, we need to check their bounds
+          */
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, TRUE, &stored) );
+      }
+
+      if( stored )
+      {
+#ifdef SCIP_DEBUG
+         SCIPdebugMessage("found feasible rounded solution:\n");
+         SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
+#endif
+         *result = SCIP_FOUNDSOL;
+      }
+   }
+
+   assert( !propagate || SCIPinProbing(scip) );
+   if( propagate )
+   {
       SCIP_CALL( SCIPendProbing(scip) );
    }
+
+   SCIPfreeBufferArray(scip, &permutedcands);
 
    return SCIP_OKAY;
 }
