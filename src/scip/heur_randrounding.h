@@ -15,10 +15,12 @@
 
 /**@file   heur_randrounding.h
  * @ingroup PRIMALHEURISTICS
- * @brief  Simple and fast LP rounding heuristic
+ * @brief  randomized LP rounding heuristic which also generates conflicts via an auxiliary probing tree
  * @author Gregor Hendel
  *
- *
+ * Randomized LP rounding uses a random variable from a uniform distribution
+ * over [0,1] to determine whether the fractional LP value x should be rounded
+ * up with probability x - floor(x) or down with probability ceil(x) - x
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
