@@ -304,6 +304,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/dialog_default.o \
 			scip/disp_default.o \
 			scip/event_solvingstage.o \
+			scip/event_nodeevent.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \

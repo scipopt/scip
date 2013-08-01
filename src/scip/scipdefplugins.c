@@ -98,6 +98,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSolvingstage(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrNodeevent(scip) );
    SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );
    SCIP_CALL( SCIPincludeHeurClique(scip) );
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
