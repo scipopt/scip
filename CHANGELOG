@@ -60,6 +60,7 @@ features:
 - added first implication detection in cons_linear
 - several new presolvimng steps for linear and knapsack constraints, using gcd information and many more
 - cons_indicator can now try to construct feasible solutions from a cover
+- reader_osil can now read SOS1 and SOS2 constraints
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor

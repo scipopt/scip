@@ -1,4 +1,3 @@
-#define SCIP_DBG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -17,6 +16,7 @@
 /**@file   reader_osil.c
  * @brief  OS instance language (OSiL) format file reader
  * @author Stefan Vigerske
+ * @author Ingmar Vierhaus
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2378,11 +2378,18 @@ SCIP_RETCODE readSOScons(
    int nsosvars;
    int sosorder;
    int type;
-/*   int convexityrow; */
-   int count,varcount;
+   int count;
+   int varcount;
    int idx;
-   SCIP_Bool initial, separate, enforce, check, propagate;
-   SCIP_Bool local, modifiable, dynamic, removable;
+   SCIP_Bool initial;
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool local;
+   SCIP_Bool modifiable;
+   SCIP_Bool dynamic;
+   SCIP_Bool removable;
    char name[SCIP_MAXSTRLEN];
 
 
@@ -2403,10 +2410,10 @@ SCIP_RETCODE readSOScons(
       return SCIP_OKAY;
 
    /* get number of sos constraints */
-   attrval = xmlGetAttrval(soscons, "numberOfSpecialOrderedSets");
+   attrval = xmlGetAttrval(soscons, "numberOfSOS");
    if( attrval == NULL )
    {
-      SCIPerrorMessage("Attribute \"numberOfSpecialOrderedSets in <specialOrderedSets> node not found.\n");
+      SCIPerrorMessage("Attribute \"numberOfSOS in <specialOrderedSets> node not found.\n");
       *doingfine = FALSE;
       return SCIP_OKAY;
    }
@@ -2414,17 +2421,18 @@ SCIP_RETCODE readSOScons(
    nsoscons = (int)strtol(attrval, (char**)&attrval, 10);
    if( *attrval != '\0' || nsoscons < 0 )
    {
-      SCIPerrorMessage("Invalid value '%s' for \"numberOfSpecialOrderedSets\" attribute in <specialOrderedSets>.\n", xmlGetAttrval(soscons, "numberOfSpecialOrderedSets"));
+      SCIPerrorMessage("Invalid value '%s' for \"numberOfSOS\" attribute in <specialOrderedSets>.\n", xmlGetAttrval(soscons, "numberOfSOS"));
       *doingfine = FALSE;
       return SCIP_OKAY;
    }
    assert(nsoscons >= 0);
+
    /* read sos constraints and create corresponding constraint */
    count = 0;
    for( soscons = xmlFirstChild(soscons); soscons != NULL; soscons = xmlNextSibl(soscons), ++count )
    {
-
       SCIP_CONS* cons;
+
       /* Make sure we get a sos node and not more then announced*/
       if( strcmp(xmlGetName(soscons), "sos") != 0 )
       {
@@ -2432,6 +2440,7 @@ SCIP_RETCODE readSOScons(
          *doingfine = FALSE;
          break;
       }
+
       if( count >= nsoscons)
       {
          SCIPerrorMessage("Too many sos under <specialOrderedSets> node, expected %d many, but got at least %d.\n", nsoscons, count + 1);
@@ -2458,7 +2467,7 @@ SCIP_RETCODE readSOScons(
       assert(nsosvars >= 0);
 
       /* get order of this sos constraint */
-      attrval = xmlGetAttrval(soscons, "order");
+      attrval = xmlGetAttrval(soscons, "type");
       if( attrval == NULL )
       {
          SCIPerrorMessage("Attribute \"order\" in <sos> node not found.\n");
@@ -2476,29 +2485,8 @@ SCIP_RETCODE readSOScons(
       assert(sosorder == 1 || sosorder == 2);
       type = sosorder;
 
-     /* get convexityRow value (unused)*/
-      /*
-      attrval = xmlGetAttrval(soscons, "convexityRow");
-      if( attrval == NULL )
-      {
-         SCIPerrorMessage("Attribute \"convexityRow\" in <sos> node not found.\n");
-         *doingfine = FALSE;
-         return SCIP_OKAY;
-      }
-
-      convexityrow = (int)strtol(attrval, (char**)&attrval, 10);
-      if( *attrval != '\0' || convexityrow < 0 )
-      {
-         SCIPerrorMessage("Invalid/unsupported value '%s' for \"convexityRow\" attribute in <sos>.\n", xmlGetAttrval(soscons, "convexityRow"));
-         *doingfine = FALSE;
-         return SCIP_OKAY;
-      }
-      assert(convexityrow > 0);
-      */
-
-
       /* set artificial name for sos constraint*/
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SOS%d_%d", type,count);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SOS%d_%d", type, count);
 
       /* Create sos constraint */
       switch( type )
@@ -2550,7 +2538,7 @@ SCIP_RETCODE readSOScons(
              SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
              SCIPABORT();
           }
-      } /* Close looop over variables in sos constraint */
+      } /* Close loop over variables in sos constraint */
 
       /* add the SOS constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -2558,6 +2546,7 @@ SCIP_RETCODE readSOScons(
 
    return SCIP_OKAY;
 }
+
  /*
  * Callback methods of reader
  */
