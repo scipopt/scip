@@ -2424,7 +2424,7 @@ features:
   node or not
 - command shell now understands escape characters ",', and \ which makes it possible to read in files with spaces in the
   name
-- updated XPress interface to XPress-MP 17 (contributed by Michael Perregard)
+- updated XPress interface to XPress-MP 17 (contributed by Michael Perregaard)
 - the EXITSOL callback of the plugins is now called before the LP and the global cut pool are freed
 - possibility of SAT-like restarts after a number of conflict constraints have been found
 - in the root node of the very first run, heuristics with timing AFTERNODELPNODE, AFTERLPPLUNGE, AFTERPSEUDONODE, and
