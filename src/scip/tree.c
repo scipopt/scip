@@ -2127,6 +2127,9 @@ void SCIPnodeUpdateLowerbound(
 
    if( newbound > node->lowerbound )
    {
+      SCIP_Real oldlowerbound;
+
+      oldlowerbound = node->lowerbound;
       node->lowerbound = newbound;
       node->estimate = MAX(node->estimate, newbound);
       if( node->depth == 0 )
@@ -2134,12 +2137,13 @@ void SCIPnodeUpdateLowerbound(
          stat->rootlowerbound = newbound;
          SCIPstatUpdatePrimalDualIntegral(stat, set, prob, SCIPsetInfinity(set), newbound);
       }
-      else if( newbound > stat->lastlowerbound )
+      else if( SCIPsetIsEQ(set, oldlowerbound, stat->lastlowerbound) )
       {
          SCIP_Real lowerbound;
          lowerbound = SCIPtreeGetLowerbound(tree, set);
          assert(newbound >= lowerbound);
-       	/* updating the primal integral is only necessary if dual bound has increased since last evaluation */
+
+         /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
          if( lowerbound > stat->lastlowerbound )
             SCIPstatUpdatePrimalDualIntegral(stat, set, prob, SCIPsetInfinity(set), lowerbound);
       }
