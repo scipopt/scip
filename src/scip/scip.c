@@ -646,7 +646,7 @@ void SCIPstoreSolutionGap(
    if( scip->primal->nsols == 1 )
       scip->stat->firstsolgap = scip->stat->lastsolgap;
 
-   if( scip->set->stage == SCIP_STAGE_SOLVING )
+   if( scip->set->stage == SCIP_STAGE_SOLVING && scip->set->misc_calcintegral )
    {
       SCIPstatUpdatePrimalDualIntegral(scip->stat, scip->set, scip->transprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
    }
@@ -35014,9 +35014,15 @@ void printSolutionStatistics(
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap              : %10.2f %%\n", 100.0 * gap);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         : %10.2f %% (%6.2f primal integral)\n",
-         SCIPisFeasZero(scip, SCIPgetSolvingTime(scip)) ? 0.0 : scip->stat->primalintegralval/SCIPgetSolvingTime(scip),
+   if( scip->set->misc_calcintegral )
+      if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE )
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (problem infeasible)\n");
+      else
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         : %10.2f %% (%.2f primal integral)\n",
+            SCIPisFeasZero(scip, SCIPgetSolvingTime(scip)) ? 0.0 : scip->stat->primalintegralval/SCIPgetSolvingTime(scip),
                scip->stat->primalintegralval);
+   else
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (not evaluated)\n");
 }
 
 /** display first LP statistics */

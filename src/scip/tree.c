@@ -2135,9 +2135,10 @@ void SCIPnodeUpdateLowerbound(
       if( node->depth == 0 )
       {
          stat->rootlowerbound = newbound;
-         SCIPstatUpdatePrimalDualIntegral(stat, set, prob, SCIPsetInfinity(set), newbound);
+         if( set->misc_calcintegral )
+            SCIPstatUpdatePrimalDualIntegral(stat, set, prob, SCIPsetInfinity(set), newbound);
       }
-      else if( SCIPsetIsEQ(set, oldlowerbound, stat->lastlowerbound) )
+      else if( set->misc_calcintegral && SCIPsetIsEQ(set, oldlowerbound, stat->lastlowerbound) )
       {
          SCIP_Real lowerbound;
          lowerbound = SCIPtreeGetLowerbound(tree, set);

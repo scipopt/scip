@@ -312,7 +312,7 @@ void SCIPstatResetPrimalIntegral(
 }
 
 /** update the primal dual integral statistic. method accepts + and - SCIPsetInfinity() as values for
- *  primal and dual bound, respectively
+ *  upper and lower bound, respectively
  */
 void SCIPstatUpdatePrimalDualIntegral(
    SCIP_STAT*           stat,                /**< problem statistics data */
@@ -331,6 +331,10 @@ void SCIPstatUpdatePrimalDualIntegral(
    assert(set != NULL);
 
    solvingtime = SCIPclockGetTime(stat->solvingtime);
+   assert(solvingtime >= stat->previntegralevaltime);
+
+   primalbound = stat->lastprimalbound;
+   dualbound = stat->lastdualbound;
 
    /* the gap is 0.0 if the lower bound is greater-equal the upper bound */
    if( SCIPsetIsGE(set, lowerbound, upperbound) )
@@ -342,16 +346,9 @@ void SCIPstatUpdatePrimalDualIntegral(
       /* use values in external original space for gap calculation */
       if( !SCIPsetIsInfinity(set, upperbound) || stat->lastprimalbound == SCIP_UNKNOWN )
          primalbound = SCIPprobExternObjval(prob, set, upperbound);
-      else
-         primalbound = stat->lastprimalbound;
 
       if( !SCIPsetIsInfinity(set, -lowerbound) || stat->lastdualbound == SCIP_UNKNOWN )
          dualbound = SCIPprobExternObjval(prob, set, lowerbound);
-      else
-         dualbound = stat->lastdualbound;
-
-      assert(solvingtime >= stat->previntegralevaltime);
-      stat->primalintegralval += (solvingtime - stat->previntegralevaltime) * stat->previousgap;
 
       /* The gap in the definition of the primal-dual integral differs from default SCIP gap function.
        * Here, the MAX(primalbound, dualbound) is taken for gap quotient in order to ensure a gap <= 100.
@@ -370,6 +367,9 @@ void SCIPstatUpdatePrimalDualIntegral(
    /* if primal and dual bound have opposite signs, the gap always evaluates to 100.0% */
    assert(currentgap == 0.0 || currentgap == 100.0 || SCIPsetIsGE(set, primalbound * dualbound, 0.0));
    assert(SCIPsetIsGE(set, stat->previousgap, currentgap));
+
+   /* update the integral based on information based on previous information */
+   stat->primalintegralval += (solvingtime - stat->previntegralevaltime) * stat->previousgap;
 
    /* update all relevant information for next evaluation */
    stat->previousgap = currentgap;

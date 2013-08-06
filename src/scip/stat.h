@@ -100,7 +100,7 @@ void SCIPstatResetPrimalIntegral(
    );
 
 /** update the primal dual integral statistic. method accepts + and - SCIPsetInfinity() as values for
- *  primal and dual bound, respectively
+ *  upper and lower bound, respectively
  */
 extern
 void SCIPstatUpdatePrimalDualIntegral(
