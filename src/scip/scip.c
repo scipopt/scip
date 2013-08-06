@@ -31135,8 +31135,6 @@ SCIP_RETCODE SCIPaddSol(
       if( *stored && (bestsol != SCIPgetBestSol(scip)) )
       {
          SCIPstoreSolutionGap(scip);
-
-
       }
 
       return SCIP_OKAY;
