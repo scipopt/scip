@@ -368,7 +368,7 @@ void SCIPstatUpdatePrimalDualIntegral(
    }
 
    /* if primal and dual bound have opposite signs, the gap always evaluates to 100.0% */
-   assert(SCIPsetIsInfinity(set, lowerbound) || SCIPsetIsGE(set, primalbound * dualbound, 0.0) || currentgap == 100.0);
+   assert(currentgap == 0.0 || currentgap == 100.0 || SCIPsetIsGE(set, primalbound * dualbound, 0.0));
    assert(SCIPsetIsGE(set, stat->previousgap, currentgap));
 
    /* update all relevant information for next evaluation */
