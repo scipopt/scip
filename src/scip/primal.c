@@ -1487,8 +1487,11 @@ SCIP_RETCODE SCIPprimalTransformSol(
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 
       /* check whether the fixing corresponds to the solution value of the original variable */
-      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+      if( scalar == 0.0 )
       {
+         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED ||
+            (SCIPsetIsInfinity(set, constant) || SCIPsetIsInfinity(set, -constant)));
+
          if( !SCIPsetIsEQ(set, solval, constant) )
          {
             SCIPdebugMessage("original variable <%s> (solval=%g) resolves to fixed variable <%s> (original solval=%g)\n",

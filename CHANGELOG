@@ -45,6 +45,7 @@ fixed bugs:
   fixed bug in heuristic separation method, fixed asserts
 - fixed bugs with freeing C++ object data for problem and variables
 - fixed wrong bound calculation in sepa_rapidlearning
+- fixed bug with infinite multi-aggregation constants
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
