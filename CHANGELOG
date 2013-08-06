@@ -145,6 +145,8 @@ parameters:
 - new parameter "constraints/indicator/trysolfromcover" for trying to construct a feasible solution from a cover
 - new parameter "constraints/linear/checkrelmaxabs" for checking linear constraints with a side of 0.0 relative to
   the maximum absolute value in the activity instead of 1.0
+- new parameter "heuristics/shiftandpropagate/fixbinlocks" for fixing binary variables with no locks in one direction
+  to the corresponding bound
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
