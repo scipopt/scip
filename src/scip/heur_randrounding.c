@@ -262,7 +262,7 @@ SCIP_RETCODE performLPRandRounding(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_HEURTIMING       heurtiming,         /**< heuristic timing mask */
-   SCIP_Bool             propagate,
+   SCIP_Bool             propagate,          /**< should the heuristic apply SCIP's propagation? */
    SCIP_RESULT*          result              /**< pointer to store the result of the heuristic call */
    )
 {
