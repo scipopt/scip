@@ -43,6 +43,7 @@
 #include "scip/debug.h"
 #include "scip/prob.h"
 #include "scip/scip.h"
+#include "scip/struct_scip.h"
 #include "scip/pub_message.h"
 
 
@@ -1095,6 +1096,8 @@ void SCIPnodeCutoff(
    SCIP_TREE*            tree                /**< branch and bound tree */
    )
 {
+  SCIP_EVENT event;
+
    assert(node != NULL);
    assert(set != NULL);
    assert(stat != NULL);
@@ -1107,6 +1110,11 @@ void SCIPnodeCutoff(
       tree->cutoffdepth = MIN(tree->cutoffdepth, (int)node->depth);
 
    SCIPvbcCutoffNode(stat->vbc, stat, node);
+
+   /* issue NODEINFEASIBLE event */
+   SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE);
+   SCIPeventChgNode(&event, node);
+   SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter);
 
    SCIPdebugMessage("cutting off %s node #%"SCIP_LONGINT_FORMAT" at depth %d (cutoffdepth: %d)\n", 
       node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
@@ -3362,6 +3370,13 @@ SCIP_RETCODE nodeToLeaf(
    }
    else
    {
+      SCIP_EVENT event;
+
+      /* issue NODEINFEASIBLE event */
+      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+      SCIP_CALL( SCIPeventChgNode(&event, *node) );
+      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter) );
+
       /* delete node due to bound cut off */
       SCIPvbcCutoffNode(stat->vbc, stat, *node);
       SCIP_CALL( SCIPnodeFree(node, blkmem, set, stat, eventqueue, tree, lp) );
@@ -3926,6 +3941,7 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_NODE* subroot;
    SCIP_NODE* childrenlpstatefork;
    int oldcutoffdepth;
+   SCIP_EVENT event;
 
    assert(node != NULL);
    assert(*node == NULL
@@ -3964,6 +3980,13 @@ SCIP_RETCODE SCIPnodeFocus(
       {
          SCIP_CALL( SCIPnodepqRemove(tree->leaves, set, *node) );
       }
+      SCIPvbcCutoffNode(stat->vbc, stat, *node);
+
+      /* issue NODEINFEASIBLE event */
+      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+      SCIP_CALL( SCIPeventChgNode(&event, *node) );
+      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter) );
+
       SCIP_CALL( SCIPnodeFree(node, blkmem, set, stat, eventqueue, tree, lp) );
 
       return SCIP_OKAY;
@@ -4632,9 +4655,17 @@ SCIP_RETCODE SCIPtreeCutoff(
       node = tree->siblings[i];
       if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
+         SCIP_EVENT event;
+
          SCIPdebugMessage("cut off sibling #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n", 
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
          SCIPvbcCutoffNode(stat->vbc, stat, node);
+
+         /* issue NODEINFEASIBLE event */
+         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+         SCIP_CALL( SCIPeventChgNode(&event, node) );
+         SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter) );
+
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
       }
    }
@@ -4645,9 +4676,17 @@ SCIP_RETCODE SCIPtreeCutoff(
       node = tree->children[i];
       if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
+         SCIP_EVENT event;
+
          SCIPdebugMessage("cut off child #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n",
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
          SCIPvbcCutoffNode(stat->vbc, stat, node);
+
+         /* issue NODEINFEASIBLE event */
+         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+         SCIP_CALL( SCIPeventChgNode(&event, node) );
+         SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter) );
+
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
       }
    }

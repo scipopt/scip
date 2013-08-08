@@ -4189,12 +4189,12 @@ SCIP_RETCODE SCIPsolveCIP(
             {
                SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp,
                      eventqueue, eventfilter, FALSE) );
-            }
 
-            /* issue NODEFEASIBLE event */
-            SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
-            SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
-            SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+               /* issue NODEFEASIBLE event */
+               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
+               SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
+               SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+            }
          }
          else if( !unbounded )
          {
@@ -4289,6 +4289,11 @@ SCIP_RETCODE SCIPsolveCIP(
           */
          SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp,
                eventqueue, eventfilter, TRUE) );
+
+         /* issue NODEFEASIBLE event */
+         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
+         SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
+         SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
       }
 
       /* compute number of successfully applied conflicts */
@@ -4336,6 +4341,10 @@ SCIP_RETCODE SCIPsolveCIP(
    if( tree->focusnode != NULL && SCIPtreeGetNNodes(tree) == 0
       && SCIPsetIsGE(set, tree->focusnode->lowerbound, primal->cutoffbound) )
    {
+      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+      SCIP_CALL( SCIPeventChgNode(&event, tree->focusnode) );
+      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+
       focusnode = NULL;
       SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, primal, tree, lp, branchcand, conflict,
             eventfilter, eventqueue, &cutoff) );

@@ -29,6 +29,7 @@
 #include "scip/clock.h"
 #include "scip/stat.h"
 #include "scip/vbc.h"
+#include "scip/event.h"
 #include "scip/paramset.h"
 #include "scip/tree.h"
 #include "scip/scip.h"
@@ -37,8 +38,7 @@
 #include "scip/pub_misc.h"
 
 #include "scip/struct_nodesel.h"
-
-
+#include "scip/struct_scip.h"
 
 /* 
  * node priority queue methods
@@ -610,6 +610,8 @@ SCIP_RETCODE SCIPnodepqBound(
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
       if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
       {
+         SCIP_EVENT event;
+
          SCIPdebugMessage("free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
             pos, nodepq->len, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
 
@@ -633,6 +635,11 @@ SCIP_RETCODE SCIPnodepqBound(
             pos--;
 
          SCIPvbcCutoffNode(stat->vbc, stat, node);
+
+         /* issue NODEINFEASIBLE event */
+         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+         SCIP_CALL( SCIPeventChgNode(&event, node) );
+         SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter) );
 
          /* free memory of the node */
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );

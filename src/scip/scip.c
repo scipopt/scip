@@ -96,9 +96,9 @@
  * In optimized mode, the structure is included in scip.h, because some of the methods
  * are implemented as defines for performance reasons (e.g. the numerical comparisons)
  */
-#ifndef NDEBUG
+//#ifndef NDEBUG
 #include "scip/struct_scip.h"
-#endif
+//#endif
 
 
 /* 
