@@ -64,6 +64,7 @@ features:
 - several new presolvimng steps for linear and knapsack constraints, using gcd information and many more
 - cons_indicator can now try to construct feasible solutions from a cover
 - reader_osil can now read SOS1 and SOS2 constraints
+- reader_lp is now abled to write and constraints in form of their (weak/strict) relaxation
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -149,6 +150,10 @@ parameters:
   the maximum absolute value in the activity instead of 1.0
 - new parameter "heuristics/shiftandpropagate/fixbinlocks" for fixing binary variables with no locks in one direction
   to the corresponding bound
+- new parameter "reading/lpreader/linearize-and-constraints" to allow and constraints to be linearized when printing in
+  LP format
+- new parameter "reading/lpreader/aggrlinearization-ands" to enable/disable the printing of the weak or strict
+  relaxation of and constraints in LP format
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
