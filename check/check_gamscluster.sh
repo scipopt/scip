@@ -176,11 +176,11 @@ fi
 if test $EXAMINER = 1
 then
   mkdir -p $OPTDIR
+  echo "subsolver ${SOLVER,,}" > $OPTDIR/examiner2.opt
   if test "$SETNAME" != "default"
   then
-    echo "subsolver ${SOLVER,,}.1" > $OPTDIR/examiner2.opt
+    echo "subsolveropt 1" >> $OPTDIR/examiner2.opt
   else
-    echo "subsolver ${SOLVER,,}" > $OPTDIR/examiner2.opt
     GAMSOPTS="$GAMSOPTS optdir=$OPTDIR optfile=1"
   fi
   #echo "traceStyle 1" >> $OPTDIR/examiner2.opt
