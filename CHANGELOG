@@ -14,6 +14,8 @@ fixed bugs:
 - do not multi-aggregate variables if the constant would be a huge value in order to avoid numerical troubles
 - fixed bug with infinite multi-aggregation constants
 - fixed wrong bound calculation in sepa_rapidlearning
+- fixed bug when bound change contradicts local bound and is stored as pending, but the contradicting local
+  bound becomes global afterwards (--> node where pending bound change is valid can be cut off)
 
 data structures
 - new data structure for (circular) queues (SCIP_QUEUE)
@@ -64,6 +66,11 @@ features:
 - several new presolvimng steps for linear and knapsack constraints, using gcd information and many more
 - cons_indicator can now try to construct feasible solutions from a cover
 - reader_osil can now read SOS1 and SOS2 constraints
+- added strong branching with domain propagation support: in SCIPstartStrongbranch(), support for propagation can
+  be enabled (uses the probing mode, some overhead compared to standard strong branching), after that
+  SCIPgetVarStrongbranchWithPropagation() can be used to perform strong branching on a variable with previous domain
+  propagation; similar to probing, valid bounds for variables are collected
+- strong branching with propagation can be enabled in fullstrong and relpscost branching rule
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -149,6 +156,11 @@ parameters:
   the maximum absolute value in the activity instead of 1.0
 - new parameter "heuristics/shiftandpropagate/fixbinlocks" for fixing binary variables with no locks in one direction
   to the corresponding bound
+- new parameters "branching/firstsbchild" and "branching/forcebothchildren" to specify the first child node to be
+  investigated during strong branching ('u'p,'d'down,'a'uto) and whether always both children should be solved (only for
+  strong branching with domain propagation, per default, the second child is not looked at when the first is infeasible)
+- new parameters "branching/checksol" and "branching/heursbsol" to specify whether the strong branching LP solution
+  should be checked for feasibility and whether fast heuristics should be run on this solution
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
