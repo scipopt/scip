@@ -11893,6 +11893,14 @@ SCIP_RETCODE exitPresolve(
       /* if possible, scale objective function such that it becomes integral with gcd 1 */
       SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
             scip->tree, scip->lp, scip->eventqueue) );
+
+      scip->stat->lastlowerbound = SCIPprobInternObjval(scip->transprob, scip->set, scip->transprob->dualbound);
+
+      /* we need to update the primal dual integral here to update the last{upper/dual}bound values after a restart */
+      if( scip->set->misc_calcintegral )
+      {
+         SCIPstatUpdatePrimalDualIntegral(scip->stat, scip->set, scip->transprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
+      }
    }
 
    /* free temporary presolving root node */
@@ -12564,6 +12572,8 @@ SCIP_RETCODE initSolve(
    /* update dual bound of the root node if a valid dual bound is at hand */
    if( scip->transprob->dualbound < SCIP_INVALID )
    {
+      scip->stat->lastlowerbound = SCIPprobInternObjval(scip->transprob, scip->set, scip->transprob->dualbound);
+
       SCIPnodeUpdateLowerbound(SCIPtreeGetRootNode(scip->tree), scip->stat, scip->set, scip->tree, scip->transprob,
          SCIPprobInternObjval(scip->transprob, scip->set, scip->transprob->dualbound));
    }
