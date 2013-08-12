@@ -158,6 +158,8 @@ parameters:
   MPS format
 - new parameter "reading/mpsreader/aggrlinearization-ands" to enable/disable the printing of the weak or strict
   relaxation of and constraints in MPS format
+- new parameter "constraints/logicor/strengthen", should pairwise constraint comparison try to strengthen constraints by
+  removing superflous non-zeros?
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
