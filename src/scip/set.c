@@ -68,7 +68,7 @@
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
 #define SCIP_DEFAULT_BRANCH_FORCEBOTH     FALSE /**< should both strong branching children be regarded even if the first
                                                  *   one is detected to be infeasible? (only with propagation) */
-#define SCIP_DEFAULT_BRANCH_UPCHILDFIRST   TRUE /**< should the up child be regarded first during strong branching? (only with propagation) */
+#define SCIP_DEFAULT_BRANCH_FIRSTSBCHILD    'u' /**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
 #define SCIP_DEFAULT_BRANCH_CHECKSBSOL     TRUE /**< should LP solutions during strong branching with propagation be checked for feasibility? */
 #define SCIP_DEFAULT_BRANCH_HEURSBSOL      TRUE /**< should fast heuristics be called for LP solutions during strong branching with propagation? (only when checksbsol=TRUE) */
 
@@ -807,22 +807,22 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "branching/forcebothchildren",
          "should both strong branching children be regarded even if the first one is detected to be infeasible? (only with propagation)",
-         &(*set)->branch_forceboth, FALSE, SCIP_DEFAULT_BRANCH_FORCEBOTH,
+         &(*set)->branch_forceboth, TRUE, SCIP_DEFAULT_BRANCH_FORCEBOTH,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "branching/upchildfirst",
-         "should the up child be regarded first during strong branching? (only with propagation)",
-         &(*set)->branch_upchildfirst, FALSE, SCIP_DEFAULT_BRANCH_UPCHILDFIRST,
+   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
+         "branching/firstsbchild",
+         "child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic",
+         &(*set)->branch_firstsbchild, TRUE, SCIP_DEFAULT_BRANCH_FIRSTSBCHILD, "adu",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "branching/checksol",
          "should LP solutions during strong branching with propagation be checked for feasibility?",
-         &(*set)->branch_checksbsol, FALSE, SCIP_DEFAULT_BRANCH_CHECKSBSOL,
+         &(*set)->branch_checksbsol, TRUE, SCIP_DEFAULT_BRANCH_CHECKSBSOL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "branching/heursbsol",
          "should fast heuristics be called for LP solutions during strong branching with propagation? (only when checksbsol=TRUE)",
-         &(*set)->branch_heursbsol, FALSE, SCIP_DEFAULT_BRANCH_HEURSBSOL,
+         &(*set)->branch_heursbsol, TRUE, SCIP_DEFAULT_BRANCH_HEURSBSOL,
          NULL, NULL) );
 
    /* conflict analysis parameters */

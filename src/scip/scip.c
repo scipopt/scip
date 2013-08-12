@@ -16385,13 +16385,22 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
     * the other. We will stop when the first child is detected infeasible, saving the effort we would need for the
     * second child. Since empirically, the up child tends to be infeasible more often, we do strongbranching first on
     * the up branch.
-    *
-    * @todo: decide the branch to look at first based on the cutoffs in previous calls
     */
    oldniters = scip->stat->nsbdivinglpiterations;
-   downchild = !scip->set->branch_upchildfirst;
    firstchild = TRUE;
    cutoff = FALSE;
+
+   /* @todo: decide the branch to look at first based on the cutoffs in previous calls? */
+   if( scip->set->branch_firstsbchild == 'u' )
+      downchild = FALSE;
+   else if( scip->set->branch_firstsbchild == 'a' )
+      downchild = SCIPvarGetNLocksDown(var) > SCIPvarGetNLocksUp(var);
+   else
+   {
+      assert(scip->set->branch_firstsbchild == 'd');
+      downchild = TRUE;
+   }
+
 
    do
    {
