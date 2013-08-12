@@ -11662,7 +11662,6 @@ SCIP_RETCODE SCIPtransformProb(
    }
 
    assert(scip->origprimal->nsols == 0);
-   assert(scip->origprimal->nexistingsols == 0);
 
    if( nfeassols > 0 )
    {
