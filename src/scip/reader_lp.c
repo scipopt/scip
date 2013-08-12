@@ -19,6 +19,7 @@
  * @author Marc Pfetsch
  * @author Stefan Heinz
  * @author Stefan Vigerske
+ * @author Michael Winkler
  * @author Lars Schewe
  */
 
@@ -52,8 +53,9 @@
 #define READER_DESC             "file reader for MIPs in IBM CPLEX's LP file format"
 #define READER_EXTENSION        "lp"
 
-#define DEFAULT_LINEARIZE_ANDS         TRUE
-#define DEFAULT_AGGRLINEARIZATION_ANDS TRUE
+#define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the lp
+                                              *   file? */
+#define DEFAULT_AGGRLINEARIZATION_ANDS TRUE  /**< should an aggregated linearization for and constraints be used? */
 
 /*
  * Data structures
@@ -67,7 +69,7 @@
 #define LP_PRINTLEN          100
 
 
-/** CIP reading data */
+/** LP reading data */
 struct SCIP_ReaderData
 {
    SCIP_Bool             linearizeands;
@@ -2962,6 +2964,7 @@ SCIP_RETCODE printSOCCons(
    return SCIP_OKAY;
 }
 
+/**< prints a linearization of an and-constraint into the given file */
 static
 SCIP_RETCODE printAndCons(
    SCIP*                 scip,               /**< SCIP data structure */
