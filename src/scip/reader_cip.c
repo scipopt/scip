@@ -1050,9 +1050,6 @@ SCIP_DECL_READERWRITE(readerWriteCip)
 
       for( i = 0; i < nconss; ++i )
       {
-         /* in case the transformed is written only constraint are posted which are enabled in the current node */
-         assert(!transformed || SCIPconsIsEnabled(conss[i]));
-
          SCIP_CALL( SCIPprintCons(scip, conss[i], file) );
          SCIPinfoMessage(scip, file, ";\n");
       }

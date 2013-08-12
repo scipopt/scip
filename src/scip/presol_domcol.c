@@ -74,7 +74,7 @@ struct SCIP_PresolData
 
    SCIP_Bool             predbndstr;         /**< flag indicating if predictive bound strengthening should be applied */
    SCIP_Bool             singcolstuffing;    /**< flag indicating if singleton columns stuffing should be applied */
-#ifdef DOMCOL_STATISTIC
+#ifdef SCIP_STATISTIC
    int                   nfixingsstuffing;   /**< number of fixings done by singleton columns stuffing */
    int                   nfixingsdomcol;     /**< number of fixings only from dominated columns */
 #endif
@@ -3003,7 +3003,7 @@ SCIP_RETCODE singletonColumnStuffing(
  * Callback methods of presolver
  */
 
-#ifdef DOMCOL_STATISTIC
+#ifdef SCIP_STATISTIC
 /** presolving deinitialization method of presolver (called after presolving has been finished) */
 static
 SCIP_DECL_PRESOLEXITPRE(presolExitpreDomcol)
@@ -3156,7 +3156,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       if( presoldata->singcolstuffing )
       {
          SCIP_CALL( singletonColumnStuffing(scip, matrix, varsprocessed, varstofix, &nfixingsstuffing) );
-#ifdef DOMCOL_STATISTIC
+#ifdef SCIP_STATISTIC
          presoldata->nfixingsstuffing += nfixingsstuffing;
 #endif
       }
@@ -3360,7 +3360,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       }
 
 
-#ifdef DOMCOL_STATISTIC
+#ifdef SCIP_STATISTIC
       presoldata->nfixingsdomcol += nfixings;
 #endif
 
@@ -3507,7 +3507,7 @@ SCIP_RETCODE SCIPincludePresolDomcol(
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyDomcol) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeDomcol) );
 
-#ifdef DOMCOL_STATISTIC
+#ifdef SCIP_STATISTIC
    presoldata->nfixingsstuffing = 0;
    presoldata->nfixingsdomcol = 0;
    SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreDomcol) );

@@ -263,11 +263,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       dualsol = SCIProwGetDualsol(lprows[i]);
       if( !SCIPisZero(scip, dualsol) )
       {
-         if( dualsol > 0 && SCIPisFeasEQ(scip,SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
+         if( dualsol > 0 && SCIPisFeasEQ(scip, SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
          {
             SCIP_CALL( SCIPchgRowRhsDive(scip, lprows[i], SCIProwGetLhs(lprows[i])) );
          }
-         else if( dualsol < 0 && SCIPisFeasEQ(scip,SCIProwGetRhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
+         else if( dualsol < 0 && SCIPisFeasEQ(scip, SCIProwGetRhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
          {
             SCIP_CALL( SCIPchgRowLhsDive(scip, lprows[i], SCIProwGetRhs(lprows[i])) );
          }
@@ -301,7 +301,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 #endif
 
       /* apply feasibility pump objective function to fractional variables */
-      for( i = 0; i < nlpcands; ++i)
+      for( i = 0; i < nlpcands; ++i )
       {
          SCIP_Real frac;
          frac = SCIPfrac(scip, SCIPgetSolVal(scip, NULL, lpcandscopy[i]));

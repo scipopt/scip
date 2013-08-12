@@ -11,6 +11,9 @@ fixed bugs:
 - fixed wrong presolving finished status which sometimes occurred when the time limit was hit during presolve
 - fixed several bugs where variables or constraints were not freed correctly
 - fixed minor bugs in presolving in cons_setppc.c and cons_logicor.c
+- do not multi-aggregate variables if the constant would be a huge value in order to avoid numerical troubles
+- fixed bug with infinite multi-aggregation constants
+- fixed wrong bound calculation in sepa_rapidlearning
 
 data structures
 - new data structure for (circular) queues (SCIP_QUEUE)
@@ -60,6 +63,7 @@ features:
 - added first implication detection in cons_linear
 - several new presolvimng steps for linear and knapsack constraints, using gcd information and many more
 - cons_indicator can now try to construct feasible solutions from a cover
+- reader_osil can now read SOS1 and SOS2 constraints
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -141,6 +145,10 @@ parameters:
 - new parameters "heuristics/"<heurname>"/lplimfac" for LNS heuristics to limit the number of LPs solved in a subproblem
 - new parameter "reading/cipreader/writefixedvars" for disabling printing of fixed variables in CIP format
 - new parameter "constraints/indicator/trysolfromcover" for trying to construct a feasible solution from a cover
+- new parameter "constraints/linear/checkrelmaxabs" for checking linear constraints with a side of 0.0 relative to
+  the maximum absolute value in the activity instead of 1.0
+- new parameter "heuristics/shiftandpropagate/fixbinlocks" for fixing binary variables with no locks in one direction
+  to the corresponding bound
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to

@@ -8743,6 +8743,9 @@ SCIP_RETCODE removeIrrelevantJobs(
 
          /* delete variable at the given position */
          SCIP_CALL( consdataDeletePos(scip, consdata, cons, j) );
+
+         /* for the statistic we count the number of jobs which are irrelevant */
+         SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nirrelevantjobs++ );
       }
    }
 

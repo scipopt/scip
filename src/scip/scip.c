@@ -633,12 +633,8 @@ void SCIPstoreSolutionGap(
    dualbound = getDualbound(scip);
 
    if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
-   {
       scip->stat->lastsolgap = 0.0;
 
-      if( scip->primal->nsols == 1 )
-         scip->stat->firstsolgap = 0.0;
-   }
    else if( SCIPsetIsZero(scip->set, dualbound)
       || SCIPsetIsZero(scip->set, primalbound)
       || SCIPsetIsInfinity(scip->set, REALABS(primalbound))
@@ -646,16 +642,16 @@ void SCIPstoreSolutionGap(
       || primalbound * dualbound < 0.0 )
    {
       scip->stat->lastsolgap = SCIPsetInfinity(scip->set);
-
-      if( scip->primal->nsols == 1 )
-         scip->stat->firstsolgap = scip->stat->lastsolgap;
    }
    else
-   {
       scip->stat->lastsolgap = REALABS((primalbound - dualbound)/MIN(REALABS(dualbound), REALABS(primalbound)));
 
-      if( scip->primal->nsols == 1 )
-         scip->stat->firstsolgap = scip->stat->lastsolgap;
+   if( scip->primal->nsols == 1 )
+      scip->stat->firstsolgap = scip->stat->lastsolgap;
+
+   if( scip->set->stage == SCIP_STAGE_SOLVING && scip->set->misc_calcintegral )
+   {
+      SCIPstatUpdatePrimalDualIntegral(scip->stat, scip->set, scip->transprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
    }
 }
 
@@ -11304,7 +11300,7 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
 {
    SCIP_CALL( checkStage(scip, "SCIPupdateNodeLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeUpdateLowerbound(node, scip->stat, newbound);
+   SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->tree, scip->transprob, newbound);
 
    /* if lowerbound exceeds the cutoffbound the node will be marked to be cutoff
     *
@@ -12571,7 +12567,7 @@ SCIP_RETCODE initSolve(
    /* update dual bound of the root node if a valid dual bound is at hand */
    if( scip->transprob->dualbound < SCIP_INVALID )
    {
-      SCIPnodeUpdateLowerbound(SCIPtreeGetRootNode(scip->tree), scip->stat,
+      SCIPnodeUpdateLowerbound(SCIPtreeGetRootNode(scip->tree), scip->stat, scip->set, scip->tree, scip->transprob,
          SCIPprobInternObjval(scip->transprob, scip->set, scip->transprob->dualbound));
    }
 
@@ -12783,7 +12779,7 @@ SCIP_RETCODE freeTransform(
    if( scip->set->misc_resetstat )
    {
       /* reset statistics to the point before the problem was transformed */
-      SCIPstatReset(scip->stat);
+      SCIPstatReset(scip->stat, scip->set);
    }
 
    /* switch stage to PROBLEM */
@@ -15071,7 +15067,9 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
 
 /** transforms given variable, scalar and constant to the corresponding active, fixed, or
  *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
- *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"; a multi-aggregation
+ *  with only one active variable (this can happen due to fixings after the multi-aggregation),
+ *  is treated like an aggregation; if the multi-aggregation constant is infinite, "scalar" will be 0.0
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -28177,7 +28175,7 @@ SCIP_RETCODE SCIPendDive(
    if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL && SCIPlpIsRelax(scip->lp) && SCIPlpIsSolved(scip->lp) )
    {
       assert(SCIPtreeIsFocusNodeLPConstructed(scip->tree));
-      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->transprob, scip->lp) );
+      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->tree, scip->transprob, scip->lp) );
    }
    /* reset the probably changed LP's cutoff bound */
    SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->transprob, scip->primal->cutoffbound) );
@@ -31834,10 +31832,10 @@ SCIP_RETCODE SCIPaddSol(
       SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, scip->tree,
             scip->lp, scip->eventqueue, scip->eventfilter, sol, stored) );
 
-      if( *stored )
+
+      if( *stored && (bestsol != SCIPgetBestSol(scip)) )
       {
-         if( bestsol != SCIPgetBestSol(scip) )
-            SCIPstoreSolutionGap(scip);
+         SCIPstoreSolutionGap(scip);
       }
 
       return SCIP_OKAY;
@@ -31907,7 +31905,10 @@ SCIP_RETCODE SCIPaddSolFree(
       if( *stored )
       {
          if( bestsol != SCIPgetBestSol(scip) )
+         {
+            assert(SCIPgetBestSol(scip) != NULL);
             SCIPstoreSolutionGap(scip);
+         }
       }
 
       return SCIP_OKAY;
@@ -35719,6 +35720,16 @@ void printSolutionStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap              :   infinite\n");
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap              : %10.2f %%\n", 100.0 * gap);
+
+   if( scip->set->misc_calcintegral )
+      if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE )
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (problem infeasible)\n");
+      else
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         : %10.2f %% (%.2f primal integral)\n",
+            SCIPisFeasZero(scip, SCIPgetSolvingTime(scip)) ? 0.0 : scip->stat->primalintegralval/SCIPgetSolvingTime(scip),
+               scip->stat->primalintegralval);
+   else
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (not evaluated)\n");
 }
 
 /** display first LP statistics */
