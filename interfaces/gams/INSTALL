@@ -44,3 +44,5 @@ Notes:
    However, the lp/solver option to choose an LP solver by parameter is
    not available with the interface provided here. If you need it, you can
    just check out the GAMSlinks project from COIN-OR and build it.
+ - The build system (Makefile) has only been tested on Linux, Windows will
+   not be supported.
