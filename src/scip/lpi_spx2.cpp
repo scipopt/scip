@@ -449,16 +449,9 @@ public:
 
    virtual SPxSolver::Status doSolve(bool printwarning = true)
    {
-      bool minimize;
       int verbosity;
-      Real objLimitUpper;
-      Real objLimitLower;
 
       SPxSolver::Status status;
-
-      minimize = intParam(OBJSENSE) == OBJSENSE_MINIMIZE;
-      objLimitUpper = realParam(OBJLIMIT_UPPER);
-      objLimitLower = realParam(OBJLIMIT_LOWER);
 
       /* store and set verbosity */
       verbosity = Param::verbose();
@@ -480,6 +473,10 @@ public:
 //       setTerminationIter(_itlim);
 
 #ifdef WITH_LPSCHECK
+      bool minimize = intParam(OBJSENSE) == OBJSENSE_MINIMIZE;
+      Real objLimitUpper = realParam(OBJLIMIT_UPPER);
+      Real objLimitLower = realParam(OBJLIMIT_LOWER);
+
       /* if SoPlex gave a definite answer, we double check if it is consistent with CPLEX's answer */
       if( getDoubleCheck() && (status == SPxSolver::OPTIMAL || status == SPxSolver::UNBOUNDED || status == SPxSolver::INFEASIBLE || status == SPxSolver::ABORT_VALUE) )
       {
@@ -1435,7 +1432,7 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setIntParam(SPxSCIP::OBJSENSE, objsen == SCIP_OBJSEN_MINIMIZE ? SPxSCIP::OBJSENSE_MINIMIZE : SPxSCIP::OBJSENSE_MAXIMIZE ) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setIntParam(SoPlex2::OBJSENSE, objsen == SCIP_OBJSEN_MINIMIZE ? SoPlex2::OBJSENSE_MINIMIZE : SoPlex2::OBJSENSE_MAXIMIZE ) );
 
    return SCIP_OKAY;
 }
@@ -1512,14 +1509,14 @@ SCIP_RETCODE SCIPlpiScaleRow(
       rowvec *= scaleval;
 
       /* adjust the sides */
-      if( lhs > -lpi->spx->realParam(SPxSCIP::INFTY) )
+      if( lhs > -lpi->spx->realParam(SoPlex2::INFTY) )
          lhs *= scaleval;
       else if( scaleval < 0.0 )
-         lhs = lpi->spx->realParam(SPxSCIP::INFTY);
-      if( rhs < lpi->spx->realParam(SPxSCIP::INFTY) )
+         lhs = lpi->spx->realParam(SoPlex2::INFTY);
+      if( rhs < lpi->spx->realParam(SoPlex2::INFTY) )
          rhs *= scaleval;
       else if( scaleval < 0.0 )
-         rhs = -lpi->spx->realParam(SPxSCIP::INFTY);
+         rhs = -lpi->spx->realParam(SoPlex2::INFTY);
       if( scaleval < 0.0 )
       {
          SCIP_Real oldlhs = lhs;
@@ -1584,14 +1581,14 @@ SCIP_RETCODE SCIPlpiScaleCol(
       obj *= scaleval;
 
       /* adjust the bounds */
-      if( lb > -lpi->spx->realParam(SPxSCIP::INFTY) )
+      if( lb > -lpi->spx->realParam(SoPlex2::INFTY) )
          lb /= scaleval;
       else if( scaleval < 0.0 )
-         lb = lpi->spx->realParam(SPxSCIP::INFTY);
-      if( ub < lpi->spx->realParam(SPxSCIP::INFTY) )
+         lb = lpi->spx->realParam(SoPlex2::INFTY);
+      if( ub < lpi->spx->realParam(SoPlex2::INFTY) )
          ub /= scaleval;
       else if( scaleval < 0.0 )
-         ub = -lpi->spx->realParam(SPxSCIP::INFTY);
+         ub = -lpi->spx->realParam(SoPlex2::INFTY);
       if( scaleval < 0.0 )
       {
          SCIP_Real oldlb = lb;
@@ -1889,7 +1886,7 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    assert(lpi->spx != NULL);
    assert(objsen != NULL);
 
-   *objsen = (lpi->spx->intParam(SPxSCIP::OBJSENSE) == SPxSCIP::OBJSENSE_MINIMIZE) ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE;
+   *objsen = (lpi->spx->intParam(SoPlex2::OBJSENSE) == SoPlex2::OBJSENSE_MINIMIZE) ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE;
 
    return SCIP_OKAY;
 }
