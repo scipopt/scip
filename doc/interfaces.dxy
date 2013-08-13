@@ -48,7 +48,7 @@
  * modeling language for constraint programming, <a href="http://www.ampl.com/">AMPL</a> and <a
  * href="http://www.gams.com/">GAMS</a>, which are well-suited for modeling mixed-integer linear and nonlinear
  * optimization problems, and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
- * The AMPL and ZIMPL interfaces are included in the SCIP distribution, the GAMS interface is available <a
+ * The AMPL, GAMS, and ZIMPL interfaces are included in the SCIP distribution, the GAMS interface originated at <a
  * href="https://projects.coin-or.org/GAMSlinks">here</a>.
  *
  * With \SCIP 3.0, a first beta version of a functional MATLAB interface has been released.  It supports solving MIPs

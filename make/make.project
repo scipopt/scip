@@ -196,25 +196,6 @@ DFLAGS		+=	$(USRDFLAGS)
 
 
 #-----------------------------------------------------------------------------
-# SHARED Libaries
-#-----------------------------------------------------------------------------
-
-ifeq ($(SHARED),true)
-FLAGS		+=	-fPIC
-LIBEXT		=	$(SHAREDLIBEXT)
-LIBBUILD	=	$(LINKCC)
-LIBBUILDFLAGS	+=      -shared
-LIBBUILD_o	= 	-o # the trailing space is important
-ARFLAGS		=
-RANLIB		=
-endif
-
-ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
-endif
-
-
-#-----------------------------------------------------------------------------
 # PARASCIP
 #-----------------------------------------------------------------------------
 
@@ -371,6 +352,29 @@ endif
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
 NLPILIBSHORTNAMECPPAD = .cppad
+endif
+
+
+#-----------------------------------------------------------------------------
+# SHARED Libaries
+#-----------------------------------------------------------------------------
+
+ifeq ($(SHARED),true)
+FLAGS		+=	-fPIC
+LIBEXT		=	$(SHAREDLIBEXT)
+ifeq ($(LINKER),CPP)
+LIBBUILD	=	$(LINKCXX)
+else
+LIBBUILD	=	$(LINKCC)
+endif
+LIBBUILDFLAGS	+=      -shared
+LIBBUILD_o	= 	-o # the trailing space is important
+ARFLAGS		=
+RANLIB		=
+endif
+
+ifneq ($(LINKRPATH),)
+LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
 endif
 
 
