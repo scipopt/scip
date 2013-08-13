@@ -229,12 +229,12 @@ SCIP_RETCODE exprLinearAdd(
 
    /* add new children to expr's children array */
    SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &expr->children, expr->nchildren, expr->nchildren + nchildren) );
-   BMScopyMemoryArray(&expr->children[expr->nchildren], children, nchildren);
+   BMScopyMemoryArray(&expr->children[expr->nchildren], children, nchildren);  /*lint !e866*/
 
    /* add constant and new coefs to expr's data array */
    SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &data, expr->nchildren + 1, expr->nchildren + nchildren + 1) );
    data[expr->nchildren + nchildren] = data[expr->nchildren] + constant;
-   BMScopyMemoryArray(&data[expr->nchildren], coefs, nchildren);
+   BMScopyMemoryArray(&data[expr->nchildren], coefs, nchildren); /*lint !e866*/
    expr->data.data = (void*)data;
 
    expr->nchildren += nchildren;
@@ -253,7 +253,7 @@ void exprLinearFree(
    assert(expr != NULL);
    assert(SCIPexprGetOperator(*expr) == SCIP_EXPR_LINEAR);
 
-   BMSfreeBlockMemoryArray(blkmem, (SCIP_Real**)&(*expr)->data.data, (*expr)->nchildren + 1);
+   BMSfreeBlockMemoryArray(blkmem, (SCIP_Real**)&(*expr)->data.data, (*expr)->nchildren + 1); /*lint !e866*/
    BMSfreeBlockMemoryArray(blkmem, &(*expr)->children, (*expr)->nchildren);
 
    BMSfreeBlockMemory(blkmem, expr);
@@ -332,7 +332,7 @@ SCIP_RETCODE exprAdd(
       {
          term1 = term2;
          coef1 = coef2;
-         term2 = NULL;
+         /* term2 = NULL; */
       }
       if( constant != 0.0 || coef1 != 1.0 )
       {
@@ -421,7 +421,6 @@ SCIP_RETCODE makeExprtree(
    int                   codelen,
    int*                  opcodes,
    int*                  fields,
-   int                   constantlen,
    SCIP_Real*            constants,
    SCIP_EXPRTREE**       exprtree            /**< buffer where to store expression tree */
 )
@@ -510,16 +509,16 @@ SCIP_RETCODE makeExprtree(
                varidx = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)probdata->vars[address]);
                assert(varidx >= 0);
                assert(varidx < nvars);
-               assert(vars[varidx] = probdata->vars[address]);
+               assert(vars[varidx] == probdata->vars[address]);
             }
-            SCIPexprCreate(blkmem, &e, SCIP_EXPR_VARIDX, varidx);
+            SCIP_CALL( SCIPexprCreate(blkmem, &e, SCIP_EXPR_VARIDX, varidx) );
             break;
          }
 
          case nlPushI: /* push constant */
          {
             SCIPdebugPrintf("push constant %g\n", constants[address]);
-            SCIPexprCreate(blkmem, &e, SCIP_EXPR_CONST, constants[address]);
+            SCIP_CALL( SCIPexprCreate(blkmem, &e, SCIP_EXPR_CONST, constants[address]) );
             break;
          }
 
@@ -569,7 +568,7 @@ SCIP_RETCODE makeExprtree(
                varidx = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)probdata->vars[address]);
                assert(varidx >= 0);
                assert(varidx < nvars);
-               assert(vars[varidx] = probdata->vars[address]);
+               assert(vars[varidx] == probdata->vars[address]);
             }
 
             SCIP_CALL( SCIPexprCreate(blkmem, &term2, SCIP_EXPR_VARIDX, varidx) );
@@ -630,7 +629,7 @@ SCIP_RETCODE makeExprtree(
                varidx = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)probdata->vars[address]);
                assert(varidx >= 0);
                assert(varidx < nvars);
-               assert(vars[varidx] = probdata->vars[address]);
+               assert(vars[varidx] == probdata->vars[address]);
             }
 
             SCIP_CALL( SCIPexprCreate(blkmem, &term2, SCIP_EXPR_VARIDX, varidx) );
@@ -690,7 +689,7 @@ SCIP_RETCODE makeExprtree(
                varidx = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)probdata->vars[address]);
                assert(varidx >= 0);
                assert(varidx < nvars);
-               assert(vars[varidx] = probdata->vars[address]);
+               assert(vars[varidx] == probdata->vars[address]);
             }
 
             SCIP_CALL( SCIPexprCreate(blkmem, &term2, SCIP_EXPR_VARIDX, varidx) );
@@ -764,7 +763,7 @@ SCIP_RETCODE makeExprtree(
                varidx = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)probdata->vars[address]);
                assert(varidx >= 0);
                assert(varidx < nvars);
-               assert(vars[varidx] = probdata->vars[address]);
+               assert(vars[varidx] == probdata->vars[address]);
             }
 
             SCIP_CALL( SCIPexprCreate(blkmem, &term2, SCIP_EXPR_VARIDX, varidx) );
@@ -821,7 +820,7 @@ SCIP_RETCODE makeExprtree(
                varidx = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)probdata->vars[address]);
                assert(varidx >= 0);
                assert(varidx < nvars);
-               assert(vars[varidx] = probdata->vars[address]);
+               assert(vars[varidx] == probdata->vars[address]);
             }
 
             minusone = -1.0;
@@ -1209,7 +1208,7 @@ SCIP_RETCODE makeExprtree(
                   SCIPerrorMessage("GAMS function %d not supported\n", func);
                   return SCIP_READERROR;
                }
-            }
+            } /*lint !e788*/
             break;
          }
 
@@ -1219,7 +1218,7 @@ SCIP_RETCODE makeExprtree(
             SCIPerrorMessage("GAMS opcode %d not supported - Error.\n", opcode);
             return SCIP_READERROR;
          }
-      }
+      } /*lint !e788*/
 
       if( e != NULL )
       {
@@ -1292,13 +1291,13 @@ SCIP_RETCODE createProblem(
 
    /* we want a real objective function, if it is linear, otherwise keep the GAMS single-variable-objective? */
    gmoObjReformSet(gmo, 1);
-   gmoObjStyleSet(gmo, gmoObjType_Fun);
+   gmoObjStyleSet(gmo, (int)gmoObjType_Fun);
 #if 0
    if( gmoObjNLNZ(gmo) > 0 )
       gmoObjStyleSet(gmo, gmoObjType_Var);
    objnonlinear = FALSE;
 #else
-   objnonlinear = gmoObjStyle(gmo) == gmoObjType_Fun && gmoObjNLNZ(gmo) > 0;
+   objnonlinear = gmoObjStyle(gmo) == (int)gmoObjType_Fun && gmoObjNLNZ(gmo) > 0;
 #endif
 
    /* we want to start indexing at 0 */
@@ -1314,7 +1313,7 @@ SCIP_RETCODE createProblem(
    probdata->gmo = gmo;
    probdata->gev = gev;
 
-   gmoNameInput(gmo, buffer);
+   (void) gmoNameInput(gmo, buffer);
    SCIP_CALL( SCIPcreateProb(scip, buffer,
       probdataDelOrigGmo, probdataTransGmo, probdataDelTransGmo,
       probdataInitSolGmo, probdataExitSolGmo, probdataCopyGmo,
@@ -1341,7 +1340,7 @@ SCIP_RETCODE createProblem(
          return SCIP_ERROR;
       }
 
-      gevGetStrOpt(gev, gevNameSysDir, buffer);
+      (void) gevGetStrOpt(gev, gevNameSysDir, buffer);
       if( strlen(buffer) > 500 )
       {
          SCIPerrorMessage("*** Path to GAMS system directory too long.");
@@ -1354,18 +1353,18 @@ SCIP_RETCODE createProblem(
          for( i = 1; i <= optMessageCount(opt); ++i )
          {
             optGetMessage(opt, i, buffer, &itype);
-            if( itype <= optMsgFileLeave || itype == optMsgUserError )
+            if( itype <= (int) optMsgFileLeave || itype == (int) optMsgUserError )
                gevLogStat(gev, buffer);
          }
          optClearMessages(opt);
          return SCIP_ERROR;
       }
 
-      optReadParameterFile(opt, readerdata->indicatorfile);
+      (void) optReadParameterFile(opt, readerdata->indicatorfile);
       for( i = 1; i <= optMessageCount(opt); ++i )
       {
          optGetMessage(opt, i, buffer, &itype);
-         if( itype <= optMsgFileLeave || itype == optMsgUserError )
+         if( itype <= (int) optMsgFileLeave || itype == (int) optMsgUserError )
             gevLogStat(gev, buffer);
       }
       optClearMessages(opt);
@@ -1382,11 +1381,14 @@ SCIP_RETCODE createProblem(
          }
       }
 
-      optFree(&opt);
+      (void) optFree(&opt);
    }
 #endif
+   assert(indicrows != NULL || nindics == 0);
+   assert(indiccols != NULL || nindics == 0);
+   assert(indiconvals != NULL || nindics == 0);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->vars, gmoN(gmo)) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->vars, gmoN(gmo)) ); /*lint !e666*/
    vars = probdata->vars;
    
    /* compute range of variable priorities */ 
@@ -1396,7 +1398,7 @@ SCIP_RETCODE createProblem(
    { 
       for (i = 0; i < gmoN(gmo); ++i)
       {
-         if( gmoGetVarTypeOne(gmo, i) == gmovar_X )
+         if( gmoGetVarTypeOne(gmo, i) == (int) gmovar_X )
             continue; /* GAMS forbids branching priorities for continuous variables */
          if( gmoGetVarPriorOne(gmo,i) < minprior )
             minprior = gmoGetVarPriorOne(gmo,i);
@@ -1409,8 +1411,8 @@ SCIP_RETCODE createProblem(
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, gmoN(gmo)+1) ); /* +1 if we have to transform the objective into a constraint */
    if( !objnonlinear )
    {
-      if( gmoObjStyle(gmo) == gmoObjType_Fun )
-         gmoGetObjVector(gmo, coefs, NULL);
+      if( gmoObjStyle(gmo) == (int) gmoObjType_Fun )
+         (void) gmoGetObjVector(gmo, coefs, NULL);
       else
          coefs[gmoObjVar(gmo)] = 1.0;
    }
@@ -1430,6 +1432,7 @@ SCIP_RETCODE createProblem(
       {
          case gmovar_SC:
             lb = 0.0;
+            /*lint -fallthrough*/
          case gmovar_X:
          case gmovar_S1:
          case gmovar_S2:
@@ -1440,6 +1443,7 @@ SCIP_RETCODE createProblem(
             break;
          case gmovar_SI:
             lb = 0.0;
+            /*lint -fallthrough*/
          case gmovar_I:
             vartype = SCIP_VARTYPE_INTEGER;
             break;
@@ -1448,7 +1452,7 @@ SCIP_RETCODE createProblem(
             return SCIP_INVALIDDATA;
       }
       if( gmoDict(gmo) )
-         gmoGetVarNameOne(gmo, i, buffer);
+         (void) gmoGetVarNameOne(gmo, i, buffer);
       else
          sprintf(buffer, "x%d", i);
       SCIP_CALL( SCIPcreateVar(scip, &vars[i], buffer, lb, ub, coefs[i], vartype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
@@ -1456,7 +1460,7 @@ SCIP_RETCODE createProblem(
       SCIPdebugMessage("added variable ");
       SCIPdebug( SCIPprintVar(scip, vars[i], NULL) );
       
-      if( gmoPriorOpt(gmo) && minprior < maxprior && gmoGetVarTypeOne(gmo, i) != gmovar_X )
+      if( gmoPriorOpt(gmo) && minprior < maxprior && gmoGetVarTypeOne(gmo, i) != (int) gmovar_X )
       {
          /* in GAMS: higher priorities are given by smaller .prior values
             in SCIP: variables with higher branch priority are always preferred to variables with lower priority in selection of branching variable
@@ -1468,7 +1472,7 @@ SCIP_RETCODE createProblem(
    }
    
    /* setup bound disjunction constraints for semicontinuous/semiinteger variables by saying x <= 0 or x >= gmoGetVarLower */
-   if( gmoGetVarTypeCnt(gmo, gmovar_SC) || gmoGetVarTypeCnt(gmo, gmovar_SI) )
+   if( gmoGetVarTypeCnt(gmo, (int) gmovar_SC) || gmoGetVarTypeCnt(gmo, (int) gmovar_SI) )
    {
       SCIP_BOUNDTYPE bndtypes[2];
       SCIP_Real      bnds[2];
@@ -1482,13 +1486,13 @@ SCIP_RETCODE createProblem(
 
       for( i = 0; i < gmoN(gmo); ++i )
       {
-         if( gmoGetVarTypeOne(gmo, i) != gmovar_SC && gmoGetVarTypeOne(gmo, i) != gmovar_SI )
+         if( gmoGetVarTypeOne(gmo, i) != (int) gmovar_SC && gmoGetVarTypeOne(gmo, i) != (int) gmovar_SI )
             continue;
          
          bndvars[0] = vars[i];
          bndvars[1] = vars[i];
          bnds[1] = gmoGetVarLowerOne(gmo, i);
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "semi%s_%s", gmoGetVarTypeOne(gmo, i) == gmovar_SC ? "con" : "int", SCIPvarGetName(vars[i]));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "semi%s_%s", gmoGetVarTypeOne(gmo, i) == (int) gmovar_SC ? "con" : "int", SCIPvarGetName(vars[i]));
          SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, bndvars, bndtypes, bnds,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -1512,19 +1516,19 @@ SCIP_RETCODE createProblem(
       int j, k;
       
       numSos = numSos1 + numSos2;
-      SCIPallocBufferArray(scip, &sostype, numSos);
-      SCIPallocBufferArray(scip, &sosbeg,  numSos+1);
-      SCIPallocBufferArray(scip, &sosind,  nzSos);
-      SCIPallocBufferArray(scip, &soswt,   nzSos);
+      SCIP_CALL( SCIPallocBufferArray(scip, &sostype, numSos) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &sosbeg,  numSos+1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &sosind,  nzSos) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &soswt,   nzSos) );
 
-      gmoGetSosConstraints(gmo, sostype, sosbeg, sosind, soswt);
+      (void) gmoGetSosConstraints(gmo, sostype, sosbeg, sosind, soswt);
       
       for( i = 0; i < numSos; ++i )
       {
          for( j = sosbeg[i], k = 0; j < sosbeg[i+1]; ++j, ++k )
          {
             consvars[k] = vars[sosind[j]];
-            assert(gmoGetVarTypeOne(gmo, sosind[j]) == (sostype[i] == 1 ? gmovar_S1 : gmovar_S2));
+            assert(gmoGetVarTypeOne(gmo, sosind[j]) == (sostype[i] == 1 ? (int) gmovar_S1 : (int) gmovar_S2));
          }
          
          sprintf(buffer, "sos%d", i);
@@ -1618,36 +1622,37 @@ SCIP_RETCODE createProblem(
       }
 
       if( gmoDict(gmo) )
-         gmoGetEquNameOne(gmo, i, buffer);
+         (void) gmoGetEquNameOne(gmo, i, buffer);
       else
          sprintf(buffer, "e%d", i);
 
+      con = NULL;
       switch( gmoGetEquOrderOne(gmo, i) )
       {
          case gmoorder_L:
          {
             /* linear constraint */
             int j, nz, nlnz;
-            gmoGetRowSparse(gmo, i, indices, coefs, NULL, &nz, &nlnz);
+            (void) gmoGetRowSparse(gmo, i, indices, coefs, NULL, &nz, &nlnz);
             assert(nlnz == 0);
 
             for( j = 0; j < nz; ++j )
                consvars[j] = vars[indices[j]];
 
             /* create indicator constraint, if we are at one */
-            if( indicidx < nindics && indicrows[indicidx] == i )
+            if( indicidx < nindics && indicrows[indicidx] == i ) /*lint !e613*/
             {
                SCIP_VAR* binvar;
 
-               binvar = vars[indiccols[indicidx]];
+               binvar = vars[indiccols[indicidx]]; /*lint !e613*/
                if( SCIPvarGetType(binvar) != SCIP_VARTYPE_BINARY )
                {
                   SCIPerrorMessage("Indicator variable <%s> is not of binary type.\n", SCIPvarGetName(binvar));
                   return SCIP_ERROR;
                }
 
-               assert(indiconvals[indicidx] == 0 || indiconvals[indicidx] == 1);
-               if( indiconvals[indicidx] == 0 )
+               assert(indiconvals[indicidx] == 0 || indiconvals[indicidx] == 1); /*lint !e613*/
+               if( indiconvals[indicidx] == 0 ) /*lint !e613*/
                {
                   SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvar) );
                }
@@ -1663,6 +1668,7 @@ SCIP_RETCODE createProblem(
                      SCIPdebugMessage("added constraint ");
                      SCIPdebug( SCIPprintCons(scip, con, NULL) );
                      SCIP_CALL( SCIPreleaseCons(scip, &con) );
+                     con = NULL;
                   }
                }
                if( !SCIPisInfinity(scip, -lhs) )
@@ -1689,12 +1695,18 @@ SCIP_RETCODE createProblem(
             /* quadratic constraint */
             int j, nz, nlnz, qnz;
             
-            gmoGetRowSparse(gmo, i, indices, coefs, NULL, &nz, &nlnz);
+            assert(qcol != NULL);
+            assert(qrow != NULL);
+            assert(quadcoefs != NULL);
+            assert(quadvars1 != NULL);
+            assert(quadvars2 != NULL);
+
+            (void) gmoGetRowSparse(gmo, i, indices, coefs, NULL, &nz, &nlnz);
             for( j = 0; j < nz; ++j )
                consvars[j] = vars[indices[j]];
             
             qnz = gmoGetRowQNZOne(gmo,i);
-            gmoGetRowQ(gmo, i, qcol, qrow, quadcoefs);
+            (void) gmoGetRowQ(gmo, i, qcol, qrow, quadcoefs);
             for( j = 0; j < qnz; ++j )
             {
                assert(qcol[j] >= 0);
@@ -1719,7 +1731,9 @@ SCIP_RETCODE createProblem(
             int codelen;
             SCIP_EXPRTREE* exprtree;
 
-            gmoGetRowSparse(gmo, i, indices, coefs, nlflag, &nz, &nlnz);
+            assert(nlflag != NULL);
+
+            (void) gmoGetRowSparse(gmo, i, indices, coefs, nlflag, &nz, &nlnz);
             linnz = 0;
             for( j = 0; j < nz; ++j )
             {
@@ -1731,8 +1745,8 @@ SCIP_RETCODE createProblem(
                }
             }
 
-            gmoDirtyGetRowFNLInstr(gmo, i, &codelen, opcodes, fields);
-            SCIP_CALL( makeExprtree(scip, codelen, opcodes, fields, gmoNLConst(gmo), (SCIP_Real*)gmoPPool(gmo), &exprtree) );
+            (void) gmoDirtyGetRowFNLInstr(gmo, i, &codelen, opcodes, fields);
+            SCIP_CALL( makeExprtree(scip, codelen, opcodes, fields, (SCIP_Real*)gmoPPool(gmo), &exprtree) );
 
             SCIP_CALL( SCIPcreateConsNonlinear(scip, &con, buffer, linnz, consvars, coefs, 1, &exprtree, NULL, lhs, rhs,
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -1746,13 +1760,14 @@ SCIP_RETCODE createProblem(
             return SCIP_INVALIDDATA;
       }
       
+      assert(con != NULL);
       SCIP_CALL( SCIPaddCons(scip, con) );      
       SCIPdebugMessage("added constraint ");
       SCIPdebug( SCIPprintCons(scip, con, NULL) );
       SCIP_CALL( SCIPreleaseCons(scip, &con) );
 
       /* @todo do something about this */
-      if( indicidx < nindics && indicrows[indicidx] == i )
+      if( indicidx < nindics && indicrows[indicidx] == i ) /*lint !e613*/
       {
          SCIPerrorMessage("Only linear constraints can be indicatored, currently.\n");
          return SCIP_ERROR;
@@ -1765,16 +1780,22 @@ SCIP_RETCODE createProblem(
       int j, nz, nlnz, qnz;
       double lhs, rhs;
       
-      assert(gmoGetObjOrder(gmo) == gmoorder_L || gmoGetObjOrder(gmo) == gmoorder_Q || gmoGetObjOrder(gmo) == gmoorder_NL);
+      assert(gmoGetObjOrder(gmo) == (int) gmoorder_L || gmoGetObjOrder(gmo) == (int) gmoorder_Q || gmoGetObjOrder(gmo) == (int) gmoorder_NL);
 
       SCIP_CALL( SCIPcreateVar(scip, &probdata->objvar, "xobj", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->objvar) );
       SCIPdebugMessage("added objective variable ");
       SCIPdebug( SCIPprintVar(scip, probdata->objvar, NULL) );
 
-      if( gmoGetObjOrder(gmo) != gmoorder_NL )
+      if( gmoGetObjOrder(gmo) != (int) gmoorder_NL )
       {
-         gmoGetObjSparse(gmo, indices, coefs, NULL, &nz, &nlnz);
+         assert(qcol != NULL);
+         assert(qrow != NULL);
+         assert(quadcoefs != NULL);
+         assert(quadvars1 != NULL);
+         assert(quadvars2 != NULL);
+
+         (void) gmoGetObjSparse(gmo, indices, coefs, NULL, &nz, &nlnz);
          for( j = 0; j < nz; ++j )
             consvars[j] = vars[indices[j]];
 
@@ -1783,7 +1804,7 @@ SCIP_RETCODE createProblem(
          ++nz;
 
          qnz = gmoObjQNZ(gmo);
-         gmoGetObjQ(gmo, qcol, qrow, quadcoefs);
+         (void) gmoGetObjQ(gmo, qcol, qrow, quadcoefs);
          for( j = 0; j < qnz; ++j )
          {
             assert(qcol[j] >= 0);
@@ -1796,7 +1817,7 @@ SCIP_RETCODE createProblem(
                quadcoefs[j] /= 2.0; /* for some strange reason, the coefficients on the diagonal are multiplied by 2 in GMO */
          }
 
-         if( gmoSense(gmo) == gmoObj_Min )
+         if( gmoSense(gmo) == (int) gmoObj_Min )
          {
             lhs = -SCIPinfinity(scip);
             rhs = -gmoObjConst(gmo);
@@ -1817,7 +1838,9 @@ SCIP_RETCODE createProblem(
          int codelen;
          SCIP_EXPRTREE* exprtree;
 
-         gmoGetObjSparse(gmo, indices, coefs, nlflag, &nz, &nlnz);
+         assert(nlflag != NULL);
+
+         (void) gmoGetObjSparse(gmo, indices, coefs, nlflag, &nz, &nlnz);
          linnz = 0;
          for( j = 0; j < nz; ++j )
          {
@@ -1835,10 +1858,10 @@ SCIP_RETCODE createProblem(
 
          objfactor = -1.0 / gmoObjJacVal(gmo);
 
-         gmoDirtyGetObjFNLInstr(gmo, &codelen, opcodes, fields);
-         SCIP_CALL( makeExprtree(scip, codelen, opcodes, fields, gmoNLConst(gmo), (SCIP_Real*)gmoPPool(gmo), &exprtree) );
+         (void) gmoDirtyGetObjFNLInstr(gmo, &codelen, opcodes, fields);
+         SCIP_CALL( makeExprtree(scip, codelen, opcodes, fields, (SCIP_Real*)gmoPPool(gmo), &exprtree) );
 
-         if( gmoSense(gmo) == gmoObj_Min )
+         if( gmoSense(gmo) == (int) gmoObj_Min )
          {
             lhs = -SCIPinfinity(scip);
             rhs = -gmoObjConst(gmo);
@@ -1869,7 +1892,7 @@ SCIP_RETCODE createProblem(
       SCIPdebug( SCIPprintVar(scip, probdata->objconst, NULL) );
    }
 
-   if( gmoSense(gmo) == gmoObj_Max )
+   if( gmoSense(gmo) == (int) gmoObj_Max )
       SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
 
    SCIPfreeBufferArray(scip, &coefs);
@@ -1903,7 +1926,7 @@ SCIP_RETCODE createProblem(
       SCIP_CALL( SCIPcreateOrigSol(scip, &sol, NULL) );
 
       SCIP_CALL( SCIPallocBufferArray(scip, &vals, gmoN(gmo)) );
-      gmoGetVarL(gmo, vals);
+      (void) gmoGetVarL(gmo, vals);
 
       SCIP_CALL( SCIPsetSolVals(scip, sol, gmoN(gmo), probdata->vars, vals) );
 
@@ -1912,7 +1935,7 @@ SCIP_RETCODE createProblem(
       {
          double objval;
          int numErr;
-         gmoEvalFuncObj(gmo, vals, &objval, &numErr);
+         (void) gmoEvalFuncObj(gmo, vals, &objval, &numErr);
          if( numErr == 0 )
          {
             SCIP_CALL( SCIPsetSolVal(scip, sol, probdata->objvar, objval) );
@@ -2007,7 +2030,7 @@ SCIP_RETCODE checkAndRepairSol(
       SCIP_CALL( SCIPsetSolVal(scip, sol, probdata->objconst, 1.0) );
    }
 
-   SCIP_CALL( SCIPresolveSolHeurSubNlp(scip, heursubnlp, sol, success, 100, 10.0) );
+   SCIP_CALL( SCIPresolveSolHeurSubNlp(scip, heursubnlp, sol, success, 100LL, 10.0) );
 
    if( *success )
    {
@@ -2059,49 +2082,50 @@ SCIP_RETCODE writeGmoSolution(
    {
       default:
       case SCIP_STATUS_UNKNOWN: /* the solving status is not yet known */
-         gmoSolveStatSet(gmo, gmoSolveStat_SystemErr);
-         gmoModelStatSet(gmo, gmoModelStat_ErrorNoSolution);
+         gmoSolveStatSet(gmo, (int) gmoSolveStat_SystemErr);
+         gmoModelStatSet(gmo, (int) gmoModelStat_ErrorNoSolution);
          nrsol = 0;
          break;
       case SCIP_STATUS_USERINTERRUPT: /* the user interrupted the solving process (by pressing Ctrl-C) */
-         gmoSolveStatSet(gmo, gmoSolveStat_User);
-         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? gmoModelStat_Integer : gmoModelStat_OptimalLocal) : gmoModelStat_NoSolutionReturned);
+         gmoSolveStatSet(gmo, (int) gmoSolveStat_User);
+         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_OptimalLocal) : (int) gmoModelStat_NoSolutionReturned);
          break;
       case SCIP_STATUS_NODELIMIT:      /* the solving process was interrupted because the node limit was reached */
       case SCIP_STATUS_STALLNODELIMIT: /* the solving process was interrupted because the node limit was reached */
-         gmoSolveStatSet(gmo, gmoSolveStat_Iteration);
-         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? gmoModelStat_Integer : gmoModelStat_OptimalLocal) : gmoModelStat_NoSolutionReturned);
+      case SCIP_STATUS_TOTALNODELIMIT:
+         gmoSolveStatSet(gmo, (int) gmoSolveStat_Iteration);
+         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_OptimalLocal) : (int) gmoModelStat_NoSolutionReturned);
          break;
       case SCIP_STATUS_TIMELIMIT: /* the solving process was interrupted because the time limit was reached */
       case SCIP_STATUS_MEMLIMIT:  /* the solving process was interrupted because the memory limit was reached */
-         gmoSolveStatSet(gmo, gmoSolveStat_Resource);
-         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? gmoModelStat_Integer : gmoModelStat_OptimalLocal) : gmoModelStat_NoSolutionReturned);
+         gmoSolveStatSet(gmo, (int) gmoSolveStat_Resource);
+         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_OptimalLocal) : (int) gmoModelStat_NoSolutionReturned);
          break;
       case SCIP_STATUS_GAPLIMIT: /* the solving process was interrupted because the gap limit was reached */
-         gmoSolveStatSet(gmo, gmoSolveStat_Normal);
-         gmoModelStatSet(gmo, nrsol > 0 ? (SCIPgetGap(scip) > 0.0 ? (gmoNDisc(gmo) ? gmoModelStat_Integer : gmoModelStat_OptimalLocal) : gmoModelStat_OptimalGlobal): gmoModelStat_NoSolutionReturned);
+         gmoSolveStatSet(gmo, (int) gmoSolveStat_Normal);
+         gmoModelStatSet(gmo, nrsol > 0 ? (SCIPgetGap(scip) > 0.0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_OptimalLocal) : (int) gmoModelStat_OptimalGlobal) : (int) gmoModelStat_NoSolutionReturned);
          break;
       case SCIP_STATUS_SOLLIMIT: /* the solving process was interrupted because the solution limit was reached */
       case SCIP_STATUS_BESTSOLLIMIT: /* the solving process was interrupted because the solution improvement limit was reached */
-         gmoSolveStatSet(gmo, gmoSolveStat_Resource);
-         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? gmoModelStat_Integer : gmoModelStat_OptimalLocal) : gmoModelStat_NoSolutionReturned);
+         gmoSolveStatSet(gmo, (int) gmoSolveStat_Resource);
+         gmoModelStatSet(gmo, nrsol > 0 ? (gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_OptimalLocal) : (int) gmoModelStat_NoSolutionReturned);
          break;
       case SCIP_STATUS_OPTIMAL: /* the problem was solved to optimality, an optimal solution is available */
-         gmoSolveStatSet(gmo, gmoSolveStat_Normal);
-         gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
+         gmoSolveStatSet(gmo, (int) gmoSolveStat_Normal);
+         gmoModelStatSet(gmo, (int) gmoModelStat_OptimalGlobal);
          break;
       case SCIP_STATUS_INFEASIBLE: /* the problem was proven to be infeasible */
-         gmoSolveStatSet(gmo, gmoSolveStat_Normal);
-         gmoModelStatSet(gmo, gmoModelStat_InfeasibleNoSolution);
+         gmoSolveStatSet(gmo, (int) gmoSolveStat_Normal);
+         gmoModelStatSet(gmo, (int) gmoModelStat_InfeasibleNoSolution);
          nrsol = 0;
          break;
       case SCIP_STATUS_UNBOUNDED: /* the problem was proven to be unbounded */
-         gmoSolveStatSet(gmo, gmoSolveStat_Normal);
-         gmoModelStatSet(gmo, nrsol > 0 ? gmoModelStat_Unbounded : gmoModelStat_UnboundedNoSolution);
+         gmoSolveStatSet(gmo, (int) gmoSolveStat_Normal);
+         gmoModelStatSet(gmo, nrsol > 0 ? (int) gmoModelStat_Unbounded : (int) gmoModelStat_UnboundedNoSolution);
          break;
       case SCIP_STATUS_INFORUNBD: /* the problem was proven to be either infeasible or unbounded */
-         gmoSolveStatSet(gmo, gmoSolveStat_Normal);
-         gmoModelStatSet(gmo, gmoModelStat_NoSolutionReturned);
+         gmoSolveStatSet(gmo, (int) gmoSolveStat_Normal);
+         gmoModelStatSet(gmo, (int) gmoModelStat_NoSolutionReturned);
          nrsol = 0;
          break;
    }
@@ -2110,11 +2134,11 @@ SCIP_RETCODE writeGmoSolution(
       dualbound = SCIPgetDualbound(scip);
    else
       dualbound = gmoValNA(gmo);
-   gmoSetHeadnTail(gmo, gmoTmipbest, dualbound);
-   gmoSetHeadnTail(gmo, gmoTmipnod,  (int)SCIPgetNNodes(scip));
-   gmoSetHeadnTail(gmo, gmoHresused, SCIPgetSolvingTime(scip));
-   gmoSetHeadnTail(gmo, gmoHiterused, SCIPgetNLPIterations(scip));
-   gmoSetHeadnTail(gmo, gmoHdomused, 0);
+   gmoSetHeadnTail(gmo, (int) gmoTmipbest, dualbound);
+   gmoSetHeadnTail(gmo, (int) gmoTmipnod,  (double) SCIPgetNNodes(scip));
+   gmoSetHeadnTail(gmo, (int) gmoHresused, SCIPgetSolvingTime(scip));
+   gmoSetHeadnTail(gmo, (int) gmoHiterused, (double) SCIPgetNLPIterations(scip));
+   gmoSetHeadnTail(gmo, (int) gmoHdomused, 0.0);
 
    /* dump all solutions, if more than one found and parameter is set */
    if( nrsol > 1)
@@ -2139,7 +2163,7 @@ SCIP_RETCODE writeGmoSolution(
          if( gdxOpenWrite(gdx, indexfilename, "SCIP DumpSolutions Index File", &rc) == 0 )
          {
             rc = gdxGetLastError(gdx);
-            gdxErrorStr(gdx, rc, buffer);
+            (void) gdxErrorStr(gdx, rc, buffer);
             SCIPerrorMessage("problem writing GDX file %s: %s\n", indexfilename, buffer);
          }
          else
@@ -2153,17 +2177,17 @@ SCIP_RETCODE writeGmoSolution(
 
             /* create index file */
             GDXSTRINDEXPTRS_INIT(keysX, keys);
-            gdxDataWriteStrStart(gdx, "index", "Dumpsolutions index", 1, dt_set, 0);
+            (void) gdxDataWriteStrStart(gdx, "index", "Dumpsolutions index", 1, (int) dt_set, 0);
             for( i = 1; i < nrsol; ++i)
             {
                (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "soln_scip_p%d.gdx", i);
-               gdxAddSetText(gdx, buffer, &sloc);
+               (void) gdxAddSetText(gdx, buffer, &sloc);
                (void) SCIPsnprintf(keys[0], GMS_SSSIZE, "file%d", i);
                vals[GMS_VAL_LEVEL] = sloc;
-               gdxDataWriteStr(gdx, (const char**)keys, vals);
+               (void) gdxDataWriteStr(gdx, (const char**)keys, vals);
             }
-            gdxDataWriteDone(gdx);
-            gdxClose(gdx);
+            (void) gdxDataWriteDone(gdx);
+            (void) gdxClose(gdx);
 
             SCIP_CALL( SCIPallocBufferArray(scip, &collev, gmoN(gmo)) );
 
@@ -2173,7 +2197,7 @@ SCIP_RETCODE writeGmoSolution(
                (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "soln_scip_p%d.gdx", i);
 
                SCIP_CALL( SCIPgetSolVals(scip, SCIPgetSols(scip)[i], gmoN(gmo), probdata->vars, collev) );
-               gmoSetVarL(gmo, collev);
+               (void) gmoSetVarL(gmo, collev);
                if( gmoUnloadSolutionGDX(gmo, buffer, 0, 1, 0) )
                {
                   SCIPerrorMessage("Problems creating point file %s\n", buffer);
@@ -2187,7 +2211,7 @@ SCIP_RETCODE writeGmoSolution(
             SCIPfreeBufferArray(scip, &collev);
          }
 
-         gdxFree(&gdx);
+         (void) gdxFree(&gdx);
       }
    }
 
@@ -2218,7 +2242,7 @@ SCIP_RETCODE writeGmoSolution(
          SCIPfreeBufferArray(scip, &lambda);
       }
 #else
-      gmoSetSolutionPrimal(gmo, collev);
+      (void) gmoSetSolutionPrimal(gmo, collev);
 #endif
 
       SCIPfreeBufferArray(scip, &collev);
@@ -2270,12 +2294,12 @@ SCIP_RETCODE writeGmoSolution(
             }
 
             /* try up to 10 best SCIP solutions */
-            nsols = MIN(10, SCIPgetNSols(scip));
+            nsols = MIN(10, SCIPgetNSols(scip)); /*lint !e666*/
             SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nsols) );
             SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nsols) );
             for( s = 0; s < nsols; ++s )
             {
-               SCIP_CALL( SCIPallocBufferArray(scip, &solvals[s], gmoN(gmo)) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &solvals[s], gmoN(gmo)) ); /*lint !e866*/
                SCIP_CALL( SCIPgetSolVals(scip, SCIPgetSols(scip)[s], gmoN(gmo), probdata->vars, solvals[s]) );
                objvals[s] = SCIPgetSolOrigObj(scip, SCIPgetSols(scip)[s]);
             }
@@ -2313,8 +2337,8 @@ SCIP_RETCODE writeGmoSolution(
             SCIP_CALL( SCIPstopClock(scip, resolveclock) );
 
             /* add time for checks and NLP resolves to reported solving time */
-            mainsoltime = gmoGetHeadnTail(gmo, gmoHresused);
-            gmoSetHeadnTail(gmo, gmoHresused, mainsoltime + SCIPgetClockTime(scip, resolveclock));
+            mainsoltime = gmoGetHeadnTail(gmo, (int) gmoHresused);
+            gmoSetHeadnTail(gmo, (int) gmoHresused, mainsoltime + SCIPgetClockTime(scip, resolveclock));
 
             SCIP_CALL( SCIPfreeClock(scip, &resolveclock) );
 
@@ -2336,17 +2360,17 @@ SCIP_RETCODE writeGmoSolution(
                   SCIPfreeBufferArray(scip, &lambda);
                }
 #else
-               gmoSetSolutionPrimal(gmo, solvals[s]);
+               (void) gmoSetSolutionPrimal(gmo, solvals[s]);
 #endif
                /* update reevaluated objective value */
-               objvals[s] = gmoGetHeadnTail(gmo, gmoHobjval);
+               objvals[s] = gmoGetHeadnTail(gmo, (int) gmoHobjval);
 
                SCIPinfoMessage(scip, NULL, "Solution #%0.2d feasible. Reevaluated objective value = %.15e.\n", s, objvals[s]);
 
                SCIPinfoMessage(scip, NULL, "\nStatus update:\n");
-               SCIPinfoMessage(scip, NULL, "Solving Time (sec) : %.2f\n", gmoGetHeadnTail(gmo, gmoHresused));
+               SCIPinfoMessage(scip, NULL, "Solving Time (sec) : %.2f\n", gmoGetHeadnTail(gmo, (int) gmoHresused));
                SCIPinfoMessage(scip, NULL, "Primal Bound       : %+.14e\n", objvals[s]);
-               if( gmoGetHeadnTail(gmo, gmoTmipbest) != gmoValNA(gmo) )
+               if( gmoGetHeadnTail(gmo, (int) gmoTmipbest) != gmoValNA(gmo) ) /*lint !e777*/
                {
                   SCIPinfoMessage(scip, NULL, "Dual Bound         : %+.14e\n", dualbound);
                   SCIPinfoMessage(scip, NULL, "Gap                : ");
@@ -2355,13 +2379,13 @@ SCIP_RETCODE writeGmoSolution(
                      SCIPinfoMessage(scip, NULL, "%.2f %%\n", 0.0);
                   else if( SCIPisZero(scip, dualbound)
                      || SCIPisZero(scip, objvals[s])
-                     || (dualbound == gmoValNA(gmo))
+                     || (dualbound == gmoValNA(gmo))  /*lint !e777*/
                      || SCIPisInfinity(scip, REALABS(objvals[s]))
                      || SCIPisInfinity(scip, REALABS(dualbound))
                      || objvals[s] * dualbound < 0.0 )
                      SCIPinfoMessage(scip, NULL, "infinite\n");
                   else
-                     SCIPinfoMessage(scip, NULL, "%.2f %%\n", REALABS((objvals[s] - dualbound)/MIN(REALABS(dualbound),REALABS(objvals[s]))));
+                     SCIPinfoMessage(scip, NULL, "%.2f %%\n", REALABS((objvals[s] - dualbound)/MIN(REALABS(dualbound),REALABS(objvals[s])))); /*lint !e666*/
                }
             }
             else
@@ -2372,10 +2396,10 @@ SCIP_RETCODE writeGmoSolution(
             /* restore original parameter values */
             if( resolvenlp )
             {
-               SCIP_CALL( SCIPsetIntParam(scip, "limits/maxorigsol", origmaxorigsol) );
-               SCIP_CALL( SCIPsetIntParam(scip, "heuristics/subnlp/nlpverblevel", orignlpverblevel) );
+               SCIP_CALL( SCIPsetIntParam(scip, "limits/maxorigsol", origmaxorigsol) ); /*lint !e644*/
+               SCIP_CALL( SCIPsetIntParam(scip, "heuristics/subnlp/nlpverblevel", orignlpverblevel) ); /*lint !e644*/
                /* SCIP_CALL( SCIPsetRealParam(scip, "numerics/feastol", origfeastol) ); */
-               SCIP_CALL( SCIPsetIntParam(scip, "heuristics/subnlp/maxpresolverounds", origmaxpresolrounds) );
+               SCIP_CALL( SCIPsetIntParam(scip, "heuristics/subnlp/maxpresolverounds", origmaxpresolrounds) ); /*lint !e644*/
             }
 
             for( s = 0; s < nsols; ++s )
@@ -2390,31 +2414,31 @@ SCIP_RETCODE writeGmoSolution(
          if( !success )
          {
             /* couldn't get a feasible solution, report intermediate infeasible */
-            gmoModelStatSet(gmo, gmoModelStat_InfeasibleIntermed);
+            gmoModelStatSet(gmo, (int) gmoModelStat_InfeasibleIntermed);
          }
-         else if( !SCIPisEQ(scip, gmoGetHeadnTail(gmo, gmoHobjval), gmoGetHeadnTail(gmo, gmoTmipbest)) )
+         else if( !SCIPisEQ(scip, gmoGetHeadnTail(gmo, (int) gmoHobjval), gmoGetHeadnTail(gmo, (int) gmoTmipbest)) )
          {
             /* feasible, but gap not closed, so only local optimum */
-            gmoModelStatSet(gmo, gmoNDisc(gmo) ? gmoModelStat_Integer : gmoModelStat_OptimalLocal);
+            gmoModelStatSet(gmo, gmoNDisc(gmo) ? (int) gmoModelStat_Integer : (int) gmoModelStat_OptimalLocal);
          }
          else
          {
             /* feasible and gap closed, so solved globally */
-            gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
+            gmoModelStatSet(gmo, (int) gmoModelStat_OptimalGlobal);
          }
 
       }
    }
 
-   if( gmoModelType(gmo) == gmoProc_cns )
+   if( gmoModelType(gmo) == (int) gmoProc_cns )
       switch( gmoModelStat(gmo) )
       {
          case gmoModelStat_OptimalGlobal:
          case gmoModelStat_OptimalLocal:
          case gmoModelStat_NonOptimalIntermed:
          case gmoModelStat_Integer:
-            gmoModelStatSet(gmo, gmoModelStat_Solved);
-      }
+            gmoModelStatSet(gmo, (int) gmoModelStat_Solved);
+      } /*lint !e744*/
 
    return SCIP_OKAY;
 }
@@ -2502,24 +2526,24 @@ SCIP_DECL_READERREAD(readerReadGmo)
       if( gevInitEnvironmentLegacy(gev, filename) )
       {
          SCIPerrorMessage("Could not load control file %s\n", filename);
-         gmoFree(&gmo);
-         gevFree(&gev);
+         (void) gmoFree(&gmo);
+         (void) gevFree(&gev);
          return SCIP_READERROR;
       }
 
       if( gmoRegisterEnvironment(gmo, gev, buffer) )
       {
          SCIPerrorMessage("Error registering GAMS Environment: %s\n", buffer);
-         gmoFree(&gmo);
-         gevFree(&gev);
+         (void) gmoFree(&gmo);
+         (void) gevFree(&gev);
          return SCIP_ERROR;
       }
 
       if( gmoLoadDataLegacy(gmo, buffer) )
       {
          SCIPerrorMessage("Could not load model data.\n");
-         gmoFree(&gmo);
-         gevFree(&gev);
+         (void) gmoFree(&gmo);
+         (void) gevFree(&gev);
          return SCIP_READERROR;
       }
    }
@@ -2920,7 +2944,7 @@ SCIP_RETCODE SCIPreadParamsReaderGmo(
 
    if( gevGetIntOpt(gev, gevNodeLim) > 0 )
    {
-      SCIP_CALL( SCIPsetLongintParam(scip, "limits/nodes", gevGetIntOpt(gev, gevNodeLim)) );
+      SCIP_CALL( SCIPsetLongintParam(scip, "limits/nodes", (long long)gevGetIntOpt(gev, gevNodeLim)) );
    }
    SCIP_CALL( SCIPsetRealParam(scip, "limits/time",   gevGetDblOpt(gev, gevResLim)) );
    SCIP_CALL( SCIPsetRealParam(scip, "limits/gap",    gevGetDblOpt(gev, gevOptCR)) );
@@ -2956,7 +2980,7 @@ SCIP_RETCODE SCIPreadParamsReaderGmo(
 #endif
 
    /* enable column on number of branching on nonlinear variables, if any */
-   if( gmoNLNZ(gmo) > 0 || (gmoObjStyle(gmo) == gmoObjType_Fun && gmoObjNLNZ(gmo) > 0) )
+   if( gmoNLNZ(gmo) > 0 || (gmoObjStyle(gmo) == (int) gmoObjType_Fun && gmoObjNLNZ(gmo) > 0) )
    {
       /* enable column on number of branching on continuous variables */
       SCIP_CALL( SCIPsetIntParam(scip, "display/nexternbranchcands/active", 2) );
@@ -2975,7 +2999,7 @@ SCIP_RETCODE SCIPreadParamsReaderGmo(
       char optfilename[1024];
       SCIP_RETCODE ret;
 
-      gmoNameOptFile(gmo, optfilename);
+      (void) gmoNameOptFile(gmo, optfilename);
       SCIPinfoMessage(scip, NULL, "\nreading option file %s\n", optfilename);
       ret = SCIPreadParams(scip, optfilename);
       if( ret != SCIP_OKAY )

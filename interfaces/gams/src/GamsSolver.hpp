@@ -35,8 +35,8 @@ protected:
    bool HSLInit(
       struct gmoRec*     gmo,                /**< GAMS modeling object */
       struct palRec*     pal                 /**< GAMS audit and license object */
-   )
-   {
+   ) const
+   { /*lint --e{715}*/
       return false;
    }
 #endif
