@@ -89,6 +89,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNodeselEstimate(scip) );
    SCIP_CALL( SCIPincludeNodeselHybridestim(scip) );
    SCIP_CALL( SCIPincludeNodeselRestartdfs(scip) );
+   SCIP_CALL( SCIPincludeNodeselUct(scip) );
    SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleCloud(scip) );
    SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
