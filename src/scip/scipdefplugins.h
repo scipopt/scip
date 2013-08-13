@@ -109,6 +109,7 @@
 #include "scip/nodesel_dfs.h"
 #include "scip/nodesel_estimate.h"
 #include "scip/nodesel_hybridestim.h"
+#include "scip/nodesel_uct.h"
 #include "scip/nodesel_restartdfs.h"
 #include "scip/presol_boundshift.h"
 #include "scip/presol_components.h"
