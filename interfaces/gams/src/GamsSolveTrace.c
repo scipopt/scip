@@ -45,10 +45,10 @@ struct GAMS_solvetrace
    double                infinity;           /**< solver value for infinity */
    int                   nodefreq;           /**< interval in number of nodes when to write N-lines to trace files */
    double                timefreq;           /**< interval in seconds when to write T-lines to trace files */
-   long int              linecount;          /**< line counter */
+   long long             linecount;          /**< line counter */
    double                starttime;          /**< time when the S-line was written */
    double                lasttime;           /**< last time when a T-line was written */
-   long int              lastnode;           /**< last node when a N-line was written */
+   long long             lastnode;           /**< last node when a N-line was written */
 };
 
 /** creates a GAMS solve trace data structure and initializes trace file for writing
@@ -125,13 +125,17 @@ static
 void addLine(
    GAMS_SOLVETRACE*      solvetrace,         /**< GAMS solve trace data structure */
    char                  seriesid,           /**< series identifier */
-   long int              nnodes,             /**< number of enumerated nodes so far */
+   long long             nnodes,             /**< number of enumerated nodes so far */
    double                seconds,            /**< elapsed time in seconds */
    double                dualbnd,            /**< current dual bound */
    double                primalbnd           /**< current primal bound */
 )
 {
-   fprintf(solvetrace->tracefile, "%ld, %c, %ld, %g", solvetrace->linecount, seriesid, nnodes, seconds);
+#if defined(_WIN32) || defined(_WIN64)
+   fprintf(solvetrace->tracefile, "%I64d, %c, %I64d, %g", solvetrace->linecount, seriesid, nnodes, seconds);
+#else
+   fprintf(solvetrace->tracefile, "%lld, %c, %lld, %g", solvetrace->linecount, seriesid, nnodes, seconds);
+#endif
 
    if( primalbnd > -solvetrace->infinity && primalbnd < solvetrace->infinity )
       fprintf(solvetrace->tracefile, ", %.10g", primalbnd);
@@ -151,7 +155,7 @@ void addLine(
 /** adds line to GAMS solve trace file */
 void GAMSsolvetraceAddLine(
    GAMS_SOLVETRACE*      solvetrace,         /**< GAMS solve trace data structure */
-   long int              nnodes,             /**< number of enumerated nodes so far */
+   long long             nnodes,             /**< number of enumerated nodes so far */
    double                dualbnd,            /**< current dual bound */
    double                primalbnd           /**< current primal bound */
 )
@@ -187,7 +191,7 @@ void GAMSsolvetraceAddLine(
 /** adds end line to GAMS solve trace file */
 void GAMSsolvetraceAddEndLine(
    GAMS_SOLVETRACE*      solvetrace,         /**< GAMS solve trace data structure */
-   long int              nnodes,             /**< number of enumerated nodes so far */
+   long long             nnodes,             /**< number of enumerated nodes so far */
    double                dualbnd,            /**< current dual bound */
    double                primalbnd           /**< current primal bound */
 )

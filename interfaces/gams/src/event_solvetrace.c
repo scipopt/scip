@@ -129,7 +129,7 @@ SCIP_DECL_EVENTEXIT(eventExitSolveTrace)
 
    SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_NODESOLVED | SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_PRESOLVEROUND | SCIP_EVENTTYPE_LPEVENT, eventhdlr, (SCIP_EVENTDATA*)eventhdlrdata->solvetrace, eventhdlrdata->filterpos) );
 
-   GAMSsolvetraceAddEndLine(eventhdlrdata->solvetrace, (int) SCIPgetNTotalNodes(scip),
+   GAMSsolvetraceAddEndLine(eventhdlrdata->solvetrace, SCIPgetNTotalNodes(scip),
       eventhdlrdata->dualbound == SCIP_INVALID ? -(int)SCIPgetObjsense(scip) * SCIPinfinity(scip) : eventhdlrdata->dualbound,   /*lint !e777*/
       SCIPgetNSols(scip) > 0 ? SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)) : (int)SCIPgetObjsense(scip) * SCIPinfinity(scip));
 
@@ -192,7 +192,7 @@ SCIP_DECL_EVENTEXEC(eventExecSolveTrace)
    assert(event != NULL);
    assert(eventdata != NULL);
 
-   GAMSsolvetraceAddLine((GAMS_SOLVETRACE*)eventdata, (int) SCIPgetNTotalNodes(scip),
+   GAMSsolvetraceAddLine((GAMS_SOLVETRACE*)eventdata, SCIPgetNTotalNodes(scip),
       SCIPgetDualbound(scip),
       SCIPgetNSols(scip) > 0 ? SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)) : (int) SCIPgetObjsense(scip) * SCIPinfinity(scip));
 

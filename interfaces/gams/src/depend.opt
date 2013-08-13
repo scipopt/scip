@@ -107,8 +107,7 @@ event_solvetrace.o: src/event_solvetrace.c src/event_solvetrace.h \
  ../../src/scip/var.h ../../src/scip/event.h \
  ../../src/scip/struct_event.h \
   \
-  \
- ../../src/scip/githash.c
+ 
 GamsSolveTrace.o: src/GamsSolveTrace.c src/GamsSolveTrace.h
 $(OBJDIR)/GamsScip.o: src/GamsScip.cpp src/GamsScip.hpp src/GamsSolver.hpp \
  ../../src/scip/type_retcode.h \

@@ -39,7 +39,7 @@ void GAMSsolvetraceFree(
 extern
 void GAMSsolvetraceAddLine(
    GAMS_SOLVETRACE*      solvetrace,         /**< GAMS solve trace data structure */
-   long int              nnodes,             /**< number of enumerated nodes so far */
+   long long             nnodes,             /**< number of enumerated nodes so far */
    double                dualbnd,            /**< current dual bound */
    double                primalbnd           /**< current primal bound */
 );
@@ -48,7 +48,7 @@ void GAMSsolvetraceAddLine(
 extern
 void GAMSsolvetraceAddEndLine(
    GAMS_SOLVETRACE*      solvetrace,         /**< GAMS solve trace data structure */
-   long int              nnodes,             /**< number of enumerated nodes so far */
+   long long             nnodes,             /**< number of enumerated nodes so far */
    double                dualbnd,            /**< current dual bound */
    double                primalbnd           /**< current primal bound */
 );
