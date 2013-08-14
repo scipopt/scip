@@ -210,6 +210,7 @@ fixed bugs:
 - fixed bug in cons_and.c when a constraint was not correctly propagated which led to wrong dual-presolve reductions
 - fixed bugs in cons_bivariate.c when the nonlinear function is not differentiable on the boundary of the domain
 - fixed bug in cons_indicator.c:SCIPmakeIndicatorFeasible() with handling fixed variables
+- fixed bug in sepa_zerohalf.c where the maxcuts(root) parameters led to an invalid memory allocation call
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
@@ -2600,7 +2601,7 @@ features:
   node or not
 - command shell now understands escape characters ",', and \ which makes it possible to read in files with spaces in the
   name
-- updated XPress interface to XPress-MP 17 (contributed by Michael Perregard)
+- updated XPress interface to XPress-MP 17 (contributed by Michael Perregaard)
 - the EXITSOL callback of the plugins is now called before the LP and the global cut pool are freed
 - possibility of SAT-like restarts after a number of conflict constraints have been found
 - in the root node of the very first run, heuristics with timing AFTERNODELPNODE, AFTERLPPLUNGE, AFTERPSEUDONODE, and

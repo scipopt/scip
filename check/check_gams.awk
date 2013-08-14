@@ -105,7 +105,7 @@ BEGIN  {
 #18 NumberOfNodes
 
 /.*/ {
-  if ( $3 == solver )
+  if( $3 == solver || $3 == "EXAMINER2" )
   {
     model[nprobs] = $1;
     type[nprobs] = $2;

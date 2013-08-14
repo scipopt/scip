@@ -37,8 +37,11 @@ SETCUTOFF=0
 # set this to 1 if you want the scripts to (try to) pass a best known solution (from .gdx file) to the GAMS solver
 PASSSTARTSOL=0
 
-# set this to true to keep solutions in .gdx files
+# set this to 1 to keep solutions in .gdx files
 KEEPSOLS=0
+
+# set this to 1 to run the solver through Examiner2
+EXAMINER=0
 
 # check all variables defined
 if [ -z ${EXCLUSIVE} ]
@@ -143,8 +146,8 @@ then
   GAMSOPTS="$GAMSOPTS gdxcompress=1"
 fi
 
-# check for solver settings (template) file
-SETTINGS=
+# setup solver option file
+# create directory $OPTDIR and put optionfile <solvername>.opt there
 if test "$SETNAME" != "default"
 then
   SETDIR=`cd ../settings ; pwd`
@@ -156,6 +159,26 @@ then
     echo "${m} settings file $SETDIR/${SETNAME}.gamsset not found"
     exit 1
   fi
+fi
+
+# setup examiner option file
+if test $EXAMINER = 1
+then
+  mkdir -p $OPTDIR
+  echo "subsolver ${SOLVER,,}" > $OPTDIR/examiner2.opt
+  if test "$SETNAME" != "default"
+  then
+    echo "subsolveropt 1" >> $OPTDIR/examiner2.opt
+  else
+    GAMSOPTS="$GAMSOPTS optdir=$OPTDIR optfile=1"
+  fi
+  #echo "traceStyle 1" >> $OPTDIR/examiner2.opt
+  echo   "scaled yes" >> $OPTDIR/examiner2.opt
+  echo "unscaled yes" >> $OPTDIR/examiner2.opt
+  echo "examinesolupoint yes" >> $OPTDIR/examiner2.opt
+  echo "examinesolvpoint yes" >> $OPTDIR/examiner2.opt
+  echo "examinegamspoint no"  >> $OPTDIR/examiner2.opt
+  echo "examineinitpoint no"  >> $OPTDIR/examiner2.opt
 fi
 
 # add information on solver and limits for eval script
@@ -356,16 +379,16 @@ do
     # additional environment variables needed by rungamscluster.sh
     export BASENAME=$FILENAME
     export FILENAME=$i
-    export GAMSBIN
-    export GAMSOPTS
-    export GMSFILE
-    export INPUTDIR
-    export MODTYPE
-    export SOLVER
-    export GDXFILE
-    export CLIENTTMPDIR
-    export PASSSTARTSOL
-    export SETTINGS
+    export GAMSBIN="$GAMSBIN"
+    export GAMSOPTS="$GAMSOPTS"
+    export GMSFILE=$GMSFILE
+    export INPUTDIR=$INPUTDIR
+    export MODTYPE=$MODTYPE
+    export SOLVER=$SOLVER
+    export GDXFILE=$GDXFILE
+    export CLIENTTMPDIR=$CLIENTTMPDIR
+    export PASSSTARTSOL=$PASSSTARTSOL
+    export EXAMINER=$EXAMINER
 
     case $QUEUETYPE in
       srun )
