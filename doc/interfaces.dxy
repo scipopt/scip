@@ -65,7 +65,7 @@
  * is a constraint programming platform implemented in python. It supports a variety of different solvers, one of them
  * being the \SCIP Optimization Suite. <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> is developed
  * and maintained by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite. <a
- * href="http://picos.zib.de/>PICOS</a> is a python interface for conic optimization, provided by Guillaume Sagnol.
+ * href="http://picos.zib.de/">PICOS</a> is a python interface for conic optimization, provided by Guillaume Sagnol.
  *
  *
  */
