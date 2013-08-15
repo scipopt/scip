@@ -214,6 +214,7 @@ fixed bugs:
 - fixed bugs in cons_bivariate.c when the nonlinear function is not differentiable on the boundary of the domain
 - fixed bug in cons_indicator.c:SCIPmakeIndicatorFeasible() with handling fixed variables
 - fixed bug in sepa_zerohalf.c where the maxcuts(root) parameters led to an invalid memory allocation call
+- fixed bug in sepa_closecuts: need to make sure that variable values of separation point satisfy bounds
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
