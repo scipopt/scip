@@ -2950,7 +2950,7 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
    return SCIP_OKAY;
 }
 
-#define MAX_CONSLENGTH 100
+#define MAX_CONSLENGTH 200
 
 /** try to tighten constraints by reducing the number of variables in the constraints using implications and cliques,
  *  also derive fixations through them, @see SCIPshrinkDisjunctiveVarSet()
