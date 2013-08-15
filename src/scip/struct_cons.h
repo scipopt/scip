@@ -53,11 +53,13 @@ struct SCIP_Cons
    int                   enfoconsspos;       /**< position of constraint in the handler's enfoconss array */
    int                   checkconsspos;      /**< position of constraint in the handler's checkconss array */
    int                   propconsspos;       /**< position of constraint in the handler's propconss array */
-   int                   nuses;              /**< number of times, this constraint is referenced */
    int                   nlockspos;          /**< number of times, the constraint locked rounding of its variables */
    int                   nlocksneg;          /**< number of times, the constraint locked vars for the constraint's negation */
    int                   activedepth;        /**< depth level of constraint activation (-2: inactive, -1: problem constraint) */
    int                   validdepth;         /**< depth level where constraint is valid (-1: equals activedepth) */
+   unsigned int          nuses:16;           /**< number of times, this constraint is referenced */
+   unsigned int          nupgradelocks:16;   /**< number of times, a constraint is locked against an upgrade
+                                              *   (e.g. linear -> logicor), 0 means a constraint can be upgraded */
    unsigned int          markedprop:1;       /**< TRUE iff the constraint is marked to be propagated during the next node processing */
    unsigned int          initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
    unsigned int          separate:1;         /**< TRUE iff constraint should be separated during LP processing */

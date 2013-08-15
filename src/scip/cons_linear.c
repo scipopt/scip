@@ -210,7 +210,6 @@ struct SCIP_ConsData
    unsigned int          normalized:1;       /**< is the constraint in normalized form? */
    unsigned int          upgradetried:1;     /**< was the constraint already tried to be upgraded? */
    unsigned int          upgraded:1;         /**< is the constraint upgraded and will it be removed after preprocessing? */
-   unsigned int          donotupgrade:1;     /**< should the constraint not be upgraded? */
    unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
    unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
    unsigned int          cliquesadded:1;     /**< were the cliques of the constraint already extracted? */
@@ -891,7 +890,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->normalized = FALSE;
    (*consdata)->upgradetried = FALSE;
    (*consdata)->upgraded = FALSE;
-   (*consdata)->donotupgrade = FALSE;
    (*consdata)->sorted = (nvars <= 1);
    (*consdata)->merged = (nvars <= 1);
    (*consdata)->cliquesadded = FALSE;
@@ -10454,7 +10452,7 @@ SCIP_RETCODE aggregateConstraints(
    }
 
    /* if better aggregation was found, create new constraint and delete old one */
-   if( bestv != -1 || commonvarlindependent )
+   if( (bestv != -1 || commonvarlindependent) && SCIPconsGetNUpgradeLocks(cons0) == 0 )
    {
       SCIP_CONS* newcons;
       SCIP_CONSDATA* newconsdata;
@@ -10613,7 +10611,6 @@ SCIP_RETCODE aggregateConstraints(
 
       /* copy the upgraded flag from the old cons0 to the new constraint */
       newconsdata->upgraded = consdata0->upgraded;
-      newconsdata->donotupgrade = consdata0->donotupgrade;
 
       /* normalize the new constraint */
       SCIP_CALL( normalizeCons(scip, newcons) );
@@ -12606,9 +12603,6 @@ SCIP_DECL_CONSTRANS(consTransLinear)
 
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
-
-   /* copy the donotupgrade mark */
-   targetdata->donotupgrade = sourcedata->donotupgrade;
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -15066,6 +15060,10 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
 
+   /* check for upgradability */
+   if( SCIPconsGetNUpgradeLocks(cons) > 0 )
+      return SCIP_OKAY;
+
    /* get the constraint handler and check, if it's really a linear constraint */
    conshdlr = SCIPconsGetHdlr(cons);
    if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
@@ -15082,10 +15080,6 @@ SCIP_RETCODE SCIPupgradeConsLinear(
 
    /* check, if the constraint was already upgraded and will be deleted anyway after preprocessing */
    if( consdata->upgraded )
-      return SCIP_OKAY;
-
-   /* do not upgrade marked constraints */
-   if ( consdata->donotupgrade )
       return SCIP_OKAY;
 
    /* check, if the constraint is already stored as LP row */
@@ -15241,79 +15235,5 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    }
 #endif
 
-   return SCIP_OKAY;
-}
-
-
-/** forbids upgrading of constraint */
-SCIP_RETCODE SCIPmarkDoNotUpgradeConsLinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< linear constraint to mark */
-   )
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
-
-   /* get the constraint handler and check, if it's really a linear constraint */
-   conshdlr = SCIPconsGetHdlr(cons);
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not linear\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   /* get data */
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   consdata->donotupgrade = TRUE;
-
-   return SCIP_OKAY;
-}
-
-/** sets upgrading flag of linear constraint 
- *
- *  @note the donotupgrade flag should only be changed from TRUE to FALSE, by the caller who set it to TRUE
- */
-SCIP_RETCODE SCIPsetUpgradeConsLinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< linear constraint to mark */
-   SCIP_Bool             upgradeallowed      /**< allow upgrading? */
-   )
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
-
-   assert(cons != NULL);
-
-   /* get the constraint handler and check, if it's really a linear constraint */
-   conshdlr = SCIPconsGetHdlr(cons);
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not linear\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   /* get data */
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(!consdata->upgraded);
-
-   if( upgradeallowed && consdata->donotupgrade )
-   {
-      consdata->donotupgrade = FALSE;
-
-      /* update the upgrade flag to try again */
-      consdata->upgradetried = FALSE;
-   }
-   else if( !upgradeallowed )
-   {
-      if( consdata->donotupgrade )
-      {
-         /* @todo: change donotupgrade flag to a counter */
-         SCIPwarningMessage(scip, "constraint is already marked not to be upgraded\n");
-      }
-      consdata->donotupgrade = TRUE;
-   }
    return SCIP_OKAY;
 }

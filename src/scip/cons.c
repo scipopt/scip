@@ -5333,11 +5333,12 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->propconsspos = -1;
    (*cons)->activedepth = -2;
    (*cons)->validdepth = (local ? -1 : 0);
-   (*cons)->nuses = 0;
    (*cons)->age = 0.0;
    (*cons)->nlockspos = 0;
    (*cons)->nlocksneg = 0;
    (*cons)->markedprop = FALSE;
+   (*cons)->nuses = 0;
+   (*cons)->nupgradelocks = 0;
    (*cons)->initial = initial;
    (*cons)->separate = separate;
    (*cons)->enforce = enforce;
@@ -5656,7 +5657,7 @@ void SCIPconsCapture(
    )
 {
    assert(cons != NULL);
-   assert(cons->nuses >= 0);
+   assert(cons->nuses < (1 << 16) - 1);
 
    SCIPdebugMessage("capture constraint <%s> with nuses=%d, cons pointer %p\n", cons->name, cons->nuses, (void*)cons);
    cons->nuses++;
@@ -5906,6 +5907,9 @@ SCIP_RETCODE SCIPconsTransform(
       /* link original and transformed constraint */
       origcons->transorigcons = *transcons;
       (*transcons)->transorigcons = origcons;
+
+      /* copy the number of upgradelocks */
+      (*transcons)->nupgradelocks = origcons->nupgradelocks;
    }
    assert(*transcons != NULL);
 
@@ -7405,6 +7409,7 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #undef SCIPconsGetNLocksPos
 #undef SCIPconsGetNLocksNeg
 #undef SCIPconsIsAdded
+#undef SCIPconsGetNUpgradeLocks
 
 /** returns the name of the constraint */
 const char* SCIPconsGetName(
@@ -7763,4 +7768,26 @@ SCIP_Bool SCIPconsIsAdded(
    assert(cons != NULL);
 
    return (cons->addarraypos >= 0);
+}
+
+/** adds locks to (dis-)allow upgrading of constraint */
+void SCIPconsAddUpgradeLocks(
+   SCIP_CONS*            cons,               /**< constraint to add locks */
+   int                   nlocks              /**< number of locks to add */
+   )
+{
+   assert(cons != NULL);
+
+   assert(cons->nupgradelocks < (1 << 16) - nlocks);
+   cons->nupgradelocks += nlocks;
+}
+
+/** gets number of locks against upgrading the constraint, 0 means this constraint can be upgraded */
+int SCIPconsGetNUpgradeLocks(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->nupgradelocks;
 }

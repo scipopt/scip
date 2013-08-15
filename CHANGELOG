@@ -66,6 +66,7 @@ features:
 - reader_osil can now read SOS1 and SOS2 constraints
 - reader_lp is now abled to write and constraints in form of their (weak/strict) relaxation
 - reader_mps is now abled to write and constraints in form of their (weak/strict) relaxation
+- added possibility to forbid constraint upgrading
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -119,6 +120,8 @@ interface
 - SCIPaddCut() has an additional parameter that determines whether the cut to be added is infeasible
 - SCIPwriteMIP() has an additional parameter that allows to write removable rows as lazy constraints
 - added a copy of the GAMS/SCIP interface to interfaces/gams
+- added SCIPconsAddUpgradeLocks() and SCIPconsGetNUpgradeLocks() to either add/decrease the counter on upgrade-locks on
+  a constraint or get the current number of upgrade-locks
 
 parameters:
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
