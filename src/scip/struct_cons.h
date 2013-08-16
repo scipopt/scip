@@ -57,9 +57,7 @@ struct SCIP_Cons
    int                   nlocksneg;          /**< number of times, the constraint locked vars for the constraint's negation */
    int                   activedepth;        /**< depth level of constraint activation (-2: inactive, -1: problem constraint) */
    int                   validdepth;         /**< depth level where constraint is valid (-1: equals activedepth) */
-   unsigned int          nuses:16;           /**< number of times, this constraint is referenced */
-   unsigned int          nupgradelocks:16;   /**< number of times, a constraint is locked against an upgrade
-                                              *   (e.g. linear -> logicor), 0 means a constraint can be upgraded */
+   int                   nuses;              /**< number of times, this constraint is referenced */
    unsigned int          markedprop:1;       /**< TRUE iff the constraint is marked to be propagated during the next node processing */
    unsigned int          initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
    unsigned int          separate:1;         /**< TRUE iff constraint should be separated during LP processing */
@@ -99,6 +97,8 @@ struct SCIP_Cons
    unsigned int          updateactfocus:1;   /**< TRUE iff delayed constraint activation happened at focus node */
    unsigned int          updatemarkpropagate:1;/**< TRUE iff constraint has to be marked to be propagated in update phase */
    unsigned int          updateunmarkpropagate:1;/**< TRUE iff constraint has to be unmarked to be propagated in update phase */
+   unsigned int          nupgradelocks:29;   /**< number of times, a constraint is locked against an upgrade
+                                              *   (e.g. linear -> logicor), 0 means a constraint can be upgraded */
 };
 
 /** tracks additions and removals of the set of active constraints */
