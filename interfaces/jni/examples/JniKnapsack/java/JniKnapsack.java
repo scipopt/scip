@@ -60,7 +60,6 @@ public class JniKnapsack {
 	 /* create the SCIP linear constraint environment */
 	 JniScipConsLinear envConsLinear = new JniScipConsLinear();
 
-
 	 /* create SCIP instance */
 	 scip = env.create();
 
@@ -153,5 +152,47 @@ public class JniKnapsack {
       {
 	 System.out.println(e.getMessage());
       }
+
+      try
+      {
+	 /**@note C pointer are longs in the JNI interface */
+	 long scip;
+
+	 /* create the SCIP environment */
+	 JniScip env = new JniScip();
+
+	 /* create the SCIP variable environment */
+	 JniScipVar envVar = new JniScipVar();
+
+	 scip = env.create();
+
+	 /* include default plugins od f SCIP */
+	 env.includeDefaultPlugins(scip);
+
+	 env.readProb(scip, "test.lp", "");
+
+	 env.readSol(scip, "solution.sol");
+
+	 long[] sols = env.getSols(scip);
+
+	 long[] vars = env.getVars(scip);
+	 int nvars = env.getNVars(scip);
+
+	 for( int i = 0; i < nvars; ++i )
+	 {
+	    System.out.println("variable <" + envVar.varGetName(vars[i]) + "> -> <" + env.getSolVal(scip, sols[0], vars[i]) + ">");
+	 }
+
+	 env.presolve(scip);
+
+	 env.printBestSol(scip, 0, false);
+
+	 env.free(scip);
+      }
+      catch (NativeScipException e)
+      {
+	 System.out.println(e.getMessage());
+      }
+
    }
 }

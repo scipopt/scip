@@ -4336,6 +4336,28 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetIsHugeValue
 #undef SCIPsetGetHugeValue
 
+/** returns value treated as infinity */
+SCIP_Real SCIPsetInfinity(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_infinity;
+}
+
+/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity
+ *  computation)
+ */
+SCIP_Real SCIPsetGetHugeValue(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_hugeval;
+}
+
 /** returns value treated as zero */
 SCIP_Real SCIPsetEpsilon(
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -4452,6 +4474,17 @@ SCIP_Bool SCIPsetIsInfinity(
    return (val >= set->num_infinity);
 }
 
+/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+SCIP_Bool SCIPsetIsHugeValue(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be checked whether it is huge */
+   )
+{
+   assert(set != NULL);
+
+   return (val >= set->num_hugeval);
+}
+
 /** checks, if values are in range of epsilon */
 SCIP_Bool SCIPsetIsEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4510,16 +4543,6 @@ SCIP_Bool SCIPsetIsGE(
    assert(set != NULL);
 
    return EPSGE(val1, val2, set->num_epsilon);
-}
-
-/** returns value treated as infinity */
-SCIP_Real SCIPsetInfinity(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(set != NULL);
-
-   return set->num_infinity;
 }
 
 /** checks, if value is in range epsilon of 0.0 */
@@ -5194,25 +5217,4 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    quotient = ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon);
 
    return quotient >= set->num_recompfac;
-}
-
-/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
-SCIP_Bool SCIPsetIsHugeValue(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             val                 /**< value to be checked whether it is huge */
-   )
-{
-   assert(set != NULL);
-
-   return (val >= set->num_hugeval);
-}
-
-/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity computation) */
-SCIP_Real SCIPsetGetHugeValue(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(set != NULL);
-
-   return set->num_hugeval;
 }

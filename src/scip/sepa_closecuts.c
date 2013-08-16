@@ -139,6 +139,12 @@ SCIP_RETCODE generateCloseCutPoint(
       var = vars[i];
       val = alpha * SCIPgetSolVal(scip, sepadata->sepasol, var) + onealpha * SCIPvarGetLPSol(var);
 
+      /* If both the LP relaxation and the base point respect the variable bounds, the computed point will satisfy them
+       * as well. However, variables might be fixed (e.g. by branching) since the time of the computation of the base
+       * point. Thus, we adapt the value to lie inside the bounds in optimized mode. */
+      val = MAX(val, SCIPvarGetLbLocal(var));
+      val = MIN(val, SCIPvarGetUbLocal(var));
+
       if ( ! SCIPisZero(scip, val) )
       {
          SCIP_CALL( SCIPsetSolVal(scip, *point, var, val) );

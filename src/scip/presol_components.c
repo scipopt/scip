@@ -322,6 +322,15 @@ SCIP_RETCODE copyAndSolveComponent(
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
 
+      if( !SCIPisParamFixed(subscip, "limits/solutions") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "limits/solutions", -1) );
+      }
+      if( !SCIPisParamFixed(subscip, "limits/bestsol") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", -1) );
+      }
+
       /* set gap limit to 0 */
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", 0.0) );
 

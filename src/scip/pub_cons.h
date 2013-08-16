@@ -681,7 +681,21 @@ int SCIPconsGetNLocksNeg(
    );
 
 /** returns if the constraint was already added to a SCIP instance */
+EXTERN
 SCIP_Bool SCIPconsIsAdded(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** adds locks to (dis-)allow upgrading of constraint */
+EXTERN
+void SCIPconsAddUpgradeLocks(
+   SCIP_CONS*            cons,               /**< constraint to add locks */
+   int                   nlocks              /**< number of locks to add */
+   );
+
+/** gets number of locks against upgrading the constraint, 0 means this constraint can be upgraded */
+EXTERN
+int SCIPconsGetNUpgradeLocks(
    SCIP_CONS*            cons                /**< constraint */
    );
 
@@ -731,6 +745,7 @@ SCIP_Bool SCIPconsIsAdded(
 #define SCIPconsGetNLocksPos(cons)      ((cons)->nlockspos)
 #define SCIPconsGetNLocksNeg(cons)      ((cons)->nlocksneg)
 #define SCIPconsIsAdded(cons)           ((cons)->addarraypos >= 0)
+#define SCIPconsGetNUpgradeLocks(cons)  ((cons)->nupgradelocks)
 
 #endif
 

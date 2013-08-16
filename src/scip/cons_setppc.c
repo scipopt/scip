@@ -5348,6 +5348,12 @@ SCIP_RETCODE multiAggregateBinvar(
  *
  *  5. f1: x + y <= 1,  uplocks(x) = 1, obj(x) <= 0                       =>  x = 1 - y and delete f1
  *
+ *  @todo might want to multi-aggregate variables even with more locks, when the fill in is still smaller or equal to
+ *        the old number of non-zeros, e.g.
+ *
+ *        x + y + z = 1
+ *        ~x + u + v <=/= 1
+ *        ~x + w <= 1
  */
 static
 SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(

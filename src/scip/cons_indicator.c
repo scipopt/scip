@@ -3129,7 +3129,8 @@ SCIP_RETCODE createVarUbs(
 	    /* mark linear constraint to be upgrade-able */
 	    if ( SCIPconsIsActive(consdata->lincons) )
 	    {
-	       SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+               SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+               assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
 	    }
 
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
@@ -3195,7 +3196,8 @@ SCIP_RETCODE presolRoundIndicator(
       /* mark linear constraint to be update-able */
       if ( SCIPconsIsActive(consdata->lincons) )
       {
-         SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+         assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
       }
 
       /* delete indicator constraint (leave linear constraint) */
@@ -3214,7 +3216,8 @@ SCIP_RETCODE presolRoundIndicator(
       /* mark linear constraint to be update-able */
       if ( SCIPconsIsActive(consdata->lincons) )
       {
-         SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+         assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
       }
 
       /* delete indicator constraint */
@@ -3248,7 +3251,8 @@ SCIP_RETCODE presolRoundIndicator(
       /* mark linear constraint to be update-able */
       if ( SCIPconsIsActive(consdata->lincons) )
       {
-         SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+         assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
       }
 
       /* delete constraint */
@@ -3316,7 +3320,8 @@ SCIP_RETCODE presolRoundIndicator(
       /* mark linear constraint to be upgrade-able */
       if ( SCIPconsIsActive(consdata->lincons) )
       {
-         SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+         assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
       }
 
       /* delete constraint */
@@ -3447,7 +3452,8 @@ SCIP_RETCODE propIndicator(
       /* mark linear constraint to be update-able */
       if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
       {
-	 SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+         assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
       }
 
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
@@ -3604,7 +3610,8 @@ SCIP_RETCODE propIndicator(
 	 /* mark linear constraint to be update-able */
 	 if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
 	 {
-	    SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
+            SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+            assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
 	 }
 
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );
@@ -6382,7 +6389,8 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    }
 
    /* mark linear constraint not to be upgraded - otherwise we loose control over it */
-   SCIP_CALL( SCIPmarkDoNotUpgradeConsLinear(scip, lincons) );
+   SCIPconsAddUpgradeLocks(lincons, 1);
+   assert(SCIPconsGetNUpgradeLocks(lincons) > 0);
 
    /* add slack variable */
    if ( conshdlrdata->scaleslackvar )
@@ -6565,7 +6573,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    }
 
    /* mark linear constraint not to be upgraded - otherwise we loose control over it */
-   SCIP_CALL( SCIPmarkDoNotUpgradeConsLinear(scip, lincons) );
+   SCIPconsAddUpgradeLocks(lincons, 1);
+   assert(SCIPconsGetNUpgradeLocks(lincons) > 0);
 
    /* check whether we should generate a bilinear constraint instead of an indicator constraint */
    if ( conshdlrdata->generatebilinear )

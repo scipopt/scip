@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -14,7 +14,7 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 #@file    Makefile
-#@brief   Makefile for AMPL interface project
+#@brief   Makefile for GAMS interface project
 #@author  Stefan Vigerske
 
 
@@ -23,39 +23,47 @@
 #-----------------------------------------------------------------------------
 
 SCIPDIR		=	../..
-
+GAMSDIR		=	# FILL IN PATH TO GAMS DIRECTORY HERE
 
 #-----------------------------------------------------------------------------
 # include default project Makefile from SCIP
 #-----------------------------------------------------------------------------
+
 include $(SCIPDIR)/make/make.project
 
+ifneq ($(LINKRPATH),)
+LIBBUILDFLAGS	+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
+endif
+
+GAMSIODIR	=	$(GAMSDIR)/apifiles/C/api
 
 #-----------------------------------------------------------------------------
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAME	=	scipampl
-MAINOBJ		=	cmain.o reader_nl.o
-MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
-MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
+MAINNAME	=	gamsscip
+# C sources
+MAINCOBJ	=	reader_gmo.o event_solvetrace.o GamsSolveTrace.o
+MAINCSRC	=	$(addprefix $(SRCDIR)/,$(MAINCOBJ:.o=.c))
+# C++ sources
+MAINCXXOBJ	=	GamsScip.o GamsSolver.o GamsOptions.o
+MAINCXXSRC	=	$(addprefix $(SRCDIR)/,$(MAINCXXOBJ:.o=.cpp))
+# C sources in GAMS I/O directory
+MAINGOBJ	=	gdxcc.o gevmcc.o gmomcc.o optcc.o
+MAINGSRC	=	$(addprefix $(GAMSIODIR)/,$(MAINGOBJ:.o=.c))
+MAINDEP		=	$(SRCDIR)/depend.$(OPT)
 
-MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
-MAINFILE	=	$(BINDIR)/$(MAIN)
-MAINSHORTLINK	=	$(BINDIR)/$(MAINNAME)
-MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
+MAIN		=	lib$(MAINNAME).$(BASE).$(LPS).$(LIBEXT)
+MAINFILE	=	$(LIBDIR)/$(MAIN)
+MAINSHORTLINK	=	$(LIBDIR)/lib$(MAINNAME).$(LIBEXT)
+MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINCOBJ) $(MAINCXXOBJ) $(MAINGOBJ))
 
 #-----------------------------------------------------------------------------
-# ASL library
+# GMO library
 #-----------------------------------------------------------------------------
 
-FLAGS += -Isolvers
-
-ifeq ($(OSTYPE),mingw)
-LDFLAGS += solvers/amplsolv.$(STATICLIBEXT)
-else
-LDFLAGS += solvers/amplsolver.$(STATICLIBEXT) $(LINKCC_l)dl$(LINKLIBSUFFIX)
-endif
+# where to find header files for GAMS I/O files
+FLAGS += -I$(GAMSIODIR)
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -68,8 +76,12 @@ endif
 .PHONY: all
 all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 
+.PHONY: install
+install:
+		@./gamsinst.sh "$(GAMSDIR)"
+
 .PHONY: lint
-lint:		$(MAINSRC)
+lint:		$(MAINCSRC) $(MAINCXXSRC)
 		-rm -f lint.out
 		-ln -fs $(SCIPDIR)/lint
 		$(SHELL) -ec 'for i in $^; \
@@ -79,10 +91,6 @@ lint:		$(MAINSRC)
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
-.PHONY: scipampl
-scipampl:
-		@$(MAKE) -C $(SCIPDIR) libs $^
-
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
@@ -90,17 +98,8 @@ $(MAINSHORTLINK):	$(MAINFILE)
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)
 
-$(BINDIR):
-		@-mkdir -p $(BINDIR)
-
-.PHONY: test
-test:           $(MAINFILE)
-	@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
-	@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
-	@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
-	@-(cd check/testset && ln -fs ../../$(SCIPDIR)/check/testset/short.solu);
-	cd check; \
-	$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(LPS) $(VALGRIND);
+$(LIBDIR):
+		@-mkdir -p $(LIBDIR)
 
 .PHONY: clean
 clean:		$(OBJDIR)
@@ -112,19 +111,24 @@ endif
 
 .PHONY: depend
 depend:		$(SCIPDIR)
-		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINSRC) \
+		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINCSRC) $(MAINCXXSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z\_]*\).cpp|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.cpp|g'\'' \
+		| sed '\''s|$(GAMSIODIR).*h||g'\'' \
 		>$(MAINDEP)'
 
 -include	$(MAINDEP)
 
-$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
+$(MAINFILE):	$(LIBDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-		$(LINKCXX) $(MAINOBJFILES) \
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ \
+		$(MAINOBJFILES) \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+		$(LPSLDFLAGS) $(LDFLAGS)
+ifneq ($(RANLIB),)
+		$(RANLIB) $@
+endif
+
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
@@ -133,5 +137,9 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
+
+$(OBJDIR)/%.o:	$(GAMSIODIR)/%.c
+		@echo "-> compiling $@"
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS:-pedantic=) -Wno-shadow -c $< $(CC_o)$@
 
 #---- EOF --------------------------------------------------------------------

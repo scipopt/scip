@@ -19,6 +19,7 @@
  * @author Marc Pfetsch
  * @author Stefan Heinz
  * @author Stefan Vigerske
+ * @author Michael Winkler
  * @author Lars Schewe
  */
 
@@ -39,6 +40,7 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
+#include "scip/cons_and.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 #include "scip/cons_indicator.h"
@@ -51,6 +53,9 @@
 #define READER_DESC             "file reader for MIPs in IBM CPLEX's LP file format"
 #define READER_EXTENSION        "lp"
 
+#define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the lp
+                                              *   file? */
+#define DEFAULT_AGGRLINEARIZATION_ANDS TRUE  /**< should an aggregated linearization for and constraints be used? */
 
 /*
  * Data structures
@@ -62,6 +67,15 @@
 #define LP_MAX_PRINTLEN      561       /**< the maximum length of any line is 560 + '\\0' = 561*/
 #define LP_MAX_NAMELEN       256       /**< the maximum length for any name is 255 + '\\0' = 256 */
 #define LP_PRINTLEN          100
+
+
+/** LP reading data */
+struct SCIP_ReaderData
+{
+   SCIP_Bool             linearizeands;
+   SCIP_Bool             aggrlinearizationands;
+};
+
 
 /** Section in LP File */
 enum LpSection
@@ -2950,6 +2964,93 @@ SCIP_RETCODE printSOCCons(
    return SCIP_OKAY;
 }
 
+/**< prints a linearization of an and-constraint into the given file */
+static
+SCIP_RETCODE printAndCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           consname,           /**< name of the constraint */
+   SCIP_CONS*            cons,               /**< and constraint */
+   SCIP_Bool             aggrlinearizationands,/**< print weak or strong realaxation */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_VAR** operands;
+   SCIP_VAR* resultant;
+   SCIP_Real* vals;
+   char rowname[LP_MAX_NAMELEN];
+   int nvars;
+   int v;
+
+   assert(scip != NULL);
+   assert(consname != NULL);
+   assert(cons != NULL);
+
+   nvars = SCIPgetNVarsAnd(scip, cons);
+   operands = SCIPgetVarsAnd(scip, cons);
+   resultant = SCIPgetResultantAnd(scip, cons);
+
+   /* allocate buffer array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars + 1) );
+
+   /* the tight relaxtion, number of and-constraint operands rows */
+   if( !aggrlinearizationands )
+   {
+      vars[0] = resultant;
+      vals[0] = 1.0;
+      vals[1] = -1.0;
+
+      /* print operator rows */
+      for( v = 0; v < nvars; ++v )
+      {
+         (void) SCIPsnprintf(rowname, LP_MAX_NAMELEN, "%s_%d", consname, v);
+         vars[1] = operands[v];
+
+         /* print for each operator a row */
+         SCIP_CALL( printQuadraticCons(scip, file, rowname,
+               vars, vals, 2, NULL, 0, NULL, 0, -SCIPinfinity(scip), 0.0, transformed) );
+      }
+   }
+
+   /* prepare for next row */
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      vars[v] = operands[v];
+      vals[v] = -1.0;
+   }
+
+   vars[nvars] = resultant;
+
+   /* the weak relaxtion, only one constraint */
+   if( aggrlinearizationands )
+   {
+      /* adjust rowname of constraint */
+      (void) SCIPsnprintf(rowname, LP_MAX_NAMELEN, "%s_operators", consname);
+
+      vals[nvars] = (SCIP_Real) nvars;
+
+      /* print aggregated operator row */
+      SCIP_CALL( printQuadraticCons(scip, file, rowname,
+            vars, vals, nvars + 1, NULL, 0, NULL, 0, -SCIPinfinity(scip), 0.0, transformed) );
+   }
+
+   /* create additional linear constraint */
+   (void) SCIPsnprintf(rowname, LP_MAX_NAMELEN, "%s_add", consname);
+
+   vals[nvars] = 1.0;
+
+   SCIP_CALL( printQuadraticCons(scip, file, rowname,
+         vars, vals, nvars + 1, NULL, 0, NULL, 0, -nvars + 1.0, SCIPinfinity(scip), transformed) );
+
+   /* free buffer array */
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /** check whether given variables are aggregated and put them into an array without duplication */
 static
 SCIP_RETCODE collectAggregatedVars(
@@ -3136,10 +3237,23 @@ SCIP_DECL_READERCOPY(readerCopyLp)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderLp(scip) );
- 
+
    return SCIP_OKAY;
 }
 
+/** destructor of reader to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_READERFREE(readerFreeLp)
+{
+   SCIP_READERDATA* readerdata;
+
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+   SCIPfreeMemory(scip, &readerdata);
+
+   return SCIP_OKAY;
+}
 
 /** problem reading method of reader */
 static
@@ -3156,6 +3270,9 @@ SCIP_DECL_READERREAD(readerReadLp)
 static
 SCIP_DECL_READERWRITE(readerWriteLp)
 {  /*lint --e{715}*/
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
    SCIP_CALL( SCIPwriteLp(scip, file, name, transformed, objsense, objscale, objoffset, vars,
          nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
 
@@ -3176,15 +3293,26 @@ SCIP_RETCODE SCIPincludeReaderLp(
    SCIP_READER* reader;
 
    /* create reader data */
-   readerdata = NULL;
+   SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyLp) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeLp) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadLp) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteLp) );
+
+   /* add lp-reader parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/"READER_NAME"/linearize-and-constraints",
+         "should possible \"and\" constraint be linearized when writing the lp file?",
+         &readerdata->linearizeands, TRUE, DEFAULT_LINEARIZE_ANDS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/"READER_NAME"/aggrlinearization-ands",
+         "should an aggregated linearization for and constraints be used?",
+         &readerdata->aggrlinearizationands, TRUE, DEFAULT_AGGRLINEARIZATION_ANDS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -3276,6 +3404,10 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {
+   SCIP_READER* reader;
+   SCIP_READERDATA* readerdata;
+   SCIP_Bool linearizeands;
+   SCIP_Bool aggrlinearizationands;
    int c;
    int v;
 
@@ -3312,7 +3444,7 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_Real lb;
    SCIP_Real ub;
 
-   assert( scip != NULL );
+   assert(scip != NULL);
 
    /* find indicator constraint handler */
    conshdlrInd = SCIPfindConshdlr(scip, "indicator");
@@ -3418,6 +3550,21 @@ SCIP_RETCODE SCIPwriteLp(
 
    /* print "Subject to" section */
    SCIPinfoMessage(scip, file, "Subject to\n");
+
+   reader = SCIPfindReader(scip, READER_NAME);
+   if( reader != NULL )
+   {
+      readerdata = SCIPreaderGetData(reader);
+      assert(readerdata != NULL);
+
+      linearizeands = readerdata->linearizeands;
+      aggrlinearizationands = readerdata->aggrlinearizationands;
+   }
+   else
+   {
+      linearizeands = DEFAULT_LINEARIZE_ANDS;
+      aggrlinearizationands = DEFAULT_AGGRLINEARIZATION_ANDS;
+   }
 
    /* collect SOS, quadratic, and SOC constraints in array for later output */
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS1, nconss) );
@@ -3607,6 +3754,20 @@ SCIP_RETCODE SCIPwriteLp(
          SCIP_CALL( printSOCCons(scip, file, consname, cons) );
 
          consSOC[nConsSOC++] = cons;
+      }
+      else if( strcmp(conshdlrname, "and") == 0 )
+      {
+         if( linearizeands )
+         {
+            SCIP_CALL( printAndCons(scip, file, consname, cons, aggrlinearizationands, transformed) );
+         }
+         else
+         {
+            SCIPwarningMessage(scip, "change parameter \"reading/"READER_NAME"/linearize-and-constraints\" to TRUE to print and-constraints\n");
+            SCIPinfoMessage(scip, file, "\\ ");
+            SCIP_CALL( SCIPprintCons(scip, cons, file) );
+            SCIPinfoMessage(scip, file, ";\n");
+         }
       }
       else
       {
