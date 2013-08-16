@@ -98,18 +98,7 @@ then
     exit
 fi
 
-# check if the slurm blades should be used exclusively
-if test "$EXCLUSIVE" = "true"
-then
-    EXCLUSIVE=" --exclusive"
-else
-    EXCLUSIVE=""
-fi
-
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
-# NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
-#       jobs get automatically assigned in the "exrpess" queue; this queue has only 4 CPUs
-#       available
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 
 # we add 10% to the hard memory limit and additional 100MB to the hard memory limit
@@ -201,6 +190,17 @@ then
     NICE="--nice=10000"
 fi
 
+# check if the slurm blades should be used exclusively
+if test "$EXCLUSIVE" = "true"
+then
+    EXCLUSIVE=" --exclusive"
+    if test $CLUSTERQUEUE = "opt"
+    then
+        CLUSTERQUEUE="M610"
+    fi
+else
+    EXCLUSIVE=""
+fi
 
 # counter to define file names for a test set uniquely
 COUNT=0
