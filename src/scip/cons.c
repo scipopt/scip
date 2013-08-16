@@ -5657,7 +5657,7 @@ void SCIPconsCapture(
    )
 {
    assert(cons != NULL);
-   assert(cons->nuses < (1 << 16) - 1);
+   assert(cons->nuses >= 0);
 
    SCIPdebugMessage("capture constraint <%s> with nuses=%d, cons pointer %p\n", cons->name, cons->nuses, (void*)cons);
    cons->nuses++;
@@ -7778,7 +7778,7 @@ void SCIPconsAddUpgradeLocks(
 {
    assert(cons != NULL);
 
-   assert(cons->nupgradelocks < (1 << 16) - nlocks);
+   assert(cons->nupgradelocks < (1 << 29) - nlocks);
    cons->nupgradelocks += nlocks;
 }
 
