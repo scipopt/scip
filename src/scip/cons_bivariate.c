@@ -1307,12 +1307,12 @@ SCIP_RETCODE solveDerivativeEquation(
          SCIP_Real sold;
 
          sold = s;
-         amount = iter <= 65 ? 0.1 / (1<<iter) : 1e-20;
+         amount = iter <= 65 ? 0.1 / (1u<<iter) : 1e-20; /*lint !e790*/
          do
          {
             perturb(&s, lb, ub, amount);
             amount *= 2.0;
-         } while( s == sold );
+         } while( s == sold ); /*lint !e777*/
 
          SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, &s, TRUE, &fval, &grad) );
 
@@ -1385,13 +1385,13 @@ SCIP_RETCODE solveDerivativeEquation(
       assert(step != 0.0);
 
       nexts = s - step;
-      while( s == nexts )
+      while( s == nexts ) /*lint !e777*/
       {
          /* if steplength is so tiny that there is no change in s, go by 1e-9 into given direction */
          step *= 2.0;
          nexts = s - step;
       }
-      assert(nexts != s);
+      assert(nexts != s); /*lint !e777*/
       s = nexts;
 
       if( s < lb )
@@ -3004,7 +3004,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       else
       {
          /* setup cut coefficients */
-         if( xval == xlb )
+         if( xval == xlb ) /*lint !e777*/
             cutcoeff[0]   = (yub - ylb) * MIN(gradylb[0], gradyub[0]);/* coefficient of x */
          else
             cutcoeff[0]   = (yub - ylb) * MAX(gradylb[0], gradyub[0]);/* coefficient of x */
@@ -4286,7 +4286,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
     * -> alpha/gamma * x + beta/gamma * y - delta/gamma + c*z <= f(x,y) + c*z <= rhs
     */
 
-   assert(finite(cutcoeff[0]));
+   assert(finite(cutcoeff[0])); /*lint !e644*/
    assert(finite(cutcoeff[1]));
    assert(finite(cutcoeff[2]));
    assert(finite(cutcoeff[3]));
