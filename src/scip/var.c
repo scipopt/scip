@@ -11408,7 +11408,7 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
       while( !resolved && *var != NULL )
       {
          assert(SCIPvarIsBinary(*var));
-         
+
          switch( SCIPvarGetStatus(*var) )
          {
          case SCIP_VARSTATUS_ORIGINAL:
@@ -11417,7 +11417,7 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
             else
                *var = (*var)->data.original.transvar;
             break;
-            
+
          case SCIP_VARSTATUS_LOOSE:
          case SCIP_VARSTATUS_COLUMN:
          case SCIP_VARSTATUS_FIXED:
@@ -11430,16 +11430,32 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
                assert( (*var)->data.multaggr.vars != NULL );
                assert( (*var)->data.multaggr.scalars != NULL );
                assert( SCIPvarIsBinary((*var)->data.multaggr.vars[0]) );
-               assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) ); /*lint !e835*/
-               assert( EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
-               assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) == EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)); /*lint !e835*/
-               *negated = (*negated != ((*var)->data.multaggr.scalars[0] < 0.0));
-               *var = (*var)->data.multaggr.vars[0];
+
+               /* if not all variables were fully propagated, it might happen that a variable is multi-aggregated to
+                * another having a constant of -1; this means this multi-aggregation variable needs to be 1
+                *
+                * e.g. x = y - 1 => (x = 0 && y = 1)
+                *
+                * is this special case we need to return the muti-aggregation
+                */
+               if( EPSEQ((*var)->data.multaggr.constant, -1.0, 1e-06) )
+               {
+                  assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06));
+                  resolved = TRUE;
+               }
+               else
+               {
+                  assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) ); /*lint !e835*/
+                  assert( EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+                  assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) == EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)); /*lint !e835*/
+                  *negated = (*negated != ((*var)->data.multaggr.scalars[0] < 0.0));
+                  *var = (*var)->data.multaggr.vars[0];
+               }
             }
             else
                resolved = TRUE;
             break;
-            
+
          case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
             assert((*var)->data.aggregate.var != NULL);
             assert(SCIPvarIsBinary((*var)->data.aggregate.var));
@@ -11449,13 +11465,13 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
             *negated = (*negated != ((*var)->data.aggregate.scalar < 0.0));
             *var = (*var)->data.aggregate.var;
             break;
-            
+
          case SCIP_VARSTATUS_NEGATED:     /* x =  - x' + c'  =>  a*x + c ==   (-a)*x' + (a*c' + c) */
             assert((*var)->negatedvar != NULL);
             *negated = !(*negated);
             *var = (*var)->negatedvar;
             break;
-            
+
          default:
             SCIPerrorMessage("unknown variable status at position %d in variable array\n", v);
             return SCIP_INVALIDDATA;
@@ -11508,12 +11524,27 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
             assert( (*var)->data.multaggr.vars != NULL );
             assert( (*var)->data.multaggr.scalars != NULL );
             assert( SCIPvarIsBinary((*var)->data.multaggr.vars[0]) );
-            assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) ); /*lint !e835*/
-            assert( EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
-            assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) == EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)); /*lint !e835*/
-            *negated = (*negated != ((*var)->data.multaggr.scalars[0] < 0.0));
-            *var = (*var)->data.multaggr.vars[0];
-            break;
+
+            /* if not all variables were fully propagated, it might happen that a variable is multi-aggregated to
+             * another having a constant of -1; this means this multi-aggregation variable needs to be 1
+             *
+             * e.g. x = y - 1 => (x = 0 && y = 1)
+             *
+             * is this special case we need to return the muti-aggregation
+             */
+            if( EPSEQ((*var)->data.multaggr.constant, -1.0, 1e-06) )
+            {
+               assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06));
+            }
+            else
+            {
+               assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) ); /*lint !e835*/
+               assert( EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+               assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) == EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)); /*lint !e835*/
+               *negated = (*negated != ((*var)->data.multaggr.scalars[0] < 0.0));
+               *var = (*var)->data.multaggr.vars[0];
+               break;
+            }
          }
          return SCIP_OKAY;
 
