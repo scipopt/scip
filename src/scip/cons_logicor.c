@@ -935,7 +935,7 @@ SCIP_RETCODE applyFixings(
                easycase = TRUE;
          }
 
-         /* we can easily add the coefficients and still have a setppc constraint */
+         /* we can easily add the coefficients and still have a logicor constraint */
          if( easycase )
          {
             /* delete old (multi-aggregated) variable */
