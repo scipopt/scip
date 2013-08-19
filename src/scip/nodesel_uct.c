@@ -46,6 +46,7 @@ struct SCIP_NodeselData
 {
    int*  nodevisits;
    int   nodelimit;
+   int   nselections;
    SCIP_Real weight;
    SCIP_NODE* lastfocusnode;
 };
@@ -90,7 +91,6 @@ void backpropagateVisits(
 
    pathnode = nodeseldata->lastfocusnode;
    assert(pathnode != NULL);
-   assert(SCIPnodeGetType(pathnode) == SCIP_NODETYPE_LEAF || SCIPnodeGetType(pathnode) == SCIP_NODETYPE_SIBLING);
    do
    {
       SCIP_Longint nodenumber;
@@ -130,15 +130,13 @@ SCIP_DECL_NODESELINITSOL(nodeselInitsolUct)
    nodeseldata = SCIPnodeselGetData(nodesel);
 
    assert(nodeseldata != NULL);
-   if( nodeseldata->nodevisits != NULL )
+   if( nodeseldata->nodevisits == NULL )
    {
-      BMSclearMemoryArray(nodeseldata->nodevisits, nodeseldata->nodelimit);
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(nodeseldata->nodevisits), 2 * nodeseldata->nodelimit) );
    }
-   else
-   {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(nodeseldata->nodevisits), nodeseldata->nodelimit) );
-   }
+   BMSclearMemoryArray(nodeseldata->nodevisits, 2 * nodeseldata->nodelimit);
    nodeseldata->lastfocusnode = NULL;
+   nodeseldata->nselections = 0;
 
    return SCIP_OKAY;
 }
@@ -155,7 +153,7 @@ SCIP_DECL_NODESELFREE(nodeselFreeUct)
    {
       SCIPfreeMemoryArray(scip, &nodeseldata->nodevisits);
    }
-   SCIPfreeMemory(scip, &nodeseldata);
+   SCIPfreeBlockMemory(scip, &nodeseldata);
 
    SCIPnodeselSetData(nodesel, NULL);
 
@@ -176,19 +174,45 @@ SCIP_DECL_NODESELSELECT(nodeselSelectUct)
    assert(scip != NULL);
    assert(selnode != NULL);
 
-
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
-
+   /* select next node as best node with respect to UCT-based comparison method */
    *selnode = SCIPgetBestNode(scip);
 
-   assert(*selnode != NULL);
+   if(*selnode == NULL)
+      return SCIP_OKAY;
 
-   if( SCIPnodeGetType(*selnode) != SCIP_NODETYPE_CHILD && nodeseldata->lastfocusnode != NULL )
+   /* count the number of selections */
+   ++nodeseldata->nselections;
+
+   /* switch back to default node selection rule if the node limit is exceeded */
+   if( nodeseldata->nselections == nodeseldata->nodelimit )
    {
+      SCIP_NODESEL** nodesels;
+      int nnodesels;
+      int newpriority;
+      int n;
+
+      nodesels = SCIPgetNodesels(scip);
+      nnodesels = SCIPgetNNodesels(scip);
+      newpriority = SCIPnodeselGetStdPriority(nodesel);
+      for( n = 0; n < nnodesels; ++n )
+      {
+         newpriority = MIN(newpriority, SCIPnodeselGetStdPriority(nodesels[n]));
+      }
+      SCIPdebugMessage("Reached node limit of UCT node selection rule -> switching to default\n");
+      SCIP_CALL( SCIPsetNodeselStdPriority(scip, nodesel, newpriority - 1) );
+   }
+   else if( SCIPnodeGetType(*selnode) != SCIP_NODETYPE_CHILD && nodeseldata->lastfocusnode != NULL )
+   {
+      /* trigger backpropagation of visits upwards from last focus node if the newly selected node is not a child node
+       * of the focus node
+       */
       SCIPdebugMessage("Backpropagating node visits from node number %"SCIP_LONGINT_FORMAT"\n", SCIPnodeGetNumber(nodeseldata->lastfocusnode));
       backpropagateVisits(nodeseldata);
    }
+
+   /* keep selected node as last focus node for next time */
    nodeseldata->lastfocusnode = *selnode;
 
    return SCIP_OKAY;
@@ -228,41 +252,27 @@ SCIP_DECL_NODESELCOMP(nodeselCompUct)
 
    parentvisits1 = nodeGetVisits(nodesel, parent1);
    parentvisits2 = nodeGetVisits(nodesel, parent2);
+   SCIPdebugMessage("Comparing nodes: %10.2g %d %d -- %10.2g %d %d (lower bound, visits, parent visits)\n",
+         SCIPnodeGetLowerbound(node1), nodevisits1, parentvisits1, SCIPnodeGetLowerbound(node2), nodevisits2, parentvisits2 );
    if( parentvisits1 > 0 || parentvisits2 > 0 )
    {
       score1 -= nodeseldata->weight * parentvisits1 / (SCIP_Real)(1 + nodevisits1);
       score2 -= nodeseldata->weight * parentvisits2 /(SCIP_Real)(1 + nodevisits2);
    }
-   if( score1 < score2 )
-      return -1;
-   else if( score1 > score2 )
-      return 1;
-   else return 0;
-}
-
-#if 0
-static
-SCIP_DECL_EVENTEXEC(eventExecUct)
-{
-   SCIP_NODE* currentfocusnode;
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
-
-   assert(event != NULL);
-   currentfocusnode = SCIPeventGetNode(event);
-   assert(currentfocusnode != NULL);
-   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-
-   /* update the visits back along the path from the root at the end of a plunge */
-   if( eventhdlrdata->lastfocusnode != SCIPnodeGetParent(currentfocusnode) )
+   if( (SCIPisInfinity(scip, score1) && SCIPisInfinity(scip, score2)) ||
+         (SCIPisInfinity(scip, -score1) && SCIPisInfinity(scip, -score2))
+         || SCIPisEQ(scip, score1, score2) )
    {
-      backpropagateVisits(eventhdlrdata->lastfocusnode, eventhdlrdata->nodesel);
+      return 0;
    }
-   eventhdlrdata->lastfocusnode = currentfocusnode;
-
-   return SCIP_OKAY;
-
+   if( SCIPisLT(scip, score1, score2) )
+      return -1;
+   else
+   {
+      assert(SCIPisGT(scip, score1, score2));
+      return 1;
+   }
 }
-#endif
 
 /*
  * node selector specific interface methods
@@ -278,9 +288,9 @@ SCIP_RETCODE SCIPincludeNodeselUct(
 
    /* create uct node selector data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &nodeseldata) );
-   /* TODO: (optional) create node selector specific data here */
 
    nodesel = NULL;
+   nodeseldata->nodevisits = NULL;
    /* use SCIPincludeNodeselBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
@@ -295,9 +305,8 @@ SCIP_RETCODE SCIPincludeNodeselUct(
    SCIP_CALL( SCIPsetNodeselFree(scip, nodesel, nodeselFreeUct) );
 
    /* add uct node selector parameters */
-   /* TODO: (optional) add node selector specific parameters with SCIPaddTypeParam() here */
    SCIP_CALL( SCIPaddIntParam(scip, "nodeselection/"NODESEL_NAME"/nodelimit", "maximum number of nodes before switching to default rule",
-         &nodeseldata->nodelimit, TRUE, DEFAULT_NODELIMIT, 0, 4095, NULL, NULL) );
+         &nodeseldata->nodelimit, TRUE, DEFAULT_NODELIMIT, 0, 1000000, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "nodeselection/"NODESEL_NAME"/weight", "weight for visit quotient of node selection rule",
          &nodeseldata->weight, TRUE, DEFAULT_WEIGHT, 0.0, 1.0, NULL, NULL) );
    return SCIP_OKAY;
