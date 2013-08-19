@@ -11432,13 +11432,14 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
                assert( SCIPvarIsBinary((*var)->data.multaggr.vars[0]) );
 
                /* if not all variables were fully propagated, it might happen that a variable is multi-aggregated to
-                * another having a constant of -1; this means this multi-aggregation variable needs to be 1
+                * another variable which needs to be fixed
                 *
                 * e.g. x = y - 1 => (x = 0 && y = 1)
+                * e.g. x = y + 1 => (x = 1 && y = 0)
                 *
                 * is this special case we need to return the muti-aggregation
                 */
-               if( EPSEQ((*var)->data.multaggr.constant, -1.0, 1e-06) )
+               if( EPSEQ((*var)->data.multaggr.constant, -1.0, 1e-06) || (EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) && EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)) )
                {
                   assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06));
                   resolved = TRUE;
@@ -11526,13 +11527,14 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
             assert( SCIPvarIsBinary((*var)->data.multaggr.vars[0]) );
 
             /* if not all variables were fully propagated, it might happen that a variable is multi-aggregated to
-             * another having a constant of -1; this means this multi-aggregation variable needs to be 1
+             * another variable which needs to be fixed
              *
              * e.g. x = y - 1 => (x = 0 && y = 1)
+             * e.g. x = y + 1 => (x = 1 && y = 0)
              *
              * is this special case we need to return the muti-aggregation
              */
-            if( EPSEQ((*var)->data.multaggr.constant, -1.0, 1e-06) )
+            if( EPSEQ((*var)->data.multaggr.constant, -1.0, 1e-06) || (EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) && EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)) )
             {
                assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06));
             }
