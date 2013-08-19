@@ -2225,6 +2225,9 @@ SCIP_RETCODE prettifyConss(
    {
       assert(conss != NULL);
 
+      if( SCIPconsIsDeleted(conss[c]) )
+         continue;
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
