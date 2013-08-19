@@ -9704,6 +9704,13 @@ SCIP_RETCODE simplifyInequalities(
       else
          candpos = nvars - 1;
 
+      /* check last coefficient for integrality */
+      if( gcd > 1 && allcoefintegral && !redundant )
+      {
+         if( !SCIPisIntegral(scip, vals[nvars - 1]) )
+            allcoefintegral = FALSE;
+      }
+
       /* check for further necessary coefficient adjustments */
       if( offsetv >= 0 && gcd > 1 && allcoefintegral )
       {
