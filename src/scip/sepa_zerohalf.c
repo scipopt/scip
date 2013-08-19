@@ -7577,12 +7577,12 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          "separating/zerohalf/maxcutsfound",
          "maximal number of {0,1/2}-cuts determined per separation round\n\
    #                      (this includes separated but inefficacious cuts)",
-         &(sepadata->maxcuts), TRUE, DEFAULT_MAXCUTS, 0, 1e6, NULL, NULL));
+         &(sepadata->maxcuts), TRUE, DEFAULT_MAXCUTS, 0, 1000000, NULL, NULL));
    SCIP_CALL(SCIPaddIntParam(scip,
          "separating/zerohalf/maxcutsfoundroot",
          "maximal number of {0,1/2}-cuts determined per separation round in the root node\n\
    #                      (this includes separated but inefficacious cuts)",
-         &(sepadata->maxcutsroot), TRUE, DEFAULT_MAXCUTSROOT, 0, 1e6, NULL, NULL));
+         &(sepadata->maxcutsroot), TRUE, DEFAULT_MAXCUTSROOT, 0, 1000000, NULL, NULL));
 
 
    SCIP_CALL(SCIPaddIntParam(scip,

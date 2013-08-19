@@ -5425,6 +5425,7 @@ SCIP_RETCODE checkCons(
          SCIP_Real maxabs;
          SCIP_Real coef;
          SCIP_Real absval;
+         SCIP_Real solval;
          int v;
 
          maxabs = 1.0;
@@ -5439,7 +5440,8 @@ SCIP_RETCODE checkCons(
             else
                coef = 1.0;
 
-            absval = ABS( coef * SCIPgetSolVal(scip, sol, consdata->vars[v]) );
+            solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
+            absval = REALABS( coef * solval );
             maxabs = MAX( maxabs, absval );
          }
 
