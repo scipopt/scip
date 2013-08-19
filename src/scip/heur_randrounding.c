@@ -154,7 +154,7 @@ SCIP_RETCODE performRandRounding(
          /* the standard randomized rounding */
          SCIP_Real randnumber;
 
-         randnumber = SCIPgetRandomReal(0, 1, &heurdata->randseed);
+         randnumber = SCIPgetRandomReal(0.0, 1.0, &heurdata->randseed);
          if( randnumber <= oldsolval - floorval )
             newsolval = ceilval;
          else

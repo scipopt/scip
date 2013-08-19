@@ -7801,7 +7801,7 @@ void SCIPconsAddUpgradeLocks(
 {
    assert(cons != NULL);
 
-   assert(cons->nupgradelocks < (1 << 29) - nlocks);
+   assert(cons->nupgradelocks < (1 << 29) - nlocks); /*lint !e574*/
    cons->nupgradelocks += nlocks;
 }
 

@@ -345,7 +345,7 @@ void SCIPstatUpdatePrimalDualIntegral(
    solvingtime = SCIPclockGetTime(stat->solvingtime);
    assert(solvingtime >= stat->previntegralevaltime);
 
-   if( !SCIPsetIsInfinity(set, upperbound) || stat->lastprimalbound == SCIP_UNKNOWN )
+   if( !SCIPsetIsInfinity(set, upperbound) || stat->lastprimalbound == SCIP_UNKNOWN ) /*lint !e777*/
    {
       /* get value in original space for gap calculation */
       primalbound = SCIPprobExternObjval(prob, set, upperbound);
@@ -357,7 +357,7 @@ void SCIPstatUpdatePrimalDualIntegral(
       primalbound = stat->lastprimalbound;
    }
 
-   if( !SCIPsetIsInfinity(set, -lowerbound) || stat->lastdualbound == SCIP_UNKNOWN )
+   if( !SCIPsetIsInfinity(set, -lowerbound) || stat->lastdualbound == SCIP_UNKNOWN ) /*lint !e777*/
    {
       /* get value in original space for gap calculation */
       dualbound = SCIPprobExternObjval(prob, set, lowerbound);
@@ -386,11 +386,14 @@ void SCIPstatUpdatePrimalDualIntegral(
    }
    else if( !SCIPsetIsInfinity(set, REALABS(primalbound)) && !SCIPsetIsInfinity(set, REALABS(dualbound)) )
    {
+      SCIP_Real absprim = REALABS(primalbound);
+      SCIP_Real absdual = REALABS(dualbound);
+
       /* The gap in the definition of the primal-dual integral differs from the default SCIP gap function.
        * Here, the MAX(primalbound, dualbound) is taken for gap quotient in order to ensure a gap <= 100.
        */
-      currentgap = 100.0 * REALABS(primalbound - dualbound) / MAX(REALABS(primalbound), REALABS(dualbound));
-      assert(SCIPsetIsLE(set, currentgap, 100));
+      currentgap = 100.0 * REALABS(primalbound - dualbound) / MAX(absprim, absdual);
+      assert(SCIPsetIsLE(set, currentgap, 100.0));
    }
    else
       currentgap = 100.0;

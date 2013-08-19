@@ -33190,6 +33190,7 @@ SCIP_Longint SCIPgetNLPs(
  *  @return the total number of iterations used so far in primal and dual simplex and barrier algorithm
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
@@ -33198,7 +33199,7 @@ SCIP_Longint SCIPgetNLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->stat->nlpiterations;
 }

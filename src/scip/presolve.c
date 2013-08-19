@@ -1003,6 +1003,9 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    int w;
    int v;
 
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
    assert(scip != NULL);
    assert(vars != NULL);
    assert(bounds != NULL);

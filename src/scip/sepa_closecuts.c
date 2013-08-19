@@ -113,6 +113,8 @@ SCIP_RETCODE generateCloseCutPoint(
    SCIP_Real val;
    SCIP_Real alpha;
    SCIP_Real onealpha;
+   SCIP_Real lb;
+   SCIP_Real ub;
    int nvars;
    int i;
 
@@ -142,8 +144,10 @@ SCIP_RETCODE generateCloseCutPoint(
       /* If both the LP relaxation and the base point respect the variable bounds, the computed point will satisfy them
        * as well. However, variables might be fixed (e.g. by branching) since the time of the computation of the base
        * point. Thus, we adapt the value to lie inside the bounds in optimized mode. */
-      val = MAX(val, SCIPvarGetLbLocal(var));
-      val = MIN(val, SCIPvarGetUbLocal(var));
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
+      val = MAX(val, lb);
+      val = MIN(val, ub);
 
       if ( ! SCIPisZero(scip, val) )
       {

@@ -107,7 +107,7 @@
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
-#define MAXSCALEDCOEFINTEGER        1e+06 /**< maximal coefficient value after scaling if all variables are of integral
+#define MAXSCALEDCOEFINTEGER        1e+05 /**< maximal coefficient value after scaling if all variables are of integral
                                            *   type
                                            */
 
@@ -5425,6 +5425,7 @@ SCIP_RETCODE checkCons(
          SCIP_Real maxabs;
          SCIP_Real coef;
          SCIP_Real absval;
+         SCIP_Real solval;
          int v;
 
          maxabs = 1.0;
@@ -5439,7 +5440,8 @@ SCIP_RETCODE checkCons(
             else
                coef = 1.0;
 
-            absval = ABS( coef * SCIPgetSolVal(scip, sol, consdata->vars[v]) );
+            solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
+            absval = REALABS( coef * solval );
             maxabs = MAX( maxabs, absval );
          }
 
@@ -9703,6 +9705,13 @@ SCIP_RETCODE simplifyInequalities(
       }
       else
          candpos = nvars - 1;
+
+      /* check last coefficient for integrality */
+      if( gcd > 1 && allcoefintegral && !redundant )
+      {
+         if( !SCIPisIntegral(scip, vals[nvars - 1]) )
+            allcoefintegral = FALSE;
+      }
 
       /* check for further necessary coefficient adjustments */
       if( offsetv >= 0 && gcd > 1 && allcoefintegral )

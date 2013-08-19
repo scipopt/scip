@@ -2361,12 +2361,8 @@ SCIP_RETCODE readSOScons(
    const XML_NODE*       datanode,           /**< XML root node for instance data */
    SCIP_VAR**            vars,               /**< variables in order of OSiL indices */
    int                   nvars,              /**< number of variables */
-   SCIP_CONS**           conss,              /**< constraints in order of OSiL indices */
-   CONSTYPE*             constypes,          /**< type of constraints (assumed to be LINEAR) */
-   int                   nconss,             /**< number of constraints */
    SCIP_Bool             initialconss,       /**< should model constraints be marked as initial? */
    SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
-   SCIP_Bool             dynamiccols,        /**< should columns be added and removed dynamically to the LP? */
    SCIP_Bool             dynamicrows,        /**< should rows be added and removed dynamically to the LP? */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
@@ -2391,7 +2387,6 @@ SCIP_RETCODE readSOScons(
    SCIP_Bool dynamic;
    SCIP_Bool removable;
    char name[SCIP_MAXSTRLEN];
-
 
    /* standard settings for SOS constraints: */
    initial = initialconss;
@@ -2529,10 +2524,10 @@ SCIP_RETCODE readSOScons(
           switch( type )
           {
           case 1:
-             SCIP_CALL( SCIPaddVarSOS1(scip, cons, vars[idx], varcount) );
+             SCIP_CALL( SCIPaddVarSOS1(scip, cons, vars[idx], (SCIP_Real) varcount) );
              break;
           case 2:
-             SCIP_CALL( SCIPaddVarSOS2(scip, cons, vars[idx], varcount) );
+             SCIP_CALL( SCIPaddVarSOS2(scip, cons, vars[idx], (SCIP_Real) varcount) );
              break;
           default:
              SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
@@ -2692,7 +2687,7 @@ SCIP_DECL_READERREAD(readerReadOsil)
    }
 
    /* read sos2 constraints  and add to problem*/
-   SCIP_CALL( readSOScons(scip, data, vars, nvars, conss, constypes, nconss, initialconss, dynamicconss, dynamicrows, dynamiccols, &doingfine) );
+   SCIP_CALL( readSOScons(scip, data, vars, nvars, initialconss, dynamicconss, dynamicrows, &doingfine) );
    if( !doingfine )
       goto CLEANUP;
 
