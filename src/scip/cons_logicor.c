@@ -2704,6 +2704,89 @@ SCIP_RETCODE strengthenConss(
    return SCIP_OKAY;
 }
 
+
+/** prepares a constraint by removing fixings and merge it */
+static
+SCIP_RETCODE prepareCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< logic or constraint */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   unsigned char**       entries,            /**< array to store whether two positions in constraints represent the same variable */
+   int*                  nentries,           /**< pointer for array size, if array will be to small it's corrected */
+   SCIP_Bool*            redundant,          /**< returns whether a variable fixed to one exists in the constraint */
+   int*                  nfixedvars,         /**< pointer to count number of fixings */
+   int*                  nchgcoefs,          /**< pointer to count number of changed/deleted coefficients */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
+   SCIP_Bool*            cutoff              /**< pointer to store, if cut off appeared */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(!SCIPconsIsDeleted(cons));
+   assert(eventhdlr != NULL);
+   assert(*entries != NULL);
+   assert(nentries != NULL);
+   assert(redundant != NULL);
+   assert(nfixedvars != NULL);
+   assert(nchgcoefs != NULL);
+   assert(ndelconss != NULL);
+   assert(redundant != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->nvars > 1);
+
+   *redundant = FALSE;
+
+   /* remove old fixings */
+   if( !consdata->presolved )
+   {
+      /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
+      SCIP_CALL( applyFixings(scip, cons, eventhdlr, redundant, nchgcoefs, NULL, NULL) );
+   }
+
+   if( !*redundant )
+   {
+      /* merge constraint */
+      SCIP_CALL( mergeMultiples(scip, cons, eventhdlr, entries, nentries, redundant, nchgcoefs) );
+   }
+
+   if( *redundant )
+   {
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+
+      return SCIP_OKAY;
+   }
+
+   if( consdata->nvars == 0 )
+   {
+      *cutoff = TRUE;
+   }
+   else if( consdata->nvars == 1 )
+   {
+      SCIP_Bool infeasible;
+      SCIP_Bool fixed;
+
+      SCIPdebugMessage(" -> fix last remaining variable and delete constraint\n");
+
+      SCIP_CALL( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible, &fixed) );
+      assert(!infeasible);
+      assert(fixed);
+      ++(*nfixedvars);
+
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+
+      *redundant = TRUE;
+   }
+   consdata->presolved = TRUE;
+
+   return SCIP_OKAY;
+}
+
 #define HASHTABLESIZE_FACTOR 5
 
 /** find covered/subsumed constraints and redundant non-zero entries
@@ -2732,8 +2815,10 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
    SCIP_Bool             usestrengthening,   /**< should we try to strengthen constraints by removing superflous
                                               *   non-zeros? */
    int*                  firstchange,        /**< pointer to store first changed constraint */
+   int*                  nfixedvars,         /**< pointer to count number of fixings */
    int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
-   int*                  nchgcoefs           /**< pointer to store the number of deleted coefficients */
+   int*                  nchgcoefs,          /**< pointer to store the number of deleted coefficients */
+   SCIP_Bool*            cutoff              /**< pointer to store, if cut off appeared */
    )
 {
    SCIP_CONS*** occurlist;
@@ -2760,6 +2845,7 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
    assert(eventhdlr != NULL);
    assert(firstchange != NULL);
    assert(0 <= *firstchange);
+   assert(nfixedvars != NULL);
    assert(ndelconss != NULL);
    assert(nchgcoefs != NULL);
 
@@ -2777,38 +2863,39 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
       cons = myconss[c];
       assert(cons != NULL);
 
-      if( SCIPconsIsModifiable(cons) )
+      if( SCIPconsIsDeleted(cons) || SCIPconsIsModifiable(cons) )
       {
          myconss[c] = myconss[nmyconss - 1];
          --nmyconss;
+
+         continue;
       }
 
-      /* we need all variables to be active or a negation of an active variable */
-      SCIP_CALL( applyFixings(scip, cons, eventhdlr, &redundant, nchgcoefs, NULL, NULL) );
-
-      if( !redundant )
-      {
-         /* merge constraint */
-         SCIP_CALL( mergeMultiples(scip, cons, eventhdlr, entries, nentries, &redundant, nchgcoefs) );
-      }
+      /* prepare constraint by removing fixings and merge it */
+      SCIP_CALL( prepareCons(scip, cons, eventhdlr, entries, nentries, &redundant, nfixedvars, nchgcoefs, ndelconss, cutoff) );
 
       if( redundant )
       {
-         SCIP_CALL( SCIPdelCons(scip, cons) );
-         ++(*ndelconss);
+         assert(SCIPconsIsDeleted(cons));
 
          myconss[c] = myconss[nmyconss - 1];
          --nmyconss;
       }
-      else
+
+      if( *cutoff )
       {
+         *cutoff = TRUE;
+         SCIPfreeBufferArray(scip, &myconss);
 
-         consdata = SCIPconsGetData(cons);
-         assert(consdata != NULL);
-
-         /* sort the constraint */
-         consdataSort(consdata);
+         return SCIP_OKAY;
       }
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+      assert(consdata->nvars >= 2);
+
+      /* sort the constraint */
+      consdataSort(consdata);
    }
 
    SCIPsortPtr((void**)myconss, conssLogicorComp, nmyconss);
@@ -2966,7 +3053,8 @@ SCIP_RETCODE shortenConss(
    int*                  nentries,           /**< pointer for array size, if array will be to small it's corrected */
    int*                  nfixedvars,         /**< pointer to count number of fixings */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints */
-   int*                  nchgcoefs           /**< pointer to count number of changed/deleted coefficients */
+   int*                  nchgcoefs,          /**< pointer to count number of changed/deleted coefficients */
+   SCIP_Bool*            cutoff              /**< pointer to store, if cut off appeared */
    )
 {
    SCIP_VAR** probvars;
@@ -3016,37 +3104,22 @@ SCIP_RETCODE shortenConss(
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      /* remove old fixings */
-      if( !consdata->presolved )
-      {
-         int naddconss = 0;
+      /* prepare constraint by removing fixings and merge it */
+      SCIP_CALL( prepareCons(scip, cons, eventhdlr, entries, nentries, &redundant, nfixedvars, nchgcoefs, ndelconss, cutoff) );
 
-         /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
-         SCIP_CALL( applyFixings(scip, cons, eventhdlr, &redundant, nchgcoefs, &naddconss, ndelconss) );
-         assert(naddconss == 0);
-
-         if( redundant )
-         {
-            SCIP_CALL( SCIPdelCons(scip, cons) );
-            ++(*ndelconss);
-
-            continue;
-         }
-         else if( SCIPconsIsDeleted(cons) )
-            continue;
-      }
-
-      consdata->presolved = TRUE;
-
-      /* merge constraint */
-      SCIP_CALL( mergeMultiples(scip, cons, eventhdlr, entries, nentries, &redundant, nchgcoefs) );
       if( redundant )
       {
-         SCIP_CALL( SCIPdelCons(scip, cons) );
-         ++(*ndelconss);
-
+         assert(SCIPconsIsDeleted(cons));
          continue;
       }
+
+      if( *cutoff )
+      {
+         *cutoff = TRUE;
+         goto TERMINATE;
+      }
+
+      assert(consdata->nvars >= 2);
 
       /* do not try to shorten too long constraints */
       if( consdata->nvars > MAX_CONSLENGTH )
@@ -3117,6 +3190,7 @@ SCIP_RETCODE shortenConss(
       }
    }
 
+ TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &redundants);
    SCIPfreeBufferArray(scip, &boundtypes);
@@ -3138,8 +3212,15 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    SCIP_CONS**           conss,              /**< all constraints */
    int                   nconss,             /**< number of constraints */
+   unsigned char**       entries,            /**< array to store whether two positions in constraints represent the same
+                                              *   variable */
+   int*                  nentries,           /**< pointer for array size, if array will be to small it's corrected */
+   int*                  nfixedvars,         /**< pointer to count number of fixings */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
    int*                  nupgdconss,         /**< pointer to count number of upgraded constraints */
-   int*                  nchgcoefs           /**< pointer to count number of changed/deleted coefficients */
+   int*                  nchgcoefs,          /**< pointer to count number of changed/deleted coefficients */
+   SCIP_Bool*            cutoff              /**< pointer to store, if cut off appeared */
+
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3148,6 +3229,7 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
    SCIP_VAR** repvars;
    SCIP_Bool* negated;
    SCIP_VAR* var1;
+   SCIP_Bool redundant;
    int c;
    int size;
    int maxcomppercons;
@@ -3157,8 +3239,14 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
    assert(conshdlr != NULL);
    assert(eventhdlr != NULL);
    assert(conss != NULL || nconss == 0);
+   assert(entries != NULL);
+   assert(*entries != NULL);
+   assert(nentries != NULL);
+   assert(nfixedvars != NULL);
+   assert(ndelconss != NULL);
    assert(nupgdconss != NULL);
    assert(nchgcoefs != NULL);
+   assert(cutoff != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3190,10 +3278,26 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
       if( !SCIPconsIsActive(cons) )
          continue;
 
+      /* prepare constraint by removing fixings and merge it */
+      SCIP_CALL( prepareCons(scip, cons, eventhdlr, entries, nentries, &redundant, nfixedvars, nchgcoefs, ndelconss, cutoff) );
+
+      if( redundant )
+      {
+         assert(SCIPconsIsDeleted(cons));
+         continue;
+      }
+
+      if( *cutoff )
+      {
+         *cutoff = TRUE;
+         goto TERMINATE;
+      }
+
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
-      assert(consdata->nvars > 1);
+      assert(consdata->nvars >= 2);
       assert(consdata->nvars <= size);
+      assert(consdata->presolved);
 
       if( SCIPconsIsModifiable(cons) && consdata->nvars == 2 )
          continue;
@@ -3204,23 +3308,15 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
       maxcomppercons = MAXCOMPARISONS / nconss;
       comppercons = 0;
 
-      if( !consdata->presolved )
-      {
-         /* get binary representations of constraint variables */
-         SCIP_CALL( SCIPgetBinvarRepresentatives(scip, consdata->nvars, consdata->vars, repvars, negated) );
-      }
-      else
-      {
-         BMScopyMemoryArray(repvars, consdata->vars, consdata->nvars);
+      BMScopyMemoryArray(repvars, consdata->vars, consdata->nvars);
 
-         /* all variables should be active or negative active variables, otherwise something went wrong with applyFixings()
-          * called before mergeMultiples()
-          */
-         for( v = consdata->nvars - 1; v >= 0; --v )
-         {
-            assert(SCIPvarIsActive(repvars[v]) || (SCIPvarGetStatus(repvars[v]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(repvars[v]))));
-            negated[v] = SCIPvarIsNegated(repvars[v]);
-         }
+      /* all variables should be active or negative active variables, otherwise something went wrong with applyFixings()
+       * called before mergeMultiples()
+       */
+      for( v = consdata->nvars - 1; v >= 0; --v )
+      {
+         assert(SCIPvarIsActive(repvars[v]) || (SCIPvarGetStatus(repvars[v]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(repvars[v]))));
+         negated[v] = SCIPvarIsNegated(repvars[v]);
       }
 
       for( v = consdata->nvars - 1; v > 0; --v )
@@ -3367,6 +3463,7 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
       }
    }
 
+ TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &negated);
    SCIPfreeBufferArray(scip, &repvars);
@@ -4345,10 +4442,15 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
    /* preprocess pairs of logic or constraints and apply negated clique presolving */
    if( oldnfixedvars == *nfixedvars && oldnchgbds == *nchgbds && oldndelconss == *ndelconss && oldnupgdconss == *nupgdconss && oldnchgcoefs == *nchgcoefs )
    {
+      SCIP_Bool cutoff = FALSE;
+
       /* check constraints for redundancy */
       if( conshdlrdata->presolpairwise )
       {
-         SCIP_CALL( removeRedundantConssAndNonzeros(scip, conss, nconss, &entries, &nentries, conshdlrdata->eventhdlr, conshdlrdata->usestrengthening, &firstchange, ndelconss, nchgcoefs) );
+         SCIP_CALL( removeRedundantConssAndNonzeros(scip, conss, nconss, &entries, &nentries, conshdlrdata->eventhdlr, conshdlrdata->usestrengthening, &firstchange, nfixedvars, ndelconss, nchgcoefs, &cutoff) );
+
+         if( cutoff )
+            goto TERMINATE;
       }
 
       if( SCIPisPresolveFinished(scip) )
@@ -4358,13 +4460,19 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
           */
          if( conshdlrdata->useimplications && (SCIPgetNCliques(scip) != conshdlrdata->nlastcliques || SCIPgetNImplications(scip) > conshdlrdata->nlastimpls) )
          {
-            SCIP_CALL( shortenConss(scip, conshdlrdata->eventhdlr, conss, nconss, &entries, &nentries, nfixedvars, ndelconss, nchgcoefs) );
+            SCIP_CALL( shortenConss(scip, conshdlrdata->eventhdlr, conss, nconss, &entries, &nentries, nfixedvars, ndelconss, nchgcoefs, &cutoff) );
+
+            if( cutoff )
+               goto TERMINATE;
          }
 
          /* check for redundant constraints due to negated clique information */
          if( conshdlrdata->usenegatedclique )
          {
-            SCIP_CALL( removeConstraintsDueToNegCliques(scip, conshdlr, conshdlrdata->eventhdlr, conss, nconss, nupgdconss, nchgcoefs) );
+            SCIP_CALL( removeConstraintsDueToNegCliques(scip, conshdlr, conshdlrdata->eventhdlr, conss, nconss, &entries, &nentries, nfixedvars, ndelconss, nupgdconss, nchgcoefs, &cutoff) );
+
+            if( cutoff )
+               goto TERMINATE;
          }
 
          if( conshdlrdata->useimplications || conshdlrdata->usenegatedclique )
