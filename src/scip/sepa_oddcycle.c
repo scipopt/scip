@@ -872,8 +872,8 @@ SCIP_RETCODE liftOddCycleCut(
  * methods for both techniques
  */
 
-/* add the inequality corresponding to the given odd cycle to the LP (if violated)
- * after lifting it (if requested by user flag)
+/** add the inequality corresponding to the given odd cycle to the LP (if violated)
+ *  after lifting it (if requested by user flag)
  */
 static
 SCIP_RETCODE generateOddCycleCut(
@@ -918,7 +918,7 @@ SCIP_RETCODE generateOddCycleCut(
 
 #ifdef SCIP_OUTPUT
    /* debug method that prints out all found cycles */
-   printCycle(vars,pred,nbinvars,startnode);
+   printCycle(vars, pred, nbinvars, startnode);
 #endif
 
    /* cycle contains only one node */
@@ -1028,7 +1028,7 @@ SCIP_RETCODE generateOddCycleCut(
    }
 
    /* modify right hand side corresponding to number of added negated variables */
-   SCIP_CALL( SCIPchgRowRhs(scip, cut, SCIProwGetRhs(cut)-negatedcount) );
+   SCIP_CALL( SCIPchgRowRhs(scip, cut, SCIProwGetRhs(cut) - negatedcount) );
    SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
    /* not every odd cycle has to be violated due to incompleteness of the implication graph */
@@ -1462,7 +1462,7 @@ SCIP_RETCODE addNextLevelBinImpls(
       unsigned int weight;
 
       assert( implvars != NULL && impltypes != NULL );
-      assert(SCIPvarGetType(implvars[j]) == SCIP_VARTYPE_BINARY);
+      assert( SCIPvarIsBinary(implvars[j]) );
 
       k = sepadata->mapping[SCIPvarGetProbindex(implvars[j])];
       assert(k < nbinvars);
@@ -3085,7 +3085,7 @@ SCIP_RETCODE addGLSBinImpls(
       int tmp;
 
       assert( implvars != NULL && impltypes != NULL && implbounds != NULL ); /* for lint */
-      assert(SCIPvarGetType(implvars[m]) == SCIP_VARTYPE_BINARY);
+      assert( SCIPvarIsBinary(implvars[m]) );
 
       neighbor = implvars[m];
       neighindex = sepadata->mapping[SCIPvarGetProbindex(neighbor)];
@@ -3348,7 +3348,6 @@ SCIP_RETCODE separateGLS(
    SCIP_VAR** vars;                          /* variables of the current SCIP (sorted if requested) */
    unsigned int nbinvars;                    /* number of binary problem variables */
    SCIP_Bool original;                       /* flag if the current variable is original or negated */
-   int nscipbinvars;
 
    unsigned int nbinimpls;                   /* number of binary implications of the current variable */
    unsigned int ncliques;                    /* number of cliques of the current variable */
@@ -3359,6 +3358,7 @@ SCIP_RETCODE separateGLS(
    unsigned int maxarcs;                     /* maximum number of arcs in the Dijkstra graph */
    unsigned int maxstarts;                   /* maximum number of start nodes */
    unsigned int startcounter;                /* counter of tried start nodes */
+   unsigned long long cutoff;                /* cutoff value for Dijkstra algorithm */
 
    unsigned int startnode;                   /* start node for Dijkstra algorithm */
    unsigned int endnode;                     /* target node for Dijkstra algorithm */
@@ -3372,6 +3372,11 @@ SCIP_RETCODE separateGLS(
    SCIP_Bool* incycle;                       /* flag array if variable is contained in the found cycle */
    unsigned int* pred2;                      /* temporary predecessor list for backprojection of found cycle */
 
+   int nscipbinvars;
+   int nscipintvars;
+   int nscipimplvars;
+   int k;
+
    assert(scip != NULL);
    assert(sepadata != NULL);
    assert(result != NULL);
@@ -3379,35 +3384,41 @@ SCIP_RETCODE separateGLS(
    success = TRUE;
    emptygraph = TRUE;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &scipvars, NULL, &nscipbinvars, NULL, NULL, NULL) );
-   assert(scipvars != NULL || nscipbinvars == 0);
+   SCIP_CALL( SCIPgetVarsData(scip, &scipvars, NULL, &nscipbinvars, &nscipintvars, &nscipimplvars, NULL) );
+   assert(scipvars != NULL || (nscipbinvars + nscipintvars + nscipimplvars) == 0);
 
-   if( nscipbinvars == 0 )
-      return SCIP_OKAY;
+   /* collect binary variables, including implicit binary */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nscipbinvars + nscipintvars + nscipimplvars) );
+   for (k = 0; k < nscipbinvars; ++k)
+      vars[k] = scipvars[k];
 
    nbinvars = (unsigned int) nscipbinvars;
+   for (k = nscipbinvars; k < nscipbinvars + nscipintvars + nscipimplvars; ++k)
+   {
+      assert( SCIPvarGetType(scipvars[k]) != SCIP_VARTYPE_CONTINUOUS );
+      if ( SCIPvarIsBinary(scipvars[k]) )
+         vars[nbinvars++] = scipvars[k];
+   }
+
+   if( nbinvars == 0 )
+   {
+      SCIPfreeBufferArray(scip, &vars);
+      return SCIP_OKAY;
+   }
 
    /* initialize flag array to avoid multiple cuts per variable, if requested by user-flag */
    SCIP_CALL( SCIPallocBufferArray(scip, &incut, (int) (4 * nbinvars)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, (int) (2 * nbinvars)) );
 
-   /* duplicate variable data array for sorting (if requested) */
-   vars = NULL;
-   if( sepadata->sortswitch != UNSORTED )
-   {
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, scipvars, nscipbinvars) );
-   }
-
+   /* prepare values */
+   assert( vars != NULL );
    switch( sepadata->sortswitch )
    {
    case UNSORTED :
       /* if no sorting is requested, we use the normal variable array */
-      vars = scipvars;
       break;
 
    case MAXIMAL_LPVALUE :
-      assert(vars != NULL);
-
       /* store lp-values */
       for( i = 0; i < nbinvars; ++i )
          vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
@@ -3417,8 +3428,6 @@ SCIP_RETCODE separateGLS(
       break;
 
    case MINIMAL_LPVALUE :
-      assert(vars != NULL);
-
       /* store lp-values */
       for( i = 0; i < nbinvars; ++i )
          vals[i] = SCIPgetSolVal(scip, sol, vars[i]);
@@ -3428,8 +3437,6 @@ SCIP_RETCODE separateGLS(
       break;
 
    case MAXIMAL_FRACTIONALITY  :
-      assert(vars != NULL);
-
       /* store lp-values and determine fractionality */
       for( i = 0; i < nbinvars; ++i )
       {
@@ -3442,8 +3449,6 @@ SCIP_RETCODE separateGLS(
       break;
 
    case MINIMAL_FRACTIONALITY :
-      assert(vars != NULL);
-
       /* store lp-values and determine fractionality */
       for( i = 0; i < nbinvars; ++i )
       {
@@ -3462,13 +3467,13 @@ SCIP_RETCODE separateGLS(
    assert(vars != NULL);
 
    /* create mapping for getting the index of a variable via its probindex to the index in the sorted variable array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &(sepadata->mapping), (int) nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(sepadata->mapping), nscipbinvars + nscipintvars + nscipimplvars) );
    BMSclearMemoryArray(incut, 4 * nbinvars);
 
    /* initialize LP value and cut flag for all variables */
    for( i = 0; i < nbinvars; ++i )
    {
-      assert( 0 <= SCIPvarGetProbindex(vars[i]) && SCIPvarGetProbindex(vars[i]) < (int) nbinvars );  /* since binary variables are first */
+      assert( 0 <= SCIPvarGetProbindex(vars[i]) && SCIPvarGetProbindex(vars[i]) < nscipbinvars + nscipintvars + nscipimplvars);  /* since binary, integer, and implicit variables are first */
       sepadata->mapping[SCIPvarGetProbindex(vars[i])] = i;
       vals[i] = SCIPgetSolVal(scip, sol, vars[i]); /* need to get new values, since they might be corrupted */
    }
@@ -3688,12 +3693,12 @@ SCIP_RETCODE separateGLS(
    SCIP_CALL( SCIPallocBufferArray(scip, &incycle, (int) (2 * nbinvars)) );
 
    /* separate odd cycle inequalities by GLS method */
+   cutoff = (unsigned long long) (0.5 * sepadata->scale);
    for( i = (unsigned int) sepadata->lastroot; i < 2 * nbinvars
            && startcounter < maxstarts
            && sepadata->ncuts - sepadata->oldncuts < (unsigned int) sepadata->maxsepacutsround
            && !SCIPisStopped(scip); ++i )
    {
-      unsigned long long cutoff;             /* cutoff value for Dijkstra algorithm */
       unsigned int ncyclevars;               /* cycle length */
       SCIP_Bool edgedirection;               /* partitionindicator for backprojection from bipartite graph to original graph:
                                               * is the current edge a backwards edge, i.e., from second to first partition? */
@@ -3720,7 +3725,6 @@ SCIP_RETCODE separateGLS(
 
       ++startcounter;
 
-      cutoff = (unsigned long long) (0.5 * sepadata->scale);
       if ( sepadata->allowmultiplecuts )
          (void) dijkstraPairCutoffIgnore(&graph, startnode, endnode, incut, cutoff, dist, pred, entry, order);
       else
@@ -3728,6 +3732,10 @@ SCIP_RETCODE separateGLS(
 
       /* no odd cycle cut found */
       if( dist[endnode] == DIJKSTRA_FARAWAY )
+         continue;
+
+      /* skip check if cutoff has been exceeded */
+      if ( dist[endnode] >= cutoff )
          continue;
 
       /* detect cycle including:
