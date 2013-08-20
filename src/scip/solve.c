@@ -4132,6 +4132,32 @@ SCIP_RETCODE SCIPsolveCIP(
       stat->nnodes++;
       stat->ntotalnodes++;
 
+      if( (stat->nnodes % 10000) == 0 )
+      {
+         /* print front statistics to file */
+         char filename[256];
+         FILE* file;
+
+         sprintf(filename, "check/nodefrontiers/%s_%"SCIP_LONGINT_FORMAT".profile", SCIPprobGetName(origprob), stat->nnodes);
+         file = fopen(filename, "w");
+
+         if( file != NULL )
+         {
+            SCIP_NODE** treenodes;
+            int len;
+            int n;
+
+            treenodes = SCIPnodepqNodes(tree->leaves);
+            len = SCIPnodepqLen(tree->leaves);
+
+            for( n = 0; n < len; ++n )
+            {
+               fprintf(file, "(%16.9g, %d)\n", SCIPprobExternObjval(transprob, set, SCIPnodeGetLowerbound(treenodes[n])) , SCIPnodeGetDepth(treenodes[n]));
+            }
+         }
+         fclose(file);
+      }
+
       /* issue NODEFOCUSED event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFOCUSED) );
       SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
