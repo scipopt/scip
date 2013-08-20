@@ -510,8 +510,8 @@ SCIP_Real determineBound(
             /* effect does not equal zero, the bound is determined as minimum positive integer such that
              * feasibility is remained in all constraints.
              * if constraint is an equality constraint, activity and lhs/rhs should be feasibly equal, which
-             * will cause the method to return zero.*/
-
+             * will cause the method to return zero.
+             */
             assert(rowpos < nrows);
 
             activity = activities[rowpos];
@@ -529,7 +529,7 @@ SCIP_Real determineBound(
             {
                assert(SCIPisNegative(scip, effect));
                /*lint --e{414}*/
-               bound = SCIPfeasFloor(scip, (lhs - activity)/effect); /*lint !e795 */
+               bound = MIN(bound - 1.0, SCIPfeasFloor(scip, (lhs - activity)/effect)); /*lint !e795 */
             }
 
             /* if the row has an upper bound, ensure that shifting preserves feasibility of this "<="-constraint */
@@ -537,7 +537,7 @@ SCIP_Real determineBound(
             {
                assert(SCIPisPositive(scip, effect));
                /*lint --e{414}*/
-               bound = SCIPfeasFloor(scip, (rhs - activity)/effect); /*lint !e795 */
+               bound = MIN(bound - 1.0, SCIPfeasFloor(scip, (rhs - activity)/effect)); /*lint !e795 */
             }
 
             assert(SCIPisFeasLE(scip, lhs, activity + effect * bound) && SCIPisFeasGE(scip, rhs, activity + effect * bound));
