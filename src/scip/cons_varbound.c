@@ -440,19 +440,18 @@ SCIP_Bool checkCons(
    if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vbdvar)) && (!SCIPisFeasLE(scip, solval, consdata->rhs) || !SCIPisFeasGE(scip, solval, consdata->lhs)) )
       return FALSE;
 
+
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
       SCIP_Real sum;
 
-      sum = SCIPgetSolVal(scip, sol, consdata->var);
-      sum += consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
+      sum = solval + consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
 
       return (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasGE(scip, sum, consdata->lhs))
          && (SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasLE(scip, sum, consdata->rhs));
    }
    else
       return TRUE;
-
 }
 
 
@@ -1159,6 +1158,12 @@ SCIP_RETCODE propagateCons(
 
    *cutoff = FALSE;
 
+   /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
+   if( !SCIPinRepropagation(scip) )
+   {
+      SCIP_CALL( SCIPincConsAge(scip, cons) );
+   }
+
    /* check, if constraint is already propagated */
    if( consdata->propagated )
       return SCIP_OKAY;
@@ -1208,6 +1213,8 @@ SCIP_RETCODE propagateCons(
             {
                assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)));
 
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
                /* analyze infeasibility */
                SCIP_CALL( analyzeConflict(scip, cons, consdata->var, newlb, PROPRULE_1, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
                break;
@@ -1217,6 +1224,7 @@ SCIP_RETCODE propagateCons(
             {
                tightenedround = TRUE;
                (*nchgbds)++;
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
             }
             xlb = SCIPvarGetLbLocal(consdata->var);
          }
@@ -1269,6 +1277,8 @@ SCIP_RETCODE propagateCons(
                   {
                      assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
 
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newub, PROPRULE_2, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
                      break;
@@ -1278,6 +1288,7 @@ SCIP_RETCODE propagateCons(
                   {
                      tightenedround = TRUE;
                      (*nchgbds)++;
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   }
                   yub = SCIPvarGetUbLocal(consdata->vbdvar);
                }
@@ -1319,6 +1330,8 @@ SCIP_RETCODE propagateCons(
             {
                assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)));
 
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
                /* analyze infeasibility */
                SCIP_CALL( analyzeConflict(scip, cons, consdata->var, newub, PROPRULE_3, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
                break;
@@ -1328,6 +1341,7 @@ SCIP_RETCODE propagateCons(
             {
                tightenedround = TRUE;
                (*nchgbds)++;
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
             }
             xub = SCIPvarGetUbLocal(consdata->var);
          }
@@ -1353,6 +1367,8 @@ SCIP_RETCODE propagateCons(
                   {
                      assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
 
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newub, PROPRULE_4, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
                      break;
@@ -1362,6 +1378,7 @@ SCIP_RETCODE propagateCons(
                   {
                      tightenedround = TRUE;
                      (*nchgbds)++;
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   }
                   yub = SCIPvarGetUbLocal(consdata->vbdvar);
                }
@@ -1380,6 +1397,8 @@ SCIP_RETCODE propagateCons(
                   {
                      assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
 
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newlb, PROPRULE_4, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
                      break;
@@ -1389,6 +1408,7 @@ SCIP_RETCODE propagateCons(
                   {
                      tightenedround = TRUE;
                      (*nchgbds)++;
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   }
                   ylb = SCIPvarGetLbLocal(consdata->vbdvar);
                }
@@ -3613,13 +3633,20 @@ SCIP_DECL_CONSENFOLP(consEnfolpVarbound)
          assert((*result) == SCIP_INFEASIBLE || (*result) == SCIP_FEASIBLE);
          (*result) = SCIP_INFEASIBLE;
 
+         SCIP_CALL( SCIPresetConsAge(scip, conss[i]) );
+
          SCIP_CALL( separateCons(scip, conss[i], conshdlrdata->usebdwidening, NULL, result) );
          assert((*result) != SCIP_FEASIBLE);
 
          if( (*result) != SCIP_INFEASIBLE )
             break;
       }
-   } 
+      else
+      {
+         /* increase age of constraint */
+         SCIP_CALL( SCIPincConsAge(scip, conss[i]) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -3635,13 +3662,20 @@ SCIP_DECL_CONSENFOPS(consEnfopsVarbound)
    {
       if( !checkCons(scip, conss[i], NULL, TRUE) )
       {
+         SCIP_CALL( SCIPresetConsAge(scip, conss[i]) );
+
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
       }
-   } 
+      else
+      {
+         /* increase age of constraint */
+         SCIP_CALL( SCIPincConsAge(scip, conss[i]) );
+      }
+   }
    *result = SCIP_FEASIBLE;
 
-   return SCIP_OKAY;  
+   return SCIP_OKAY;
 }
 
 
@@ -3659,17 +3693,17 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
 
          if( printreason )
          {
-            SCIP_Real sum;
             SCIP_CONSDATA* consdata;
+            SCIP_Real sum;
 
             consdata = SCIPconsGetData(conss[i]);
             assert( consdata != NULL );
 
-            sum = SCIPgetSolVal(scip, sol, consdata->var);
-            sum += consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);   
+            sum = SCIPgetSolVal(scip, sol, consdata->var) + consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
 
             SCIP_CALL( SCIPprintCons(scip, conss[i], NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
+
             if( !SCIPisFeasGE(scip, sum, consdata->lhs) )
             {
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - sum);
@@ -3681,7 +3715,7 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
          }
          return SCIP_OKAY;
       }
-   } 
+   }
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
