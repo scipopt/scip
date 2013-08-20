@@ -21,7 +21,7 @@ data structures
 
 features:
 - new LNS heuristic called proximity which solves a problem in which a local branching constraint replaces the
-  objective function which in turn is treated as additional constraint.
+  objective function which in turn is treated as additional constraint
 - added average gap based on primal-dual integral to solution statistics, can be disabled via parameter "misc/calcintegral" 
 - new LP-based rounding heuristic (heur_randround) whose randomized rounding is biased towards the LP solution value. 
   The heuristic uses the probing mode of SCIP to generate conflict causes on the fractional variables  
