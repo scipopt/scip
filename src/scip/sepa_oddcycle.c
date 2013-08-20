@@ -3488,8 +3488,10 @@ SCIP_RETCODE separateGLS(
     * * graph.nodes
     * = (nbinvars+1)*graph.nodes
     * + graph.nodes => separating entries for arclist)
+    *
+    * Number is corrected below.
     */
-   graph.arcs = (nbinvars+1) * graph.nodes;
+   graph.arcs = 0;
 
    /* the implication graph is redundant and therefore more implications and clique arcs may occur than should be possible
     * @todo later: filtering of edges which were already added,  maxarcs should be graph.arcs rather than INT_MAX;
@@ -3668,6 +3670,10 @@ SCIP_RETCODE separateGLS(
       }
       assert(narcs < maxarcs);
    }
+
+   /* correct number of arcs */
+   graph.arcs = narcs;
+
    SCIPdebugMessage("--- graph successfully created (%u nodes, %u arcs) ---\n", graph.nodes, narcs);
 
    /* graph is now prepared for Dijkstra methods */
