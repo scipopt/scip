@@ -1,1 +1,1 @@
-src/scip/lpi_spx.cpp
+src/scip/lpi_spx2.cpp src/scip/lpi_spx.cpp
