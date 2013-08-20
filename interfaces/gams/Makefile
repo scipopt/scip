@@ -23,7 +23,7 @@
 #-----------------------------------------------------------------------------
 
 SCIPDIR		=	../..
-GAMSDIR		=	# FILL IN PATH TO GAMS DIRECTORY HERE
+GAMSDIR		=	gams
 
 #-----------------------------------------------------------------------------
 # include default project Makefile from SCIP

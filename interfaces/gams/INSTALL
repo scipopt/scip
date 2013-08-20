@@ -22,7 +22,8 @@ Note, that any modern GAMS installation includes a relatively up to date
 SCIP library, which can be used with any academic GAMS license.
 
 To build and install your own GAMS/SCIP interface, you have to do the following:
- - adjust SCIPDIR and GAMSDIR in Makefile
+ - adjust GAMSDIR in Makefile or set a symbolic link 'gams' that points to
+   the directory of your GAMS distribution
  - if you use SoPlex, build SoPlex with the flag SHARED=true and make sure
    that SCIPDIR/lib/libsoplex.*.so points to the created SoPlex shared library
  - build SCIP with the flags SHARED=true ZIMPL=false and your favorite other
