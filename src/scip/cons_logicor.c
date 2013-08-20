@@ -70,9 +70,9 @@
 
 /* @todo make this a parameter setting */
 #if 1 /* @todo test which AGEINCREASE formula is better! */
-#define AGEINCREASE(n) (1.0 + 0.2*n)
+#define AGEINCREASE(n) (1.0 + 0.2 * (n))
 #else
-#define AGEINCREASE(n) (0.1*n)
+#define AGEINCREASE(n) (0.1 * (n))
 #endif
 
 
@@ -1502,15 +1502,17 @@ SCIP_RETCODE checkCons(
 
    vars = consdata->vars;
    nvars = consdata->nvars;
-   
+
    /* calculate the constraint's activity */
    sum = 0.0;
    solval = 0.0;
    for( v = 0; v < nvars && sum < 1.0; ++v )
    {
       assert(SCIPvarIsBinary(vars[v]));
+
       solval = SCIPgetSolVal(scip, sol, vars[v]);
       assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
+
       sum += solval;
    }
 
@@ -4227,11 +4229,12 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
                {
                   assert( consdata->vars[v] != NULL);
                   assert( SCIPvarIsBinary(consdata->vars[v]) );
-                  assert( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vars[v])) );
+                  assert( SCIPisFeasLT(scip, SCIPgetSolVal(scip, sol, consdata->vars[v]), 1.0) );
                }
 #endif
                SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-               SCIPinfoMessage(scip, NULL, ";\nviolation: all variables are set to zero\n");
+               SCIPinfoMessage(scip, NULL, ";\n");
+               SCIPinfoMessage(scip, NULL, "violation: all variables are set to zero\n");
             }
 
             return SCIP_OKAY;
