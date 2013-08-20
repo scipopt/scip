@@ -37,6 +37,7 @@ fixed bugs:
 - fixed bug in cons_indicator.c:SCIPmakeIndicatorFeasible() with handling fixed variables
 - fixed bug in sepa_zerohalf.c where the maxcuts(root) parameters led to an invalid memory allocation call
 - fixed bug in sepa_closecuts: need to make sure that variable values of separation point satisfy bounds
+- fixed bug in intervalarith.c: bivariate quad. equations may have been solved wrongly if second variable is unbounded 
 
 features:
 - can now output the solutions in the solution pool in the interactive shell

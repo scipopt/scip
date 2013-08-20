@@ -3401,6 +3401,12 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
             if( axy < 0.0 || ay < 0.0 )
                minvalleft = -infinity;
 
+            if( axy < 0.0 && ay > 0.0 )
+               maxvalleft =  infinity;
+
+            if( axy > 0.0 && ay > 0.0 )
+               minvalleft = -infinity;
+
             if( axy > 0.0 || ay < 0.0 )
                maxvalright = infinity;
          }
@@ -3461,6 +3467,12 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          {
             if( axy > 0.0 || ay < 0.0 )
                minvalleft  = -infinity;
+
+            if( axy < 0.0 && ay > 0.0 )
+               maxvalleft  =  infinity;
+
+            if( axy > 0.0 && ay > 0.0 )
+               minvalright = -infinity;
 
             if( axy < 0.0 || ay < 0.0 )
                maxvalright =  infinity;
