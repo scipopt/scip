@@ -20,7 +20,15 @@
  *
  * Randomized LP rounding uses a random variable from a uniform distribution
  * over [0,1] to determine whether the fractional LP value x should be rounded
- * up with probability x - floor(x) or down with probability ceil(x) - x
+ * up with probability x - floor(x) or down with probability ceil(x) - x.
+ *
+ * This implementation uses domain propagation techniques to tighten the variable domains after every
+ * rounding step.
+ *
+ * @see: The most relevant publication is Raghavan & Thompson,
+ *       "Randomized rounding: A technique for provably good algorithms and algorithmic proofs",
+ *        Combinatorica 7 (4): 365–374
+ *        1987
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
