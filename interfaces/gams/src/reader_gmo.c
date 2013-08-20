@@ -1275,6 +1275,7 @@ SCIP_RETCODE createProblem(
    SCIP_PROBDATA* probdata;
    int* opcodes;
    int* fields;
+   SCIP_Real* constants;
    int nindics;
    int* indicrows;
    int* indiccols;
@@ -1571,6 +1572,27 @@ SCIP_RETCODE createProblem(
 
       SCIP_CALL( SCIPallocBufferArray(scip, &opcodes, gmoMaxSingleFNL(gmo)+1) );
       SCIP_CALL( SCIPallocBufferArray(scip, &fields, gmoMaxSingleFNL(gmo)+1) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &constants, gmoPPool(gmo), gmoNLConst(gmo)) );
+
+      /* translate special GAMS constants into SCIP variants (gmo does not seem to do this...) */
+      for( i = 0; i < gmoNLConst(gmo); ++i )
+      {
+         if( constants[i] == GMS_SV_PINF )
+            constants[i] =  SCIPinfinity(scip);
+         else if( constants[i] == GMS_SV_MINF )
+            constants[i] = -SCIPinfinity(scip);
+         else if( constants[i] == GMS_SV_EPS )
+            constants[i] = 0.0;
+         else if( constants[i] == GMS_SV_UNDEF || constants[i] == GMS_SV_NA || constants[i] == GMS_SV_NAINT || constants[i] == GMS_SV_ACR )
+         {
+            SCIPwarningMessage(scip, "Constant %e in nonlinear expressions constants pool cannot be handled by SCIP.\n");
+            constants[i] = SCIP_INVALID;
+         }
+         else if( constants[i] <= -SCIPinfinity(scip) )
+            constants[i] = -SCIPinfinity(scip);
+         else if( constants[i] >=  SCIPinfinity(scip) )
+            constants[i] =  SCIPinfinity(scip);
+      }
    }
    else
    {
@@ -1584,6 +1606,7 @@ SCIP_RETCODE createProblem(
 
       opcodes = NULL;
       fields = NULL;
+      constants = NULL;
    }
 
    for( i = 0; i < gmoM(gmo); ++i )
@@ -1746,7 +1769,7 @@ SCIP_RETCODE createProblem(
             }
 
             (void) gmoDirtyGetRowFNLInstr(gmo, i, &codelen, opcodes, fields);
-            SCIP_CALL( makeExprtree(scip, codelen, opcodes, fields, (SCIP_Real*)gmoPPool(gmo), &exprtree) );
+            SCIP_CALL( makeExprtree(scip, codelen, opcodes, fields, constants, &exprtree) );
 
             SCIP_CALL( SCIPcreateConsNonlinear(scip, &con, buffer, linnz, consvars, coefs, 1, &exprtree, NULL, lhs, rhs,
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -1859,7 +1882,7 @@ SCIP_RETCODE createProblem(
          objfactor = -1.0 / gmoObjJacVal(gmo);
 
          (void) gmoDirtyGetObjFNLInstr(gmo, &codelen, opcodes, fields);
-         SCIP_CALL( makeExprtree(scip, codelen, opcodes, fields, (SCIP_Real*)gmoPPool(gmo), &exprtree) );
+         SCIP_CALL( makeExprtree(scip, codelen, opcodes, fields, constants, &exprtree) );
 
          if( gmoSense(gmo) == (int) gmoObj_Min )
          {
@@ -1906,6 +1929,7 @@ SCIP_RETCODE createProblem(
    SCIPfreeBufferArrayNull(scip, &qcol);
    SCIPfreeBufferArrayNull(scip, &opcodes);
    SCIPfreeBufferArrayNull(scip, &fields);
+   SCIPfreeBufferArrayNull(scip, &constants);
    SCIPfreeBufferArrayNull(scip, &indicrows);
    SCIPfreeBufferArrayNull(scip, &indiccols);
    SCIPfreeBufferArrayNull(scip, &indiconvals);
