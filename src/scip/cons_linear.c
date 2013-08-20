@@ -4174,7 +4174,7 @@ SCIP_RETCODE applyFixings(
             SCIPABORT();
          }
       }
-      
+
       if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->lhs) )
       {
          /* for large numbers that are relatively equal, substraction can lead to cancellation,
@@ -4182,7 +4182,7 @@ SCIP_RETCODE applyFixings(
           * for small numbers, polishing the difference might lead to wrong results -->
           * better use the exact difference in this case
           */
-         if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs) && SCIPisFeasGE(scip, REALABS(lhssubtrahend), 1.0) ) 
+         if( SCIPisEQ(scip, lhssubtrahend, consdata->lhs) && SCIPisFeasGE(scip, REALABS(lhssubtrahend), 1.0) )
          {
             SCIP_CALL( chgLhs(scip, cons, 0.0) );
          }
@@ -4199,7 +4199,7 @@ SCIP_RETCODE applyFixings(
           * for small numbers, polishing the difference might lead to wrong results -->
           * better use the exact difference in this case
           */
-         if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) && SCIPisFeasGE(scip, REALABS(rhssubtrahend), 1.0) )
+         if( SCIPisEQ(scip, rhssubtrahend, consdata->rhs ) && SCIPisFeasGE(scip, REALABS(rhssubtrahend), 1.0) )
          {
             SCIP_CALL( chgRhs(scip, cons, 0.0) );
          }
@@ -5556,7 +5556,7 @@ SCIP_RETCODE checkCons(
    }
    else
    {
-      /* only increase constraint age if we are in enforcement */
+     /* only increase constraint age if we are in enforcement */
       if( sol == NULL )
       {
          SCIP_CALL( SCIPincConsAge(scip, cons) );
@@ -12920,8 +12920,8 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
 
       if( printreason )
       {
-         SCIP_Real activity;
          SCIP_CONSDATA* consdata;
+         SCIP_Real activity;
 
          consdata = SCIPconsGetData(conss[c-1]);
          assert( consdata != NULL);
@@ -12930,6 +12930,7 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
 
          SCIP_CALL( SCIPprintCons(scip, conss[c-1], NULL ) );
          SCIPinfoMessage(scip, NULL, ";\n");
+
          if( SCIPisFeasLT(scip, activity, consdata->lhs) )
             SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - activity);
 
