@@ -20,6 +20,11 @@ data structures
 - hash tables will now increase dynamically
 
 features:
+- new LNS heuristic called proximity which solves a problem in which a local branching constraint replaces the
+  objective function which in turn is treated as additional constraint.
+- added average gap based on primal-dual integral to solution statistics, can be disabled via parameter "misc/calcintegral" 
+- new LP-based rounding heuristic (heur_randround) whose randomized rounding is biased towards the LP solution value. 
+  The heuristic uses the probing mode of SCIP to generate conflict causes on the fractional variables  
 - added new dual presolving for setppc-constraints
 - changed dualfix presolver to propagator such that dual fixing can also be applied during repropagation of the root node
 - added upgrade from varbound constraints to set-packing constraints
@@ -124,6 +129,7 @@ interface
   a constraint or get the current number of upgrade-locks
 
 parameters:
+- new parameter "misc/calcintegral" (default TRUE) to trigger calculation of primal-dual integral 
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
 - new parameter <separating/gomory/sidetypebasis> to decide whether the sides of ranged rows should be determined from
   the basis status
