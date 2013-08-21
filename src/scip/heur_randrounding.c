@@ -284,7 +284,7 @@ SCIP_RETCODE performLPRandRounding(
       return SCIP_OKAY;
 
    /* get fractional variables, that should be integral */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands, NULL, NULL) );
 
    /* only call heuristic, if LP solution is fractional; except we are called during pricing, in this case we
     * want to detect a (mixed) integer (LP) solution which is primal feasible */

@@ -14119,7 +14119,11 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
 /**@{ */
 
 /** gets branching candidates for LP solution branching (fractional variables) along with solution values,
- *  fractionalities, and number of branching candidates;
+ *  fractionalities, and number of branching candidates; The number of branching candidates does NOT
+ *  account for fractional implicit integer variables which should not be used for branching decisions.
+ *
+ *  Fractional implicit integer variables are stored at the positions *nlpcands - *nlpcands + *nfracimplvars - 1
+ *
  *  branching rules should always select the branching candidate among the first npriolpcands of the candidate
  *  list
  *
@@ -14138,7 +14142,8 @@ SCIP_RETCODE SCIPgetLPBranchCands(
    SCIP_Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*                  nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
-   int*                  npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  npriolpcands,       /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  nfracimplvars       /**< pointer to store the number of implicit fractional variables, or NULL */
    );
 
 /** gets number of branching candidates for LP solution branching (number of fractional variables)

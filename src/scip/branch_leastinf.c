@@ -240,7 +240,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLeastinf)
    SCIPdebugMessage("Execlp method of leastinf branching\n");
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);
 
    /* search the least infeasible candidate */

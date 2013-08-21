@@ -947,7 +947,7 @@ SCIP_RETCODE updateEstimate(
    assert(focusnode != NULL);
 
    /* get the fractional variables */
-   SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, &lpcands, NULL, &lpcandsfrac, &nlpcands, NULL) );
+   SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, &lpcands, NULL, &lpcandsfrac, &nlpcands, NULL, NULL) );
 
    /* calculate the estimate: lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j}) */
    estimate = SCIPnodeGetLowerbound(focusnode);
@@ -2326,7 +2326,7 @@ SCIP_RETCODE priceAndCutLoop(
                         SCIP_Real objreldiff;
                         int nfracs;
 
-                        SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nfracs, NULL) );
+                        SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nfracs, NULL, NULL) );
                         lpobjval = SCIPlpGetObjval(lp, set, prob);
                         objreldiff = SCIPrelDiff(lpobjval, stalllpobjval);
                         SCIPdebugMessage(" -> LP bound moved from %g to %g (reldiff: %g)\n",
@@ -3669,7 +3669,7 @@ SCIP_RETCODE solveNode(
 
          if( SCIPtreeHasFocusNodeLP(tree) )
          {
-            SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpcands, NULL) );
+            SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpcands, NULL, NULL) );
          }
          else
             nlpcands = 0;

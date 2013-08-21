@@ -1024,7 +1024,8 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    propdata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    /* get (number of) fractional variables that should be integral */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &vars, NULL, NULL, &nvars, NULL) );
+   /* todo check if integrating fractional implicit integer variables is beneficial for probing */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &vars, NULL, NULL, &nvars, NULL, NULL) );
    nbinvars = 0;
 
    /* alloc array for fractional binary variables */

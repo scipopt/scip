@@ -488,7 +488,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
    SCIPdebugMessage("Execlp method of pscost branching\n");
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);
 
    bestcand = -1;

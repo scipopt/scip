@@ -7308,7 +7308,7 @@ SCIP_RETCODE branchLP(
    assert(varuses != NULL);
 
    /* get fractional variables */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands, NULL, NULL) );
    if( nlpcands == 0 )
       return SCIP_OKAY;
 
