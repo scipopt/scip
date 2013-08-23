@@ -293,7 +293,8 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            origprob            /**< original problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob           /**< transformed problem */
    );
 
 /** tries to transform original solution to the transformed problem space */

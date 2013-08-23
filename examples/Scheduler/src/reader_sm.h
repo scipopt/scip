@@ -52,7 +52,8 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
    int*                  durations,          /**< array to store the processing for each job */
    int*                  capacities,         /**< array to store the different capacities */
    int                   njobs,              /**< number of jobs to be parsed */
-   int                   nresources          /**< number of capacities to be parsed */
+   int                   nresources,         /**< number of capacities to be parsed */
+   SCIP_Bool             initialize          /**< initialize list scheduling heuristic */
    );
 
 #ifdef __cplusplus

@@ -1045,9 +1045,9 @@ SCIP_RETCODE SCIPnodeFree(
       SCIP_CALL( pseudoforkFree(&((*node)->data.pseudofork), blkmem, set, lp) );
       break;
    case SCIP_NODETYPE_FORK:
-      
-      /** release special root LPI state capture which is used to keep the root LPI state over the whole solving
-       *  process 
+
+      /* release special root LPI state capture which is used to keep the root LPI state over the whole solving
+       * process
        */
       if( isroot )
       {
@@ -1812,7 +1812,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
          newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
       else
          newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, prob, var, oldbound, newbound, boundtype);
-      SCIPnodeUpdateLowerbound(node, stat, newpseudoobjval);
+      SCIPnodeUpdateLowerbound(node, stat, set, tree, prob, newpseudoobjval);
    }
    else
    {
@@ -2116,6 +2116,9 @@ SCIP_RETCODE treeApplyPendingBdchgs(
 void SCIPnodeUpdateLowerbound(
    SCIP_NODE*            node,               /**< node to update lower bound for */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    )
 {
@@ -2124,10 +2127,27 @@ void SCIPnodeUpdateLowerbound(
 
    if( newbound > node->lowerbound )
    {
+      SCIP_Real oldlowerbound;
+
+      oldlowerbound = node->lowerbound;
       node->lowerbound = newbound;
       node->estimate = MAX(node->estimate, newbound);
       if( node->depth == 0 )
+      {
          stat->rootlowerbound = newbound;
+         if( set->misc_calcintegral )
+            SCIPstatUpdatePrimalDualIntegral(stat, set, prob, SCIPsetInfinity(set), newbound);
+      }
+      else if( set->misc_calcintegral && SCIPsetIsEQ(set, oldlowerbound, stat->lastlowerbound) )
+      {
+         SCIP_Real lowerbound;
+         lowerbound = SCIPtreeGetLowerbound(tree, set);
+         assert(newbound >= lowerbound);
+
+         /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
+         if( lowerbound > stat->lastlowerbound )
+            SCIPstatUpdatePrimalDualIntegral(stat, set, prob, SCIPsetInfinity(set), lowerbound);
+      }
    }
 }
 
@@ -2136,6 +2156,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_NODE*            node,               /**< node to set lower bound for */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_LP*              lp                  /**< LP data */
    )
@@ -2151,7 +2172,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    else
       lpobjval = SCIPlpGetObjval(lp, set, prob);
 
-   SCIPnodeUpdateLowerbound(node, stat, lpobjval);
+   SCIPnodeUpdateLowerbound(node, stat, set, tree, prob, lpobjval);
 
    return SCIP_OKAY;
 }
@@ -2254,8 +2275,11 @@ SCIP_RETCODE SCIPnodePropagateImplics(
          {
             SCIP_Real lb;
             SCIP_Real ub;
-                  
-            if( SCIPvarGetStatus(implvars[j]) == SCIP_VARSTATUS_MULTAGGR )
+
+            /* @note should this be checked here (because SCIPnodeAddBoundinfer fails for multi-aggregated variables)
+             *       or should SCIPnodeAddBoundinfer() just return for multi-aggregated variables?
+             */
+            if( SCIPvarGetStatus(SCIPvarGetProbvar(implvars[j])) == SCIP_VARSTATUS_MULTAGGR )
                continue;
 
             /* check for infeasibility */
@@ -4099,8 +4123,8 @@ SCIP_RETCODE SCIPnodeFocus(
       }
       else
       {
-         /* in case the LP was not constructed (do to the parameter settings for example) we have the finally remember the old size
-          * of the LP (if it was constructed in an earlier node) before we change the current node into a junction
+         /* in case the LP was not constructed (due to the parameter settings for example) we have the finally remember the
+          * old size of the LP (if it was constructed in an earlier node) before we change the current node into a junction
           */
          SCIPlpMarkSize(lp);
 
@@ -4110,6 +4134,12 @@ SCIP_RETCODE SCIPnodeFocus(
    }
    else if( tree->focusnode != NULL )
    {
+      /* in case the LP was not constructed (due to the parameter settings for example) we have the finally remember the
+       * old size of the LP (if it was constructed in an earlier node) before we change the current node into a junction
+       */
+      if( !tree->focuslpconstructed )
+         SCIPlpMarkSize(lp);
+
       /* convert old focus node into deadend */
       SCIP_CALL( focusnodeToDeadend(blkmem, set, stat, eventqueue, prob, tree, lp, branchcand) );
    }
@@ -4546,7 +4576,7 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    assert(tree->focusnode == NULL);
    assert(tree->pathlen == 0);
 
-   /** reset tree data structure */
+   /* reset tree data structure */
    SCIP_CALL( SCIPtreeClear(tree, blkmem, set, stat, eventqueue, lp) );
 
    return SCIP_OKAY;
@@ -5113,6 +5143,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
             var, downub, SCIP_BOUNDTYPE_UPPER, FALSE) );
+      /* output branching bound change to VBC file */
+      SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
+
       if( downchild != NULL )
          *downchild = node;
    }
@@ -5135,6 +5168,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                var, fixval, SCIP_BOUNDTYPE_UPPER, FALSE) );
       }
+      /* output branching bound change to VBC file */
+      SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
+
       if( eqchild != NULL )
          *eqchild = node;
    }
@@ -5152,6 +5188,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
             var, uplb, SCIP_BOUNDTYPE_LOWER, FALSE) );
+      /* output branching bound change to VBC file */
+      SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
+
       if( upchild != NULL )
          *upchild = node;
    }
@@ -5254,6 +5293,8 @@ SCIP_RETCODE SCIPtreeBranchVarHole(
    SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
    SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
          var, left, SCIP_BOUNDTYPE_UPPER, FALSE) );
+   /* output branching bound change to VBC file */
+   SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
 
    if( downchild != NULL )
       *downchild = node;
@@ -5272,6 +5313,8 @@ SCIP_RETCODE SCIPtreeBranchVarHole(
    SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
    SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
          var, right, SCIP_BOUNDTYPE_LOWER, FALSE) );
+   /* output branching bound change to VBC file */
+   SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
 
    if( upchild != NULL )
       *upchild = node;
@@ -5509,6 +5552,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
             var, left , SCIP_BOUNDTYPE_LOWER, FALSE) );
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
             var, right, SCIP_BOUNDTYPE_UPPER, FALSE) );
+         /* output branching bound change to VBC file */
+         SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
 
          if( nchildren != NULL )
             ++*nchildren;
@@ -5587,6 +5632,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
          }
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
             var, left, SCIP_BOUNDTYPE_UPPER, FALSE) );
+         /* output branching bound change to VBC file */
+         SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
 
          if( nchildren != NULL )
             ++*nchildren;
@@ -5634,6 +5681,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
             SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                var, bnd, SCIP_BOUNDTYPE_UPPER, FALSE) );
          }
+         /* output branching bound change to VBC file */
+         SCIP_CALL( SCIPvbcUpdateChild(stat->vbc, stat, node) );
 
          if( nchildren != NULL )
             ++*nchildren;
@@ -5743,6 +5792,9 @@ SCIP_RETCODE SCIPtreeStartProbing(
 
    SCIPdebugMessage("probing started in depth %d (LP flushed: %u, LP solved: %u, solstat: %d), probing root in depth %d\n",
       tree->pathlen-1, lp->flushed, lp->solved, SCIPlpGetSolstat(lp), tree->pathlen);
+
+   /* store all marked constraints for propagation */
+   SCIP_CALL( SCIPconshdlrsStorePropagationStatus(set, set->conshdlrs, set->nconshdlrs) );
 
    /* inform LP about probing mode */
    SCIP_CALL( SCIPlpStartProbing(lp) );
@@ -6082,7 +6134,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          }
          else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) )
          {
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, prob, lp) );
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, prob, lp) );
          }
       }
    }
@@ -6124,6 +6176,9 @@ SCIP_RETCODE SCIPtreeEndProbing(
 
    /* inform LP about end of probing mode */
    SCIP_CALL( SCIPlpEndProbing(lp) );
+
+   /* reset all marked constraints for propagation */
+   SCIP_CALL( SCIPconshdlrsResetPropagationStatus(set, blkmem, set->conshdlrs, set->nconshdlrs) );
 
    SCIPdebugMessage("probing ended in depth %d (LP flushed: %u, solstat: %d)\n",
       tree->pathlen-1, lp->flushed, SCIPlpGetSolstat(lp));

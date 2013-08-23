@@ -603,7 +603,8 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* get fractional variables, that should be integral */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL) );
+   /* todo check if heuristic should include implicit integer variables for its calculations */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
    nfrac = nlpcands;
 
    /* only call heuristic, if LP solution is fractional */
@@ -943,13 +944,13 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
        * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
 #ifdef NDEBUG
-      retstat = SCIPsolveDiveLP(scip, -1, &lperror);
+      retstat = SCIPsolveDiveLP(scip, -1, &lperror, NULL);
       if( retstat != SCIP_OKAY )
       {
          SCIPwarningMessage(scip, "Error while solving LP in Intshifting heuristic; LP solve terminated with code <%d>\n",retstat);
       }
 #else
-      SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );
+      SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror, NULL) );
 #endif
 
       SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));

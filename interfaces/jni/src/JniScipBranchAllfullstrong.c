@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,7 +15,7 @@
 
 /**@file   JniScipBranchAllfullstrong.c
  * @ingroup PUBLICMETHODS
- * @brief  JNI SCIP variable callable library
+ * @brief  JNI SCIP all variables full strong LP branching rule
  * @author Stefan Heinz
  * @author Alexandra Kraft
  */
@@ -25,7 +25,13 @@
 #include "JniScipBranchAllfullstrong.h"
 #include "def.h"
 
+#include "scip/scip.h"
+#include "scip/scipdefplugins.h"
+#include "scip/branch_allfullstrong.h"
 
+#include <string.h>
+
+/** creates the all variables full strong LP branching rule and includes it in SCIP */
 JNIEXPORT
 void JNISCIPBRANCHALLFULLSTRONG(includeBranchruleAllfullstrong)(
    JNIEnv*               env,                /**< JNI environment variable */
@@ -33,6 +39,11 @@ void JNISCIPBRANCHALLFULLSTRONG(includeBranchruleAllfullstrong)(
    jlong                 jscip               /**< SCIP data structure */
    )
 {
+   SCIP* scip;
 
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
+
+   JNISCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
 }
-

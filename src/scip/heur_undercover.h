@@ -47,7 +47,7 @@ EXTERN
 SCIP_RETCODE SCIPcomputeCoverUndercover(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  coversize,          /**< size of the computed cover */
-   SCIP_VAR**            cover,              /**< buffer to store the variables (of the original SCIP) in the computed cover
+   SCIP_VAR**            cover,              /**< pointer to store the variables (of the original SCIP) in the computed cover
                                               *   (should be ready to hold SCIPgetNVars(scip) entries) */
    SCIP_Real             timelimit,          /**< time limit */
    SCIP_Real             memorylimit,        /**< memory limit */

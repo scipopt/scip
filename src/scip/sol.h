@@ -357,7 +357,8 @@ SCIP_RETCODE SCIPsolRetransform(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            origprob            /**< original problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob           /**< transformed problem */
    );
 
 /** recomputes the objective value of an original solution, e.g., when transferring solutions

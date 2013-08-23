@@ -86,6 +86,7 @@ struct SCIP_HashTable
    SCIP_HASHTABLELIST**  lists;              /**< hash table lists of the hash table */
    int                   nlists;             /**< number of lists stored in the hash table */
    void*                 userptr;            /**< user pointer */
+   SCIP_Longint          nelements;          /**< number of elements in the hashtable */
 };
 
 /** element list to store single mappings of a hash map */

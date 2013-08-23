@@ -411,7 +411,7 @@ BEGIN {
       timetobest = $11;
    }
 }
-/^Dual Bound         :/ { 
+/^  Dual Bound       :/ {
    if( $4 != "-" ) {
       db = $4;
       dbset = 1;
@@ -634,7 +634,6 @@ BEGIN {
 
       if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
          timeout = 1;
-         aborted = 0;
          tottime = endtime - starttime;
       }
       else if( gapreached || sollimitreached || memlimitreached || nodelimitreached )
@@ -691,7 +690,6 @@ BEGIN {
          failtime += tottime;
          fail++;
       }
-
       else if( checksol && !bestsolfeas ) {
          status = "fail";
          failtime += tottime;
@@ -915,6 +913,9 @@ BEGIN {
          } else if( status == "timeout" ) {
             modelstat = abs(pb) < infty ? 8 : 14;
             solverstat = 3;
+         } else if( status == "nodelimit" || status == "memlimit" || status == "sollimit" ) {
+            modelstat = abs(pb) < infty ? 8 : 14;
+            solverstat = 2;  # GAMS does not have a status for these limits, so let's report iteration limit
          } else if( status == "gaplimit" || status == "better" ) {
             modelstat = 8;
             solverstat = 1;

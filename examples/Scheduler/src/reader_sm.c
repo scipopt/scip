@@ -450,15 +450,39 @@ SCIP_RETCODE getPrecedence(
 static
 int computeUbmakespan(
    int*                  durations,          /**< array of durations */
-   int                   njobs               /**< number og jobs */
+   int                   njobs,              /**< number og jobs */
+   SCIP_DIGRAPH*         precedencegraph     /**< direct graph to store the precedence conditions */
    )
 {
-   int j;
    int ub;
+   int j;
 
    ub = 0;
+
    for( j = 0; j < njobs; ++j )
-      ub += durations[j];
+   {
+      void** distances;
+      int nsuccessors;
+      int duration;
+      int i;
+
+      nsuccessors = SCIPdigraphGetNSuccessors(precedencegraph, j);
+      distances = SCIPdigraphGetSuccessorsDatas(precedencegraph, j);
+
+      duration = durations[j];
+
+      for( i = 0; i < nsuccessors; ++i )
+      {
+         int distance;
+
+         distance = (int)(size_t)distances[i];
+
+         if( distance != INT_MAX )
+            duration = MAX(duration, distance);
+      }
+
+      ub += duration;
+   }
 
    return ub;
 }
@@ -634,7 +658,7 @@ SCIP_DECL_READERREAD(readerReadSm)
 
    /* create problem */
    SCIP_CALL( SCIPcreateSchedulingProblem(scip, filename, rcpspdata.jobnames, rcpspdata.resourcenames, rcpspdata.demands,
-         rcpspdata.precedencegraph, rcpspdata.durations, rcpspdata.capacities, rcpspdata.njobs, rcpspdata.nresources) );
+         rcpspdata.precedencegraph, rcpspdata.durations, rcpspdata.capacities, rcpspdata.njobs, rcpspdata.nresources, TRUE) );
 
    (*result) = SCIP_SUCCESS;
 
@@ -722,7 +746,8 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
    int*                  durations,          /**< array to store the processing for each job */
    int*                  capacities,         /**< array to store the different capacities */
    int                   njobs,              /**< number of jobs to be parsed */
-   int                   nresources          /**< number of capacities to be parsed */
+   int                   nresources,         /**< number of capacities to be parsed */
+   SCIP_Bool             initialize          /**< initialize list scheduling heuristic */
    )
 {
    SCIP_VAR** jobs;
@@ -750,10 +775,8 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
    /* create SCIP data structure */
    SCIP_CALL( SCIPcreateProb(scip, problemname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
-
    /* compute a feasible upper bound on the makespan */
-   ubmakespan = computeUbmakespan(durations, njobs);
-   ubmakespan *= 100;
+   ubmakespan = computeUbmakespan(durations, njobs, precedencegraph);
 
    /* allocate buffer for jobs and precedence constraints */
    SCIP_CALL( SCIPallocBufferArray(scip, &jobs, njobs) );
@@ -877,8 +900,11 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
    }
 
    /* initialize the problem specific heuristic */
-   SCIP_CALL( SCIPinitializeHeurListScheduling(scip, precedencegraph, jobs,
-         durations, demands, capacities, njobs, nresources) );
+   if( initialize )
+   {
+      SCIP_CALL( SCIPinitializeHeurListScheduling(scip, precedencegraph, jobs,
+            durations, demands, capacities, njobs, nresources) );
+   }
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &consdurations);

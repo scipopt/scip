@@ -357,14 +357,22 @@ void SCIPhashtableClear(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
-/** inserts element in hash table (multiple inserts of same element possible) */
+/** inserts element in hash table (multiple inserts of same element possible)
+ *
+ *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
+ *        to the hash table, due to dynamic resizing.
+ */
 EXTERN
 SCIP_RETCODE SCIPhashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to insert into the table */
    );
 
-/** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
+/** inserts element in hash table (multiple insertion of same element is checked and results in an error)
+ *
+ *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
+ *        element to the hash table, due to dynamic resizing.
+ */
 EXTERN
 SCIP_RETCODE SCIPhashtableSafeInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
@@ -379,11 +387,16 @@ void* SCIPhashtableRetrieve(
    );
 
 /** retrieve element with key from hash table, returns NULL if not existing
- * can be used to retrieve all entries with the same key (one-by-one) */
+ *  can be used to retrieve all entries with the same key (one-by-one)
+ *
+ *  @note The returned hashtablelist pointer might get invalid when adding a new element to the hash table.
+ */
 EXTERN
 void* SCIPhashtableRetrieveNext(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL; output: entry in hash table list corresponding to element after retrieved one, or NULL */
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL
+                                              *   output: entry in hash table list corresponding to element after
+                                              *           retrieved one, or NULL */
    void*                 key                 /**< key to retrieve */
    );
 
@@ -399,6 +412,18 @@ EXTERN
 SCIP_RETCODE SCIPhashtableRemove(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to remove from the table */
+   );
+
+/** returns number of hash table elements */
+EXTERN
+SCIP_Longint SCIPhashtableGetNElemenets(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   );
+
+/** returns the load of the given hash table in percentage */
+EXTERN
+SCIP_Real SCIPhashtableGetLoad(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
 /** prints statistics about hash table usage */

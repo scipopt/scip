@@ -60,7 +60,9 @@ struct SCIP_Stat
    SCIP_Longint          nrootsblpiterations;/**< number of simplex iterations used in strong branching at the root node */
    SCIP_Longint          nconflictlpiterations;/**< number of simplex iterations used in conflict analysis */
    SCIP_Longint          nnodes;             /**< number of nodes processed in current run (including focus node) */
+   SCIP_Longint          ninternalnodes;     /**< number of nodes processed in current run where a branching was performed */
    SCIP_Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including focus node) */
+   SCIP_Longint          ntotalinternalnodes;/**< total number of nodes processed in all runs where a branching was performed */
    SCIP_Longint          ncreatednodes;      /**< total number of nodes created */
    SCIP_Longint          ncreatednodesrun;   /**< number of nodes created in current run */
    SCIP_Longint          nactivatednodes;    /**< number of times, a node got activated in current run */
@@ -96,6 +98,13 @@ struct SCIP_Stat
    SCIP_Real             mincopytime;        /**< minimal time needed for copying a problem */
    SCIP_Real             firstlptime;        /**< time needed to solve the very first LP in the root node */
    SCIP_Real             lastbranchvalue;    /**< domain value of the last branching */
+   SCIP_Real             primalintegralval;  /**< current primal-dual integral value */
+   SCIP_Real             previousgap;        /**< primal dual gap preceding the current gap */
+   SCIP_Real             previntegralevaltime;/**< last time of primal-dual integral evaluation */
+   SCIP_Real             lastprimalbound;    /**< last (non-infinite) primal bound (in transformed space) for integral evaluation */
+   SCIP_Real             lastdualbound;      /**< last (non-infinite) dual bound (in transformed space) for integral evaluation */
+   SCIP_Real             lastlowerbound;     /**< last lower bound (in transformed space) for integral evaluation */
+   SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    SCIP_CLOCK*           primallptime;       /**< primal LP solution time */

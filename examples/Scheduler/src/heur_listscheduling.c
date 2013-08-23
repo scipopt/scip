@@ -56,7 +56,7 @@
 #define HEUR_DESC             "scheduling specific primal heuristic which is based on bidirectional serial generation scheme"
 #define HEUR_DISPCHAR         'x'
 #define HEUR_PRIORITY         10000
-#define HEUR_FREQ             1
+#define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         100000
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_BEFOREPRESOL
@@ -579,6 +579,7 @@ SCIP_RETCODE performBackwardScheduling(
    return SCIP_OKAY;
 }
 
+/** creates a permutation of the job w.r.t. earliest start time */
 static
 SCIP_RETCODE getEstPermutation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -607,6 +608,7 @@ SCIP_RETCODE getEstPermutation(
    return SCIP_OKAY;
 }
 
+/** creates a permutation of the job w.r.t. latest completion time */
 static
 SCIP_RETCODE getLctPermuataion(
    SCIP*                 scip,               /**< SCIP data structure */

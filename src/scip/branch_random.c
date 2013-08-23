@@ -180,7 +180,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRandom)
    assert(branchruledata != NULL);
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);
 
    /* get random branching candidate */

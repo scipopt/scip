@@ -91,7 +91,8 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
-   SCIP_Bool             root                /**< are we at the root node? */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the cut is infeasible */
    );
 
 /** adds cuts to the LP and clears separation storage */

@@ -131,7 +131,7 @@ READ		=	read -e
 LN_s		= 	ln -s
 
 #initial compiler and linker flags
-FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPREALPATH)/src
+FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=
@@ -196,25 +196,6 @@ DFLAGS		+=	$(USRDFLAGS)
 
 
 #-----------------------------------------------------------------------------
-# SHARED Libaries
-#-----------------------------------------------------------------------------
-
-ifeq ($(SHARED),true)
-FLAGS		+=	-fPIC
-LIBEXT		=	$(SHAREDLIBEXT)
-LIBBUILD	=	$(LINKCC)
-LIBBUILDFLAGS	+=      -shared
-LIBBUILD_o	= 	-o # the trailing space is important
-ARFLAGS		=
-RANLIB		=
-endif
-
-ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
-endif
-
-
-#-----------------------------------------------------------------------------
 # PARASCIP
 #-----------------------------------------------------------------------------
 
@@ -254,6 +235,14 @@ LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUF
 
 ifeq ($(LPSCHECK),true)
 LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+endif
+endif
+
+ifeq ($(LPS),spx2)
+LPSLDFLAGS  += $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+
+ifeq ($(LPSCHECK),true)
+LPSLDFLAGS  += $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 endif
 
@@ -312,6 +301,16 @@ ifeq ($(GMP_LDFLAGS),)
 GMP		=	false
 endif
 
+ifeq ($(ZIMPL),true)
+ifeq ($(ZLIB),false)
+$(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true)
+endif
+ifeq ($(GMP),false)
+$(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=auto)
+endif
+LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
+endif
+
 ifeq ($(GMP),true)
 FLAGS		+=	-DWITH_GMP $(GMP_FLAGS)
 LDFLAGS		+=	$(GMP_LDFLAGS)
@@ -324,16 +323,6 @@ endif
 ifeq ($(READLINE),true)
 FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
 LDFLAGS		+=	$(READLINE_LDFLAGS)
-endif
-
-ifeq ($(ZIMPL),true)
-ifeq ($(ZLIB),false)
-$(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true)
-endif
-ifeq ($(GMP),false)
-$(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=auto)
-endif
-LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
 endif
 
 ifeq ($(IPOPT),true)
@@ -363,6 +352,29 @@ endif
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
 NLPILIBSHORTNAMECPPAD = .cppad
+endif
+
+
+#-----------------------------------------------------------------------------
+# SHARED Libaries
+#-----------------------------------------------------------------------------
+
+ifeq ($(SHARED),true)
+FLAGS		+=	-fPIC
+LIBEXT		=	$(SHAREDLIBEXT)
+ifeq ($(LINKER),CPP)
+LIBBUILD	=	$(LINKCXX)
+else
+LIBBUILD	=	$(LINKCC)
+endif
+LIBBUILDFLAGS	+=      -shared
+LIBBUILD_o	= 	-o # the trailing space is important
+ARFLAGS		=
+RANLIB		=
+endif
+
+ifneq ($(LINKRPATH),)
+LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
 endif
 
 

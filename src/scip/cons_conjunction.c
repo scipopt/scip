@@ -397,10 +397,9 @@ SCIP_DECL_CONSPRESOL(consPresolConjunction)
                SCIPconsGetName(consdata->conss[i]), SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPaddCons(scip, consdata->conss[i]) );
             *result = SCIP_SUCCESS;
-
-	    /* release constraint from the conjunction constraint */
-	    SCIP_CALL( SCIPreleaseCons(scip, &(consdata->conss[i])) );
          }
+         /* release constraint because it will be removed from the conjunction constraint */
+         SCIP_CALL( SCIPreleaseCons(scip, &(consdata->conss[i])) );
       }
       /* all constraints where removed, so we need to clear the array */
       consdata->nconss = 0;
@@ -641,6 +640,12 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
       /* create conjunctive constraint */
       SCIP_CALL( SCIPcreateConsConjunction(scip, cons, name, nconss, conss,
 	    enforce, check, local, modifiable, dynamic) );
+   }
+
+   /* free parsed constraints */
+   for( --nconss; nconss >= 0; --nconss )
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[nconss]) );
    }
 
  TERMINATE:

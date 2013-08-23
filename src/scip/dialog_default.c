@@ -2481,6 +2481,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    char* valuestr;
    SCIP_Bool offset;
    SCIP_Bool generic;
+   SCIP_Bool lazyconss;
    SCIP_Bool error;
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -2552,8 +2553,30 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    (void) SCIPsnprintf(command, SCIP_MAXSTRLEN, "%s %s", command, offset ? "TRUE" : "FALSE");
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, command, FALSE) );
 
+   /* fourth ask for lazy constraints */
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
+         "output removable rows as lazy constraints (TRUE/FALSE): ",
+         &valuestr, &endoffile) );
+
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+   if( valuestr[0] == '\0' )
+      return SCIP_OKAY;
+
+   lazyconss = parseBoolValue(scip, valuestr, &error);
+
+   if( error )
+      return SCIP_OKAY;
+
+   /* adjust command and add to the history */
+   SCIPescapeString(command, SCIP_MAXSTRLEN, filename);
+   (void) SCIPsnprintf(command, SCIP_MAXSTRLEN, "%s %s", command, lazyconss ? "TRUE" : "FALSE");
+
    /* execute command */
-   SCIP_CALL( SCIPwriteMIP(scip, filename, generic, offset) );
+   SCIP_CALL( SCIPwriteMIP(scip, filename, generic, offset, lazyconss) );
    SCIPdialogMessage(scip, NULL, "written node MIP relaxation to file <%s>\n", filename);
 
    SCIPdialogMessage(scip, NULL, "\n");
@@ -4001,7 +4024,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecSetLimitsObjective, NULL, NULL,
-            "objective", "set limit on objective value", FALSE, NULL) );
+            "objective", "set limit on objective function, such that only solutions better than this limit are accepted", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
 

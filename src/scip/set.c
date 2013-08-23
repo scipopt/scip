@@ -109,6 +109,8 @@
 #define SCIP_DEFAULT_CONF_IGNORERELAXEDBD FALSE /**< should relaxed bounds be ignored? */
 #define SCIP_DEFAULT_CONF_MAXVARSDETECTIMPLIEDBOUNDS 250 /**< maximal number of variables to try to detect global bound implications and shorten the whole conflict set (0: disabled) */
 #define SCIP_DEFAULT_CONF_FULLSHORTENCONFLICT TRUE /**< try to shorten the whole conflict set or terminate early (depending on the 'maxvarsdetectimpliedbounds' parameter) */
+#define SCIP_DEFAULT_CONF_CONFLITWEIGHT     0.0 /**< the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict */
+#define SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT 1.0/**< the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph */
 
 
 /* Constraints */
@@ -218,7 +220,7 @@
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
 #define SCIP_DEFAULT_MISC_PERMUTATIONSEED    -1 /**< seed value for permuting the problem after the problem was transformed (-1: no permutation) */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
-#define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reseted if the transformed problem is
+#define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reset if the transformed problem is
                                                  *   freed otherwise the statistics get reset after original problem is
                                                  *   freed (in case of bender decomposition this parameter should be set
                                                  *   to FALSE and therefore can be used to collect statistics over all
@@ -227,7 +229,7 @@
 #define SCIP_DEFAULT_MISC_PRINTREASON      TRUE /**< should the reason be printed if a given start solution is infeasible? */
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
-
+#define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
 /* Node Selection */
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
                                                  *   'r'oot LP value difference, 'h'brid inference/root LP value difference) */
@@ -945,6 +947,16 @@ SCIP_RETCODE SCIPsetCreate(
          "try to shorten the whole conflict set or terminate early (depending on the 'maxvarsdetectimpliedbounds' parameter)",
          &(*set)->conf_fullshortenconflict, TRUE, SCIP_DEFAULT_CONF_FULLSHORTENCONFLICT,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/conflictweight",
+         "the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict",
+         &(*set)->conf_conflictweight, FALSE, SCIP_DEFAULT_CONF_CONFLITWEIGHT, 0.0, 1.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/conflictgraphweight",
+         "the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph",
+         &(*set)->conf_conflictgraphweight, FALSE, SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT, 0.0, 1.0,
+         NULL, NULL) );
 
    /* constraint parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -1306,7 +1318,7 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/resetstat",
-         "should the statistics be reseted if the transformed problem is freed (in case of a benders decomposition this parameter should be set to FALSE)",
+         "should the statistics be reset if the transformed problem is freed (in case of a benders decomposition this parameter should be set to FALSE)",
          &(*set)->misc_resetstat, FALSE, SCIP_DEFAULT_MISC_RESETSTAT,
          NULL, NULL) );
 
@@ -1330,6 +1342,12 @@ SCIP_RETCODE SCIPsetCreate(
          "should SCIP try to transfer original solutions to the extended space (after presolving)?",
          &(*set)->misc_transorigsols, FALSE, SCIP_DEFAULT_MISC_TRANSORIGSOLS,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/calcintegral",
+            "should SCIP calculate the primal dual integral value?",
+            &(*set)->misc_calcintegral, FALSE, SCIP_DEFAULT_MISC_CALCINTEGRAL,
+            NULL, NULL) );
+
 
    /* node selection */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
@@ -4294,6 +4312,28 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetIsHugeValue
 #undef SCIPsetGetHugeValue
 
+/** returns value treated as infinity */
+SCIP_Real SCIPsetInfinity(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_infinity;
+}
+
+/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity
+ *  computation)
+ */
+SCIP_Real SCIPsetGetHugeValue(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_hugeval;
+}
+
 /** returns value treated as zero */
 SCIP_Real SCIPsetEpsilon(
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -4410,6 +4450,17 @@ SCIP_Bool SCIPsetIsInfinity(
    return (val >= set->num_infinity);
 }
 
+/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+SCIP_Bool SCIPsetIsHugeValue(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be checked whether it is huge */
+   )
+{
+   assert(set != NULL);
+
+   return (val >= set->num_hugeval);
+}
+
 /** checks, if values are in range of epsilon */
 SCIP_Bool SCIPsetIsEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4468,16 +4519,6 @@ SCIP_Bool SCIPsetIsGE(
    assert(set != NULL);
 
    return EPSGE(val1, val2, set->num_epsilon);
-}
-
-/** returns value treated as infinity */
-SCIP_Real SCIPsetInfinity(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(set != NULL);
-
-   return set->num_infinity;
 }
 
 /** checks, if value is in range epsilon of 0.0 */
@@ -5152,25 +5193,4 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    quotient = ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon);
 
    return quotient >= set->num_recompfac;
-}
-
-/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
-SCIP_Bool SCIPsetIsHugeValue(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             val                 /**< value to be checked whether it is huge */
-   )
-{
-   assert(set != NULL);
-
-   return (val >= set->num_hugeval);
-}
-
-/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity computation) */
-SCIP_Real SCIPsetGetHugeValue(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(set != NULL);
-
-   return set->num_hugeval;
 }

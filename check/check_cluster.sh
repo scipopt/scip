@@ -122,14 +122,6 @@ then
     exit
 fi
 
-# check if the slurm blades should be used exclusively
-if test "$EXCLUSIVE" = "true"
-then
-    EXCLUSIVE=" --exclusive --exclude=opt233,opt234,opt235,opt236,opt237,opt238,opt239,opt240,opt241,opt242,opt243,opt244,opt245,opt246,opt247,opt248"
-else
-    EXCLUSIVE=""
-fi
-
 #define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
 CLUSTERQUEUE=$QUEUE
 
@@ -150,6 +142,18 @@ elif test $CLUSTERQUEUE = "opt-low"
 then
     CLUSTERQUEUE="opt"
     NICE="--nice=10000"
+fi
+
+# check if the slurm blades should be used exclusively
+if test "$EXCLUSIVE" = "true"
+then
+    EXCLUSIVE=" --exclusive"
+    if test $CLUSTERQUEUE = "opt"
+    then
+        CLUSTERQUEUE="M610"
+    fi
+else
+    EXCLUSIVE=""
 fi
 
 

@@ -257,7 +257,7 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
 
    /* get fractional variables that should be integral */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
 
    /* don't try to dive, if there are no fractional variables */
    if( nlpcands == 0 )
@@ -510,14 +510,14 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 #ifdef NDEBUG
             SCIP_RETCODE retstat;
             nlpiterations = SCIPgetNLPIterations(scip);
-            retstat = SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
+            retstat = SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror, &cutoff);
             if( retstat != SCIP_OKAY )
             {
                SCIPwarningMessage(scip, "Error while solving LP in Fracdiving heuristic; LP solve terminated with code <%d>\n",retstat);
             }
 #else
             nlpiterations = SCIPgetNLPIterations(scip);
-            SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+            SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror, &cutoff) );
 #endif
             if( lperror )
                break;
@@ -527,8 +527,8 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 
             /* get LP solution status, objective value, and fractional variables, that should be integral */
             lpsolstat = SCIPgetLPSolstat(scip);
-            cutoff = (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE ||
-               (lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip))));
+            assert(cutoff || (lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT && lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE &&
+                  (lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))));
          }
 
          /* perform backtracking if a cutoff was detected */
@@ -566,7 +566,7 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
          }
 
          /* get new fractional variables */
-         SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
+         SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
       }
       SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", lpsolstat, objval, searchbound, nlpcands);
    }

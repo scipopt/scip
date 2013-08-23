@@ -314,6 +314,12 @@ SCIP_Longint SCIPconflictGetNAppliedLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** returns the total number of global bound changes applied by the conflict analysis */
+extern
+SCIP_Longint SCIPconflictGetNGlobalChgBds(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** returns the total number of conflict constraints that were added globally to the problem */
 extern
 SCIP_Longint SCIPconflictGetNAppliedGlobalConss(
@@ -323,6 +329,12 @@ SCIP_Longint SCIPconflictGetNAppliedGlobalConss(
 /** returns the total number of literals in conflict constraints that were added globally to the problem */
 extern
 SCIP_Longint SCIPconflictGetNAppliedGlobalLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** returns the total number of local bound changes applied by the conflict analysis */
+extern
+SCIP_Longint SCIPconflictGetNLocalChgBds(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 

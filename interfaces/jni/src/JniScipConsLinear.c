@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -381,8 +381,8 @@ jlongArray JNISCIPCONSLINEAR(getVarsLinear)(
 {
    SCIP* scip;
    SCIP_CONS* cons;
-   SCIP_VAR** vars;
    int nvars;
+
    jlongArray jvars;
 
    /* convert JNI pointer into C pointer */
@@ -393,15 +393,24 @@ jlongArray JNISCIPCONSLINEAR(getVarsLinear)(
    cons = (SCIP_CONS*) (size_t) jcons;
    assert( cons != NULL);
 
-
-   vars = SCIPgetVarsLinear(scip, cons);
    nvars = SCIPgetNVarsLinear(scip, cons);
 
    /* create jlongArray */
    jvars = (*env)->NewLongArray(env, nvars);
 
-   /* fill long array with SCIP variable pointers */
-   (*env)->SetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
+   if( jvars == NULL )
+   {
+      SCIPerrorMessage("Out of Memory\n");
+      JNISCIP_CALL( SCIP_ERROR );
+   }
+   else
+   {
+      SCIP_VAR** vars;
+
+      /* fill long array with SCIP variable pointers */
+      vars = SCIPgetVarsLinear(scip, cons);
+      (*env)->SetLongArrayRegion(env, jvars, 0, nvars, (jlong*)vars);
+   }
 
    return jvars;
 }
@@ -416,8 +425,8 @@ jdoubleArray JNISCIPCONSLINEAR(getValsLinear)(
 {
    SCIP* scip;
    SCIP_CONS* cons;
-   SCIP_Real* vals;
    int nvars;
+
    jdoubleArray jvals;
 
    /* convert JNI pointer into C pointer */
@@ -428,15 +437,24 @@ jdoubleArray JNISCIPCONSLINEAR(getValsLinear)(
    cons = (SCIP_CONS*) (size_t) jcons;
    assert( cons != NULL);
 
-
-   vals = SCIPgetValsLinear(scip, cons);
    nvars = SCIPgetNVarsLinear(scip, cons);
 
    /* create jlongArray */
    jvals = (*env)->NewDoubleArray(env, nvars);
 
-   /* fill long array with SCIP variable pointers */
-   (*env)->SetDoubleArrayRegion(env, jvals, 0, nvars, (jdouble*)vals);
+   if( jvals == NULL )
+   {
+      SCIPerrorMessage("Out of Memory\n");
+      JNISCIP_CALL( SCIP_ERROR );
+   }
+   else
+   {
+      SCIP_Real* vals;
+
+      /* fill long array with SCIP variable pointers */
+      vals = SCIPgetValsLinear(scip, cons);
+      (*env)->SetDoubleArrayRegion(env, jvals, 0, nvars, (jdouble*)vals);
+   }
 
    return jvals;
 }
@@ -563,10 +581,17 @@ jlong JNISCIPCONSLINEAR(getRowLinear)(
    jlong                 jcons               /**< constraint data */
    )
 {
-   SCIPerrorMessage("method getRowLinear  is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP* scip;
+   SCIP_CONS* cons;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
+
+   cons = (SCIP_CONS*) (size_t) jcons;
+   assert(cons != NULL);
+
+   return (jlong) (size_t) SCIPgetRowLinear(scip, cons);
 }
 
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */
@@ -577,10 +602,20 @@ jlong JNISCIPCONSLINEAR(upgradeConsLinear)(
    jlong                 jcons               /**< constraint data */
    )
 {
-   SCIPerrorMessage("method upgradeConsLinear is not implemented yet\n");
-   JNISCIP_CALL( SCIP_ERROR );
+   SCIP* scip;
+   SCIP_CONS* cons;
+   SCIP_CONS* upgdcons;
 
-   return 0;
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
+
+   cons = (SCIP_CONS*) (size_t) jcons;
+   assert(cons != NULL);
+
+   JNISCIP_CALL( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
+
+   return (jlong) (size_t) upgdcons;
 }
 
 /** forbids upgrading of constraint */
@@ -605,7 +640,7 @@ void JNISCIPCONSLINEAR(markDoNotUpgradeConsLinear)(
    JNISCIP_CALL( SCIPmarkDoNotUpgradeConsLinear(scip, cons) );
 }
 
-/** sets upgrading flag of linear constraint 
+/** sets upgrading flag of linear constraint
  *
  *  @note the donotupgrade flag should only be changed from TRUE to FALSE, by the caller who set it to TRUE
  */

@@ -37,22 +37,17 @@ SETCUTOFF=0
 # set this to 1 if you want the scripts to (try to) pass a best known solution (from .gdx file) to the GAMS solver
 PASSSTARTSOL=0
 
-# set this to true to keep solutions in .gdx files
+# set this to 1 to keep solutions in .gdx files
 KEEPSOLS=0
+
+# set this to 1 to run the solver through Examiner2
+EXAMINER=0
 
 # check all variables defined
 if [ -z ${EXCLUSIVE} ]
 then
     echo Skipping test since not all variables are defined.
     exit 1;
-fi
-
-# check if the slurm blades should be used exclusively
-if test "$EXCLUSIVE" = "true"
-then
-    EXCLUSIVE=" --exclusive --exclude=opt233,opt234,opt235,opt236,opt237,opt238,opt239,opt240,opt241,opt242,opt243,opt244,opt245,opt246,opt247,opt248"
-else
-    EXCLUSIVE=""
 fi
 
 # check if queuetype has been defined
@@ -90,8 +85,6 @@ then
   exit 1
 fi
 
-SETDIR=../settings
-
 if test ! -e results
 then
     mkdir results
@@ -104,8 +97,8 @@ fi
 EVALFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.eval
 SETFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.set
 SCHFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.sch
+OPTFILE=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.opt
 GMSDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.gms
-OPTDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.opt
 SOLDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.sol
 
 # additional environment variables needed by finishgamscluster.sh at the end (or when trap is setup)
@@ -145,24 +138,39 @@ then
   GAMSOPTS="$GAMSOPTS gdxcompress=1"
 fi
 
-# setup option file
+# setup solver option file
 # create directory $OPTDIR and put optionfile <solvername>.opt there
 if test "$SETNAME" != "default"
 then
+  SETDIR=`cd ../settings ; pwd`
   if test -f "$SETDIR/$SETNAME.gamsset"
   then
-    if test -d $OPTDIR
-    then
-      rm -f $OPTDIR/*
-    else
-      mkdir -p $OPTDIR
-    fi
-    cp "$SETDIR/$SETNAME.gamsset" $OPTDIR/${SOLVER,,}.opt
-    GAMSOPTS="$GAMSOPTS optdir=$OPTDIR optfile=1"
+    SETTINGS="$SETDIR/${SETNAME}.gamsset"
+    cp $SETTINGS $OPTFILE
   else
     echo "${m} settings file $SETDIR/${SETNAME}.gamsset not found"
     exit 1
   fi
+fi
+
+# setup examiner option file
+if test $EXAMINER = 1
+then
+  mkdir -p $OPTDIR
+  echo "subsolver ${SOLVER,,}" > $OPTDIR/examiner2.opt
+  if test "$SETNAME" != "default"
+  then
+    echo "subsolveropt 1" >> $OPTDIR/examiner2.opt
+  else
+    GAMSOPTS="$GAMSOPTS optdir=$OPTDIR optfile=1"
+  fi
+  #echo "traceStyle 1" >> $OPTDIR/examiner2.opt
+  echo   "scaled yes" >> $OPTDIR/examiner2.opt
+  echo "unscaled yes" >> $OPTDIR/examiner2.opt
+  echo "examinesolupoint yes" >> $OPTDIR/examiner2.opt
+  echo "examinesolvpoint yes" >> $OPTDIR/examiner2.opt
+  echo "examinegamspoint no"  >> $OPTDIR/examiner2.opt
+  echo "examineinitpoint no"  >> $OPTDIR/examiner2.opt
 fi
 
 # add information on solver and limits for eval script
@@ -254,6 +262,18 @@ elif test $CLUSTERQUEUE = "opt-low"
 then
     CLUSTERQUEUE="opt"
     NICE="--nice=10000"
+fi
+
+# check if the slurm blades should be used exclusively
+if test "$EXCLUSIVE" = "true"
+then
+    EXCLUSIVE=" --exclusive"
+    if test $CLUSTERQUEUE = "opt"
+    then
+        CLUSTERQUEUE="M610"
+    fi
+else
+    EXCLUSIVE=""
 fi
 
 # counter to define file names for a test set uniquely 
@@ -372,6 +392,7 @@ do
     export GDXFILE=$GDXFILE
     export CLIENTTMPDIR=$CLIENTTMPDIR
     export PASSSTARTSOL=$PASSSTARTSOL
+    export EXAMINER=$EXAMINER
 
     case $QUEUETYPE in
       srun )

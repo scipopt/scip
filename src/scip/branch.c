@@ -145,6 +145,7 @@ SCIP_RETCODE SCIPbranchcandCreate(
    (*branchcand)->pseudocands = NULL;
    (*branchcand)->lpcandssize = 0;
    (*branchcand)->nlpcands = 0;
+   (*branchcand)->nimpllpfracs = 0;
    (*branchcand)->npriolpcands = 0;
    (*branchcand)->npriolpbins = 0;
    (*branchcand)->lpmaxpriority = INT_MIN;
@@ -206,10 +207,11 @@ SCIP_RETCODE branchcandCalcLPCands(
 
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
    {
-      branchcand->lpmaxpriority = INT_MIN;
+      branchcand->lpmaxpriority = INT_MIN / 2;
       branchcand->nlpcands = 0;
       branchcand->npriolpcands = 0;
       branchcand->npriolpbins = 0;
+      branchcand->nimpllpfracs = 0;
       branchcand->validlpcandslp = stat->lpcount;
 
       SCIPdebugMessage(" LP is unbounded -> no branching candidates\n");
@@ -238,8 +240,9 @@ SCIP_RETCODE branchcandCalcLPCands(
       /* construct the LP branching candidate set, moving the candidates with maximal priority to the front */
       SCIP_CALL( ensureLpcandsSize(branchcand, set, ncols) );
 
-      branchcand->lpmaxpriority = INT_MIN;
+      branchcand->lpmaxpriority = INT_MIN / 2;
       branchcand->nlpcands = 0;
+      branchcand->nimpllpfracs = 0;
       branchcand->npriolpcands = 0;
       branchcand->npriolpbins = 0;
       for( c = 0; c < ncols; ++c )
@@ -259,9 +262,11 @@ SCIP_RETCODE branchcandCalcLPCands(
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
          assert(SCIPvarGetCol(var) == col);
          
-         /* LP branching candidates are fractional binary and integer variables */
+         /* LP branching candidates are fractional binary and integer variables; implicit variables are kept at the end
+          * of the candidates array for some rounding heuristics
+          */
          vartype = SCIPvarGetType(var);
-         if( vartype != SCIP_VARTYPE_BINARY && vartype != SCIP_VARTYPE_INTEGER )
+         if( vartype == SCIP_VARTYPE_CONTINUOUS )
             continue;
 
          /* ignore fixed variables (due to numerics, it is possible, that the LP solution of a fixed integer variable
@@ -275,12 +280,28 @@ SCIP_RETCODE branchcandCalcLPCands(
          if( SCIPsetIsFeasFracIntegral(set, frac) )
             continue;
 
-         assert(branchcand->nlpcands < branchcand->lpcandssize);
-
          /* insert candidate in candidate list */
          branchpriority = SCIPvarGetBranchPriority(var);
-         insertpos = branchcand->nlpcands;
-         branchcand->nlpcands++;
+         insertpos = branchcand->nlpcands + branchcand->nimpllpfracs;
+         assert(insertpos < branchcand->lpcandssize);
+
+         if( vartype == SCIP_VARTYPE_IMPLINT )
+            branchpriority = INT_MIN;
+
+         assert(vartype == SCIP_VARTYPE_IMPLINT || branchpriority >= INT_MIN/2);
+         /* ensure that implicit variables are stored at the end of the array */
+         if( vartype != SCIP_VARTYPE_IMPLINT && branchcand->nimpllpfracs > 0 )
+         {
+            assert(branchcand->lpcands[branchcand->nlpcands] != NULL
+                  && SCIPvarGetType(branchcand->lpcands[branchcand->nlpcands]) == SCIP_VARTYPE_IMPLINT );
+
+            branchcand->lpcands[insertpos] = branchcand->lpcands[branchcand->nlpcands];
+            branchcand->lpcandssol[insertpos] = branchcand->lpcandssol[branchcand->nlpcands];
+            branchcand->lpcandsfrac[insertpos] = branchcand->lpcandsfrac[branchcand->nlpcands];
+
+            insertpos = branchcand->nlpcands;
+         }
+
          if( branchpriority > branchcand->lpmaxpriority )
          {
             /* candidate has higher priority than the current maximum:
@@ -323,14 +344,32 @@ SCIP_RETCODE branchcandCalcLPCands(
                branchcand->npriolpbins++;
             }
          }
+         /* insert variable at the correct position of the candidates storage */
          branchcand->lpcands[insertpos] = var;
          branchcand->lpcandssol[insertpos] = primsol;
          branchcand->lpcandsfrac[insertpos] = frac;
+
+         /* increase the counter depending on the variable type */
+         if( vartype != SCIP_VARTYPE_IMPLINT )
+            branchcand->nlpcands++;
+         else
+            branchcand->nimpllpfracs++;
 
          SCIPdebugMessage(" -> candidate %d: var=<%s>, sol=%g, frac=%g, prio=%d (max: %d) -> pos %d\n", 
             branchcand->nlpcands, SCIPvarGetName(var), primsol, frac, branchpriority, branchcand->lpmaxpriority,
             insertpos);
       }
+
+#ifndef NDEBUG
+      /* in debug mode we assert that the variables are positioned correctly (binaries and integers first,
+       * implicit integers last)
+       */
+      for( c = 0; c < branchcand->nlpcands + branchcand->nimpllpfracs; ++c )
+      {
+         assert(c >= branchcand->nlpcands || SCIPvarGetType(branchcand->lpcands[c]) != SCIP_VARTYPE_IMPLINT);
+         assert(c < branchcand->nlpcands || SCIPvarGetType(branchcand->lpcands[c]) == SCIP_VARTYPE_IMPLINT);
+      }
+#endif
 
       branchcand->validlpcandslp = stat->lpcount;
    }
@@ -351,7 +390,8 @@ SCIP_RETCODE SCIPbranchcandGetLPCands(
    SCIP_Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*                  nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
-   int*                  npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  npriolpcands,       /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  nfracimplvars       /**< pointer to store the number of implicit fractional variables, or NULL */
    )
 {
    /* calculate branching candidates */
@@ -369,6 +409,8 @@ SCIP_RETCODE SCIPbranchcandGetLPCands(
    if( npriolpcands != NULL )
       *npriolpcands = (set->branch_preferbinary && branchcand->npriolpbins > 0 ? branchcand->npriolpbins
          : branchcand->npriolpcands);
+   if( nfracimplvars != NULL )
+      *nfracimplvars = branchcand->nimpllpfracs;
 
    return SCIP_OKAY;
 }

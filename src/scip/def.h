@@ -31,6 +31,17 @@
 #include <assert.h>
 
 /*
+ * GNU COMPILER VERSION define
+ */
+#ifdef __GNUC__
+#ifndef GCC_VERSION
+#define GCC_VERSION (__GNUC__ * 100                     \
+      + __GNUC_MINOR__ * 10                             \
+      + __GNUC_PATCHLEVEL__)
+#endif
+#endif
+
+/*
  * Boolean values
  */
 
@@ -71,7 +82,7 @@ extern "C" {
 #endif
 
 #define SCIP_VERSION                301 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               1 /**< SCIP sub version number */
+#define SCIP_SUBVERSION               5 /**< SCIP sub version number */
 #define SCIP_COPYRIGHT   "Copyright (c) 2002-2013 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 

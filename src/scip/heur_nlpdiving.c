@@ -2233,11 +2233,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          if( !cutoff && !lperror && (heurdata->lp || heurdata->varselrule == 'd')
             && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL && SCIPisLPSolBasic(scip) )
          {
-            SCIP_CALL( SCIPsolveProbingLP(scip, 100, &lperror) );
+            SCIP_CALL( SCIPsolveProbingLP(scip, 100, &lperror, &cutoff) );
 
             /* get LP solution status, objective value, and fractional variables, that should be integral */
             lpsolstat = SCIPgetLPSolstat(scip);
-            cutoff = (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
+            assert(cutoff || (lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT && lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE &&
+                  (lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))));
 
             if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
             {

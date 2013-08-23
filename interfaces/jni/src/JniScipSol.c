@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -48,6 +48,40 @@ jint JNISCIPSOL(solGetOrigin)(
    orig = SCIPsolGetOrigin(sol);
 
    return (jint) orig;
+}
+
+/** returns whether the given solution is defined on original variables */
+JNIEXPORT
+jboolean JNISCIPSOL(solIsOriginal)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jsol                /**< primal CIP solution */
+   )
+{
+   SCIP_SOL* sol;
+
+   /* convert JNI pointer into C pointer */
+   sol = (SCIP_SOL*) (size_t) jsol;
+   assert(sol != NULL);
+
+   return (jboolean) SCIPsolIsOriginal(sol);
+}
+
+/** gets objective value of primal CIP solution which lives in the original problem space */
+JNIEXPORT
+jdouble JNISCIPSOL(solGetOrigObj)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jsol                /**< primal CIP solution */
+   )
+{
+   SCIP_SOL* sol;
+
+   /* convert JNI pointer into C pointer */
+   sol = (SCIP_SOL*) (size_t) jsol;
+   assert(sol != NULL);
+
+   return (jdouble) SCIPsolGetOrigObj(sol);
 }
 
 /** gets clock time, when this solution was found */
@@ -159,17 +193,17 @@ void JNISCIPSOL(solSetHeur)(
    jlong                 jheur               /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
-   // SCIP_SOL* sol;
-   // SCIP_HEUR* heur;
+   SCIP_SOL* sol;
+   SCIP_HEUR* heur;
 
-   // /* convert JNI pointer into C pointer */
-   // sol = (SCIP_SOL*) (size_t) jsol;
-   // assert(sol != NULL);
+   /* convert JNI pointer into C pointer */
+   sol = (SCIP_SOL*) (size_t) jsol;
+   assert(sol != NULL);
 
-   // heur = (SCIP_HEUR*) (size_t) jheur;
-   // assert(heur != NULL);
+   heur = (SCIP_HEUR*) (size_t) jheur;
+   assert(heur != NULL);
 
-   // JNISCIP_CALL( SCIPsolSetHeur(sol, heur) );
+   SCIPsolSetHeur(sol, heur);
 }
 
 /** returns unique index of given solution */

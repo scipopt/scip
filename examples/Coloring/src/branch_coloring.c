@@ -117,7 +117,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
    *result = SCIP_DIDNOTRUN;
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);
 
    bestcand = -1;

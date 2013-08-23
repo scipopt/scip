@@ -210,7 +210,7 @@ void calculateBounds(
 
       assert(0 <= rowpos && rowpos < nslacks);
 
-      /** all bounds and slacks as they are calculated in zirounding always have to be greater equal zero.
+      /* all bounds and slacks as they are calculated in zirounding always have to be greater equal zero.
        * It might however be due to numerical issues, e.g. with scaling, that they are not. Better abort in this case.
        */
       if( SCIPisFeasLT(scip, *lowerbound, 0.0) || SCIPisFeasLT(scip, *upperbound, 0.0)
@@ -278,10 +278,10 @@ SCIP_RETCODE updateSlacks(
    int                   nslacks             /**< size of the arrays */
    )
 {
-   SCIP_COL*    col;        /** the corresponding column of variable var */
-   SCIP_ROW**   rows;       /** pointer to the nonzero coefficient rows for variable var */
-   int          nrows;      /** the number of nonzeros */
-   SCIP_Real*   colvals;    /** array to store the nonzero coefficients */
+   SCIP_COL*    col;        /* the corresponding column of variable var */
+   SCIP_ROW**   rows;       /* pointer to the nonzero coefficient rows for variable var */
+   int          nrows;      /* the number of nonzeros */
+   SCIP_Real*   colvals;    /* array to store the nonzero coefficients */
    int i;
 
    assert(scip != NULL);
@@ -544,6 +544,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    SCIP_Longint       nlps;
    int                currentlpcands;
    int                nlpcands;
+   int                nimplfracs;
    int                i;
    int                c;
    int                nslacks;
@@ -584,8 +585,8 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    heurdata->lastlp = nlps;
 
    /* get fractional variables */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL) );
-
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, &nimplfracs) );
+   nlpcands = nlpcands + nimplfracs;
    /* make sure that there is at least one fractional variable that should be integral */
    if( nlpcands == 0 )
       return SCIP_OKAY;
@@ -605,13 +606,11 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    assert(rows != NULL);
    assert(nslacks > 0);
 
-
    /* get the working solution from heuristic's local data */
    sol = heurdata->sol;
    assert(sol != NULL);
 
    *result = SCIP_DIDNOTFIND;
-
 
    /* copy the current LP solution to the working solution and allocate memory for local data */
    SCIP_CALL( SCIPlinkLPSol(scip, sol) );
@@ -838,7 +837,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             down = MAX(down, floorx);
          }
 
-         /** calculate necessary values */
+         /* calculate necessary values */
          ziup      = getZiValue(scip, up);
          zidown    = getZiValue(scip, down);
          zicurrent = getZiValue(scip, oldsolval);
