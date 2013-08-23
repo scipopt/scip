@@ -90,7 +90,7 @@
 
 /* propagation */
 #define DEFAULT_TTINFER                 TRUE /**< should time-table (core-times) propagator be used to infer bounds? */
-#define DEFAULT_EFCHECK                 TRUE /**< should edge-finding be used to detect an overload? */
+#define DEFAULT_EFCHECK                FALSE /**< should edge-finding be used to detect an overload? */
 #define DEFAULT_EFINFER                FALSE /**< should edge-finding be used to infer bounds? */
 #define DEFAULT_USEADJUSTEDJOBS        FALSE /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
 #define DEFAULT_TTEFCHECK               TRUE /**< should time-table edge-finding be used to detect an overload? */
