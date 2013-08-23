@@ -1,0 +1,7 @@
+FLAGS		+=	-DNDEBUG -DROUNDING_FE
+OFLAGS		+=	-O3 -mtune=native -fomit-frame-pointer -fPIC # -malign-double -mcpu=pentium4 -g
+CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+#OFLAGS		+=	-O2 -fexceptions -funsigned-char -fno-strict-aliasing -fno-omit-frame-pointer -fstack-protector-all -fvisibility=hidden -pipe -fPIC -pthread -g -Wall -Wcast-align -Wno-trigraphs -Wmissing-prototypes -Wextra -Wno-unused-variable -Wno-unused-parameter -Wno-unknown-pragmas -Wstack-protector -minline-all-stringops -D__NO_MATH_INLINES -DGCC_UTF16_PATCH -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64  -DGCC_HIDDEN_VISIBILITY
+#CFLAGS		+=	$(GCCWARN) -Wno-missing-declarations
+#CXXFLAGS	+=	$(GXXWARN) # -fno-exceptions (CLP uses exceptions)

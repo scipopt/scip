@@ -65,3 +65,25 @@ coverage:
 		make  $^ test
 		lcov -d $(OBJDIR) -c >gcov/scip.capture
 		genhtml -o gcov gcov/scip.capture
+
+
+#-----------------------------------------------------------------------------
+# SAP SCIP Library
+#-----------------------------------------------------------------------------
+
+SAPSCIPLIBFILE		=	$(LIBDIR)/libsap$(SCIPLIB).$(LIBEXT)
+SAPSCIPLIBSHORTLINK	=	$(LIBDIR)/libsap$(SCIPLIBSHORTNAME).$(LIBEXT)
+
+saplib:		githash $(LINKSMARKERFILE) $(SAPSCIPLIBFILE) $(SAPSCIPLIBSHORTLINK)
+
+$(SAPSCIPLIBSHORTLINK):	$(SAPSCIPLIBFILE)
+		@rm -f $@
+		cd $(dir $@) && $(LN_s) $(notdir $(SAPSCIPLIBFILE)) $(notdir $@)
+
+$(SAPSCIPLIBFILE):	checklpsdefine $(LIBDIR) $(LIBOBJSUBDIRS) touchexternal $(SCIPLIBOBJFILES) $(NLPILIBOBJFILES) $(LPILIBOBJFILES)
+		@echo "-> generating library $@"
+		-rm -f $@
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES) $(NLPILIBOBJFILES) $(LPILIBOBJFILES)
+ifneq ($(RANLIB),)
+		$(RANLIB) $@
+endif
