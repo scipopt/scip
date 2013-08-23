@@ -10428,15 +10428,15 @@ SCIP_RETCODE presolveCons(
 {
    assert(!SCIPconsIsDeleted(cons));
 
-   /* computes the effective horizon and checks if the constraint can be decomposed */
-   SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
-
-   if( SCIPconsIsDeleted(cons) )
-      return SCIP_OKAY;
-
    /* only perform dual reductions on model constraints */
    if( conshdlrdata->dualpresolve )
    {
+      /* computes the effective horizon and checks if the constraint can be decomposed */
+      SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
+
+      if( SCIPconsIsDeleted(cons) )
+         return SCIP_OKAY;
+
       /* in case the cumulative constraint is independent of every else, solve the cumulative problem and apply the
        * fixings (dual reductions)
        */
