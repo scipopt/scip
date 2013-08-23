@@ -449,10 +449,6 @@ SCIP_RETCODE addCoef(
 
       consdata->presolved = FALSE;
    }
-   else
-   {
-      assert(SCIPvarGetStatus(SCIPvarGetProbvar(var)) != SCIP_VARSTATUS_MULTAGGR);
-   }
    assert(var != NULL);
    assert(transformed == SCIPvarIsTransformed(var));
 
