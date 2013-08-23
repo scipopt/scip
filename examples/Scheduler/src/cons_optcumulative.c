@@ -91,8 +91,11 @@
  * @{
  */
 
-#define EVENTHDLR_NAME         "optcumulative"
-#define EVENTHDLR_DESC         "bound change event handler for optcumulative constraints"
+#define EVENTHDLR_BINVARS_NAME  "optcumulativebinvars"
+#define EVENTHDLR_BINVARS_DESC  "bound change event handler for binary variables of optcumulative constraints"
+
+#define EVENTHDLR_INTVARS_NAME  "optcumulativeintvars"
+#define EVENTHDLR_INTVARS_DESC  "bound change event handler for integer variables of optcumulative constraints"
 
 /**@} */
 
@@ -143,7 +146,8 @@ struct SCIP_ConsData
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
+   SCIP_EVENTHDLR*       eventhdlrbinvars;   /**< event handler for bound change events on binary variables */
+   SCIP_EVENTHDLR*       eventhdlrintvars;   /**< event handler for bound change events on integer variables */
    SCIP_HEUR*            heurtrysol;         /**< trysol heuristic */
    SCIP_Bool             rowrelax;           /**< add linear relaxation as LP row (otherwise a knapsack constraint is created)? */
    SCIP_Bool             conflictanalysis;   /**< participate in conflict analysis? */
@@ -400,16 +404,19 @@ static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA**   conshdlrdata,       /**< pointer to store the constraint handler data */
-   SCIP_EVENTHDLR*       eventhdlr           /**< used event handler for tracing bound changes on binary variables */
+   SCIP_EVENTHDLR*       eventhdlrbinvars,   /**< used event handler for tracing bound changes on binary variables */
+   SCIP_EVENTHDLR*       eventhdlrintvars    /**< used event handler for tracing bound changes on integer variables */
    )
 {
    assert(scip != NULL);
    assert(conshdlrdata != NULL);
-   assert(eventhdlr != NULL);
+   assert(eventhdlrbinvars != NULL);
+   assert(eventhdlrintvars != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
-   (*conshdlrdata)->eventhdlr = eventhdlr;
+   (*conshdlrdata)->eventhdlrbinvars = eventhdlrbinvars;
+   (*conshdlrdata)->eventhdlrintvars = eventhdlrintvars;
    (*conshdlrdata)->heurtrysol = NULL;
 
    return SCIP_OKAY;
@@ -452,9 +459,9 @@ SCIP_RETCODE unlockRounding(
    return SCIP_OKAY;
 }
 
-/** catches events for variable at given position */
+/** catches events for binary variable at given position */
 static
-SCIP_RETCODE catchEvent(
+SCIP_RETCODE catchEventBinvar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< set partitioning / packing / covering constraint */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -497,9 +504,9 @@ SCIP_RETCODE catchEvent(
    return SCIP_OKAY;
 }
 
-/** drops events for variable at given position */
+/** drops events for binary variable at given position */
 static
-SCIP_RETCODE dropEvent(
+SCIP_RETCODE dropEventBinvar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< set partitioning / packing / covering constraint */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -536,12 +543,78 @@ SCIP_RETCODE dropEvent(
    return SCIP_OKAY;
 }
 
+/** catches events for integer variable at given position */
+static
+SCIP_RETCODE catchEventIntvar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< set partitioning / packing / covering constraint */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int                   pos                 /**< array position of variable to catch bound change events for */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_EVENTTYPE eventtype;
+   SCIP_VAR* var;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(eventhdlr != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+   assert(consdata->vars != NULL);
+
+   var = consdata->vars[pos];
+   assert(var != NULL);
+
+   /* we are catching the following events for the integer variables:
+    *
+    * - SCIP_EVENTTYPE_GBDCHANGED: This allows to check if the optcumulative can be converted into an cumulative
+    *   constraint
+    */
+   eventtype = SCIP_EVENTTYPE_GBDCHANGED;
+
+   /* catch bound change events on variable */
+   SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** drops events for integer variable at given position */
+static
+SCIP_RETCODE dropEventIntvar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< set partitioning / packing / covering constraint */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int                   pos                 /**< array position of variable to catch bound change events for */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_EVENTTYPE eventtype;
+   SCIP_VAR* var;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(eventhdlr != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+   assert(consdata->vars != NULL);
+
+   var = consdata->vars[pos];
+   assert(var != NULL);
+
+   eventtype = SCIP_EVENTTYPE_GBDCHANGED;
+
+   /* drop events on variable */
+   SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
+
+   return SCIP_OKAY;
+}
+
 /** catches bound change events for all variables in transformed optcumulative constraint */
 static
 SCIP_RETCODE catchAllEvents(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< set partitioning / packing / covering constraint */
-   SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+   SCIP_EVENTHDLR*       eventhdlrbinvars,   /**< event handler to call for the event processing on binary variables */
+   SCIP_EVENTHDLR*       eventhdlrintvars    /**< event handler to call for the event processing on integer variables */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -555,7 +628,9 @@ SCIP_RETCODE catchAllEvents(
    /* catch event for every single variable */
    for( v = 0; v < consdata->nvars; ++v )
    {
-      SCIP_CALL( catchEvent(scip, cons, eventhdlr, v) );
+      SCIP_CALL( catchEventBinvar(scip, cons, eventhdlrbinvars, v) );
+
+      SCIP_CALL( catchEventIntvar(scip, cons, eventhdlrintvars, v) );
    }
 
    /* (debug) check if the counter of the constraint are correct */
@@ -569,7 +644,8 @@ static
 SCIP_RETCODE dropAllEvents(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< set partitioning / packing / covering constraint */
-   SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+   SCIP_EVENTHDLR*       eventhdlrbinvars,   /**< event handler to call for the event processing on binary variables */
+   SCIP_EVENTHDLR*       eventhdlrintvars    /**< event handler to call for the event processing on integer variables */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -581,7 +657,9 @@ SCIP_RETCODE dropAllEvents(
    /* drop event of every single variable */
    for( v = 0; v < consdata->nvars; ++v )
    {
-      SCIP_CALL( dropEvent(scip, cons, eventhdlr, v) );
+      SCIP_CALL( dropEventBinvar(scip, cons, eventhdlrbinvars, v) );
+
+      SCIP_CALL( dropEventIntvar(scip, cons, eventhdlrintvars, v) );
    }
 
    /* check that the internal constraint state is rested */
@@ -1117,6 +1195,85 @@ void collectSolActivities(
    }
 }
 
+/** solves given cumulative condition as independent sub problem
+ *
+ *  @note The time and memory limit of the SCIP environment in transferred to sub solver
+ *
+ *  @note If the problem was solved to the earliest start times (ests) and latest start times (lsts) array contain the
+ *        solution values; If the problem was not solved these two arrays contain the global bounds at the time the sub
+ *        solver was interrupted.
+ */
+static
+SCIP_RETCODE solveCumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Bool             local,              /**< use local bounds, otherwise global */
+   SCIP_Real*            ests,               /**< array to store the earlier start time for each job */
+   SCIP_Real*            lsts,               /**< array to store the latest start time for each job */
+   SCIP_Longint          maxnodes,           /**< maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit) */
+   SCIP_Bool*            solved,             /**< pointer to store if the problem is solved (to optimality) */
+   SCIP_Bool*            infeasible,         /**< pointer to store if the problem is infeasible */
+   SCIP_Bool*            unbounded,          /**< pointer to store if the problem is unbounded */
+   SCIP_Bool*            error               /**< pointer to store if an error occurred */
+   )
+{
+   SCIP_Real* objvals;
+   SCIP_Real timelimit;
+   SCIP_Real memorylimit;
+   int v;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nvars) );
+
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_VAR* var;
+
+      var = vars[v];
+      assert(var != NULL);
+
+      if( local )
+      {
+         ests[v] = SCIPvarGetLbLocal(var);
+         lsts[v] = SCIPvarGetUbLocal(var);
+      }
+      else
+      {
+         ests[v] = SCIPvarGetLbGlobal(var);
+         lsts[v] = SCIPvarGetUbGlobal(var);
+      }
+
+      objvals[v] = SCIPvarGetObj(var);
+   }
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+   if( !SCIPisInfinity(scip, memorylimit) )
+   {
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   SCIP_CALL( SCIPsolveCumulative(scip, nvars, ests, lsts, objvals,  durations, demands,
+         capacity, hmin, hmax, timelimit, memorylimit, maxnodes,
+         solved, infeasible, unbounded, error) );
+
+   SCIPfreeBufferArray(scip, &objvals);
+
+   return SCIP_OKAY;
+}
+
+
 /** check of the given constraint is redundant */
 static
 SCIP_RETCODE checkRedundancy(
@@ -1167,7 +1324,7 @@ SCIP_RETCODE checkRedundancy(
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
 
    /* solve the cumulative condition separately */
-   SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, consdata->durations, consdata->demands,
+   SCIP_CALL( solveCumulative(scip, nvars, vars, consdata->durations, consdata->demands,
          consdata->capacity, consdata->hmin, consdata->hmax, FALSE,
          lbs, ubs, 1000LL, &solved, &infeasible, &unbounded, &error) );
    assert(!unbounded);
@@ -1269,7 +1426,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
 
    /* solve the cumulative condition separately */
-   SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, durations, demands, consdata->capacity, consdata->hmin, consdata->hmax, TRUE,
+   SCIP_CALL( solveCumulative(scip, nvars, vars, durations, demands, consdata->capacity, consdata->hmin, consdata->hmax, TRUE,
          lbs, ubs, 2000LL, &solved, cutoff, &unbounded, &error) );
    assert(!unbounded);
 
@@ -1283,7 +1440,7 @@ SCIP_RETCODE solveSubproblem(
 
          while( nvars > 1 )
          {
-            SCIP_CALL( SCIPsolveCumulative(scip, nvars-1, vars, durations, demands, consdata->capacity, consdata->hmin, consdata->hmax, TRUE,
+            SCIP_CALL( solveCumulative(scip, nvars-1, vars, durations, demands, consdata->capacity, consdata->hmin, consdata->hmax, TRUE,
                   lbs, ubs, 2000LL, &solved, &infeasible, &unbounded, &error) );
 
             if( !infeasible )
@@ -1495,7 +1652,7 @@ SCIP_RETCODE enfopsCons(
       SCIP_CALL( SCIPcheckCumulativeCondition(scip, NULL, nvars, vars,
             durations, demands, consdata->capacity, consdata->hmin, consdata->hmax, violated, cons, FALSE) );
 
-      if( *violated && auxiliary )
+      if( *violated && auxiliary && !consdata->triedsolving )
       {
          SCIP_Real* lbs;
          SCIP_Real* ubs;
@@ -1504,11 +1661,13 @@ SCIP_RETCODE enfopsCons(
          SCIP_Bool error;
          SCIP_Bool solved;
 
+         consdata->triedsolving = TRUE;
+
          SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
 
          /* solve the cumulative condition separately */
-         SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, durations, demands,
+         SCIP_CALL( solveCumulative(scip, nvars, vars, durations, demands,
                consdata->capacity, consdata->hmin, consdata->hmax, FALSE,
                lbs, ubs, 1000LL, &solved, &infeasible, &unbounded, &error) );
          assert(!unbounded);
@@ -1527,7 +1686,7 @@ SCIP_RETCODE enfopsCons(
                (*solfeasible) = FALSE;
                (*consadded) = TRUE;
             }
-            else if( solved && solfeasible && trysol != NULL )
+            else if( solved && *solfeasible && trysol != NULL )
             {
                int v;
 
@@ -1801,10 +1960,12 @@ SCIP_RETCODE consdataDeletePos(
       conshdlr = SCIPconsGetHdlr(cons);
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
-      assert(conshdlrdata->eventhdlr != NULL);
+      assert(conshdlrdata->eventhdlrbinvars != NULL);
+      assert(conshdlrdata->eventhdlrintvars != NULL);
 
       /* drop bound change events of variable */
-      SCIP_CALL( dropEvent(scip, cons, conshdlrdata->eventhdlr, pos) );
+      SCIP_CALL( dropEventBinvar(scip, cons, conshdlrdata->eventhdlrbinvars, pos) );
+      SCIP_CALL( dropEventIntvar(scip, cons, conshdlrdata->eventhdlrintvars, pos) );
    }
 
    SCIPdebugMessage("remove variable <%s> from optcumulative constraint <%s>\n",
@@ -2682,12 +2843,13 @@ SCIP_DECL_CONSDELETE(consDeleteOptcumulative)
    /* get event handler */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr != NULL);
+   assert(conshdlrdata->eventhdlrbinvars != NULL);
+   assert(conshdlrdata->eventhdlrintvars != NULL);
 
    /* if constraint belongs to transformed problem space, drop bound change events on variables */
    if( (*consdata)->nvars > 0 && SCIPvarIsTransformed((*consdata)->vars[0]) )
    {
-      SCIP_CALL( dropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+      SCIP_CALL( dropAllEvents(scip, cons, conshdlrdata->eventhdlrbinvars, conshdlrdata->eventhdlrintvars) );
    }
 
    /* free optcumulative constraint data */
@@ -2712,7 +2874,8 @@ SCIP_DECL_CONSTRANS(consTransOptcumulative)
    /* get event handler */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr != NULL);
+   assert(conshdlrdata->eventhdlrbinvars != NULL);
+   assert(conshdlrdata->eventhdlrintvars != NULL);
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
@@ -2735,7 +2898,7 @@ SCIP_DECL_CONSTRANS(consTransOptcumulative)
    assert(targetdata->nglbfixedzeros == 0);
 
    /* catch bound change events of variables */
-   SCIP_CALL( catchAllEvents(scip, *targetcons, conshdlrdata->eventhdlr) );
+   SCIP_CALL( catchAllEvents(scip, *targetcons, conshdlrdata->eventhdlrbinvars, conshdlrdata->eventhdlrintvars) );
 
    return SCIP_OKAY;
 }
@@ -3488,14 +3651,14 @@ SCIP_DECL_CONSCOPY(consCopyOptcumulative)
  */
 
 static
-SCIP_DECL_EVENTEXEC(eventExecOptcumulative)
+SCIP_DECL_EVENTEXEC(eventExecOptcumulativeBinvars)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_EVENTTYPE eventtype;
 
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_BINVARS_NAME) == 0);
    assert(event != NULL);
 
    /* collect event information */
@@ -3522,6 +3685,22 @@ SCIP_DECL_EVENTEXEC(eventExecOptcumulative)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_EVENTEXEC(eventExecOptcumulativeIntvars)
+{  /*lint --e{715}*/
+   assert(eventhdlr != NULL);
+   assert(eventdata != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_INTVARS_NAME) == 0);
+   assert(event != NULL);
+
+   if( SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING )
+   {
+      SCIP_CALL( SCIPrestartSolve(scip) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * constraint specific interface methods
  */
@@ -3532,14 +3711,19 @@ SCIP_RETCODE SCIPincludeConshdlrOptcumulative(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLR* eventhdlrbinvars;
+   SCIP_EVENTHDLR* eventhdlrintvars;
 
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         eventExecOptcumulative, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlrbinvars, EVENTHDLR_BINVARS_NAME, EVENTHDLR_BINVARS_DESC,
+         eventExecOptcumulativeBinvars, NULL) );
+
+   /* create event handler for bound change events */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlrintvars, EVENTHDLR_INTVARS_NAME, EVENTHDLR_INTVARS_DESC,
+         eventExecOptcumulativeIntvars, NULL) );
 
    /* create constraint handler data */
-   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata, eventhdlr) );
+   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata, eventhdlrbinvars, eventhdlrintvars) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -3644,13 +3828,14 @@ SCIP_RETCODE SCIPcreateConsOptcumulative(
       /* get event handler */
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
-      assert(conshdlrdata->eventhdlr != NULL);
+      assert(conshdlrdata->eventhdlrbinvars != NULL);
+      assert(conshdlrdata->eventhdlrintvars != NULL);
 
       assert(consdata->nglbfixedones == 0);
       assert(consdata->nglbfixedzeros == 0);
 
       /* catch bound change events of variables */
-      SCIP_CALL( catchAllEvents(scip, *cons, conshdlrdata->eventhdlr) );
+      SCIP_CALL( catchAllEvents(scip, *cons, conshdlrdata->eventhdlrbinvars, conshdlrdata->eventhdlrintvars) );
    }
 
    return SCIP_OKAY;
