@@ -2682,7 +2682,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
             lct = convertBoundToInt(scip, relaxedbd) + duration;
             assert(begin <= lct);
-            assert(lct - begin < duration);
+            assert(bdchgidx == NULL || convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)) < begin);
 
             /* compute the overlap of the job after the propagation but considering the relaxed bound */
             left = MIN(lct - begin + 1, end - begin);
@@ -2729,7 +2729,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
             est = convertBoundToInt(scip, relaxedbd);
             assert(end >= est);
-            assert(end - est < duration);
+            assert(bdchgidx == NULL || end - SCIPvarGetLbAtIndex(var, bdchgidx, TRUE) < duration);
 
             /* compute the overlap of the job after the propagation but considering the relaxed bound */
             right = MIN(end - est + 1, end - begin);
