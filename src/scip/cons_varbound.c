@@ -1208,7 +1208,7 @@ SCIP_RETCODE propagateCons(
 
             if( *cutoff )
             {
-               assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)));
+               assert( SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)) );
 
                /* analyze infeasibility */
                SCIP_CALL( analyzeConflict(scip, cons, consdata->var, newlb, PROPRULE_1, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
@@ -1242,7 +1242,7 @@ SCIP_RETCODE propagateCons(
 
                   if( *cutoff )
                   {
-                     assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
+                     assert( SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)) );
 
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newlb, PROPRULE_2, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
@@ -1269,7 +1269,7 @@ SCIP_RETCODE propagateCons(
 
                   if( *cutoff )
                   {
-                     assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
+                     assert( SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)) );
 
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newub, PROPRULE_2, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
@@ -1319,7 +1319,7 @@ SCIP_RETCODE propagateCons(
 
             if( *cutoff )
             {
-               assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)));
+               assert( SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)) );
 
                /* analyze infeasibility */
                SCIP_CALL( analyzeConflict(scip, cons, consdata->var, newub, PROPRULE_3, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
