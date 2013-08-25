@@ -46,13 +46,13 @@ VERSION		=	unittests
 #-----------------------------------------------------------------------------
 
 # add new unit tests here:
-UNITTESTS	=	unittest-slack unittest-depthlevel
+UNITTESTS	=	unittest-slack unittest-depthlevel unittest-boundchg
 
 # UNITTESTS, EXECCOMMANDS, and TESTCASES depend on each other
 # command which should be used to start the unittest, e.g. optimize or presolve
-EXECCOMMANDS    =       testslack NOEXEC
+EXECCOMMANDS    =       testslack NOEXEC NOEXEC
 # testsets or NOTEST if there is no testset
-TESTCASES       =       short nofile
+TESTCASES       =       short nofile nofile
 
 UNITTESTSSRC	=	$(addprefix $(SRCDIR)/, $(addsuffix .c, $(UNITTESTS)))
 UNITTESTSOBJ	=	$(addprefix $(OBJDIR)/, $(addsuffix .o, $(UNITTESTS)))
