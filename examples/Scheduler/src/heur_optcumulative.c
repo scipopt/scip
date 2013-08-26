@@ -463,6 +463,8 @@ SCIP_RETCODE applyOptcumulative(
 
             SCIPdebugMessage("check machine %d (variables %d)\n", m, nvars);
 
+            SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nvars) );
+
             for( v = 0; v < nvars; ++v )
             {
                SCIP_VAR* var;
