@@ -111,6 +111,8 @@ SCIP_RETCODE performSimpleRounding(
    {
       SCIP_Bool stored;
 
+      SCIP_CALL ( SCIPadjustImplicitSolVals(scip, sol, TRUE) );
+
       if( SCIPallColsInLP(scip) )
       {
          /* check solution for feasibility, and add it to solution store if possible

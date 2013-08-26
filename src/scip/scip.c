@@ -30654,12 +30654,143 @@ SCIP_Bool SCIPareSolsEqual(
    return SCIPsolsAreEqual(sol1, sol2, scip->set, scip->stat, scip->origprob, scip->transprob);
 }
 
+/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
+ *  deteriorated by this method.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_RETCODE SCIPadjustImplicitSolVals(
+   SCIP*                 scip,               /** SCIP data structure */
+   SCIP_SOL*             sol,                /** primal CIP solution */
+   SCIP_Bool             uselprows           /** should LP row information be considered for none-objective variables */
+   )
+{
+   SCIP_VAR** vars;
+   int nimplvars;
+   int nbinvars;
+   int nintvars;
+   int v;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+
+   /* get variable data */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
+
+   if( nimplvars == 0 )
+      return SCIP_OKAY;
+
+   /* calculate the last array position of implicit integer variables */
+   nimplvars = nbinvars + nintvars + nimplvars;
+
+   /* loop over implicit integer variables and round them up or down */
+   for( v = nbinvars + nintvars; v < nimplvars; ++v )
+   {
+      SCIP_VAR* var;
+      SCIP_Real solval;
+      SCIP_Real obj;
+      SCIP_Bool roundup;
+      SCIP_Bool rounddown;
+      int nuplocks;
+      int ndownlocks;
+
+      var = vars[v];
+
+      assert( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT );
+      solval = SCIPgetSolVal(scip, sol, var);
+
+      /* we do not need to round integral solution values or those of variables which are not column variables */
+      if( SCIPisFeasIntegral(scip, solval) || SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+         continue;
+
+      nuplocks = SCIPvarGetNLocksUp(var);
+      ndownlocks = SCIPvarGetNLocksDown(var);
+      obj = SCIPvarGetObj(var);
+
+      roundup = FALSE;
+      rounddown = FALSE;
+      assert(SCIPisZero(scip, obj) || (SCIPisFeasNegative(scip, obj) && nuplocks <= 1) || ndownlocks <= 1);
+
+      /* in case of a non-zero objective coefficient, there is only one possible rounding direction */
+      if( SCIPisFeasNegative(scip, obj) )
+         roundup = TRUE;
+      else if( SCIPisFeasPositive(scip, obj) )
+         rounddown = TRUE;
+      else if( uselprows )
+      {
+         /* determine rounding direction based on row violations */
+         SCIP_COL* col;
+         SCIP_ROW** rows;
+         SCIP_Real* vals;
+         int nrows;
+         int r;
+
+         col = SCIPvarGetCol(var);
+         vals = SCIPcolGetVals(col);
+         rows = SCIPcolGetRows(col);
+         nrows = SCIPcolGetNNonz(col);
+
+         /* loop over rows and search for equations whose violation can be decreased by rounding */
+         for( r = 0; r < nrows && !(roundup && rounddown); ++r )
+         {
+            SCIP_ROW* row;
+            SCIP_Real activity;
+            SCIP_Real rhs;
+            SCIP_Real lhs;
+
+            row = rows[r];
+            assert(!SCIPisFeasZero(scip, vals[r]));
+
+            if( SCIProwIsLocal(row) || !SCIProwIsInLP(row) )
+               continue;
+
+            rhs = SCIProwGetRhs(row);
+            lhs = SCIProwGetLhs(row);
+
+            if( SCIPisInfinity(scip, rhs) || SCIPisInfinity(scip, -lhs) )
+               continue;
+
+            activity = SCIProwGetSolActivity(row, scip->set, scip->stat, sol);
+            if( SCIPisFeasLE(scip, activity, rhs) && SCIPisFeasLE(scip, lhs, activity) )
+               continue;
+
+            if( (SCIPisFeasGT(scip, activity, rhs) && SCIPisPositive(scip, vals[r]))
+                  || (SCIPisFeasLT(scip, activity, lhs) && SCIPisNegative(scip, vals[r])) )
+               rounddown = TRUE;
+            else
+               roundup = TRUE;
+         }
+      }
+
+      /* in case of a tie, we select the rounding step based on the number of variable locks */
+      if( roundup == rounddown )
+      {
+         rounddown = ndownlocks <= nuplocks;
+         roundup = !rounddown;
+      }
+
+      /* round the variable up or down */
+      if( roundup )
+      {
+         assert(SCIPisFeasLE(scip, SCIPfeasCeil(scip, solval), SCIPvarGetUbGlobal(var)));
+         SCIP_CALL( SCIPsolSetVal(sol, scip->set, scip->stat, scip->tree, var, SCIPfeasCeil(scip, solval)) );
+      }
+      else if( rounddown )
+      {
+         assert(SCIPisFeasGE(scip, SCIPfeasFloor(scip, solval), SCIPvarGetLbGlobal(var)));
+         SCIP_CALL( SCIPsolSetVal(sol, scip->set, scip->stat, scip->tree, var, SCIPfeasFloor(scip, solval)) );
+      }
+   }
+   return SCIP_OKAY;
+}
+
 /** outputs non-zero variables of solution in original problem space to the given file stream
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre In case the solution pointer @p sol is NULL (askinking for the current LP/pseudo solution), this method can be
+ *  @pre In case the solution pointer @p sol is NULL (asking for the current LP/pseudo solution), this method can be
  *       called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE

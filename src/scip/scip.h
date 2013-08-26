@@ -15383,6 +15383,19 @@ SCIP_Bool SCIPareSolsEqual(
    SCIP_SOL*             sol2                /**< second primal CIP solution */
    );
 
+/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
+ *  deteriorated by this method.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+EXTERN
+SCIP_RETCODE SCIPadjustImplicitSolVals(
+   SCIP*                 scip,               /** SCIP data structure */
+   SCIP_SOL*             sol,                /** primal CIP solution */
+   SCIP_Bool             uselprows           /** should LP row information be considered for none-objective variables */
+   );
+
 /** outputs non-zero variables of solution in original problem space to the given file stream
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
