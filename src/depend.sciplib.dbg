@@ -720,7 +720,7 @@ $(LIBOBJDIR)/scip/cons_pseudoboolean.o: src/scip/cons_pseudoboolean.c src/scip/c
  src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
  src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/cons_indicator.h \
- src/scip/cons_linear.h src/scip/cons_pseudoboolean.h
+ src/scip/cons_linear.h src/scip/cons_pseudoboolean.h src/scip/debug.h
 $(LIBOBJDIR)/scip/cons_quadratic.o: src/scip/cons_quadratic.c src/scip/cons_nonlinear.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h \
@@ -3118,7 +3118,7 @@ $(LIBOBJDIR)/scip/reader_opb.o: src/scip/reader_opb.c src/scip/cons_and.h src/sc
  src/scip/cons_indicator.h src/scip/cons_knapsack.h \
  src/scip/cons_linear.h src/scip/cons_logicor.h \
  src/scip/cons_pseudoboolean.h src/scip/cons_setppc.h \
- src/scip/cons_varbound.h src/scip/reader_opb.h
+ src/scip/cons_varbound.h src/scip/reader_opb.h src/scip/debug.h
 $(LIBOBJDIR)/scip/reader_osil.o: src/scip/reader_osil.c src/scip/reader_osil.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h \
