@@ -534,7 +534,6 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
    SCIP_Real bestshiftval;
    SCIP_Real minobj;
    int nlpcands;
-   int nimplfracs;
    int nlprows;
    int nvars;
    int nfrac;
@@ -583,8 +582,8 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
 
    /* get fractional variables, that should be integral */
    /* todo check if heuristic should include implicit integer variables for its calculations */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, &nimplfracs) );
-   nfrac = nlpcands + nimplfracs;
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
+   nfrac = nlpcands;
 
    /* only call heuristic, if LP solution is fractional */
    if( nfrac == 0 )
