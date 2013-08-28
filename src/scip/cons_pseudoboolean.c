@@ -38,7 +38,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_pseudoboolean.h"
 #include "scip/pub_var.h"
-
+#include "scip/debug.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "pseudoboolean"
@@ -1555,6 +1555,23 @@ SCIP_RETCODE createAnds(
          /* add auxiliary variable to the problem */
          SCIP_CALL( SCIPaddVar(scip, var) );
          created = TRUE;
+
+#ifdef SCIP_DEBUG_SOLUTION
+         {
+            SCIP_Real val;
+            int v;
+
+            for( v = term->nvars - 1; v >= 0; --v )
+            {
+               SCIP_CALL( SCIPdebugGetSolVal(scip, term->vars[v], &val) );
+               assert(SCIPisFeasZero(scip, val) || SCIPisFeasEQ(scip, val, 1.0));
+
+               if( val < 0.5 )
+                  break;
+            }
+            SCIP_CALL( SCIPdebugAddSolVal(scip, var, (val < 0.5) ? 0.0 : 1.0) );
+         }
+#endif
 
          SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/nlcseparate", &separate) );
          SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/nlcpropagate", &propagate) );
