@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -22,6 +22,7 @@
 #@author  Timo Berthold
 #@author  Robert Waniek
 #@author  Gregor Hendel
+#@author  Marc Pfetsch
 #
 function abs(x)
 {
@@ -410,7 +411,7 @@ BEGIN {
       timetobest = $11;
    }
 }
-/^Dual Bound         :/ { 
+/^  Dual Bound       :/ {
    if( $4 != "-" ) {
       db = $4;
       dbset = 1;
@@ -527,8 +528,12 @@ BEGIN {
       headerprinted = 1;
    }
 
-   if( (!onlyinsolufile || solstatus[prob] != "") &&
-       (!onlyintestfile || intestfile[filename]) ) {
+   if( (!onlyinsolufile || prob in solstatus) &&
+       (!onlyintestfile || intestfile[filename]) )
+   {
+      # if sol file could not be read, fix status to be "unkown"
+      if ( ! (prob in solstatus) )
+         solstatus[prob] = "unkown";
 
       #avoid problems when comparing floats and integer (make everything float)
       temp = pb;
@@ -629,7 +634,6 @@ BEGIN {
 
       if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
          timeout = 1;
-         aborted = 0;
          tottime = endtime - starttime;
       }
       else if( gapreached || sollimitreached || memlimitreached || nodelimitreached )
@@ -688,7 +692,6 @@ BEGIN {
          failtime += tottime;
          fail++;
       }
-
       else if( checksol && !bestsolfeas ) {
          status = "fail";
          failtime += tottime;
@@ -839,7 +842,7 @@ BEGIN {
          reltol = 1e-5 * max(abs(pb),1.0);
          abstol = 1e-4;
 
-         if( timeout || gapreached || sollimitreached || memlimit || nodelimit ) {
+         if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) {
 	    if( timeout )
 	       status = "timeout";
 	    else if( gapreached )
@@ -912,6 +915,9 @@ BEGIN {
          } else if( status == "timeout" ) {
             modelstat = abs(pb) < infty ? 8 : 14;
             solverstat = 3;
+         } else if( status == "nodelimit" || status == "memlimit" || status == "sollimit" ) {
+            modelstat = abs(pb) < infty ? 8 : 14;
+            solverstat = 2;  # GAMS does not have a status for these limits, so let's report iteration limit
          } else if( status == "gaplimit" || status == "better" ) {
             modelstat = 8;
             solverstat = 1;
@@ -1017,4 +1023,9 @@ END {
       printf(" [GitHash: %s]\n", githash);
    else
       printf("\n");
+
+   if ( TEXFILE != "" )
+      close(TEXFILE);
+   if ( PAVFILE != "" )
+      close(PAVFILE);
 }

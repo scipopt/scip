@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,6 +41,17 @@
 #define READER_NAME             "smreader"
 #define READER_DESC             "scheduling file reader for sm files (RCPSP format)"
 #define READER_EXTENSION        "sm"
+
+
+/**@name Default parameter values
+ *
+ * @{
+ */
+
+#define DEFAULT_FILENAME            "-" /**< file name of precedence graph output file (in GML format), or - if no output should be created */
+
+/**@} */
+
 
 
 #define SM_MAX_LINELEN      65536     /**< size of the line buffer for reading or writing */
@@ -439,15 +450,39 @@ SCIP_RETCODE getPrecedence(
 static
 int computeUbmakespan(
    int*                  durations,          /**< array of durations */
-   int                   njobs               /**< number og jobs */
+   int                   njobs,              /**< number og jobs */
+   SCIP_DIGRAPH*         precedencegraph     /**< direct graph to store the precedence conditions */
    )
 {
-   int j;
    int ub;
+   int j;
 
    ub = 0;
+
    for( j = 0; j < njobs; ++j )
-      ub += durations[j];
+   {
+      void** distances;
+      int nsuccessors;
+      int duration;
+      int i;
+
+      nsuccessors = SCIPdigraphGetNSuccessors(precedencegraph, j);
+      distances = SCIPdigraphGetSuccessorsDatas(precedencegraph, j);
+
+      duration = durations[j];
+
+      for( i = 0; i < nsuccessors; ++i )
+      {
+         int distance;
+
+         distance = (int)(size_t)distances[i];
+
+         if( distance != INT_MAX )
+            duration = MAX(duration, distance);
+      }
+
+      ub += duration;
+   }
 
    return ub;
 }
@@ -583,6 +618,7 @@ static
 SCIP_DECL_READERREAD(readerReadSm)
 {  /*lint --e{715}*/
    SCIP_RCPSPDATA rcpspdata;
+   char* predfilename;
    int j;
 
    /* initialize resources constrained project scheduling data */
@@ -600,9 +636,29 @@ SCIP_DECL_READERREAD(readerReadSm)
    /* output rcpspdata to check it */
    SCIPdebug( outputRcpspData(scip, &rcpspdata) );
 
+   SCIP_CALL( SCIPgetStringParam(scip, "reading/"READER_NAME"/filename", &predfilename) );
+
+   if( strncmp(predfilename, "-", 1) != 0 )
+   {
+      FILE* file;
+
+      file = fopen(predfilename, "w");
+
+      if( file == NULL )
+      {
+         SCIPerrorMessage("cannot create file <%s> for writing\n", predfilename);
+         SCIPprintSysError(predfilename);
+         return SCIP_FILECREATEERROR;
+      }
+
+      SCIPdigraphPrintGml(rcpspdata.precedencegraph, file);
+
+      fclose(file);
+   }
+
    /* create problem */
    SCIP_CALL( SCIPcreateSchedulingProblem(scip, filename, rcpspdata.jobnames, rcpspdata.resourcenames, rcpspdata.demands,
-         rcpspdata.precedencegraph, rcpspdata.durations, rcpspdata.capacities, rcpspdata.njobs, rcpspdata.nresources) );
+         rcpspdata.precedencegraph, rcpspdata.durations, rcpspdata.capacities, rcpspdata.njobs, rcpspdata.nresources, TRUE) );
 
    (*result) = SCIP_SUCCESS;
 
@@ -671,6 +727,11 @@ SCIP_RETCODE SCIPincludeReaderSm(
          "reading/"READER_NAME"/mipmodel", "create MIP model?",
          NULL, FALSE, FALSE, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddStringParam(scip,
+         "reading/"READER_NAME"/filename",
+         "file name of precedence graph output file (in GML format), or - if no output should be created",
+         NULL, FALSE, DEFAULT_FILENAME, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
@@ -685,7 +746,8 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
    int*                  durations,          /**< array to store the processing for each job */
    int*                  capacities,         /**< array to store the different capacities */
    int                   njobs,              /**< number of jobs to be parsed */
-   int                   nresources          /**< number of capacities to be parsed */
+   int                   nresources,         /**< number of capacities to be parsed */
+   SCIP_Bool             initialize          /**< initialize list scheduling heuristic */
    )
 {
    SCIP_VAR** jobs;
@@ -713,10 +775,8 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
    /* create SCIP data structure */
    SCIP_CALL( SCIPcreateProb(scip, problemname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
-
    /* compute a feasible upper bound on the makespan */
-   ubmakespan = computeUbmakespan(durations, njobs);
-   ubmakespan *= 100;
+   ubmakespan = computeUbmakespan(durations, njobs, precedencegraph);
 
    /* allocate buffer for jobs and precedence constraints */
    SCIP_CALL( SCIPallocBufferArray(scip, &jobs, njobs) );
@@ -840,8 +900,11 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
    }
 
    /* initialize the problem specific heuristic */
-   SCIP_CALL( SCIPinitializeHeurListScheduling(scip, precedencegraph, jobs,
-         durations, demands, capacities, njobs, nresources) );
+   if( initialize )
+   {
+      SCIP_CALL( SCIPinitializeHeurListScheduling(scip, precedencegraph, jobs,
+            durations, demands, capacities, njobs, nresources) );
+   }
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &consdurations);

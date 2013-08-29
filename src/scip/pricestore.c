@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -410,7 +410,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
             SCIPdebugMessage("price column variable <%s> in bounds [%g,%g]\n", 
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
-            /** add variable to pricing storage, if zero is not best bound w.r.t. objective function */
+            /* add variable to pricing storage, if zero is not best bound w.r.t. objective function */
             SCIP_CALL( addBoundViolated(pricestore, blkmem, set, stat, tree, lp, branchcand, eventqueue, var, &added) );
 
             if( added )

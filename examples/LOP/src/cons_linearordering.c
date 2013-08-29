@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -68,7 +68,8 @@ SCIP_RETCODE LinearOrderingSeparate(
    int                   n,                  /**< number of elements */
    SCIP_VAR***           vars,               /**< n x n matrix of variables */
    SCIP_SOL*             sol,                /**< solution to be separated */
-   int*                  nGen                /**< output: number of added rows */
+   int*                  nGen,               /**< output: pointer to store number of added rows */
+   SCIP_Bool*            cutoff              /**< output: pointer to store whether we detected a cutoff */
    )
 {
    int i;
@@ -78,10 +79,12 @@ SCIP_RETCODE LinearOrderingSeparate(
    assert( scip != NULL );
    assert( vars != NULL );
    assert( nGen != NULL );
+   assert( cutoff != NULL );
 
-   for (i = 0; i < n; ++i)
+   *cutoff = FALSE;
+   for (i = 0; i < n && ! (*cutoff); ++i)
    {
-      for (j = 0; j < n; ++j)
+      for (j = 0; j < n && ! (*cutoff); ++j)
       {
 	 SCIP_Real valIJ = 0.0;
 	 if (j == i)
@@ -105,9 +108,12 @@ SCIP_RETCODE LinearOrderingSeparate(
 #ifdef SCIP_DEBUG
 	    SCIPdebug( SCIProwPrint(row, NULL) );
 #endif
-	    SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+	    SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
 	    SCIP_CALL( SCIPreleaseRow(scip, &row));
 	    ++(*nGen);
+
+            if ( *cutoff )
+               break;
 	 }
 
 	 /* check triangle inequalities */
@@ -136,9 +142,12 @@ SCIP_RETCODE LinearOrderingSeparate(
 #ifdef SCIP_DEBUG
 	       SCIPdebug( SCIProwPrint(row, NULL) );
 #endif
-	       SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+	       SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
 	       SCIP_CALL( SCIPreleaseRow(scip, &row));
 	       ++(*nGen);
+
+               if ( *cutoff )
+                  break;
 	    }
 	 }
       }
@@ -287,6 +296,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 	 for (j = i+1; j < n; ++j)
 	 {
 	    char s[SCIP_MAXSTRLEN];
+            SCIP_Bool infeasible;
 	    SCIP_ROW* row;
 
 	    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
@@ -298,9 +308,13 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 #ifdef SCIP_DEBUG
 	    SCIPdebug( SCIProwPrint(row, NULL) );
 #endif
-	    SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+	    SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
 	    SCIP_CALL( SCIPreleaseRow(scip, &row));
 	    ++nGen;
+
+            /* cannot handle infeasible case here - just exit */
+            if ( infeasible )
+               return SCIP_OKAY;
 	 }
       }
    }
@@ -329,6 +343,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinearOrdering)
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
+      SCIP_Bool cutoff;
 
       cons = conss[c];
       assert( cons != NULL );
@@ -338,7 +353,12 @@ SCIP_DECL_CONSSEPALP(consSepalpLinearOrdering)
       assert( consdata != NULL );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( LinearOrderingSeparate(scip, conshdlr, consdata->n, consdata->vars, NULL, &nGen) );
+      SCIP_CALL( LinearOrderingSeparate(scip, conshdlr, consdata->n, consdata->vars, NULL, &nGen, &cutoff) );
+      if ( cutoff )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
    }
    if (nGen > 0)
       *result = SCIP_SEPARATED;
@@ -367,6 +387,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinearOrdering)
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
+      SCIP_Bool cutoff;
 
       cons = conss[c];
       assert( cons != NULL );
@@ -376,7 +397,12 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinearOrdering)
       assert( consdata != NULL );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( LinearOrderingSeparate(scip, conshdlr, consdata->n, consdata->vars, sol, &nGen) );
+      SCIP_CALL( LinearOrderingSeparate(scip, conshdlr, consdata->n, consdata->vars, sol, &nGen, &cutoff) );
+      if ( cutoff )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
    }
    if (nGen > 0)
       *result = SCIP_SEPARATED;
@@ -435,6 +461,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 	    if ( ! SCIPisFeasEQ(scip, 1.0 - valIJ, SCIPgetSolVal(scip, NULL, vars[j][i])) )
 	    {
 	       SCIP_ROW *row;
+               SCIP_Bool infeasible;
 	       char s[SCIP_MAXSTRLEN];
 
 	       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
@@ -447,9 +474,15 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 #ifdef SCIP_DEBUG
 	       SCIPdebug( SCIProwPrint(row, NULL) );
 #endif
-	       SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+	       SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
 	       SCIP_CALL( SCIPreleaseRow(scip, &row));
 	       ++nGen;
+
+               if ( infeasible )
+               {
+                  *result = SCIP_CUTOFF;
+                  return SCIP_OKAY;
+               }
 	    }
 
 	    /* enforce triangle inequalities */
@@ -465,6 +498,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 	       if ( SCIPisFeasGT(scip, sum, 2.0) ) /* this is the only difference to the separation call */
 	       {
 		  SCIP_ROW *row;
+                  SCIP_Bool infeasible;
 		  char s[SCIP_MAXSTRLEN];
 
 		  (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "triangle#%d#%d#%d", i, j, k);
@@ -478,9 +512,15 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 #ifdef SCIP_DEBUG
 		  SCIPdebug( SCIProwPrint(row, NULL) );
 #endif
-		  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+		  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
 		  SCIP_CALL( SCIPreleaseRow(scip, &row));
 		  ++nGen;
+
+                  if ( infeasible )
+                  {
+                     *result = SCIP_CUTOFF;
+                     return SCIP_OKAY;
+                  }
 	       }
 	    }
 	 }

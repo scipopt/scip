@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -357,14 +357,22 @@ void SCIPhashtableClear(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
-/** inserts element in hash table (multiple inserts of same element possible) */
+/** inserts element in hash table (multiple inserts of same element possible)
+ *
+ *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
+ *        to the hash table, due to dynamic resizing.
+ */
 EXTERN
 SCIP_RETCODE SCIPhashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to insert into the table */
    );
 
-/** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
+/** inserts element in hash table (multiple insertion of same element is checked and results in an error)
+ *
+ *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
+ *        element to the hash table, due to dynamic resizing.
+ */
 EXTERN
 SCIP_RETCODE SCIPhashtableSafeInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
@@ -379,11 +387,16 @@ void* SCIPhashtableRetrieve(
    );
 
 /** retrieve element with key from hash table, returns NULL if not existing
- * can be used to retrieve all entries with the same key (one-by-one) */
+ *  can be used to retrieve all entries with the same key (one-by-one)
+ *
+ *  @note The returned hashtablelist pointer might get invalid when adding a new element to the hash table.
+ */
 EXTERN
 void* SCIPhashtableRetrieveNext(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL; output: entry in hash table list corresponding to element after retrieved one, or NULL */
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL
+                                              *   output: entry in hash table list corresponding to element after
+                                              *           retrieved one, or NULL */
    void*                 key                 /**< key to retrieve */
    );
 
@@ -402,8 +415,20 @@ SCIP_RETCODE SCIPhashtableRemove(
    );
 
 /** clears hash table */
-extern
+EXTERN
 void SCIPhashtableRemoveAll(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   );
+
+/** returns number of hash table elements */
+EXTERN
+SCIP_Longint SCIPhashtableGetNElemenets(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   );
+
+/** returns the load of the given hash table in percentage */
+EXTERN
+SCIP_Real SCIPhashtableGetLoad(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
@@ -771,6 +796,13 @@ SCIP_RETCODE SCIPdigraphCreate(
    int                   nnodes              /**< number of nodes */
    );
 
+/** resize directed graph structure */
+EXTERN
+SCIP_RETCODE SCIPdigraphResize(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   nnodes              /**< new number of nodes */
+   );
+
 /** copies directed graph structure */
 EXTERN
 SCIP_RETCODE SCIPdigraphCopy(
@@ -820,6 +852,21 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
 EXTERN
 int SCIPdigraphGetNNodes(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
+
+/** returns the node data, or NULL if no data exist */
+EXTERN
+void* SCIPdigraphGetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the node data is returned */
+   );
+
+/** sets the node data */
+EXTERN
+void SCIPdigraphSetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   void*                 dataptr,            /**< user node data pointer, or NULL */
+   int                   node                /**< node for which the node data is returned */
    );
 
 /** returns the total number of arcs in the given digraph */
@@ -1310,15 +1357,6 @@ void SCIPsortReal(
    int                   len                 /**< length of arrays */
    );
 
-/** sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-decreasing order */
-EXTERN
-void SCIPsortRealBoolPtr(
-   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
-   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
-   void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   int                   len                 /**< length of arrays */
-   );
-
 /** sort of two joint arrays of Reals/pointers, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortRealPtr(
@@ -1327,21 +1365,20 @@ void SCIPsortRealPtr(
    int                   len                 /**< length of arrays */
    );
 
-/** sort of three joint arrays of Reals/pointers, sorted by first array in non-decreasing order */
-EXTERN
-void SCIPsortRealPtrPtrInt(
-   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
-   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
-   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
-   int*                  intarray,           /**< int array to be sorted */
-   int                   len                 /**< length of arrays */
-   );
-
 /** sort of two joint arrays of Reals/ints, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortRealBoolPtr(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
@@ -1369,6 +1406,16 @@ void SCIPsortRealRealPtr(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second  SCIP_Real array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortRealPtrPtrInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be sorted */
    int                   len                 /**< length of arrays */
    );
 
@@ -1799,15 +1846,6 @@ void SCIPsortDownReal(
    int                   len                 /**< length of arrays */
    );
 
-/** sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-increasing order */
-EXTERN
-void SCIPsortDownRealBoolPtr(
-   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
-   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
-   void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   int                   len                 /**< length of arrays */
-   );
-
 /** sort of two joint arrays of Reals/pointers, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortDownRealPtr(
@@ -1821,6 +1859,15 @@ EXTERN
 void SCIPsortDownRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
    int*                  intarray,           /**< pointer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortDownRealBoolPtr(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
@@ -1848,6 +1895,16 @@ void SCIPsortDownRealRealPtr(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortDownRealPtrPtrInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be sorted */
    int                   len                 /**< length of arrays */
    );
 
@@ -2349,21 +2406,6 @@ void SCIPsortedvecInsertRealPtr(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
-/** insert a new element into two joint arrays of Reals/pointers, sorted by first array in non-decreasing order */
-EXTERN
-void SCIPsortedvecInsertRealPtrPtrInt(
-   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
-   void**                ptrarray1,          /**< pointer array where an element is to be inserted */
-   void**                ptrarray2,          /**< pointer array where an element is to be inserted */
-   int*                  intarray,           /**< int array where an element is to be inserted */
-   SCIP_Real             keyval,             /**< key value of new element */
-   void*                 field1val,          /**< additional value of new element */
-   void*                 field2val,          /**< additional value of new element */
-   int                   intval,             /**<  additional value of new element */
-   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
-   int*                  pos                 /**< pointer to store the insertion position, or NULL */
-   );
-
 /** insert a new element into an arrays of Reals, sorted in non-decreasing order */
 EXTERN
 void SCIPsortedvecInsertReal(
@@ -2419,6 +2461,21 @@ void SCIPsortedvecInsertRealRealPtr(
    SCIP_Real             keyval,             /**< key value of new element */
    SCIP_Real             field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
+/** insert a new element into four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecInsertRealPtrPtrInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   void**                ptrarray1,          /**< pointer array where an element is to be inserted */
+   void**                ptrarray2,          /**< pointer array where an element is to be inserted */
+   int*                  intarray,           /**< int array where an element is to be inserted */
+   SCIP_Real             keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   void*                 field2val,          /**< additional value of new element */
+   int                   intval,             /**< additional value of new element */
    int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
@@ -3113,6 +3170,21 @@ void SCIPsortedvecInsertDownRealRealPtr(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
+/** insert a new element into four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortedvecInsertDownRealPtrPtrInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   void**                ptrarray1,          /**< pointer array where an element is to be inserted */
+   void**                ptrarray2,          /**< pointer array where an element is to be inserted */
+   int*                  intarray,           /**< int array where an element is to be inserted */
+   SCIP_Real             keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   void*                 field2val,          /**< additional value of new element */
+   int                   intval,             /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
 /** insert a new element into four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortedvecInsertDownRealLongRealInt(
@@ -3717,10 +3789,10 @@ void SCIPsortedvecDelPosRealRealPtr(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
-/** delete the element at the given position from three joint arrays of Reals/Reals/Pointer, sorted by first array in non-decreasing order */
+/** delete the element at the given position from four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortedvecDelPosRealPtrPtrInt(
-   SCIP_Real*            realarray,          /**<  first SCIP_Real array where an element is to be deleted */
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be deleted */
    void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
    void**                ptrarray2,          /**< second pointer array where an element is to be deleted */
    int*                  intarray,           /**< int array where an element is to be deleted */
@@ -4255,6 +4327,17 @@ void SCIPsortedvecDelPosDownRealPtrPtr(
    SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be deleted */
    void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
    void**                ptrarray2,          /**< second pointer array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortedvecDelPosDownRealPtrPtrInt(
+   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be deleted */
+   void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
+   void**                ptrarray2,          /**< second pointer array where an element is to be deleted */
+   int*                  intarray,           /**< int array where an element is to be deleted */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
@@ -4968,24 +5051,31 @@ int SCIPsnprintf(
    ...                                       /**< further parameters */
    );
 
-/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to str */
+/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
 EXTERN
 SCIP_Bool SCIPstrToIntValue(
    const char*           str,                /**< string to search */
    int*                  value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 
-/** extract the next token as a double value if it is one; in case a value is parsed the endptr is set to NULL */
+/** extract the next token as a double value if it is one; in case a value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
 EXTERN
 SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed
-                                              *   otherwise NULL */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 
-/** copies the string between a start and end character */
+/** copies the first size characters between a start and end character of str into token, if no error occured endptr
+ *  will point to the position after the read part, otherwise it will point to @p str
+ */
 EXTERN
 void SCIPstrCopySection(
    const char*           str,                /**< string to search */
@@ -4993,8 +5083,7 @@ void SCIPstrCopySection(
    char                  endchar,            /**< character which defines the ending */
    char*                 token,              /**< string to store the copy */
    int                   size,               /**< size of the token char array */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed
-                                              *   otherwise NULL */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 
 /**@} */

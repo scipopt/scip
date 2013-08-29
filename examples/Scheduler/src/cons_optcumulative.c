@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -745,7 +745,8 @@ SCIP_RETCODE createRow(
    SCIP_Longint          capacity,           /**< available cumulative capacity */
    SCIP_Bool             local,              /**< create local row */
    SCIP_Bool*            rowadded,           /**< pointer to store if a row was added */
-   SCIP_Bool*            consadded           /**< pointer to store if a constraint was added */
+   SCIP_Bool*            consadded,          /**< pointer to store if a constraint was added */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff occurred */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -753,6 +754,7 @@ SCIP_RETCODE createRow(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   *cutoff = FALSE;
    if( conshdlrdata->rowrelax )
    {
       SCIP_ROW* row;
@@ -775,7 +777,7 @@ SCIP_RETCODE createRow(
       assert(!SCIProwIsInLP(row));
 
       SCIPdebug( SCIPprintRow(scip, row, NULL) );
-      SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
       (*rowadded) = TRUE;
    }
@@ -806,7 +808,8 @@ SCIP_RETCODE addRelaxation(
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data structure */
    SCIP_CONS*            cons,               /**< optcumulative constraint */
    SCIP_Bool*            rowadded,           /**< pointer to store if a row was added */
-   SCIP_Bool*            consadded           /**< pointer to store if a constraint was added */
+   SCIP_Bool*            consadded,          /**< pointer to store if a constraint was added */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff occurred */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -816,7 +819,9 @@ SCIP_RETCODE addRelaxation(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert( cutoff != NULL );
 
+   *cutoff = FALSE;
    if( consdata->relaxadded )
       return SCIP_OKAY;
 
@@ -908,9 +913,9 @@ SCIP_RETCODE addRelaxation(
          }
       }
 
-      for( j = consdata->nvars-1; j >= 0; --j )
+      for( j = consdata->nvars-1; j >= 0 && ! (*cutoff); --j )
       {
-         for( i = 0; i < nrows[j]; ++i )
+         for( i = 0; i < nrows[j] && ! (*cutoff); ++i )
          {
             SCIP_VAR** vars;
             SCIP_Longint* weights;
@@ -932,7 +937,7 @@ SCIP_RETCODE addRelaxation(
                SCIPconsGetName(cons), starttime, endtime, energy, rowtightness[j][i]);
 
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s[%d,%d]", SCIPconsGetName(cons), starttime, endtime);
-            SCIP_CALL( createRow(scip, conshdlr, name, vars, weights, nvars, energy, SCIPconsIsLocal(cons), rowadded, consadded) );
+            SCIP_CALL( createRow(scip, conshdlr, name, vars, weights, nvars, energy, SCIPconsIsLocal(cons), rowadded, consadded, cutoff) );
 
             SCIPfreeBufferArray(scip, &weights);
             SCIPfreeBufferArray(scip, &vars);
@@ -1001,7 +1006,7 @@ SCIP_RETCODE addRelaxation(
          SCIPdebugMessage("create linear relaxation for <%s> (nvars %d) time interval [%d,%d] <= %"SCIP_LONGINT_FORMAT"\n",
             SCIPconsGetName(cons), nvars, est, lct, energy);
 
-         SCIP_CALL( createRow(scip, conshdlr, name, consdata->binvars, weights, nvars, energy, SCIPconsIsLocal(cons), rowadded, consadded) );
+         SCIP_CALL( createRow(scip, conshdlr, name, consdata->binvars, weights, nvars, energy, SCIPconsIsLocal(cons), rowadded, consadded, cutoff) );
       }
 
       /* free buffer */
@@ -1421,7 +1426,7 @@ static
 SCIP_RETCODE createConflictCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to store the created conflict constraint */
-   const char*           name,
+   const char*           name,               /**< name of conflict constraint */
    SCIP_VAR**            binvars,            /**< array of binary variables */
    int                   nvars               /**< number of variables */
    )
@@ -1549,6 +1554,7 @@ SCIP_RETCODE enfopsCons(
    return SCIP_OKAY;
 }
 
+#if 0
 /** enforce the LP or pseudo solution */
 static
 SCIP_RETCODE enfoCons(
@@ -1564,6 +1570,7 @@ SCIP_RETCODE enfoCons(
    int* demands;
    int* durations;
    SCIP_Bool auxiliary;
+   SCIP_Bool cutoff;
    int nvars;
 
    assert(scip != NULL);
@@ -1594,7 +1601,7 @@ SCIP_RETCODE enfoCons(
 #if 0
          /* create row */
          SCIP_CALL( createRow(scip, SCIPconsGetName(cons), binvars, vars, durations, demands, nvars,
-               consdata->capacity, TRUE) );
+               consdata->capacity, TRUE, &cutoff) );
 #endif
          /* reset constraint age since it successfully detected infeasibility */
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1614,6 +1621,7 @@ SCIP_RETCODE enfoCons(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** upgrade constraints to an cumulative constraint */
 static
@@ -2474,7 +2482,9 @@ SCIP_RETCODE propagateCons(
                   /* propagation detected infeasibility, therefore, job cannot be processed by that machine */
                   SCIPdebugMessage("  probing detect infeasibility\n");
                   SCIPdebugMessage("  fix variable <%s> to 0.0\n", SCIPvarGetName(binvar));
-                  //SCIP_CALL( SCIPinferBinvarCons(scip, binvar, FALSE, cons, 0, &infeasible, &tightened) );
+#if 0
+                  SCIP_CALL( SCIPinferBinvarCons(scip, binvar, FALSE, cons, 0, &infeasible, &tightened) );
+#endif
                   SCIP_CALL( SCIPtightenVarUb(scip, binvar, 0.0, FALSE, &infeasible, &tightened) );
                   if( infeasible )
                      (*cutoff) = TRUE;
@@ -2738,6 +2748,7 @@ SCIP_DECL_CONSINITLP(consInitlpOptcumulative)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool rowadded;
    SCIP_Bool consadded;
+   SCIP_Bool cutoff;
    int c;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -2749,7 +2760,8 @@ SCIP_DECL_CONSINITLP(consInitlpOptcumulative)
    for( c = 0; c < nconss; ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addRelaxation(scip, conshdlr, conshdlrdata, conss[c], &rowadded, &consadded) );
+      SCIP_CALL( addRelaxation(scip, conshdlr, conshdlrdata, conss[c], &rowadded, &consadded, &cutoff) );
+      /* ignore cutoff value */
    }
 
    return SCIP_OKAY;
@@ -2763,6 +2775,7 @@ SCIP_DECL_CONSSEPALP(consSepalpOptcumulative)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool rowadded;
    SCIP_Bool consadded;
+   SCIP_Bool cutoff;
    int c;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -2770,13 +2783,16 @@ SCIP_DECL_CONSSEPALP(consSepalpOptcumulative)
 
    rowadded = FALSE;
    consadded = FALSE;
+   cutoff = FALSE;
 
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && ! cutoff; ++c )
    {
-      SCIP_CALL( addRelaxation(scip, conshdlr, conshdlrdata, conss[c], &rowadded, &consadded) );
+      SCIP_CALL( addRelaxation(scip, conshdlr, conshdlrdata, conss[c], &rowadded, &consadded, &cutoff) );
    }
 
-   if( consadded )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( consadded )
       *result = SCIP_CONSADDED;
    else if( rowadded )
       *result = SCIP_SEPARATED;
@@ -2834,6 +2850,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOptcumulative)
    /* add a potentially feasible solution was constructed we pass it to the heuristic try sol */
    if( solfeasible && violated && trysol != NULL )
    {
+#ifdef SCIP_DEBUG
       FILE* file;
       file = fopen("build.sol", "w");
 
@@ -2842,6 +2859,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOptcumulative)
          SCIP_CALL( SCIPprintSol(scip, trysol, file, FALSE) );
          fclose(file);
       }
+#endif
 
       SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->heurtrysol, trysol) );
    }
@@ -3295,7 +3313,7 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
 
       /* resolve propagate of cumulative condition */
       SCIP_CALL( SCIPrespropCumulativeCondition(scip, nvars, vars, durations, demands, consdata->capacity, consdata->hmin, consdata->hmax,
-            infervar, inferinfo, boundtype, bdchgidx, explanation, result) );
+            infervar, inferinfo, boundtype, bdchgidx, relaxedbd, explanation, result) );
 
       /* if the cumulative constraint handler successfully create an explanation for the propagate we extend this
        * explanation with the required choice variables

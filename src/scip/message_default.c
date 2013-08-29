@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   type_message.h
+/**@file   message_default.c
  * @ingroup PUBLICMETHODS
  * @brief  default message handler
  * @author Stefan Heinz
@@ -33,10 +33,11 @@
 static
 void logMessage(
    FILE*                 file,               /**< file stream to print message into */
-   const char*           msg                 /**< message to print */
+   const char*           msg                 /**< message to print (or NULL to flush) */
    )
 {
-   fputs(msg, file);
+   if ( msg != NULL )
+      fputs(msg, file);
    fflush(file);
 }
 
@@ -48,8 +49,8 @@ void logMessage(
 static
 SCIP_DECL_MESSAGEWARNING(messageWarningDefault)
 {  /*lint --e{715}*/
-
-   fputs("WARNING: ", file);
+   if ( msg != NULL && msg[0] != '\0' && msg[0] != '\n' )
+      fputs("WARNING: ", file);
 
    logMessage(file, msg);
 }
@@ -68,7 +69,7 @@ SCIP_DECL_MESSAGEINFO(messageInfoDefault)
    logMessage(file, msg);
 }
 
-/** Create default message handler. To free the message handler use SCIPmessagehdlrFree() */
+/** Create default message handler. To free the message handler use SCIPmessagehdlrRelease(). */
 SCIP_RETCODE SCIPcreateMessagehdlrDefault(
    SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store message handler */
    SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,6 +15,7 @@
 
 /**@file   cons_sos1.c
  * @brief  constraint handler for SOS type 1 constraints
+ * @author Tobias Fischer
  * @author Marc Pfetsch
  *
  * A specially ordered set of type 1 (SOS1) is a sequence of variables such that at most one
@@ -46,7 +47,7 @@
  * weight. The later version allows the user to specify an order for the branching importance of the
  * constraints. Constraint branching can also be turned off.
  *
- * @todo Possibly allow to generate local cuts via strengthened local cuts (would affect lhs/rhs of rows)
+ * @todo Possibly allow to generate local cuts via strengthened local cuts (would need to modified coefficients of rows).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -91,7 +92,8 @@ struct SCIP_ConsData
    int                   maxvars;            /**< maximal number of variables (= size of storage) */
    int                   nfixednonzeros;     /**< number of variables fixed to be nonzero */
    SCIP_VAR**            vars;               /**< variables in constraint */
-   SCIP_ROW*             row;                /**< row corresponding to upper and lower bound inequalities, or NULL if not yet created */
+   SCIP_ROW*             rowlb;              /**< row corresponding to lower bounds, or NULL if not yet created */
+   SCIP_ROW*             rowub;              /**< row corresponding to upper bounds, or NULL if not yet created */
    SCIP_Real*            weights;            /**< weights determining the order (ascending), or NULL if not used */
 };
 
@@ -305,17 +307,16 @@ SCIP_RETCODE handleNewVariableSOS1(
    /* install the rounding locks for the new variable */
    SCIP_CALL( lockVariableSOS1(scip, cons, var) );
 
-   /* add the new coefficient to the LP row, if necessary */
-   if ( consdata->row != NULL )
+   /* add the new coefficient to the upper bound LP row, if necessary */
+   if ( consdata->rowub != NULL && ! SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) && ! SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
    {
-      /* this is currently dead code, since the constraint is not modifiable */
-      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, 1.0) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->rowub, var, 1.0/SCIPvarGetUbGlobal(var)) );
+   }
 
-      /* update lhs and rhs if necessary */
-      if ( SCIPisFeasGT(scip, SCIPvarGetUbLocal(var), SCIProwGetRhs(consdata->row)) )
-         SCIP_CALL( SCIPchgRowRhs(scip, consdata->row, SCIPvarGetUbLocal(var) ) );
-      if ( SCIPisFeasLT(scip, SCIPvarGetLbLocal(var), SCIProwGetLhs(consdata->row)) )
-         SCIP_CALL( SCIPchgRowLhs(scip, consdata->row, SCIPvarGetLbLocal(var) ) );
+   /* add the new coefficient to the lower bound LP row, if necessary */
+   if ( consdata->rowlb != NULL && ! SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)) && ! SCIPisZero(scip, SCIPvarGetLbGlobal(var)) )
+   {
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->rowlb, var, 1.0/SCIPvarGetLbGlobal(var)) );
    }
 
    return SCIP_OKAY;
@@ -1038,65 +1039,120 @@ SCIP_RETCODE enforceSOS1(
  *
  *  We generate the row corresponding to the following simple valid inequalities:
  *  \f[
- *         x_1 + \ldots + x_n \leq \max\{u_1, \ldots, u_n\}\qquad\mbox{and}\qquad
- *         x_1 + \ldots + x_n \geq \min\{l_1, \ldots, l_n\},
+ *         \frac{x_1}{u_1} + \ldots + \frac{x_n}{u_n} \leq 1\qquad\mbox{and}\qquad
+ *         \frac{x_1}{\ell_1} + \ldots + \frac{x_n}{\ell_1} \leq 1,
  *  \f]
- *  where \f$l_1, \ldots, l_n\f$ and \f$u_1, \ldots, u_n\f$ are the
- *  lower and upper bounds of the variables \f$x_1, \ldots, x_n\f$.
- *  Of course, these inequalities are only added if the upper and
- *  lower bounds are all finite and at least one lower bound is < 0 or
- *  one upper bound is > 0 (lower bounds > 0 and upper bounds < 0 are
- *  usually detected in presolving).
+ *  where \f$\ell_1, \ldots, \ell_n\f$ and \f$u_1, \ldots, u_n\f$ are the nonzero and finite lower and upper bounds of
+ *  the variables \f$x_1, \ldots, x_n\f$. If an upper bound < 0 or a lower bound > 0, the constraint itself is
+ *  redundant, so the cut is not applied (lower bounds > 0 and upper bounds < 0 are usually detected in presolving or
+ *  propagation). Infinite bounds and zero are skipped. Thus \f$\ell_1, \ldots, \ell_n\f$ are all negative, which
+ *  results in the \f$\leq\f$ inequality.
+ *
+ *  Note that in fact, any mixture of nonzero finite lower and upper bounds would lead to a valid inequality as
+ *  above. However, usually either the lower or upper bound is nonzero. Thus, the above inequalities are the most
+ *  interesting.
  */
 static
 SCIP_RETCODE generateRowSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONSDATA*        consdata            /**< constraint data */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             local               /**< produce local cut? */
    )
 {
+   char name[SCIP_MAXSTRLEN];
+   SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
-   SCIP_Real minLb;
-   SCIP_Real maxUb;
+   SCIP_Real* vals;
+   SCIP_Real val;
    SCIP_ROW* row;
    int nvars;
+   int cnt;
    int j;
 
    assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( cons != NULL );
+
+   consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->row == NULL );
+   assert( consdata->vars != NULL );
+   assert( consdata->rowlb == NULL || consdata->rowub == NULL );
 
-   minLb = SCIPinfinity(scip);
-   maxUb = -SCIPinfinity(scip);
    nvars = consdata->nvars;
-   vars = consdata->vars;
-   assert( vars != NULL );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
 
-   /* find minimum and maximum lower and upper bounds */
-   for (j = 0; j < nvars; ++j)
+   /* take care of upper bounds */
+   if ( consdata->rowub == NULL )
    {
-      if ( SCIPvarGetLbLocal(vars[j]) < minLb )
-         minLb = SCIPvarGetLbLocal(vars[j]);
-      if ( SCIPvarGetUbLocal(vars[j]) > maxUb )
-         maxUb = SCIPvarGetUbLocal(vars[j]);
+      cnt = 0;
+      for (j = 0; j < nvars; ++j)
+      {
+         if ( local )
+            val = SCIPvarGetUbLocal(consdata->vars[j]);
+         else
+            val = SCIPvarGetUbGlobal(consdata->vars[j]);
+
+         /* should not apply the cut if a variable is fixed to be negative -> constraint is redundant */
+         if ( SCIPisNegative(scip, val) )
+            break;
+
+         if ( ! SCIPisInfinity(scip, val) && ! SCIPisZero(scip, val) )
+         {
+            vars[cnt] = consdata->vars[j];
+            vals[cnt++] = 1.0/val;
+         }
+      }
+
+      /* if cut is meaningful */
+      if ( cnt >= 2 )
+      {
+         /* create upper bound inequality if at least two of the bounds are finite and nonzero */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", SCIPconsGetName(cons));
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), 1.0, local, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddVarsToRow(scip, row, cnt, vars, vals) );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+         consdata->rowub = row;
+      }
    }
 
-   /* ignore trivial inequality if all lower bounds are 0 */
-   if ( SCIPisFeasZero(scip, minLb) )
-      minLb = -SCIPinfinity(scip);
-
-   /* ignore trivial inequality if all upper bounds are 0 */
-   if ( SCIPisFeasZero(scip, maxUb) )
-      maxUb = SCIPinfinity(scip);
-
-   /* create upper and lower bound inequality if one of the bounds is finite */
-   if ( ! SCIPisInfinity(scip, REALABS(minLb)) || ! SCIPisInfinity(scip, REALABS(maxUb)) )
+   /* take care of lower bounds */
+   if ( consdata->rowlb == NULL )
    {
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "sosbnd", minLb, maxUb, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, row, nvars, vars, 1.0) );
-      consdata->row = row;
-      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+      cnt = 0;
+      for (j = 0; j < nvars; ++j)
+      {
+         if ( local )
+            val = SCIPvarGetLbLocal(consdata->vars[j]);
+         else
+            val = SCIPvarGetLbGlobal(consdata->vars[j]);
+
+         /* should not apply the cut if a variable is fixed to be positive -> constraint is redundant */
+         if ( SCIPisPositive(scip, val) )
+            break;
+
+         if ( ! SCIPisInfinity(scip, -val) && ! SCIPisZero(scip, val) )
+         {
+            vars[cnt] = consdata->vars[j];
+            vals[cnt++] = 1.0/val;
+         }
+      }
+
+      /* if cut is meaningful */
+      if ( cnt >= 2 )
+      {
+         /* create lower bound inequality if at least two of the bounds are finite and nonzero */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", SCIPconsGetName(cons));
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), 1.0, local, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, vars, vals) );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+         consdata->rowlb = row;
+      }
    }
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -1161,10 +1217,14 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
 
       SCIPdebugMessage("Exiting SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
-      /* free row */
-      if ( consdata->row != NULL )
+      /* free rows */
+      if ( consdata->rowub != NULL )
       {
-         SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+         SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowub) );
+      }
+      if ( consdata->rowlb != NULL )
+      {
+         SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowlb) );
       }
    }
    return SCIP_OKAY;
@@ -1207,12 +1267,17 @@ SCIP_DECL_CONSDELETE(consDeleteSOS1)
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, (*consdata)->maxvars);
    }
 
-   /* free row */
-   if ( (*consdata)->row != NULL )
+   /* free rows */
+   if ( (*consdata)->rowub != NULL )
    {
-      SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
+      SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->rowub) );
    }
-   assert( (*consdata)->row == NULL );
+   if ( (*consdata)->rowlb != NULL )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->rowlb) );
+   }
+   assert( (*consdata)->rowub == NULL );
+   assert( (*consdata)->rowlb == NULL );
 
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -1254,7 +1319,8 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
 
    consdata->nvars = sourcedata->nvars;
    consdata->maxvars = sourcedata->nvars;
-   consdata->row = NULL;
+   consdata->rowub = NULL;
+   consdata->rowlb = NULL;
    consdata->nfixednonzeros = 0;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars, consdata->nvars) );
    /* if weights were used */
@@ -1355,7 +1421,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
          assert( consdata->nvars <= consdata->maxvars );
          assert( ! SCIPconsIsModifiable(cons) );
 
-         /** perform one presolving round */
+         /* perform one presolving round */
          SCIP_CALL( presolRoundSOS1(scip, cons, consdata, eventhdlr, &cutoff, &success, ndelconss, nupgdconss, nfixedvars, &nremovedvars) );
 
          if ( cutoff )
@@ -1391,6 +1457,8 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
+      SCIP_Bool infeasible;
+      SCIP_ROW* row;
 
       assert( conss != NULL );
       assert( conss[c] != NULL );
@@ -1399,19 +1467,30 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
 
       SCIPdebugMessage("Checking for initial rows for SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
-      /* possibly generate row if not yet done */
-      if ( consdata->row == NULL )
+      /* possibly generate rows if not yet done */
+      if ( consdata->rowub == NULL || consdata->rowlb == NULL )
       {
-         SCIP_CALL( generateRowSOS1(scip, conshdlr, consdata) );
+         SCIP_CALL( generateRowSOS1(scip, conshdlr, conss[c], FALSE) );
       }
 
       /* put corresponding rows into LP */
-      if ( consdata->row != NULL && ! SCIProwIsInLP(consdata->row) )
+      row = consdata->rowub;
+      if ( row != NULL && ! SCIProwIsInLP(row) )
       {
-         assert( ! SCIPisInfinity(scip, REALABS(SCIProwGetLhs(consdata->row))) || ! SCIPisInfinity(scip, REALABS(SCIProwGetRhs(consdata->row))) );
+         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
-         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL) ) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         assert( ! infeasible );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+      }
+      row = consdata->rowlb;
+      if ( row != NULL && ! SCIProwIsInLP(row) )
+      {
+         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
+
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         assert( ! infeasible );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
       }
    }
 
@@ -1423,6 +1502,7 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
 static
 SCIP_DECL_CONSSEPALP(consSepalpSOS1)
 {  /*lint --e{715}*/
+   SCIP_Bool cutoff = FALSE;
    int nGen = 0;
    int c;
 
@@ -1435,7 +1515,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
    *result = SCIP_DIDNOTRUN;
 
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for (c = 0; c < nconss && ! cutoff; ++c)
    {
       SCIP_CONSDATA* consdata;
       SCIP_ROW* row;
@@ -1447,27 +1527,39 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
       SCIPdebugMessage("Separating inequalities for SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
       /* put corresponding rows into LP if they are useful */
-      row = consdata->row;
 
       /* possibly generate row if not yet done */
-      if ( row == NULL )
+      if ( consdata->rowub == NULL || consdata->rowlb == NULL )
       {
-         SCIP_CALL( generateRowSOS1(scip, conshdlr, consdata) );
+         SCIP_CALL( generateRowSOS1(scip, conshdlr, conss[c], FALSE) );
       }
 
       /* possibly add row to LP if it is useful */
+      row = consdata->rowub;
       if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
       {
-         assert( ! SCIPisInfinity(scip, REALABS(SCIProwGetLhs(consdata->row))) || ! SCIPisInfinity(scip, REALABS(SCIProwGetRhs(consdata->row))) );
+         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+         SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+         ++nGen;
+      }
+      row = consdata->rowlb;
+      if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
+      {
+         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
+
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          ++nGen;
       }
    }
    SCIPdebugMessage("Separated %d SOS1 constraints.\n", nGen);
-   if ( nGen > 0 )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( nGen > 0 )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -1478,6 +1570,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
 {  /*lint --e{715}*/
+   SCIP_Bool cutoff = FALSE;
    int nGen = 0;
    int c;
 
@@ -1490,7 +1583,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
    *result = SCIP_DIDNOTRUN;
 
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for (c = 0; c < nconss && ! cutoff; ++c)
    {
       SCIP_CONSDATA* consdata;
       SCIP_ROW* row;
@@ -1502,27 +1595,39 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
       SCIPdebugMessage("Separating solution for SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
       /* put corresponding row into LP if it is useful */
-      row = consdata->row;
 
       /* possibly generate row if not yet done */
-      if ( row == NULL )
+      if ( consdata->rowub == NULL || consdata->rowlb == NULL )
       {
-         SCIP_CALL( generateRowSOS1(scip, conshdlr, consdata) );
+         SCIP_CALL( generateRowSOS1(scip, conshdlr, conss[c], FALSE) );
       }
 
       /* possibly add row to LP if it is useful */
+      row = consdata->rowub;
       if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
       {
-         assert( ! SCIPisInfinity(scip, REALABS(SCIProwGetLhs(consdata->row))) || ! SCIPisInfinity(scip, REALABS(SCIProwGetRhs(consdata->row))) );
+         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
 
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+         SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+         ++nGen;
+      }
+      row = consdata->rowlb;
+      if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
+      {
+         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) );
+
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          ++nGen;
       }
    }
    SCIPdebugMessage("Separated %d SOS1 constraints.\n", nGen);
-   if ( nGen > 0 )
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( nGen > 0 )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -2175,7 +2280,8 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    consdata->vars = NULL;
    consdata->nvars = nvars;
    consdata->maxvars = nvars;
-   consdata->row = NULL;
+   consdata->rowub = NULL;
+   consdata->rowlb = NULL;
    consdata->nfixednonzeros = -1;
    consdata->weights = NULL;
 

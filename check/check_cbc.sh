@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -41,7 +41,7 @@ TEXFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.tex
 TMPFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.tmp
 SETFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.cmd
 
-SETTINGS=settings/$SETNAME.cbcset
+SETTINGS=../settings/$SETNAME.set
 
 if test "$CONTINUE" = "true"
 then
@@ -103,8 +103,9 @@ do
             if test $SETNAME != "default"
             then
                 cp $SETTINGS $TMPFILE
+                echo -n ""                          >> $TMPFILE
             else
-                echo ""                              > $TMPFILE
+                echo -n ""                          > $TMPFILE
             fi
             if test $FEASTOL != "default"
             then
@@ -115,7 +116,7 @@ do
             TIMELIMIT=`expr $TIMELIMIT \* $THREADS`
             echo seconds $TIMELIMIT                 >> $TMPFILE
 #$MEMLIMIT not supported (version 2.4)
-            echo threads $THREADS                   >> $TMPFILE
+#            echo threads $THREADS                   >> $TMPFILE
             echo ratioGap 0.0                       >> $TMPFILE
             echo maxNodes $NODELIMIT                >> $TMPFILE
             echo import $i                          >> $TMPFILE

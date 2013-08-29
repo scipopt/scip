@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -358,7 +358,7 @@ EXTERN
 SCIP_RETCODE SCIPgetNlRowQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
    );
 
 /** Gets the number of variables in the linear part of a quadratic constraint.
@@ -486,7 +486,7 @@ SCIP_RETCODE SCIPgetViolationQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution which violation to calculate, or NULL for LP solution */
-   SCIP_Real*            violation           /**< buffer to store violation of constraint */
+   SCIP_Real*            violation           /**< pointer to store violation of constraint */
    );
 
 /** Indicates whether the quadratic constraint is local w.r.t. the current local bounds.

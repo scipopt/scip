@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -133,7 +133,7 @@ EXTERN
 SCIP_RETCODE SCIPgetNlRowSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
    );
 
 /** Gets the number of variables on the left hand side of a SOC constraint.

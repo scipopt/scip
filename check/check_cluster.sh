@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -115,14 +115,6 @@ then
     exit
 fi
 
-# check if the slurm blades should be used exclusively
-if test "$EXCLUSIVE" = "true"
-then
-    EXCLUSIVE=" --exclusive"
-else
-    EXCLUSIVE=""
-fi
-
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 
@@ -210,6 +202,19 @@ then
     CLUSTERQUEUE="opt"
     NICE="--nice=10000"
 fi
+
+# check if the slurm blades should be used exclusively
+if test "$EXCLUSIVE" = "true"
+then
+    EXCLUSIVE=" --exclusive"
+    if test $CLUSTERQUEUE = "opt"
+    then
+        CLUSTERQUEUE="M610"
+    fi
+else
+    EXCLUSIVE=""
+fi
+
 
 # counter to define file names for a test set uniquely
 COUNT=0

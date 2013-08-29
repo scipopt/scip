@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -17,7 +17,7 @@
 # check if tmp-path exists 
 if test ! -d $CLIENTTMPDIR
 then
-    echo Skipping test since the path for the tmp-dir does not exist.
+    echo "Skipping test since the path for the tmp-dir does not exist."
     exit
 fi
 
@@ -26,6 +26,7 @@ ERRFILE=$CLIENTTMPDIR/$BASENAME.err
 LSTFILE=$CLIENTTMPDIR/$BASENAME.lst
 TRCFILE=$CLIENTTMPDIR/$BASENAME.trc
 WORKDIR=$CLIENTTMPDIR/$BASENAME.scr
+OPTDIR=$CLIENTTMPDIR/$BASENAME.opt
 
 # setup scratch directory
 mkdir -p $WORKDIR
@@ -39,6 +40,21 @@ trap "
   test -e $ERRFILE && mv $ERRFILE results/$BASENAME.err
   test -e $TRCFILE && mv $TRCFILE results/$BASENAME.trc
 " EXIT
+
+
+# create directory $OPTDIR and put optionfile <solvername>.opt there
+if test -n "$SETTINGS"
+then
+  if test -d $OPTDIR
+  then
+    rm -f $OPTDIR/*
+  else
+    mkdir -p $OPTDIR
+  fi
+  # replace all ${var} by their value w.r.t. the current environment
+  awk '{while(match($0,"[$]{[^}]*}")) {var=substr($0,RSTART+2,RLENGTH -3);gsub("[$]{"var"}",ENVIRON[var])}}1' $SETTINGS > $OPTDIR/${SOLVER,,}.opt
+  GAMSOPTS="$GAMSOPTS optdir=$OPTDIR optfile=1"
+fi
 
 # initialize trace file
 echo "* Trace Record Definition" > $TRCFILE
@@ -70,6 +86,12 @@ if test "$PASSSTARTSOL" = 1 ; then
   done
 fi
 
+if test "$EXAMINER" = 1 ; then
+  ACTSOLVER=EXAMINER2
+else
+  ACTSOLVER=$SOLVER
+fi
+
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
 echo @01 $FILENAME ===========      >> $OUTFILE 
@@ -81,7 +103,7 @@ echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
 
 # run GAMS and check return code
-$GAMSBIN $GMSFILE $GAMSOPTS output=$LSTFILE inputdir=$INPUTDIR $MODTYPE=$SOLVER $GDXFILE traceopt=3 trace=$TRCFILE >> $OUTFILE 2>>$ERRFILE
+$GAMSBIN $GMSFILE $GAMSOPTS output=$LSTFILE inputdir=$INPUTDIR $MODTYPE=$ACTSOLVER $GDXFILE traceopt=3 trace=$TRCFILE >> $OUTFILE 2>>$ERRFILE
 gamsrc=$?
 if test $gamsrc != 0
 then

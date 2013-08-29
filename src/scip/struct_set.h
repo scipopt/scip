@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -187,6 +187,12 @@ struct SCIP_Set
    SCIP_Bool             conf_fullshortenconflict;/**< try to shorten the whole conflict set or terminate early
                                                    *   (depending on the 'maxvarsdetectimpliedbounds' parameter)
                                                    */
+   SCIP_Real             conf_conflictweight;/**< the weight the VSIDS score is weight by updating the VSIDS for a
+                                              *   variable if it is part of a conflict
+                                              */
+   SCIP_Real             conf_conflictgraphweight; /**< the weight the VSIDS score is weight by updating the VSIDS for a
+                                                    *   variable if it is part of a conflict graph
+                                                    */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
@@ -287,7 +293,7 @@ struct SCIP_Set
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
    int                   misc_permutationseed;/**< seed value for permuting the problem after the problem was tranformed 
                                                *   (-1: no permutation) */
-   SCIP_Bool             misc_resetstat;     /**< should the statistics be reseted if the transformed problem is freed
+   SCIP_Bool             misc_resetstat;     /**< should the statistics be reset if the transformed problem is freed
                                               *   otherwise the statistics get reset after original problem is freed (in
                                               *   case of bender decomposition this parameter should be set to FALSE and
                                               *   therefore can be used to collect statistics over all runs) */
@@ -295,6 +301,8 @@ struct SCIP_Set
    SCIP_Bool             misc_printreason;   /**< should the reason be printed if a given start solution is infeasible? */
    SCIP_Bool             misc_estimexternmem;/**< should the usage of external memory be estimated? */
    SCIP_Bool             misc_transorigsols; /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
+   SCIP_Bool             misc_calcintegral;  /**< should SCIP calculate the primal dual integral value which may require
+                                              *   a large number of additional clock calls (and decrease the performance)? */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
@@ -381,6 +389,12 @@ struct SCIP_Set
    char*                 vbc_filename;       /**< name of the VBC Tool output file, or - if no output should be created */
    SCIP_Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in VBC output? */
    SCIP_Bool             vbc_dispsols;       /**< should the node where solutions are found be visualized? */
+
+   /* Reading */
+   SCIP_Bool             read_initialconss;  /**< should model constraints be marked as initial? */
+   SCIP_Bool             read_dynamicconss;  /**< should model constraints be subject to aging? */
+   SCIP_Bool             read_dynamiccols;   /**< should columns be added and removed dynamically to the LP? */
+   SCIP_Bool             read_dynamicrows;   /**< should rows be added and removed dynamically to the LP? */
 
    /* Writing */
    SCIP_Bool             write_allconss;     /**< should all constraints be written (including the redundant constraints)? */

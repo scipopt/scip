@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,6 +31,17 @@
 #include <assert.h>
 
 /*
+ * GNU COMPILER VERSION define
+ */
+#ifdef __GNUC__
+#ifndef GCC_VERSION
+#define GCC_VERSION (__GNUC__ * 100                     \
+      + __GNUC_MINOR__ * 10                             \
+      + __GNUC_PATCHLEVEL__)
+#endif
+#endif
+
+/*
  * Boolean values
  */
 
@@ -51,10 +62,14 @@
 #define strncasecmp _strnicmp
 #define getcwd _getcwd
 
+#ifndef EXTERN
 #define EXTERN __declspec(dllexport)
+#endif
 
 #else
+#ifndef EXTERN
 #define EXTERN extern
+#endif
 #endif
 
 
@@ -66,9 +81,9 @@
 extern "C" {
 #endif
 
-#define SCIP_VERSION                300 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               2 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2012 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                301 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               5 /**< SCIP sub version number */
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2013 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*

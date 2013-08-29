@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -624,10 +624,8 @@ SCIP_RETCODE createCoveringProblem(
          int mapsize;
 
          /* calculate size of hash map */
-         conshdlr = SCIPfindConshdlr(scip, "and");
-         mapsize = SCIPconshdlrGetNActiveConss(conshdlr);
          conshdlr = SCIPfindConshdlr(scip, "quadratic");
-         mapsize += SCIPconshdlrGetNActiveConss(conshdlr);
+         mapsize = SCIPconshdlrGetNActiveConss(conshdlr);
          conshdlr = SCIPfindConshdlr(scip, "soc");
          mapsize += SCIPconshdlrGetNActiveConss(conshdlr);
          mapsize = MAX(mapsize, nnlprows);
@@ -1064,9 +1062,11 @@ SCIP_RETCODE createCoveringProblem(
          /* get nlrow representation and store it in hash map */
          SCIP_CALL( SCIPgetNlRowQuadratic(scip, quadcons, &nlrow) );
          assert(nlrow != NULL);
-         assert(nlrowmap != NULL);
-         assert(!SCIPhashmapExists(nlrowmap, nlrow));
-         SCIP_CALL( SCIPhashmapInsert(nlrowmap, nlrow, quadcons) );
+         if( nlrowmap != NULL )
+         {
+            assert(!SCIPhashmapExists(nlrowmap, nlrow));
+            SCIP_CALL( SCIPhashmapInsert(nlrowmap, nlrow, quadcons) );
+         }
 
          /* if we only want to convexify and curvature and bounds prove already convexity, nothing to do */
          if( onlyconvexify
@@ -2131,7 +2131,7 @@ SCIP_RETCODE solveSubproblem(
    assert(sol != NULL);
    assert(*sol == NULL);
    assert(nusednodes != NULL);
-   
+
    *validsolved = FALSE;
    *nusednodes = 0;
 
@@ -2154,7 +2154,7 @@ SCIP_RETCODE solveSubproblem(
 
    if( heurdata->copycuts )
    {
-      /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
       SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, heurdata->globalbounds, NULL) );
    }
 
@@ -2185,7 +2185,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
 
    /* deactivate expensive pre-root heuristics, since it may happen that the lp relaxation of the subproblem is already
-      infeasible; in this case, we do not want to waste time on heuristics before solving the root lp */
+    * infeasible; in this case, we do not want to waste time on heuristics before solving the root lp */
    if( !SCIPisParamFixed(subscip, "heuristics/shiftandpropagate/freq") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shiftandpropagate/freq", -1) );
@@ -2198,7 +2198,7 @@ SCIP_RETCODE solveSubproblem(
       SCIP_CALL( SCIPunfixParam(subscip, "heuristics/"HEUR_NAME"/freq") );
    }
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/"HEUR_NAME"/freq", -1) );
-   
+
    SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %"SCIP_LONGINT_FORMAT", nstallnodes = %"SCIP_LONGINT_FORMAT"\n", timelimit, memorylimit, nodelimit, nstallnodes);
 
    SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %"SCIP_LONGINT_FORMAT", nstallnodes = %"SCIP_LONGINT_FORMAT"\n", timelimit, memorylimit, nodelimit, nstallnodes);
@@ -3464,7 +3464,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
 SCIP_RETCODE SCIPcomputeCoverUndercover(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  coversize,          /**< buffer for the size of the computed cover */
-   SCIP_VAR**            cover,              /**< buffer to store the variables (for the original SCIP) in the computed cover
+   SCIP_VAR**            cover,              /**< pointer to store the variables (of the original SCIP) in the computed cover
                                               *   (should be ready to hold SCIPgetNVars(scip) entries) */
    SCIP_Real             timelimit,          /**< time limit */
    SCIP_Real             memorylimit,        /**< memory limit */

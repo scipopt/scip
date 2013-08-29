@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -132,6 +132,20 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    int                   nbdchginfos         /**< number of bound changes in the conflict set */
    );
 
+/** checks whether given conflict graph frontier is valid for the debugging solution */
+extern
+SCIP_RETCODE SCIPdebugCheckConflictFrontier(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node,               /**< node where the conflict clause is added */
+   SCIP_BDCHGINFO*       bdchginfo,          /**< bound change info which got resolved, or NULL */
+   SCIP_BDCHGINFO**      bdchginfos,         /**< bound change informations of the conflict set */
+   SCIP_Real*            relaxedbds,         /**< array with relaxed bounds which are efficient to create a valid conflict */
+   int                   nbdchginfos,        /**< number of bound changes in the conflict set */
+   SCIP_PQUEUE*          bdchgqueue,         /**< unprocessed conflict bound changes */
+   SCIP_PQUEUE*          forcedbdchgqueue    /**< unprocessed conflict bound changes that must be resolved */
+   );
+
 /** creates the debugging propagator and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPdebugIncludeProp(
@@ -158,6 +172,33 @@ SCIP_RETCODE SCIPdebugGetSolVal(
    SCIP_Real*            val                 /**< buffer to store solution value */
    );
 
+/** check whether the debugging solution is valid in the current node */
+extern
+SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            isvalidinsubtree    /**< pointer to store whether the solution is valid in the current
+                                              *   subtree
+                                              */
+   );
+
+/** enabling solution debugging mechanism */
+extern
+void SCIPdebugSolEnable(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** disabling solution debugging mechanism */
+extern
+void SCIPdebugSolDisable(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** check if solution debugging mechanism is enabled */
+extern
+SCIP_Bool SCIPdebugSolIsEnabled(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 #else
 
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
@@ -170,9 +211,14 @@ SCIP_RETCODE SCIPdebugGetSolVal(
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
 #define SCIPdebugCheckClique(set,vars,values,nvars) SCIP_OKAY
 #define SCIPdebugCheckConflict(blkmem,set,node,bdchginfos,relaxedbds,nliterals) SCIP_OKAY
+#define SCIPdebugCheckConflictFrontier(blkmem,set,node,bdchginfo,bdchginfos,relaxedbds,nliterals,bdchgqueue,forcedbdchgqueue) SCIP_OKAY
 #define SCIPdebugIncludeProp(scip) SCIP_OKAY
 #define SCIPdebugAddSolVal(scip,var,val) SCIP_OKAY
 #define SCIPdebugGetSolVal(scip,var,val) SCIP_OKAY
+#define SCIPdebugSolIsValidInSubtree(scip,isvalidinsubtree) SCIP_OKAY
+#define SCIPdebugSolEnable(scip) /**/
+#define SCIPdebugSolDisable(scip) /**/
+#define SCIPdebugSolIsEnabled(scip) FALSE
 #endif
 
 

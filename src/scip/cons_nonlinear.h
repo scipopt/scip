@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -301,7 +301,7 @@ EXTERN
 SCIP_RETCODE SCIPgetNlRowNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
    );
 
 /** gets the number of variables in the linear term of a nonlinear constraint */
@@ -384,7 +384,7 @@ SCIP_RETCODE SCIPgetCurvatureNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             checkcurv,          /**< whether to check constraint curvature, if not checked before */
-   SCIP_EXPRCURV*        curvature           /**< buffer to store curvature of constraint */
+   SCIP_EXPRCURV*        curvature           /**< pointer to store curvature of constraint */
    );
 
 /** gets the curvature of the expression trees (multiplied by their coefficient) of a nonlinear constraint */
@@ -402,7 +402,7 @@ SCIP_RETCODE SCIPgetViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution which violation to calculate, or NULL for LP solution */
-   SCIP_Real*            violation           /**< buffer to store violation of constraint */
+   SCIP_Real*            violation           /**< pointer to store violation of constraint */
    );
 
 /** gets expression graph of nonlinear constraint handler */

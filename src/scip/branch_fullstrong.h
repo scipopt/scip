@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -52,6 +52,37 @@ extern "C" {
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**
+ * Selects a variable from a set of candidates by strong branching
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ * @note The variables in the lpcands array must have a fractional value in the current LP solution
+ */
+EXTERN
+SCIP_RETCODE SCIPselectVarStrongBranching(
+   SCIP*                 scip,               /**< original SCIP data structure                        */
+   SCIP_VAR**            lpcands,            /**< branching candidates                                */
+   SCIP_Real*            lpcandssol,         /**< solution values of the branching candidates         */
+   SCIP_Real*            lpcandsfrac,        /**< fractional values of the branching candidates       */
+   SCIP_Bool*            skipdown,           /**< should down branchings be skipped? */
+   SCIP_Bool*            skipup,             /**< should up branchings be skipped? */
+   int                   nlpcands,           /**< number of branching candidates                      */
+   int                   npriolpcands,       /**< number of priority branching candidates             */
+   int                   ncomplete,          /**< number of branching candidates without skip         */
+   int*                  start,              /**< starting index in lpcands                           */
+   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
+   int*                  bestcand,           /**< best candidate for branching                        */
+   SCIP_Real*            bestdown,           /**< objective value of the down branch for bestcand     */
+   SCIP_Real*            bestup,             /**< objective value of the up branch for bestcand       */
+   SCIP_Real*            bestscore,          /**< score for bestcand                                  */
+   SCIP_Bool*            bestdownvalid,      /**< is bestdown a valid dual bound for the down branch? */
+   SCIP_Bool*            bestupvalid,        /**< is bestup a valid dual bound for the up branch?     */
+   SCIP_Real*            provedbound,        /**< proved dual bound for current subtree               */
+   SCIP_RESULT*          result              /**< result pointer                                      */
    );
 
 #ifdef __cplusplus

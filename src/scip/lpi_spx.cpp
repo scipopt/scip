@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -348,7 +348,8 @@ public:
 
    bool isPerturbed()
    {
-      return (shift() >= epsilon());
+      /* the epsilon is 1e-16; we add a factor of ten to account for numerics */
+      return (shift() >= 10.0 * epsilon());
    }
 
    /** set iteration limit (-1 = unbounded) */
@@ -903,7 +904,7 @@ public:
          {
             SCIPdebugMessage("simplifier detected primal or dual infeasibility - reloading and solving unsimplified LP\n");
 
-            simplifier->~SPxSimplifier();
+            simplifier->~SPxMainSM();
             spx_free(simplifier);
 
             SPxSolver::loadLP(origlp);
@@ -947,7 +948,7 @@ public:
       {
          SCIPdebugMessage("presolved LP not optimal - reloading and solving original LP\n");
 
-         simplifier->~SPxSimplifier();
+         simplifier->~SPxMainSM();
          spx_free(simplifier);
 
          SPxSolver::loadLP(origlp);
@@ -1054,7 +1055,7 @@ public:
          }
          if( simplifier != NULL )
          {
-            simplifier->~SPxSimplifier();
+            simplifier->~SPxMainSM();
             spx_free(simplifier);
          }
       }
@@ -1741,10 +1742,9 @@ SCIP_RETCODE SCIPlpiAddCols(
    {
       LPColSet cols(ncols);
       DSVector colVector(ncols);
-      int nrows = spx->nRows();
+      int start;
       int last;
       int i;
-      int j;
 
       /* create column vectors with coefficients and bounds */
       for( i = 0; i < ncols; ++i )
@@ -1752,12 +1752,9 @@ SCIP_RETCODE SCIPlpiAddCols(
          colVector.clear();
          if( nnonz > 0 )
          {
+            start = beg[i];
             last = (i == ncols-1 ? nnonz : beg[i+1]);
-            for( j = beg[i]; j < last; ++j )
-            {
-               if( ind[j] < nrows )
-                  colVector.add(ind[j], val[j]);
-            }
+            colVector.add( last-start, &ind[start], &val[start] );
          }
          cols.add(obj[i], lb[i], colVector, ub[i]);
       }
@@ -1860,9 +1857,9 @@ SCIP_RETCODE SCIPlpiAddRows(
       SPxSCIP* spx = lpi->spx;
       LPRowSet rows(nrows);
       DSVector rowVector;
+      int start;
       int last;
       int i;
-      int j;
 
       /* create row vectors with given sides */
       for( i = 0; i < nrows; ++i )
@@ -1870,9 +1867,9 @@ SCIP_RETCODE SCIPlpiAddRows(
          rowVector.clear();
          if( nnonz > 0 )
          {
+            start = beg[i];
             last = (i == nrows-1 ? nnonz : beg[i+1]);
-            for( j = beg[i]; j < last; ++j )
-               rowVector.add(ind[j], val[j]);
+            rowVector.add( last-start, &ind[start], &val[start] );
          }
          rows.add(lhs[i], rowVector, rhs[i]);
       }
@@ -2860,8 +2857,8 @@ SCIP_RETCODE lpiStrongbranch(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(down != NULL);
-   assert(up != NULL);
+   /*  assert(down != NULL);
+    * assert(up != NULL); temporary hack for cloud branching */
    assert(downvalid != NULL);
    assert(upvalid != NULL);
 
@@ -2886,7 +2883,7 @@ SCIP_RETCODE lpiStrongbranch(
 
    /* down branch */
    newub = EPSCEIL(psol-1.0, lpi->spx->feastol());
-   if( newub >= oldlb - 0.5 )
+   if( newub >= oldlb - 0.5 && down != NULL )
    {
       SCIPdebugMessage("strong branching down on x%d (%g) with %d iterations\n", col, psol, itlim);
 
@@ -2952,17 +2949,19 @@ SCIP_RETCODE lpiStrongbranch(
       spx->changeUpper(col, oldub);
       assert(spx->lower(col) <= spx->upper(col));
    }
-   else
+   else if( down != NULL )
    {
       *down = spx->terminationValue();
       *downvalid = TRUE;
    }
+   else
+      *downvalid = TRUE;
 
    /* up branch */
    if( !error )
    {
       newlb = EPSFLOOR(psol+1.0, lpi->spx->feastol());
-      if( newlb <= oldub + 0.5 )
+      if( newlb <= oldub + 0.5 && up != NULL )
       {
          SCIPdebugMessage("strong branching  up  on x%d (%g) with %d iterations\n", col, psol, itlim);
 
@@ -3028,11 +3027,13 @@ SCIP_RETCODE lpiStrongbranch(
          spx->changeLower(col, oldlb);
          assert(spx->lower(col) <= spx->upper(col));
       }
-      else
+      else if( up != NULL )
       {
          *up = spx->terminationValue();
          *upvalid = TRUE;
       }
+      else
+         *upvalid = TRUE;
    }
 
    /* reset old iteration limit */
@@ -3282,8 +3283,12 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return lpi->spx->getStatus() == SPxSolver::UNBOUNDED
-      && (lpi->spx->basis().status() == SPxBasis::PRIMAL || lpi->spx->basis().status() == SPxBasis::UNBOUNDED);
+   assert(lpi->spx->getStatus() != SPxSolver::UNBOUNDED || lpi->spx->basis().status() == SPxBasis::UNBOUNDED);
+
+   /* if SoPlex returns unbounded, this may only mean that an unbounded ray is available, not necessarily a primal
+    * feasible point; hence we have to check the perturbation
+    */
+   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED && !lpi->spx->isPerturbed());
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
@@ -3313,8 +3318,13 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    basestatus = lpi->spx->basis().status();
 
-   return (basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::OPTIMAL || basestatus == SPxBasis::UNBOUNDED)
-      && !lpi->spx->isPerturbed();
+   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
+    * still return true as long as perturbation plus violation is within tolerances
+    */
+   assert(basestatus == SPxBasis::OPTIMAL || lpi->spx->getStatus() != SPxSolver::OPTIMAL);
+
+   return basestatus == SPxBasis::OPTIMAL ||
+      ((basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::UNBOUNDED) && !lpi->spx->isPerturbed());
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -3379,16 +3389,18 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SPxBasis::SPxStatus basestatus;
-
    SCIPdebugMessage("calling SCIPlpiIsDualFeasible()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   basestatus = lpi->spx->basis().status();
+   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
+    * still return true as long as perturbation plus violation is within tolerances
+    */
+   assert(lpi->spx->basis().status() == SPxBasis::OPTIMAL || lpi->spx->getStatus() != SPxSolver::OPTIMAL);
 
-   return (basestatus == SPxBasis::DUAL && !lpi->spx->isPerturbed()) || basestatus == SPxBasis::OPTIMAL;
+   return (lpi->spx->basis().status() == SPxBasis::OPTIMAL) ||
+      (lpi->spx->basis().status() == SPxBasis::DUAL && !lpi->spx->isPerturbed());
 }
 
 /** returns TRUE iff LP was solved to optimality */
@@ -3399,9 +3411,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    SCIPdebugMessage("calling SCIPlpiIsOptimal()\n");
 
    assert(lpi != NULL);
-   assert(lpi->spx != NULL);
+   assert((lpi->spx->basis().status() == SPxBasis::OPTIMAL)
+      == (SCIPlpiIsPrimalFeasible(lpi) && SCIPlpiIsDualFeasible(lpi)));
 
-   return (lpi->spx->getStatus() == SPxSolver::OPTIMAL);
+   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
+    * still return true as long as perturbation plus violation is within tolerances
+    */
+   return (lpi->spx->basis().status() == SPxBasis::OPTIMAL);
 }
 
 /** returns TRUE iff current LP basis is stable */

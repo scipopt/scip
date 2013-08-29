@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -272,7 +272,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    if( sepadata->copycuts )
    {
-      /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
       SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, FALSE, NULL) );
    }
 
@@ -393,8 +393,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       SCIP_CALL( SCIPhashmapInsert(varmapbw, SCIPvarGetTransVar(subvars[i]), vars[i]) );
    }
 
-   /** allocate memory for constraints storage. Each constraint that will be created from now on will be a conflict.
-    *  Therefore, we need to remember oldnconss to get the conflicts from the FD search. 
+   /* allocate memory for constraints storage. Each constraint that will be created from now on will be a conflict.
+    * Therefore, we need to remember oldnconss to get the conflicts from the FD search.
     */
    nconshdlrs = 4;
    SCIP_CALL( SCIPallocBufferArray(scip, &conshdlrs, nconshdlrs) );
@@ -521,9 +521,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    {
       /* we need to multiply the dualbound with the scaling factor and add the offset, 
        * because this information has been disregarded in the sub-SCIP */
-      SCIPdebugMessage("Update old dualbound %g to new dualbound %g.\n", SCIPgetDualbound(scip), SCIPgetTransObjscale(scip) * SCIPgetDualbound(subscip) + SCIPgetTransObjoffset(scip));
+      SCIPdebugMessage("Update old dualbound %g to new dualbound %g.\n", SCIPgetDualbound(scip), SCIPretransformObj(scip, SCIPgetDualbound(subscip)));
 
-      SCIP_CALL( SCIPupdateLocalDualbound(scip, SCIPgetDualbound(subscip) * SCIPgetTransObjscale(scip) + SCIPgetTransObjoffset(scip)) );
+      SCIP_CALL( SCIPupdateLocalDualbound(scip, SCIPretransformObj(scip, SCIPgetDualbound(subscip))) );
       dualboundchg = TRUE;
    }
 

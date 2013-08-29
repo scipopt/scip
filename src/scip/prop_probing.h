@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,6 +35,23 @@ extern "C" {
 EXTERN
 SCIP_RETCODE SCIPincludePropProbing(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** applies and evaluates probing of a single variable in the given direction and bound */
+EXTERN
+SCIP_RETCODE SCIPapplyProbingVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   nvars,              /**< number of problem variables */
+   int                   probingpos,         /**< variable number to apply probing on */
+   SCIP_BOUNDTYPE        boundtype,          /**< which bound should be changed */
+   SCIP_Real             bound,              /**< whioch bound should be set */
+   int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
+   SCIP_Real*            impllbs,            /**< array to store lower bounds after applying implications and cliques */
+   SCIP_Real*            implubs,            /**< array to store upper bounds after applying implications and cliques */
+   SCIP_Real*            proplbs,            /**< array to store lower bounds after full propagation */
+   SCIP_Real*            propubs,            /**< array to store upper bounds after full propagation */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the probing direction is infeasible */
    );
 
 /** analyses boundchanges resulting from probing on a variable and performs deduced fixations, aggregations, and domain tightenings

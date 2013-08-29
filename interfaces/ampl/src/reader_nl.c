@@ -335,7 +335,10 @@ SCIP_RETCODE walkExpression(
 
          SCIP_CALL( walkExpression(scip, &child2, asl, amplexpr->R.e, exprvaridx, nexprvars, nvars, doingfine) );
          if( !*doingfine )
+         {
+            SCIPexprFreeDeep(SCIPblkmem(scip), &child1);
             break;
+         }
 
          switch( opnum )
          {
@@ -373,7 +376,13 @@ SCIP_RETCODE walkExpression(
                break;
          }
          if( !*doingfine )
+         {
+            for( --i; i >= 0; --i )
+               SCIPexprFreeDeep(SCIPblkmem(scip), &children[i]);
+
+            SCIPfreeBufferArray(scip, &children);
             break;
+         }
 
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_SUM, nchildren, children) );
 
@@ -387,6 +396,8 @@ SCIP_RETCODE walkExpression(
          SCIP_Real minusone;
 
          SCIP_CALL( walkExpression(scip, scipexpr, asl, amplexpr->L.e, exprvaridx, nexprvars, nvars, doingfine) );
+         if( !*doingfine )
+            break;
 
          minusone = -1.0;
          SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), scipexpr, 1, scipexpr, &minusone, 0.0) );
@@ -405,7 +416,10 @@ SCIP_RETCODE walkExpression(
 
          SCIP_CALL( walkExpression(scip, &child2, asl, amplexpr->R.e, exprvaridx, nexprvars, nvars, doingfine) );
          if( !*doingfine )
+         {
+            SCIPexprFreeDeep(SCIPblkmem(scip), &child1);
             break;
+         }
 
          if( SCIPexprGetOperator(child2) == SCIP_EXPR_CONST )
          {
@@ -471,9 +485,7 @@ SCIP_RETCODE walkExpression(
 
       case OPCPOW: /* power number^expr */
       {
-         SCIP_CALL( walkExpression(scip, scipexpr, asl, amplexpr->R.e, exprvaridx, nexprvars, nvars, doingfine) );
-         if( !*doingfine )
-            break;
+         SCIP_EXPR* tmp;
 
          /* number^expr is exp(expr * ln(number)) */
          if( amplexpr->L.en->v < 0.0 )
@@ -482,14 +494,14 @@ SCIP_RETCODE walkExpression(
             *doingfine = FALSE;
             break;
          }
-         else
-         {
-            SCIP_EXPR* tmp;
 
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_CONST, log(amplexpr->L.en->v)) );
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_MUL, tmp, *scipexpr) );
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_EXP, tmp) );
-         }
+         SCIP_CALL( walkExpression(scip, scipexpr, asl, amplexpr->R.e, exprvaridx, nexprvars, nvars, doingfine) );
+         if( !*doingfine )
+            break;
+
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_CONST, log(amplexpr->L.en->v)) );
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_MUL, tmp, *scipexpr) );
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_EXP, tmp) );
 
          break;
       }
@@ -565,7 +577,10 @@ SCIP_RETCODE walkExpression(
 
                SCIP_CALL( walkExpression(scip, &arg2, asl, amplexpr->L.ep[1], exprvaridx, nexprvars, nvars, doingfine) );
                if( !*doingfine )
+               {
+                  SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
                   break;
+               }
 
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, arg1, arg2) );
 
@@ -573,7 +588,10 @@ SCIP_RETCODE walkExpression(
                {
                   SCIP_CALL( walkExpression(scip, &arg1, asl, amplexpr->L.ep[i], exprvaridx, nexprvars, nvars, doingfine) );
                   if( !*doingfine )
+                  {
+                     SCIPexprFreeDeep(SCIPblkmem(scip), scipexpr);
                      break;
+                  }
 
                   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_MAX, *scipexpr, arg1) );
                }
@@ -591,7 +609,13 @@ SCIP_RETCODE walkExpression(
                break;
          }
          if( !*doingfine )
+         {
+            for( --i; i >= 0; --i )
+               SCIPexprFreeDeep(SCIPblkmem(scip), &children[i]);
+
+            SCIPfreeBufferArray(scip, &children);
             break;
+         }
 
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), scipexpr, SCIP_EXPR_SUM, nchildren, children) );
 
@@ -601,7 +625,15 @@ SCIP_RETCODE walkExpression(
       }
 
       case OP_cos:
+         SCIPerrorMessage("AMPL operand number OP_cos not supported so far.\n");
+         *doingfine = FALSE;
+         break;
+
       case OP_sin:
+         SCIPerrorMessage("AMPL operand number OP_sin not supported so far.\n");
+         *doingfine = FALSE;
+         break;
+
       default:
          SCIPerrorMessage("AMPL operand number %d not supported so far.\n", opnum);
          *doingfine = FALSE;
@@ -750,8 +782,8 @@ SCIP_RETCODE setupObjective(
 
          if( !*success )
          {
-            SCIPexprFreeDeep(SCIPblkmem(scip), &objexpr);
             SCIPfreeBufferArray(scip, &exprvaridx);
+            SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
 
             return SCIP_OKAY;
          }
@@ -902,7 +934,9 @@ SCIP_RETCODE setupConstraints(
 
          if( !*success )
          {
-            SCIPexprFreeDeep(SCIPblkmem(scip), &consexpr);
+            SCIPfreeBufferArray(scip, &exprvaridx);
+            SCIPfreeBufferArray(scip, &exprvars);
+
             break;
          }
 
@@ -1088,12 +1122,95 @@ SCIP_DECL_READERREAD(readerReadNl)
 static
 SCIP_DECL_DIALOGEXEC(dialogExecWriteAmplSol)
 {  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(dialoghdlr != NULL);
+   assert(dialog != NULL);
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_INIT || SCIPgetStage(scip) == SCIP_STAGE_FREE )
+   {
+      SCIPerrorMessage("No AMPL problem read, cannot write AMPL solution then.\n");
+      return SCIP_OKAY;
+   }
+
+   /* currently, can pass NULL as reader
+    * in the future, the reader should be changed to store its data in the readerdata
+    * instead of the problem data
+    */
+   SCIP_CALL( SCIPwriteAmplSolReaderNl(scip, NULL) );
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * reader specific interface methods
+ */
+
+/** includes the AMPL .nl file reader in SCIP */
+SCIP_RETCODE SCIPincludeReaderNl(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_READER* reader;
+   SCIP_READERDATA* readerdata;
+   SCIP_DIALOG* dialog;
+   SCIP_DIALOG* parentdialog;
+
+   readerdata = NULL;
+   reader = NULL;
+
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+   assert(reader != NULL);
+
+   /* set non fundamental callbacks via setter functions */
+   /* SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyNl) ); */
+   /* SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeNl) ); */
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadNl) );
+
+   if( SCIPgetRootDialog(scip) != NULL )
+   {
+      /* get parent dialog "write" */
+      if( SCIPdialogFindEntry(SCIPgetRootDialog(scip), "write", &parentdialog) != 1 )
+      {
+         SCIPerrorMessage("sub menu \"write\" not found\n");
+         return SCIP_PLUGINNOTFOUND;
+      }
+      assert(parentdialog != NULL);
+
+      /* create, include, and release dialog */
+      if( !SCIPdialogHasEntry(parentdialog, DIALOG_WRITEAMPLSOL_NAME) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL, dialogExecWriteAmplSol, NULL, NULL,
+            DIALOG_WRITEAMPLSOL_NAME, DIALOG_WRITEAMPLSOL_DESC, DIALOG_WRITEAMPLSOL_ISSUBMENU, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "ASL", "AMPL Solver Library developed by D. Gay (www.netlib.com/ampl)") );
+
+   return SCIP_OKAY;
+}
+
+
+/** writes AMPL solution file */
+SCIP_RETCODE SCIPwriteAmplSolReaderNl(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          nlreader            /**< AMPL .nl file reader */
+   )
+{  /*lint --e{715}*/
    SCIP_PROBDATA* probdata;
    SCIP_Real* x;
    const char* msg;
    ASL* asl;
 
-   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+   assert(scip != NULL);
 
    probdata = SCIPgetProbData(scip);
    if( probdata == NULL || probdata->asl == NULL )
@@ -1163,60 +1280,6 @@ SCIP_DECL_DIALOGEXEC(dialogExecWriteAmplSol)
 
    SCIPfreeBufferArrayNull(scip, &x);
 
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-
    return SCIP_OKAY;
 }
 
-
-/*
- * reader specific interface methods
- */
-
-/** includes the AMPL .nl file reader in SCIP */
-SCIP_RETCODE SCIPincludeReaderNl(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_READER* reader;
-   SCIP_READERDATA* readerdata;
-   SCIP_DIALOG* dialog;
-   SCIP_DIALOG* parentdialog;
-
-   readerdata = NULL;
-   reader = NULL;
-
-   /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
-   assert(reader != NULL);
-
-   /* set non fundamental callbacks via setter functions */
-   /* SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyNl) ); */
-   /* SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeNl) ); */
-   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadNl) );
-
-   if( SCIPgetRootDialog(scip) != NULL )
-   {
-      /* get parent dialog "write" */
-      if( SCIPdialogFindEntry(SCIPgetRootDialog(scip), "write", &parentdialog) != 1 )
-      {
-         SCIPerrorMessage("sub menu \"write\" not found\n");
-         return SCIP_PLUGINNOTFOUND;
-      }
-      assert(parentdialog != NULL);
-
-      /* create, include, and release dialog */
-      if( !SCIPdialogHasEntry(parentdialog, DIALOG_WRITEAMPLSOL_NAME) )
-      {
-         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-            NULL, dialogExecWriteAmplSol, NULL, NULL,
-            DIALOG_WRITEAMPLSOL_NAME, DIALOG_WRITEAMPLSOL_DESC, DIALOG_WRITEAMPLSOL_ISSUBMENU, NULL) );
-         SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
-         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-      }
-   }
-
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "ASL", "AMPL Solver Library developed by D. Gay (www.netlib.com/ampl)") );
-
-   return SCIP_OKAY;
-}

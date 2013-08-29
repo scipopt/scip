@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -215,14 +215,6 @@ SCIP_VAR* SCIPgetBinaryVarIndicator(
 EXTERN
 SCIP_VAR* SCIPgetSlackVarIndicator(
    SCIP_CONS*            cons                /**< indicator constraint */
-   );
-
-/** sets slack variable corresponding to indicator constraint */
-EXTERN
-SCIP_RETCODE SCIPsetSlackVarIndicator(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< indicator constraint */
-   SCIP_VAR*             slackvar            /**< slack variable */
    );
 
 /** checks whether indicator constraint is violated w.r.t. sol */

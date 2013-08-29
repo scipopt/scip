@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -193,9 +193,58 @@ SCIP_Bool sepastoreIsCutRedundant(
    maxactivity = SCIProwGetMaxActivity(cut, set, stat);
    if( SCIPsetIsLE(set, lhs, minactivity) && SCIPsetIsLE(set, maxactivity, rhs) )
    {
-      SCIPdebugMessage("ignoring activity redundant cut <%s> (sides=[%g,%g], act=[%g,%g]\n",
+      SCIPdebugMessage("ignoring activity redundant cut <%s> (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
       /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+/** checks cut for redundancy or infeasibility due to activity bounds */
+static
+SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_ROW*             cut,                /**< separated cut */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the cut has been detected to be infeasible */
+   )
+{
+   SCIP_Real minactivity;
+   SCIP_Real maxactivity;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+
+   assert(sepastore != NULL);
+   assert(cut != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   /* modifiable cuts cannot be declared redundant or infeasible, since we don't know all coefficients */
+   if( SCIProwIsModifiable(cut) )
+      return FALSE;
+
+   /* check for activity redundancy */
+   lhs = SCIProwGetLhs(cut);
+   rhs = SCIProwGetRhs(cut);
+   minactivity = SCIProwGetMinActivity(cut, set, stat);
+   maxactivity = SCIProwGetMaxActivity(cut, set, stat);
+   if( SCIPsetIsLE(set, lhs, minactivity) && SCIPsetIsLE(set, maxactivity, rhs) )
+   {
+      SCIPdebugMessage("ignoring activity redundant cut <%s> (sides=[%g,%g], act=[%g,%g])\n",
+         SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
+      /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
+      return TRUE;
+   }
+   if ( SCIPsetIsGT(set, minactivity, rhs) || SCIPsetIsLT(set, maxactivity, lhs) )
+   {
+      SCIPdebugMessage("cut <%s> is infeasible (sides=[%g,%g], act=[%g,%g])\n",
+         SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
+      /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
+      *infeasible = TRUE;
       return TRUE;
    }
 
@@ -217,12 +266,14 @@ SCIP_RETCODE sepastoreAddCut(
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
-   SCIP_Bool             root                /**< are we at the root node? */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the cut is infeasible */
    )
 {
    SCIP_Real cutefficacy;
    SCIP_Real cutobjparallelism;
    SCIP_Real cutscore;
+   SCIP_Bool redundant;
    int pos;
 
    assert(sepastore != NULL);
@@ -244,10 +295,13 @@ SCIP_RETCODE sepastoreAddCut(
       assert(!SCIProwIsLocal(cut));
    }
 
-   /* check cut for redundancy
-    * in each separation round, make sure that at least one (even redundant) cut enters the LP to avoid cycling
-    */
-   if( !forcecut && sepastore->ncuts > 0 && sepastoreIsCutRedundant(sepastore, set, stat, cut) )
+   /* check cut for redundancy or infeasibility */
+   redundant = sepastoreIsCutRedundantOrInfeasible(sepastore, set, stat, cut, infeasible);
+   /* Note that we add infeasible rows in any case, since we cannot be sure whether the return values are handled
+    * correctly. In this way, the LP becomes infeasible. */
+
+   /* in each separation round, make sure that at least one (even redundant) cut enters the LP to avoid cycling */
+   if( !forcecut && sepastore->ncuts > 0 && redundant )
       return SCIP_OKAY;
 
    /* if only one cut is currently present in the cut store, it could be redundant; in this case, it can now be removed
@@ -255,9 +309,7 @@ SCIP_RETCODE sepastoreAddCut(
     */
    if( sepastore->ncuts == 1 && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
    {
-      /* check, if the row deletions from separation storage events are tracked
-       * if so, issue ROWDELETEDSEPA event
-       */
+      /* check, if the row deletions from separation storage events are tracked if so, issue ROWDELETEDSEPA event */
       if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDSEPA) != 0 )
       {
          SCIP_EVENT* event;
@@ -277,8 +329,7 @@ SCIP_RETCODE sepastoreAddCut(
     *  - it is a bound change
     * if it is a non-forced cut and no cuts should be added, abort
     */
-   forcecut = forcecut || sepastore->initiallp || sepastore->forcecuts
-      || (!SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1);
+   forcecut = forcecut || sepastore->initiallp || sepastore->forcecuts || (!SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1);
    if( !forcecut && SCIPsetGetSepaMaxcuts(set, root) == 0 )
       return SCIP_OKAY;
 
@@ -403,7 +454,8 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
-   SCIP_Bool             root                /**< are we at the root node? */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the cut is infeasible */
    )
 {
    assert(sepastore != NULL);
@@ -422,7 +474,7 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    }
 
    /* add LP row cut to separation storage */
-   SCIP_CALL( sepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, cut, forcecut, root) );
+   SCIP_CALL( sepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, cut, forcecut, root, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -434,7 +486,8 @@ SCIP_RETCODE sepastoreApplyLb(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -458,7 +511,7 @@ SCIP_RETCODE sepastoreApplyLb(
 
          if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbLocal(var)) )
          {
-            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
                   eventqueue, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
          }
          else
@@ -479,7 +532,7 @@ SCIP_RETCODE sepastoreApplyLb(
 
          if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbGlobal(var)) )
          {
-            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
                   eventqueue, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
          }
          else
@@ -505,7 +558,8 @@ SCIP_RETCODE sepastoreApplyUb(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -529,7 +583,7 @@ SCIP_RETCODE sepastoreApplyUb(
 
          if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbLocal(var)) )
          {
-            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
                   eventqueue, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
          }
          else
@@ -550,7 +604,7 @@ SCIP_RETCODE sepastoreApplyUb(
 
          if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbGlobal(var)) )
          {
-            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
                   eventqueue, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
          }
          else
@@ -576,7 +630,8 @@ SCIP_RETCODE sepastoreApplyBdchg(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -622,13 +677,13 @@ SCIP_RETCODE sepastoreApplyBdchg(
       if( vals[0] > 0.0 )
       {
          /* coefficient is positive -> lhs corresponds to lower bound */
-         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                var, lhs/vals[0], local, cutoff) );
       }
       else
       {
          /* coefficient is negative -> lhs corresponds to upper bound */
-         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                var, lhs/vals[0], local, cutoff) );
       }
    }
@@ -641,13 +696,13 @@ SCIP_RETCODE sepastoreApplyBdchg(
       if( vals[0] > 0.0 )
       {
          /* coefficient is positive -> rhs corresponds to upper bound */
-         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                var, rhs/vals[0], local, cutoff) );
       }
       else
       {
          /* coefficient is negative -> rhs corresponds to lower bound */
-         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                var, rhs/vals[0], local, cutoff) );
       }
    }
@@ -854,7 +909,8 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -914,7 +970,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
       {
          SCIPdebugMessage(" -> applying forced cut <%s> as boundchange\n", SCIProwGetName(cut));
-         SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, cut, cutoff) );
+         SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, cut, cutoff) );
       }
       else
       {
@@ -984,7 +1040,7 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
 
    assert(sepastore != NULL);
 
-   SCIPdebugMessage("clearing %d cuts\n", sepastore->nforcedcuts + sepastore->ncuts);
+   SCIPdebugMessage("clearing %d cuts\n", sepastore->ncuts);
 
    /* release cuts */
    for( c = 0; c < sepastore->ncuts; ++c )

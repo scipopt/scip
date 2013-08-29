@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -364,7 +364,8 @@ SCIP_RETCODE SCIPdispPrintLine(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics data */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   SCIP_Bool             forcedisplay        /**< should the line be printed without regarding frequency? */
+   SCIP_Bool             forcedisplay,       /**< should the line be printed without regarding frequency? */
+   SCIP_Bool             endline             /**< should the line be terminated with a newline symbol? */
    )
 {
    assert(set != NULL);
@@ -423,7 +424,10 @@ SCIP_RETCODE SCIPdispPrintLine(
             stripline = set->disps[i]->stripline;
          }
       }
-      SCIPmessageFPrintInfo(messagehdlr, file, "\n");
+      if( endline )
+      {
+         SCIPmessageFPrintInfo(messagehdlr, file, "\n");
+      }
       fflush(stdout);
 
       stat->lastdispnode = stat->nnodes;

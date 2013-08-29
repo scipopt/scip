@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1658,7 +1658,7 @@ SCIP_DECL_CONSCOPY(consCopySuperindicator)
 
          SCIP_CALL( SCIPgetTransformedCons(sourcescip, sourceslackcons, &transslackcons) );
          assert(transslackcons != NULL);
-
+         SCIP_CALL( SCIPreleaseCons(sourcescip, &sourceconsdata->slackcons) );
          SCIP_CALL( SCIPcaptureCons(sourcescip, transslackcons) );
 
          sourceconsdata->slackcons = transslackcons;
@@ -1696,8 +1696,8 @@ SCIP_DECL_CONSCOPY(consCopySuperindicator)
             initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
    }
 
-   /* release empty constraint */
-   if( SCIPconsIsDeleted(sourceslackcons) )
+   /* relase slack constraint */
+   if( targetslackcons != NULL )
    {
       SCIP_CALL( SCIPreleaseCons(scip, &targetslackcons) );
    }
@@ -1793,6 +1793,9 @@ SCIP_DECL_CONSPARSE(consParseSuperindicator)
       /* create the superindicator constraint */
       SCIP_CALL( SCIPcreateConsSuperindicator(scip, cons, name, binvar, slackcons,
             initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+
+      /* the new superindicator constraint captured the slack constraint, so we can release it now */
+      SCIP_CALL( SCIPreleaseCons(scip, &slackcons) );
    }
 
    return SCIP_OKAY;
@@ -1834,7 +1837,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSuperindicator)
    /* get number of variables in slack constraint */
    SCIP_CALL( SCIPgetConsNVars(scip, consdata->slackcons, nvars, success) );
 
-   /** add binary variable */
+   /* add binary variable */
    if( *success )
       (*nvars)++;
 

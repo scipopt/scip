@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -91,6 +91,7 @@ lint:		$(MAINSRC)
 .PHONY: scip
 scip:
 		@$(MAKE) -C $(SCIPDIR) libs $^
+		@$(MAKE) $^
 
 .PHONY: doc
 doc:
@@ -129,6 +130,7 @@ test:		$(CHECKDIR)
 .PHONY: clean
 clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
+		@-rm -f $(LASTSETTINGS)
 		@-(rm -f $(OBJDIR)/*.o && rmdir $(OBJDIR));
 		@echo "-> remove main objective files"
 endif

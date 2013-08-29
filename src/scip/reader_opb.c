@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -311,7 +311,7 @@ SCIP_Bool getNextLine(
       do
       {
          opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-         (void)SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file);
+         (void)SCIPfgets(opbinput->linebuf, (int) sizeof(opbinput->linebuf), opbinput->file);
       }
       while( opbinput->linebuf[OPB_MAX_LINELEN-2] != '\0' );
 
@@ -331,7 +331,7 @@ SCIP_Bool getNextLine(
    else
       opbinput->linepos += OPB_MAX_LINELEN - 2;
 
-   if( SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file) == NULL )
+   if( SCIPfgets(opbinput->linebuf, (int) sizeof(opbinput->linebuf), opbinput->file) == NULL )
       return FALSE;
 
    opbinput->bufpos = 0;
@@ -697,8 +697,8 @@ SCIP_RETCODE createVariable(
    SCIP_Bool dynamiccols;
    SCIP_Bool initial;
    SCIP_Bool removable;
-   
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamiccols", &dynamiccols) );
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
    initial = !dynamiccols;
    removable = dynamiccols;
    
@@ -1175,16 +1175,16 @@ SCIP_RETCODE setObjective(
 
       if( strcmp(sense, "max" ) == 0 )
          opbinput->objsense = SCIP_OBJSENSE_MAXIMIZE;
-      
+
       /* @todo: what todo with non-linear objectives, maybe create the necessary and-constraints and add the arising linear
        * objective (with and-resultants) or add a integer variable to this constraint and put only this variable in the
-       * objective, for this we need to expand the pseudo-boolean constraints to handle integer variables 
+       * objective, for this we need to expand the pseudo-boolean constraints to handle integer variables
        *
-       * integer variant is not implemented 
+       * integer variant is not implemented
        */
       if( ntermcoefs > 0 )
       {
-#if (LINEAROBJECTIVE == TRUE) 
+#if (LINEAROBJECTIVE == TRUE)
          /* all non-linear parts are created as and-constraints, even if the same non-linear part was already part of the objective function */
 
          SCIP_VAR** vars;
@@ -1201,7 +1201,7 @@ SCIP_RETCODE setObjective(
 
             /* create auxiliary variable */
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, ARTIFICIALVARNAMEPREFIX"obj_%d", t);
-            SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, termcoefs[t], SCIP_VARTYPE_BINARY, 
+            SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, termcoefs[t], SCIP_VARTYPE_BINARY,
                   TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
 
             /* @todo: check if it is better to change the branching priority for the artificial variables */
@@ -1305,9 +1305,7 @@ static
 SCIP_RETCODE readConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    OPBINPUT*             opbinput,           /**< OPB reading data */
-   int*                  nNonlinearConss,    /**< pointer to store number of nonlinear constraints */
-   SCIP_Bool             dynamicconss,       /**< should the created constraint be dynamic? */
-   SCIP_Bool             dynamicrows         /**< should rows be added and removed dynamically to the LP? */
+   int*                  nNonlinearConss     /**< pointer to store number of nonlinear constraints */
    )
 {
    char name[OPB_MAX_LINELEN];
@@ -1324,6 +1322,9 @@ SCIP_RETCODE readConstraints(
    SCIP_Real sidevalue;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   SCIP_Bool initialconss;
+   SCIP_Bool dynamicconss;
+   SCIP_Bool dynamicrows;
    SCIP_Bool initial;
    SCIP_Bool separate;
    SCIP_Bool enforce;
@@ -1441,16 +1442,20 @@ SCIP_RETCODE readConstraints(
    }
 
    /* create and add the linear constraint */
-   initial = !dynamicrows;
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initialconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicconss", &dynamicconss) );
+
+   initial = initialconss;
    separate = TRUE;
    enforce = TRUE;
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
    modifiable = FALSE;
-   dynamic = dynamicconss;
+   dynamic = FALSE;/*dynamicconss;*/
    removable = dynamicrows;
-   
+
    /* create corresponding constraint */
    if( issoftcons )
    {
@@ -1473,7 +1478,7 @@ SCIP_RETCODE readConstraints(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean");
 #endif
       SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &cons, name, linvars, nlincoefs, lincoefs, terms, ntermcoefs,
-            ntermvars, termcoefs, indvar, weight, issoftcons, NULL, lhs, rhs, 
+            ntermvars, termcoefs, indvar, weight, issoftcons, NULL, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
    }
    else
@@ -1484,7 +1489,7 @@ SCIP_RETCODE readConstraints(
 #else
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "linear");
 #endif
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs, 
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
    }
 
@@ -1533,7 +1538,7 @@ SCIP_RETCODE getMaxAndConsDim(
 
    do
    {   
-      if( SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file) == NULL )
+      if( SCIPfgets(opbinput->linebuf, (int) sizeof(opbinput->linebuf), opbinput->file) == NULL )
       {
          assert(SCIPfeof( opbinput->file ) );
          break;
@@ -1603,8 +1608,6 @@ SCIP_RETCODE readOPBFile(
    const char*           filename            /**< name of the input file */
    )
 {
-   SCIP_Bool dynamicconss;
-   SCIP_Bool dynamicrows;
    int nNonlinearConss;
    int i;
 
@@ -1633,12 +1636,9 @@ SCIP_RETCODE readOPBFile(
 
    nNonlinearConss = 0;
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicrows", &dynamicrows) );
-
    while( !SCIPfeof( opbinput->file ) && !hasError(opbinput) )
    {
-      SCIP_CALL( readConstraints(scip, opbinput, &nNonlinearConss, dynamicconss, dynamicrows) );
+      SCIP_CALL( readConstraints(scip, opbinput, &nNonlinearConss) );
    }
 
    /* if we read a wbo file we need to make sure that the top cost won't be exceeded */
@@ -1714,8 +1714,8 @@ SCIP_RETCODE getBinVarsRepresentatives(
    {
       for( v = nvars - 1; v >= 0; --v )
       {
-         /** gets a binary variable that is equal to the given binary variable, and that is either active, fixed, or
-          *  multi-aggregated, or the negated variable of an active, fixed, or multi-aggregated variable
+         /* gets a binary variable that is equal to the given binary variable, and that is either active, fixed, or
+          * multi-aggregated, or the negated variable of an active, fixed, or multi-aggregated variable
           */
          SCIP_CALL( SCIPgetBinvarRepresentative( scip, vars[v], &vars[v], &negated) );
       }
@@ -1724,15 +1724,14 @@ SCIP_RETCODE getBinVarsRepresentatives(
    {
       SCIP_Real scalar;
       SCIP_Real constant;
-      
+
       for( v = nvars - 1; v >= 0; --v )
       {
          scalar = 1.0;
          constant = 0.0;
 
-         /** retransforms given variable, scalar and constant to the corresponding original variable, scalar and constant,
-          *  if possible;
-          *  if the retransformation is impossible, NULL is returned as variable
+         /* retransforms given variable, scalar and constant to the corresponding original variable, scalar and constant,
+          * if possible; if the retransformation is impossible, NULL is returned as variable
           */
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalar, &constant) );
 
@@ -2052,10 +2051,10 @@ void appendBuffer(
    assert(linebuffer != NULL);
    assert(linecnt != NULL);
    assert(extension != NULL);
-   
+
    if( (*linecnt) + strlen(extension) >= OPB_MAX_LINELEN - 1 )
       writeBuffer(scip, file, linebuffer, linecnt);
-   
+
    /* append extension to linebuffer */
    strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
    (*linecnt) += (int) strlen(extension);
@@ -2101,14 +2100,13 @@ SCIP_RETCODE writeOpbObjective(
    objective = FALSE;
 
    clearBuffer(linebuffer, &linecnt);
-   
+
    /* check if a objective function exits and compute the multiplier to
     * shift the coefficients to integers */
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v]; /*lint !e613 */
 
-      
 #ifndef NDEBUG
       {
          /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
@@ -2117,14 +2115,15 @@ SCIP_RETCODE writeOpbObjective(
                SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
       }
 #endif
-      
+
       /* we found a indicator variable so we assume this is a wbo file */
       if( strstr(SCIPvarGetName(var), INDICATORVARNAME) != NULL )
       {
          /* find the topcost linear inequality which gives us the maximal cost which could be violated by our
           * solution, which is an artificial constraint and print this at first
           *
-          * @note: only linear constraint handler is enough in problem stage, otherwise it could be any upgraded linear constraint which handles pure binary variables
+          * @note: only linear constraint handler is enough in problem stage, otherwise it could be any upgraded linear
+          *        constraint which handles pure binary variables
           */
          SCIP_CONSHDLR* conshdlr;
          SCIP_CONS* topcostcons;
@@ -2137,7 +2136,7 @@ SCIP_RETCODE writeOpbObjective(
          {
             conshdlr = SCIPconsGetHdlr(topcostcons);
             assert(conshdlr != NULL);
-            
+
             if( strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 )
                (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %g;\n", SCIPgetRhsLinear(scip, topcostcons));
             else if( strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 )
@@ -2158,7 +2157,7 @@ SCIP_RETCODE writeOpbObjective(
          {
             /* first try linear constraints */
             conshdlr = SCIPfindConshdlr(scip, "linear");
-            
+
             if( conshdlr != NULL )
             {
                SCIP_CONS** conss;
@@ -2167,7 +2166,7 @@ SCIP_RETCODE writeOpbObjective(
 
                conss = SCIPconshdlrGetConss(conshdlr);
                nconss = SCIPconshdlrGetNConss(conshdlr);
-            
+
                assert(conss != NULL || nconss == 0);
 
                for( c = 0; c < nconss; ++c )
@@ -2197,7 +2196,7 @@ SCIP_RETCODE writeOpbObjective(
                         topcostfound = FALSE;
                      }
                   }
-               
+
                   if( topcostfound )
                   {
                      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %g;\n", SCIPgetRhsLinear(scip, cons));
@@ -2213,7 +2212,7 @@ SCIP_RETCODE writeOpbObjective(
             {
                /* second try knapsack constraints */
                conshdlr = SCIPfindConshdlr(scip, "knapsack");
-               
+
                if( conshdlr != NULL )
                {
                   SCIP_CONS** conss;
@@ -2222,7 +2221,7 @@ SCIP_RETCODE writeOpbObjective(
 
                   conss = SCIPconshdlrGetConss(conshdlr);
                   nconss = SCIPconshdlrGetNConss(conshdlr);
-            
+
                   assert(conss != NULL || nconss == 0);
 
                   for( c = 0; c < nconss; ++c )
@@ -2252,7 +2251,7 @@ SCIP_RETCODE writeOpbObjective(
                            topcostfound = FALSE;
                         }
                      }
-               
+
                      if( topcostfound )
                      {
                         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %g;\n", SCIPgetCapacityKnapsack(scip, cons));
@@ -2269,7 +2268,7 @@ SCIP_RETCODE writeOpbObjective(
             {
                /* third try setppc constraints */
                conshdlr = SCIPfindConshdlr(scip, "setppc");
-               
+
                if( conshdlr != NULL )
                {
                   SCIP_CONS** conss;
@@ -2278,7 +2277,7 @@ SCIP_RETCODE writeOpbObjective(
 
                   conss = SCIPconshdlrGetConss(conshdlr);
                   nconss = SCIPconshdlrGetNConss(conshdlr);
-            
+
                   assert(conss != NULL || nconss == 0);
 
                   for( c = 0; c < nconss; ++c )
@@ -2308,7 +2307,7 @@ SCIP_RETCODE writeOpbObjective(
                            topcostfound = FALSE;
                         }
                      }
-               
+
                      if( topcostfound )
                      {
                         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: 1;\n");
@@ -2332,32 +2331,32 @@ SCIP_RETCODE writeOpbObjective(
 
          return SCIP_OKAY;
       }
-  
+
       if( !SCIPisZero(scip, SCIPvarGetObj(var)) )
       {
          objective = TRUE;
-         while( !SCIPisIntegral(scip, SCIPvarGetObj(var) * mult) ) 
+         while( !SCIPisIntegral(scip, SCIPvarGetObj(var) * mult) )
          {
             assert(mult * 10 > mult);
             mult *= 10;
          }
       }
    }
-   
+
    if( objective )
    {
       /* there exist a objective function*/
       SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale * mult);
       SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n", objoffset);
-      
+
       clearBuffer(linebuffer, &linecnt);
-      
+
       /* opb format supports only minimization; therefore, a maximization problem has to be converted */
       if( objsense == SCIP_OBJSENSE_MAXIMIZE )
          mult *= -1;
-      
+
       SCIPdebugMessage("print objective function multiplied with %"SCIP_LONGINT_FORMAT"\n", mult);
-      
+
       appendBuffer(scip, file, linebuffer, &linecnt, "min:");
 
 #ifndef NDEBUG
@@ -2374,21 +2373,21 @@ SCIP_RETCODE writeOpbObjective(
       {
          SCIP_Bool negated;
          var = vars[v]; /*lint !e613 */
-         
+
          assert(var != NULL);
 
          if( SCIPisZero(scip, SCIPvarGetObj(var)) )
             continue;
-         
+
          negated = SCIPvarIsNegated(var);
-         
+
          assert( linecnt != 0 );
 
          if( SCIPvarGetObj(var) * mult > SCIP_LONGINT_MAX )
          {
             SCIPerrorMessage("Integral objective value to big (mult = %"SCIP_LONGINT_FORMAT", value = %g, mult*value = %g, printingvalue = %"SCIP_LONGINT_FORMAT")for printing in opb format.\n", mult, SCIPvarGetObj(var), SCIPvarGetObj(var) * mult, (SCIP_Longint) SCIPround(scip, SCIPvarGetObj(var) * mult));
          }
-         
+
          /* replace and-resultant with corresponding variables */
          if( existands && SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, var, nresvars, &pos) )
          {
@@ -2402,11 +2401,11 @@ SCIP_RETCODE writeOpbObjective(
             negated = SCIPvarIsNegated(andvars[pos][nandvars[pos] - 1]);
 
             /* print and-vars */
-            (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT"%s%s%s", 
+            (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT"%s%s%s",
                (SCIP_Longint) (SCIPvarGetObj(var) * mult), multisymbol, negated ? "~" : "",
                strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][nandvars[pos] - 1]) : andvars[pos][nandvars[pos] - 1]), "x"));
             appendBuffer(scip, file, linebuffer, &linecnt, buffer);
-         
+
             for(a = nandvars[pos] - 2; a >= 0; --a )
             {
                negated = SCIPvarIsNegated(andvars[pos][a]);
@@ -2417,12 +2416,12 @@ SCIP_RETCODE writeOpbObjective(
          }
          else
          {
-            (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT"%s%s%s", 
+            (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT"%s%s%s",
                (SCIP_Longint) (SCIPvarGetObj(var) * mult), multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(var) : var), "x"));
             appendBuffer(scip, file, linebuffer, &linecnt, buffer);
          }
       }
-      
+
       /* and objective function line ends with a ';' */
       appendBuffer(scip, file, linebuffer, &linecnt, " ;\n");
       writeBuffer(scip, file, linebuffer, &linecnt);
@@ -2446,7 +2445,7 @@ SCIP_RETCODE printNLRow(
    SCIP_VAR**const*const andvars,            /**< corresponding array of and-variables */
    int const*const       nandvars,           /**< array of numbers of corresponding and-variables */
    SCIP_Longint          weight,             /**< if we found a soft constraint this is the weight, otherwise 0 */
-   SCIP_Longint*const    mult,               /**< multiplier for the coefficients */  
+   SCIP_Longint*const    mult,               /**< multiplier for the coefficients */
    char const*const      multisymbol         /**< the multiplication symbol to use between coefficient and variable */
    )
 {
@@ -2456,14 +2455,14 @@ SCIP_RETCODE printNLRow(
    int v;
    int pos;
    int linecnt;
-   
+
    assert(scip != NULL);
    assert(strcmp(type, "=") == 0 || strcmp(type, ">=") == 0);
    assert(mult != NULL);
-   assert(resvars != NULL); 
-   assert(nresvars > 0); 
-   assert(andvars != NULL && nandvars != NULL); 
-   
+   assert(resvars != NULL);
+   assert(nresvars > 0);
+   assert(andvars != NULL && nandvars != NULL);
+
    clearBuffer(linebuffer, &linecnt);
 
    /* check if all coefficients are internal; if not commentstart multiplier */
@@ -2481,7 +2480,7 @@ SCIP_RETCODE printNLRow(
       assert(ABS(*mult) < ABS(*mult * 10));
       (*mult) *= 10;
    }
-   
+
    /* print comment line if we have to multiply the coefficients to get integrals */
    if( ABS(*mult) != 1 )
       SCIPinfoMessage(scip, file, "* the following constraint is multiplied by %"SCIP_LONGINT_FORMAT" to get integral coefficients\n", ABS(*mult) );
@@ -2491,7 +2490,7 @@ SCIP_RETCODE printNLRow(
    for( v = nresvars - 1; v > 0; --v )
       assert(SCIPvarGetIndex(resvars[v]) >= SCIPvarGetIndex(resvars[v - 1]));
 #endif
-   
+
    /* if we have a soft constraint print the weight*/
    if( weight != 0 )
    {
@@ -2513,12 +2512,12 @@ SCIP_RETCODE printNLRow(
       if( SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, var, nresvars, &pos) )
       {
 	 int a;
-	 
+
          assert(andvars != NULL);
          assert(nandvars != NULL);
          assert(pos >= 0 && nandvars[pos] > 0 && andvars[pos] != NULL);
          assert(andvars[pos][nandvars[pos] - 1] != NULL);
-	 
+
 	 negated = SCIPvarIsNegated(andvars[pos][nandvars[pos] - 1]);
 
          if( vals[v] * (*mult) > SCIP_LONGINT_MAX )
@@ -2527,36 +2526,36 @@ SCIP_RETCODE printNLRow(
          }
 
 	 /* print and-vars */
-	 (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT"%s%s%s", 
+	 (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT"%s%s%s",
 	    (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)), multisymbol, negated ? "~" : "",
 	    strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][nandvars[pos] - 1]) : andvars[pos][nandvars[pos] - 1]), "x") );
 	 appendBuffer(scip, file, linebuffer, &linecnt, buffer);
-         
+
          for(a = nandvars[pos] - 2; a >= 0; --a )
          {
             negated = SCIPvarIsNegated(andvars[pos][a]);
-            
+
             (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s%s", multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][a]) : andvars[pos][a]), "x"));
             appendBuffer(scip, file, linebuffer, &linecnt, buffer);
          }
-            
+
          appendBuffer(scip, file, linebuffer, &linecnt, " ");
       }
       else
       {
-         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT"%s%s%s ", 
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT"%s%s%s ",
             (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)), multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(var) : var), "x"));
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
       }
    }
-   
+
    /* print left hand side */
    if( SCIPisZero(scip, lhs) )
       lhs = 0.0;
-   
+
    (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s %"SCIP_LONGINT_FORMAT" ;\n", type, (SCIP_Longint) (lhs * (*mult)) );
    appendBuffer(scip, file, linebuffer, &linecnt, buffer);
-   
+
    writeBuffer(scip, file, linebuffer, &linecnt);
 
    return SCIP_OKAY;
@@ -3938,6 +3937,7 @@ SCIP_RETCODE SCIPreadOpb(
    )
 {  /*lint --e{715}*/
    OPBINPUT opbinput;
+   SCIP_RETCODE retcode;
    int i;
 
    /* initialize OPB input data */
@@ -3970,7 +3970,7 @@ SCIP_RETCODE SCIPreadOpb(
 #endif
 
    /* read the file */
-   SCIP_CALL( readOPBFile(scip, &opbinput, filename) );
+   retcode = readOPBFile(scip, &opbinput, filename);
 
    /* free dynamically allocated memory */
    for( i = OPB_MAX_PUSHEDTOKENS - 1; i >= 0; --i )
@@ -3979,6 +3979,8 @@ SCIP_RETCODE SCIPreadOpb(
    }
    SCIPfreeBufferArrayNull(scip, &opbinput.tokenbuf);
    SCIPfreeBufferArrayNull(scip, &opbinput.token);
+
+   SCIP_CALL( retcode );
 
    if( opbinput.nproblemcoeffs > 0 )
    {
@@ -4233,12 +4235,6 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/"READER_NAME"/dynamicconss", "should model constraints be subject to aging?",
          NULL, FALSE, FALSE/*TRUE*/, NULL, NULL) ); /* have to be FALSE, otherwise an error might inccur in restart during branch and bound */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/"READER_NAME"/multisymbol", "use '*' between coefficients and variables by writing to problem?",
          NULL, TRUE, FALSE, NULL, NULL) );

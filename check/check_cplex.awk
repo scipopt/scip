@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -18,6 +18,7 @@
 #@brief   CPLEX Check Report Generator
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
+#@author  Marc Pfetsch
 #@author  Robert Waniek
 #
 function abs(x)
@@ -41,6 +42,7 @@ BEGIN {
    NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
    headerprinted = 0;
+   namelength = 18;             # maximal length of instance names (can be increased)
 
    nprobs   = 0;
    sbab     = 0;
@@ -79,8 +81,8 @@ BEGIN {
    for( i = 2; i < m; ++i )
       prob = prob "." b[i];
 
-   if( useshortnames && length(prob) > 18 )
-      shortprob = substr(prob, length(prob)-17, 18);
+   if( useshortnames && length(prob) > namelength )
+      shortprob = substr(prob, length(prob)-namelength-1, namelength);
    else
       shortprob = prob;
 
@@ -89,6 +91,13 @@ BEGIN {
    pprob = a[1];
    for( i = 2; i <= n; i++ )
       pprob = pprob "\\_" a[i];
+
+   # for marking section (is repeated with bounds in newer CPLEX versions)
+   parsedvars = 0;
+   parsedcons = 0;
+   parsednnz  = 0;
+   parsedind  = 0;
+
    origvars   = 0;
    origcons   = 0;
    vars       = 0;
@@ -169,29 +178,54 @@ BEGIN {
 # problem size
 #
 /^Variables            : / {
-   if ( $3 != "Min" ) {
-      origvars = $3;
-      intvars = $10;
-      binvars = $7;
-   }
-   if ( vars == 0 )
-      vars = origvars;
-   contvars = vars - intvars - binvars;
+    if ( parsedvars == 0 )
+    {
+	origvars = $3;
+	for (i = 4; i < NF; i = i + 1)
+	{
+	    if ( $i == "[Binary:" )
+	    {
+		binvars = $(i+1);
+	    }
+	    if ( $i == "[General Integer:" )
+	    {
+		intvars = $(i+1);
+	    }
+	}
+	if ( vars == 0 )
+	    vars = origvars;
+	contvars = vars - intvars - binvars;
+	parsedvars = 1;
+    }
 }
 /^Linear constraints   : / {
-   if ( $4 > 0 )
-      origcons = $4;
-   if ( cons == 0 )
-      cons = origcons;
+   if ( parsedcons == 0 )
+   {
+      if ( $4 > 0 )
+	 origcons = $4;
+      if ( cons == 0 )
+	 cons = origcons;
+      parsedcons = 1;
+   }
 }
-/nonzeros.$/ { 
-   cons = $4; 
-   vars = $6; 
+# find line that ends with "nonzeros.", which corresponds to information about presolved constraints
+/nonzeros.$/ {
+   if ( parsednnz == 0 )
+   {
+      cons = $4;
+      vars = $6;
+      parsednnz = 1;
+   }
 }
+# find line that ends with "indicators.", which corresponds to information about presolved variables
 /indicators.$/ {
-   binvars = $4;
-   intvars = $6;
-   contvars = vars - intvars - binvars;
+   if ( parsedind == 0 )
+   {
+      binvars = $4;
+      intvars = $6;
+      contvars = vars - intvars - binvars;
+      parsedind = 1;
+   }
 }
 #
 # solution
@@ -334,9 +368,28 @@ BEGIN {
       printf("\\tablecaption{CPLEX with %s settings}\n",settings)      >TEXFILE;
       printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
 
-      printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+--------\n");
-      printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |       \n");
-      printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+--------\n");
+      # prepare header
+      hyphenstr = "";
+      for (i = 0; i < namelength; ++i)
+         hyphenstr = sprintf("%s-", hyphenstr);
+
+      # first part: name of given length
+      tablehead1 = hyphenstr;
+      tablehead2 = sprintf("Name%*s", namelength-4, " ");
+      tablehead3 = hyphenstr;
+
+      # append rest of header
+      tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+-------+";
+      tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |";
+      tablehead3 = tablehead3"+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+";
+
+      tablehead1 = tablehead1"--------\n";
+      tablehead2 = tablehead2"       \n";
+      tablehead3 = tablehead3"--------\n";
+   
+      printf(tablehead1);
+      printf(tablehead2);
+      printf(tablehead3);
 
       headerprinted = 1;
    }
@@ -382,18 +435,18 @@ BEGIN {
       if( vars == 0 )
          probtype = "--";
       else if( binvars == 0 && intvars == 0 )
-         probtype = "LP";
+         probtype = "   LP";
       else if( contvars == 0 ) {
          if( intvars == 0 && implvars == 0 )
-            probtype = "BP";
+            probtype = "   BP";
          else
-            probtype = "IP";
+            probtype = "   IP";
       }
       else {
          if( intvars == 0 )
-            probtype = "MBP";
+            probtype = "  MBP";
          else
-            probtype = "MIP";
+            probtype = "  MIP";
       }
 
       if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
@@ -406,11 +459,11 @@ BEGIN {
       if( timelimit > 0.0 )
          tottime = min(tottime, timelimit);
 
-      printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
-	     pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
+      printf("%-*s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
+	     namelength, pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
-      printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
-	     shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
+      printf("%-*s  %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
+	     namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
       if( aborted ) {
          printf("abort\n");

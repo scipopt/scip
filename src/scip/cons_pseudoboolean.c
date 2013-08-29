@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,7 +19,7 @@
  * @author Michael Winkler
  *
  *
- * The constraint handler deals with pseudo Boolean constraints. These are constraints of the form 
+ * The constraint handler deals with pseudo Boolean constraints. These are constraints of the form
  * \f[
  * \mbox{lhs} \leq \sum_{k=0}^m c_k \cdot x_k  +  \sum_{i=0}^n c_i \cdot \prod_{j \in I_i} x_j \leq \mbox{rhs}
  * \f]
@@ -82,7 +82,7 @@
  *       - need to keep and constraint pointer for special propagations like if two ands are due to their variables in
  *         one clique, add this cliques of and-resultants
  *
- *       - do special presolving like on instance : 
+ *       - do special presolving like on instance :
  * check/IP/PseudoBoolean/normalized-PB07/OPT-SMALLINT-NLC/submittedPB07/manquinho/bsg/normalized-bsg_1000_25_1.opb.gz
  *
  *         there exist constraint like:        1 x1 x2 + 1 x1 x3 + 1 x1 x4 + 1 x1 x5 <= 1 ;
@@ -109,7 +109,7 @@
  *       - do better conflict analysis by choosing the earliest fixed variable which led to a conflict instead of maybe
  *         best coefficient or create more conflicts by using all to zero fixed variables one by one
  *
- *       - how to make sure that we aggregate in a right way, when aggregating a resultant and a "normal" variable, 
+ *       - how to make sure that we aggregate in a right way, when aggregating a resultant and a "normal" variable,
  *         maybe add in SCIPaggregateVars a check for original variables, to prefer them if the variable type is the
  *         same; probably it would be better too if we would aggregate two resultants that the one with less variables
  *         inside the and-constraint will stay active
@@ -170,7 +170,7 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
    CONSANDDATA**         allconsanddatas;    /**< array of all and-constraint data objects inside the whole problem,
-                                              *   created via this constraint handler */ 
+                                              *   created via this constraint handler */
    int                   nallconsanddatas;   /**< number of all and-constraint data objects inside the whole problem,
                                               *   created via this constraint handler */
    int                   sallconsanddatas;   /**< size of all and-constraint data objects inside the whole problem,
@@ -316,13 +316,13 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqAndConsDatas)
       /* tests if variables are equal */
       if( cdata1->vars[v] != cdata2->vars[v] )
       {
-         assert(SCIPvarCompare(cdata1->vars[v], cdata2->vars[v]) == 1 || 
+         assert(SCIPvarCompare(cdata1->vars[v], cdata2->vars[v]) == 1 ||
             SCIPvarCompare(cdata1->vars[v], cdata2->vars[v]) == -1);
          return FALSE;
       }
-      assert(SCIPvarCompare(cdata1->vars[v], cdata2->vars[v]) == 0); 
-   } 
-   
+      assert(SCIPvarCompare(cdata1->vars[v], cdata2->vars[v]) == 0);
+   }
+
    return TRUE;
 }
 
@@ -334,9 +334,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndConsDatas)
    int minidx;
    int mididx;
    int maxidx;
-   
+
    cdata = (CONSANDDATA*)key;
-   
+
    assert(cdata != NULL);
    assert(cdata->vars != NULL);
    assert(cdata->nvars > 1);
@@ -561,7 +561,7 @@ SCIP_RETCODE getLinearConsSides(
       break;
    case SCIP_SETPPC:
       type = SCIPgetTypeSetppc(scip, cons);
-      
+
       switch( type )
       {
       case SCIP_SETPPCTYPE_PARTITIONING:
@@ -890,7 +890,7 @@ SCIP_RETCODE consdataCreate(
       rhs = SCIPinfinity(scip);
    else if( SCIPisInfinity(scip, -rhs) )
       rhs = -SCIPinfinity(scip);
-   
+
    /* adjust left hand side */
    if( SCIPisInfinity(scip, -lhs) )
       lhs = -SCIPinfinity(scip);
@@ -922,10 +922,10 @@ SCIP_RETCODE consdataCreate(
    }
    else
       (*consdata)->indvar = NULL;
-  
+
    /* copy artificial integer variable if it exist */
    if( intvar != NULL )
-   { 
+   {
       if( SCIPisTransformed(scip) )
       {
          SCIP_CALL( SCIPgetTransformedVar(scip, intvar, &((*consdata)->intvar)) );
@@ -935,7 +935,7 @@ SCIP_RETCODE consdataCreate(
    }
    else
       (*consdata)->intvar = NULL;
-   
+
    /* copy linear constraint */
    (*consdata)->lincons = lincons;
    (*consdata)->linconstype = linconstype;
@@ -946,7 +946,7 @@ SCIP_RETCODE consdataCreate(
 
    /* copy and-constraints */
    if( nandconss > 0 )
-   { 
+   {
       SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_VAR** andress;
       int c;
@@ -1003,7 +1003,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_CONSHDLRDATA* conshdlrdata;
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
-      
+
       conshdlrdata->noriguses += (*consdata)->nconsanddatas;
    }
 
@@ -1198,9 +1198,9 @@ SCIP_RETCODE consdataPrint(
    SCIP_VAR** andress;
    SCIP_Real* andcoefs;
    int nandress;
-   
+
    SCIP_Bool printed;
-   
+
    assert(scip != NULL);
    assert(cons != NULL);
 
@@ -1249,9 +1249,7 @@ SCIP_RETCODE consdataPrint(
    assert(consdata->nlinvars + consdata->nconsanddatas == nvars);
 
    /* print left hand side for ranged rows */
-   if( !SCIPisInfinity(scip, -lhs)
-      && !SCIPisInfinity(scip, rhs)
-      && !SCIPisEQ(scip, lhs, rhs) )
+   if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && !SCIPisEQ(scip, lhs, rhs) )
       SCIPinfoMessage(scip, file, "%.15g <= ", lhs);
 
    printed = FALSE;
@@ -1335,7 +1333,7 @@ SCIP_RETCODE consdataPrint(
          SCIP_CALL( SCIPwriteVarsList(scip, file, andvars, nandvars, TRUE, '*') );
       }
    }
-   
+
    if( !printed )
    {
       SCIPinfoMessage(scip, file, " 0 ");
@@ -1372,20 +1370,24 @@ SCIP_RETCODE createAndAddAndCons(
    SCIP_Bool const       initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool const       enforce,            /**< should the constraint be enforced during node processing?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+                                              *   TRUE for model constraints, FALSE for additional, redundant
+                                              *   constraints. */
    SCIP_Bool const       check,              /**< should the constraint be checked for feasibility?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+                                              *   TRUE for model constraints, FALSE for additional, redundant
+                                              *   constraints. */
    SCIP_Bool const       local,              /**< is constraint only valid locally?
-                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching
+                                              *   constraints. */
    SCIP_Bool const       modifiable,         /**< is constraint modifiable (subject to column generation)?
-                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
-                                              *   adds coefficients to this constraint. */
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE
+                                              *   if pricing adds coefficients to this constraint. */
    SCIP_Bool const       dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are seperated as constraints. */
    SCIP_Bool const       stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent
+                                              *   node data. */
    SCIP_CONS**const      andcons             /**< pointer to store and-constraint */
    )
 {
@@ -1446,14 +1448,14 @@ SCIP_RETCODE createAndAddAndCons(
       ++(tmpdata->nuses);
    }
    else
-   { 
+   {
       /* create new and-constraint */
       SCIP_CONS* newcons;
       SCIP_VAR* resultant;
 
       /* create auxiliary variable */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, ARTIFICIALVARNAMEPREFIX"%d", conshdlrdata->nallconsanddatas);
-      SCIP_CALL( SCIPcreateVar(scip, &resultant, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, 
+      SCIP_CALL( SCIPcreateVar(scip, &resultant, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
             TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
 
       /* @todo: check whether we want to branch on artificial variables */
@@ -1471,10 +1473,10 @@ SCIP_RETCODE createAndAddAndCons(
 
       /* we do not want to check the and constraints, so the check flag will be FALSE */
 
-      /* create and add "and" constraint for the multiplication of the binary variables */ 
+      /* create and add "and" constraint for the multiplication of the binary variables */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "andcons_%d", conshdlrdata->nallconsanddatas);
       SCIP_CALL( SCIPcreateConsAnd(scip, &newcons, name, resultant, newdata->nvars, newdata->vars,
-            initial, separate, enforce, FALSE, propagate, 
+            initial, separate, enforce, FALSE, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
       SCIP_CALL( SCIPaddCons(scip, newcons) );
       SCIPdebugPrintCons(scip, newcons, NULL);
@@ -1501,7 +1503,7 @@ SCIP_RETCODE createAndAddAndCons(
       newdata->cons = newcons;
       SCIP_CALL( SCIPcaptureCons(scip, newdata->cons) );
 
-      /* no such and-constraint in current hash table: insert the new object into hash table */  
+      /* no such and-constraint in current hash table: insert the new object into hash table */
       SCIP_CALL( SCIPhashtableInsert(conshdlrdata->hashtable, (void*)newdata) );
 
       /* insert new mapping */
@@ -1537,7 +1539,7 @@ SCIP_RETCODE addCoefTerm(
    SCIP_CONS* andcons;
    SCIP_CONSDATA* consdata;
    SCIP_VAR* res;
-   
+
    assert(scip != NULL);
    assert(cons != NULL);
    assert(nvars == 0 || vars != NULL);
@@ -1557,7 +1559,7 @@ SCIP_RETCODE addCoefTerm(
    /* create (and add) and-constraint */
    SCIP_CALL( createAndAddAndCons(scip, conshdlr, vars, nvars,
          SCIPconsIsInitial(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsStickingAtNode(cons), 
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsStickingAtNode(cons),
          &andcons) );
    assert(andcons != NULL);
 
@@ -1595,7 +1597,7 @@ SCIP_RETCODE addCoefTerm(
    case SCIP_SETPPC:
       if( !SCIPisEQ(scip, val, 1.0) )
          return SCIP_INVALIDDATA;
-      
+
       SCIP_CALL( SCIPaddCoefSetppc(scip, consdata->lincons, res) );
       break;
 #if 0
@@ -1741,7 +1743,7 @@ SCIP_RETCODE chgLhs(
 
    /* calculate all not artificial linear variables and all artificial and-resultants which will be ordered like the
     * 'consanddatas' such that the and-resultant of the and-constraint is the and-resultant in the 'andress' array
-    * afterwards 
+    * afterwards
     */
    SCIP_CALL( getLinVarsAndAndRess(scip, cons, vars, coefs, nvars, linvars, lincoefs, &nlinvars, andress, andcoefs, &nandress) );
    assert(consdata->nconsanddatas == nandress);
@@ -1764,7 +1766,7 @@ SCIP_RETCODE chgLhs(
          {
             CONSANDDATA* consanddata;
             SCIP_CONS* andcons;
-            
+
             consanddata = consdata->consanddatas[c];
             assert(consanddata != NULL);
 
@@ -1799,7 +1801,7 @@ SCIP_RETCODE chgLhs(
          {
             CONSANDDATA* consanddata;
             SCIP_CONS* andcons;
-            
+
             consanddata = consdata->consanddatas[c];
             assert(consanddata != NULL);
 
@@ -1911,7 +1913,7 @@ SCIP_RETCODE chgRhs(
 
    /* calculate all not artificial linear variables and all artificial and-resultants which will be ordered like the
     * 'consanddatas' such that the and-resultant of the and-constraint is the and-resultant in the 'andress' array
-    * afterwards 
+    * afterwards
     */
    SCIP_CALL( getLinVarsAndAndRess(scip, cons, vars, coefs, nvars, linvars, lincoefs, &nlinvars, andress, andcoefs, &nandress) );
    assert(consdata->nconsanddatas == nandress);
@@ -1934,7 +1936,7 @@ SCIP_RETCODE chgRhs(
          {
             CONSANDDATA* consanddata;
             SCIP_CONS* andcons;
-            
+
             consanddata = consdata->consanddatas[c];
             assert(consanddata != NULL);
 
@@ -1969,7 +1971,7 @@ SCIP_RETCODE chgRhs(
          {
             CONSANDDATA* consanddata;
             SCIP_CONS* andcons;
-            
+
             consanddata = consdata->consanddatas[c];
             assert(consanddata != NULL);
 
@@ -2034,20 +2036,24 @@ SCIP_RETCODE createAndAddAnds(
    SCIP_Bool const       initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool const       enforce,            /**< should the constraint be enforced during node processing?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+                                              *   TRUE for model constraints, FALSE for additional, redundant
+                                              *   constraints. */
    SCIP_Bool const       check,              /**< should the constraint be checked for feasibility?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+                                              *   TRUE for model constraints, FALSE for additional, redundant
+                                              *   constraints. */
    SCIP_Bool const       local,              /**< is constraint only valid locally?
-                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching
+                                              *   constraints. */
    SCIP_Bool const       modifiable,         /**< is constraint modifiable (subject to column generation)?
-                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
-                                              *   adds coefficients to this constraint. */
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE
+                                              *   if pricing adds coefficients to this constraint. */
    SCIP_Bool const       dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are seperated as constraints. */
    SCIP_Bool const       stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent
+                                              *   node data. */
    SCIP_CONS**const      andconss,           /**< array to store all created and-constraints for given terms */
    SCIP_Real*const       andvals,            /**< array to store all coefficients of and-constraints */
    int*const             nandconss           /**< number of created and constraints */
@@ -2073,7 +2079,7 @@ SCIP_RETCODE createAndAddAnds(
       if( !SCIPisZero(scip, termcoefs[t]) && ntermvars[t] > 0 )
       {
          SCIP_CALL( createAndAddAndCons(scip, conshdlr, terms[t], ntermvars[t],
-               initial, enforce, check, local, modifiable, dynamic, stickingatnode, 
+               initial, enforce, check, local, modifiable, dynamic, stickingatnode,
                &(andconss[*nandconss])) );
          assert(andconss[*nandconss] != NULL);
          andvals[*nandconss] = termcoefs[t];
@@ -2102,24 +2108,29 @@ SCIP_RETCODE createAndAddLinearCons(
    SCIP_Bool const       separate,           /**< should the constraint be separated during LP processing?
                                               *   Usually set to TRUE. */
    SCIP_Bool const       enforce,            /**< should the constraint be enforced during node processing?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+                                              *   TRUE for model constraints, FALSE for additional, redundant
+                                              *   constraints. */
    SCIP_Bool const       check,              /**< should the constraint be checked for feasibility?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+                                              *   TRUE for model constraints, FALSE for additional, redundant
+                                              *   constraints. */
    SCIP_Bool const       propagate,          /**< should the constraint be propagated during node processing?
                                               *   Usually set to TRUE. */
    SCIP_Bool const       local,              /**< is constraint only valid locally?
-                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching
+                                              *   constraints. */
    SCIP_Bool const       modifiable,         /**< is constraint modifiable (subject to column generation)?
-                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
-                                              *   adds coefficients to this constraint. */
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE
+                                              *   if pricing adds coefficients to this constraint. */
    SCIP_Bool const       dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are seperated as constraints. */
    SCIP_Bool const       removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
-                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user
+                                              *   cuts'. */
    SCIP_Bool const       stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent
+                                              *   node data. */
    SCIP_CONS**const      lincons,            /**< pointer to store created linear constraint */
    SCIP_LINEARCONSTYPE*const linconstype     /**< pointer to store the type of the linear constraint */
    )
@@ -2687,12 +2698,8 @@ SCIP_RETCODE createAndAddLinearCons(
    *lincons = cons;
    SCIP_CALL( SCIPcaptureCons(scip, *lincons) );
 
-   if( *linconstype == SCIP_LINEAR )
-   {
-      /* todo: make the constraint upgrade flag global, now it works only for the common linear constraint */
-      /* mark linear constraint not to be upgraded - otherwise we loose control over it */
-      SCIP_CALL( SCIPmarkDoNotUpgradeConsLinear(scip, cons) );
-   }
+   /* mark linear constraint not to be upgraded - otherwise we loose control over it */
+   SCIPconsAddUpgradeLocks(cons, 1);
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -2791,7 +2798,7 @@ SCIP_RETCODE checkOrigPbCons(
     * terms)
     */
    for( v = 0; v < nvars; ++v )
-   { 
+   {
       assert(vars[v] != NULL);
 
       if( !SCIPhashmapExists(conshdlrdata->hashmap, (void*)(vars[v])) )
@@ -3080,7 +3087,7 @@ SCIP_RETCODE copyConsPseudoboolean(
       ntargetandconss = 0;
 
       if( *valid )
-      {        
+      {
          SCIP_CONSHDLR* conshdlrand;
          SCIP_CONS* oldcons;
          SCIP_Bool validand;
@@ -3162,10 +3169,10 @@ SCIP_RETCODE copyConsPseudoboolean(
             consname = SCIPconsGetName(sourcecons);
 
          /* create new pseudoboolean constraint */
-         SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname, 
+         SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname,
                targetlincons, targetlinconstype, targetandconss, targetandcoefs, ntargetandconss,
-               indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, 
-               sourceconsdata->lhs, sourceconsdata->rhs, 
+               indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar,
+               sourceconsdata->lhs, sourceconsdata->rhs,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       }
       else
@@ -3409,7 +3416,7 @@ SCIP_RETCODE correctLocksAndCaptures(
       assert(SCIPvarGetIndex(andress[c]) > SCIPvarGetIndex(andress[c - 1]));
    }
    /* check that consanddata objects are sorted due to the index of the corresponding resultants, and coefficents are
-    * not zero 
+    * not zero
     */
    for( c = nconsanddatas - 1; c > 0; --c )
    {
@@ -3460,7 +3467,7 @@ SCIP_RETCODE correctLocksAndCaptures(
 
       assert(consanddatas[c] != NULL);
 
-      /* consanddata object could have been deleted in the last presolving round */ 
+      /* consanddata object could have been deleted in the last presolving round */
       if( consanddatas[c]->deleted )
       {
          ++c;
@@ -3875,7 +3882,7 @@ SCIP_RETCODE addCliques(
              * var1 == ~var2
              *
              * if:
-             * var1 + ~var1 <= 1;          r_1  
+             * var1 + ~var1 <= 1;          r_1
              *    0 +     1 <= 1             0   \
              *    1 +     0 <= 1   ==>  1 or 0    >   ==>    r_1 + var2 <= 1
              *    0 +     0 <= 1             0   /
@@ -3900,10 +3907,10 @@ SCIP_RETCODE addCliques(
 	       *nchgbds += nchgbdslocal;
 
                (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_clq_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]) );
-               SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, consname, 2, clqvars, 
-                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+               SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, consname, 2, clqvars,
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                      FALSE, SCIPconsIsPropagated(cons),
-                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
                SCIP_CALL( SCIPaddCons(scip, newcons) );
@@ -3913,7 +3920,7 @@ SCIP_RETCODE addCliques(
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
             }
             /* if a variable in an and-constraint is in a clique with another normal linear variable, we can add the
-             * clique between the linear variable and the and-resultant 
+             * clique between the linear variable and the and-resultant
              *
              * set r_1 = var1 * z; (z is some product)
              *
@@ -3943,10 +3950,10 @@ SCIP_RETCODE addCliques(
 	       *nchgbds += nchgbdslocal;
 
                (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_clq_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]) );
-               SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, consname, 2, clqvars, 
-                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+               SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, consname, 2, clqvars,
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                      FALSE, SCIPconsIsPropagated(cons),
-                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
                SCIP_CALL( SCIPaddCons(scip, newcons) );
@@ -4069,10 +4076,10 @@ SCIP_RETCODE addCliques(
 	       *nchgbds += nchgbdslocal;
 
                (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_clq_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]) );
-               SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, consname, 2, clqvars, 
-                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+               SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, consname, 2, clqvars,
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                      FALSE, SCIPconsIsPropagated(cons),
-                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
                SCIP_CALL( SCIPaddCons(scip, newcons) );
@@ -4113,10 +4120,10 @@ SCIP_RETCODE addCliques(
 	       *nchgbds += nchgbdslocal;
 
                (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_clq_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]) );
-               SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, consname, 2, clqvars, 
-                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+               SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, consname, 2, clqvars,
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                      FALSE, SCIPconsIsPropagated(cons),
-                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
                SCIP_CALL( SCIPaddCons(scip, newcons) );
@@ -4468,7 +4475,7 @@ SCIP_RETCODE correctConshdlrdata(
 }
 
 /* update the uses counter of consandata objects which are used in pseudoboolean constraint, which was deleted and
- * probably delete and-constraints 
+ * probably delete and-constraints
  */
 static
 SCIP_RETCODE updateConsanddataUses(
@@ -4576,16 +4583,14 @@ SCIP_RETCODE updateConsanddataUses(
 	    if( nfixedvars > 0 )
 	    {
 	       SCIP_VAR** fixedvars;
+               SCIP_Bool foundmultiaggrvar = FALSE; /* workaround for multi-aggregated variables */
 	       int pos;
-#ifndef NDEBUG
 	       int w;
-#endif
 
 	       SCIP_CALL( SCIPduplicateBufferArray(scip, &fixedvars, SCIPgetFixedVars(scip), nfixedvars) );
 
 	       SCIPvarsGetProbvar(fixedvars, nfixedvars);
 
-#ifndef NDEBUG
 	       /* all inactive variables have a loose, column, fixed or multi-aggregated variable as counterpart, but
 		* because we have only binary variables (in pseudobbolean contest) there should also be no
 		* multi-aggregated variable
@@ -4594,12 +4599,17 @@ SCIP_RETCODE updateConsanddataUses(
 	        */
 	       for( w = nfixedvars - 1; w >= 0; --w )
 	       {
-		  assert(SCIPvarGetStatus(fixedvars[w]) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(fixedvars[w]) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(fixedvars[w]) == SCIP_VARSTATUS_FIXED);
+                  if( SCIPvarGetStatus(fixedvars[w]) == SCIP_VARSTATUS_MULTAGGR )
+                     foundmultiaggrvar = TRUE;
+                  else
+                     assert(SCIPvarGetStatus(fixedvars[w]) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(fixedvars[w]) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(fixedvars[w]) == SCIP_VARSTATUS_FIXED);
 	       }
-#endif
+
 	       SCIPsortPtr((void**)fixedvars, SCIPvarComp, nfixedvars);
 
-	       if( SCIPsortedvecFindPtr((void**)fixedvars, SCIPvarComp, SCIPgetResultantAnd(scip, consanddata->cons), nfixedvars, &pos) )
+               if( foundmultiaggrvar )
+		  delete = FALSE;
+	       else if( SCIPsortedvecFindPtr((void**)fixedvars, SCIPvarComp, SCIPgetResultantAnd(scip, consanddata->cons), nfixedvars, &pos) )
 		  delete = FALSE;
 
 	       SCIPfreeBufferArray(scip, &fixedvars);
@@ -5605,7 +5615,7 @@ SCIP_RETCODE tryUpgradingLogicor(
       assert(nminvars > 0);
       assert(nminvars <= nmaxvars);
 
-      /* now we only want to handle the easy case where nminvars == nmaxvars 
+      /* now we only want to handle the easy case where nminvars == nmaxvars
        * @todo: implement for the othercase too
        */
       if( nminvars < nmaxvars )
@@ -5635,13 +5645,13 @@ SCIP_RETCODE tryUpgradingLogicor(
             if( nneweqvars < v )
                eqvars[nneweqvars] = eqvars[v];
             ++nneweqvars;
-            ++v; 
-            ++v2; 
+            ++v;
+            ++v2;
          }
       }
       neqvars = nneweqvars;
 
-      /* now we only want to handle the easy case where nminvars == neqvars + 1 
+      /* now we only want to handle the easy case where nminvars == neqvars + 1
        * @todo: implement for the othercase too
        */
       if( nminvars > neqvars + 1 )
@@ -5682,7 +5692,7 @@ SCIP_RETCODE tryUpgradingLogicor(
    /* Extract additional information ???
     *
     * e.g. x1 * x2 * x4 + x1 * x3 * x5 + x2 * x3 * x6 >= 1
-    * =>  extract x1 + x2 + x3 >= 2 
+    * =>  extract x1 + x2 + x3 >= 2
     */
 
    /* if we have no normal linear variable in the logicor constraint, we can fix all equal variables */
@@ -5707,7 +5717,7 @@ SCIP_RETCODE tryUpgradingLogicor(
       }
 
       /* if a complete consanddata object have all variables in common with all other consanddata objects, than we can
-       * delete this constraint after fixing all equal variables 
+       * delete this constraint after fixing all equal variables
        */
       if( nminvars == neqvars )
       {
@@ -5729,8 +5739,8 @@ SCIP_RETCODE tryUpgradingLogicor(
       SCIP_Real lhs;
       SCIP_Real rhs;
 
-      lhs = 1.0; 
-      rhs = SCIPinfinity(scip); 
+      lhs = 1.0;
+      rhs = SCIPinfinity(scip);
 
       lincons = consdata->lincons;
 
@@ -5742,7 +5752,7 @@ SCIP_RETCODE tryUpgradingLogicor(
             SCIPconsIsDynamic(lincons), SCIPconsIsRemovable(lincons), SCIPconsIsStickingAtNode(lincons)) );
 
       /* if createcons == TRUE add all variables which are not in the eqvars array to the new constraint with
-       * coefficient 1.0 
+       * coefficient 1.0
        */
       for( c = nconsanddatas - 1; c >= 0; --c )
       {
@@ -5834,11 +5844,11 @@ SCIP_RETCODE tryUpgradingLogicor(
          SCIP_CALL( SCIPallocBufferArray(scip, &linvars, nvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nvars) );
 
-         /* get variables and coefficients */ 
+         /* get variables and coefficients */
          SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
          assert(nvars == 0 || (vars != NULL && coefs != NULL));
 
-#ifndef NDEBUG         
+#ifndef NDEBUG
          /* all coefficients have to be 1 */
          for( v = 0; v < nvars; ++v )
             assert(SCIPisEQ(scip, coefs[v], 1.0));
@@ -5961,7 +5971,7 @@ SCIP_RETCODE tryUpgradingSetppc(
 
       /* @todo: implement the following */
 
-      /* for each set packing constraint: 
+      /* for each set packing constraint:
        *     sum_i (x_i) + res <= 1 , with and-constraint of res as the resultant like res = y_1 * ... * y_n
        *  => sum_i (n * x_i) + sum_j=1^n y_j <= n + n-1
        *
@@ -5969,11 +5979,11 @@ SCIP_RETCODE tryUpgradingSetppc(
        *  => 3x_1 + 3x_2 + 3x_3 + x_4 + x_5 + x_6 <= 5
        */
 
-      /* for each set partitioning constraint: 
-       *     sum_i (x_i) + res = 1 , with the corresponding and-constraint of res like 
-       *                             res = y_1 * ... * y_n 
+      /* for each set partitioning constraint:
+       *     sum_i (x_i) + res = 1 , with the corresponding and-constraint of res like
+       *                             res = y_1 * ... * y_n
        *
-       *  => n <= sum_i (n * x_i) + sum_j=1^n y_j <= 2 * n - 1 
+       *  => n <= sum_i (n * x_i) + sum_j=1^n y_j <= 2 * n - 1
        *
        * i.e. x_1 + x_2 + x_3 + x_4*x_5*x_6 = 1
        *  => 3 <= 3x_1 + 3x_2 + 3x_3 + x_4 + x_5 + x_6 <= 5
@@ -6056,7 +6066,7 @@ SCIP_RETCODE tryUpgradingSetppc(
       assert(nminvars <= nmaxvars);
 
 #if 0
-      /* now we only want to handle the easy case where nminvars == nmaxvars 
+      /* now we only want to handle the easy case where nminvars == nmaxvars
        * @todo: implement for the othercase too
        */
       if( nminvars < nmaxvars )
@@ -6087,13 +6097,13 @@ SCIP_RETCODE tryUpgradingSetppc(
             if( nneweqvars < v )
                eqvars[nneweqvars] = eqvars[v];
             ++nneweqvars;
-            ++v; 
-            ++v2; 
+            ++v;
+            ++v2;
          }
       }
       neqvars = nneweqvars;
 
-      /* now we only want to handle the easy case where nminvars == neqvars + 1 
+      /* now we only want to handle the easy case where nminvars == neqvars + 1
        * @todo: implement for the othercase too
        */
       if( nminvars > neqvars + 1 && type != SCIP_SETPPCTYPE_PARTITIONING)
@@ -6148,21 +6158,21 @@ SCIP_RETCODE tryUpgradingSetppc(
       /* determine new sides of linear constraint */
       if( type == SCIP_SETPPCTYPE_PARTITIONING )
       {
-         lhs = 1.0; 
-         rhs = 1.0; 
+         lhs = 1.0;
+         rhs = 1.0;
       }
       else
       {
          assert(type == SCIP_SETPPCTYPE_PACKING);
-         lhs = -SCIPinfinity(scip); 
-         rhs = 1.0; 
+         lhs = -SCIPinfinity(scip);
+         rhs = 1.0;
       }
 
       /* if one and-constraint was completely contained in all other and-constraints, we have to reduced the right hand
        * side by 1
        */
       if( neqvars == nminvars )
-         rhs -= 1.0; 
+         rhs -= 1.0;
 
       createcons = (SCIPisLE(scip, lhs, rhs) && ((nminvars == nmaxvars && nminvars == neqvars + 1) || (nminvars == neqvars)));
       assert(createcons || type == SCIP_SETPPCTYPE_PARTITIONING);
@@ -6182,10 +6192,10 @@ SCIP_RETCODE tryUpgradingSetppc(
       }
 
       /* if createcons == TRUE add all variables which are not in the eqvars array to the new constraint with
-       * coefficient 1.0 
+       * coefficient 1.0
        *
        * otherwise (if createcons == FALSE) fix all variables to zero which are not in the eqvars array and if we have a
-       * set partitioning constraint 
+       * set partitioning constraint
        */
       for( c = nconsanddatas - 1; c >= 0; --c )
       {
@@ -6302,7 +6312,7 @@ SCIP_RETCODE tryUpgradingSetppc(
       }
 
       /* fix all equal variable in set-partitioning constraints which have to be one, in set-packing constraint we have
-       * to add these variable with a coeffcient as big as (nconsanddatas - 1) 
+       * to add these variable with a coeffcient as big as (nconsanddatas - 1)
        */
       for( v = 0; v < neqvars; ++v )
       {
@@ -6319,7 +6329,7 @@ SCIP_RETCODE tryUpgradingSetppc(
             if( fixed )
                ++(*nfixedvars);
          }
-         else 
+         else
          {
             assert(type == SCIP_SETPPCTYPE_PACKING);
             SCIP_CALL( SCIPaddCoefLinear(scip, newcons, eqvars[v], (SCIP_Real)(nconsanddatas - 1)) );
@@ -6410,12 +6420,11 @@ SCIP_RETCODE tryUpgrading(
    /* if no consanddata-objects in pseudoboolean constraint are left, create the corresponding linear constraint */
    if( consdata->nconsanddatas == 0 )
    {
-      if( consdata->linconstype == SCIP_LINEAR )
-      {
-         SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
-      }
+      SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+      assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
+
       /* @TODO: maybe it is better to create everytime a standard linear constraint instead of letting the special
-       *        linear constraint stay 
+       *        linear constraint stay
        */
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
@@ -6456,7 +6465,7 @@ SCIP_RETCODE tryUpgrading(
    if( SCIPconsIsDeleted(cons) )
    {
       /* update the uses counter of consandata objects which are used in pseudoboolean constraint, which was deleted and
-       * probably delete and-constraints 
+       * probably delete and-constraints
        */
       SCIP_CALL( updateConsanddataUses(scip, cons, ndelconss) );
    }
@@ -7232,7 +7241,7 @@ SCIP_DECL_CONSEXIT(consExitPseudoboolean)
          SCIP_CALL( SCIPreleaseCons(scip, &(allconsanddatas[c]->cons)) );
       }
       if( allconsanddatas[c]->origcons != NULL )
-      { 
+      {
          SCIP_CALL( SCIPreleaseCons(scip, &(allconsanddatas[c]->origcons)) );
       }
    }
@@ -7306,7 +7315,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
             SCIP_Real ub;
 #else
             SCIP_CONS* indcons;
-#endif         
+#endif
 
             assert(consdata->weight != 0);
             assert(consdata->indvar != NULL);
@@ -7346,7 +7355,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                SCIPwarningMessage(scip, "minactivity = %g exceed -infinity value.\n", minact);
             }
 
-            /* @todo check whether it's better to set the initial flag to false */         
+            /* @todo check whether it's better to set the initial flag to false */
             initial = SCIPconsIsInitial(cons); /* FALSE; */
 
             /* first soft constraints for lhs */
@@ -7441,7 +7450,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
             }
 #else /* with indicator */
-            /* @todo check whether it's better to set the initial flag to false */         
+            /* @todo check whether it's better to set the initial flag to false */
             initial = SCIPconsIsInitial(cons); /* FALSE; */
 
             if( !SCIPisInfinity(scip, rhs) )
@@ -7454,7 +7463,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 
                SCIP_CALL( SCIPcreateConsIndicator(scip, &indcons, name, negindvar, nvars, vars, coefs, rhs,
                      initial, SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-                     SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
+                     SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
                /* update and constraint flags */
@@ -7502,13 +7511,10 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
          /* no soft constraint */
          else if( !consdata->issoftcons && conshdlrdata->decomposenormalpbcons )
          {
-            if( consdata->linconstype == SCIP_LINEAR )
-            {
-               /* todo: maybe better create a new linear constraint and let scip do the upgrade */
+            /* todo: maybe better create a new linear constraint and let scip do the upgrade */
 
-               /* mark linear constraint not to be upgraded - otherwise we loose control over it */
-               SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
-            }
+            /* mark linear constraint not to be upgraded - otherwise we loose control over it */
+            SCIPconsAddUpgradeLocks(consdata->lincons, 1);
 
             /* update and constraint flags */
             SCIP_CALL( updateAndConss(scip, cons) );
@@ -7566,7 +7572,7 @@ SCIP_DECL_CONSDELETE(consDeletePseudoboolean)
    return SCIP_OKAY;
 }
 
-/** transforms constraint data into data belonging to the transformed problem */ 
+/** transforms constraint data into data belonging to the transformed problem */
 static
 SCIP_DECL_CONSTRANS(consTransPseudoboolean)
 {  /*lint --e{715}*/
@@ -7608,8 +7614,8 @@ SCIP_DECL_CONSTRANS(consTransPseudoboolean)
    }
 
    /* create pseudoboolean constraint data for target constraint */
-   SCIP_CALL( consdataCreate(scip, conshdlr, &targetdata, sourcedata->lincons, sourcedata->linconstype, 
-         andconss, sourcedata->andcoefs, sourcedata->nconsanddatas,     
+   SCIP_CALL( consdataCreate(scip, conshdlr, &targetdata, sourcedata->lincons, sourcedata->linconstype,
+         andconss, sourcedata->andcoefs, sourcedata->nconsanddatas,
          sourcedata->indvar, sourcedata->weight, sourcedata->issoftcons, sourcedata->intvar, sourcedata->lhs, sourcedata->rhs) );
 
    /* free temporary memory */
@@ -7842,7 +7848,7 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
 
       /* calculate all not artificial linear variables and all artificial and-resultants which will be ordered like the
        * 'consanddatas' such that the and-resultant of the and-constraint is the and-resultant in the 'andress' array
-       * afterwards 
+       * afterwards
        */
       SCIP_CALL( getLinVarsAndAndRess(scip, cons, vars, coefs, nvars, linvars, lincoefs, &nlinvars, andress, andcoefs, &nandress) );
 
@@ -7876,7 +7882,7 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
          SCIP_CALL( tryUpgrading(scip, cons, conshdlrdata, ndelconss, naddconss, nfixedvars, nchgcoefs, nchgsides, &cutoff) );
          if( cutoff )
             goto CONTTERMINATE;
-      }  
+      }
 
       /* if upgrading deleted the pseudoboolean constraint we go on */
       if( !SCIPconsIsActive(cons) )
@@ -8114,8 +8120,9 @@ SCIP_DECL_CONSCOPY(consCopyPseudoboolean)
    else
       consname = SCIPconsGetName(sourcecons);
 
-   SCIP_CALL( copyConsPseudoboolean(scip, cons, sourcescip, sourcecons, consname, varmap, consmap, 
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
+   SCIP_CALL( copyConsPseudoboolean(scip, cons, sourcescip, sourcecons, consname, varmap, consmap,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global,
+         valid) );
    assert(cons != NULL || *valid == FALSE);
 
    return SCIP_OKAY;
@@ -8598,7 +8605,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
          /* increase usage of data object */
          ++(newdata->nuses);
 
-         /* no such and-constraint in current hash table: insert the new object into hash table */  
+         /* no such and-constraint in current hash table: insert the new object into hash table */
          SCIP_CALL( SCIPhashtableInsert(conshdlrdata->hashtable, (void*)newdata) );
 
          /* if newdata object was new we want to allocate new memory in next loop iteration */
@@ -8637,16 +8644,13 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    /* capture linear constraint */
    SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
-   if( linconstype == SCIP_LINEAR )
-   {
-      /* todo: make the constraint upgrade flag global, now it works only for the common linear constraint */
-      /* mark linear constraint not to be upgraded - otherwise we loose control over it */
-      SCIP_CALL( SCIPmarkDoNotUpgradeConsLinear(scip, lincons) );
-   }
+   /* todo: make the constraint upgrade flag global, now it works only for the common linear constraint */
+   /* mark linear constraint not to be upgraded - otherwise we loose control over it */
+   SCIPconsAddUpgradeLocks(lincons, 1);
 
    /* create constraint data */
    /* checking for and-constraints will be FALSE, we check all information in this constraint handler */
-   SCIP_CALL( consdataCreate(scip, conshdlr, &consdata, lincons, linconstype, andconss, andcoefs, nandconss, 
+   SCIP_CALL( consdataCreate(scip, conshdlr, &consdata, lincons, linconstype, andconss, andcoefs, nandconss,
          indvar, weight, issoftcons, intvar, lhs, rhs) );
    assert(consdata != NULL);
 
@@ -8657,7 +8661,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    return SCIP_OKAY;
 }
 
-/** creates and captures a pseudoboolean constraint 
+/** creates and captures a pseudoboolean constraint
  *
  *  @note linear and nonlinear terms can be added using SCIPaddCoefPseudoboolean() and SCIPaddTermPseudoboolean(),
  *        respectively
@@ -8699,7 +8703,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -9031,7 +9035,7 @@ SCIP_RETCODE SCIPgetLinDatasWithoutAndPseudoboolean(
    SCIP_VAR**const       linvars,            /**< array to store and-constraints */
    SCIP_Real*const       lincoefs,           /**< array to store and-coefficients */
    int*const             nlinvars            /**< pointer to store the required array size for and-constraints, have to
-                                              *   be initialized with size of given array */ 
+                                              *   be initialized with size of given array */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -9092,7 +9096,7 @@ SCIP_RETCODE SCIPgetAndDatasPseudoboolean(
    SCIP_CONS**const      andconss,           /**< array to store and-constraints */
    SCIP_Real*const       andcoefs,           /**< array to store and-coefficients */
    int*const             nandconss           /**< pointer to store the required array size for and-constraints, have to
-                                              *   be initialized with size of given array */ 
+                                              *   be initialized with size of given array */
    )
 {
    SCIP_CONSDATA* consdata;

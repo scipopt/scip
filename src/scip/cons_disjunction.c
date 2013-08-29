@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -878,6 +878,12 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 	    initial, enforce, check, local, modifiable, dynamic) );
    }
 
+   /* free parsed constraints */
+   for( --nconss; nconss >= 0; --nconss )
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[nconss]) );
+   }
+
  TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &copystr);
@@ -945,7 +951,16 @@ SCIP_DECL_CONSCOPY(consCopyDisjunction)
       {
 	 SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, name, nconss, conss, relaxcons,
 	       initial, enforce, check, local, modifiable, dynamic) );
+
+         SCIP_CALL( SCIPreleaseCons(scip, &relaxcons) );
       }
+   }
+
+   /* release the copied constraints */
+   for(; c >= 0; --c )
+   {
+      assert(conss[c] != NULL);
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[c]) );
    }
 
    SCIPfreeBufferArray(scip, &conss);

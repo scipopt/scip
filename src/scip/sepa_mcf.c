@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -263,13 +263,13 @@ typedef struct nodepartition NODEPARTITION;
  * Local methods
  */
 
-#define LHSPOSSIBLE     1                    /**< we may use the constraint as lhs <= a*x */
-#define RHSPOSSIBLE     2                    /**< we may use the constraint as a*x <= rhs */
-#define LHSASSIGNED     4                    /**< we have chosen to use the constraint as lhs <= a*x */
-#define RHSASSIGNED     8                    /**< we have chosen to use the constraint as a*x <= rhs */
-#define INVERTED       16                    /**< we need to invert the row */
-#define DISCARDED      32                    /**< we have chosen to not use the constraint */
-#define UNDIRECTED     64                    /**< the capacity candidate has two flow variables for a commodity */
+#define LHSPOSSIBLE     1u                   /**< we may use the constraint as lhs <= a*x */
+#define RHSPOSSIBLE     2u                   /**< we may use the constraint as a*x <= rhs */
+#define LHSASSIGNED     4u                   /**< we have chosen to use the constraint as lhs <= a*x */
+#define RHSASSIGNED     8u                   /**< we have chosen to use the constraint as a*x <= rhs */
+#define INVERTED       16u                   /**< we need to invert the row */
+#define DISCARDED      32u                   /**< we have chosen to not use the constraint */
+#define UNDIRECTED     64u                   /**< the capacity candidate has two flow variables for a commodity */
 
 
 /** creates an empty MCF network data structure */
@@ -2271,8 +2271,7 @@ SCIP_RETCODE extractCapacities(
    for( r = 0; r < nrows; r++ )
       rowarcid[r] = -1;
 
-   /**  ->  loop through the list of capacity cands in non-increasing score order
-   */
+   /* ->  loop through the list of capacity cands in non-increasing score order  */
    for( i = 0; i < ncapacitycands; i++ )
    {
 
@@ -2556,7 +2555,7 @@ SCIP_RETCODE getNodeSimilarityScore(
       arcid = colarcid[c];
       if( arcid == -1 )
       {
-         if( valsign > 0.0 )
+         if( valsign > 0 )
             nposuncap++;
          else
             nneguncap++;
@@ -2637,8 +2636,8 @@ SCIP_RETCODE getNodeSimilarityScore(
       int rowarcs = rowlen - nposuncap - nneguncap;
       int baserowarcs = baserowlen - basenposuncap - basenneguncap;
 
-      assert(overlap <= rowlen);
-      assert(overlap <= baserowlen);
+      assert(overlap <= (SCIP_Real) rowlen);
+      assert(overlap <= (SCIP_Real) baserowlen);
       assert(noverlappingarcs >= 1);
 
       *invertcommodity = (rowcomsign == -1);
@@ -5831,9 +5830,9 @@ SCIP_RETCODE addCut(
       SCIPdebugMessage(" -> found MCF cut <%s>: rhs=%f, act=%f eff=%f rank=%d\n",
                        cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut));
       /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
 
-      if( !cutislocal )
+      if( !(*cutoff) && !cutislocal )
       {
          SCIP_CALL( SCIPaddPoolCut(scip, cut) );
       }
@@ -5843,10 +5842,10 @@ SCIP_RETCODE addCut(
    /* release the row */
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 
-   if( sepadata->separateknapsack)
+   if( !(*cutoff) && sepadata->separateknapsack)
    {
       /* relax cut to knapsack row and separate lifted cover cuts */
-      SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, sepa, ncutvars, cutvars, cutvals, +1.0, cutrhs, sol, ncuts, cutoff) );
+      SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, sepa, ncutvars, cutvars, cutvals, +1.0, cutrhs, sol, cutoff, ncuts) );
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &cutvals);
@@ -6917,65 +6916,65 @@ SCIP_RETCODE SCIPincludeSepaMcf(
    /** @todo introduce parameters such as maxrounds (see other separators) */
    /* add mcf separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-                              "separating/mcf/nclusters",
-                              "number of clusters to generate in the shrunken network -- default separation",
-                              &sepadata->nclusters, TRUE, DEFAULT_NCLUSTERS, 2, 8*sizeof(unsigned int), NULL, NULL) );
+         "separating/mcf/nclusters",
+         "number of clusters to generate in the shrunken network -- default separation",
+         &sepadata->nclusters, TRUE, DEFAULT_NCLUSTERS, 2, (int) (8*sizeof(unsigned int)), NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-                               "separating/mcf/maxweightrange",
-                               "maximal valid range max(|weights|)/min(|weights|) of row weights",
-                               &sepadata->maxweightrange, TRUE, DEFAULT_MAXWEIGHTRANGE, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+         "separating/mcf/maxweightrange",
+         "maximal valid range max(|weights|)/min(|weights|) of row weights",
+         &sepadata->maxweightrange, TRUE, DEFAULT_MAXWEIGHTRANGE, 1.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-                              "separating/mcf/maxtestdelta",
-                              "maximal number of different deltas to try (-1: unlimited)  -- default separation",
-                              &sepadata->maxtestdelta, TRUE, DEFAULT_MAXTESTDELTA, -1, INT_MAX, NULL, NULL) );
+         "separating/mcf/maxtestdelta",
+         "maximal number of different deltas to try (-1: unlimited)  -- default separation",
+         &sepadata->maxtestdelta, TRUE, DEFAULT_MAXTESTDELTA, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-                               "separating/mcf/trynegscaling",
-                               "should negative values also be tested in scaling?",
-                               &sepadata->trynegscaling, TRUE, DEFAULT_TRYNEGSCALING, NULL, NULL) );
+         "separating/mcf/trynegscaling",
+         "should negative values also be tested in scaling?",
+         &sepadata->trynegscaling, TRUE, DEFAULT_TRYNEGSCALING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-                               "separating/mcf/fixintegralrhs",
-                               "should an additional variable be complemented if f0 = 0?",
-                               &sepadata->fixintegralrhs, TRUE, DEFAULT_FIXINTEGRALRHS, NULL, NULL) );
+         "separating/mcf/fixintegralrhs",
+         "should an additional variable be complemented if f0 = 0?",
+         &sepadata->fixintegralrhs, TRUE, DEFAULT_FIXINTEGRALRHS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-                               "separating/mcf/dynamiccuts",
-                               "should generated cuts be removed from the LP if they are no longer tight?",
-                               &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
+         "separating/mcf/dynamiccuts",
+         "should generated cuts be removed from the LP if they are no longer tight?",
+         &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-                              "separating/mcf/modeltype",
-                              "model type of network (0: auto, 1:directed, 2:undirected)",
-                              &sepadata->modeltype, TRUE, DEFAULT_MODELTYPE, 0, 2, NULL, NULL) );
+         "separating/mcf/modeltype",
+         "model type of network (0: auto, 1:directed, 2:undirected)",
+         &sepadata->modeltype, TRUE, DEFAULT_MODELTYPE, 0, 2, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-                              "separating/mcf/maxsepacuts",
-                              "maximal number of mcf cuts separated per separation round",
-                              &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, -1, INT_MAX, NULL, NULL) );
+         "separating/mcf/maxsepacuts",
+         "maximal number of mcf cuts separated per separation round",
+         &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-                              "separating/mcf/maxsepacutsroot",
-                              "maximal number of mcf cuts separated per separation round in the root node  -- default separation",
-                              &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, -1, INT_MAX, NULL, NULL) );
+         "separating/mcf/maxsepacutsroot",
+         "maximal number of mcf cuts separated per separation round in the root node  -- default separation",
+         &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-                               "separating/mcf/maxinconsistencyratio",
-                               "maximum inconsistency ratio for separation at all",
-                               &sepadata->maxinconsistencyratio, TRUE, DEFAULT_MAXINCONSISTENCYRATIO, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         "separating/mcf/maxinconsistencyratio",
+         "maximum inconsistency ratio for separation at all",
+         &sepadata->maxinconsistencyratio, TRUE, DEFAULT_MAXINCONSISTENCYRATIO, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-                               "separating/mcf/maxarcinconsistencyratio",
-                               "maximum inconsistency ratio of arcs not to be deleted",
-                               &sepadata->maxarcinconsistencyratio, TRUE, DEFAULT_MAXARCINCONSISTENCYRATIO, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         "separating/mcf/maxarcinconsistencyratio",
+         "maximum inconsistency ratio of arcs not to be deleted",
+         &sepadata->maxarcinconsistencyratio, TRUE, DEFAULT_MAXARCINCONSISTENCYRATIO, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-                               "separating/mcf/checkcutshoreconnectivity",
-                               "should we separate only if the cuts shores are connected?",
-                               &sepadata->checkcutshoreconnectivity, TRUE, DEFAULT_CHECKCUTSHORECONNECTIVITY, NULL, NULL) );
+         "separating/mcf/checkcutshoreconnectivity",
+         "should we separate only if the cuts shores are connected?",
+         &sepadata->checkcutshoreconnectivity, TRUE, DEFAULT_CHECKCUTSHORECONNECTIVITY, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-                               "separating/mcf/separatesinglenodecuts",
-                               "should we separate inequalities based on single-node cuts?",
-                               &sepadata->separatesinglenodecuts, TRUE, DEFAULT_SEPARATESINGLENODECUTS, NULL, NULL) );
+         "separating/mcf/separatesinglenodecuts",
+         "should we separate inequalities based on single-node cuts?",
+         &sepadata->separatesinglenodecuts, TRUE, DEFAULT_SEPARATESINGLENODECUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-                               "separating/mcf/separateflowcutset",
-                               "should we separate flowcutset inequalities on the network cuts?",
-                               &sepadata->separateflowcutset, TRUE, DEFAULT_SEPARATEFLOWCUTSET, NULL, NULL) );
+         "separating/mcf/separateflowcutset",
+         "should we separate flowcutset inequalities on the network cuts?",
+         &sepadata->separateflowcutset, TRUE, DEFAULT_SEPARATEFLOWCUTSET, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-                               "separating/mcf/separateknapsack",
-                               "should we separate knapsack cover inequalities on the network cuts?",
-                               &sepadata->separateknapsack, TRUE, DEFAULT_SEPARATEKNAPSACK, NULL, NULL) );
+         "separating/mcf/separateknapsack",
+         "should we separate knapsack cover inequalities on the network cuts?",
+         &sepadata->separateknapsack, TRUE, DEFAULT_SEPARATEKNAPSACK, NULL, NULL) );
 
    return SCIP_OKAY;
 }

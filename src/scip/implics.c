@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,7 +31,6 @@
 #include "scip/implics.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-
 #include "scip/debug.h"
 
 #ifndef NDEBUG
@@ -154,6 +153,7 @@ SCIP_RETCODE vboundsSearchPos(
       }
       else if( negativecoef )
       {
+         assert(vbounds->coefs[pos] > 0.0);
          if( pos+1 < vbounds->len && vbounds->vars[pos+1] == var )
          {
             /* the variable exists with the desired sign at the next position */
@@ -170,6 +170,7 @@ SCIP_RETCODE vboundsSearchPos(
       }
       else
       {
+         assert(vbounds->coefs[pos] < 0.0);
          if( pos-1 >= 0 && vbounds->vars[pos-1] == var )
          {
             /* the variable exists with the desired sign at the previous position */
@@ -1361,7 +1362,7 @@ int cliquesSearchClique(
    SCIP_CLIQUE*          clique              /**< clique to search for */
    )
 {
-   int cliqueid;
+   unsigned int cliqueid;
    int left;
    int right;
 
@@ -1369,18 +1370,16 @@ int cliquesSearchClique(
    assert(clique != NULL);
 
    cliqueid = clique->id;
-   assert(cliqueid >= 0);
    left = -1;
    right = ncliques;
    while( left < right-1 )
    {
+      unsigned int id;
       int middle;
-      int id;
 
       assert(cliques != NULL);
       middle = (left+right)/2;
       id = cliques[middle]->id;
-      assert(id >= 0);
       if( cliqueid < id )
          right = middle;
       else if( cliqueid > id )
@@ -1760,7 +1759,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -1796,7 +1796,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    for( i = 0; i < nvars; ++i )
    {
       /* put the clique into the sorted clique table of the variable */
-      SCIP_CALL( SCIPvarAddClique(vars[i], blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
+      SCIP_CALL( SCIPvarAddClique(vars[i], blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
             values != NULL ? values[i] : TRUE, clique, infeasible, nbdchgs) );
    }
 
@@ -1865,7 +1865,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem data if in solving stage */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -1909,31 +1910,33 @@ SCIP_RETCODE SCIPcliquetableCleanup(
          /* add the 2-clique as implication (don't use transitive closure; otherwise new cliques can be generated) */
          if( SCIPvarGetType(clique->vars[0]) == SCIP_VARTYPE_BINARY )
          {
-            SCIP_CALL( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
+            SCIP_CALL( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                  branchcand, eventqueue,
                   clique->values[0], clique->vars[1], clique->values[1] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
                   (SCIP_Real)(!clique->values[1]), FALSE, infeasible, NULL) );
          }
 	 else if( SCIPvarGetType(clique->vars[1]) == SCIP_VARTYPE_BINARY )
          {
-            SCIP_CALL( SCIPvarAddImplic(clique->vars[1], blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
+            SCIP_CALL( SCIPvarAddImplic(clique->vars[1], blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                  branchcand, eventqueue,
                   clique->values[1], clique->vars[0], clique->values[0] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
                   (SCIP_Real)(!clique->values[0]), FALSE, infeasible, NULL) );
          }
          else
          {
-            /** in case the variable are not of binary type we have to add the implication as variable bound */
+            /* in case the variable are not of binary type we have to add the implication as variable bound */
 
             assert(SCIPvarGetType(clique->vars[0]) != SCIP_VARTYPE_BINARY && SCIPvarIsBinary(clique->vars[0]));
 
             /* add variable upper or rather variable lower bound on vars[0] */
             if( clique->values[0] )
             {
-               SCIP_CALL( SCIPvarAddVub(clique->vars[0], blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
+               SCIP_CALL( SCIPvarAddVub(clique->vars[0], blkmem, set, stat, transprob, origprob, tree, lp, cliquetable, branchcand, eventqueue,
                      clique->vars[1], clique->values[1] ? -1.0 : 1.0, clique->values[1] ? 1.0 : 0.0, FALSE, infeasible, NULL) );
             }
             else
             {
-               SCIP_CALL( SCIPvarAddVlb(clique->vars[0], blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
+               SCIP_CALL( SCIPvarAddVlb(clique->vars[0], blkmem, set, stat, transprob, origprob, tree, lp, cliquetable, branchcand, eventqueue,
                      clique->vars[1], clique->values[1] ? 1.0 : -1.0, clique->values[1] ? 0.0 : 1.0, FALSE, infeasible, NULL) );
             }
          }
@@ -2149,7 +2152,7 @@ int SCIPcliqueGetId(
 {
    assert(clique != NULL);
 
-   return clique->id;
+   return (int) clique->id;
 }
    
 /** returns the number of cliques stored in the clique list */

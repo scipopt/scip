@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -192,7 +192,7 @@ XML_Bool popPstack(
    )
 {
    PSTACK* p;
-   int result;
+   XML_Bool result;
 
    assert(ppos != NULL);
 
@@ -243,7 +243,7 @@ int mygetc(
       if ( NULL == FGETS(ppos->buf, sizeof(ppos->buf), ppos->fp) )
          return EOF;
 #else
-      int len = FREAD(ppos->buf, sizeof(ppos->buf) - 1, ppos->fp);
+      size_t len = FREAD(ppos->buf, sizeof(ppos->buf) - 1, ppos->fp);
 
       if (len <= 0)
          return EOF;
@@ -503,11 +503,11 @@ char* getAttrval(
  *  Return FALSE if an error occurs.
  */
 static
-int doComment(
+XML_Bool doComment(
    PPOS*                 ppos
    )
 {
-   int result = TRUE;
+   XML_Bool result = TRUE;
    int c;
    int state = 0;
 
@@ -668,11 +668,12 @@ void handleDecl(
    int c;
    int k = 0;
    int beg = 0;
-   int end = (sizeof(key) / sizeof(key[0])) - 1;
+   int end;
 
    assert(ppos        != NULL);
    assert(ppos->state == XML_STATE_BEFORE);
 
+   end = (int) (sizeof(key) / sizeof(key[0])) - 1;
    do
    {
       c = getsymbol(ppos);
@@ -864,7 +865,7 @@ void procInTag(
 {
    XML_ATTR* attr;
    int     c;
-   int     empty = FALSE;
+   XML_Bool empty = FALSE;
    char*   name;
    char*   value;
 
@@ -1070,14 +1071,15 @@ XML_NODE* xmlProcess(
    PPOS      ppos;
    XML_NODE* node = NULL;
    XML_ATTR* attr;
-   int       result = FALSE;
+   XML_Bool  result = FALSE;
    char*     myfilename;
    size_t    filenamelen;
 
    /* allocate space and copy filename (possibly modified below) in two steps in order to satisfy valgrind */
    assert( filename != NULL );
    filenamelen = strlen(filename);
-   ALLOC_FALSE( BMSallocMemoryArray(&myfilename, filenamelen + 5) );
+   if ( BMSallocMemoryArray(&myfilename, filenamelen + 5) == NULL )
+      return NULL;
    BMScopyMemoryArray(myfilename, filename, filenamelen + 1);
 
 #ifdef WITH_ZLIB

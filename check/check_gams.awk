@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -105,7 +105,7 @@ BEGIN  {
 #18 NumberOfNodes
 
 /.*/ {
-  if ( $3 == solver )
+  if( $3 == solver || $3 == "EXAMINER2" )
   {
     model[nprobs] = $1;
     type[nprobs] = $2;
@@ -424,6 +424,9 @@ END {
        } else if( status == "timeout" ) {
          modelstat = abs(pb) < infty ? 8 : 14;
          solverstat = 3;
+       } else if( status == "nodelimit" ) {
+         modelstat = abs(pb) < infty ? 8 : 14;
+         solverstat = 2;  # GAMS does not have a status for these limits, so let's report iteration limit
        } else if( status == "gaplimit" || status == "better" ) {
          modelstat = 8;
          solverstat = 1;

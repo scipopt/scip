@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -109,9 +109,10 @@ extern "C" {
 #endif
 
 
-/** Creates a message handler which deals with warning, information, and dialog (interactive shell) methods.
+/** Creates and captures a message handler which deals with warning, information, and dialog (interactive shell) methods.
  *
  *  @note The message handler does not handle error messages. For that see SCIPmessageSetErrorPrinting()
+ *  @note Creating a message handler automatically captures it.
  */
 EXTERN
 SCIP_RETCODE SCIPmessagehdlrCreate(
@@ -191,14 +192,6 @@ void SCIPmessageVFPrintInfo(
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
    const char*           formatstr,          /**< format string like in printf() function */
    va_list               ap                  /**< variable argument list */
-   );
-
-/** prints the header with source file location for an error message */
-EXTERN
-void SCIPmessagePrintWarningHeader(
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           sourcefile,         /**< name of the source file that called the function */
-   int                   sourceline          /**< line in the source file where the function was called */
    );
 
 /** prints a warning message, acting like the printf() command */

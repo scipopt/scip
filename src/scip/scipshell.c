@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -61,8 +61,8 @@ SCIP_RETCODE fromCommandLine(
     * Problem Creation *
     ********************/
 
-   /* @note The message handler should be only fed line by line such the message has the chance to add string in front
-    *       of each message
+   /** @note The message handler should be only fed line by line such the message has the chance to add string in front
+    *        of each message
     */
    SCIPinfoMessage(scip, NULL, "\n");
    SCIPinfoMessage(scip, NULL, "read problem <%s>\n", filename);
@@ -208,7 +208,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
                {
                   char buffer[SCIP_MAXSTRLEN];
 
-                  (void)SCIPfgets(buffer, sizeof(buffer), file);
+                  (void)SCIPfgets(buffer, (int) sizeof(buffer), file);
                   if( buffer[0] != '\0' )
                   {
                      SCIP_CALL( SCIPaddDialogInputLine(scip, buffer) );

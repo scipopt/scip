@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
@@ -42,7 +42,7 @@ extern "C" {
 #endif
 
 /*
- * Define the marco EXTERN depending if the OS is Windows or not
+ * Define the macro EXTERN depending if the OS is Windows or not
  */
 #ifndef EXTERN
 

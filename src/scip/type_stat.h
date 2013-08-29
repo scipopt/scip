@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,7 +36,9 @@ enum SCIP_Status
    SCIP_STATUS_TOTALNODELIMIT =  3,     /**< the solving process was interrupted because the total node limit was
                                          *   reached (incl. restarts)
                                          */
-   SCIP_STATUS_STALLNODELIMIT =  4,     /**< the solving process was interrupted because the node limit was reached */
+   SCIP_STATUS_STALLNODELIMIT =  4,     /**< the solving process was interrupted because the stalling node limit was
+                                         *   reached (no inprovement w.r.t. primal bound)
+                                         */
    SCIP_STATUS_TIMELIMIT      =  5,     /**< the solving process was interrupted because the time limit was reached */
    SCIP_STATUS_MEMLIMIT       =  6,     /**< the solving process was interrupted because the memory limit was reached */
    SCIP_STATUS_GAPLIMIT       =  7,     /**< the solving process was interrupted because the gap limit was reached */

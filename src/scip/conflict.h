@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -262,24 +262,6 @@ SCIP_Real SCIPconflictGetVarUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
- *  global lower bound
- */
-extern
-SCIP_Real SCIPconflictGetVarRelaxedLb(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
-/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
- *  the global upper bound
- */
-extern
-SCIP_Real SCIPconflictGetVarRelaxedUb(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
 /** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound() and
  *  SCIPconflictAddRelaxedBound(), and on success, calls the conflict handlers to create a conflict constraint out of
  *  the resulting conflict set; updates statistics for propagation conflict analysis
@@ -306,7 +288,8 @@ SCIP_RETCODE SCIPconflictFlushConss(
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -332,6 +315,12 @@ SCIP_Longint SCIPconflictGetNAppliedLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** returns the total number of global bound changes applied by the conflict analysis */
+extern
+SCIP_Longint SCIPconflictGetNGlobalChgBds(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** returns the total number of conflict constraints that were added globally to the problem */
 extern
 SCIP_Longint SCIPconflictGetNAppliedGlobalConss(
@@ -341,6 +330,12 @@ SCIP_Longint SCIPconflictGetNAppliedGlobalConss(
 /** returns the total number of literals in conflict constraints that were added globally to the problem */
 extern
 SCIP_Longint SCIPconflictGetNAppliedGlobalLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** returns the total number of local bound changes applied by the conflict analysis */
+extern
+SCIP_Longint SCIPconflictGetNLocalChgBds(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
@@ -423,7 +418,8 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -541,7 +537,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -620,7 +617,8 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */

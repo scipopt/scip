@@ -1,4 +1,4 @@
-# SCIP version 3.0.0
+# SCIP version 3.0.1
 
 # branching score function ('s'um, 'p'roduct)
 # [type: char, range: {sp}, default: p]
@@ -4457,8 +4457,8 @@ heuristics/zirounding/stoppercentage = 0.02
 heuristics/zirounding/minstopncalls = 1000
 
 # priority of propagator <genvbounds>
-# [type: int, range: [-536870912,536870911], default: -10]
-propagating/genvbounds/priority = -10
+# [type: int, range: [-536870912,536870911], default: 3000000]
+propagating/genvbounds/priority = 3000000
 
 # frequency for calling propagator <genvbounds> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -4483,6 +4483,18 @@ propagating/genvbounds/maxprerounds = -1
 # should presolving be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 propagating/genvbounds/presoldelay = FALSE
+
+# apply global propagation?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/genvbounds/global = TRUE
+
+# apply genvbounds in root node if no new incumbent was found?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/genvbounds/propinrootnode = TRUE
+
+# sort genvbounds and wait for bound change events?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/genvbounds/sort = TRUE
 
 # priority of propagator <obbt>
 # [type: int, range: [-536870912,536870911], default: -1000000]
@@ -4520,6 +4532,10 @@ propagating/obbt/creategenvbounds = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/obbt/normalize = TRUE
 
+# try to filter bounds in so-called filter rounds by solving auxiliary LPs?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+propagating/obbt/applyfilterrounds = FALSE
+
 # minimal number of filtered bounds to apply another filter round
 # [type: int, range: [1,2147483647], default: 2]
 propagating/obbt/minfilter = 2
@@ -4531,6 +4547,10 @@ propagating/obbt/maxlookahead = 3
 # multiple of root node LP iterations used as total LP iteration limit for obbt (<= 0: no limit )
 # [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 5]
 propagating/obbt/itlimitfactor = 5
+
+# feasibility tolerance for reduced costs used in obbt; this value is used if SCIP's dual feastol is greater
+# [type: real, range: [0,1.79769313486232e+308], default: 1e-09]
+propagating/obbt/dualfeastol = 1e-09
 
 # priority of propagator <probing>
 # [type: int, range: [-536870912,536870911], default: -100000]
@@ -5233,8 +5253,12 @@ separating/gomory/maxroundsroot = 10
 separating/gomory/maxsepacuts = 50
 
 # maximal number of gomory cuts separated per separation round in the root node
-# [type: int, range: [0,2147483647], default: 50]
-separating/gomory/maxsepacutsroot = 50
+# [type: int, range: [0,2147483647], default: 200]
+separating/gomory/maxsepacutsroot = 200
+
+# minimal integrality violation of a basis variable in order to try Gomory cut
+# [type: real, range: [0,0.5], default: 0.01]
+separating/gomory/away = 0.01
 
 # maximal valid range max(|weights|)/min(|weights|) of row weights
 # [type: real, range: [1,1.79769313486232e+308], default: 10000]
@@ -5249,12 +5273,16 @@ separating/gomory/dynamiccuts = TRUE
 separating/gomory/makeintegral = TRUE
 
 # if conversion to integral coefficients failed still use the cut
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/gomory/forcecuts = FALSE
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/gomory/forcecuts = TRUE
 
 # separate rows with integral slack
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/gomory/separaterows = TRUE
+
+# should cuts be added to the delayed cut pool?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/gomory/delayedcuts = TRUE
 
 # priority of separator <impliedbounds>
 # [type: int, range: [-536870912,536870911], default: -50]

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -86,6 +86,7 @@ struct SCIP_HashTable
    SCIP_HASHTABLELIST**  lists;              /**< hash table lists of the hash table */
    int                   nlists;             /**< number of lists stored in the hash table */
    void*                 userptr;            /**< user pointer */
+   SCIP_Longint          nelements;          /**< number of elements in the hashtable */
 };
 
 /** element list to store single mappings of a hash map */
@@ -171,6 +172,7 @@ struct SCIP_Digraph
 {
    int**                 successors;         /**< adjacency list: for each node (first dimension) list of all successors */
    void***               arcdatas;           /**< arc datas corresponding to the arcs to successors given by the successors array  */
+   void**                nodedatas;          /**< arc datas corresponding to the arcs to successors given by the successors array  */
    int*                  successorssize;     /**< sizes of the successor lists for the nodes */
    int*                  nsuccessors;        /**< number of successors stored in the adjacency lists of the nodes */
    int*                  components;         /**< array to store the node indices of the components, one component after the other */

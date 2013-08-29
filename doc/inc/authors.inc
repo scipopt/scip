@@ -90,7 +90,7 @@
 	    </tr>
 	    <tr>
 	      <td>
-		<a href="http://www.mso.math.uni-erlangen.de/optimization/edom/team/martin-alexander/prof-dr-alexander-martin.html">Alexander Martin</a>
+		<a href="http://www.am.uni-erlangen.de/?id=199">Alexander Martin</a>
 	      </td>
 	      <td>
 		Developer of SIP &ndash; the predecessor of SCIP
@@ -98,7 +98,7 @@
 	    </tr>
             <tr>
 	      <td>
-		<a href="http://www.zib.de/en/people/staff/member.html?mail=miltenberger">Matthias Miltenberger</a>
+		<a href="http://www.zib.de/miltenberger/">Matthias Miltenberger</a>
 	      </td>
 	      <td>
                 Probing propagator
@@ -106,7 +106,7 @@
 	    </tr>
 	    <tr>
 	      <td>
-		Felipe Serrano
+		<a href="http://www.zib.de/de/menschen/mitarbeiter/member.html?mail=serrano">Felipe Serrano</a>
 	      </td>
 	      <td>
                 nonlinear development
@@ -122,7 +122,7 @@
 	    </tr>
 	    <tr>
 	      <td>
-		<a href="http://www.am.uni-erlangen.de/optimization/edom/team/weninger-dieter/dieter-weninger.html">Dieter Weninger</a>
+		<a href="http://www.mso.math.fau.de/de/wirtschaftsmathematik/team/weninger-dieter">Dieter Weninger</a>
 	      </td>
 	      <td>
                 Presolvers for independent components and dominated columns
@@ -202,7 +202,7 @@
 	    </tr>
             <tr>
 	      <td>
-                <a href="http://www.mso.math.uni-erlangen.de/optimization/edom/team/gellermann-thorsten/thorsten-gellermann.html">Thorsten Gellermann</a>
+                <a href="http://www3.mathematik.tu-darmstadt.de/hp/optimierung/gellermann-thorsten/startseite.html">Thorsten Gellermann</a>
 	      </td>
 	      <td>
                  Generic NLP interface
@@ -243,7 +243,7 @@
                  Michael Perregaard
 	      </td>
 	      <td>
-                 Interface to <a href="http://www.dashoptimization.com/home/products/products_optimizer.html">FICO/Xpress</a>
+                 Interface to <a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO/Xpress</a>
 	      </td>
 	    </tr>
             <tr>
@@ -332,7 +332,7 @@
 	    </tr>
             <tr>
 	      <td>
-                Stefan Weltge
+                 <a href="http://www.math.uni-magdeburg.de/~weltge/">Stefan Weltge</a>
 	      </td>
 	      <td>
                  OBBT propagator

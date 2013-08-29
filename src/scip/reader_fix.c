@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -93,7 +93,7 @@ SCIP_RETCODE readSol(
       int nread;
 
       /* get next line */
-      if( SCIPfgets(buffer, sizeof(buffer), file) == NULL )
+      if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
          break;
       lineno++;
 

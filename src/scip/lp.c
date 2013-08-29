@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -388,7 +388,13 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->solisbasic = storedsolvals->solisbasic;
 
       /* solution values are stored only for LPs solved to optimality or unboundedness */
-      assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY || lp->validsollp == -1);
+      assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||
+         lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY ||
+         lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
+         lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT ||
+         lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT ||
+         lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE ||
+         lp->validsollp == -1);
    }
    /* no values available, mark LP as unsolved */
    else
@@ -459,9 +465,7 @@ SCIP_RETCODE colRestoreSolVals(
       col->validredcostlp = validlp;
       col->basisstatus = storedsolvals->basisstatus; /*lint !e641*/
 
-      /* we do not save the farkas coefficient, since we expected a node with infeasible LP to be pruned anyway; to be
-       * safe, we invalidate it here
-       */
+      /* we do not save the farkas coefficient, since it can be recomputed; thus, we invalidate it here */
       col->validfarkaslp = -1;
    }
    /* if the column was created after performing the storage (possibly during probing), we treat it as implicitly zero;
@@ -489,7 +493,8 @@ SCIP_RETCODE colRestoreSolVals(
 static
 SCIP_RETCODE rowStoreSolVals(
    SCIP_ROW*             row,                /**< LP row */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Bool             infeasible          /**< is the solution infeasible? */
    )
 {
    SCIP_ROWSOLVALS* storedsolvals;
@@ -505,9 +510,18 @@ SCIP_RETCODE rowStoreSolVals(
    storedsolvals = row->storedsolvals;
 
    /* store values */
-   storedsolvals->dualsol = row->dualsol;
-   storedsolvals->activity = row->activity;
-   storedsolvals->basisstatus = row->basisstatus; /*lint !e641*/
+   if ( infeasible )
+   {
+      storedsolvals->dualsol = row->dualfarkas;
+      storedsolvals->activity = SCIP_INVALID;
+      storedsolvals->basisstatus = SCIP_BASESTAT_BASIC;  /*lint !e641*/
+   }
+   else
+   {
+      storedsolvals->dualsol = row->dualsol;
+      storedsolvals->activity = row->activity;
+      storedsolvals->basisstatus = row->basisstatus; /*lint !e641*/
+   }
 
    return SCIP_OKAY;
 }
@@ -518,7 +532,8 @@ SCIP_RETCODE rowRestoreSolVals(
    SCIP_ROW*             row,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Longint          validlp,            /**< number of lp for which restored values are valid */
-   SCIP_Bool             freebuffer          /**< should buffer for LP solution values be freed? */
+   SCIP_Bool             freebuffer,         /**< should buffer for LP solution values be freed? */
+   SCIP_Bool             infeasible          /**< is the solution infeasible? */
    )
 {
    SCIP_ROWSOLVALS* storedsolvals;
@@ -530,7 +545,10 @@ SCIP_RETCODE rowRestoreSolVals(
    storedsolvals = row->storedsolvals;
    if( storedsolvals != NULL )
    {
-      row->dualsol = storedsolvals->dualsol;
+      if ( infeasible )
+         row->dualfarkas = storedsolvals->dualsol;
+      else
+         row->dualsol = storedsolvals->dualsol;
       row->activity = storedsolvals->activity;
       row->validactivitylp = validlp;
       row->basisstatus = storedsolvals->basisstatus; /*lint !e641*/
@@ -3793,8 +3811,9 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
    assert(col->lppos < lp->ncols);
    assert(lp->cols[col->lppos] == col);
    assert(itlim >= 1);
-   assert(down != NULL);
-   assert(up != NULL);
+   /*   assert(down != NULL);
+    *  assert(up != NULL); temporary hack for cloud branching
+    */
    assert(lperror != NULL);
 
    *lperror = FALSE;
@@ -3834,13 +3853,17 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
          col->sbitlim = itlim;
          col->nsbcalls++;
 
+         sbdown = lp->lpobjval;
+         sbup = lp->lpobjval;
+
          if( integral )
-            retcode = SCIPlpiStrongbranchInt(lp->lpi, col->lpipos, col->primsol, itlim, &sbdown, &sbup, &sbdownvalid, &sbupvalid, &iter);
+            retcode = SCIPlpiStrongbranchInt(lp->lpi, col->lpipos, col->primsol, itlim, down  == NULL ? NULL : &sbdown, up  == NULL ? NULL : &sbup, &sbdownvalid, &sbupvalid, &iter);
          else
          {
             assert( ! SCIPsetIsIntegral(set, col->primsol) );
-            retcode = SCIPlpiStrongbranchFrac(lp->lpi, col->lpipos, col->primsol, itlim, &sbdown, &sbup, &sbdownvalid, &sbupvalid, &iter);
+            retcode = SCIPlpiStrongbranchFrac(lp->lpi, col->lpipos, col->primsol, itlim, down == NULL ? NULL : &sbdown, up == NULL ? NULL :  &sbup, &sbdownvalid, &sbupvalid, &iter);
          }
+
 
          /* check return code for errors */
          if( retcode == SCIP_LPERROR )
@@ -3865,6 +3888,7 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
             looseobjval = getFiniteLooseObjval(lp, set, prob);
             col->sbdown = MIN(sbdown + looseobjval, lp->cutoffbound);
             col->sbup = MIN(sbup + looseobjval, lp->cutoffbound);
+
             col->sbdownvalid = sbdownvalid;
             col->sbupvalid = sbupvalid;
 
@@ -3896,8 +3920,10 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
    assert(*lperror || col->sbdown < SCIP_INVALID);
    assert(*lperror || col->sbup < SCIP_INVALID);
 
-   *down = col->sbdown;
-   *up = col->sbup;
+   if( down != NULL)
+      *down = col->sbdown;
+   if( up != NULL )
+      *up = col->sbup;
    if( downvalid != NULL )
       *downvalid = col->sbdownvalid;
    if( upvalid != NULL )
@@ -4186,6 +4212,19 @@ SCIP_Longint SCIPcolGetStrongbranchLPAge(
    return (col->sbnode != stat->nnodes ? SCIP_LONGINT_MAX : stat->lpcount - col->validsblp);
 }
 
+/** marks a column to be not removable from the LP in the current node because it became obsolete */
+void SCIPcolMarkNotRemovableLocal(
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(col  != NULL);
+   assert(stat != NULL);
+   assert(stat->nnodes > 0);
+
+   /* lpRemoveObsoleteCols() does not remove a column if the node number stored in obsoletenode equals the current node number */
+   col->obsoletenode = stat->nnodes;
+}
 
 
 /*
@@ -5007,7 +5046,6 @@ SCIP_RETCODE SCIProwChgLhs(
 {
    assert(row != NULL);
    assert(lp != NULL);
-   assert(!lp->diving || row->lppos == -1);
 
    if( !SCIPsetIsEQ(set, row->lhs, lhs) )
    {
@@ -5018,8 +5056,11 @@ SCIP_RETCODE SCIProwChgLhs(
       row->lhs = lhs;
       SCIP_CALL( rowSideChanged(row, set, lp, SCIP_SIDETYPE_LEFT) );
       
-      /* issue row side changed event */
-      SCIP_CALL( rowEventSideChanged(row, blkmem, set, eventqueue, SCIP_SIDETYPE_LEFT, oldlhs, lhs) );
+      if( !lp->diving )
+      {
+         /* issue row side changed event */
+         SCIP_CALL( rowEventSideChanged(row, blkmem, set, eventqueue, SCIP_SIDETYPE_LEFT, oldlhs, lhs) );
+      }
    }
 
    return SCIP_OKAY;
@@ -5037,7 +5078,6 @@ SCIP_RETCODE SCIProwChgRhs(
 {
    assert(row != NULL);
    assert(lp != NULL);
-   assert(!lp->diving || row->lppos == -1);
 
    if( !SCIPsetIsEQ(set, row->rhs, rhs) )
    {
@@ -5048,8 +5088,11 @@ SCIP_RETCODE SCIProwChgRhs(
       row->rhs = rhs;
       SCIP_CALL( rowSideChanged(row, set, lp, SCIP_SIDETYPE_RIGHT) );
 
-      /* issue row side changed event */
-      SCIP_CALL( rowEventSideChanged(row, blkmem, set, eventqueue, SCIP_SIDETYPE_RIGHT, oldrhs, rhs) );
+      if( !lp->diving )
+      {
+         /* issue row side changed event */
+         SCIP_CALL( rowEventSideChanged(row, blkmem, set, eventqueue, SCIP_SIDETYPE_RIGHT, oldrhs, rhs) );
+      }
    }
 
    return SCIP_OKAY;
@@ -6245,13 +6288,21 @@ SCIP_Real SCIProwGetNLPEfficacy(
    return -feasibility / norm;
 }
 
-/** returns the scalar product of the coefficient vectors of the two given rows */
+/** returns the scalar product of the coefficient vectors of the two given rows
+ *
+ *  @note the scalar product is computed w.r.t. the current LP columns only
+ *  @todo also consider non-LP columns for the computation?
+ */
 SCIP_Real SCIProwGetScalarProduct(
    SCIP_ROW*             row1,               /**< first LP row */
    SCIP_ROW*             row2                /**< second LP row */
    )
 {
    SCIP_Real scalarprod;
+   int* row1colsidx;
+   int* row2colsidx;
+   int i1;
+   int i2;
 
    assert(row1 != NULL);
    assert(row2 != NULL);
@@ -6263,9 +6314,31 @@ SCIP_Real SCIProwGetScalarProduct(
     * Normally, this should be suficient, because a column contained in both rows should either be one of the LP columns
     * for both or one of the non-LP columns for both.
     * However, directly after a row was created, before a row is added to the LP, the row is not linked to all its
-    * columns and all columns are treated as non-LP columns.
-    * Therefore, if exactly one of the rows has no LP columns, we cannot rely on the partition, because this row might
-    * just have been created and also columns that are in the LP might be in the non-LP columns part.
+    * columns and all columns are treated as non-LP columns. Moreover, for example when doing column generation,
+    * columns can be added later and remain unlinked while all previously added columns might already be linked.
+    * Therefore, we have to be very careful about whether we can rely on the partitioning of the variables.
+    *
+    * We distinguish the following cases:
+    *
+    * 1) both rows have no unlinked columns
+    *    -> we just check the LP partitions
+    *
+    * 2) exactly one row is completely unlinked, the other one is completely linked
+    *    -> we compare the non-LP (unlinked) partition with the LP partition of the other row
+    *       (thus all common LP columns are regarded)
+    *
+    * 3) we have unlinked and LP columns in both rows
+    *    -> we need to compare four partitions at once
+    *
+    * 4a) we have one row with unlinked and LP columns and the other without any unlinked columns
+    *     -> we need to compare three partitions: the LP part of the completely linked row and both partitions of the
+    *        other row
+    *
+    * 4b) we have one row with unlinked and LP columns and the other is completely unlinked
+    *     -> we need to compare three partitions: the complete unlinked row and both partitions of the other row
+    *
+    * 5) both rows are completely unlinked
+    *    -> we need to compare two partitions: both complete rows
     */
    SCIProwSort(row1);
    assert(row1->lpcolssorted);
@@ -6274,165 +6347,300 @@ SCIP_Real SCIProwGetScalarProduct(
    assert(row2->lpcolssorted);
    assert(row2->nonlpcolssorted);
 
-   /* currently we are only handling rows which are completely linked or not linked at all */
-   assert(row1->nunlinked == 0 || row1->nlpcols == 0);
-   assert(row2->nunlinked == 0 || row2->nlpcols == 0);
+   assert(row1->nunlinked <= row1->len - row1->nlpcols);
+   assert(row2->nunlinked <= row2->len - row2->nlpcols);
 
-   /* both rows have LP columns, or none of them has, or one has only LP colums and the other only non-LP columns,
-    * so we can rely on the sorting of the columns
-    */
-   if( (row1->nlpcols == 0) == (row2->nlpcols == 0)
-      || (row1->nlpcols == 0 && row2->nlpcols == row2->len)
-      || (row1->nlpcols == row1->len && row2->nlpcols == 0) )
-   {
-      int i1;
-      int i2;
+   row1colsidx = row1->cols_index;
+   row2colsidx = row2->cols_index;
 
 #ifndef NDEBUG
-      /* check that we can rely on the partition into LP columns and non-LP columns */
-      if( (row1->nlpcols == 0) == (row2->nlpcols == 0) )
+   /* check that we can rely on the partition into LP columns and non-LP columns if the rows are completely linked */
+   if( row1->nunlinked == 0 && row2->nunlinked == 0 )
+   {
+      i1 = 0;
+      i2 = row2->nlpcols;
+      while( i1 < row1->nlpcols && i2 < row2->len )
       {
-         i1 = 0;
-         i2 = row2->nlpcols;
-         while( i1 < row1->nlpcols && i2 < row2->len )
+         assert(row1->cols[i1] != row2->cols[i2]);
+         if( row1->cols[i1]->index < row2->cols[i2]->index )
+            ++i1;
+         else
          {
-            assert(row1->cols[i1] != row2->cols[i2]);
-            if( row1->cols[i1]->index < row2->cols[i2]->index )
-               ++i1;
-            else
-            {
-               assert(row1->cols[i1]->index > row2->cols[i2]->index);
-               ++i2;
-            }
+            assert(row1->cols[i1]->index > row2->cols[i2]->index);
+            ++i2;
          }
-         assert(i1 == row1->nlpcols || i2 == row2->len);
-
-         i1 = row1->nlpcols;
-         i2 = 0;
-         while( i1 < row1->len && i2 < row2->nlpcols )
-         {
-            assert(row1->cols[i1] != row2->cols[i2]);
-            if( row1->cols[i1]->index < row2->cols[i2]->index )
-               ++i1;
-            else
-            {
-               assert(row1->cols[i1]->index > row2->cols[i2]->index);
-               ++i2;
-            }
-         }
-         assert(i1 == row1->len || i2 == row2->nlpcols);
       }
+      assert(i1 == row1->nlpcols || i2 == row2->len);
+
+      i1 = row1->nlpcols;
+      i2 = 0;
+      while( i1 < row1->len && i2 < row2->nlpcols )
+      {
+         assert(row1->cols[i1] != row2->cols[i2]);
+         if( row1->cols[i1]->index < row2->cols[i2]->index )
+            ++i1;
+         else
+         {
+            assert(row1->cols[i1]->index > row2->cols[i2]->index);
+            ++i2;
+         }
+      }
+      assert(i1 == row1->len || i2 == row2->nlpcols);
+   }
 #endif
 
-      /* calculate the scalar product */
+   /* The "easy" cases 1) and 2) */
+   if( (row1->nunlinked == 0 && row2->nunlinked == 0) ||
+      ((row1->nlpcols == row1->len || row1->nunlinked == row1->len)
+         && (row2->nlpcols == row2->len || row2->nunlinked == row2->len)
+         && (row1->nunlinked == 0 || row2->nunlinked == 0)) )
+   {
+      assert(row1->nunlinked == 0 || row1->nunlinked == row1->len);
+      assert(row2->nunlinked == 0 || row2->nunlinked == row2->len);
+
+      /* set the iterators to the last column we want to regard in the row: nunlinked is either 0 or row->len,
+       * therefore, we get nlpcols if nunlinked is 0 and row->len if the row is completely unlinked
+       */
+      i1 = MAX(row1->nlpcols, row1->nunlinked) - 1;
+      i2 = MAX(row2->nlpcols, row2->nunlinked) - 1;
       scalarprod = 0.0;
-      i1 = 0;
-      i2 = 0;
-      while( i1 < row1->len && i2 < row2->len )
+
+      /* calculate the scalar product */
+      while( i1 >= 0 && i2 >= 0 )
       {
-         assert(row1->cols[i1]->index == row1->cols_index[i1]);
-         assert(row2->cols[i2]->index == row2->cols_index[i2]);
-         assert((row1->cols[i1] == row2->cols[i2]) == (row1->cols_index[i1] == row2->cols_index[i2]));
-         if( row1->cols_index[i1] < row2->cols_index[i2] )
-            i1++;
-         else if( row1->cols_index[i1] > row2->cols_index[i2] )
-            i2++;
+         assert(row1->cols[i1]->index == row1colsidx[i1]);
+         assert(row2->cols[i2]->index == row2colsidx[i2]);
+         assert((row1->cols[i1] == row2->cols[i2]) == (row1colsidx[i1] == row2colsidx[i2]));
+         if( row1colsidx[i1] < row2colsidx[i2] )
+            --i2;
+         else if( row1colsidx[i1] > row2colsidx[i2] )
+            --i1;
          else
          {
             scalarprod += row1->vals[i1] * row2->vals[i2];
-            i1++;
-            i2++;
+            --i1;
+            --i2;
          }
       }
    }
-   /* one row has columns in the LP, but the other not, that could be because the one without was just created and isn't
-    * linked yet; in this case, one column could be an LP column in one row and a non-LP column in the other row, so we
-    * cannot rely on the partition into LP columns and non-LP columns;
-    */
+   /* the "harder" cases 3) - 5): start with four partitions and reduce their number iteratively */
    else
    {
-      int i1;
-      int ilp;
-      int inlp;
-
-      /* ensure that row1 is the row without LP columns, switch the rows, if neccessary */
-      if( row2->nlpcols == 0 )
-      {
-         SCIP_ROW* tmprow;
-         tmprow = row2;
-         row2 = row1;
-         row1 = tmprow;
-      }
-      assert(row1->nlpcols == 0 && row2->nlpcols > 0);
+      SCIP_Bool lpcols;
+      int ilp1;
+      int inlp1;
+      int ilp2;
+      int inlp2;
+      int end1;
+      int end2;
 
       scalarprod = 0;
-      i1 = 0;
-      ilp = 0;
-      inlp = row2->nlpcols;
+      ilp1 = 0;
+      ilp2 = 0;
 
-      /* for each column of row1, we look for the first LP and non-LP column in row2 with index >= the index of the
-       * current column in row1; if one of both row2 columns is the same as the current row1 column, add the product of
-       * their coefficients to the scalar product and increase the iterators, otherwise go to the next column of row1
+      /* if a row is completely linked (case 4a), we do not have to consider its non-LP columns */
+      inlp1 = (row1->nunlinked > 0 ? row1->nlpcols : row1->len);
+      inlp2 = (row2->nunlinked > 0 ? row2->nlpcols : row2->len);
+
+      /* handle the case of four partitions (case 3) until one partition is finished;
+       * cases 4a), 4b), and 5) will fail the while-condition
        */
-      while( i1 < row1->len && ilp < row2->nlpcols && inlp < row2->len )
+      while( ilp1 < row1->nlpcols && inlp1 < row1->len && ilp2 < row2->nlpcols && inlp2 < row2->len )
       {
-         assert(row1->cols[i1]->index == row1->cols_index[i1]);
-         assert(row2->cols[ilp]->index == row2->cols_index[ilp]);
-         assert(row2->cols[inlp]->index == row2->cols_index[inlp]);
-         assert((row1->cols[i1] == row2->cols[ilp]) == (row1->cols_index[i1] == row2->cols_index[ilp]));
-         assert((row1->cols[i1] == row2->cols[inlp]) == (row1->cols_index[i1] == row2->cols_index[inlp]));
+         assert(row1->cols[ilp1]->index == row1colsidx[ilp1]);
+         assert(row1->cols[inlp1]->index == row1colsidx[inlp1]);
+         assert(row2->cols[ilp2]->index == row2colsidx[ilp2]);
+         assert(row2->cols[inlp2]->index == row2colsidx[inlp2]);
+         assert((row1->cols[ilp1] == row2->cols[ilp2]) == (row1colsidx[ilp1] == row2colsidx[ilp2]));
+         assert((row1->cols[ilp1] == row2->cols[inlp2]) == (row1colsidx[ilp1] == row2colsidx[inlp2]));
+         assert((row1->cols[inlp1] == row2->cols[ilp2]) == (row1colsidx[inlp1] == row2colsidx[ilp2]));
+         assert((row1->cols[inlp1] == row2->cols[inlp2]) == (row1colsidx[inlp1] == row2colsidx[inlp2]));
 
-         if( row1->cols_index[i1] > row2->cols_index[ilp] )
-            ++ilp;
-         else if( row1->cols_index[i1] > row2->cols_index[inlp] )
-            ++inlp;
-         else if( row1->cols_index[i1] == row2->cols_index[ilp] )
+         /* rows have the same linked LP columns */
+         if( row1colsidx[ilp1] == row2colsidx[ilp2] )
          {
-            scalarprod += row1->vals[i1] * row2->vals[ilp];
-            ++i1;
-            ++ilp;
+            scalarprod += row1->vals[ilp1] * row2->vals[ilp2];
+            ++ilp1;
+            ++ilp2;
          }
-         else if( row1->cols_index[i1] == row2->cols_index[inlp] )
+         /* LP column of row1 is the same as unlinked column of row2 */
+         else if( row1colsidx[ilp1] == row2colsidx[inlp2] )
          {
-            scalarprod += row1->vals[i1] * row2->vals[inlp];
-            ++i1;
-            ++inlp;
+            scalarprod += row1->vals[ilp1] * row2->vals[inlp2];
+            ++ilp1;
+            ++inlp2;
+         }
+         /* unlinked column of row1 is the same as LP column of row2 */
+         else if( row1colsidx[inlp1] == row2colsidx[ilp2] )
+         {
+            scalarprod += row1->vals[inlp1] * row2->vals[ilp2];
+            ++inlp1;
+            ++ilp2;
+         }
+         /* two unlinked LP columns are the same */
+         else if( row1colsidx[inlp1] == row2colsidx[inlp2] && row1->cols[inlp1]->lppos >= 0 )
+         {
+            scalarprod += row1->vals[inlp1] * row2->vals[inlp2];
+            ++inlp1;
+            ++inlp2;
+         }
+         /* increase smallest counter */
+         else if( row1colsidx[ilp1] < row1colsidx[inlp1] )
+         {
+            if( row2colsidx[ilp2] < row2colsidx[inlp2] )
+            {
+               if( row1colsidx[ilp1] < row2colsidx[ilp2] )
+                  ++ilp1;
+               else
+                  ++ilp2;
+            }
+            else
+            {
+               if( row1colsidx[ilp1] < row2colsidx[inlp2] )
+                  ++ilp1;
+               else
+                  ++inlp2;
+            }
          }
          else
-            i1++;
+         {
+            if( row2colsidx[ilp2] < row2colsidx[inlp2] )
+            {
+               if( row1colsidx[inlp1] < row2colsidx[ilp2] )
+                  ++inlp1;
+               else
+                  ++ilp2;
+            }
+            else
+            {
+               if( row1colsidx[inlp1] < row2colsidx[inlp2] )
+                  ++inlp1;
+               else
+                  ++inlp2;
+            }
+         }
       }
-      /* there are only LP columns left, iterate over them */
-      while( ilp < row2->nlpcols && i1 < row1->len )
+
+      /* One partition was completely handled, we just have to handle the three remaining partitions:
+       * the remaining partition of this row and the two partitions of the other row.
+       * If necessary, we swap the partitions to ensure that row1 is the row with only one remaining partition.
+       */
+      if( ilp1 != row1->nlpcols && inlp1 != row1->len )
       {
-         assert(row1->cols[i1]->index == row1->cols_index[i1]);
-         assert(row2->cols[ilp]->index == row2->cols_index[ilp]);
-         assert((row1->cols[i1] == row2->cols[ilp]) == (row1->cols_index[i1] == row2->cols_index[ilp]));
-         if( row1->cols_index[i1] < row2->cols_index[ilp] )
-            i1++;
-         else if( row1->cols_index[i1] > row2->cols_index[ilp] )
-            ilp++;
+         int tmpilp;
+         int tmpinlp;
+
+         assert(ilp2 == row2->nlpcols || inlp2 == row2->len);
+
+         SCIPswapPointers((void**) &row1, (void**) &row2);
+         SCIPswapPointers((void**) &row1colsidx, (void**) &row2colsidx);
+         tmpilp = ilp1;
+         tmpinlp = inlp1;
+         ilp1 = ilp2;
+         inlp1 = inlp2;
+         ilp2 = tmpilp;
+         inlp2 = tmpinlp;
+      }
+
+      /* determine section of row 1 that we want to look at (current iterator = begin, end, LP-columns?)
+       * -> this merges cases 4a) and 4b)
+       */
+      if( ilp1 == row1->nlpcols )
+      {
+         i1 = inlp1;
+         end1 = row1->len;
+         lpcols = FALSE;
+      }
+      else
+      {
+         assert(inlp1 == row1->len);
+
+         i1 = ilp1;
+         end1 = row1->nlpcols;
+         lpcols = TRUE;
+      }
+
+      /* handle the case of three partitions (case 4) until one partition is finished, this reduces our problem to case 1), 2), or 5);
+       * case 5) will fail the while-condition
+       */
+      while( i1 < end1 && ilp2 < row2->nlpcols && inlp2 < row2->len )
+      {
+         assert(row1->cols[i1]->index == row1colsidx[i1]);
+         assert(row2->cols[ilp2]->index == row2colsidx[ilp2]);
+         assert(row2->cols[inlp2]->index == row2colsidx[inlp2]);
+         assert((row1->cols[i1] == row2->cols[ilp2]) == (row1colsidx[i1] == row2colsidx[ilp2]));
+         assert((row1->cols[i1] == row2->cols[inlp2]) == (row1colsidx[i1] == row2colsidx[inlp2]));
+
+         /* current column in row 1 is the same as the current LP column in row 2 */
+         if( row1colsidx[i1] == row2colsidx[ilp2] )
+         {
+            scalarprod += row1->vals[i1] * row2->vals[ilp2];
+            ++i1;
+            ++ilp2;
+         }
+         /* linked or unlinked LP column of row1 is the same as unlinked column of row2 */
+         else if( row1colsidx[i1] == row2colsidx[inlp2] && (lpcols || row1->cols[i1]->lppos >= 0) )
+         {
+            scalarprod += row1->vals[i1] * row2->vals[inlp2];
+            ++i1;
+            ++inlp2;
+         }
+         /* increase smallest counter */
+         else if( row2colsidx[ilp2] < row2colsidx[inlp2] )
+         {
+            if( row1colsidx[i1] < row2colsidx[ilp2] )
+               ++i1;
+            else
+               ++ilp2;
+         }
          else
          {
-            scalarprod += row1->vals[i1] * row2->vals[ilp];
-            i1++;
-            ilp++;
+            if( row1colsidx[i1] < row2colsidx[inlp2] )
+               ++i1;
+            else
+               ++inlp2;
          }
       }
-      /* there are only non-LP columns left, iterate over them */
-      while( inlp < row2->nlpcols && i1 < row1->len )
+
+      /* if the second section of row 1 was finished, we can stop; otherwise, we have to consider the remaining parts of
+       * the two rows
+       */
+      if( i1 < end1 )
       {
-         assert(row1->cols[i1]->index == row1->cols_index[i1]);
-         assert(row2->cols[inlp]->index == row2->cols_index[inlp]);
-         assert((row1->cols[i1] == row2->cols[inlp]) == (row1->cols_index[i1] == row2->cols_index[inlp]));
-         if( row1->cols_index[i1] < row2->cols_index[inlp] )
-            i1++;
-         else if( row1->cols_index[i1] > row2->cols_index[inlp] )
-            inlp++;
+         /* determine section of row 2 that we want to look at (current iterator = begin, end, LP-columns?) */
+         if( ilp2 == row2->nlpcols )
+         {
+            i2 = inlp2;
+            end2 = row2->len;
+            lpcols = FALSE;
+         }
          else
          {
-            scalarprod += row1->vals[i1] * row2->vals[inlp];
-            i1++;
-            inlp++;
+            assert(inlp2 == row2->len);
+
+            i2 = ilp2;
+            end2 = row2->nlpcols;
+         }
+
+         /* handle the case of two partitions (standard case 5, or case 1 or 2 due to partition reduction) */
+         while( i1 < end1 && i2 < end2 )
+         {
+            assert(row1->cols[i1]->index == row1colsidx[i1]);
+            assert(row2->cols[i2]->index == row2colsidx[i2]);
+            assert((row1->cols[i1] == row2->cols[i2]) == (row1colsidx[i1] == row2colsidx[i2]));
+
+            /* linked or unlinked LP column of row1 is the same as linked or unlinked LP column of row2 */
+            if( row1colsidx[i1] == row2colsidx[i2] && (lpcols || row1->cols[i1]->lppos >= 0) )
+            {
+               scalarprod += row1->vals[i1] * row2->vals[i2];
+               ++i1;
+               ++i2;
+            }
+            /* increase smallest counter */
+            else if( row1colsidx[i1] < row2colsidx[i2] )
+               ++i1;
+            else
+               ++i2;
          }
       }
    }
@@ -6448,11 +6656,47 @@ int SCIProwGetDiscreteScalarProduct(
    )
 {
    int prod;
+   int* row1colsidx;
+   int* row2colsidx;
+   int i1;
+   int i2;
 
    assert(row1 != NULL);
    assert(row2 != NULL);
 
-   /* make sure, the rows are sorted */
+   /* Sort the column indices of both rows.
+    *
+    * The columns in a row are divided into two parts: LP columns, which are currently in the LP and non-LP columns;
+    * we sort the rows, but that only ensures that within these two parts, columns are sorted w.r.t. their index.
+    * Normally, this should be suficient, because a column contained in both rows should either be one of the LP columns
+    * for both or one of the non-LP columns for both.
+    * However, directly after a row was created, before a row is added to the LP, the row is not linked to all its
+    * columns and all columns are treated as non-LP columns. Moreover, for example when doing column generation,
+    * columns can be added later and remain unlinked while all previously added columns might already be linked.
+    * Therefore, we have to be very careful about whether we can rely on the partitioning of the variables.
+    *
+    * We distinguish the following cases:
+    *
+    * 1) both rows have no unlinked columns
+    *    -> we just check the LP partitions
+    *
+    * 2) exactly one row is completely unlinked, the other one is completely linked
+    *    -> we compare the non-LP (unlinked) partition with the LP partition of the other row
+    *       (thus all common LP columns are regarded)
+    *
+    * 3) we have unlinked and LP columns in both rows
+    *    -> we need to compare four partitions at once
+    *
+    * 4a) we have one row with unlinked and LP columns and the other without any unlinked columns
+    *     -> we need to compare three partitions: the LP part of the completely linked row and both partitions of the
+    *        other row
+    *
+    * 4b) we have one row with unlinked and LP columns and the other is completely unlinked
+    *     -> we need to compare three partitions: the complete unlinked row and both partitions of the other row
+    *
+    * 5) both rows are completely unlinked
+    *    -> we need to compare two partitions: both complete rows
+    */
    SCIProwSort(row1);
    assert(row1->lpcolssorted);
    assert(row1->nonlpcolssorted);
@@ -6460,154 +6704,300 @@ int SCIProwGetDiscreteScalarProduct(
    assert(row2->lpcolssorted);
    assert(row2->nonlpcolssorted);
 
-   /* both rows have LP columns, or none of them has, or one has only LP colums and the other only non-LP columns,
-    * so we can rely on the sorting of the columns
-    */
-   if( (row1->nlpcols == 0) == (row2->nlpcols == 0)
-      || (row1->nlpcols == 0 && row2->nlpcols == row2->len)
-      || (row1->nlpcols == row1->len && row2->nlpcols == 0) )
-   {
-      int i1;
-      int i2;
+   assert(row1->nunlinked <= row1->len - row1->nlpcols);
+   assert(row2->nunlinked <= row2->len - row2->nlpcols);
+
+   row1colsidx = row1->cols_index;
+   row2colsidx = row2->cols_index;
 
 #ifndef NDEBUG
-      /* check that we can rely on the partition into LP columns and non-LP columns */
-      if( (row1->nlpcols == 0) == (row2->nlpcols == 0) )
-      {
-         i1 = 0;
-         i2 = row2->nlpcols;
-         while( i1 < row1->nlpcols && i2 < row2->len )
-         {
-            assert(row1->cols[i1] != row2->cols[i2]);
-            if( row1->cols[i1]->index < row2->cols[i2]->index )
-               ++i1;
-            else
-            {
-               assert(row1->cols[i1]->index > row2->cols[i2]->index);
-               ++i2;
-            }
-         }
-         assert(i1 == row1->nlpcols || i2 == row2->len);
-
-         i1 = row1->nlpcols;
-         i2 = 0;
-         while( i1 < row1->len && i2 < row2->nlpcols )
-         {
-            assert(row1->cols[i1] != row2->cols[i2]);
-            if( row1->cols[i1]->index < row2->cols[i2]->index )
-               ++i1;
-            else
-            {
-               assert(row1->cols[i1]->index > row2->cols[i2]->index);
-               ++i2;
-            }
-         }
-         assert(i1 == row1->len || i2 == row2->nlpcols);
-      }
-#endif
-
-      /* calculate the scalar product */
-      prod = 0;
+   /* check that we can rely on the partition into LP columns and non-LP columns if the rows are completely linked */
+   if( row1->nunlinked == 0 && row2->nunlinked == 0 )
+   {
       i1 = 0;
-      i2 = 0;
-      while( i1 < row1->len && i2 < row2->len )
+      i2 = row2->nlpcols;
+      while( i1 < row1->nlpcols && i2 < row2->len )
       {
-         assert(row1->cols[i1]->index == row1->cols_index[i1]);
-         assert(row2->cols[i2]->index == row2->cols_index[i2]);
-         assert((row1->cols[i1] == row2->cols[i2]) == (row1->cols_index[i1] == row2->cols_index[i2]));
-         if( row1->cols_index[i1] < row2->cols_index[i2] )
-            i1++;
-         else if( row1->cols_index[i1] > row2->cols_index[i2] )
-            i2++;
+         assert(row1->cols[i1] != row2->cols[i2]);
+         if( row1->cols[i1]->index < row2->cols[i2]->index )
+            ++i1;
          else
          {
-            prod++;
-            i1++;
-            i2++;
+            assert(row1->cols[i1]->index > row2->cols[i2]->index);
+            ++i2;
+         }
+      }
+      assert(i1 == row1->nlpcols || i2 == row2->len);
+
+      i1 = row1->nlpcols;
+      i2 = 0;
+      while( i1 < row1->len && i2 < row2->nlpcols )
+      {
+         assert(row1->cols[i1] != row2->cols[i2]);
+         if( row1->cols[i1]->index < row2->cols[i2]->index )
+            ++i1;
+         else
+         {
+            assert(row1->cols[i1]->index > row2->cols[i2]->index);
+            ++i2;
+         }
+      }
+      assert(i1 == row1->len || i2 == row2->nlpcols);
+   }
+#endif
+
+   /* The "easy" cases 1) and 2) */
+   if( (row1->nunlinked == 0 && row2->nunlinked == 0) ||
+      ((row1->nlpcols == row1->len || row1->nunlinked == row1->len)
+         && (row2->nlpcols == row2->len || row2->nunlinked == row2->len)
+         && (row1->nunlinked == 0 || row2->nunlinked == 0)) )
+   {
+      assert(row1->nunlinked == 0 || row1->nunlinked == row1->len);
+      assert(row2->nunlinked == 0 || row2->nunlinked == row2->len);
+
+      /* set the iterators to the last column we want to regard in the row: nunlinked is either 0 or row->len,
+       * therefore, we get nlpcols if nunlinked is 0 and row->len if the row is completely unlinked
+       */
+      i1 = MAX(row1->nlpcols, row1->nunlinked) - 1;
+      i2 = MAX(row2->nlpcols, row2->nunlinked) - 1;
+      prod = 0;
+
+      /* calculate the scalar product */
+      while( i1 >= 0 && i2 >= 0 )
+      {
+         assert(row1->cols[i1]->index == row1colsidx[i1]);
+         assert(row2->cols[i2]->index == row2colsidx[i2]);
+         assert((row1->cols[i1] == row2->cols[i2]) == (row1colsidx[i1] == row2colsidx[i2]));
+         if( row1colsidx[i1] < row2colsidx[i2] )
+            --i2;
+         else if( row1colsidx[i1] > row2colsidx[i2] )
+            --i1;
+         else
+         {
+            ++prod;
+            --i1;
+            --i2;
          }
       }
    }
-   /* one row has columns in the LP, but the other not, that could be because the one without was just created and
-    * columns aren't linked yet; in this case, one column could be an lpcolumn in one row and a non-lpcolumn in the
-    * other row, so we cannot rely on the partition into lpcolumns and non-lpcolumns
-    */
+   /* the "harder" cases 3) - 5): start with four partitions and reduce their number iteratively */
    else
    {
-      int i1;
-      int ilp;
-      int inlp;
-
-      if( row2->nlpcols == 0 )
-      {
-         SCIP_ROW* tmprow;
-         tmprow = row2;
-         row2 = row1;
-         row1 = tmprow;
-      }
-      assert(row1->nlpcols == 0 && row2->nlpcols > 0);
+      SCIP_Bool lpcols;
+      int ilp1;
+      int inlp1;
+      int ilp2;
+      int inlp2;
+      int end1;
+      int end2;
 
       prod = 0;
-      i1 = 0;
-      ilp = 0;
-      inlp = row2->nlpcols;
+      ilp1 = 0;
+      ilp2 = 0;
 
-      while( i1 < row1->len && ilp < row2->nlpcols && inlp < row2->len )
+      /* if a row is completely linked (case 4a), we do not have to consider its non-LP columns */
+      inlp1 = (row1->nunlinked > 0 ? row1->nlpcols : row1->len);
+      inlp2 = (row2->nunlinked > 0 ? row2->nlpcols : row2->len);
+
+      /* handle the case of four partitions (case 3) until one partition is finished;
+       * cases 4a), 4b), and 5) will fail the while-condition
+       */
+      while( ilp1 < row1->nlpcols && inlp1 < row1->len && ilp2 < row2->nlpcols && inlp2 < row2->len )
       {
-         assert(row1->cols[i1]->index == row1->cols_index[i1]);
-         assert(row2->cols[ilp]->index == row2->cols_index[ilp]);
-         assert(row2->cols[inlp]->index == row2->cols_index[inlp]);
-         assert((row1->cols[i1] == row2->cols[ilp]) == (row1->cols_index[i1] == row2->cols_index[ilp]));
-         assert((row1->cols[i1] == row2->cols[inlp]) == (row1->cols_index[i1] == row2->cols_index[inlp]));
+         assert(row1->cols[ilp1]->index == row1colsidx[ilp1]);
+         assert(row1->cols[inlp1]->index == row1colsidx[inlp1]);
+         assert(row2->cols[ilp2]->index == row2colsidx[ilp2]);
+         assert(row2->cols[inlp2]->index == row2colsidx[inlp2]);
+         assert((row1->cols[ilp1] == row2->cols[ilp2]) == (row1colsidx[ilp1] == row2colsidx[ilp2]));
+         assert((row1->cols[ilp1] == row2->cols[inlp2]) == (row1colsidx[ilp1] == row2colsidx[inlp2]));
+         assert((row1->cols[inlp1] == row2->cols[ilp2]) == (row1colsidx[inlp1] == row2colsidx[ilp2]));
+         assert((row1->cols[inlp1] == row2->cols[inlp2]) == (row1colsidx[inlp1] == row2colsidx[inlp2]));
 
-         if( row1->cols_index[i1] > row2->cols_index[ilp] )
-            ++ilp;
-         else if( row1->cols_index[i1] > row2->cols_index[inlp] )
-            ++inlp;
-         else if( row1->cols_index[i1] == row2->cols_index[ilp] )
+         /* rows have the same linked LP columns */
+         if( row1colsidx[ilp1] == row2colsidx[ilp2] )
+         {
+            ++prod;
+            ++ilp1;
+            ++ilp2;
+         }
+         /* LP column of row1 is the same as unlinked column of row2 */
+         else if( row1colsidx[ilp1] == row2colsidx[inlp2] )
+         {
+            ++prod;
+            ++ilp1;
+            ++inlp2;
+         }
+         /* unlinked column of row1 is the same as LP column of row2 */
+         else if( row1colsidx[inlp1] == row2colsidx[ilp2] )
+         {
+            ++prod;
+            ++inlp1;
+            ++ilp2;
+         }
+         /* two unlinked LP columns are the same */
+         else if( row1colsidx[inlp1] == row2colsidx[inlp2] && row1->cols[inlp1]->lppos >= 0 )
+         {
+            ++prod;
+            ++inlp1;
+            ++inlp2;
+         }
+         /* increase smallest counter */
+         else if( row1colsidx[ilp1] < row1colsidx[inlp1] )
+         {
+            if( row2colsidx[ilp2] < row2colsidx[inlp2] )
+            {
+               if( row1colsidx[ilp1] < row2colsidx[ilp2] )
+                  ++ilp1;
+               else
+                  ++ilp2;
+            }
+            else
+            {
+               if( row1colsidx[ilp1] < row2colsidx[inlp2] )
+                  ++ilp1;
+               else
+                  ++inlp2;
+            }
+         }
+         else
+         {
+            if( row2colsidx[ilp2] < row2colsidx[inlp2] )
+            {
+               if( row1colsidx[inlp1] < row2colsidx[ilp2] )
+                  ++inlp1;
+               else
+                  ++ilp2;
+            }
+            else
+            {
+               if( row1colsidx[inlp1] < row2colsidx[inlp2] )
+                  ++inlp1;
+               else
+                  ++inlp2;
+            }
+         }
+      }
+
+      /* One partition was completely handled, we just have to handle the three remaining partitions:
+       * the remaining partition of this row and the two partitions of the other row.
+       * If necessary, we swap the partitions to ensure that row1 is the row with only one remaining partition.
+       */
+      if( ilp1 != row1->nlpcols && inlp1 != row1->len )
+      {
+         int tmpilp;
+         int tmpinlp;
+
+         assert(ilp2 == row2->nlpcols || inlp2 == row2->len);
+
+         SCIPswapPointers((void**) &row1, (void**) &row2);
+         SCIPswapPointers((void**) &row1colsidx, (void**) &row2colsidx);
+         tmpilp = ilp1;
+         tmpinlp = inlp1;
+         ilp1 = ilp2;
+         inlp1 = inlp2;
+         ilp2 = tmpilp;
+         inlp2 = tmpinlp;
+      }
+
+      /* determine section of row 1 that we want to look at (current iterator = begin, end, LP-columns?)
+       * -> this merges cases 4a) and 4b)
+       */
+      if( ilp1 == row1->nlpcols )
+      {
+         i1 = inlp1;
+         end1 = row1->len;
+         lpcols = FALSE;
+      }
+      else
+      {
+         assert(inlp1 == row1->len);
+
+         i1 = ilp1;
+         end1 = row1->nlpcols;
+         lpcols = TRUE;
+      }
+
+      /* handle the case of three partitions (case 4) until one partition is finished, this reduces our problem to case 1), 2), or 5);
+       * case 5) will fail the while-condition
+       */
+      while( i1 < end1 && ilp2 < row2->nlpcols && inlp2 < row2->len )
+      {
+         assert(row1->cols[i1]->index == row1colsidx[i1]);
+         assert(row2->cols[ilp2]->index == row2colsidx[ilp2]);
+         assert(row2->cols[inlp2]->index == row2colsidx[inlp2]);
+         assert((row1->cols[i1] == row2->cols[ilp2]) == (row1colsidx[i1] == row2colsidx[ilp2]));
+         assert((row1->cols[i1] == row2->cols[inlp2]) == (row1colsidx[i1] == row2colsidx[inlp2]));
+
+         /* current column in row 1 is the same as the current LP column in row 2 */
+         if( row1colsidx[i1] == row2colsidx[ilp2] )
          {
             ++prod;
             ++i1;
-            ++ilp;
+            ++ilp2;
          }
-         else if( row1->cols_index[i1] == row2->cols_index[inlp] )
+         /* linked or unlinked LP column of row1 is the same as unlinked column of row2 */
+         else if( row1colsidx[i1] == row2colsidx[inlp2] && (lpcols || row1->cols[i1]->lppos >= 0) )
          {
             ++prod;
             ++i1;
-            ++inlp;
+            ++inlp2;
+         }
+         /* increase smallest counter */
+         else if( row2colsidx[ilp2] < row2colsidx[inlp2] )
+         {
+            if( row1colsidx[i1] < row2colsidx[ilp2] )
+               ++i1;
+            else
+               ++ilp2;
          }
          else
-            i1++;
-      }
-      while( ilp < row2->nlpcols && i1 < row1->len )
-      {
-         assert(row1->cols[i1]->index == row1->cols_index[i1]);
-         assert(row2->cols[ilp]->index == row2->cols_index[ilp]);
-         assert((row1->cols[i1] == row2->cols[ilp]) == (row1->cols_index[i1] == row2->cols_index[ilp]));
-         if( row1->cols_index[i1] < row2->cols_index[ilp] )
-            i1++;
-         else if( row1->cols_index[i1] > row2->cols_index[ilp] )
-            ilp++;
-         else
          {
-            prod++;
-            i1++;
-            ilp++;
+            if( row1colsidx[i1] < row2colsidx[inlp2] )
+               ++i1;
+            else
+               ++inlp2;
          }
       }
-      while( inlp < row2->nlpcols && i1 < row1->len )
+
+      /* if the second section of row 1 was finished, we can stop; otherwise, we have to consider the remaining parts of
+       * the two rows
+       */
+      if( i1 < end1 )
       {
-         assert(row1->cols[i1]->index == row1->cols_index[i1]);
-         assert(row2->cols[inlp]->index == row2->cols_index[inlp]);
-         assert((row1->cols[i1] == row2->cols[inlp]) == (row1->cols_index[i1] == row2->cols_index[inlp]));
-         if( row1->cols_index[i1] < row2->cols_index[inlp] )
-            i1++;
-         else if( row1->cols_index[i1] > row2->cols_index[inlp] )
-            inlp++;
+         /* determine section of row 2 that we want to look at (current iterator = begin, end, LP-columns?) */
+         if( ilp2 == row2->nlpcols )
+         {
+            i2 = inlp2;
+            end2 = row2->len;
+            lpcols = FALSE;
+         }
          else
          {
-            prod++;
-            i1++;
-            inlp++;
+            assert(inlp2 == row2->len);
+
+            i2 = ilp2;
+            end2 = row2->nlpcols;
+         }
+
+         /* handle the case of two partitions (standard case 5, or case 1 or 2 due to partition reduction) */
+         while( i1 < end1 && i2 < end2 )
+         {
+            assert(row1->cols[i1]->index == row1colsidx[i1]);
+            assert(row2->cols[i2]->index == row2colsidx[i2]);
+            assert((row1->cols[i1] == row2->cols[i2]) == (row1colsidx[i1] == row2colsidx[i2]));
+
+            /* linked or unlinked LP column of row1 is the same as linked or unlinked LP column of row2 */
+            if( row1colsidx[i1] == row2colsidx[i2] && (lpcols || row1->cols[i1]->lppos >= 0) )
+            {
+               ++prod;
+               ++i1;
+               ++i2;
+            }
+            /* increase smallest counter */
+            else if( row1colsidx[i1] < row2colsidx[i2] )
+               ++i1;
+            else
+               ++i2;
          }
       }
    }
@@ -6737,6 +7127,19 @@ SCIP_RETCODE SCIProwDropEvent(
    return SCIP_OKAY;
 }
 
+/** marks a row to be not removable from the LP in the current node because it became obsolete */
+void SCIProwMarkNotRemovableLocal(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(row  != NULL);
+   assert(stat != NULL);
+   assert(stat->nnodes > 0);
+
+   /* lpRemoveObsoleteRows() does not remove a row if the node number stored in obsoletenode equals the current node number */
+   row->obsoletenode = stat->nnodes;
+}
 
 /*
  * LP solver data update
@@ -7382,8 +7785,6 @@ SCIP_RETCODE lpFlushChgRows(
    if( lp->nchgrows == 0 )
       return SCIP_OKAY;
 
-   assert(!lp->diving);
-
    /* get the solver's infinity value */
    lpiinf = SCIPlpiInfinity(lp->lpi);
 
@@ -7781,6 +8182,74 @@ void rowUpdateDelLP(
    }
 }
 
+static
+SCIP_RETCODE allocDiveChgSideArrays(
+   SCIP_LP*              lp,                 /**< LP data object */
+   int                   initsize            /**< initial size of the arrays */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->divechgsides == NULL);
+   assert(lp->divechgsidetypes == NULL);
+   assert(lp->divechgrows == NULL);
+   assert(lp->ndivechgsides == 0);
+   assert(lp->divechgsidessize == 0);
+   assert(initsize > 0);
+
+   lp->divechgsidessize = initsize;
+   SCIP_ALLOC( BMSallocMemoryArray(&lp->divechgsides, lp->divechgsidessize) );
+   SCIP_ALLOC( BMSallocMemoryArray(&lp->divechgsidetypes, lp->divechgsidessize) );
+   SCIP_ALLOC( BMSallocMemoryArray(&lp->divechgrows, lp->divechgsidessize) );
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE reallocDiveChgSideArrays(
+   SCIP_LP*              lp,                 /**< LP data object */
+   int                   minsize,            /**< minimal number of elements */
+   SCIP_Real             growfact            /**< growing factor */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->divechgsides != NULL);
+   assert(lp->divechgsidetypes != NULL);
+   assert(lp->divechgrows != NULL);
+   assert(lp->ndivechgsides > 0);
+   assert(lp->divechgsidessize > 0);
+   assert(minsize > 0);
+
+   if( minsize <= lp->divechgsidessize )
+      return SCIP_OKAY;
+
+   lp->divechgsidessize = MAX(minsize, (int)(lp->divechgsidessize * growfact));
+   SCIP_ALLOC( BMSreallocMemoryArray(&lp->divechgsides, lp->divechgsidessize) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&lp->divechgsidetypes, lp->divechgsidessize) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&lp->divechgrows, lp->divechgsidessize) );
+
+   return SCIP_OKAY;
+}
+
+static
+void freeDiveChgSideArrays(
+   SCIP_LP*              lp                  /**< LP data object */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->divechgsides != NULL);
+   assert(lp->divechgsidetypes != NULL);
+   assert(lp->divechgrows != NULL);
+   assert(lp->ndivechgsides == 0);
+   assert(lp->divechgsidessize > 0);
+
+   BMSfreeMemoryArrayNull(&lp->divechgsides);
+   BMSfreeMemoryArrayNull(&lp->divechgsidetypes);
+   BMSfreeMemoryArrayNull(&lp->divechgrows);
+   lp->divechgsidessize = 0;
+}
+
+#define DIVESTACKINITSIZE 100
+
 /** creates empty LP data object */
 SCIP_RETCODE SCIPlpCreate(
    SCIP_LP**             lp,                 /**< pointer to LP data object */
@@ -7870,6 +8339,11 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->divingobjchg = FALSE;
    (*lp)->divinglazyapplied = FALSE;
    (*lp)->divelpistate = NULL;
+   (*lp)->divechgsides = NULL;
+   (*lp)->divechgsidetypes = NULL;
+   (*lp)->divechgrows = NULL;
+   (*lp)->ndivechgsides = 0;
+   (*lp)->divechgsidessize = 0;
    (*lp)->ndivingrows = 0;
    (*lp)->divinglpiitlim = INT_MAX;
    (*lp)->resolvelperror = FALSE;
@@ -7888,6 +8362,9 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
    (*lp)->lpithreads = set->lp_threads;
    (*lp)->storedsolvals = NULL;
+
+   /* allocate arrays for diving */
+   SCIP_CALL( allocDiveChgSideArrays(*lp, DIVESTACKINITSIZE) );
 
    /* set default parameters in LP solver */
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim, &success) );
@@ -8002,6 +8479,8 @@ SCIP_RETCODE SCIPlpFree(
    
    SCIP_CALL( SCIPlpClear(*lp, blkmem, set, eventqueue, eventfilter) );
 
+   freeDiveChgSideArrays(*lp);
+
    /* release LPI rows */
    for( i = 0; i < (*lp)->nlpirows; ++i )
    {
@@ -8017,6 +8496,7 @@ SCIP_RETCODE SCIPlpFree(
    BMSfreeMemoryArrayNull(&(*lp)->lpicols);
    BMSfreeMemoryArrayNull(&(*lp)->lpirows);
    BMSfreeMemoryArrayNull(&(*lp)->chgcols);
+   BMSfreeMemoryArrayNull(&(*lp)->chgrows);
    BMSfreeMemoryArrayNull(&(*lp)->lazycols);
    BMSfreeMemoryArrayNull(&(*lp)->cols);
    BMSfreeMemoryArrayNull(&(*lp)->rows);
@@ -13555,13 +14035,15 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             lpi = SCIPlpGetLPI(lp);
 
             assert(lpi != NULL);
-            assert(lp->lastlpalgo != SCIP_LPALGO_DUALSIMPLEX || SCIPlpiIsObjlimExc(lpi)
-               || SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiuobjlim));
+            /* actually, SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) should hold, but we are a bit less strict in
+             * the assert by using !SCIPsetIsFeasNegative()
+             */
+            assert(SCIPlpiIsObjlimExc(lpi) || !SCIPsetIsFeasNegative(set, lp->lpobjval - lp->lpiuobjlim));
 
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
             /* do one additional simplex step if the computed dual solution doesn't exceed the objective limit */
-            if( objval < lp->lpiuobjlim )
+            if( SCIPsetIsLT(set, objval, lp->lpiuobjlim) )
             {
                SCIP_Real tmpcutoff;
                char tmppricingchar;
@@ -13607,7 +14089,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                 * was stopped due to time or iteration limit, solve again with fastmip turned off
                 */
                if( solstat == SCIP_LPSOLSTAT_ITERLIMIT &&
-                  SCIPsetIsRelLT(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
+                  SCIPsetIsLT(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
                {
                   assert(!(*lperror));
 
@@ -13735,7 +14217,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                }
 
                assert(lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT);
-               assert(SCIPsetIsRelGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))
+               assert(SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))
                   || lp->lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT);
             }
             else
@@ -14201,16 +14683,23 @@ void getObjvalDeltaLb(
 {
    assert(!SCIPsetIsInfinity(set, REALABS(obj)));
    assert(!SCIPsetIsInfinity(set, oldlb));
-   assert(!SCIPsetIsInfinity(set, newlb));
    assert(!SCIPsetIsInfinity(set, -oldlb) || !SCIPsetIsInfinity(set, -newlb));
    assert(SCIPsetIsPositive(set, obj)); /* we only need to update if the objective is positive */
 
    if( SCIPsetIsInfinity(set, -oldlb) )
    {
-      (*deltainf) = -1;
-      (*deltaval) = newlb * obj;
+      if( !SCIPsetIsInfinity(set, newlb) )
+      {
+         (*deltainf) = -1;
+         (*deltaval) = newlb * obj;
+      }
+      else
+      {
+         (*deltainf) = 0;
+         (*deltaval) = 0.0;
+      }
    }
-   else if( SCIPsetIsInfinity(set, -newlb) )
+   else if( SCIPsetIsInfinity(set, REALABS(newlb)) )
    {
       (*deltainf) = 1;
       (*deltaval) = -oldlb * obj;
@@ -14235,16 +14724,23 @@ void getObjvalDeltaUb(
 {
    assert(!SCIPsetIsInfinity(set, REALABS(obj)));
    assert(!SCIPsetIsInfinity(set, -oldub));
-   assert(!SCIPsetIsInfinity(set, -newub));
    assert(!SCIPsetIsInfinity(set, oldub) || !SCIPsetIsInfinity(set, newub));
    assert(SCIPsetIsNegative(set, obj)); /* we only need to update if the objective is negative */
 
    if( SCIPsetIsInfinity(set, oldub) )
    {
-      (*deltainf) = -1;
-      (*deltaval) = newub * obj;
+      if( !SCIPsetIsInfinity(set, -newub) )
+      {
+         (*deltainf) = -1;
+         (*deltaval) = newub * obj;
+      }
+      else
+      {
+         (*deltainf) = 0;
+         (*deltaval) = 0.0;
+      }
    }
-   else if( SCIPsetIsInfinity(set, newub) )
+   else if( SCIPsetIsInfinity(set, REALABS(newub)) )
    {
       (*deltainf) = 1;
       (*deltaval) = -oldub * obj;
@@ -15065,11 +15561,12 @@ SCIP_RETCODE SCIPlpGetSol(
    /* copy primal solution and reduced costs into columns */
    for( c = 0; c < nlpicols; ++c )
    {
+      assert( 0 <= cstat[c] && cstat[c] < 4 );
       lpicols[c]->primsol = primsol[c];
       lpicols[c]->minprimsol = MIN(lpicols[c]->minprimsol, primsol[c]);
       lpicols[c]->maxprimsol = MAX(lpicols[c]->maxprimsol, primsol[c]);
       lpicols[c]->redcost = redcost[c];
-      lpicols[c]->basisstatus = cstat[c]; /*lint !e732*/
+      lpicols[c]->basisstatus = (unsigned int) cstat[c];
       lpicols[c]->validredcostlp = lpcount;
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
@@ -15108,9 +15605,10 @@ SCIP_RETCODE SCIPlpGetSol(
    /* copy dual solution and activities into rows */
    for( r = 0; r < nlpirows; ++r )
    {
+      assert( 0 <= rstat[r] && rstat[r] < 4 );
       lpirows[r]->dualsol = dualsol[r];
       lpirows[r]->activity = activity[r] + lpirows[r]->constant;
-      lpirows[r]->basisstatus = rstat[r]; /*lint !e732*/
+      lpirows[r]->basisstatus = (unsigned int) rstat[r]; /*lint !e732*/
       lpirows[r]->validactivitylp = lpcount;
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
@@ -15370,9 +15868,12 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
+   SCIP_COL** lpicols;
    SCIP_ROW** lpirows;
    SCIP_Real* dualfarkas;
+   int nlpicols;
    int nlpirows;
+   int c;
    int r;
 
    assert(lp != NULL);
@@ -15394,7 +15895,9 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    /* get dual Farkas infeasibility proof */
    SCIP_CALL( SCIPlpiGetDualfarkas(lp->lpi, dualfarkas) );
 
+   lpicols = lp->lpicols;
    lpirows = lp->lpirows;
+   nlpicols = lp->nlpicols;
    nlpirows = lp->nlpirows;
 
    /* store infeasibility proof in rows */
@@ -15403,6 +15906,19 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    {
       SCIPdebugMessage(" row <%s>: dualfarkas=%f\n", lpirows[r]->name, dualfarkas[r]);
       lpirows[r]->dualfarkas = dualfarkas[r];
+      lpirows[r]->dualsol = SCIP_INVALID;
+      lpirows[r]->activity = 0.0;
+      lpirows[r]->validactivitylp = -1L;
+      lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
+   }
+
+   /* set columns as invalid */
+   for( c = 0; c < nlpicols; ++c )
+   {
+      lpicols[c]->primsol = SCIP_INVALID;
+      lpicols[c]->redcost = SCIP_INVALID;
+      lpicols[c]->validredcostlp = -1L;
+      lpicols[c]->validfarkaslp = -1L;
    }
 
    /* free temporary memory */
@@ -15717,7 +16233,7 @@ SCIP_RETCODE lpRemoveObsoleteCols(
       assert(cols[c]->lppos == c);
       assert(cols[c]->lpipos == c);
       if( cols[c]->removable
-         && cols[c]->obsoletenode != stat->nnodes /* don't remove column a second time from same node (avoid cycling) */
+         && cols[c]->obsoletenode != stat->nnodes /* don't remove column a second time from same node (avoid cycling), or a first time if marked nonremovable locally */
          && cols[c]->age > set->lp_colagelimit
          && (SCIP_BASESTAT)cols[c]->basisstatus != SCIP_BASESTAT_BASIC
          && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
@@ -15796,7 +16312,7 @@ SCIP_RETCODE lpRemoveObsoleteRows(
       assert(rows[r]->lppos == r);
       assert(rows[r]->lpipos == r);
       if( rows[r]->removable
-         && rows[r]->obsoletenode != stat->nnodes  /* don't remove row a second time from same node (avoid cycling) */
+         && rows[r]->obsoletenode != stat->nnodes  /* don't remove row a second time from same node (avoid cycling), or a first time if marked nonremovable locally */
          && rows[r]->age > set->lp_rowagelimit
          && (SCIP_BASESTAT)rows[r]->basisstatus == SCIP_BASESTAT_BASIC )
       {
@@ -16194,6 +16710,7 @@ SCIP_RETCODE SCIPlpStartDive(
    assert(lp->validsollp <= stat->lpcount);
    assert(blkmem != NULL);
    assert(set != NULL);
+   assert(lp->ndivechgsides == 0);
 
    SCIPdebugMessage("diving started (LP flushed: %u, LP solved: %u, solstat: %d)\n",
       lp->flushed, lp->solved, SCIPlpGetSolstat(lp));
@@ -16217,29 +16734,45 @@ SCIP_RETCODE SCIPlpStartDive(
    /* save current LP values dependent on the solution */
    SCIP_CALL( lpStoreSolVals(lp, stat, blkmem) );
    assert(lp->storedsolvals != NULL);
-   if( !set->lp_resolverestore && lp->solved
-      && (lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
+   if( !set->lp_resolverestore && lp->solved )
    {
-      /* ensure that solution values in LP data structures are up-to-date */
-      if( lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+      SCIP_Bool store = TRUE;
+
+      switch ( lp->lpsolstat )
       {
+      case SCIP_LPSOLSTAT_OPTIMAL:
          SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
-      }
-      else
-      {
-         assert(lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+         assert(lp->validsollp == stat->lpcount);
+         break;
+      case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
          SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, NULL, NULL) );
+         assert(lp->validsollp == stat->lpcount);
+         break;
+      case SCIP_LPSOLSTAT_OBJLIMIT:
+      case SCIP_LPSOLSTAT_ITERLIMIT:
+      case SCIP_LPSOLSTAT_TIMELIMIT:
+         SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
+         assert(lp->validsollp == stat->lpcount);
+         break;
+      case SCIP_LPSOLSTAT_INFEASIBLE:
+         SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat) );
+         break;
+      case SCIP_LPSOLSTAT_NOTSOLVED:
+      case SCIP_LPSOLSTAT_ERROR:
+      default:
+         store = FALSE;
       }
 
-      assert(lp->validsollp == stat->lpcount);
-
-      for( c = 0; c < lp->ncols; ++c )
+      if ( store )
       {
-         SCIP_CALL( colStoreSolVals(lp->cols[c], blkmem) );
-      }
-      for( r = 0; r < lp->nrows; ++r )
-      {
-         SCIP_CALL( rowStoreSolVals(lp->rows[r], blkmem) );
+         for( c = 0; c < lp->ncols; ++c )
+         {
+            SCIP_CALL( colStoreSolVals(lp->cols[c], blkmem) );
+         }
+         for( r = 0; r < lp->nrows; ++r )
+         {
+            SCIP_CALL( rowStoreSolVals(lp->rows[r], blkmem, lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE) );
+         }
       }
    }
 
@@ -16296,6 +16829,28 @@ SCIP_RETCODE SCIPlpEndDive(
 
    /* remove rows which were added in diving mode */
    SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, lp->ndivingrows) );
+
+   /* undo changes to left hand sides and right hand sides */
+   while( lp->ndivechgsides > 0 )
+   {
+      SCIP_Real oldside;
+      SCIP_SIDETYPE sidetype;
+      SCIP_ROW* row;
+
+      lp->ndivechgsides--;
+      oldside = lp->divechgsides[lp->ndivechgsides];
+      sidetype = lp->divechgsidetypes[lp->ndivechgsides];
+      row = lp->divechgrows[lp->ndivechgsides];
+
+      if( sidetype == SCIP_SIDETYPE_LEFT )
+      {
+         SCIP_CALL( SCIProwChgLhs(row, blkmem, set, eventqueue, lp, oldside) );
+      }
+      else
+      {
+         SCIP_CALL( SCIProwChgRhs(row, blkmem, set, eventqueue, lp, oldside) );
+      }
+   }
 
    /* restore LPI iteration limit */
    SCIP_CALL( lpSetIterationLimit(lp, lp->divinglpiitlim) );
@@ -16356,7 +16911,14 @@ SCIP_RETCODE SCIPlpEndDive(
       stat->lpcount++;
 
       /* restore LP solution values in lp data, columns and rows */
-      if( lp->storedsolvals->lpissolved && (lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
+      if( lp->storedsolvals->lpissolved &&
+         (lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||
+            lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY ||
+            lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
+            lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT ||
+            lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT ||
+            lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE)
+         )
       {
          SCIP_CALL( lpRestoreSolVals(lp, blkmem, stat->lpcount) );
 
@@ -16366,7 +16928,7 @@ SCIP_RETCODE SCIPlpEndDive(
          }
          for( r = 0; r < lp->nrows; ++r )
          {
-            SCIP_CALL( rowRestoreSolVals(lp->rows[r], blkmem, stat->lpcount, set->lp_freesolvalbuffers) );
+            SCIP_CALL( rowRestoreSolVals(lp->rows[r], blkmem, stat->lpcount, set->lp_freesolvalbuffers, lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE) );
          }
       }
       else
@@ -16390,6 +16952,32 @@ SCIP_RETCODE SCIPlpEndDive(
       }
    }
 #endif
+
+   return SCIP_OKAY;
+}
+
+#define DIVESTACKGROWFACT 1.5
+
+/** records a current row side such that any change will be undone after diving */
+SCIP_RETCODE SCIPlpRecordOldRowSideDive(
+   SCIP_LP*              lp,                 /**< LP data object */
+   SCIP_ROW*             row,                /**< row affected by the change */
+   SCIP_SIDETYPE         sidetype            /**< side type */
+   )
+{
+   assert(lp != NULL);
+   assert(row != NULL);
+
+   if( lp->ndivechgsides == lp->divechgsidessize )
+   {
+      SCIP_CALL( reallocDiveChgSideArrays(lp, lp->divechgsidessize + 1, DIVESTACKGROWFACT) );
+   }
+   assert(lp->ndivechgsides < lp->divechgsidessize);
+
+   lp->divechgsides[lp->ndivechgsides] = (sidetype == SCIP_SIDETYPE_LEFT) ? row->lhs : row->rhs;
+   lp->divechgsidetypes[lp->ndivechgsides] = sidetype;
+   lp->divechgrows[lp->ndivechgsides] = row;
+   lp->ndivechgsides++;
 
    return SCIP_OKAY;
 }
@@ -16602,7 +17190,8 @@ SCIP_RETCODE SCIPlpWriteMip(
    SCIP_Bool             origobj,            /**< should the original objective function be used? */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
    SCIP_Real             objscale,           /**< objective scaling factor */
-   SCIP_Real             objoffset           /**< objective offset, e.g., caused by variable fixings in presolving */
+   SCIP_Real             objoffset,          /**< objective offset, e.g., caused by variable fixings in presolving */
+   SCIP_Bool             lazyconss           /**< output removable rows as lazy constraints? */
    )
 {
    FILE* file;
@@ -16629,7 +17218,7 @@ SCIP_RETCODE SCIPlpWriteMip(
       SCIPmessageFPrintInfo(messagehdlr, file, "\\ Original Variable and Constraint Names have been replaced by generic names.\n"); 
    else
    {
-      SCIPmessageFPrintInfo(messagehdlr, file,"\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.\n");
+      SCIPmessageFPrintInfo(messagehdlr, file, "\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.\n");
       SCIPmessageFPrintInfo(messagehdlr, file, "\\ If this is the case, the model may be corrupted!\n");
    }
 
@@ -16647,7 +17236,7 @@ SCIP_RETCODE SCIPlpWriteMip(
       SCIPmessageFPrintInfo(messagehdlr, file, "Maximize");
    
    /* print objective */
-   SCIPmessageFPrintInfo(messagehdlr, file, "\n Obj:");
+   SCIPmessageFPrintInfo(messagehdlr, file, "\nObj:");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
@@ -16661,36 +17250,40 @@ SCIP_RETCODE SCIPlpWriteMip(
          }
 
          if( genericnames )
-            SCIPmessageFPrintInfo(messagehdlr, file," %+.15g x_%d", coeff, lp->cols[i]->lppos);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g x_%d", coeff, lp->cols[i]->lppos);
          else
-            SCIPmessageFPrintInfo(messagehdlr, file," %+.15g %s", coeff, lp->cols[i]->var->name);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g %s", coeff, lp->cols[i]->var->name);
          
          ++j;
          if( j % 10 == 0 )
-            SCIPmessageFPrintInfo(messagehdlr, file,"\n     ");
+            SCIPmessageFPrintInfo(messagehdlr, file, "\n     ");
       }
    }
-   if( origobj && objoffset != 0.0 ) 
-      SCIPmessageFPrintInfo(messagehdlr, file," %+.15g objoffset", objoffset * (SCIP_Real) objsense * objscale);
+   /* add artificial variable 'objoffset' to transfer objective offset */
+   if( origobj && objoffset != 0.0 )
+      SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g objoffset", objoffset * (SCIP_Real) objsense * objscale);
 
    /* print constraint section */
-   SCIPmessageFPrintInfo(messagehdlr, file,"\n\nSubject to\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "\nSubject to\n");
    for( i = 0; i < lp->nrows; i++ )
    {
-      char type;
-      type = 'i';
+      char type = 'i';
+
+      /* skip removable rows if we want to write them as lazy constraints */
+      if ( lazyconss && SCIProwIsRemovable(lp->rows[i]) )
+         continue;
 
       /* constraint types: 'l' means: only lhs exists, 'r' means: only rhs exists, 'e' means: both sides exist and are
        * equal, 'b' and 'B' mean: both sides exist, if the type is 'b', the lhs will be written, if the type is 'B', 
        * the rhs will be written. Ergo: set type to b first, change it to 'B' afterwards and go back to WRITEROW.
        * type 'i' means: lhs and rhs are both infinite */      
-      if( SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
+      if( SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
          type = 'r';
-      else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
+      else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
          type = 'l';
-      else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && SCIPsetIsEQ(set, lp->rows[i]->lhs, lp->rows[i]->rhs) )
+      else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && SCIPsetIsEQ(set, lp->rows[i]->lhs, lp->rows[i]->rhs) )
          type = 'e';
-      else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
+      else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
          type = 'b';
 
       /* print name of row */
@@ -16709,16 +17302,16 @@ SCIP_RETCODE SCIPlpWriteMip(
             SCIPmessageFPrintInfo(messagehdlr, file, "%s: ", rowname);
          break;
       case 'i':
-         SCIPmessageFPrintInfo(messagehdlr, file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>",lp->rows[i]->name); 
-         SCIPmessageFPrintInfo(messagehdlr, file,"are not in a valid range. The following two constraints may be corrupted!\n");
-         SCIPmessagePrintWarning(messagehdlr, "The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
+         SCIPmessageFPrintInfo(messagehdlr, file, "\\\\ WARNING: The lhs and the rhs of the row with original name <%s>", lp->rows[i]->name);
+         SCIPmessageFPrintInfo(messagehdlr, file, "are not in a valid range. The following two constraints may be corrupted!\n");
+         SCIPmessagePrintWarning(messagehdlr, "The lhs and rhs of row <%s> are not in a valid range.\n", lp->rows[i]->name);
          type = 'b';
          /*lint -fallthrough*/
       case 'b':
-         SCIPmessageFPrintInfo(messagehdlr, file,"%s_lhs: ", rowname);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s_lhs: ", rowname);
          break;
       case 'B':
-         SCIPmessageFPrintInfo(messagehdlr, file,"%s_rhs: ", rowname);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s_rhs: ", rowname);
          break;
       default:
          SCIPerrorMessage("Undefined row type!\n");
@@ -16729,30 +17322,30 @@ SCIP_RETCODE SCIPlpWriteMip(
       for( j = 0; j < lp->rows[i]->nlpcols; ++j )
       {
          if( genericnames )
-            SCIPmessageFPrintInfo(messagehdlr, file," %+.15g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
          else
-            SCIPmessageFPrintInfo(messagehdlr, file," %+.15g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
          
          if( (j+1) % 10 == 0 )
-            SCIPmessageFPrintInfo(messagehdlr, file,"\n          ");
+            SCIPmessageFPrintInfo(messagehdlr, file, "\n          ");
       }
       
       /* print right hand side */
       switch( type )
       {
       case 'b':
-         SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);         
+         SCIPmessageFPrintInfo(messagehdlr, file, " >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
          type = 'B';
          goto WRITEROW;
       case 'l':
-         SCIPmessageFPrintInfo(messagehdlr, file," >= %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       case 'B':
       case 'r':
-         SCIPmessageFPrintInfo(messagehdlr, file," <= %.15g\n",lp->rows[i]->rhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " <= %.15g\n", lp->rows[i]->rhs - lp->rows[i]->constant);
          break;
       case 'e':
-         SCIPmessageFPrintInfo(messagehdlr, file," = %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " = %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       default:
          SCIPerrorMessage("Undefined row type!\n");
@@ -16760,33 +17353,126 @@ SCIP_RETCODE SCIPlpWriteMip(
       }
    }
 
+   if ( lazyconss )
+   {
+      /* print lazy constraint section */
+      SCIPmessageFPrintInfo(messagehdlr, file, "lazy constraints\n");
+      for( i = 0; i < lp->nrows; i++ )
+      {
+         char type = 'i';
+
+         /* skip non-removable rows if we want to write lazy constraints */
+         if ( ! SCIProwIsRemovable(lp->rows[i]) )
+            continue;
+
+         /* constraint types: 'l' means: only lhs exists, 'r' means: only rhs exists, 'e' means: both sides exist and are
+          * equal, 'b' and 'B' mean: both sides exist, if the type is 'b', the lhs will be written, if the type is 'B', 
+          * the rhs will be written. Ergo: set type to b first, change it to 'B' afterwards and go back to WRITEROW.
+          * type 'i' means: lhs and rhs are both infinite */      
+         if( SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
+            type = 'r';
+         else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
+            type = 'l';
+         else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && SCIPsetIsEQ(set, lp->rows[i]->lhs, lp->rows[i]->rhs) )
+            type = 'e';
+         else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
+            type = 'b';
+
+         /* print name of row */
+         if( genericnames )
+            (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "row_%d", lp->rows[i]->lppos);
+         else
+            (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s", lp->rows[i]->name);
+
+      WRITELAZYROW:
+         switch( type )
+         {
+         case 'r':
+         case 'l':
+         case 'e':
+            if( strlen(rowname) > 0 )
+               SCIPmessageFPrintInfo(messagehdlr, file, "%s: ", rowname);
+            break;
+         case 'i':
+            SCIPmessageFPrintInfo(messagehdlr, file, "\\\\ WARNING: The lhs and the rhs of the row with original name <%s>", lp->rows[i]->name);
+            SCIPmessageFPrintInfo(messagehdlr, file, "are not in a valid range. The following two constraints may be corrupted!\n");
+            SCIPmessagePrintWarning(messagehdlr, "The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
+            type = 'b';
+            /*lint -fallthrough*/
+         case 'b':
+            SCIPmessageFPrintInfo(messagehdlr, file, "%s_lhs: ", rowname);
+            break;
+         case 'B':
+            SCIPmessageFPrintInfo(messagehdlr, file, "%s_rhs: ", rowname);
+            break;
+         default:
+            SCIPerrorMessage("Undefined row type!\n");
+            return SCIP_ERROR;
+         }
+
+         /* print coefficients and variables */
+         for( j = 0; j < lp->rows[i]->nlpcols; ++j )
+         {
+            if( genericnames )
+               SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
+            else
+               SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
+
+            if( (j+1) % 10 == 0 )
+               SCIPmessageFPrintInfo(messagehdlr, file, "\n          ");
+         }
+
+         /* print right hand side */
+         switch( type )
+         {
+         case 'b':
+            SCIPmessageFPrintInfo(messagehdlr, file, " >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
+            type = 'B';
+            goto WRITELAZYROW;
+         case 'l':
+            SCIPmessageFPrintInfo(messagehdlr, file, " >= %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
+            break;
+         case 'B':
+         case 'r':
+            SCIPmessageFPrintInfo(messagehdlr, file, " <= %.15g\n", lp->rows[i]->rhs - lp->rows[i]->constant);
+            break;
+         case 'e':
+            SCIPmessageFPrintInfo(messagehdlr, file, " = %.15g\n", lp->rows[i]->lhs - lp->rows[i]->constant);
+            break;
+         default:
+            SCIPerrorMessage("Undefined row type!\n");
+            return SCIP_ERROR;
+         }
+      }
+   }
+
    /* print variable bounds */
-   SCIPmessageFPrintInfo(messagehdlr, file,"\n\nBounds\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "Bounds\n");
    for( i = 0; i < lp->ncols; ++i )
    {
       if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) || !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
       {
          /* print lower bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) )
-            SCIPmessageFPrintInfo(messagehdlr, file," %.15g <=", lp->cols[i]->lb);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %.15g <=", lp->cols[i]->lb);
          
          /* print variable name */
          if( genericnames )
-            SCIPmessageFPrintInfo(messagehdlr, file," x_%d ", lp->cols[i]->lppos);
+            SCIPmessageFPrintInfo(messagehdlr, file, " x_%d ", lp->cols[i]->lppos);
          else
-            SCIPmessageFPrintInfo(messagehdlr, file," %s ", lp->cols[i]->var->name);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %s ", lp->cols[i]->var->name);
          
          /* print upper bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
-            SCIPmessageFPrintInfo(messagehdlr, file,"<= %.15g", lp->cols[i]->ub);
-         SCIPmessageFPrintInfo(messagehdlr, file,"\n");
+            SCIPmessageFPrintInfo(messagehdlr, file, "<= %.15g", lp->cols[i]->ub);
+         SCIPmessageFPrintInfo(messagehdlr, file, "\n");
       }
    }
    if( origobj && objoffset != 0.0 )
-      SCIPmessageFPrintInfo(messagehdlr, file," objoffset = 1");
+      SCIPmessageFPrintInfo(messagehdlr, file, " objoffset = 1\n");
 
    /* print integer variables */
-   SCIPmessageFPrintInfo(messagehdlr, file,"\n\nGenerals\n ");
+   SCIPmessageFPrintInfo(messagehdlr, file, "Generals\n");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
@@ -16794,19 +17480,19 @@ SCIP_RETCODE SCIPlpWriteMip(
       {
          /* print variable name */
          if( genericnames )
-            SCIPmessageFPrintInfo(messagehdlr, file," x_%d ", lp->cols[i]->lppos);
+            SCIPmessageFPrintInfo(messagehdlr, file, " x_%d ", lp->cols[i]->lppos);
          else
-            SCIPmessageFPrintInfo(messagehdlr, file," %s ", lp->cols[i]->var->name);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %s ", lp->cols[i]->var->name);
 
          j++;
          if( j % 10 == 0 )
-            SCIPmessageFPrintInfo(messagehdlr, file,"\n ");
+            SCIPmessageFPrintInfo(messagehdlr, file, "\n");
       }
    }
-   
-   SCIPmessageFPrintInfo(messagehdlr, file,"\n\nEnd");
+
+   SCIPmessageFPrintInfo(messagehdlr, file, "\nEnd");
    fclose(file);
-   
+
    return SCIP_OKAY;
 }
 
@@ -17065,7 +17751,8 @@ int SCIPcolGetNNonz(
 }
 
 /** get number of nonzero entries in column vector, that correspond to rows currently in the SCIP_LP;
- *  Warning! This method is only applicable on columns, that are completely linked to their rows (e.g. a column
+ *
+ *  @warning This method is only applicable on columns, that are completely linked to their rows (e.g. a column
  *  that is in the current LP and the LP was solved, or a column that was in a solved LP and didn't change afterwards
  */
 int SCIPcolGetNLPNonz(
@@ -17141,7 +17828,8 @@ int SCIProwGetNNonz(
 }
 
 /** get number of nonzero entries in row vector, that correspond to columns currently in the SCIP_LP;
- *  Warning! This method is only applicable on rows, that are completely linked to their columns (e.g. a row
+ *
+ *  @warning This method is only applicable on rows, that are completely linked to their columns (e.g. a row
  *  that is in the current LP and the LP was solved, or a row that was in a solved LP and didn't change afterwards
  */
 int SCIProwGetNLPNonz(
@@ -18249,7 +18937,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       SCIPmessagePrintWarning(messagehdlr, "Could not set time limit of LP solver for relative interior point computation.\n");
 
    /* set iteration limit */
-   retcode = SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPTILIM, iterlimit);
+   retcode = SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, iterlimit);
 
    /* check, if parameter is unknown */
    if ( retcode == SCIP_PARAMETERUNKNOWN )
@@ -18415,10 +19103,10 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
       /* free */
       SCIPsetFreeBufferArray(set, &primal);
+
+      *success = TRUE;
    }
    SCIP_CALL( SCIPlpiFree(&lpi) );
-
-   *success = TRUE;
 
    return SCIP_OKAY;
 }

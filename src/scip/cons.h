@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -567,7 +567,8 @@ void SCIPconshdlrIncNCutsFound(
  */
 
 /** creates and captures a constraint, and inserts it into the conss array of its constraint handler
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *
+ *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
@@ -610,7 +611,8 @@ SCIP_RETCODE SCIPconsCreate(
 /** copies source constraint of source SCIP into the target constraint for the target SCIP, using the variable map for
  *  mapping the variables of the source SCIP to the variables of the target SCIP; if the copying process was successful
  *  a constraint is creates and captures;
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *
+ *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
@@ -643,7 +645,8 @@ SCIP_RETCODE SCIPconsCopy(
 
 /** parses constraint information (in cip format) out of a string; if the parsing process was successful a constraint is
  *  created, captured, and inserted into the conss array of its constraint handler.
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution
+ *
+ *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
@@ -1173,6 +1176,27 @@ SCIP_RETCODE SCIPconsAddLocks(
 /** gets the key (i.e. the name) of the given constraint */
 extern
 SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons);
+
+/*
+ * method for arrays of contraint handlers
+ */
+
+/** stores all constraints marked for propagation away when probing is started */
+extern
+SCIP_RETCODE SCIPconshdlrsStorePropagationStatus(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONSHDLR**       conshdlrs,          /**< all constraint handlers */
+   int                   nconshdlrs          /**< number of contraint handlers */
+   );
+
+/** reset all constraints marked for propagation when probing was finished */
+extern
+SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CONSHDLR**       conshdlrs,          /**< all constraint handlers */
+   int                   nconshdlrs          /**< number of contraint handlers */
+   );
 
 #ifdef __cplusplus
 }

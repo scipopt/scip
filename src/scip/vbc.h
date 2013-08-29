@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -67,6 +67,14 @@ void SCIPvbcExit(
 /** creates a new node entry in the VBC output file */
 extern
 SCIP_RETCODE SCIPvbcNewChild(
+   SCIP_VBC*             vbc,                /**< VBC information */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_NODE*            node                /**< new node, that was created */
+   );
+
+/** updates a node entry in the VBC output file */
+extern
+SCIP_RETCODE SCIPvbcUpdateChild(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */

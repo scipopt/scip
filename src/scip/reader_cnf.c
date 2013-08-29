@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,7 +18,7 @@
  * @author Thorsten Koch
  * @author Tobias Achterberg
  *
- * DIMACS CNF (conjunctive normal form) file format used for example for SAT problems. For a detailed description of
+ * The DIMACS CNF (conjunctive normal form) is a file format used for example for SAT problems. For a detailed description of
  * this format see http://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html .
  */
 
@@ -140,6 +140,7 @@ SCIP_RETCODE readCnf(
    char format[SCIP_MAXSTRLEN];
    char varname[SCIP_MAXSTRLEN];
    char s[SCIP_MAXSTRLEN];
+   SCIP_Bool initialconss;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
    SCIP_Bool dynamicrows;
@@ -160,7 +161,7 @@ SCIP_RETCODE readCnf(
    linecount = 0;
 
    /* read header */
-   SCIP_CALL( readCnfLine(scip, file, line, sizeof(line), &linecount) );
+   SCIP_CALL( readCnfLine(scip, file, line, (int) sizeof(line), &linecount) );
    if( *line != 'p' )
    {
       readError(scip, linecount, "problem declaration line expected");
@@ -191,9 +192,10 @@ SCIP_RETCODE readCnf(
    }
 
    /* get parameter values */
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamiccols", &dynamiccols) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initialconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/useobj", &useobj) );
 
    /* get temporary memory */
@@ -216,7 +218,7 @@ SCIP_RETCODE readCnf(
    clauselen = 0;
    do
    {
-      retcode = readCnfLine(scip, file, line, sizeof(line), &linecount);
+      retcode = readCnfLine(scip, file, line, (int) sizeof(line), &linecount);
       if( retcode != SCIP_OKAY )
          goto TERMINATE;
 
@@ -245,17 +247,17 @@ SCIP_RETCODE readCnf(
                (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "c%d", clausenum);
                
                if( SCIPfindConshdlr(scip, "logicor") != NULL )
-               {   
+               {
                   /* if the constraint handler logicor exit create a logicor constraint */
-                  SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, s, clauselen, clausevars, 
-                        !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+                  SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, s, clauselen, clausevars,
+                        initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
                }
                else if( SCIPfindConshdlr(scip, "setppc") != NULL )
                {
                   /* if the constraint handler logicor does not exit but constraint
                    *  handler setppc create a setppc constraint */
-                  SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, s, clauselen, clausevars, 
-                        !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+                  SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, s, clauselen, clausevars,
+                        initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
                }
                else
                {
@@ -268,10 +270,10 @@ SCIP_RETCODE readCnf(
                   
                   for( i = 0; i < clauselen; ++i )
                      vals[i] = 1.0;
-                  
+
                   SCIP_CALL( SCIPcreateConsLinear(scip, &cons, s, clauselen, clausevars, vals, 1.0, SCIPinfinity(scip),
-                        !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
-                  
+                        initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+
                   SCIPfreeBufferArray(scip, &vals);
                }
 
@@ -332,13 +334,13 @@ SCIP_RETCODE readCnf(
  TERMINATE:
    /* change objective values and release variables */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
-   if( useobj )
+   for( v = 0; v < nvars; ++v )
    {
-      for( v = 0; v < nvars; ++v )
+      if( useobj )
       {
          SCIP_CALL( SCIPchgVarObj(scip, vars[v], (SCIP_Real)varsign[v]) );
-         SCIP_CALL( SCIPreleaseVar(scip, &vars[v]) );
       }
+      SCIP_CALL( SCIPreleaseVar(scip, &vars[v]) );
    }
 
    /* free temporary memory */
@@ -429,18 +431,9 @@ SCIP_RETCODE SCIPincludeReaderCnf(
 
    /* add cnf reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/cnfreader/dynamicconss", "should model constraints be subject to aging?",
-         NULL, FALSE, TRUE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/cnfreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/cnfreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/cnfreader/useobj", "should an artificial objective, depending on the number of clauses a variable appears in, be used?",
          NULL, FALSE, FALSE, NULL, NULL) );
-   
+
    return SCIP_OKAY;
 }
 

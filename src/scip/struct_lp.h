@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -279,6 +279,9 @@ struct SCIP_Lp
    SCIP_COL**            lazycols;           /**< array with current LP lazy columns */
    SCIP_ROW**            rows;               /**< array with current LP rows in correct order */
    SCIP_LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
+   SCIP_Real*            divechgsides;       /**< stores the lhs/rhs changed in the current diving */
+   SCIP_SIDETYPE*        divechgsidetypes;   /**< stores the side type of the changes done in the current diving */
+   SCIP_ROW**            divechgrows;        /**< stores the rows changed in the current diving */
    SCIP_LPSOLVALS*       storedsolvals;      /**< collected values of the LP data which depend on the LP solution */
    SCIP_Longint          validsollp;         /**< LP number for which the currently stored solution values are valid */
    SCIP_Longint          validfarkaslp;      /**< LP number for which the currently stored Farkas row multipliers are valid */
@@ -307,6 +310,8 @@ struct SCIP_Lp
    int                   glbpseudoobjvalinf; /**< number of variables with infinite best bound in global pseudo solution */
    int                   pseudoobjvalinf;    /**< number of variables with infinite best bound in current pseudo solution */
    int                   ndivingrows;        /**< number of rows when entering diving mode */
+   int                   ndivechgsides;      /**< number of side changes in current diving */
+   int                   divechgsidessize;   /**< size of the arrays */
    int                   divinglpiitlim;     /**< LPI iteration limit when entering diving mode */
    int                   lpiitlim;           /**< current iteration limit setting in LPI */
    int                   lpifastmip;         /**< current FASTMIP setting in LPI */

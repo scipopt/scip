@@ -3,7 +3,7 @@
 /*                  this file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*                  2002-2012 Konrad-Zuse-Zentrum                            */
+/*                  2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,7 +47,7 @@
  * See the web site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
  *
  * SCIP is developed together with <a href="http://www3.mathematik.tu-darmstadt.de/ags/optimierung/research/discrete-optimization.html">TU Darmstadt</a> and
- * <a href="http://www.am.uni-erlangen.de/optimization/edom.html">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
+ * <a href="http://www.am.uni-erlangen.de/wima/">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
  * and has more than 500,000 lines of C code.
  *
  * @section GETTINGSTARTED Getting started
@@ -94,7 +94,7 @@
  *   - \ref NLPI    "Interfaces to NLP solvers"
  *   - \ref EXPRINT "Interfaces to expression interpreters"
  *   - \ref CONF    "Conflict analysis"
- *   - \ref PARAM   "Adding additional user parameters"
+ *   - \ref PARAM   "additional user parameters"
  *
  * - \ref TEST     "How to run automated tests with SCIP"
  * - \ref COUNTER  "How to use SCIP to count feasible solutions"
@@ -117,7 +117,7 @@
  * - <a class="el" href="AUTHORS.shtml#further">Further developers</a>
  * - <a class="el" href="AUTHORS.shtml#contributors">Contributors</a>
  *
- * @version  3.0.0.2
+ * @version  3.0.1.4
  *
  * \image html scippy.png
  *
@@ -227,7 +227,7 @@
  *  <a href="http://scip.zib.de/doc/examples/Scheduler/index.shtml"><b>Scheduler</b></a>
  *  </td>
  *  <td>
- *  An examples containing three readers and one primal heuristic for scheduling problems.
+ *  An example containing three readers and one primal heuristic for scheduling problems.
  *  </td>
  *  </tr>
  *  </table>
@@ -893,13 +893,13 @@
  * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/download.shtml">SCIP download
  * section</a> and download an appropriate binary for your operating system. To follow this tutorial, we recommend downloading the instance
  * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
- * the <a href="http://miplib.zib.de/miplib3/miplib3.html">MIPLIB 3.0</a> homepage.
+ * the <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
  *
  * Now start your binary, without any arguments. This opens the interactive shell, which should look somehow like this:
  *
  * \code
  * SCIP version 2.0.1 [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 1.5.0]
- * Copyright (c) 2002-2012 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2013 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * External codes:
  *   SoPlex 1.5.0         Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)
@@ -1351,7 +1351,6 @@
  * \par CONSHDLR_DELAYPRESOL: the default for whether the presolving method should be delayed, if other presolvers found reductions.
  * This property is analogous to the DELAYSEPA flag, but deals with the preprocessing method of the constraint handler.
  *
-
  *
  *
  * @section CONS_DATA Constraint Data and Constraint Handler Data
@@ -1387,7 +1386,7 @@
  * the constraint handler available to the model, and looks like this:
  *  -# If you are using constraint handler data, you have to <b>allocate the memory for the data</b> at this point.
  *     You also have to initialize the fields in struct SCIP_ConshdlrData afterwards.
- *  \code
+ *  \verbatim
  * SCIP_RETCODE SCIPincludeConshdlrKnapsack(
  * ...
  * )
@@ -1398,7 +1397,7 @@
  *
  *  SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
  *  ...
- *  \endcode
+ *  \endverbatim
  *  -# Now, <b>SCIP gets notified</b> of the presence of the constraint handler together with its \ref CONS_FUNDAMENTALCALLBACKS "basic callbacks".
  *   \code
  *  SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -5553,7 +5552,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page PARAM Adding additional user parameters
+/**@page PARAM How to add additional user parameters
  *
  *  Users may add their own parameters to SCIP by calling SCIPaddXyzParam(). Using
  *  this method, there are two possibilities for where to store the actual parameter value:
@@ -5603,7 +5602,7 @@ SCIP_RETCODE consdataCatchEvent(
    ...
    }
  * \endverbatim
- *
+ *    @n
  *    As you can see, both pointers and integers are checked for valid values at the beginning of the
  *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
  *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>
@@ -5643,10 +5642,10 @@ SCIP_RETCODE consdataCatchEvent(
  *  @section EXAMPLE_1 How to activate debug messages
  *    For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
  *    in DBG mode, and run the SCIP interactive shell to solve p0033.mps from the
- *     <a href="http://miplib.zib.de/miplib3/miplib3.shtml">MIPLIB 3.0</a> , we get some output like:
+ *     <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
- * Copyright (c) 2002-2012 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2013 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * user parameter file <scip.set> not found - using default parameters
  *
@@ -5815,7 +5814,7 @@ SCIP_RETCODE consdataCatchEvent(
  *
  *  \arg <code>*.res</code> - ASCII table containing a summary of the computational results
  *  \arg <code>*.tex</code> - TeX table containing a summary of the computational results
- *  \arg <code>*.pav</code> - <a href="http://www.gamsworld.org/performance/paver">PAVER</a> output
+ *  \arg <code>*.pav</code> - <a href="http://www.gamsworld.org/performance/paver/">PAVER</a> output
  *
  *  The last three files in the above list, i.e., the files containing a summary of the computational results,
  *  can also be generated manually. Therefore the user has to call the <code>evalcheck.sh</code> script in the
@@ -5999,7 +5998,7 @@ SCIP_RETCODE consdataCatchEvent(
  *  \code
  *  make testgurobi
  *  \endcode
- *  \arg for <a href="http://projects.coin-or.org/Cbc">cbc</a>
+ *  \arg for <a href="https://projects.coin-or.org/Cbc">cbc</a>
  *  \code
  *  make testcbc
  *  \endcode
@@ -6011,7 +6010,7 @@ SCIP_RETCODE consdataCatchEvent(
  *  \code
  *  make testglpk
  *  \endcode
- *  \arg for <a href="http://projects.coin-or.org/SYMPHONY">symphony</a>
+ *  \arg for <a href="https://projects.coin-or.org/SYMPHONY">symphony</a>
  *  \code
  *  make testsymphony
  *  \endcode
@@ -6682,6 +6681,8 @@ SCIP_RETCODE consdataCatchEvent(
  */
 
 /**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-3.0.1
  *
  * \verbinclude SCIP-release-notes-3.0
  *

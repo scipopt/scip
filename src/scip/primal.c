@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -348,14 +348,12 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
+   SCIP_SOL* sol;
    SCIP_Real upperbound;
+   SCIP_Real objval;
    SCIP_Real inf;
    int i;
-#if 1
-   SCIP_SOL* sol;
-   SCIP_Real objval;
    int j;
-#endif
 
    assert(primal != NULL);
    assert(SCIPsetGetStage(set) <= SCIP_STAGE_EXITPRESOLVE);
@@ -365,7 +363,6 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    inf = SCIPsetInfinity(set);
    upperbound = MIN(upperbound, inf);
 
-#if 1 /* check if the resorting is necessary */
    /* resort current primal solutions */
    for( i = 1; i < primal->nsols; ++i )
    {
@@ -375,17 +372,6 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
          primal->sols[j] = primal->sols[j-1];
       primal->sols[j] = sol;
    }
-#endif
-#ifndef NDEBUG
-   assert(primal->nsols == 0 || SCIPsolGetOrigin(primal->sols[0]) == SCIP_SOLORIGIN_ORIGINAL);
-
-   /* check current order of primal solutions */
-   for( i = 1; i < primal->nsols; ++i )
-   {
-      assert(SCIPsolGetOrigin(primal->sols[i]) == SCIP_SOLORIGIN_ORIGINAL);
-      assert(SCIPsetIsLE(set, SCIPsolGetObj(primal->sols[i-1], set, transprob, origprob), SCIPsolGetObj(primal->sols[i], set, transprob, origprob)));
-   }
-#endif
 
    /* compare objective limit to currently best solution */
    if( primal->nsols > 0 )
@@ -620,7 +606,7 @@ SCIP_RETCODE primalAddSol(
    /* display node information line */
    if( insertpos == 0 && !replace && set->stage >= SCIP_STAGE_SOLVING )
    {
-      SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, TRUE) );
+      SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, TRUE, TRUE) );
    }
 
    /* if an original solution was added during solving, try to transfer it to the transformed space */
@@ -674,7 +660,7 @@ SCIP_RETCODE primalAddOrigSol(
    }
 
    /* insert solution at correct position */
-   primal->nsols = MIN(primal->nsols+1, set->limit_maxsol);
+   primal->nsols = MIN(primal->nsols+1, set->limit_maxorigsol);
    for( pos = primal->nsols-1; pos > insertpos; --pos )
       primal->sols[pos] = primal->sols[pos-1];
 
@@ -1449,18 +1435,19 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            origprob            /**< original problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob           /**< transformed problem */
    )
 {
    int i;
 
    assert(primal != NULL);
 
-   for( i = 0; i < primal->nexistingsols; ++i )
+   for( i = 0; i < primal->nsols; ++i )
    {
-      if( SCIPsolGetOrigin(primal->existingsols[i]) == SCIP_SOLORIGIN_ZERO )
+      if( SCIPsolGetOrigin(primal->sols[i]) == SCIP_SOLORIGIN_ZERO )
       {
-         SCIP_CALL( SCIPsolRetransform(primal->existingsols[i], set, stat, origprob) );
+         SCIP_CALL( SCIPsolRetransform(primal->sols[i], set, stat, origprob, transprob) );
       }
    }
 
@@ -1560,8 +1547,11 @@ SCIP_RETCODE SCIPprimalTransformSol(
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 
       /* check whether the fixing corresponds to the solution value of the original variable */
-      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+      if( scalar == 0.0 )
       {
+         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED ||
+            (SCIPsetIsInfinity(set, constant) || SCIPsetIsInfinity(set, -constant)));
+
          if( !SCIPsetIsEQ(set, solval, constant) )
          {
             SCIPdebugMessage("original variable <%s> (solval=%g) resolves to fixed variable <%s> (original solval=%g)\n",

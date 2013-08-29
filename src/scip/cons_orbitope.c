@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -508,6 +508,7 @@ SCIP_RETCODE fixTriangle(
    assert( consdata->nblocks > 0 );
    assert( consdata->vars != NULL );
 
+   *infeasible = FALSE;
    *nfixedvars = 0;
 
    if ( consdata->istrianglefixed )
@@ -622,7 +623,7 @@ SCIP_RETCODE separateSCIs(
    computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
 
    /* loop through rows */
-   for (i = 1; i < nspcons; ++i)
+   for (i = 1; i < nspcons && ! (*infeasible); ++i)
    {
       SCIP_Real bar;       /* value of bar: */
       int lastcolumn;      /* last column considered as part of the bar */
@@ -698,7 +699,7 @@ SCIP_RETCODE separateSCIs(
 #endif
             SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, tmpvars, tmpvals) );
             /*SCIP_CALL( SCIPprintRow(scip, row, NULL) ); */
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
             ++(*ncuts);
 

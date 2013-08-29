@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -255,6 +255,54 @@ SCIP_RETCODE SCIPvbcNewChild(
    return SCIP_OKAY;
 }
 
+/** updates a node entry in the VBC output file */
+SCIP_RETCODE SCIPvbcUpdateChild(
+   SCIP_VBC*             vbc,                /**< VBC information */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_NODE*            node                /**< new node, that was created */
+   )
+{
+   SCIP_VAR* branchvar;
+   SCIP_BOUNDTYPE branchtype;
+   SCIP_Real branchbound;
+   size_t nodenum;
+
+   assert(vbc != NULL);
+   assert(stat != NULL);
+   assert(node != NULL);
+
+   /* check, if VBC output should be created */
+   if( vbc->file == NULL )
+      return SCIP_OKAY;
+
+   /* vbc is disabled on probing nodes */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+      return SCIP_OKAY;
+
+   /* get node num from hash map */
+   nodenum = (size_t)SCIPhashmapGetImage(vbc->nodenum, node);
+   assert(nodenum > 0);
+
+   /* get branching information */
+   getBranchInfo(node, &branchvar, &branchtype, &branchbound);
+
+   printTime(vbc, stat);
+   if( branchvar != NULL )
+   {
+      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\n",
+         (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
+         SCIPvarGetName(branchvar), SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
+         branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, SCIPnodeGetLowerbound(node));
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\n",
+         (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
+   }
+
+   return SCIP_OKAY;
+}
+
 /** changes the color of the node to the given color */
 static
 void vbcSetColor(
@@ -336,11 +384,44 @@ void SCIPvbcCutoffNode(
    SCIP_NODE*            node                /**< node, that was cut off */
    )
 {
+   SCIP_VAR* branchvar;
+   SCIP_BOUNDTYPE branchtype;
+   SCIP_Real branchbound;
+   size_t nodenum;
+
+   assert(vbc != NULL);
+   assert(stat != NULL);
    assert(node != NULL);
+
+   /* check, if VBC output should be created */
+   if( vbc->file == NULL )
+      return;
 
    /* vbc is disabled on probing nodes */
    if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
       return;
+
+   /* get node num from hash map */
+   nodenum = (size_t)SCIPhashmapGetImage(vbc->nodenum, node);
+   assert(nodenum > 0);
+
+   /* get branching information */
+   getBranchInfo(node, &branchvar, &branchtype, &branchbound);
+
+   printTime(vbc, stat);
+
+   if( branchvar != NULL )
+   {
+      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
+         (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
+         SCIPvarGetName(branchvar),  SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
+         branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, SCIPnodeGetLowerbound(node), stat->nnodes);
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
+         (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node), stat->nnodes);
+   }
 
    vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_CUTOFF);
 }

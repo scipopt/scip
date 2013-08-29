@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -520,7 +520,9 @@ SCIP_RETCODE applyOptcumulative(
          }
 
          /* analyze the conflict */
-         //SCIP_CALL( SCIPanalyzeConflict(scip, depth, NULL) );
+#if 0
+         SCIP_CALL( SCIPanalyzeConflict(scip, depth, NULL) );
+#endif
          SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
          SCIP_CALL( SCIPfreeSol(scip, &sol) );
       }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -213,34 +213,22 @@ SCIP_RETCODE solUnlinkVar(
 
    case SCIP_SOLORIGIN_LPSOL:
       solval = SCIPvarGetLPSol(var);
-      if( !SCIPsetIsZero(set, solval) )
-      {
-         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
-      }
+      SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_NLPSOL:
       solval = SCIPvarGetNLPSol(var);
-      if( !SCIPsetIsZero(set, solval) )
-      {
-         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
-      }
+      SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_RELAXSOL:
       solval = SCIPvarGetRelaxSolTransVar(var);
-      if( !SCIPsetIsZero(set, solval) )
-      {
-         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
-      }
+      SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_PSEUDOSOL:
       solval = SCIPvarGetPseudoSol(var);
-      if( !SCIPsetIsZero(set, solval) )
-      {
-         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
-      }
+      SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_UNKNOWN:
@@ -1081,8 +1069,8 @@ SCIP_Real SCIPsolGetVal(
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(var != NULL);
 
-   /** if the value of a transformed variable in an original solution is requested, we need to project the variable back
-    *  to the original space, the opposite case is handled below
+   /* if the value of a transformed variable in an original solution is requested, we need to project the variable back
+    * to the original space, the opposite case is handled below
     */
    if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
@@ -1513,29 +1501,90 @@ SCIP_RETCODE SCIPsolRetransform(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            origprob            /**< original problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob           /**< transformed problem */
    )
 {
+   SCIP_VAR** transvars;
    SCIP_VAR** vars;
+   SCIP_VAR** activevars;
    SCIP_Real* solvals;
+   SCIP_Real* activevals;
+   SCIP_Real* transsolvals;
+   SCIP_Real constant;
+   int requiredsize;
+   int ntransvars;
+   int nactivevars;
    int nvars;
    int v;
+   int i;
 
    assert(sol != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ZERO);
    assert(origprob != NULL);
+   assert(transprob != NULL);
    assert(!origprob->transformed);
+   assert(transprob->transformed);
 
+   /* This method was a performance bottleneck when retransforming a solution during presolving, before flattening the
+    * aggregation graph. In that case, calling SCIPsolGetVal() on the original variable consumed too much
+    * time. Therefore, we now first compute the active representation of each original variable using
+    * SCIPvarGetActiveRepresentatives(), which is much faster, and sum up the solution values of the active variables by
+    * hand for each original variable.
+    */
    vars = origprob->vars;
    nvars = origprob->nvars;
+   transvars = transprob->vars;
+   ntransvars = transprob->nvars;
 
-   /* allocate temporary memory for storing the original solution values */
+   /* allocate temporary memory for getting the active representation of the original variables, buffering the solution
+    * values of all active variables and storing the original solution values
+    */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &transsolvals, ntransvars + 1) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, ntransvars + 1) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &activevals, ntransvars + 1) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &solvals, nvars) );
+   assert(transsolvals != NULL); /* for flexelint */
    assert(solvals != NULL); /* for flexelint */
+
+   /* get the solution values of all active variables */
+   for( v = 0; v < ntransvars; ++v )
+   {
+      transsolvals[v] = SCIPsolGetVal(sol, set, stat, transvars[v]);
+   }
 
    /* get the solution in original problem variables */
    for( v = 0; v < nvars; ++v )
-      solvals[v] = SCIPsolGetVal(sol, set, stat, vars[v]);
+   {
+      activevars[0] = vars[v];
+      activevals[0] = 1.0;
+      nactivevars = 1;
+      constant = 0.0;
+
+      /* get active representation of the original variable */
+      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, activevars, activevals, &nactivevars, ntransvars + 1, &constant,
+            &requiredsize, TRUE) );
+      assert(requiredsize <= ntransvars);
+
+      /* compute solution value of the original variable */
+      solvals[v] = constant;
+      for( i = 0; i < nactivevars; ++i )
+      {
+         assert(0 <= SCIPvarGetProbindex(activevars[i]) && SCIPvarGetProbindex(activevars[i]) < ntransvars);
+         assert(!SCIPsetIsInfinity(set, -solvals[v]) || !SCIPsetIsInfinity(set, activevals[i] * transsolvals[SCIPvarGetProbindex(activevars[i])]));
+         assert(!SCIPsetIsInfinity(set, solvals[v]) || !SCIPsetIsInfinity(set, -activevals[i] * transsolvals[SCIPvarGetProbindex(activevars[i])]));
+         solvals[v] += activevals[i] * transsolvals[SCIPvarGetProbindex(activevars[i])];
+      }
+
+      if( SCIPsetIsInfinity(set, solvals[v]) )
+      {
+         solvals[v] = SCIPsetInfinity(set);
+      }
+      else if( SCIPsetIsInfinity(set, -solvals[v]) )
+      {
+         solvals[v] = -SCIPsetInfinity(set);
+      }
+   }
 
    /* clear the solution and convert it into original space */
    SCIP_CALL( solClearArrays(sol) );
@@ -1557,6 +1606,9 @@ SCIP_RETCODE SCIPsolRetransform(
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &solvals);
+   SCIPsetFreeBufferArray(set, &activevals);
+   SCIPsetFreeBufferArray(set, &activevars);
+   SCIPsetFreeBufferArray(set, &transsolvals);
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,7 +81,7 @@ void propdataReset(
    )
 {
    propdata->redcostvars = NULL;
-   propdata->lastcutoffbound = SCIPinfinity(scip);
+   propdata->lastcutoffbound = SCIP_INVALID;
    propdata->nredcostvars = 0;
    propdata->nredcostbinvars = 0;
    propdata->glbfirstnonfixed = 0;
@@ -138,7 +138,7 @@ SCIP_RETCODE propdataCreate(
 
 /** counts the number of variables with non-zero root reduced cost */
 static
-int countNoneZeroRootRedcostVars(
+int countNonZeroRootRedcostVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable array */
    int                   nvars               /**< number of variables */
@@ -204,7 +204,7 @@ SCIP_RETCODE propdataInit(
    assert(scip != NULL);
    assert(propdata != NULL);
 
-   /* check if the propagator data structure is already be initialized */
+   /* check if the propagator data structure is already initialized */
    if( propdata->initialized )
       return SCIP_OKAY;
 
@@ -214,11 +214,11 @@ SCIP_RETCODE propdataInit(
    nbinvars = SCIPgetNBinVars(scip);
 
    /* count binary variables with non-zero root reduced cost */
-   nredcostbinvars = countNoneZeroRootRedcostVars(scip, vars, nbinvars);
+   nredcostbinvars = countNonZeroRootRedcostVars(scip, vars, nbinvars);
    SCIPdebugMessage("There are %d (poor) binary variables with non-zero root reduced cost <%s>.\n", nredcostbinvars, SCIPgetProbName(scip));
 
    /* count non-binary variables with non-zero root reduced cost */
-   nredcostvars = countNoneZeroRootRedcostVars(scip, &vars[nbinvars], nvars - nbinvars);
+   nredcostvars = countNonZeroRootRedcostVars(scip, &vars[nbinvars], nvars - nbinvars);
 
    nredcostvars += nredcostbinvars;
 
@@ -281,6 +281,7 @@ SCIP_RETCODE propdataInit(
    propdata->nredcostvars = nredcostvars;
    propdata->nredcostbinvars = nredcostbinvars;
    propdata->glbfirstnonfixed = 0;
+   propdata->lastcutoffbound = SCIPinfinity(scip);
    propdata->initialized = TRUE;
 
    return SCIP_OKAY;
@@ -567,7 +568,6 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
 
    /* get current cutoff bound */
    cutoffbound = SCIPgetCutoffbound(scip);
-   assert(cutoffbound <= propdata->lastcutoffbound);
 
    /* reduced cost strengthening can only be applied, if we have a finite upper bound on the LP value */
    if( SCIPisInfinity(scip, cutoffbound) )
@@ -575,6 +575,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
 
    /* initialize propagator data structure */
    SCIP_CALL( propdataInit(scip, propdata) );
+   assert(cutoffbound <= propdata->lastcutoffbound);
 
    if( cutoffbound == propdata->lastcutoffbound ) /*lint !e777*/
       return SCIP_OKAY;

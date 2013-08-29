@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -124,24 +124,24 @@ SCIP_VAR* SCIPgetResultantAnd(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/* return if the variables of the and-constraint are sorted due to their indices */
-extern
+/** return if the variables of the and-constraint are sorted due to their indices */
+EXTERN
 SCIP_Bool SCIPisAndConsSorted(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< and-constraint */
    );
 
-/* sort the variables of the and-constraint due to their indices */
-extern
+/** sort the variables of the and-constraint due to their indices */
+EXTERN
 SCIP_RETCODE SCIPsortAndCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< and-constraint */
    );
 
-/* changes the check flag for all constraints created out of the given and-constraint, even if the check flag of this
- * and-constraint is set to FALSE
+/** changes the check flag for all constraints created out of the given and-constraint, even if the check flag of this
+ *  and-constraint is set to FALSE
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */

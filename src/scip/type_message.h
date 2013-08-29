@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,30 +38,36 @@ extern "C" {
 /** verbosity levels of output */
 enum SCIP_VerbLevel
 {
-   SCIP_VERBLEVEL_NONE    = 0,           /**< only error and warning messages are displayed */
-   SCIP_VERBLEVEL_DIALOG  = 1,           /**< only interactive dialogs, errors, and warnings are displayed */
-   SCIP_VERBLEVEL_MINIMAL = 2,           /**< only important messages are displayed */
-   SCIP_VERBLEVEL_NORMAL  = 3,           /**< standard messages are displayed */
-   SCIP_VERBLEVEL_HIGH    = 4,           /**< a lot of information is displayed */
-   SCIP_VERBLEVEL_FULL    = 5            /**< all messages are displayed */
+   SCIP_VERBLEVEL_NONE    = 0,          /**< only error and warning messages are displayed */
+   SCIP_VERBLEVEL_DIALOG  = 1,          /**< only interactive dialogs, errors, and warnings are displayed */
+   SCIP_VERBLEVEL_MINIMAL = 2,          /**< only important messages are displayed */
+   SCIP_VERBLEVEL_NORMAL  = 3,          /**< standard messages are displayed */
+   SCIP_VERBLEVEL_HIGH    = 4,          /**< a lot of information is displayed */
+   SCIP_VERBLEVEL_FULL    = 5           /**< all messages are displayed */
 };
 typedef enum SCIP_VerbLevel SCIP_VERBLEVEL;
 
-typedef struct SCIP_Messagehdlr SCIP_MESSAGEHDLR;  /**< message handler */
-typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA; /**< message handler data */
+typedef struct SCIP_Messagehdlr SCIP_MESSAGEHDLR;           /**< message handler */
+typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA;   /**< message handler data */
+
+/** generic messagehandler output function
+ *
+ *  Should be equal to SCIP_DECL_MESSAGEWARNING, SCIP_DECL_MESSAGEDIALOG, and SCIP_DECL_MESSAGEINFO
+ */
+#define SCIP_DECL_MESSAGEOUTPUTFUNC(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
+
 
 /** error message print method
  *
  *  This method is invoked, if SCIP wants to display an error message to the screen or a file
  *
- *  @note That this is independed of the message handler
+ *  @note This function is independent of any message handler
  *
  *  input:
- *  - msg             : string to output into the file
- *  - msglength       : length of message
+ *  - msg             : string to output into the file (or NULL to flush)
  *  - data            : data pointer
  */
-#define SCIP_DECL_ERRORPRINTING(x) void x (const char* msg, int msglength, void* data)
+#define SCIP_DECL_ERRORPRINTING(x) void x (const char* msg, void* data)
 
 /** warning message print method of message handler
  *
@@ -70,7 +76,7 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA; /**< message handler d
  *  input:
  *  - messagehdlr     : the message handler itself
  *  - file            : file stream to print into
- *  - msg             : string to output into the file
+ *  - msg             : string to output into the file (or NULL to flush)
  */
 #define SCIP_DECL_MESSAGEWARNING(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
 
@@ -81,7 +87,7 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA; /**< message handler d
  *  input:
  *  - messagehdlr     : the message handler itself
  *  - file            : file stream to print into
- *  - msg             : string to output into the file
+ *  - msg             : string to output into the file (or NULL to flush)
  */
 #define SCIP_DECL_MESSAGEDIALOG(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
 
@@ -92,7 +98,7 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA; /**< message handler d
  *  input:
  *  - messagehdlr     : the message handler itself
  *  - file            : file stream to print into
- *  - msg             : string to output into the file
+ *  - msg             : string to output into the file (or NULL to flush)
  */
 #define SCIP_DECL_MESSAGEINFO(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -218,7 +218,7 @@ SCIP_RETCODE paramCheckString(
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   for( i = 0; i < strlen(value); ++i )
+   for( i = 0; i < (unsigned int) strlen(value); ++i )
    {
       if( value[i] == '\b' || value[i] == '\f' || value[i] == '\n' || value[i] == '\r' || value[i] == '\v' )
       {
@@ -353,6 +353,42 @@ SCIP_RETCODE paramSetBool(
    else
    {
       SCIPmessagePrintWarning(messagehdlr, "unknown hard coded bool parameter <%s>\n", paramname);
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
+/** if an char parameter exits with the given parameter name it is set to the new value */
+static
+SCIP_RETCODE paramSetChar(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           paramname,          /**< parameter name */
+   char                  value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   )
+{
+   SCIP_PARAM* param;
+
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   if( param != NULL )
+   {
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_CHAR);
+
+      if( SCIPparamIsFixed(param) )
+      {
+         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+
+         return SCIP_OKAY;
+      }
+      SCIP_CALL( SCIPparamSetChar(param, set, messagehdlr, value, quiet) );
+   }
+#ifndef NDEBUG
+   else
+   {
+      SCIPmessagePrintWarning(messagehdlr, "unknown hard coded char parameter <%s>\n", paramname);
    }
 #endif
 
@@ -1333,7 +1369,7 @@ SCIP_RETCODE paramParseString(
    assert(valuestr != NULL);
 
    /* check for quotes */
-   len = strlen(valuestr);
+   len = (unsigned int) strlen(valuestr);
    if( len <= 1 || valuestr[0] != '"' || valuestr[len-1] != '"' )
    {
       SCIPerrorMessage("invalid parameter value <%s> for string parameter <%s> (string has to be in double quotes)\n",
@@ -2363,7 +2399,7 @@ SCIP_RETCODE SCIPparamsetRead(
    /* read the parameters from the file */
    lineno = 0;
    retcode = SCIP_OKAY;
-   while( fgets(line, sizeof(line), file) != NULL && retcode == SCIP_OKAY )
+   while( fgets(line, (int) sizeof(line), file) != NULL && retcode == SCIP_OKAY )
    {
       lineno++;
       retcode = paramsetParse(paramset, set, messagehdlr, line);
@@ -3459,23 +3495,23 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       break;
 
    case SCIP_PARAMEMPHASIS_CPSOLVER:
-      /* use only first unique implication point */
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/fuiplevels", 1, quiet) );
-
-      /* conflict constraints should be subject to aging to reduce the number of stored conflicts */
-      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "conflict/dynamic", TRUE, quiet) );
-
       /* shrink the minimal maximum value for the conflict length */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/minmaxvars", 10, quiet) );
+
+      /* use only first unique implication point */
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/fuiplevels", 1, quiet) );
 
       /* do not use reconversion conflicts */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/reconvlevels", 0, quiet) );
 
-      /* after 1000 conflict we force a restart since then the variable statistics are reasonable initialized */
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/restartnum", 1000, quiet) );
+      /* after 250 conflict we force a restart since then the variable statistics are reasonable initialized */
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/restartnum", 250, quiet) );
 
-      /* avoid a second restart due to conflicts */
-      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "conflict/restartfac", SCIP_REAL_MAX / 100000.0, quiet) );
+      /* increase the number of conflicts which induce a restart */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "conflict/restartfac", 2.0, quiet) );
+
+      /* weight the variable which made into a conflict */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "conflict/conflictweight", 1.0, quiet) );
 
       /* do not check pseudo solution (for performance reasons) */
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/disableenfops", TRUE, quiet) );
@@ -3486,11 +3522,17 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       /* turn of LP relaxation */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/solvefreq", -1, quiet) );
 
-      /* set priority for depth first search to highest possible value */
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "nodeselection/restartdfs/stdpriority", INT_MAX/4, quiet) );
+      /* prefer the down branch in case the value based history does not suggest something */
+      SCIP_CALL( paramSetChar(paramset, set, messagehdlr, "nodeselection/childsel", 'd', quiet) );
+
+      /* accept any bound change */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "numerics/boundstreps", 1e-6, quiet) );
+
+      /* allow for at most 10 restart, after that the value based history should be reliable */
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/maxrestarts", 10, quiet) );
 
       /* set priority for depth first search to highest possible value */
-      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "numerics/boundstreps", 1e-6, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "nodeselection/dfs/stdpriority", INT_MAX/4, quiet) );
 
       break;
 

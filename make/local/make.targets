@@ -1,6 +1,6 @@
 # this local Makefile includes the cluster targets
 
-OPTHOST	   	 := $(shell uname -n | tr -cd '[:alpha:]')
+OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | tr -cd '[:alpha:]')
 
 -include $(SCIPDIR)/make/local/make.$(OPTHOST)
 
@@ -27,6 +27,14 @@ testclustercbc:
 		$(SHELL) ./check_cluster_cbc.sh $(TEST) $(CBC) $(SETTINGS) \
 		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
+		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+
+.PHONY: testclustergurobi
+testclustergurobi:
+		cd check; \
+		$(SHELL) ./check_cluster_gurobi.sh $(TEST) $(GUROBI) $(SETTINGS) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
 		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
 .PHONY: testgamscluster

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -913,7 +913,7 @@ void hashtablelistFree(
 
    assert(hashtablelist != NULL);
    assert(blkmem != NULL);
-   
+
    list = *hashtablelist;
    while( list != NULL )
    {
@@ -949,7 +949,7 @@ SCIP_HASHTABLELIST* hashtablelistFind(
       currentkeyval = hashkeyval(userptr, currentkey);
       if( currentkeyval == keyval && hashkeyeq(userptr, currentkey, key) )
          return hashtablelist;
-      
+
       hashtablelist = hashtablelist->next;
    }
 
@@ -1005,10 +1005,12 @@ void* hashtablelistRetrieve(
 
 
 /** retrieves element with given key from the hash list, or NULL
- * returns pointer to hash table list entry */
+ *  returns pointer to hash table list entry
+ */
 static
 void* hashtablelistRetrieveNext(
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< on input: hash list to search; on exit: hash list entry corresponding to element after retrieved one, or NULL */
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< on input: hash list to search; on exit: hash list entry corresponding
+                                              *   to element after retrieved one, or NULL */
    SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
@@ -1020,7 +1022,7 @@ void* hashtablelistRetrieveNext(
    SCIP_HASHTABLELIST* h;
 
    assert(hashtablelist != NULL);
-   
+
    /* find hash list entry */
    h = hashtablelistFind(*hashtablelist, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key);
 
@@ -1028,18 +1030,18 @@ void* hashtablelistRetrieveNext(
    if( h != NULL )
    {
       *hashtablelist = h->next;
-      
+
       return h->element;
    }
-   
+
    *hashtablelist = NULL;
-   
+
    return NULL;
 }
 
 /** removes element from the hash list */
 static
-SCIP_RETCODE hashtablelistRemove(
+SCIP_Bool hashtablelistRemove(
    SCIP_HASHTABLELIST**  hashtablelist,      /**< pointer to hash list */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    void*                 element             /**< element to remove from the list */
@@ -1059,6 +1061,129 @@ SCIP_RETCODE hashtablelistRemove(
       nextlist = (*hashtablelist)->next;
       BMSfreeBlockMemory(blkmem, hashtablelist);
       *hashtablelist = nextlist;
+
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+#define SCIP_HASHTABLE_MAXSIZE 33554431 /* 2^25 - 1*/
+#define SCIP_HASHTABLE_RESIZE_PERCENTAGE 65
+#define SCIP_HASHTABLE_GROW_FACTOR 1.31
+
+/** resizing(increasing) the given hashtable */
+static
+SCIP_RETCODE hashtableResize(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   SCIP_HASHTABLELIST** newlists;
+   SCIP_HASHTABLELIST* hashtablelist;
+   SCIP_Longint nelements;
+   int nnewlists;
+   int l;
+
+   assert(hashtable != NULL);
+   assert(hashtable->lists != NULL);
+   assert(hashtable->nlists > 0);
+   assert(hashtable->hashgetkey != NULL);
+   assert(hashtable->hashkeyeq != NULL);
+   assert(hashtable->hashkeyval != NULL);
+
+   /* get new memeory for hash table lists */
+   nnewlists = (int) MIN((unsigned int)(hashtable->nlists * SCIP_HASHTABLE_GROW_FACTOR), SCIP_HASHTABLE_MAXSIZE);
+   nnewlists = MAX(nnewlists, hashtable->nlists);
+
+   SCIPdebugMessage("load = %g, nelements = %"SCIP_LONGINT_FORMAT", nlists = %d, nnewlist = %d\n", SCIPhashtableGetLoad(hashtable), hashtable->nelements, hashtable->nlists, nnewlists);
+
+   if( nnewlists > hashtable->nlists )
+   {
+      SCIP_Bool onlyone;
+      void* key;
+      unsigned int keyval;
+      unsigned int hashval;
+
+      SCIP_ALLOC( BMSallocClearMemoryArray(&newlists, nnewlists) );
+
+      /* move all lists */
+      for( l = hashtable->nlists - 1; l >= 0; --l )
+      {
+         hashtablelist = hashtable->lists[l];
+         onlyone = TRUE;
+
+         /* move all elements frmm the old lists into the new lists */
+         while( hashtablelist != NULL )
+         {
+            /* get the hash key and its hash value */
+            key = hashtable->hashgetkey(hashtable->userptr, hashtablelist->element);
+            keyval = hashtable->hashkeyval(hashtable->userptr, key);
+            hashval = keyval % nnewlists; /*lint !e573*/
+
+            /* if the old hash table list consists of only one entry, we still can use this old memory block instead
+             * of creating a new one
+             */
+            if( hashtablelist->next == NULL && onlyone )
+            {
+               /* the new list is also empty, we can directly copy the entry */
+               if( newlists[hashval] == NULL )
+                  newlists[hashval] = hashtablelist;
+               /* the new list is not empty, so we need to find the first empty spot */
+               else
+               {
+                  SCIP_HASHTABLELIST* lastnext = newlists[hashval];
+                  SCIP_HASHTABLELIST* next = lastnext->next;
+
+                  while( next != NULL )
+                  {
+                     lastnext = next;
+                     next = next->next;
+                  }
+
+                  lastnext->next = hashtablelist;
+               }
+
+               hashtable->lists[l] = NULL;
+            }
+            else
+            {
+               /* append old element to the list at the hash position */
+               SCIP_CALL( hashtablelistAppend(&(newlists[hashval]), hashtable->blkmem, hashtablelist->element) );
+            }
+
+            onlyone = FALSE;
+            hashtablelist = hashtablelist->next;
+         }
+      }
+
+      /* remember number of elements */
+      nelements = hashtable->nelements;
+      /* clear old lists */
+      SCIPhashtableClear(hashtable);
+      /* free old lists */
+      BMSfreeMemoryArray(&(hashtable->lists));
+
+      /* set new data */
+      hashtable->lists = newlists;
+      hashtable->nlists = nnewlists;
+      hashtable->nelements = nelements;
+
+#ifdef SCIP_MORE_DEBUG
+      {
+         SCIP_Longint sumslotsize = 0;
+
+         for( l = 0; l < hashtable->nlists; ++l )
+         {
+            hashtablelist = hashtable->lists[i];
+            while( hashtablelist != NULL )
+            {
+               sumslotsize++;
+               hashtablelist = hashtablelist->next;
+            }
+         }
+         assert(sumslotsize == hashtable->nelements);
+      }
+#endif
    }
 
    return SCIP_OKAY;
@@ -1082,15 +1207,14 @@ SCIP_RETCODE SCIPhashtableCreate(
    assert(hashkeyval != NULL);
 
    SCIP_ALLOC( BMSallocMemory(hashtable) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*hashtable)->lists, tablesize) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*hashtable)->lists, tablesize) );
    (*hashtable)->blkmem = blkmem;
    (*hashtable)->nlists = tablesize;
    (*hashtable)->hashgetkey = hashgetkey;
    (*hashtable)->hashkeyeq = hashkeyeq;
    (*hashtable)->hashkeyval = hashkeyval;
    (*hashtable)->userptr = userptr;
-
-   BMSclearMemoryArray((*hashtable)->lists, tablesize);
+   (*hashtable)->nelements = 0;
 
    return SCIP_OKAY;
 }
@@ -1142,9 +1266,15 @@ void SCIPhashtableClear(
    /* free hash lists */
    for( i = hashtable->nlists - 1; i >= 0; --i )
       hashtablelistFree(&lists[i], blkmem);
+
+   hashtable->nelements = 0;
 }
 
-/** inserts element in hash table (multiple inserts of same element possible) */
+/** inserts element in hash table (multiple inserts of same element possible)
+ *
+ *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
+ *        to the hash table, due to dynamic resizing.
+ */
 SCIP_RETCODE SCIPhashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to insert into the table */
@@ -1162,6 +1292,12 @@ SCIP_RETCODE SCIPhashtableInsert(
    assert(hashtable->hashkeyval != NULL);
    assert(element != NULL);
 
+   /* dynamically resizing the hashtables */
+   if( SCIPhashtableGetLoad(hashtable) > SCIP_HASHTABLE_RESIZE_PERCENTAGE )
+   {
+      SCIP_CALL( hashtableResize(hashtable) );
+   }
+
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
@@ -1169,11 +1305,17 @@ SCIP_RETCODE SCIPhashtableInsert(
 
    /* append element to the list at the hash position */
    SCIP_CALL( hashtablelistAppend(&hashtable->lists[hashval], hashtable->blkmem, element) );
-   
+
+   ++(hashtable->nelements);
+
    return SCIP_OKAY;
 }
 
-/** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
+/** inserts element in hash table (multiple insertion of same element is checked and results in an error)
+ *
+ *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
+ *        element to the hash table, due to dynamic resizing.
+ */
 SCIP_RETCODE SCIPhashtableSafeInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to insert into the table */
@@ -1188,7 +1330,7 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
 
    /* insert element in hash table */
    SCIP_CALL( SCIPhashtableInsert(hashtable, element) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1218,10 +1360,15 @@ void* SCIPhashtableRetrieve(
 }
 
 /** retrieve element with key from hash table, returns NULL if not existing
- * can be used to retrieve all entries with the same key (one-by-one) */
+ *  can be used to retrieve all entries with the same key (one-by-one)
+ *
+ *  @note The returned hashtablelist pointer might get invalid when adding a new element to the hash table.
+ */
 void* SCIPhashtableRetrieveNext(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL; output: entry in hash table list corresponding to element after retrieved one, or NULL */
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL
+                                              *   output: entry in hash table list corresponding to element after
+                                              *           retrieved one, or NULL */
    void*                 key                 /**< key to retrieve */
    )
 {
@@ -1241,10 +1388,10 @@ void* SCIPhashtableRetrieveNext(
    if( *hashtablelist == NULL )
    {
       unsigned int hashval;
-      
+
       /* get the hash value of the key */
       hashval = keyval % hashtable->nlists; /*lint !e573*/
-      
+
       *hashtablelist = hashtable->lists[hashval];
    }
 
@@ -1303,8 +1450,9 @@ SCIP_RETCODE SCIPhashtableRemove(
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* remove element from the list at the hash position */
-   SCIP_CALL( hashtablelistRemove(&hashtable->lists[hashval], hashtable->blkmem, element) );
-   
+   if( hashtablelistRemove(&hashtable->lists[hashval], hashtable->blkmem, element) )
+      --(hashtable->nelements);
+
    return SCIP_OKAY;
 }
 
@@ -1325,6 +1473,28 @@ void SCIPhashtableRemoveAll(
    /* free hash lists */
    for( i = hashtable->nlists - 1; i >= 0; --i )
       hashtablelistFree(&lists[i], blkmem);
+
+   hashtable->nelements = 0;
+}
+
+/** returns number of hash table elements */
+SCIP_Longint SCIPhashtableGetNElemenets(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   assert(hashtable != NULL);
+
+   return hashtable->nelements;
+}
+
+/** returns the load of the given hash table in percentage */
+SCIP_Real SCIPhashtableGetLoad(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   assert(hashtable != NULL);
+
+   return ((SCIP_Real)(hashtable->nelements) / (hashtable->nlists) * 100.0);
 }
 
 /** prints statistics about hash table usage */
@@ -1361,12 +1531,13 @@ void SCIPhashtablePrintStatistics(
          sumslotsize += slotsize;
       }
    }
+   assert(sumslotsize == hashtable->nelements);
 
-   SCIPmessagePrintInfo(messagehdlr, "%d hash entries, used %d/%d slots (%.1f%%)",
-      sumslotsize, usedslots, hashtable->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashtable->nlists));
+   SCIPmessagePrintInfo(messagehdlr, "%"SCIP_LONGINT_FORMAT" hash entries, used %d/%d slots (%.1f%%)",
+      hashtable->nelements, usedslots, hashtable->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashtable->nlists));
    if( usedslots > 0 )
       SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot",
-         (SCIP_Real)sumslotsize/(SCIP_Real)usedslots, maxslotsize);
+         (SCIP_Real)(hashtable->nelements)/(SCIP_Real)usedslots, maxslotsize);
    SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
@@ -1384,19 +1555,18 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqString)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 {  /*lint --e{715}*/
    const char* str;
-   unsigned int sum;
+   unsigned int hash;
 
    str = (const char*)key;
-   sum = 0;
-
+   hash = 37;
    while( *str != '\0' )
    {
-      sum *= 31;
-      sum += (unsigned int)(*str); /*lint !e571*/
+      hash *= 11;
+      hash += (unsigned int)(*str); /*lint !e571*/
       str++;
    }
 
-   return sum;
+   return hash;
 }
 
 
@@ -1976,13 +2146,13 @@ SCIP_RETCODE SCIPrealarrayExtend(
    assert(realarray->maxusedidx == INT_MIN || realarray->maxusedidx < realarray->firstidx + realarray->valssize);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
-   
+
    minidx = MIN(minidx, realarray->minusedidx);
    maxidx = MAX(maxidx, realarray->maxusedidx);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   SCIPdebugMessage("extending realarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending realarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n",
       (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
@@ -2081,7 +2251,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + realarray->valssize);
-      
+
       if( realarray->minusedidx <= realarray->maxusedidx )
       {
          int shift;
@@ -2117,7 +2287,7 @@ SCIP_RETCODE SCIPrealarrayClear(
 {
    assert(realarray != NULL);
 
-   SCIPdebugMessage("clearing realarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing realarray %p (firstidx=%d, size=%d, range=[%d,%d])\n",
       (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx);
 
    if( realarray->minusedidx <= realarray->maxusedidx )
@@ -2149,7 +2319,7 @@ SCIP_Real SCIPrealarrayGetVal(
 {
    assert(realarray != NULL);
    assert(idx >= 0);
-   
+
    if( idx < realarray->minusedidx || idx > realarray->maxusedidx )
       return 0.0;
    else
@@ -2173,16 +2343,16 @@ SCIP_RETCODE SCIPrealarraySetVal(
    assert(realarray != NULL);
    assert(idx >= 0);
 
-   SCIPdebugMessage("setting realarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %g\n", 
+   SCIPdebugMessage("setting realarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %g\n",
       (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, idx, val);
 
-   if( !SCIPsetIsZero(set, val) )
+   if( val != 0.0 )
    {
       /* extend array to be able to store the index */
       SCIP_CALL( SCIPrealarrayExtend(realarray, set, idx, idx) );
       assert(idx >= realarray->firstidx);
       assert(idx < realarray->firstidx + realarray->valssize);
-      
+
       /* set the array value of the index */
       realarray->vals[idx - realarray->firstidx] = val;
 
@@ -2194,7 +2364,7 @@ SCIP_RETCODE SCIPrealarraySetVal(
    {
       /* set the array value of the index to zero */
       realarray->vals[idx - realarray->firstidx] = 0.0;
-      
+
       /* check, if we can tighten the min/maxusedidx */
       if( idx == realarray->minusedidx )
       {
@@ -2205,7 +2375,8 @@ SCIP_RETCODE SCIPrealarraySetVal(
             realarray->minusedidx++;
          }
          while( realarray->minusedidx <= realarray->maxusedidx
-            && SCIPsetIsZero(set, realarray->vals[realarray->minusedidx - realarray->firstidx]) );
+            && realarray->vals[realarray->minusedidx - realarray->firstidx] == 0.0 );
+
          if( realarray->minusedidx > realarray->maxusedidx )
          {
             realarray->minusedidx = INT_MAX;
@@ -2222,8 +2393,8 @@ SCIP_RETCODE SCIPrealarraySetVal(
             realarray->maxusedidx--;
             assert(realarray->minusedidx <= realarray->maxusedidx);
          }
-         while( SCIPsetIsZero(set, realarray->vals[realarray->maxusedidx - realarray->firstidx]) );
-      }      
+         while( realarray->vals[realarray->maxusedidx - realarray->firstidx] == 0.0 );
+      }
    }
 
    return SCIP_OKAY;
@@ -3333,8 +3504,6 @@ int SCIPptrarrayGetMaxIdx(
 }
 
 
-
-
 /*
  * Sorting algorithms
  */
@@ -3375,7 +3544,7 @@ void SCIPsort(
    /* create identity permutation */
    for( pos = 0; pos < len; ++pos )
       perm[pos] = pos;
-   
+
    SCIPsortInd(perm, indcomp, dataptr, len);
 }
 
@@ -3461,19 +3630,20 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
-/* SCIPsortPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
-#define SORTTPL_NAMEEXT     PtrPtrIntInt
+/* SCIPsortPtrRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrRealIntInt
 #define SORTTPL_KEYTYPE     void*
-#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c" /*lint !e451*/
 
-/* SCIPsortPtrRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
-#define SORTTPL_NAMEEXT     PtrRealIntInt
+
+/* SCIPsortPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrIntInt
 #define SORTTPL_KEYTYPE     void*
-#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_PTRCOMP
@@ -3516,6 +3686,7 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     SCIP_Real
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealBoolPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -3523,25 +3694,20 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
 
-/* SCIPsortRealPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
-#define SORTTPL_NAMEEXT     RealPtrPtrInt
-#define SORTTPL_KEYTYPE     SCIP_Real
-#define SORTTPL_FIELD1TYPE  void*
-#define SORTTPL_FIELD2TYPE  void*
-#define SORTTPL_FIELD3TYPE  int
-#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealInt
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  int
 #include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortRealIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealIntLong
@@ -3550,6 +3716,7 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  SCIP_Longint
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortRealIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealIntPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -3557,12 +3724,14 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortRealLongRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealLongRealInt
@@ -3580,6 +3749,7 @@ void SCIPsort(
 #define SORTTPL_FIELD3TYPE  int
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortRealRealRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealRealInt
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -3587,6 +3757,7 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
 #include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortRealRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealRealPtr
@@ -3596,6 +3767,16 @@ void SCIPsort(
 #define SORTTPL_FIELD3TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
+/* SCIPsortRealPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealPtrPtrInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortRealRealRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealRealBoolPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -3604,6 +3785,7 @@ void SCIPsort(
 #define SORTTPL_FIELD3TYPE  SCIP_Bool
 #define SORTTPL_FIELD4TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     Int
@@ -3917,6 +4099,28 @@ void SCIPsortDown(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortDownPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrPtrIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortPtrPtrRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrPtrRealInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortDownPtrPtrLongInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownPtrPtrLongInt
 #define SORTTPL_KEYTYPE     void*
@@ -3946,12 +4150,15 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortDownRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealBoolPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  SCIP_Bool
 #define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortDownRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealPtr
@@ -4045,6 +4252,16 @@ void SCIPsortDown(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortDownRealPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealPtrPtrInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortDownRealRealRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealRealRealBoolPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -4070,6 +4287,7 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
 /* SCIPsortDownIntIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownIntIntReal
 #define SORTTPL_KEYTYPE     int
@@ -4077,6 +4295,15 @@ void SCIPsortDown(
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortDownIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownIntPtr
@@ -4996,6 +5223,38 @@ SCIP_RETCODE SCIPdigraphCreate(
    return SCIP_OKAY;
 }
 
+/** resize directed graph structure */
+SCIP_RETCODE SCIPdigraphResize(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   nnodes              /**< new number of nodes */
+   )
+{
+   int n;
+
+   /* check if the digraph has already a proper size */
+   if( nnodes <= digraph->nnodes )
+      return SCIP_OKAY;
+
+   /* reallocate memory for increasing the arrays storing arcs and datas */
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successorssize, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nsuccessors, nnodes) );
+
+   /* initialize the new node data structures */
+   for( n = digraph->nnodes; n < nnodes; ++n )
+   {
+      digraph->nodedatas[n] = NULL;
+      digraph->successorssize[n] = 0;
+      digraph->nsuccessors[n] = 0;
+   }
+
+   /* store the new number of nodes */
+   digraph->nnodes = nnodes;
+
+   return SCIP_OKAY;
+}
+
 /** copies directed graph structure */
 SCIP_RETCODE SCIPdigraphCopy(
    SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
@@ -5217,6 +5476,36 @@ int SCIPdigraphGetNNodes(
    return digraph->nnodes;
 }
 
+/** returns the node data, or NULL if no data exist */
+void* SCIPdigraphGetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the node data is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+
+   return digraph->nodedatas[node];
+}
+
+/** sets the node data
+ *
+ *  @note The old user pointer is not freed. This has to be done by the user
+ */
+void SCIPdigraphSetNodeDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   void*                 dataptr,            /**< user node data pointer, or NULL */
+   int                   node                /**< node for which the node data is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+
+   digraph->nodedatas[node] = dataptr;
+}
+
 /** returns the total number of arcs in the given digraph */
 int SCIPdigraphGetNArcs(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
@@ -5383,6 +5672,12 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
 
    assert(digraph != NULL);
    assert(digraph->nnodes > 0);
+
+   /* first free the old components */
+   if( digraph->ncomponents > 0 )
+   {
+      SCIPdigraphFreeComponents(digraph);
+   }
 
    digraph->ncomponents = 0;
    digraph->componentstartsize = 10;
@@ -6170,13 +6465,13 @@ SCIP_Longint SCIPcalcGreComDiv(
 
    assert(val1 > 0);
    assert(val2 > 0);
-   
+
    t = 0;
    /* if val1 is even, divide it by 2 */
    while( !(val1 & 1) )
    {
       val1 >>= 1; /*lint !e704*/
-      
+
       /* if val2 is even too, divide it by 2 and increase t(=number of e) */
       if( !(val2 & 1) )
       {
@@ -6189,36 +6484,82 @@ SCIP_Longint SCIPcalcGreComDiv(
          /* while val1 is even, divide it by 2 */
          while( !(val1 & 1) )
             val1 >>= 1; /*lint !e704*/
-         
+
          break;
       }
    }
+
    /* while val2 is even, divide it by 2 */
    while( !(val2 & 1) )
       val2 >>= 1; /*lint !e704*/
-   
-   /* val1 and val 2 are odd */
-   while( val1 != val2 )
+
+   /* the following if/else condition is only to make sure that we do not overflow when adding up both values before
+    * dividing them by 4 in the following while loop
+    */
+   if( t == 0 )
    {
       if( val1 > val2 )
       {
          val1 -= val2;
-         /* val1 is now even, divide it by 2  */
-         do 
-         {
+
+         /* divide val1 by 2 as long as possible  */
+         while( !(val1 & 1) )
             val1 >>= 1;   /*lint !e704*/
-         }
-         while( !(val1 & 1) );
       }
-      else 
+      else if( val1 < val2 )
       {
          val2 -= val1;
-         /* val2 is now even, divide it by 2  */
-         do 
-         {
-            val2 >>= 1;  /*lint !e704*/
-         }
-         while( !(val2 & 1) );
+
+         /* divide val2 by 2 as long as possible  */
+         while( !(val2 & 1) )
+            val2 >>= 1;   /*lint !e704*/
+      }
+   }
+
+   /* val1 and val2 are odd */
+   while( val1 != val2 )
+   {
+      if( val1 > val2 )
+      {
+         /* we can stop if one value reached one */
+         if( val2 == 1 )
+            return (1 << t);  /*lint !e647 !e701*/
+
+         /* if ((val1 xor val2) and 2) = 2, then gcd(val1, val2) = gcd((val1 + val2)/4, val2),
+          * and otherwise                        gcd(val1, val2) = gcd((val1 − val2)/4, val2)
+          */
+         if( ((val1 ^ val2) & 2) == 2 )
+            val1 += val2;
+         else
+            val1 -= val2;
+
+         assert((val1 & 3) == 0);
+         val1 >>= 2;   /*lint !e704*/
+
+         /* if val1 is still even, divide it by 2  */
+         while( !(val1 & 1) )
+            val1 >>= 1;   /*lint !e704*/
+      }
+      else
+      {
+         /* we can stop if one value reached one */
+         if( val1 == 1 )
+            return (1 << t);  /*lint !e647 !e701*/
+
+         /* if ((val2 xor val1) and 2) = 2, then gcd(val2, val1) = gcd((val2 + val1)/4, val1),
+          * and otherwise                        gcd(val2, val1) = gcd((val2 − val1)/4, val1)
+          */
+         if( ((val2 ^ val1) & 2) == 2 )
+            val2 += val1;
+         else
+            val2 -= val1;
+
+         assert((val2 & 3) == 0);
+         val2 >>= 2;   /*lint !e704*/
+
+         /* if val2 is still even, divide it by 2  */
+         while( !(val2 & 1) )
+            val2 >>= 1;   /*lint !e704*/
       }
    }
 
@@ -6237,7 +6578,7 @@ SCIP_Longint SCIPcalcSmaComMul(
    assert(val2 > 0);
 
    gcd = SCIPcalcGreComDiv(val1, val2);
-   
+
    return val1/gcd * val2;
 }
 
@@ -6830,6 +7171,13 @@ SCIP_Longint SCIPcalcBinomCoef(
    }
 }
 
+/** negates a number */
+SCIP_Real SCIPnegateReal(
+   SCIP_Real             x                   /**< value to negate */
+   )
+{
+   return -x;
+}
 
 /*
  * Permutations / Shuffling
@@ -6911,7 +7259,6 @@ void SCIPpermuteArray(
       /* get a random position into which the last entry should be shuffled */
       i = SCIPgetRandomInt(begin, end, randseed);
 
-      printf("i = %d\n", i);
       /* swap the last element and the random element */
       tmp = array[i];
       array[i] = array[end];
@@ -7111,16 +7458,22 @@ int SCIPsnprintf(
    return n;
 }
 
-/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to str */
+/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
 SCIP_Bool SCIPstrToIntValue(
    const char*           str,                /**< string to search */
    int*                  value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
    assert(str != NULL);
    assert(value != NULL);
    assert(endptr != NULL);
+
+   /* init errno to detect possible errors */
+   errno = 0;
 
    *value = strtol(str, endptr, 10);
 
@@ -7136,16 +7489,22 @@ SCIP_Bool SCIPstrToIntValue(
    return FALSE;
 }
 
-/** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to str */
+/** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
 SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
    assert(str != NULL);
    assert(value != NULL);
    assert(endptr != NULL);
+
+   /* init errno to detect possible errors */
+   errno = 0;
 
    *value = strtod(str, endptr);
 
@@ -7162,7 +7521,7 @@ SCIP_Bool SCIPstrToRealValue(
 }
 
 /** copies the first size characters between a start and end character of str into token, if no error occured endptr
- *  will point to the position after the read part, otherwise it will point to NULL
+ *  will point to the position after the read part, otherwise it will point to @p str
  */
 void SCIPstrCopySection(
    const char*           str,                /**< string to search */
@@ -7170,8 +7529,7 @@ void SCIPstrCopySection(
    char                  endchar,            /**< character which defines the ending */
    char*                 token,              /**< string to store the copy */
    int                   size,               /**< size of the token char array */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed,
-                                              *   otherwise str */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
    const char* copystr;

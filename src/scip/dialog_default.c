@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1143,6 +1143,62 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
    SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display of solutions in the pool command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolutionPool)
+{  /*lint --e{715}*/
+   char prompt[SCIP_MAXSTRLEN];
+   SCIP_Bool endoffile;
+   SCIP_SOL** sols;
+   char* idxstr;
+   char* endstr;
+   int nsols;
+   int idx;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   if ( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
+   {
+      SCIPdialogMessage(scip, NULL, "No solution available.\n\n");
+      return SCIP_OKAY;
+   }
+
+   nsols = SCIPgetNSols(scip);
+   if ( nsols == 0 )
+   {
+      SCIPdialogMessage(scip, NULL, "No solution available.\n\n");
+      return SCIP_OKAY;
+   }
+
+   /* parse solution number */
+   (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN-1, "index of solution [0-%d]: ", nsols-1);
+
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &idxstr, &endoffile) );
+
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+
+   if ( SCIPstrToIntValue(idxstr, &idx, &endstr) )
+   {
+      if ( idx < 0 || idx >= nsols )
+      {
+         SCIPdialogMessage(scip, NULL, "Solution index out of bounds [0-%d].\n", nsols-1);
+         return SCIP_OKAY;
+      }
+
+      sols = SCIPgetSols(scip);
+      assert( sols[idx] != NULL );
+      SCIP_CALL( SCIPprintSol(scip, sols[idx], NULL, FALSE) );
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
 
    return SCIP_OKAY;
 }
@@ -2425,6 +2481,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    char* valuestr;
    SCIP_Bool offset;
    SCIP_Bool generic;
+   SCIP_Bool lazyconss;
    SCIP_Bool error;
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -2496,8 +2553,30 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    (void) SCIPsnprintf(command, SCIP_MAXSTRLEN, "%s %s", command, offset ? "TRUE" : "FALSE");
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, command, FALSE) );
 
+   /* fourth ask for lazy constraints */
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
+         "output removable rows as lazy constraints (TRUE/FALSE): ",
+         &valuestr, &endoffile) );
+
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+   if( valuestr[0] == '\0' )
+      return SCIP_OKAY;
+
+   lazyconss = parseBoolValue(scip, valuestr, &error);
+
+   if( error )
+      return SCIP_OKAY;
+
+   /* adjust command and add to the history */
+   SCIPescapeString(command, SCIP_MAXSTRLEN, filename);
+   (void) SCIPsnprintf(command, SCIP_MAXSTRLEN, "%s %s", command, lazyconss ? "TRUE" : "FALSE");
+
    /* execute command */
-   SCIP_CALL( SCIPwriteMIP(scip, filename, generic, offset) );
+   SCIP_CALL( SCIPwriteMIP(scip, filename, generic, offset, lazyconss) );
    SCIPdialogMessage(scip, NULL, "written node MIP relaxation to file <%s>\n", filename);
 
    SCIPdialogMessage(scip, NULL, "\n");
@@ -3058,6 +3137,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecDisplaySolution, NULL, NULL,
             "solution", "display best primal solution", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display solution */
+   if( !SCIPdialogHasEntry(submenu, "sols") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplaySolutionPool, NULL, NULL,
+            "sols", "display solutions from pool", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -3934,7 +4024,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecSetLimitsObjective, NULL, NULL,
-            "objective", "set limit on objective value", FALSE, NULL) );
+            "objective", "set limit on objective function, such that only solutions better than this limit are accepted", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
 

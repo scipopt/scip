@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1780,7 +1780,7 @@ int eventfilterSearch(
    assert(eventtype != SCIP_EVENTTYPE_DISABLED);
    assert(eventhdlr != NULL);
 
-   for( i = 0; i < eventfilter->len; ++i )
+   for( i = eventfilter->len - 1; i >= 0; --i )
    {
       if( eventdata == eventfilter->eventdatas[i]
          && eventhdlr == eventfilter->eventhdlrs[i]
@@ -1788,7 +1788,7 @@ int eventfilterSearch(
          && eventfilter->nextpos[i] == -2 )
          return i;
    }
-   
+
    return -1;
 }
 

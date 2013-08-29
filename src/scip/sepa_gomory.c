@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -65,7 +65,7 @@
 #define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of gomory cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of gomory cuts separated per separation round in root node */
-#define DEFAULT_MAXRANK               0 /**< maximal rank of a gomory cut that could not be scaled to integral coefficients (-1: unlimited) */
+#define DEFAULT_MAXRANK               3 /**< maximal rank of a gomory cut that could not be scaled to integral coefficients (-1: unlimited) */
 #define DEFAULT_MAXRANKINTEGRAL      -1 /**< maximal rank of a gomory cut that could be scaled to integral coefficients (-1: unlimited) */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MAXWEIGHTRANGE    1e+04 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
@@ -484,7 +484,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                /* add the bound change as cut to avoid that the LP gets modified. that would mean the LP is not flushed
                 * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply that bound change automatically
                 */
-               SCIP_CALL( SCIPaddCut(scip, NULL, cut, TRUE) );
+               SCIP_CALL( SCIPaddCut(scip, NULL, cut, TRUE, &cutoff) );
                naddedcuts++;
             }
             else
@@ -532,7 +532,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                      else
                      {
                         /* local cuts we add to the sepastore */
-                        SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+                        SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &cutoff) );
                      }
 
                      naddedcuts++;

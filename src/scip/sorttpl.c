@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,6 +29,7 @@
  * #define SORTTPL_FIELD3TYPE   <type>     data type of third additional array which should be sorted in the same way (optional)
  * #define SORTTPL_FIELD4TYPE   <type>     data type of fourth additional array which should be sorted in the same way (optional)
  * #define SORTTPL_FIELD5TYPE   <type>     data type of fifth additional array which should be sorted in the same way (optional)
+ * #define SORTTPL_FIELD6TYPE   <type>     data type of fifth additional array which should be sorted in the same way (optional)
  * #define SORTTPL_PTRCOMP                 ptrcomp method should be used for comparisons (optional)
  * #define SORTTPL_INDCOMP                 indcomp method should be used for comparisons (optional)
  * #define SORTTPL_BACKWARDS               should the array be sorted other way around
@@ -283,8 +284,8 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
          SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[hi]); )
          SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[hi]); )
          SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[hi]); )
-         SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field5[lo], field5[hi]); )
-         SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field6[lo], field6[hi]); )
+         SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD5TYPE, field5[lo], field5[hi]); )
+         SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD6TYPE, field6[lo], field6[hi]); )
 
          lo++;
          hi--;
@@ -308,8 +309,8 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
             SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[mid]); )
             SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[mid]); )
             SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[mid]); )
-            SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field5[lo], field5[mid]); )
-            SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field6[lo], field6[mid]); )
+            SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD5TYPE, field5[lo], field5[mid]); )
+            SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD6TYPE, field6[lo], field6[mid]); )
             lo++;
          }
       }
@@ -329,8 +330,8 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
             SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[hi], field2[mid]); )
             SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[hi], field3[mid]); )
             SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[hi], field4[mid]); )
-            SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field5[hi], field5[mid]); )
-            SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field6[hi], field6[mid]); )
+            SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD5TYPE, field5[hi], field5[mid]); )
+            SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD6TYPE, field6[hi], field6[mid]); )
             hi--;
          }
       }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1596,7 +1596,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    assert(heurdata != NULL);
 
    /* do not call heuristic, if it barely succeded */
-   if( (SCIPheurGetNSolsFound(heur)+1) / (SCIP_Real)(SCIPheurGetNCalls(heur)+1) < heurdata->minsuccquot )
+   if( (SCIPheurGetNSolsFound(heur) + 1.0) / (SCIP_Real)(SCIPheurGetNCalls(heur) + 1.0) < heurdata->minsuccquot )
       return SCIP_OKAY;
 
    *result = SCIP_DELAYED;
@@ -1628,7 +1628,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
    /* allow at least a bit more than the so far average number of NLP iterations per dive */
    avgnnlpiterations = (int)(heurdata->nnlpiterations / MAX(ncalls, 1.0));
-   maxnnlpiterations = (int)MAX(maxnnlpiterations, heurdata->nnlpiterations + 1.2*avgnnlpiterations);
+   maxnnlpiterations = (int)MAX((SCIP_Real) maxnnlpiterations, (SCIP_Real) heurdata->nnlpiterations + 1.2*avgnnlpiterations);
 
    /* don't try to dive, if there are no unfixed discrete variables */
    SCIP_CALL( SCIPgetPseudoBranchCands(scip, NULL, &npseudocands, NULL) );
@@ -2233,11 +2233,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          if( !cutoff && !lperror && (heurdata->lp || heurdata->varselrule == 'd')
             && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL && SCIPisLPSolBasic(scip) )
          {
-            SCIP_CALL( SCIPsolveProbingLP(scip, 100, &lperror) );
+            SCIP_CALL( SCIPsolveProbingLP(scip, 100, &lperror, &cutoff) );
 
             /* get LP solution status, objective value, and fractional variables, that should be integral */
             lpsolstat = SCIPgetLPSolstat(scip);
-            cutoff = (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
+            assert(cutoff || (lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT && lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE &&
+                  (lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))));
 
             if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
             {

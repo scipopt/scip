@@ -1,0 +1,6 @@
+# verbosity level of output
+# [type: int, range: [0,5], default: 4]
+display/verblevel = 5
+
+separating/gmi/freq		=	0
+separating/gomory/freq		=	-1

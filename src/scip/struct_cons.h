@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -53,11 +53,11 @@ struct SCIP_Cons
    int                   enfoconsspos;       /**< position of constraint in the handler's enfoconss array */
    int                   checkconsspos;      /**< position of constraint in the handler's checkconss array */
    int                   propconsspos;       /**< position of constraint in the handler's propconss array */
-   int                   nuses;              /**< number of times, this constraint is referenced */
    int                   nlockspos;          /**< number of times, the constraint locked rounding of its variables */
    int                   nlocksneg;          /**< number of times, the constraint locked vars for the constraint's negation */
    int                   activedepth;        /**< depth level of constraint activation (-2: inactive, -1: problem constraint) */
    int                   validdepth;         /**< depth level where constraint is valid (-1: equals activedepth) */
+   int                   nuses;              /**< number of times, this constraint is referenced */
    unsigned int          markedprop:1;       /**< TRUE iff the constraint is marked to be propagated during the next node processing */
    unsigned int          initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
    unsigned int          separate:1;         /**< TRUE iff constraint should be separated during LP processing */
@@ -97,6 +97,8 @@ struct SCIP_Cons
    unsigned int          updateactfocus:1;   /**< TRUE iff delayed constraint activation happened at focus node */
    unsigned int          updatemarkpropagate:1;/**< TRUE iff constraint has to be marked to be propagated in update phase */
    unsigned int          updateunmarkpropagate:1;/**< TRUE iff constraint has to be unmarked to be propagated in update phase */
+   unsigned int          nupgradelocks:29;   /**< number of times, a constraint is locked against an upgrade
+                                              *   (e.g. linear -> logicor), 0 means a constraint can be upgraded */
 };
 
 /** tracks additions and removals of the set of active constraints */
@@ -175,6 +177,9 @@ struct SCIP_Conshdlr
    SCIP_CONS**           enfoconss;          /**< array with active constraints that must be enforced during node processing */
    SCIP_CONS**           checkconss;         /**< array with active constraints that must be checked for feasibility */
    SCIP_CONS**           propconss;          /**< array with active constraints that must be propagated during node processing */
+   SCIP_CONS**           storedpropconss;    /**< array to store constraints that were marked for propagation before
+                                              *   starting probing mode
+                                              */
    SCIP_CONS**           updateconss;        /**< array with constraints that changed and have to be update in the handler */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this constraint handler for the next stages */
    SCIP_CLOCK*           presoltime;         /**< time used for presolving of this constraint handler */
@@ -214,6 +219,8 @@ struct SCIP_Conshdlr
    int                   npropconss;         /**< number of active constraints that may be propagated during node processing */
    int                   nmarkedpropconss;   /**< number of active constraints which are marked to be propagated in the next round */
    int                   nusefulpropconss;   /**< number of non-obsolete active constraints that should be propagated */
+   int                   storedpropconsssize;/**< size of array for storing away marked propagation constraints */
+   int                   storednmarkedpropconss;/**< number of marked propagation constraints that are stored away */
    int                   updateconsssize;    /**< size of updateconss array */
    int                   nupdateconss;       /**< number of update constraints */
    int                   nenabledconss;      /**< total number of enabled constraints of the handler */

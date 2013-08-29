@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -177,7 +177,7 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
 
 #define SCIPnodeGetType(node)           ((SCIP_NODETYPE)(node)->nodetype)
 #define SCIPnodeGetNumber(node)         ((node)->number)
-#define SCIPnodeGetDepth(node)          ((node)->depth)
+#define SCIPnodeGetDepth(node)          ((int) (node)->depth)
 #define SCIPnodeGetLowerbound(node)     ((node)->lowerbound)
 #define SCIPnodeGetEstimate(node)       ((node)->estimate)
 #define SCIPnodeGetDomchg(node)         ((node)->domchg)

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -698,7 +698,7 @@ SCIP_RETCODE applyVbounds(
 
       if( heurdata->copycuts )
       {
-         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, FALSE, NULL) );
       }
 
@@ -759,6 +759,17 @@ SCIP_RETCODE applyVbounds(
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
       SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
 #endif
+
+      /* employ a limit on the number of enforcement rounds in the quadratic constraint handlers; this fixes the issue that
+       * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
+       * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
+       * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no decutions shall be
+       * made for the original SCIP
+       */
+      if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
+      }
 
       /* if there is already a solution, add an objective cutoff */
       if( SCIPgetNSols(scip) > 0 )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,6 +32,7 @@
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_disp.h"
+#include "scip/type_paramset.h"
 #include "scip/pub_disp.h"
 
 #ifdef __cplusplus
@@ -124,7 +125,8 @@ SCIP_RETCODE SCIPdispPrintLine(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics data */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   SCIP_Bool             forcedisplay        /**< should the line be printed without regarding frequency? */
+   SCIP_Bool             forcedisplay,       /**< should the line be printed without regarding frequency? */
+   SCIP_Bool             endline             /**< should the line be terminated with a newline symbol? */
    );
 
 /** activates all display lines fitting in the display w.r. to priority */

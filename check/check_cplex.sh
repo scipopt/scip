@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -42,7 +42,7 @@ TEXFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.tex
 TMPFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.tmp
 SETFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.prm
 
-SETTINGS=settings/$SETNAME.cpxset
+SETTINGS=../settings/$SETNAME.prm
 
 if test "$CONTINUE" = "true"
 then
@@ -100,12 +100,11 @@ do
             rm -f $SETFILE
             echo @01 $i ===========
             echo @01 $i ===========                 >> $ERRFILE
+            echo ""                                  > $TMPFILE
             if test $SETNAME != "default"
             then
-#                echo read $SETTINGS                  > $TMPFILE
-                cp $SETTINGS $TMPFILE
-            else
-                echo ""                              > $TMPFILE
+                echo read $SETTINGS                  >> $TMPFILE
+                echo disp settings changed           >> $TMPFILE
             fi
             if test $FEASTOL != "default"
             then

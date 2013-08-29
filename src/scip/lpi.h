@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -134,7 +134,10 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    );
 
-/** adds columns to the LP */
+/** adds columns to the LP
+ *
+ *  @note ind array is not checked for duplicates, problems may appear if indeces are added more than once
+ */
 extern
 SCIP_RETCODE SCIPlpiAddCols(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -166,7 +169,10 @@ SCIP_RETCODE SCIPlpiDelColset(
                                               *   output: new position of column, -1 if column was deleted */
    );
 
-/** adds rows to the LP */
+/** adds rows to the LP
+ *
+ *  @note ind array is not checked for duplicates, problems may appear if indeces are added more than once
+ */
 extern
 SCIP_RETCODE SCIPlpiAddRows(
    SCIP_LPI*             lpi,                /**< LP interface structure */

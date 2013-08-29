@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1063,7 +1063,8 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
          SCIP_CALL( probRemoveVar(prob, blkmem, set, var) );
 
          /* update the number of variables with non-zero objective coefficient */
-         SCIPprobUpdateNObjVars(prob, set, SCIPvarGetObj(var), 0.0);
+         if( prob->transformed )
+            SCIPprobUpdateNObjVars(prob, set, SCIPvarGetObj(var), 0.0);
 
          /* release variable */
          SCIP_CALL( SCIPvarRelease(&prob->deletedvars[i], blkmem, set, eventqueue, lp) );
@@ -1247,7 +1248,7 @@ SCIP_RETCODE SCIPprobAddCons(
    cons->deleted = FALSE;
 
    /* mark constraint to be globally valid */
-   cons->local = FALSE;
+   SCIPconsSetLocal(cons, FALSE);
 
    /* capture constraint */
    SCIPconsCapture(cons);
@@ -1874,8 +1875,7 @@ SCIP_RETCODE SCIPprobSetName(
  *        implicit binary status
  */
 int SCIPprobGetNImplBinVars(
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
    )
 {
    int v;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,6 +33,8 @@
 #include "reader_sch.h"
 #include "reader_sm.h"
 
+#include "scip/cons_bounddisjunction.h"
+
 
 #define READER_NAME             "schreader"
 #define READER_DESC             "scheduling file reader for sch files (RCPSP/max format)"
@@ -44,6 +46,45 @@
 /*
  * Local methods
  */
+
+static
+SCIP_RETCODE addLowerboundCons(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONS* cons;
+   SCIP_VAR** vars;
+   SCIP_Real* bounds;
+   SCIP_BOUNDTYPE* boundtypes;
+   int nvars;
+   int v;
+
+   nvars = SCIPgetNVars(scip);
+   vars = SCIPgetVars(scip);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, nvars) );
+
+   for( v = 0; v < nvars; ++v )
+   {
+      bounds[v] = SCIPvarGetLbGlobal(vars[v]);
+      boundtypes[v] = SCIP_BOUNDTYPE_UPPER;
+   }
+
+   /* add a constraint that at least one jobs needs to start at its lower bound */
+   SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, "lowerbound", nvars, vars, boundtypes, bounds,
+         TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   SCIPfreeBufferArray(scip, &boundtypes);
+   SCIPfreeBufferArray(scip, &bounds);
+
+   return SCIP_OKAY;
+}
+
+
 
 /** parse job id and check if only one job mode is present */
 static
@@ -265,8 +306,11 @@ SCIP_RETCODE readFile(
    if( retcode == SCIP_OKAY )
    {
       SCIP_CALL( SCIPcreateSchedulingProblem(scip, filename, NULL, NULL, demands,
-            precedencegraph, durations, capacities, njobs, nresources) );
+            precedencegraph, durations, capacities, njobs, nresources, FALSE) );
    }
+
+   /* add constraint that at least one job needs to start on its lower bound */
+   SCIP_CALL( addLowerboundCons(scip) );
 
    /* free the precedence graph */
    SCIPdigraphFree(&precedencegraph);

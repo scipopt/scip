@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -149,12 +149,16 @@ SCIP_RETCODE LOPreadFile(
    file = fopen(filename, "r");
    if ( file == NULL )
    {
-      SCIPerrorMessage("Could not open file %s.\n", filename);
+      SCIPerrorMessage("Could not open file <%s>.\n", filename);
       return SCIP_NOFILE;
    }
 
    /* skip one line */
-   fgets(s, SCIP_MAXSTRLEN, file);
+   if ( fgets(s, SCIP_MAXSTRLEN, file) == NULL )
+   {
+      SCIPerrorMessage("Error reading file <%s>.\n", filename);
+      return SCIP_READERROR;
+   }
 
    /* read number of elements */
    status = fscanf(file, "%d", &n);

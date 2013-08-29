@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -923,7 +923,7 @@ int SCIPdialogFindEntry(
    /* check entryname w.r.t. available dialog options */
    subdialogs = SCIPdialogGetSubdialogs(dialog);
    nsubdialogs = SCIPdialogGetNSubdialogs(dialog);
-   namelen = strlen(entryname);
+   namelen = (unsigned int) strlen(entryname);
    nfound = 0;
    for( i = 0; i < nsubdialogs; ++i )
    {
@@ -934,7 +934,7 @@ int SCIPdialogFindEntry(
          nfound++;
 
          /* if entryname exactly matches the sub-dialog's name, use this sub-dialog */
-         if( namelen == strlen(SCIPdialogGetName(subdialogs[i])) )
+         if( namelen == (unsigned int) strlen(SCIPdialogGetName(subdialogs[i])) )
             return 1;
       }
    }
@@ -1031,7 +1031,7 @@ SCIP_RETCODE SCIPdialogDisplayCompletions(
    /* check entryname w.r.t. available dialog options */
    subdialogs = SCIPdialogGetSubdialogs(dialog);
    nsubdialogs = SCIPdialogGetNSubdialogs(dialog);
-   namelen = strlen(entryname);
+   namelen = (unsigned int) strlen(entryname);
    for( i = 0; i < nsubdialogs; ++i )
    {
       /* check, if the beginning of the sub-dialog's name matches entryname */

@@ -119,9 +119,6 @@ MINLP/instances/MINLPLib/zpl/nuclearvc.zpl
 MINLP/instances/MINLPLib/zpl/nuclearvd.zpl
 MINLP/instances/MINLPLib/zpl/nuclearve.zpl
 MINLP/instances/MINLPLib/zpl/nuclearvf.zpl
-MINLP/instances/MINLPLib/zpl/nuclear24.zpl
-MINLP/instances/MINLPLib/zpl/nuclear24a.zpl
-MINLP/instances/MINLPLib/zpl/nuclear24b.zpl
 MINLP/instances/MINLPLib/zpl/nuclear25.zpl
 MINLP/instances/MINLPLib/zpl/nuclear25a.zpl
 MINLP/instances/MINLPLib/zpl/nuclear25b.zpl
@@ -737,3 +734,7 @@ MINLP/instances/ForNE/box_topo.abspower/topo_orig_00044.cip.gz
 MINLP/instances/ForNE/box_topo.abspower/topo_orig_00045.cip.gz
 MINLP/instances/ForNE/box_topo.abspower/topo_orig_00046.cip.gz
 MINLP/instances/ForNE/box_topo.abspower/topo_orig_00047.cip.gz
+MINLP/instances/WaterContamination/lp/water0202.lp
+MINLP/instances/WaterContamination/lp/water0202r.lp
+MINLP/instances/WaterContamination/lp/water0303.lp
+MINLP/instances/WaterContamination/lp/water0303r.lp

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -118,7 +118,7 @@ SCIP_RETCODE setupProbingSCIP(
 
    if( copycuts )
    {
-      /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
       SCIP_CALL( SCIPcopyCuts(scip, *probingscip, *varmapfw, NULL, FALSE, NULL) );
    }
 
@@ -1112,7 +1112,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIP_CALL( SCIPunlinkSol(scip, heurdata->roundedsol) );
       }
       
-      retcode = SCIPsolveDiveLP(scip, iterlimit, &lperror);
+      retcode = SCIPsolveDiveLP(scip, iterlimit, &lperror, NULL);
       lpsolstat = SCIPgetLPSolstat(scip);
 
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.

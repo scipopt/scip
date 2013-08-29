@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,21 +16,34 @@
 /**@file   reader_cip.c
  * @brief  CIP file reader
  * @author Stefan Heinz
+ * @author Marc Pfetsch
  * @author Michael Winkler
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 
 #include <string.h>
 #include <ctype.h>
 
 #include "scip/reader_cip.h"
-
+#include "scip/cons_linear.h"
 
 #define READER_NAME             "cipreader"
 #define READER_DESC             "file reader for CIP (Constraint Integer Program) format"
 #define READER_EXTENSION        "cip"
+
+#define DEFAULT_CIP_WRITEFIXEDVARS  TRUE     /**< should fixed and aggregated variables be written when writing in CIP
+                                              *   format
+                                              */
+
+
+/** CIP reading data */
+struct SCIP_ReaderData
+{
+   SCIP_Bool             writefixedvars;
+};
+
 
 /** Section of the in CIP files */
 enum CipSection 
@@ -78,6 +91,7 @@ SCIP_RETCODE getInputString(
 {
    char* endline;
    char* endcharacter;
+   char* windowsendlinechar;
 
    assert(cipinput != NULL);
 
@@ -134,9 +148,17 @@ SCIP_RETCODE getInputString(
 
    /*SCIPdebugMessage("read line: %s\n", cipinput->strbuf);*/
 
+   /* check for windows "carriage return" endline character */
+   windowsendlinechar = strrchr(cipinput->strbuf, '\r');
+   if( windowsendlinechar != NULL && windowsendlinechar + 1 == endline )
+      --endline;
+   else
+      /* if the assert should not hold we found a windows "carriage return" which was not at the end of the line */
+      assert(windowsendlinechar == NULL);
+
    if( cipinput->section == CIP_CONSTRAINTS && endcharacter != NULL && endline - endcharacter != 1 )
    {
-      SCIPerrorMessage("Constraint line has to end with ';\\n'.\n");
+      SCIPerrorMessage("Constraint line has to end with ';\\n' (line: %d).\n", cipinput->linenumber);
       cipinput->haserror = TRUE;
       return SCIP_OKAY; /* return error at hightest level */
    }
@@ -153,19 +175,30 @@ SCIP_RETCODE getStart(
    CIPINPUT*             cipinput            /**< CIP parsing data */
    )
 {
-   if( strncmp(cipinput->strbuf, "STATISTICS", 9) == 0 )
+   char* buf;
+
+   buf = cipinput->strbuf;
+
+   if( strncmp(buf, "STATISTICS", 9) == 0 )
    {
       cipinput->section = CIP_STATISTIC;
       return SCIP_OKAY;
    }
-   
+
+   if( strncmp(buf, "VARIABLES", 8) == 0 || strncmp(buf, "FIXED", 5) == 0 || strncmp(buf, "CONSTRAINTS", 11) == 0 || strncmp(buf, "OBJECTIVE", 9) == 0 )
+   {
+      SCIPerrorMessage("Syntax Error: File has to start with 'STATISTICS' section.\n");
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
+   }
+
    return SCIP_OKAY;
 }
 
 
 /** read the problem name out of the statistics */
 static
-SCIP_RETCODE getStatistic(
+SCIP_RETCODE getStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    CIPINPUT*             cipinput            /**< CIP parsing data */
    )
@@ -180,7 +213,7 @@ SCIP_RETCODE getStatistic(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("parse statistic\n");
+   SCIPdebugMessage("parse statistics\n");
 
    if( strncmp(buf, "  Problem name", 14) == 0 )
    {
@@ -191,20 +224,20 @@ SCIP_RETCODE getStatistic(
 
       if( name == NULL )
       {
-         SCIPwarningMessage(scip, "did not find problem name\n");
+         SCIPwarningMessage(scip, "did not find problem name (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
          return SCIP_OKAY;  /* no error, might work with empty problem name */
       }
 
       /* skip ':' */
       ++name;
 
-      /* remove tabs new line form string */
+      /* make sure that we terminate the string at comments ('#') or newline ('\r', '\n')*/
       if( NULL != (s = strpbrk(name, "#\r\n")) )
          *s = '\0';
 
-      /* remove white space in front of the name */
-      while(isspace((unsigned char)*name))
-         name++;
+      /* remove white space (tabs, ' ') in front of the name */
+      while( isspace((unsigned char)* name) )
+         ++name;
 
       /* set problem name */
       SCIP_CALL( SCIPsetProbName(scip, name) );
@@ -246,7 +279,11 @@ SCIP_RETCODE getObjective(
 
    SCIPdebugMessage("parse objective information\n");
 
-   if( strncmp(buf, "  Sense", 7) == 0 )
+   /* remove white space */
+   while ( isspace((unsigned char)* buf) )
+      ++buf;
+
+   if( strncasecmp(buf, "Sense", 5) == 0 )
    {
       SCIP_OBJSENSE objsense;
 
@@ -254,7 +291,7 @@ SCIP_RETCODE getObjective(
 
       if( name == NULL )
       {
-         SCIPwarningMessage(scip, "did not find objective sense\n");
+         SCIPwarningMessage(scip, "did not find objective sense (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
          return SCIP_OKAY; /* no error - might work with default */
       }
 
@@ -262,16 +299,16 @@ SCIP_RETCODE getObjective(
       ++name;
 
       /* remove white space in front of the name */
-      while(isspace((unsigned char)*name))
-         name++;
+      while( isspace((unsigned char)* name) )
+         ++name;
 
-      if( strncmp(name, "minimize", 3) == 0 )
+      if( strncasecmp(name, "minimize", 3) == 0 )
          objsense = SCIP_OBJSENSE_MINIMIZE;
-      else if( strncmp(name, "maximize", 3) == 0 )
+      else if( strncasecmp(name, "maximize", 3) == 0 )
          objsense = SCIP_OBJSENSE_MAXIMIZE;
       else
       {
-         SCIPwarningMessage(scip, "unknown objective sense, %s\n", name);
+         SCIPwarningMessage(scip, "unknown objective sense '%s' (line: %d):\n%s\n", name, cipinput->linenumber, cipinput->strbuf);
          return SCIP_OKAY; /* no error - might work with default */
       }
 
@@ -279,15 +316,16 @@ SCIP_RETCODE getObjective(
       SCIP_CALL( SCIPsetObjsense(scip, objsense) );
       SCIPdebugMessage("objective sense <%s>\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
    }
-   else if( strncmp(buf, "  Offset", 7) == 0 )
+   else if( strncasecmp(buf, "Offset", 6) == 0 )
    {
+      SCIP_Real off = 0;
       char* endptr;
 
       name = strchr(buf, ':');
 
       if( name == NULL )
       {
-         SCIPwarningMessage(scip, "did not find offset\n");
+         SCIPwarningMessage(scip, "did not find offset (line: %d)\n", cipinput->linenumber);
          return SCIP_OKAY;
       }
 
@@ -296,19 +334,29 @@ SCIP_RETCODE getObjective(
 
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
-         name++;
+         ++name;
 
-      *objoffset += strtod(name, &endptr);
+      if ( SCIPstrToRealValue(name, &off, &endptr) )
+      {
+         *objoffset += off;
+         SCIPdebugMessage("offset <%g> (total: %g)\n", off, *objoffset);
+      }
+      else
+      {
+         SCIPwarningMessage(scip, "could not parse offset (line: %d)\n%s\n", cipinput->linenumber, cipinput->strbuf);
+         return SCIP_OKAY;
+      }
    }
-   else if( strncmp(buf, "  Scale", 7) == 0 )
+   else if( strncasecmp(buf, "Scale", 5) == 0 )
    {
+      SCIP_Real scale = 1.0;
       char* endptr;
 
       name = strchr(buf, ':');
 
       if( name == NULL )
       {
-         SCIPwarningMessage(scip, "did not find scale\n");
+         SCIPwarningMessage(scip, "did not find scale (line: %d)\n", cipinput->linenumber);
          return SCIP_OKAY;
       }
 
@@ -317,15 +365,24 @@ SCIP_RETCODE getObjective(
 
       /* remove white space in front of the name */
       while(isspace((unsigned char)*name))
-         name++;
+         ++name;
 
-      *objscale *= strtod(name, &endptr);
+      if ( SCIPstrToRealValue(name, &scale, &endptr) )
+      {
+         *objscale *= scale;
+         SCIPdebugMessage("objscale <%g> (total: %g)\n", scale, *objscale);
+      }
+      else
+      {
+         SCIPwarningMessage(scip, "could not parse objective scale (line: %d)\n%s\n", cipinput->linenumber, cipinput->strbuf);
+         return SCIP_OKAY;
+      }
    }
 
    return SCIP_OKAY;
 }
 
-/** read variables */
+/** read variable */
 static
 SCIP_RETCODE getVariable(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -335,10 +392,11 @@ SCIP_RETCODE getVariable(
    SCIP_Real             objscale            /**< objective scale */
    )
 {
+   SCIP_Bool success;
    SCIP_VAR* var;
    char* buf;
-   SCIP_Bool success;
-   
+   char* endptr;
+
    buf = cipinput->strbuf;
    
    if( strncmp(buf, "FIXED", 5) == 0 )
@@ -352,12 +410,13 @@ SCIP_RETCODE getVariable(
       return SCIP_OKAY;
    
    SCIPdebugMessage("parse variable\n");
-   
+
    /* parse the variable */
-   SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, NULL, &success) );
-   
+   SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, NULL, &endptr, &success) );
+
    if( !success )
    {
+      SCIPerrorMessage("syntax error in variable information (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
       cipinput->haserror = TRUE;
       return SCIP_OKAY;
    }
@@ -376,14 +435,18 @@ SCIP_RETCODE getVariable(
    return SCIP_OKAY;
 }
 
-/** read fixed variables */
+/** read fixed variable */
 static
-SCIP_RETCODE getFixedVariables(
+SCIP_RETCODE getFixedVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    CIPINPUT*             cipinput            /**< CIP parsing data */
    )
 {
+   SCIP_Bool success;
+   SCIP_VAR* var;
    char* buf;
+   char* endptr;
+   char name[SCIP_MAXSTRLEN];
 
    buf = cipinput->strbuf;
 
@@ -391,20 +454,183 @@ SCIP_RETCODE getFixedVariables(
       cipinput->section = CIP_CONSTRAINTS;
    else if( strncmp(buf, "END", 3) == 0 )
       cipinput->section = CIP_END;
-   
+
    if( cipinput->section != CIP_FIXEDVARS )
       return SCIP_OKAY;
-   
-   SCIPdebugMessage("parse fixed variables\n");
-   
-   /* @todo implement parsing of fixed variables, in case of some constraints that use these variables */
+
+   SCIPdebugMessage("parse fixed variable\n");
+
+   /* parse the variable */
+   SCIP_CALL( SCIPparseVar(scip, &var, buf, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL, &endptr, &success) );
+
+   if( !success )
+   {
+      SCIPerrorMessage("syntax error in variable information (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* skip intermediate stuff */
+   buf = endptr;
+
+   while ( *buf != '\0' && (*buf == ' ' || *buf == ',') )
+      ++buf;
+
+   /* check whether variable is fixed */
+   if ( strncmp(buf, "fixed:", 6) == 0 )
+   {
+      SCIP_CALL( SCIPaddVar(scip, var) );
+      SCIPdebug( SCIP_CALL( SCIPprintVar(scip, var, NULL) ) );
+   }
+   else if ( strncmp(buf, "negated:", 8) == 0 )
+   {
+      SCIP_CONS* lincons;
+      SCIP_VAR* negvar;
+      SCIP_Real vals[2];
+      SCIP_VAR* vars[2];
+
+      buf += 8;
+
+      /* we can just parse the next variable (ignoring all other information in between) */
+      SCIP_CALL( SCIPparseVarName(scip, buf, &negvar, &endptr) );
+
+      if ( negvar == NULL )
+      {
+         SCIPerrorMessage("could not parse negated variable (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
+         cipinput->haserror = TRUE;
+         return SCIP_OKAY;
+      }
+      assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
+      assert( SCIPvarGetType(negvar) == SCIP_VARTYPE_BINARY );
+
+      SCIP_CALL( SCIPaddVar(scip, var) );
+
+      SCIPdebugMessage("creating negated variable <%s> (of <%s>) ...\n", SCIPvarGetName(var), SCIPvarGetName(negvar) );
+      SCIPdebug( SCIP_CALL( SCIPprintVar(scip, var, NULL) ) );
+
+      /* add linear constraint for negation */
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "neg_%s", SCIPvarGetName(var) );
+      vars[0] = var;
+      vars[1] = negvar;
+      vals[0] = 1.0;
+      vals[1] = 1.0;
+      SCIPdebugMessage("coupling constraint:\n");
+      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, 2, vars, vals, 1.0, 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+      SCIPdebugPrintCons(scip, lincons, NULL);
+      SCIP_CALL( SCIPaddCons(scip, lincons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+   }
+   else if ( strncmp(buf, "aggregated:", 11) == 0 )
+   {
+      /* handle (multi-)aggregated variables */
+      SCIP_CONS* lincons;
+      SCIP_Real* vals;
+      SCIP_VAR** vars;
+      SCIP_Real rhs = 0.0;
+      const char* str;
+      int nvarssize = 20;
+      int requsize;
+      int nvars;
+
+      buf += 11;
+
+      SCIPdebugMessage("parsing aggregated variable <%s> ...\n", SCIPvarGetName(var));
+
+      /* first parse constant */
+      if ( ! SCIPstrToRealValue(buf, &rhs, &endptr) )
+      {
+         SCIPerrorMessage("expected constant when aggregated variable information (line: %d):\n%s\n", cipinput->linenumber, buf);
+         cipinput->haserror = TRUE;
+         return SCIP_OKAY;
+      }
+
+      /* check whether constant is 0.0 */
+      str = endptr;
+      while ( *str != '\0' && isspace(*str) )
+         ++str;
+      /* if next char is '<' we found a variable -> constant is 0 */
+      if ( *str != '<' )
+      {
+         SCIPdebugMessage("constant: %f\n", rhs);
+         buf = endptr;
+      }
+      else
+      {
+         /* otherwise keep buf */
+         rhs = 0.0;
+      }
+
+      /* initialize buffers for storing the variables and values */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvarssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvarssize) );
+
+      vars[0] = var;
+      vals[0] = -1.0;
+      --nvarssize;
+
+      /* parse linear sum to get variables and coefficients */
+      SCIP_CALL( SCIPparseVarsLinearsum(scip, buf, &(vars[1]), &(vals[1]), &nvars, nvarssize, &requsize, &endptr, &success) );
+      if ( success && requsize > nvarssize )
+      {
+         /* realloc buffers and try again */
+         nvarssize = requsize;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, nvarssize + 1) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vals, nvarssize + 1) );
+
+         SCIP_CALL( SCIPparseVarsLinearsum(scip, buf, &(vars[1]), &(vals[1]), &nvars, nvarssize, &requsize, &endptr, &success) );
+         assert( ! success || requsize <= nvarssize); /* if successful, then should have had enough space now */
+      }
+
+      if( success )
+      {
+         /* add aggregated variable */
+         SCIP_CALL( SCIPaddVar(scip, var) );
+
+         /* special handling of variables that seem to be slack variables of indicator constraints */
+         str = SCIPvarGetName(var);
+         if ( strncmp(str, "indslack", 8) == 0 )
+         {
+            (void) strcpy(name, "indlin");
+            (void) strcat(name, str+8);
+         }
+         else if ( strncmp(str, "t_indslack", 10) == 0 )
+         {
+            (void) strcpy(name, "indlin");
+            (void) strcat(name, str+10);
+         }
+         else
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var) );
+
+         /* add linear constraint for (multi-)aggregation */
+         SCIPdebugMessage("coupling constraint:\n");
+         SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, nvars + 1, vars, vals, -rhs, -rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+         SCIPdebugPrintCons(scip, lincons, NULL);
+         SCIP_CALL( SCIPaddCons(scip, lincons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+      }
+      else
+      {
+         SCIPwarningMessage(scip, "Could not read (multi-)aggregated variable <%s>: dependent variables unkown - consider changing the order (line: %d):\n%s\n",
+            SCIPvarGetName(var), cipinput->linenumber, buf);
+      }
+
+      SCIPfreeBufferArray(scip, &vals);
+      SCIPfreeBufferArray(scip, &vars);
+   }
+   else
+   {
+      SCIPerrorMessage("unknown section when parsing variables (line: %d):\n%s\n", cipinput->linenumber, buf);
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
+   }
+   SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
    return SCIP_OKAY;
 }
 
-/** read constraints */
+/** read constraint */
 static
-SCIP_RETCODE getConstraints(
+SCIP_RETCODE getConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
    CIPINPUT*             cipinput,           /**< CIP parsing data */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -449,8 +675,15 @@ SCIP_RETCODE getConstraints(
 
    /* get length of line and check for correct ending of constraint line */
    len = (int)strlen(buf);
-   if( len < 1 || buf[len - 1] != ';' )
+   if( len < 1 )
    {
+      SCIPerrorMessage("syntax error: expected constraint in line %d.\n", cipinput->linenumber);
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
+   }
+   if ( buf[len - 1] != ';' )
+   {
+      SCIPerrorMessage("syntax error: line has to end with ';' (line: %d)\n", cipinput->linenumber);
       cipinput->haserror = TRUE;
       return SCIP_OKAY;
    }
@@ -468,6 +701,7 @@ SCIP_RETCODE getConstraints(
 
    if( !success )
    {
+      SCIPerrorMessage("syntax error when reading constraint (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
       cipinput->haserror = TRUE;
       return SCIP_OKAY;
    }
@@ -493,7 +727,21 @@ SCIP_DECL_READERCOPY(readerCopyCip)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderCip(scip) );
- 
+
+   return SCIP_OKAY;
+}
+
+/** destructor of reader to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_READERFREE(readerFreeCip)
+{
+   SCIP_READERDATA* readerdata;
+
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+   SCIPfreeMemory(scip, &readerdata);
+
    return SCIP_OKAY;
 }
 
@@ -506,15 +754,14 @@ SCIP_DECL_READERREAD(readerReadCip)
    CIPINPUT cipinput;
    SCIP_Real objscale;
    SCIP_Real objoffset;
+   SCIP_Bool initialconss;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
    SCIP_Bool dynamicrows;
 
    SCIP_Bool initialvar;
    SCIP_Bool removablevar;
-   SCIP_Bool initialcons;
-   SCIP_Bool removablecons;
-   
+
    if( NULL == (cipinput.file = SCIPfopen(filename, "r")) )
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
@@ -532,16 +779,14 @@ SCIP_DECL_READERREAD(readerReadCip)
    cipinput.readingsize = 65535;
 
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-   
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamiccols", &dynamiccols) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicrows", &dynamicrows) );
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initialconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
 
    initialvar = !dynamiccols;
    removablevar = dynamiccols;
-   
-   initialcons = !dynamicrows;
-   removablecons = dynamicrows;
 
    objscale = 1.0;
    objoffset = 0.0;
@@ -560,7 +805,7 @@ SCIP_DECL_READERREAD(readerReadCip)
          SCIP_CALL( getStart(scip, &cipinput) );
          break;
       case CIP_STATISTIC:
-         SCIP_CALL( getStatistic(scip, &cipinput) );
+         SCIP_CALL( getStatistics(scip, &cipinput) );
          break;
       case CIP_OBJECTIVE:
          SCIP_CALL( getObjective(scip, &cipinput, &objscale, &objoffset) );
@@ -569,10 +814,10 @@ SCIP_DECL_READERREAD(readerReadCip)
          SCIP_CALL( getVariable(scip, &cipinput, initialvar, removablevar, objscale) );
          break;
       case CIP_FIXEDVARS:
-         SCIP_CALL( getFixedVariables(scip, &cipinput) );
+         SCIP_CALL( getFixedVariable(scip, &cipinput) );
          break;
       case CIP_CONSTRAINTS:
-         SCIP_CALL( getConstraints(scip, &cipinput, initialcons, dynamicconss, removablecons) );
+         SCIP_CALL( getConstraint(scip, &cipinput, initialconss, dynamicconss, dynamicrows) );
          break;
       default:
          SCIPerrorMessage("invalid CIP state\n");
@@ -610,12 +855,40 @@ SCIP_DECL_READERREAD(readerReadCip)
    return SCIP_OKAY;
 }
 
+/** hash key retrieval function for variables */
+static
+SCIP_DECL_HASHGETKEY(hashGetKeyVar)
+{  /*lint --e{715}*/
+   return elem;
+}
+
+/** returns TRUE iff the indices of both variables are equal */
+static
+SCIP_DECL_HASHKEYEQ(hashKeyEqVar)
+{  /*lint --e{715}*/
+   if( key1 == key2 )
+      return TRUE;
+   return FALSE;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(hashKeyValVar)
+{  /*lint --e{715}*/
+   assert( SCIPvarGetIndex((SCIP_VAR*) key) >= 0 );
+   return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
+}
 
 /** problem writing method of reader */
 static
 SCIP_DECL_READERWRITE(readerWriteCip)
 {  /*lint --e{715}*/
+   SCIP_HASHTABLE* varhash = NULL;
+   SCIP_READERDATA* readerdata;
    int i;
+
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
 
    SCIPinfoMessage(scip, file, "STATISTICS\n");
    SCIPinfoMessage(scip, file, "  Problem name     : %s\n", name);
@@ -630,21 +903,144 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    if( !SCIPisEQ(scip, objscale, 1.0) )
       SCIPinfoMessage(scip, file, "  Scale            : %.15g\n", objscale);
 
-   if( nvars > 0 )
+   if ( nfixedvars > 0 )
+   {
+      /* set up hash table for variables that have been written property (used for writing out fixed vars in the right order) */
+      SCIP_CALL( SCIPhashtableCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * (nvars + nfixedvars)), hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   }
+
+   if ( nvars + nfixedvars > 0 )
    {
       SCIPinfoMessage(scip, file, "VARIABLES\n");
+   }
+
+   if( nvars > 0 )
+   {
       for( i = 0; i < nvars; ++i )
       {
-         SCIP_CALL( SCIPprintVar(scip, vars[i], file) );
+         SCIP_VAR* var;
+
+         var = vars[i];
+         assert( var != NULL );
+         SCIP_CALL( SCIPprintVar(scip, var, file) );
+         if ( varhash != NULL )
+         {
+            /* add free variable to hashtable */
+            if ( ! SCIPhashtableExists(varhash, (void*) var) )
+            {
+               SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+            }
+         }
       }
    }
 
-   if( nfixedvars > 0 )
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   if( readerdata->writefixedvars && nfixedvars > 0 )
    {
+      int nwritten = 0;
+
       SCIPinfoMessage(scip, file, "FIXED\n");
-      for( i = 0; i < nfixedvars; ++i )
+
+      /* loop through variables until each has been written after the variables that depend on have been written; this
+       * requires several runs over the variables, but the depth (= number of loops) is usually small. */
+      while ( nwritten < nfixedvars )
       {
-         SCIP_CALL( SCIPprintVar(scip, fixedvars[i], file) );
+         SCIPdebugMessage("written %d of %d fixed variables.\n", nwritten, nfixedvars);
+         for (i = 0; i < nfixedvars; ++i)
+         {
+            SCIP_VAR* var;
+            SCIP_VAR* tmpvar;
+
+            var = fixedvars[i];
+            assert( var != NULL );
+
+            /* skip variables already written */
+            if ( SCIPhashtableExists(varhash, (void*) var) )
+               continue;
+
+            switch ( SCIPvarGetStatus(var) )
+            {
+            case SCIP_VARSTATUS_FIXED:
+
+               /* fixed variables can simply be output and added to the hashtable */
+               SCIP_CALL( SCIPprintVar(scip, var, file) );
+               assert( ! SCIPhashtableExists(varhash, (void*) var) );
+               SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+               ++nwritten;
+
+               break;
+
+            case SCIP_VARSTATUS_NEGATED:
+
+               tmpvar = SCIPvarGetNegationVar(var);
+               assert( tmpvar != NULL );
+               assert( var == SCIPvarGetNegatedVar(tmpvar) );
+
+               /* if the negated variable has been written, we can write the current variable */
+               if ( SCIPhashtableExists(varhash, (void*) tmpvar) )
+               {
+                  SCIP_CALL( SCIPprintVar(scip, var, file) );
+                  assert( ! SCIPhashtableExists(varhash, (void*) var) );
+                  SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+                  ++nwritten;
+               }
+               break;
+
+            case SCIP_VARSTATUS_AGGREGATED:
+
+               tmpvar = SCIPvarGetAggrVar(var);
+               assert( tmpvar != NULL );
+
+               /* if the aggregating variable has been written, we can write the current variable */
+               if ( SCIPhashtableExists(varhash, (void*) tmpvar) )
+               {
+                  SCIP_CALL( SCIPprintVar(scip, var, file) );
+                  assert( ! SCIPhashtableExists(varhash, (void*) var) );
+                  SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+                  ++nwritten;
+               }
+               break;
+
+            case SCIP_VARSTATUS_MULTAGGR:
+            {
+               SCIP_VAR** aggrvars;
+               int naggrvars;
+               int j;
+
+               /* get the active representation */
+               SCIP_CALL( SCIPflattenVarAggregationGraph(scip, var) );
+
+               naggrvars = SCIPvarGetMultaggrNVars(var);
+               aggrvars = SCIPvarGetMultaggrVars(var);
+               assert( aggrvars != NULL );
+
+               for (j = 0; j < naggrvars; ++j)
+               {
+                  if ( ! SCIPhashtableExists(varhash, (void*) aggrvars[j]) )
+                     break;
+               }
+
+               /* if all multi-aggregating variables have been written, we can write the current variable */
+               if ( j >= naggrvars )
+               {
+                  SCIP_CALL( SCIPprintVar(scip, var, file) );
+                  assert( ! SCIPhashtableExists(varhash, (void*) var) );
+                  SCIP_CALL( SCIPhashtableInsert(varhash, (void*) var) );
+                  ++nwritten;
+               }
+               break;
+            }
+
+            case SCIP_VARSTATUS_ORIGINAL:
+            case SCIP_VARSTATUS_LOOSE:
+            case SCIP_VARSTATUS_COLUMN:
+               SCIPerrorMessage("Only fixed variables are allowed to be present in fixedvars list.\n");
+               SCIPABORT();
+               return SCIP_ERROR; /*lint !e527*/
+            }
+         }
       }
    }
 
@@ -654,17 +1050,19 @@ SCIP_DECL_READERWRITE(readerWriteCip)
 
       for( i = 0; i < nconss; ++i )
       {
-         /* in case the transformed is written only constraint are posted which are enabled in the current node */
-         assert(!transformed || SCIPconsIsEnabled(conss[i]));
-
          SCIP_CALL( SCIPprintCons(scip, conss[i], file) );
          SCIPinfoMessage(scip, file, ";\n");
       }
    }
+   SCIPinfoMessage(scip, file, "END\n");
 
    *result = SCIP_SUCCESS;
 
-   SCIPinfoMessage(scip, file, "END\n");
+   if( nfixedvars > 0 )
+      SCIPhashtableFree(&varhash);
+   else
+      assert(varhash == NULL);
+
    return SCIP_OKAY;
 }
 
@@ -681,27 +1079,22 @@ SCIP_RETCODE SCIPincludeReaderCip(
    SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
 
-   /* create reader data */
-   readerdata = NULL;
+   /* create cip reader data */
+   SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCip) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeCip) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCip) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteCip) );
 
    /* add cip reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamicconss", "should model constraints be subject to aging?",
-         NULL, FALSE, TRUE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   
+         "reading/cipreader/writefixedvars", "should fixed and aggregated variables be printed (if not, re-parsing might fail)",
+         &readerdata->writefixedvars, FALSE, DEFAULT_CIP_WRITEFIXEDVARS, NULL, NULL) );
+
    return SCIP_OKAY;
 }

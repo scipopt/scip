@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -37,22 +37,17 @@ SETCUTOFF=0
 # set this to 1 if you want the scripts to (try to) pass a best known solution (from .gdx file) to the GAMS solver
 PASSSTARTSOL=0
 
-# set this to true to keep solutions in .gdx files
+# set this to 1 to keep solutions in .gdx files
 KEEPSOLS=0
+
+# set this to 1 to run the solver through Examiner2
+EXAMINER=0
 
 # check all variables defined
 if [ -z ${EXCLUSIVE} ]
 then
     echo Skipping test since not all variables are defined.
     exit 1;
-fi
-
-# check if the slurm blades should be used exclusively
-if test "$EXCLUSIVE" = "true"
-then
-    EXCLUSIVE="--exclusive"
-else
-    EXCLUSIVE=""
 fi
 
 # check if queuetype has been defined
@@ -90,8 +85,6 @@ then
   exit 1
 fi
 
-SETDIR=../settings
-
 if test ! -e results
 then
     mkdir results
@@ -104,8 +97,8 @@ fi
 EVALFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.eval
 SETFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.set
 SCHFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.sch
+OPTFILE=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.opt
 GMSDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.gms
-OPTDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.opt
 SOLDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.sol
 
 # additional environment variables needed by finishgamscluster.sh at the end (or when trap is setup)
@@ -145,24 +138,39 @@ then
   GAMSOPTS="$GAMSOPTS gdxcompress=1"
 fi
 
-# setup option file
+# setup solver option file
 # create directory $OPTDIR and put optionfile <solvername>.opt there
 if test "$SETNAME" != "default"
 then
+  SETDIR=`cd ../settings ; pwd`
   if test -f "$SETDIR/$SETNAME.gamsset"
   then
-    if test -d $OPTDIR
-    then
-      rm -f $OPTDIR/*
-    else
-      mkdir -p $OPTDIR
-    fi
-    cp "$SETDIR/$SETNAME.gamsset" $OPTDIR/${SOLVER,,}.opt
-    GAMSOPTS="$GAMSOPTS optdir=$OPTDIR optfile=1"
+    SETTINGS="$SETDIR/${SETNAME}.gamsset"
+    cp $SETTINGS $OPTFILE
   else
     echo "${m} settings file $SETDIR/${SETNAME}.gamsset not found"
     exit 1
   fi
+fi
+
+# setup examiner option file
+if test $EXAMINER = 1
+then
+  mkdir -p $OPTDIR
+  echo "subsolver ${SOLVER,,}" > $OPTDIR/examiner2.opt
+  if test "$SETNAME" != "default"
+  then
+    echo "subsolveropt 1" >> $OPTDIR/examiner2.opt
+  else
+    GAMSOPTS="$GAMSOPTS optdir=$OPTDIR optfile=1"
+  fi
+  #echo "traceStyle 1" >> $OPTDIR/examiner2.opt
+  echo   "scaled yes" >> $OPTDIR/examiner2.opt
+  echo "unscaled yes" >> $OPTDIR/examiner2.opt
+  echo "examinesolupoint yes" >> $OPTDIR/examiner2.opt
+  echo "examinesolvpoint yes" >> $OPTDIR/examiner2.opt
+  echo "examinegamspoint no"  >> $OPTDIR/examiner2.opt
+  echo "examineinitpoint no"  >> $OPTDIR/examiner2.opt
 fi
 
 # add information on solver and limits for eval script
@@ -234,25 +242,38 @@ if test $SETCUTOFF = 1 ; then
   fi
 fi
 
-#define account and clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
+#define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
+CLUSTERQUEUE=$QUEUE
 
 NICE=""
-if test $QUEUE = "opt"
+ACCOUNT="mip"
+
+if test $CLUSTERQUEUE = "dbg"
 then
-  CLUSTERQUEUE="opt"
-  ACCOUNT="mip"
-elif test $QUEUE = "opt-low"
+    CLUSTERQUEUE="mip-dbg,telecom-dbg"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "telecom-dbg"
 then
-  CLUSTERQUEUE="opt"
-  ACCOUNT="mip"
-  NICE="--nice=10000"
-elif test $QUEUE = "mip-dbg"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "mip-dbg"
 then
-  CLUSTERQUEUE="mip-dbg"
-  ACCOUNT="mip-dbg"
+    ACCOUNT="mip-dbg"
+elif test $CLUSTERQUEUE = "opt-low"
+then
+    CLUSTERQUEUE="opt"
+    NICE="--nice=10000"
+fi
+
+# check if the slurm blades should be used exclusively
+if test "$EXCLUSIVE" = "true"
+then
+    EXCLUSIVE=" --exclusive"
+    if test $CLUSTERQUEUE = "opt"
+    then
+        CLUSTERQUEUE="M610"
+    fi
 else
-  CLUSTERQUEUE=$QUEUE
-  ACCOUNT="mip"
+    EXCLUSIVE=""
 fi
 
 # counter to define file names for a test set uniquely 
@@ -371,11 +392,12 @@ do
     export GDXFILE=$GDXFILE
     export CLIENTTMPDIR=$CLIENTTMPDIR
     export PASSSTARTSOL=$PASSSTARTSOL
+    export EXAMINER=$EXAMINER
 
     case $QUEUETYPE in
       srun )
         # hard timelimit could be set via --time=0:${HARDTIMELIMIT}
-        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT $NICE ${EXCLUSIVE} --output=/dev/null rungamscluster.sh`
+        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT ${EXCLUSIVE} ${NICE} --output=/dev/null rungamscluster.sh`
         echo $sbatchret
         FINISHDEPEND=$FINISHDEPEND:`echo $sbatchret | cut -d " " -f 4`
         ;;

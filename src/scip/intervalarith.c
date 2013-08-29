@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,6 +28,7 @@
 #include "scip/def.h"
 #include "scip/intervalarith.h"
 #include "scip/pub_message.h"
+#include "scip/misc.h"
 
 #ifdef ROUNDING_FE
 #define ROUNDING
@@ -248,18 +249,20 @@ double negate(
 #define nextafter(x,y) _nextafter(x,y)
 #endif
 
-#else /* unknown compiler */
+#else /* unknown compiler or MSVS 64bit */
 
 /** gets the negation of a double
- * Do this in a way that the compiler does not "optimize" it away, which usually does not considers rounding modes.
+ *
+ * Fallback implementation that calls the negation method from misc.o.
+ * Having the implementation in a different object file will hopefully prevent
+ * it from being "optimized away".
  */
 static
 SCIP_Real negate(
    SCIP_Real             x                   /**< number that should be negated */
    )
 {
-   SCIPerrorMessage("setting rounding mode not available - interval arithmetic is invalid!\n");
-   return -x;
+   return SCIPnegateReal(x);
 }
 
 #endif
@@ -2148,7 +2151,13 @@ void SCIPintervalPowerScalarInverse(
       SCIPintervalSetBounds(&tmp, MAX(image.inf, 0.0), image.sup);
       SCIPintervalPower(infinity, resultant, tmp, exprecip);
       if( basedomain.inf <= -resultant->inf && EPSISINT(exponent, 0.0) && (int)exponent % 2 == 0 )  /*lint !e835 */
-         SCIPintervalSetBounds(resultant, -resultant->sup, resultant->sup);
+      {
+         if( basedomain.sup < resultant->inf )
+            SCIPintervalSetBounds(resultant, -resultant->sup, -resultant->inf);
+         else
+            SCIPintervalSetBounds(resultant, -resultant->sup, resultant->sup);
+      }
+
       SCIPintervalIntersect(resultant, *resultant, basedomain);
    }
    else
@@ -3398,6 +3407,12 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
             if( axy < 0.0 || ay < 0.0 )
                minvalleft = -infinity;
 
+            if( axy < 0.0 && ay > 0.0 )
+               maxvalleft =  infinity;
+
+            if( axy > 0.0 && ay > 0.0 )
+               minvalleft = -infinity;
+
             if( axy > 0.0 || ay < 0.0 )
                maxvalright = infinity;
          }
@@ -3458,6 +3473,12 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          {
             if( axy > 0.0 || ay < 0.0 )
                minvalleft  = -infinity;
+
+            if( axy < 0.0 && ay > 0.0 )
+               maxvalleft  =  infinity;
+
+            if( axy > 0.0 && ay > 0.0 )
+               minvalright = -infinity;
 
             if( axy < 0.0 || ay < 0.0 )
                maxvalright =  infinity;

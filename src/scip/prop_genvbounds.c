@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1948,7 +1948,7 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
    assert(inferinfo >= 0);
    assert(inferinfo < propdata->ngenvbounds);
 
-   *result = SCIP_DIDNOTRUN;
+   *result = SCIP_DIDNOTFIND;
 
    /* check also in optimized mode that inferinfo is correct */
    if( inferinfo >= propdata->ngenvbounds)

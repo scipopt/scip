@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1077,8 +1077,12 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       }
       else
       {
-         /* for now, do not use ReOptimizeNLP, since it may not return a solution within bounds if all variables are fixed, see Ipopt ticket #179 */
+         /* ReOptimizeNLP with Ipopt <= 3.10.3 could return a solution not within bounds if all variables are fixed (see Ipopt ticket #179) */
+#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 10) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 10 && IPOPT_VERSION_RELEASE > 3)
+         status = problem->ipopt->ReOptimizeTNLP(GetRawPtr(problem->nlp));
+#else
          status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
+#endif
       }
 
       // catch the very bad status codes

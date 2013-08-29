@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -120,8 +120,8 @@ BEGIN {
 #
 /^Gurobi Optimizer version/ { version = $4; }
 /^Gurobi Interactive Shell, Version/ { version = $5; }
-/^Changed value of parameter TimeLimit to/ { timelimit = $7; }
-/^Changed value of parameter Threads to/ { threads = $7; }
+/^Set parameter TimeLimit to value / { timelimit = $6; }
+/^Set parameter Threads to value/ { threads = $6; }
 #
 /^Set parameter MIPGap/ {
    mipgap = $6;
