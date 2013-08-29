@@ -575,59 +575,53 @@ SCIP_RETCODE createMipFormulation(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &conss, nmachines) );
 
-   if( relaxation > 0 )
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nmachines) );
+
+   /* create master problem  */
+   for( i = 0; i < nmachines; ++i )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nmachines) );
-
-      /* create master problem  */
-      for( i = 0; i < nmachines; ++i )
-      {
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], njobs) );
-
-         for( j = 0; j < njobs; ++j )
-         {
-            SCIP_VAR* var;
-            SCIP_Real objval;
-            SCIP_Real ub;
-
-            objval = (SCIP_Real)costs[i][j];
-
-            /* construct variable name */
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_machine_%d", j, i);
-
-            if( releasedates[j] > deadlinedates[j] - durations[i][j] || demands[i][j] > capacities[i] )
-               ub   = 0.0;
-            else
-               ub = 1.0;
-
-            /* create binary variable */
-            SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, ub, objval, SCIP_VARTYPE_BINARY) );
-            vars[i][j] = var;
-
-            /* add and release binary variable */
-            SCIP_CALL( SCIPaddVar(scip, var) );
-            SCIP_CALL( SCIPreleaseVar(scip, &var) );
-         }
-      }
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], njobs) );
 
       for( j = 0; j < njobs; ++j )
       {
-         /* construct constraint name */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_to_one_machine", j);
-         SCIP_CALL( SCIPcreateConsBasicSetpart(scip, &cons, name, 0, NULL) );
+         SCIP_VAR* var;
+         SCIP_Real objval;
+         SCIP_Real ub;
 
-         for( i = 0; i < nmachines; ++i )
-         {
-            SCIP_CALL( SCIPaddCoefSetppc(scip, cons, vars[i][j]) );
-         }
+         objval = (SCIP_Real)costs[i][j];
 
-         SCIP_CALL( SCIPaddCons(scip, cons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+         /* construct variable name */
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_machine_%d", j, i);
+
+         if( releasedates[j] > deadlinedates[j] - durations[i][j] || demands[i][j] > capacities[i] )
+            ub   = 0.0;
+         else
+            ub = 1.0;
+
+         /* create binary variable */
+         SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, ub, objval, SCIP_VARTYPE_BINARY) );
+         vars[i][j] = var;
+
+         /* add and release binary variable */
+         SCIP_CALL( SCIPaddVar(scip, var) );
+         SCIP_CALL( SCIPreleaseVar(scip, &var) );
+      }
+   }
+
+   for( j = 0; j < njobs; ++j )
+   {
+      /* construct constraint name */
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_to_one_machine", j);
+      SCIP_CALL( SCIPcreateConsBasicSetpart(scip, &cons, name, 0, NULL) );
+
+      for( i = 0; i < nmachines; ++i )
+      {
+         SCIP_CALL( SCIPaddCoefSetppc(scip, cons, vars[i][j]) );
       }
 
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
-   else
-      vars = NULL;
 
    /* create for each machines and time point a knapsack constraint */
    for( i = 0; i < nmachines; ++i )
@@ -655,57 +649,32 @@ SCIP_RETCODE createMipFormulation(
 
       est = releasedates[j];
 
-
-      if( relaxation == 0 )
-      {
-         /* construct constraint name */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_to_one_machine", j);
-         SCIP_CALL( SCIPcreateConsBasicSetpart(scip, &cons, name, 0, NULL) );
-      }
-
       for( i = 0; i < nmachines; ++i )
       {
          int lst;
 
          lst = deadlinedates[j] - durations[i][j];
 
-         if( relaxation > 0 )
-         {
-            /* construct constraint name */
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_machine_%d", j, i);
+         /* construct constraint name */
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_machine_%d", j, i);
 
-            SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 0, NULL, NULL, 0.0, 0.0) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[i][j], -1.0) );
-         }
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 0, NULL, NULL, 0.0, 0.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[i][j], -1.0) );
 
          for( t = est; t <= lst; ++t )
          {
             SCIP_VAR* var;
-            SCIP_Real objcoef;
             int h;
-
-            if( relaxation > 0 )
-               objcoef = 0.0;
-            else
-               objcoef = costs[i][j];
 
             /* construct variable name */
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_machine_%d_time_%d", j, i, t);
 
-            SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, 1.0, objcoef, SCIP_VARTYPE_BINARY) );
+            SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
 
             SCIP_CALL( SCIPaddVar(scip, var) );
 
-            if( relaxation > 0 )
-            {
-               /* add variable to linear constraint */
-               SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, 1.0) );
-            }
-            else
-            {
-               /* add variable to set partitioning constraint */
-               SCIP_CALL( SCIPaddCoefSetppc(scip, cons, var) );
-            }
+            /* add variable to linear constraint */
+            SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, 1.0) );
 
             for( h = t ; h < MIN(t + durations[i][j], maxtime); ++h )
             {
@@ -715,15 +684,6 @@ SCIP_RETCODE createMipFormulation(
             SCIP_CALL( SCIPreleaseVar(scip, &var) );
          }
 
-         if( relaxation > 0 )
-         {
-            SCIP_CALL( SCIPaddCons(scip, cons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-         }
-      }
-
-      if( relaxation == 0 )
-      {
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
@@ -736,65 +696,62 @@ SCIP_RETCODE createMipFormulation(
    }
    SCIPfreeBufferArray(scip, &conss);
 
-   if( relaxation > 0 )
+   if( relaxation == 1 )
    {
-      if( relaxation == 1 )
+      /* create for each optimal resource a singe constraint relaxation */
+      for( i = 0; i < nmachines; ++i )
       {
-         /* create for each optimal resource a singe constraint relaxation */
-         for( i = 0; i < nmachines; ++i )
+         SCIP_Longint capacity;
+         int est;
+         int lct;
+
+         est = INT_MAX;
+         lct = INT_MIN;
+
+         /* compute earliest start end latest completion time */
+         for( j = 0; j < njobs; ++j )
          {
-            SCIP_Longint capacity;
-            int est;
-            int lct;
-
-            est = INT_MAX;
-            lct = INT_MIN;
-
-            /* compute earliest start end latest completion time */
-            for( j = 0; j < njobs; ++j )
+            if( demands[i][j] > 0 )
             {
-               if( demands[i][j] > 0 )
-               {
-                  est = MIN(est, releasedates[j]);
-                  lct = MAX(lct, deadlinedates[j]);
-               }
+               est = MIN(est, releasedates[j]);
+               lct = MAX(lct, deadlinedates[j]);
             }
-
-            /* construct constraint name */
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "relax_%d", i);
-
-            capacity = capacities[i] * (lct - est);
-
-            SCIP_CALL( SCIPcreateConsBasicKnapsack(scip, &cons, name, 0, NULL, NULL, capacity) );
-
-            for( j = 0; j < njobs; ++j )
-            {
-               if( demands[i][j] > 0 )
-               {
-                  SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[i][j], (SCIP_Longint)(durations[i][j] * demands[i][j]) ) );
-               }
-            }
-
-            /* add the constraint to the problem and release it (locally) */
-            SCIP_CALL( SCIPaddCons(scip, cons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
          }
-      }
-      else if( relaxation == 2 )
-      {
-         /* create for each optimal resource a singe constraint relaxation */
-         for( i = 0; i < nmachines; ++i )
+
+         /* construct constraint name */
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "relax_%d", i);
+
+         capacity = capacities[i] * (lct - est);
+
+         SCIP_CALL( SCIPcreateConsBasicKnapsack(scip, &cons, name, 0, NULL, NULL, capacity) );
+
+         for( j = 0; j < njobs; ++j )
          {
-            SCIP_CALL( createIntervalRelaxation(scip, i, vars[i], durations[i], demands[i], capacities[i], releasedates, deadlinedates, njobs) );
+            if( demands[i][j] > 0 )
+            {
+               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[i][j], (SCIP_Longint)(durations[i][j] * demands[i][j]) ) );
+            }
          }
-      }
 
-      for( i = nmachines-1; i >= 0; --i )
-      {
-         SCIPfreeBufferArray(scip, &vars[i]);
+         /* add the constraint to the problem and release it (locally) */
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
-      SCIPfreeBufferArray(scip, &vars);
    }
+   else if( relaxation == 2 )
+   {
+      /* create for each optimal resource a singe constraint relaxation */
+      for( i = 0; i < nmachines; ++i )
+      {
+         SCIP_CALL( createIntervalRelaxation(scip, i, vars[i], durations[i], demands[i], capacities[i], releasedates, deadlinedates, njobs) );
+      }
+   }
+
+   for( i = nmachines-1; i >= 0; --i )
+   {
+      SCIPfreeBufferArray(scip, &vars[i]);
+   }
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
