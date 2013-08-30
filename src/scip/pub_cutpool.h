@@ -44,6 +44,18 @@ int SCIPcutGetAge(
    SCIP_CUT*             cut                 /**< cut */
    );
 
+/** returns the number of times that this cut has been sharp in an optimal LP solution */
+EXTERN
+SCIP_Longint SCIPcutGetActiveLPCount(
+   SCIP_CUT*             cut                 /**< cut */
+   );
+
+/** returns the number of LPs since this cut has been created */
+EXTERN
+SCIP_Longint SCIPcutGetNLPsAfterCreation(
+   SCIP_CUT*             cut                 /**< cut */
+   );
+
 /** gets array of cuts in the cut pool */
 EXTERN
 SCIP_CUT** SCIPcutpoolGetCuts(

@@ -206,6 +206,8 @@ struct SCIP_Row
    SCIP_Longint          validpsactivitydomchg; /**< domain change number for which pseudo activity value is valid */
    SCIP_Longint          validactivitybdsdomchg;/**< domain change number for which activity bound values are valid */
    SCIP_Longint          obsoletenode;       /**< last node where this row was removed due to aging */
+   SCIP_Longint          activeinlpcounter;  /**< counter for the number of times this row was active in an optimal LP solution */
+   SCIP_Longint          nlpsaftercreation;  /**< counter for the number of LPs after the row has been created */
    SCIP_ROWSOLVALS*      storedsolvals;      /**< values stored before entering diving or probing mode */
    void*                 origin;             /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
    char*                 name;               /**< name of the row */

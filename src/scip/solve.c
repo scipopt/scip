@@ -4132,13 +4132,14 @@ SCIP_RETCODE SCIPsolveCIP(
       stat->nnodes++;
       stat->ntotalnodes++;
 
-      if( (stat->nnodes % 10000) == 0 )
+#if 0
+      if( (stat->nnodes % 30000) == 0 )
       {
          /* print front statistics to file */
          char filename[256];
          FILE* file;
 
-         sprintf(filename, "check/nodefrontiers/%s_%"SCIP_LONGINT_FORMAT".profile", SCIPprobGetName(origprob), stat->nnodes);
+         sprintf(filename, "/nfs/optimi/kombadon/bzfhende/projects/scip-git/check/nodefrontiers/%s_%"SCIP_LONGINT_FORMAT".profile", SCIPprobGetName(origprob), stat->nnodes);
          file = fopen(filename, "w");
 
          if( file != NULL )
@@ -4152,12 +4153,15 @@ SCIP_RETCODE SCIPsolveCIP(
 
             for( n = 0; n < len; ++n )
             {
-               fprintf(file, "(%16.9g, %d)\n", SCIPprobExternObjval(transprob, set, SCIPnodeGetLowerbound(treenodes[n])) , SCIPnodeGetDepth(treenodes[n]));
+               fprintf(file, "%g,%d,%g,%"SCIP_LONGINT_FORMAT"\n", SCIPprobExternObjval(transprob, set, SCIPnodeGetLowerbound(treenodes[n])),
+                     SCIPnodeGetDepth(treenodes[n]),
+                     SCIPprobExternObjval(transprob, set, SCIPnodeGetEstimate(treenodes[n])),
+                     SCIPnodeGetNumber(treenodes[n]));
             }
          }
          fclose(file);
       }
-
+#endif
       /* issue NODEFOCUSED event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFOCUSED) );
       SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
@@ -4337,6 +4341,13 @@ SCIP_RETCODE SCIPsolveCIP(
        * another restart
        */
       *restart = *restart || (stat->userrestart && SCIPtreeGetNNodes(tree) > 0 && restartAllowed(set, stat));
+      if( set->limit_autorestartnodes == stat->nnodes && stat->ntotalnodes - stat->nruns + 1 == set->limit_autorestartnodes )
+      {
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+               "(run %d, node %"SCIP_LONGINT_FORMAT") restarting: triggering parameter controlled restart)\n",
+               stat->nruns, stat->nnodes);
+         *restart = TRUE ;
+      }
 
       /* display node information line */
       SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol, TRUE) );

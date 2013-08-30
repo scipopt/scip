@@ -4607,6 +4607,8 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->validactivitylp = -1;
    (*row)->validpsactivitydomchg = -1;
    (*row)->validactivitybdsdomchg = -1;
+   (*row)->nlpsaftercreation = 0L;
+   (*row)->activeinlpcounter = 0L;
    (*row)->age = 0;
    (*row)->rank = 0;
    (*row)->obsoletenode = -1;
@@ -15983,9 +15985,14 @@ SCIP_RETCODE SCIPlpUpdateAges(
 
    for( r = 0; r < nlpirows; ++r )
    {
+      lpirows[r]->nlpsaftercreation++;
       assert(lpirows[r] == lp->rows[r]);
-      if( lpirows[r]->dualsol == 0.0 )  /* basic rows to remove are exactly at 0.0 */
+      if( lpirows[r]->dualsol == 0.0 )
+      {
          lpirows[r]->age++;
+         lpirows[r]->activeinlpcounter++;
+         /* basic rows to remove are exactly at 0.0 */
+      }
       else
          lpirows[r]->age = 0;
       /*debugMessage(" -> row <%s>: activity=%f, age=%d\n", lpirows[r]->name, lpirows[r]->activity, lpirows[r]->age);*/

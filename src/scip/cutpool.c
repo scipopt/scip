@@ -374,6 +374,25 @@ int SCIPcutGetAge(
    return cut->age;
 }
 
+/** returns the number of times that this cut has been sharp in an optimal LP solution */
+SCIP_Longint SCIPcutGetActiveLPCount(
+   SCIP_CUT*             cut                 /**< cut */
+   )
+{
+   assert(cut != NULL);
+
+   return cut->row->activeinlpcounter;
+}
+
+/** returns the number of LPs since this cut has been created */
+SCIP_Longint SCIPcutGetNLPsAfterCreation(
+   SCIP_CUT*             cut                 /**< cut */
+   )
+{
+   assert(cut != NULL);
+
+   return cut->row->nlpsaftercreation;
+}
 
 
 /*
