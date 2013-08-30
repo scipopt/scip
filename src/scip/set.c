@@ -162,7 +162,7 @@
 #define SCIP_DEFAULT_LIMIT_MAXSOL           100 /**< maximal number of solutions to store in the solution storage */
 #define SCIP_DEFAULT_LIMIT_MAXORIGSOL        10 /**< maximal number of solutions candidates to store in the solution storage of the original problem */
 #define SCIP_DEFAULT_LIMIT_RESTARTS          -1 /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
-
+#define SCIP_DEFAULT_LIMIT_AUTORESTARTNODES  -1 /**< if solve exceeds this number of nodes, an automatic restart is triggered (-1: no automatic restart)*/
 
 /* LP */
 
@@ -322,7 +322,8 @@
                                                  *   (-1: cuts are never deleted from the global cut pool) */
 #define SCIP_DEFAULT_SEPA_POOLFREQ            0 /**< separation frequency for the global cut pool */
 #define SCIP_DEFAULT_SEPA_FEASTOLFAC      -1.00 /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
-
+#define SCIP_DEFAULT_SEPA_MINACTIVITYQUOT   0.8 /**< minimum cut activity quotient to convert cuts into constraints
+                                                 *   during a restart (0.0: all cuts are converted) */
 
 /* Timing */
 
@@ -1209,6 +1210,12 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->limit_restarts, FALSE, SCIP_DEFAULT_LIMIT_RESTARTS, -1, INT_MAX,
          SCIPparamChgdLimit, NULL) );
 
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "limits/autorestartnodes",
+         "if solve exceeds this number of nodes for the first time, an automatic restart is triggered (-1: no automatic restart)",
+         &(*set)->limit_autorestartnodes, FALSE, SCIP_DEFAULT_LIMIT_AUTORESTARTNODES, -1, INT_MAX,
+         SCIPparamChgdLimit, NULL) );
+
    /* LP parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/solvefreq",
@@ -1707,6 +1714,11 @@ SCIP_RETCODE SCIPsetCreate(
          "factor to scale orthogonality of cut in separation score calculation (0.0 to disable orthogonality calculation)",
          &(*set)->sepa_orthofac, TRUE, SCIP_DEFAULT_SEPA_ORTHOFAC, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+           "separating/minactivityquot",
+           "minimum cut activity quotient to convert cuts into constraints during a restart (0.0: all cuts are converted)",
+           &(*set)->sepa_minactivityquot, FALSE, SCIP_DEFAULT_SEPA_MINACTIVITYQUOT, 0.0, 1.0,
+           NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "separating/orthofunc",
          "function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete)",

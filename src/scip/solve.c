@@ -4549,6 +4549,13 @@ SCIP_RETCODE SCIPsolveCIP(
        * another restart
        */
       *restart = *restart || (stat->userrestart && SCIPtreeGetNNodes(tree) > 0 && restartAllowed(set, stat));
+      if( set->limit_autorestartnodes == stat->nnodes && stat->ntotalnodes - stat->nruns + 1 == set->limit_autorestartnodes )
+      {
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+               "(run %d, node %"SCIP_LONGINT_FORMAT") restarting: triggering parameter controlled restart)\n",
+               stat->nruns, stat->nnodes);
+         *restart = TRUE ;
+      }
 
       /* display node information line */
       SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol, TRUE) );
