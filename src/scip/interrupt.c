@@ -63,12 +63,12 @@ void interruptHandler(
    ninterrupts++;
    if( ninterrupts >= 5 )
    {
-      /*printf("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);*/
+      printf("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
       exit(1);
    }
    else
    {
-      /*printf("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);*/
+      printf("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
    }
 }
 
@@ -106,17 +106,17 @@ void SCIPinterruptCapture(
    if( interrupt->nuses == 0 )
    {
 #ifdef NO_SIGACTION
-      interrupt->oldsighdlr = signal(SIGTERM, interruptHandler);
+      interrupt->oldsighdlr = signal(SIGINT, interruptHandler);
 #else
       struct sigaction newaction;
-      
+
       /* initialize new signal action */
       newaction.sa_handler = interruptHandler;
       newaction.sa_flags = 0;
       (void)sigemptyset(&newaction.sa_mask);
-      
+
       /* set new signal action, and remember old one */
-      (void)sigaction(SIGTERM, &newaction, &interrupt->oldsigaction);
+      (void)sigaction(SIGINT, &newaction, &interrupt->oldsigaction);
 #endif
 
       ninterrupts = 0;
@@ -131,14 +131,14 @@ void SCIPinterruptRelease(
 {
    assert(interrupt != NULL);
    assert(interrupt->nuses >= 1);
-   
+
    interrupt->nuses--;
    if( interrupt->nuses == 0 )
    {
 #ifdef NO_SIGACTION
-      (void)signal(SIGTERM, interrupt->oldsighdlr);
+      (void)signal(SIGINT, interrupt->oldsighdlr);
 #else
-      (void)sigaction(SIGTERM, &interrupt->oldsigaction, NULL);
+      (void)sigaction(SIGINT, &interrupt->oldsigaction, NULL);
 #endif
    }
 }
