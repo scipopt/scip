@@ -71,7 +71,8 @@ SCIP_RETCODE SCIPbranchcandGetLPCands(
    SCIP_Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*                  nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
-   int*                  npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  npriolpcands,       /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  nfracimplvars       /**< pointer to store the number of implicit fractional variables, or NULL */
    );
 
 

@@ -14133,7 +14133,11 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
 /**@{ */
 
 /** gets branching candidates for LP solution branching (fractional variables) along with solution values,
- *  fractionalities, and number of branching candidates;
+ *  fractionalities, and number of branching candidates; The number of branching candidates does NOT
+ *  account for fractional implicit integer variables which should not be used for branching decisions.
+ *
+ *  Fractional implicit integer variables are stored at the positions *nlpcands - *nlpcands + *nfracimplvars - 1
+ *
  *  branching rules should always select the branching candidate among the first npriolpcands of the candidate
  *  list
  *
@@ -14152,7 +14156,8 @@ SCIP_RETCODE SCIPgetLPBranchCands(
    SCIP_Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*                  nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
-   int*                  npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  npriolpcands,       /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  nfracimplvars       /**< pointer to store the number of implicit fractional variables, or NULL */
    );
 
 /** gets number of branching candidates for LP solution branching (number of fractional variables)
@@ -15390,6 +15395,19 @@ SCIP_Bool SCIPareSolsEqual(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol1,               /**< first primal CIP solution */
    SCIP_SOL*             sol2                /**< second primal CIP solution */
+   );
+
+/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
+ *  deteriorated by this method.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+EXTERN
+SCIP_RETCODE SCIPadjustImplicitSolVals(
+   SCIP*                 scip,               /** SCIP data structure */
+   SCIP_SOL*             sol,                /** primal CIP solution */
+   SCIP_Bool             uselprows           /** should LP row information be considered for none-objective variables */
    );
 
 /** outputs non-zero variables of solution in original problem space to the given file stream
@@ -18028,6 +18046,7 @@ SCIP_Real SCIPgetTotalTime(
  *  @return the current solving time in seconds.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE

@@ -90,7 +90,7 @@
 
 /* propagation */
 #define DEFAULT_TTINFER                 TRUE /**< should time-table (core-times) propagator be used to infer bounds? */
-#define DEFAULT_EFCHECK                 TRUE /**< should edge-finding be used to detect an overload? */
+#define DEFAULT_EFCHECK                FALSE /**< should edge-finding be used to detect an overload? */
 #define DEFAULT_EFINFER                FALSE /**< should edge-finding be used to infer bounds? */
 #define DEFAULT_USEADJUSTEDJOBS        FALSE /**< should during edge-finding jobs be adusted which run on the border of the effective time horizon? */
 #define DEFAULT_TTEFCHECK               TRUE /**< should time-table edge-finding be used to detect an overload? */
@@ -1352,10 +1352,17 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScip)
    /* create for each job a start time variable */
    for( v = 0; v < njobs; ++v )
    {
+      SCIP_Real objval;
+
       /* construct varibale name */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d", v);
 
-      SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[v], name, ests[v], lsts[v], objvals[v], SCIP_VARTYPE_INTEGER) );
+      if( objvals == NULL )
+         objval = 0.0;
+      else
+         objval = objvals[v];
+
+      SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[v], name, ests[v], lsts[v], objval, SCIP_VARTYPE_INTEGER) );
       SCIP_CALL( SCIPaddVar(subscip, subvars[v]) );
    }
 
@@ -2657,7 +2664,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
             int lct;
 
             /* get the latest start time of the infer start time variable before the propagation took place */
-            lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, 0));
+            lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
 
             /* the latest start time of the inference start time variable before the propagation needs to be smaller as
              * the end of the time interval; meaning the job needs be overlap with the time interval in case the job is
@@ -2675,7 +2682,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
             lct = convertBoundToInt(scip, relaxedbd) + duration;
             assert(begin <= lct);
-            assert(lct - begin < duration);
+            assert(bdchgidx == NULL || convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)) < begin);
 
             /* compute the overlap of the job after the propagation but considering the relaxed bound */
             left = MIN(lct - begin + 1, end - begin);
@@ -2689,7 +2696,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
             if( usebdwidening )
             {
-               assert(convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, 0)) <= (end - overlap));
+               assert(convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)) <= (end - overlap));
                SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, (SCIP_Real)(end - overlap)) );
             }
             else
@@ -2704,7 +2711,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
             assert(boundtype == SCIP_BOUNDTYPE_LOWER);
 
             /* get the earliest completion time of the infer start time variable before the propagation took place */
-            ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, 0)) + duration;
+            ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
 
             /* the earliest start time of the inference start time variable before the propagation needs to be larger as
              * than the beginning of the time interval; meaning the job needs be overlap with the time interval in case
@@ -2722,7 +2729,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
             est = convertBoundToInt(scip, relaxedbd);
             assert(end >= est);
-            assert(end - est < duration);
+            assert(bdchgidx == NULL || end - SCIPvarGetLbAtIndex(var, bdchgidx, TRUE) < duration);
 
             /* compute the overlap of the job after the propagation but considering the relaxed bound */
             right = MIN(end - est + 1, end - begin);
@@ -2736,7 +2743,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
             if( usebdwidening )
             {
-               assert(convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, 0)) >= (begin + overlap - duration));
+               assert(convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) >= (begin + overlap - duration));
                SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, (SCIP_Real)(begin + overlap - duration)) );
             }
             else
@@ -3405,6 +3412,33 @@ SCIP_Bool isConsIndependently(
    return TRUE;
 }
 
+/** computes the number of check constraints */
+static
+int getNCheckConss(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLR** conshdlrs;
+   int nconshdlrs;
+   int ncheckconss;
+   int c;
+
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+   conshdlrs = SCIPgetConshdlrs(scip);
+   assert(conshdlrs != NULL);
+
+   ncheckconss = 0;
+
+   /* loop over all constraint handler and collect the number of constraints which need to be checked */
+   for( c = 0; c < nconshdlrs; ++c )
+   {
+      assert(conshdlrs[c] != NULL);
+      ncheckconss += SCIPconshdlrGetNCheckConss(conshdlrs[c]);
+   }
+
+   return ncheckconss;
+}
+
 /** in case the cumulative constraint is independent of every else, solve the cumulative problem and apply the fixings
  *  (dual reductions)
  */
@@ -3422,10 +3456,15 @@ SCIP_RETCODE solveIndependentCons(
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
+   SCIP_Real* objvals;
    SCIP_Real* lbs;
    SCIP_Real* ubs;
+   SCIP_Real timelimit;
+   SCIP_Real memorylimit;
    SCIP_Bool solved;
    SCIP_Bool error;
+
+   int ncheckconss;
    int nvars;
    int v;
 
@@ -3439,9 +3478,58 @@ SCIP_RETCODE solveIndependentCons(
    if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
-   /* if the cumulative constraint is the only constraint of the original problem or the presolved problem do nothing */
-   if( SCIPgetNOrigConss(scip) == 1 || SCIPgetNConss(scip) == 1 )
+   /* if constraint is not check constraint skip it */
+   if( !SCIPconsIsChecked(cons) )
       return SCIP_OKAY;
+
+   ncheckconss = getNCheckConss(scip);
+
+   /* if the cumulative constraint is the only constraint of the original problem or the only check constraint in the
+    * presolved problem do nothing execpt to change the parameter settings
+    */
+   if( ncheckconss == 1 )
+   {
+      /* shrink the minimal maximum value for the conflict length */
+      SCIP_CALL( SCIPsetIntParam(scip, "conflict/minmaxvars", 10) );
+
+      /* use only first unique implication point */
+      SCIP_CALL( SCIPsetIntParam(scip, "conflict/fuiplevels", 1) );
+
+      /* do not use reconversion conflicts */
+      SCIP_CALL( SCIPsetIntParam(scip, "conflict/reconvlevels", 0) );
+
+      /* after 250 conflict we force a restart since then the variable statistics are reasonable initialized */
+      SCIP_CALL( SCIPsetIntParam(scip, "conflict/restartnum", 250) );
+
+      /* increase the number of conflicts which induce a restart */
+      SCIP_CALL( SCIPsetRealParam(scip, "conflict/restartfac", 2.0) );
+
+      /* weight the variable which made into a conflict */
+      SCIP_CALL( SCIPsetRealParam(scip, "conflict/conflictweight", 1.0) );
+
+      /* do not check pseudo solution (for performance reasons) */
+      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/disableenfops", TRUE) );
+
+      /* use value based history to detect a reasonable branching point */
+      SCIP_CALL( SCIPsetBoolParam(scip, "history/valuebased", TRUE) );
+
+      /* turn of LP relaxation */
+      SCIP_CALL( SCIPsetIntParam(scip, "lp/solvefreq", -1) );
+
+      /* prefer the down branch in case the value based history does not suggest something */
+      SCIP_CALL( SCIPsetCharParam(scip, "nodeselection/childsel", 'd') );
+
+      /* accept any bound change */
+      SCIP_CALL( SCIPsetRealParam(scip, "numerics/boundstreps", 1e-6) );
+
+      /* allow for at most 10 restart, after that the value based history should be reliable */
+      SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 10) );
+
+      /* set priority for depth first search to highest possible value */
+      SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
+
+      return SCIP_OKAY;
+   }
 
    /* constraints for which the check flag is set to FALSE, did not contribute to the lock numbers; therefore, we cannot
     * use the locks to decide for a dual reduction using this constraint;
@@ -3476,10 +3564,40 @@ SCIP_RETCODE solveIndependentCons(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nvars) );
+
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_VAR* var;
+
+      /* if a variables array is given, use the variable bounds otherwise the default values stored in the ests and lsts
+       * array
+       */
+      var = vars[v];
+      assert(var != NULL);
+
+      lbs[v] = SCIPvarGetLbLocal(var);
+      ubs[v] = SCIPvarGetUbLocal(var);
+
+      objvals[v] = SCIPvarGetObj(var);
+   }
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+   if( !SCIPisInfinity(scip, memorylimit) )
+   {
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
 
    /* solve the cumulative condition separately */
-   SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, consdata->durations, consdata->demands, consdata->capacity,
-         consdata->hmin, consdata->hmax, TRUE, lbs, ubs, maxnodes, &solved, cutoff, unbounded, &error) );
+   SCIP_CALL( SCIPsolveCumulative(scip, nvars, lbs, ubs, objvals, consdata->durations, consdata->demands, consdata->capacity,
+         consdata->hmin, consdata->hmax, timelimit, memorylimit, maxnodes, &solved, cutoff, unbounded, &error) );
 
    if( !(*cutoff) && !(*unbounded) && !error )
    {
@@ -3535,6 +3653,7 @@ SCIP_RETCODE solveIndependentCons(
       }
    }
 
+   SCIPfreeBufferArray(scip, &objvals);
    SCIPfreeBufferArray(scip, &ubs);
    SCIPfreeBufferArray(scip, &lbs);
 
@@ -10309,15 +10428,15 @@ SCIP_RETCODE presolveCons(
 {
    assert(!SCIPconsIsDeleted(cons));
 
-   /* computes the effective horizon and checks if the constraint can be decomposed */
-   SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
-
-   if( SCIPconsIsDeleted(cons) )
-      return SCIP_OKAY;
-
    /* only perform dual reductions on model constraints */
    if( conshdlrdata->dualpresolve )
    {
+      /* computes the effective horizon and checks if the constraint can be decomposed */
+      SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
+
+      if( SCIPconsIsDeleted(cons) )
+         return SCIP_OKAY;
+
       /* in case the cumulative constraint is independent of every else, solve the cumulative problem and apply the
        * fixings (dual reductions)
        */
@@ -13477,24 +13596,23 @@ SCIP_RETCODE SCIPsetSolveCumulative(
 
 /** solves given cumulative condition as independent sub problem
  *
- *  @note The time and memory limit of the SCIP environment in transferred to sub solver
- *
  *  @note If the problem was solved to the earliest start times (ests) and latest start times (lsts) array contain the
  *        solution values; If the problem was not solved these two arrays contain the global bounds at the time the sub
  *        solver was interrupted.
  */
 SCIP_RETCODE SCIPsolveCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of start time variables (activities) */
-   SCIP_VAR**            vars,               /**< start time variables */
+   int                   njobs,              /**< number of jobs (activities) */
+   SCIP_Real*            ests,               /**< array with the earlier start time for each job */
+   SCIP_Real*            lsts,               /**< array with the latest start time for each job */
+   SCIP_Real*            objvals,            /**< array of objective coefficients for each job (linear objective function), or NULL if none */
    int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
-   SCIP_Bool             local,              /**< use local bounds, otherwise global */
-   SCIP_Real*            ests,               /**< array to store the earlier start time for each job */
-   SCIP_Real*            lsts,               /**< array to store the latest start time for each job */
+   SCIP_Real             timelimit,          /**< time limit for solving in seconds */
+   SCIP_Real             memorylimit,        /**< memory limit for solving in mega bytes (MB) */
    SCIP_Longint          maxnodes,           /**< maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit) */
    SCIP_Bool*            solved,             /**< pointer to store if the problem is solved (to optimality) */
    SCIP_Bool*            infeasible,         /**< pointer to store if the problem is infeasible */
@@ -13504,17 +13622,13 @@ SCIP_RETCODE SCIPsolveCumulative(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Real* objvals;
-   SCIP_Real timelimit;
-   SCIP_Real memorylimit;
-   int v;
 
-   (*solved) = FALSE;
+   (*solved) = TRUE;
    (*infeasible) = FALSE;
    (*unbounded) = FALSE;
    (*error) = FALSE;
 
-   if( nvars == 0 )
+   if( njobs == 0 )
       return SCIP_OKAY;
 
    /* find the cumulative constraint handler */
@@ -13526,50 +13640,15 @@ SCIP_RETCODE SCIPsolveCumulative(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nvars) );
-
-   for( v = 0; v < nvars; ++v )
-   {
-      assert(vars[v] != NULL);
-
-      if( local )
-      {
-         ests[v] = SCIPvarGetLbLocal(vars[v]);
-         lsts[v] = SCIPvarGetUbLocal(vars[v]);
-      }
-      else
-      {
-         ests[v] = SCIPvarGetLbGlobal(vars[v]);
-         lsts[v] = SCIPvarGetUbGlobal(vars[v]);
-      }
-
-      objvals[v] = SCIPvarGetObj(vars[v]);
-   }
-
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
    /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit > 0.0 && memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+   if( timelimit > 0.0 && memorylimit > 10 )
    {
-      SCIP_CALL( conshdlrdata->solveCumulative(nvars, ests, lsts, objvals, durations, demands, capacity,
+      SCIP_CALL( conshdlrdata->solveCumulative(njobs, ests, lsts, objvals, durations, demands, capacity,
             hmin, hmax, timelimit, memorylimit, maxnodes, solved, infeasible, unbounded, error) );
    }
-
-   SCIPfreeBufferArray(scip, &objvals);
 
    return SCIP_OKAY;
 }

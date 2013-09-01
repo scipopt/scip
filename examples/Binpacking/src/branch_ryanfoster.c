@@ -143,7 +143,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    }
 
    /* get fractional LP candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);
 
    /* compute weigthts for each order pair */

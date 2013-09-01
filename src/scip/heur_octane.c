@@ -696,7 +696,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    if( SCIPgetNNodes(scip) % (SCIPheurGetNCalls(heur) / (100 * SCIPheurGetNBestSolsFound(heur) + 10*heurdata->nsuccess + 1) + 1) != 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &fracvars, NULL, NULL, &nfracvars, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &fracvars, NULL, NULL, &nfracvars, NULL, NULL) );
 
    /* don't use integral starting points */
    if( nfracvars == 0 )

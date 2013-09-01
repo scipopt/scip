@@ -90,6 +90,11 @@ performance improvements:
 - added upgradability for implicit binary variable cases for linear constraints
 
 interface
+- SCIPgetLPBranchCands() can be used to retrieve the number of implicit integer variables with fractional LP solution
+  value via an additional pointer; the corresponding implicit integer variables can be accessed together with their 
+  fractionalities and solution values in the same way as binary and integer variables before; the arrays are sorted such 
+  that binary and integer variables precede the implicit integer variables; the method SCIPbranchcandGetLPCands()
+  has been modified in the same way   
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
   the rank of a cut can be changed (default rank is 0)
 - new methods for the SCIP_QUEUE data structure in pub_misc.h, misc.c SCIPqueueCreate(), SCIPqueueFree(),

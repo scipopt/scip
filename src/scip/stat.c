@@ -335,7 +335,7 @@ void SCIPstatUpdatePrimalDualIntegral(
    solvingtime = SCIPclockGetTime(stat->solvingtime);
    assert(solvingtime >= stat->previntegralevaltime);
 
-   if( !SCIPsetIsInfinity(set, upperbound) || stat->lastprimalbound == SCIP_UNKNOWN ) /*lint !e777*/
+   if( !SCIPsetIsInfinity(set, upperbound) ) /*lint !e777*/
    {
       /* get value in original space for gap calculation */
       primalbound = SCIPprobExternObjval(transprob, origprob, set, upperbound);
@@ -347,7 +347,7 @@ void SCIPstatUpdatePrimalDualIntegral(
       primalbound = stat->lastprimalbound;
    }
 
-   if( !SCIPsetIsInfinity(set, -lowerbound) || stat->lastdualbound == SCIP_UNKNOWN ) /*lint !e777*/
+   if( !SCIPsetIsInfinity(set, -lowerbound) ) /*lint !e777*/
    {
       /* get value in original space for gap calculation */
       dualbound = SCIPprobExternObjval(transprob, origprob, set, lowerbound);
@@ -359,13 +359,10 @@ void SCIPstatUpdatePrimalDualIntegral(
       dualbound = stat->lastdualbound;
    }
 
-   /* the gap is 0.0 if the lower bound is greater-equal the upper bound */
-   if( SCIPsetIsGE(set, lowerbound, upperbound) )
-   {
-      currentgap = 0.0;
-   }
-   /* the gap is 0.0 if primal and dualbound are the same */
-   else if( SCIPsetIsEQ(set, primalbound, dualbound) )
+   if( primalbound == SCIP_UNKNOWN || dualbound == SCIP_UNKNOWN )
+      currentgap = 100.0;
+   /* the gap is 0.0 if the lower bound is greater-equal the upper bound or if primal and dualbound are equal */
+   else if( SCIPsetIsGE(set, lowerbound, upperbound) || SCIPsetIsEQ(set, primalbound, dualbound) )
    {
       currentgap = 0.0;
    }
