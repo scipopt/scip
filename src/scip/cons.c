@@ -3050,9 +3050,6 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          /* perform the cached constraint updates */
          SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
-         /* remember the result of the enforcement call */
-         conshdlr->lastenfopsresult = *result;
-
          /* update statistics */
          if( *result != SCIP_DIDNOTRUN )
             conshdlr->nenfopscalls++;
@@ -3060,10 +3057,19 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          {
             SCIPerrorMessage("enforcing method of constraint handler <%s> for pseudo solutions was skipped, even though the solution was not objective-infeasible\n", 
                conshdlr->name);
+            conshdlr->lastenfopsresult = *result;
+
             return SCIP_INVALIDRESULT;
          }
+         /* A constraint handler might return SCIP_DIDNOTRUN and not check any constraints in case objinfeasible was
+          * TRUE; we change the result pointer to SCIP_INFEASIBLE in this case.
+          */
+         else
+            *result = SCIP_INFEASIBLE;
+
          if( *result == SCIP_CUTOFF )
             conshdlr->ncutoffs++;
+
          if( *result != SCIP_BRANCHED )
          {
             assert(tree->nchildren == 0);
@@ -3075,6 +3081,9 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          }
          else
             conshdlr->nchildren += tree->nchildren;
+
+         /* remember the result of the enforcement call */
+         conshdlr->lastenfopsresult = *result;
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
