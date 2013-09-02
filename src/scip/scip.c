@@ -33149,6 +33149,37 @@ SCIP_NODE* SCIPgetBestboundNode(
    return SCIPtreeGetLowerboundNode(scip->tree, scip->set);
 }
 
+/** access to all data of open nodes including leaves, children, and siblings
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+void SCIPgetOpenNodesData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE***          leaves,
+   SCIP_NODE***          children,
+   SCIP_NODE***          siblings,
+   int*                  nleaves,
+   int*                  nchildren,
+   int*                  nsiblings
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetBestNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( leaves != NULL )
+      *leaves = SCIPnodepqNodes(scip->tree->leaves);
+   if( children != NULL )
+      *children = scip->tree->children;
+   if( siblings != NULL )
+      *siblings = scip->tree->siblings;
+   if( nleaves != NULL )
+      *nleaves = SCIPnodepqLen(scip->tree->leaves);
+   if( nchildren != NULL )
+      *nchildren = SCIPtreeGetNChildren(scip->tree);
+   if( nsiblings != NULL )
+      *nsiblings = SCIPtreeGetNSiblings(scip->tree);
+}
+
 /** cuts off node and whole sub tree from branch and bound tree
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
