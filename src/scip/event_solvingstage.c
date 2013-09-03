@@ -291,9 +291,9 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingstage)
 
    return SCIP_OKAY;
 }
-
+#if 0
 static
-SCIP_DECL_PARAMCHGD(paramChgdEnabled)
+SCIP_DECL_PARAMCHGD(paramChgdEnabledSolvingstage)
 {
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
@@ -315,7 +315,9 @@ SCIP_DECL_PARAMCHGD(paramChgdEnabled)
 
    return SCIP_OKAY;
 }
-
+#else
+#define paramChgdEnabledSolvingstage NULL
+#endif
 /** creates event handler for Solvingstage event */
 SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
    SCIP*                 scip                /**< SCIP data structure */
@@ -354,7 +356,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
 
    /* add Solvingstage event handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/enabled", "should the event handler be executed?",
-         &eventhdlrdata->enabled, FALSE, DEFAULT_ENABLED, paramChgdEnabled, NULL) );
+         &eventhdlrdata->enabled, FALSE, DEFAULT_ENABLED, paramChgdEnabledSolvingstage, NULL) );
 
    SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/solufilename","file to parse solution information from",
          &eventhdlrdata->solufilename, FALSE, DEFAULT_SOLUFILENAME, NULL, NULL) );
