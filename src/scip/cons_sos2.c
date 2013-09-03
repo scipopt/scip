@@ -1916,19 +1916,13 @@ SCIP_DECL_CONSCOPY(consCopySOS2)
 static
 SCIP_DECL_CONSPARSE(consParseSOS2)
 {  /*lint --e{715}*/
-   char varname[SCIP_MAXSTRLEN];
    SCIP_VAR* var;
    SCIP_Real weight;
    const char* s;
    char* t;
-   int k;
 
    *success = TRUE;
    s = str;
-
-   /* skip white space and '<' */
-   while ( (*s != '\0' && isspace((unsigned char)*s)) || *s == '<' )
-      ++s;
 
    /* create empty SOS2 constraint */
    SCIP_CALL( SCIPcreateConsSOS2(scip, cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
@@ -1936,20 +1930,11 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
    /* loop through string */
    do
    {
-      /* find variable name */
-      k = 0;
-      while ( *s != '\0' && ! isspace((unsigned char)*s) && *s != ',' && *s != '(' && *s != '>' )
-         varname[k++] = *s++;
-      varname[k] = '\0';
+      /* parse variable name */
+      SCIP_CALL( SCIPparseVarName(scip, s, &var, &t) );
+      s = t;
 
-      if ( *s == '\0' )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected weight at input: %s\n", s);
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
-
-      /* skip until beginning of weight (in particular, skip type specifier [?]) */
+      /* skip until beginning of weight */
       while ( *s != '\0' && *s != '(' )
          ++s;
 
@@ -1972,18 +1957,9 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
       }
       s = t;
 
-      /* skip white space, ',', '(', and '<' */
-      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' || *s == '<' ) )
+      /* skip white space, ',', and ')' */
+      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' ) )
          ++s;
-
-      /* get variable */
-      var = SCIPfindVar(scip, varname);
-      if ( var == NULL )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
 
       /* add variable */
       SCIP_CALL( SCIPaddVarSOS2(scip, *cons, var, weight) );
