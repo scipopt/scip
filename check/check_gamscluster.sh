@@ -49,14 +49,6 @@ then
     exit 1;
 fi
 
-# check if the slurm blades should be used exclusively
-if test "$EXCLUSIVE" = "true"
-then
-    EXCLUSIVE="--exclusive"
-else
-    EXCLUSIVE=""
-fi
-
 # check if queuetype has been defined
 if test "$QUEUETYPE" = ""
 then
@@ -281,6 +273,18 @@ elif test $CLUSTERQUEUE = "opt-low"
 then
     CLUSTERQUEUE="opt"
     NICE="--nice=10000"
+fi
+
+# check if the slurm blades should be used exclusively
+if test "$EXCLUSIVE" = "true"
+then
+    EXCLUSIVE="--exclusive"
+    if test $CLUSTERQUEUE = "opt"
+    then
+        CLUSTERQUEUE="M610"
+    fi
+else
+    EXCLUSIVE=""
 fi
 
 # counter to define file names for a test set uniquely 
