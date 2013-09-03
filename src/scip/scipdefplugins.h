@@ -105,6 +105,7 @@
 #include "scip/heur_veclendiving.h"
 #include "scip/heur_zirounding.h"
 #include "scip/nodesel_bfs.h"
+#include "scip/nodesel_breadthfirst.h"
 #include "scip/nodesel_dfs.h"
 #include "scip/nodesel_estimate.h"
 #include "scip/nodesel_hybridestim.h"

@@ -16,6 +16,7 @@ data structures
 - new data structure for (circular) queues (SCIP_QUEUE)
 
 features:
+- added breadth first search node selection
 - added new dual presolving for setppc-constraints
 - changed dualfix presolver to propagator such that dual fixing can also be applied during repropagation of the root node
 - added upgrade from varbound constraints to set-packing constraints
