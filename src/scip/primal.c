@@ -176,8 +176,11 @@ SCIP_RETCODE primalSetCutoffbound(
    /* set cut off value in LP solver */
    SCIP_CALL( SCIPlpSetCutoffbound(lp, set, prob, primal->cutoffbound) );
 
-   /* cut off leaves of the tree */
-   SCIP_CALL( SCIPtreeCutoff(tree, blkmem, set, stat, eventqueue, lp, primal->cutoffbound) );
+   /* cut off leaves of the tree if not in repropagation */
+   if ( ! SCIPtreeInRepropagation(tree) )
+   {
+      SCIP_CALL( SCIPtreeCutoff(tree, blkmem, set, stat, eventqueue, lp, primal->cutoffbound) );
+   }
 
    return SCIP_OKAY;
 }
