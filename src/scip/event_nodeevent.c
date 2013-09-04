@@ -83,9 +83,9 @@ SCIP_DECL_EVENTINIT(eventInitNodeevent)
 
    eventhdlrdata->avgcutoffdepth = .0;
    eventhdlrdata->ncutoffnodes = 0L;
-
+/*
    SCIPcatchEvent(scip, EVENTTOCATCH, eventhdlr, NULL, NULL);
-
+*/
    return SCIP_OKAY;
 }
 
