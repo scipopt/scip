@@ -106,9 +106,8 @@ struct SCIP_ConsData
    unsigned int          changed:1;          /**< was constraint changed since last pair preprocessing round? */
    unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
    unsigned int          checkwhenupgr:1;    /**< if and constraint is upgraded to an logicor constraint or the and-
-                                              *   constraint is linearized, should the check flag set to true, even if
-                                              *   the and-constraint ha a check flag false
-                                              */
+                                              *   constraint is linearized, should the check flag be set to true, even
+                                              *   if the and-constraint has a check flag set to false? */
 };
 
 /** constraint handler data */
@@ -4946,8 +4945,8 @@ SCIP_RETCODE SCIPsortAndCons(
    return SCIP_OKAY;
 }
 
-/** changes the check flag for all constraints created out of the given and-constraint, even if the check flag of this
- *  and-constraint is set to FALSE
+/** when 'upgrading' the given and-constraint, should the check flag for the upgraded constraint be set to TRUE, even if
+ *  the check flag of this and-constraint is set to FALSE?
  */
 SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -2455,7 +2455,7 @@ SCIP_RETCODE applyBounding(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            transprob,          /**< tranformed problem after presolve */
-   SCIP_PROB*            origprob,           /**< orginal problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */

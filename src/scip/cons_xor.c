@@ -2885,7 +2885,7 @@ SCIP_RETCODE resolvePropagation(
    return SCIP_OKAY;
 }
 
-/* try to use clique information to delete a part of the xor constraint or even fix variables */
+/** try to use clique information to delete a part of the xor constraint or even fix variables */
 static
 SCIP_RETCODE cliquePresolve(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2928,7 +2928,7 @@ SCIP_RETCODE cliquePresolve(
    if( nvars < 3 )
       return SCIP_OKAY;
 
-#if 0
+#if 0 /* try to evaluate if clique presolving should only be done multiple times when the constraint changed */
    if( !consdata->changed )
       return SCIP_OKAY;
 #endif

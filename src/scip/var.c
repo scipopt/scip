@@ -3565,7 +3565,7 @@ SCIP_RETCODE SCIPvarFix(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -4183,7 +4183,7 @@ SCIP_RETCODE varUpdateAggregationBounds(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -4372,7 +4372,7 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -4689,7 +4689,7 @@ SCIP_RETCODE tryAggregateIntVars(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -4906,7 +4906,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -5076,7 +5076,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -5845,7 +5845,7 @@ SCIP_RETCODE SCIPvarAddObj(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */

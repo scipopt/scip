@@ -261,7 +261,7 @@ SCIP_DECL_SORTPTRCOMP(resvarCompWithInactive)
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyAndConsDatas)
 {  /*lint --e{715}*/
-   /* the key is the element itself */ 
+   /* the key is the element itself */
    return elem;
 }
 
@@ -280,7 +280,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqAndConsDatas)
    cdata2 = (CONSANDDATA*)key2;
 
 #ifndef NDEBUG
-   scip = (SCIP*)userptr; 
+   scip = (SCIP*)userptr;
 #endif
    assert(scip != NULL);
    assert(cdata1 != NULL);
@@ -8489,7 +8489,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */

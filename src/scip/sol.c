@@ -303,7 +303,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -1243,7 +1243,7 @@ SCIP_Real SCIPsolGetObj(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob            /**< orginal problem data */
+   SCIP_PROB*            origprob            /**< original problem data */
    )
 {
    assert(sol != NULL);
@@ -1636,7 +1636,7 @@ void SCIPsolRecomputeObj(
    nvars = origprob->nvars;
 
    /* recompute the objective value */
-   sol->obj = 0.0;
+   sol->obj = SCIPprobGetObjoffset(origprob);
    for( v = 0; v < nvars; ++v )
    {
       solval = SCIPsolGetVal(sol, set, stat, vars[v]);

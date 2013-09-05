@@ -1413,7 +1413,7 @@ void SCIPprobSetObjIntegral(
  */
 SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -1519,7 +1519,7 @@ void SCIPprobUpdateDualbound(
 /** if possible, scales objective function such that it is integral with gcd = 1 */
 SCIP_RETCODE SCIPprobScaleObj(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -1935,7 +1935,7 @@ int SCIPprobGetNObjVars(
 /** returns the external value of the given internal objective value */
 SCIP_Real SCIPprobExternObjval(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             objval              /**< internal objective value */
    )
@@ -1957,7 +1957,7 @@ SCIP_Real SCIPprobExternObjval(
 /** returns the internal value of the given external objective value */
 SCIP_Real SCIPprobInternObjval(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             objval              /**< external objective value */
    )
@@ -2072,6 +2072,7 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNImplVars
 #undef SCIPprobGetNContVars
 #undef SCIPprobGetVars
+#undef SCIPprobGetObjoffset
 
 /** is the problem data transformed */
 SCIP_Bool SCIPprobIsTransformed(
@@ -2190,4 +2191,13 @@ SCIP_VAR** SCIPprobGetVars(
 {
    assert(prob != NULL);
    return prob->vars;
+}
+
+/** gets the objective offset */
+SCIP_Real SCIPprobGetObjoffset(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->objoffset;
 }

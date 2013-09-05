@@ -93,7 +93,7 @@ SCIP_RETCODE SCIPprimalUpdateObjlimit(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -107,7 +107,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -128,7 +128,7 @@ SCIP_Bool SCIPprimalUpperboundIsSol(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob            /**< orginal problem data */
+   SCIP_PROB*            origprob            /**< original problem data */
    );
 
 /** adds primal solution to solution storage by copying it */
@@ -175,7 +175,7 @@ SCIP_RETCODE SCIPprimalAddOrigSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SOL*             sol,                /**< primal CIP solution; is cleared in function call */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
@@ -188,7 +188,7 @@ SCIP_RETCODE SCIPprimalAddOrigSolFree(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< orginal problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );

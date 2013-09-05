@@ -72,6 +72,9 @@ features:
 - reader_lp is now abled to write and constraints in form of their (weak/strict) relaxation
 - reader_mps is now abled to write and constraints in form of their (weak/strict) relaxation
 - added possibility to forbid constraint upgrading
+- it is now possible to add an offset for the original problem instance, all original solutions will be initialized with
+  this value and updated, when the offset is changed
+- added clique presolving for xor constraints
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -132,6 +135,8 @@ interface
 - added a copy of the GAMS/SCIP interface to interfaces/gams
 - added SCIPconsAddUpgradeLocks() and SCIPconsGetNUpgradeLocks() to either add/decrease the counter on upgrade-locks on
   a constraint or get the current number of upgrade-locks
+- added new method SCIPaddOrigObjoffset() in scip.{c,h} which adds a value to the offset in original space an updates
+  all orignal solutions correspondingly
 
 parameters:
 - new parameter "misc/calcintegral" (default TRUE) to trigger calculation of primal-dual integral 
@@ -176,6 +181,8 @@ parameters:
   relaxation of and constraints in MPS format
 - new parameter "constraints/logicor/strengthen", should pairwise constraint comparison try to strengthen constraints by
   removing superflous non-zeros?
+- new parameter constraints/and/upgraderesultant to upgrade resultants of and constraints from binary to implicit binary
+  variables, default is TRUE
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
@@ -345,8 +352,6 @@ interface
   the corresponding C++ wrapper classes
 - new method SCIPpropIsPresolDelayed() which return if a propagator is delay during presolving
 - changed parameters of function SCIPpropagateCutoffboundVar() in prop_pseudoobj.{c,h}
-- added new method SCIPaddOrigObjoffset() in scip.{c,h} which adds a value to the offset in original space an updates
-  all orignal solutions correspondingly
 - SCIPcomputeCoverUndercover() now has an additional parameter coverbd
 - the code in src/dijkstra and src/xml has been changed to (increasingly) conform to the SCIP coding style;
   all function (and variable) names have been changed (do not contain "_" anymore).
@@ -482,18 +487,6 @@ interface
 - added a SCIP_CONS* parameter to SCIPcreateConsDisjunction() which can represent the linear relaxation of the whole
   disjunction constraint as a conjunction constraint, or NULL
 
-internal methods
-- changed prob to transprob/origprob and added origprob/transprob parameter to SCIPprimalUpdateObjlimit(),
-  SCIPprimalUpdateObjoffset(), SCIPprimalUpperboundIsSol(), SCIPprimalAddOrigSol(), SCIPprimalAddOrigSolFree in
-  primal.{c,h}, SCIPprobCheckObjIntegral(), SCIPprobScaleObj(), SCIPprobExternObjval(), SCIPprobInternObjval() in
-  prob.{c,h}, SCIPsolGetObj() in sol.{c,h}, SCIPvarFix(), SCIPvarTryAggregateVars(), SCIPvarAggregate(),
-  SCIPvarMultiaggregate(), SCIPvarAddObj() in var.{c,h}
-- added origprob parameter to SCIPsolCreateOriginal() in sol.{c,h}
-- added new method SCIPsolOrigAddObjval() in sol.{h,c} to add an external offset value to one original solution, this
-  is a define in opt mode
-- added new method SCIPprimalAddOrigObjoffset() in primal.{c,h}, to add an external offset to all existing original
-  solutions
-
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
   1e+06/MAX(maximal absolute coefficient, 1.0) instead of 1e+03/MAX(maximal absolute coefficient, 1.0);
@@ -607,8 +600,6 @@ parameters:
 - new parameter constraints/indicator/dualreductions to enable dual presolving/propagation steps
 - new parameters constraints/indicator/{sepacouplingcuts,sepacouplinglocal} to enable separation of (local) cuts
 - new parameters constraints/indicator/{maxsepacuts,maxsepacutsroot} to restrict the number of separated cuts
-- new parameter constraints/and/upgraderesultant to upgrade resultants of and constraints from binry to implicit binary
-  variables, default is TRUE
 - new parameter separating/oddcycle/maxunsucessfull to automatically turn off separation
 - new parameter numerics/recompfac which denotes the factor, by which the absolute of an iteratively updated value has
   to be decreased in order to recompute the value from scratch
@@ -646,9 +637,6 @@ features:
   set relaxrows = FALSE
 - the check script now recognizes MIQCP and MINLP instances
 - new column showing the pseudo objective value
-- it is now possible to add an offset for the original problem instance, all original solutions will be initialized with
-  this value and updated, when the offset is changed
-- added clique presolving for xor constraints
 - time for initpre and exitpre methods is now also measured in presolving time
 - digraph structure added to misc.c and pub_misc.h that can be used to handle directed graphs, compute undirected
   components in the graph, and sort these components (almost) topologically

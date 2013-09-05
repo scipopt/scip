@@ -138,8 +138,8 @@ SCIP_RETCODE SCIPsortAndCons(
    SCIP_CONS*            cons                /**< and-constraint */
    );
 
-/** changes the check flag for all constraints created out of the given and-constraint, even if the check flag of this
- *  and-constraint is set to FALSE
+/** when 'upgrading' the given and-constraint, should the check flag for the upgraded constraint be set to TRUE, even if
+ *  the check flag of this and-constraint is set to FALSE?
  */
 EXTERN
 SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
