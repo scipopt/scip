@@ -9764,11 +9764,12 @@ SCIP_RETCODE simplifyInequalities(
                }
 
                /* new coeffcient should never be zero */
-               assert(hasrhs || !SCIPisFeasZero(scip, newcoef));
+               assert((hasrhs && vals[candpos] > 0 && !SCIPisFeasZero(scip, newcoef)) || (haslhs && vals[candpos] < 0 && !SCIPisFeasZero(scip, newcoef)) || (hasrhs && SCIPisNegative(scip, vals[candpos])) || (haslhs && SCIPisPositive(scip, vals[candpos])));
                if( SCIPisZero(scip, newcoef) )
                {
-                  /* we cannot delete the coefficient because if one variable of a big coefficient is set to 1 we loose the implication that this variable needs to be 0 then */
-                  notchangable = TRUE;
+                  /* delete old redundant coefficient */
+                  SCIP_CALL( delCoefPos(scip, cons, candpos) );
+                  ++(*nchgcoefs);
                }
                else
                {
