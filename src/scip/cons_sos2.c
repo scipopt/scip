@@ -619,13 +619,14 @@ SCIP_RETCODE presolRoundSOS2(
             return SCIP_OKAY;
          }
 
-         lastFixedNonzero = j;
+         if( lastFixedNonzero == -1)
+            lastFixedNonzero = j;
       }
 
       /* if the variable is fixed to 0 we may delete it from our constraint */
       if( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) )
       {
-         /* all rear variable fixed to 0 can be deleted */
+         /* all rear variables fixed to 0 can be deleted */
          if( j == consdata->nvars - 1 )
          {
             ++(*nremovedvars);
@@ -635,7 +636,7 @@ SCIP_RETCODE presolRoundSOS2(
 
             *success = TRUE;
          }
-         /* remember position of last variable variable for which all up front and this one are fixed to 0 */
+         /* remember position of last variable for which all up front and this one are fixed to 0 */
          else if( lastzero > j + 1 )
             lastzero = j;
       }
@@ -646,7 +647,7 @@ SCIP_RETCODE presolRoundSOS2(
    /* check that our vars array is still correct */
    assert(vars == consdata->vars);
 
-   /* remove first "lastzero" many varaibles, that are already fixed to 0 */
+   /* remove first "lastzero" many variables, that are already fixed to 0 */
    if( lastzero < consdata->nvars )
    {
       assert(lastzero >= 0);
@@ -663,7 +664,7 @@ SCIP_RETCODE presolRoundSOS2(
       *success = TRUE;
    }
 
-   /* check that our vars array is still correct */
+   /* check that our variable array is still correct */
    assert(vars == consdata->vars);
 
    *nremovedvars += localnremovedvars;
@@ -743,7 +744,7 @@ SCIP_RETCODE presolRoundSOS2(
          SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero + 1])));
 
       /* fix all variables before lastFixedNonzero to zero */
-      for( j = 0; j < lastFixedNonzero; ++j )
+      for( j = 0; j < lastFixedNonzero - 1; ++j )
       {
          SCIPdebugMessage("fixing variable <%s> to 0.\n", SCIPvarGetName(vars[j]));
          SCIP_CALL( SCIPfixVar(scip, vars[j], 0.0, &infeasible, &fixed) );
