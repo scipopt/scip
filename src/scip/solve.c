@@ -4019,6 +4019,7 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_Bool unbounded;
    SCIP_Bool infeasible;
    SCIP_Bool foundsol;
+   SCIP_Bool eventthrown;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -4076,6 +4077,8 @@ SCIP_RETCODE SCIPsolveCIP(
 
       do
       {
+         eventthrown = FALSE;
+
          /* update the memory saving flag, switch algorithms respectively */
          SCIPstatUpdateMemsaveMode(stat, set, messagehdlr, mem);
 
@@ -4137,6 +4140,8 @@ SCIP_RETCODE SCIPsolveCIP(
       SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
       SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
+      assert(eventthrown == FALSE);
+
       /* solve focus node */
       SCIP_CALL( solveNode(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp, relaxation, pricestore, sepastore, branchcand,
             cutpool, delayedcutpool, conflict, eventfilter, eventqueue, &cutoff, &unbounded, &infeasible, restart, &afternodeheur, &stopped) );
@@ -4194,6 +4199,7 @@ SCIP_RETCODE SCIPsolveCIP(
                SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
                SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
                SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+               eventthrown = TRUE;
             }
          }
          else if( !unbounded )
@@ -4221,6 +4227,7 @@ SCIP_RETCODE SCIPsolveCIP(
             }
             SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
             SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+            eventthrown = TRUE;
          }
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
@@ -4294,6 +4301,7 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
          SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
          SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+         eventthrown = TRUE;
       }
 
       /* compute number of successfully applied conflicts */
@@ -4341,9 +4349,12 @@ SCIP_RETCODE SCIPsolveCIP(
    if( tree->focusnode != NULL && SCIPtreeGetNNodes(tree) == 0
       && SCIPsetIsGE(set, tree->focusnode->lowerbound, primal->cutoffbound) )
    {
-      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
-      SCIP_CALL( SCIPeventChgNode(&event, tree->focusnode) );
-      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+      if(!eventthrown)
+      {
+         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+         SCIP_CALL( SCIPeventChgNode(&event, tree->focusnode) );
+         SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+      }
 
       focusnode = NULL;
       SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, primal, tree, lp, branchcand, conflict,
