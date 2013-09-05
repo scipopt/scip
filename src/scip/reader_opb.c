@@ -96,6 +96,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/pub_misc.h"
 #include "scip/reader_opb.h"
+#include "scip/debug.h"
 
 #define READER_NAME             "opbreader"
 #define READER_DESC             "file reader for pseudo-Boolean problem in opb format"
@@ -1213,6 +1214,22 @@ SCIP_RETCODE setObjective(
             /* add auxiliary variable to the problem */
             SCIP_CALL( SCIPaddVar(scip, var) );
 
+#ifdef SCIP_DEBUG_SOLUTION
+            {
+               SCIP_Real val;
+
+               for( v = nvars - 1; v >= 0; --v )
+               {
+                  SCIP_CALL( SCIPdebugGetSolVal(scip, vars[v], &val) );
+                  assert(SCIPisFeasZero(scip, val) || SCIPisFeasEQ(scip, val, 1.0));
+
+                  if( val < 0.5 )
+                     break;
+               }
+               SCIP_CALL( SCIPdebugAddSolVal(scip, var, (val < 0.5) ? 0.0 : 1.0) );
+            }
+#endif
+
             /* @todo: check whether all constraint creation flags are the best option */
             /* create and-constraint */
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "obj_andcons_%d", t);
@@ -1263,6 +1280,36 @@ SCIP_RETCODE setObjective(
 #endif
          /* add auxiliary variable to the problem */
          SCIP_CALL( SCIPaddVar(scip, var) );
+
+#ifdef SCIP_DEBUG_SOLUTION
+         {
+            SCIP_Real artval = 0.0;
+            SCIP_Real val;
+
+            for( t = 0; t < ntermcoefs; ++t )
+            {
+               vars = terms[t];
+               nvars = ntermvars[t];
+               assert(vars != NULL);
+               assert(nvars > 1);
+
+               for( v = nvars - 1; v >= 0; --v )
+               {
+                  SCIP_CALL( SCIPdebugGetSolVal(scip, vars[v], &val) );
+                  assert(SCIPisFeasZero(scip, val) || SCIPisFeasEQ(scip, val, 1.0));
+
+                  if( val < 0.5 )
+                     break;
+               }
+
+               artval += (((val < 0.5) ? 0.0 : 1.0) * termcoefs[t]);
+            }
+            assert(SCIPisFeasLE(scip, lb, artval) && SCIPisFeasGE(scip, ub, artval));
+
+            SCIP_CALL( SCIPdebugAddSolVal(scip, var, artval) );
+         }
+#endif
+
 
          /* create artificial objection function constraint containing the artificial integer variable */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "artificial_obj_cons");

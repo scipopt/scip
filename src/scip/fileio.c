@@ -62,7 +62,7 @@ int SCIPfprintf(SCIP_FILE *stream, const char *format, ...)
 
    va_start(ap, format); /*lint !e826*/
 #if defined(_WIN32) || defined(_WIN64)
-   n = _vsnprintf(t, (size_t) len, s, ap);
+   n = _vsnprintf(buffer, BUFFER_LEN, format, ap);
 #else
    n = vsnprintf(buffer, BUFFER_LEN, format, ap);
 #endif

@@ -45,7 +45,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_xor.h"
 #include "scip/pub_var.h"
-
+#include "scip/debug.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "pseudoboolean"
@@ -1467,6 +1467,23 @@ SCIP_RETCODE createAndAddAndCons(
       /* add auxiliary variable to the problem */
       SCIP_CALL( SCIPaddVar(scip, resultant) );
 
+#ifdef SCIP_DEBUG_SOLUTION
+      {
+         SCIP_Real val;
+         int v;
+
+         for( v = nvars - 1; v >= 0; --v )
+         {
+            SCIP_CALL( SCIPdebugGetSolVal(scip, vars[v], &val) );
+            assert(SCIPisFeasZero(scip, val) || SCIPisFeasEQ(scip, val, 1.0));
+
+            if( val < 0.5 )
+               break;
+         }
+         SCIP_CALL( SCIPdebugAddSolVal(scip, resultant, (val < 0.5) ? 0.0 : 1.0) );
+      }
+#endif
+
       SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/nlcseparate", &separate) );
       SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/nlcpropagate", &propagate) );
       SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/nlcremovable", &removable) );
@@ -1524,7 +1541,7 @@ SCIP_RETCODE createAndAddAndCons(
    return SCIP_OKAY;
 }
 
-/** create an and constraint and adds it to the problem and to the linear constraint */
+/** adds a term to the given pseudoboolean constraint */
 static
 SCIP_RETCODE addCoefTerm(
    SCIP*const            scip,               /**< SCIP data structure */

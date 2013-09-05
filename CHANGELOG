@@ -239,7 +239,14 @@ fixed bugs:
 - fixed bug in cons_integral: need to make sure that all implicit integer variables are integral when a solution is
   checked
 - fixed bug in cons_abspower: wrong infinity check when propagating bounds
-- fixed bug in sepa_oddcylce: number of arcs have to be adjusted
+- fixed bugs in sepa_oddcylce: number of arcs have to be adjusted, handle implicit binary variables,
+  fixed bug in heuristic separation method, fixed asserts
+- fixed bugs with freeing C++ object data for problem and variables
+- fixed wrong bound calculation in sepa_rapidlearning
+- fixed bug with infinite multi-aggregation constants
+- fixed bug that old LP size was not updated for deadend if no LP was solved
+- fixed bug that removing reverse implication did not reset closestvblpcount
+- fixed bug that the number aggregated variables were not counted in the presol_inttobinary.c
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
