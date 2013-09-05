@@ -2053,6 +2053,7 @@ void SCIPprobPrintStatistics(
       SCIPmessageFPrintInfo(messagehdlr, file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
 }
 
+#ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
@@ -2201,3 +2202,5 @@ SCIP_Real SCIPprobGetObjoffset(
    assert(prob != NULL);
    return prob->objoffset;
 }
+
+#endif

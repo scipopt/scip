@@ -57,6 +57,7 @@
 #include "scip/debug.h"
 
 #include "scip/pub_message.h"
+#include "scip/pub_history.h"
 
 #define MAXIMPLSCLOSURE 100  /**< maximal number of descendants of implied variable for building closure
                               *   in implication graph */

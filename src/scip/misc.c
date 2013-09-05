@@ -36,6 +36,7 @@
 #include "scip/set.h"
 #include "scip/misc.h"
 #include "scip/intervalarith.h"
+#include "scip/pub_misc.h"
 
 #ifndef NDEBUG
 #include "scip/struct_misc.h"
@@ -4508,6 +4509,8 @@ void SCIPactivityFree(
 
 /* some simple variable functions implemented as defines */
 
+#ifndef NDEBUG
+
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
@@ -4559,6 +4562,7 @@ int SCIPactivityGetEnergy(
    return activity->duration * activity->demand ;
 }
 
+#endif
 
 /*
  * Resource Profile
