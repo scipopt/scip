@@ -10383,8 +10383,7 @@ SCIP_Bool SCIPvarHasBinaryImplic(
 }
 
 /** fixes the bounds of a binary variable to the given value, counting bound changes and detecting infeasibility */
-static
-SCIP_RETCODE varFixBinary(
+SCIP_RETCODE SCIPvarFixBinary(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -10490,7 +10489,7 @@ SCIP_RETCODE SCIPvarAddClique(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert(SCIPvarIsBinary(var)); 
+   assert(SCIPvarIsBinary(var));
    assert(infeasible != NULL);
 
    *infeasible = FALSE;
@@ -10521,7 +10520,7 @@ SCIP_RETCODE SCIPvarAddClique(
       /* if the variable now appears twice with the same value in the clique, it can be fixed to the opposite value */
       if( doubleentry )
       {
-         SCIP_CALL( varFixBinary(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, !value,
+         SCIP_CALL( SCIPvarFixBinary(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, !value,
                infeasible, nbdchgs) );
       }
 
@@ -10543,10 +10542,46 @@ SCIP_RETCODE SCIPvarAddClique(
             if( vars[i] == var )
                continue;
 
-            SCIP_CALL( varFixBinary(vars[i], blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
+            SCIP_CALL( SCIPvarFixBinary(vars[i], blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
                   !values[i], infeasible, nbdchgs) );
          }
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds a filled clique to the cliquelists of all corresponding variables */
+SCIP_RETCODE SCIPvarsAddClique(
+   SCIP_VAR**            vars,               /**< problem variables */
+   SCIP_Bool*            values,             /**< values of the variables in the clique */
+   int                   nvars,              /**< number of problem variables */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CLIQUE*          clique              /**< clique that contains all given variables and values */
+   )
+{
+   SCIP_VAR* var;
+   int v;
+
+   assert(vars != NULL);
+   assert(values != NULL);
+   assert(nvars > 0);
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(clique != NULL);
+
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      var = vars[v];
+      assert(SCIPvarIsBinary(var));
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+
+      /* add clique to variable's clique list */
+      SCIP_CALL( SCIPcliquelistAdd(&var->cliquelist, blkmem, set, values[v], clique) );
+
+      /* check consistency of cliquelist */
+      SCIPcliquelistCheck(var->cliquelist, var);
    }
 
    return SCIP_OKAY;

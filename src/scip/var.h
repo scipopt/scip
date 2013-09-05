@@ -1000,6 +1000,24 @@ SCIP_RETCODE SCIPvarAddImplic(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
+/** fixes the bounds of a binary variable to the given value, counting bound changes and detecting infeasibility */
+extern
+SCIP_RETCODE SCIPvarFixBinary(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool             value,              /**< value to fix variable to */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*                  nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   );
+
 /** adds the variable to the given clique and updates the list of cliques the binary variable is member of;
  *  if the variable now appears twice in the clique with the same value, it is fixed to the opposite value;
  *  if the variable now appears twice in the clique with opposite values, all other variables are fixed to
@@ -1021,6 +1039,17 @@ SCIP_RETCODE SCIPvarAddClique(
    SCIP_CLIQUE*          clique,             /**< clique the variable should be added to */
    SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*                  nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   );
+
+/** adds a filled clique to the cliquelists of all corresponding variables */
+extern
+SCIP_RETCODE SCIPvarsAddClique(
+   SCIP_VAR**            vars,               /**< problem variables */
+   SCIP_Bool*            values,             /**< values of the variables in the clique */
+   int                   nvars,              /**< number of problem variables */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CLIQUE*          clique              /**< clique that contains all given variables and values */
    );
 
 /** deletes the variable from the given clique and updates the list of cliques the binary variable is member of */

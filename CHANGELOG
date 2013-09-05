@@ -92,6 +92,7 @@ performance improvements:
 - improved performance of method SCIPsolRetransform() when called during presolving with many aggregations
 - minor presolving performance improvements in cons_logicor.c and cons_knapsack.c
 - added upgradability for implicit binary variable cases for linear constraints
+- improved performance of SCIPcliquelistDel(), SCIPcliquetableAdd(), SCIPcliquetableCleanup()
 
 interface
 - SCIPgetLPBranchCands() can be used to retrieve the number of implicit integer variables with fractional LP solution
