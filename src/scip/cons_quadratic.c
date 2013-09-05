@@ -6528,6 +6528,8 @@ SCIP_RETCODE generateCut(
    SCIP_Bool      success;
    SCIP_Real      mincoef;
    SCIP_Real      maxcoef;
+   SCIP_Real      lincoefsmax;
+   SCIP_Real      lincoefsmin;
    SCIP_Real      viol;
    SCIP_VAR*      var;
    int            j;
@@ -6545,6 +6547,8 @@ SCIP_RETCODE generateCut(
    *row = NULL;
    SCIP_CALL( SCIPallocBufferArray(scip, &coef, consdata->nquadvars) );
    lincoefs = consdata->lincoefs;
+   lincoefsmax = consdata->lincoefsmax;
+   lincoefsmin = consdata->lincoefsmin;
    islocal = SCIPconsIsLocal(cons);
    success = FALSE;
    lhs = -SCIPinfinity(scip);
@@ -6562,6 +6566,25 @@ SCIP_RETCODE generateCut(
       {
          /* generateCutLTI needs reference values also for the linear variables, which we only have if sol is given or LP has been solved */
          SCIP_CALL( generateCutLTI(scip, cons, violside, ref, sol, &lincoefs, coef, &lhs, &rhs, &islocal, &success, cutname) );
+
+         /* recompute the max of lincoefs */
+         {
+            int i;
+
+            for( i = 0; i < consdata->nlinvars; ++i )
+            {
+               SCIPdbgMsg("checking linear coefficient %f\n",lincoefs[i]);
+               if( REALABS(lincoefs[i]) > lincoefsmax )
+               {
+                  lincoefsmax = REALABS(lincoefs[i]);
+               }
+               if( REALABS(lincoefs[i]) < lincoefsmin )
+               {
+                  lincoefsmin = REALABS(lincoefs[i]);
+               }
+            }
+         }
+
       }
    }
 
@@ -6621,8 +6644,9 @@ SCIP_RETCODE generateCut(
       {
          refactivity = refactivitylinpart;
          mincoefidx = -1;
-         mincoef = consdata->lincoefsmin;
-         maxcoef = consdata->lincoefsmax;
+         mincoef = lincoefsmin;
+         maxcoef = lincoefsmax;
+
          for( j = 0; j < consdata->nquadvars; ++j )
          {
             /* coefficients smaller than epsilon are rounded to 0.0 when added to row, this can be problematic if variable value is very large (bad numerics)
