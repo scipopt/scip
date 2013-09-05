@@ -11,11 +11,21 @@ fixed bugs:
 - fixed wrong presolving finished status which sometimes occurred when the time limit was hit during presolve
 - fixed several bugs where variables or constraints were not freed correctly
 - fixed minor bugs in presolving in cons_setppc.c and cons_logicor.c
+- do not multi-aggregate variables if the constant would be a huge value in order to avoid numerical troubles
+- fixed bug with infinite multi-aggregation constants
+- fixed wrong bound calculation in sepa_rapidlearning
 
 data structures
 - new data structure for (circular) queues (SCIP_QUEUE)
+- hash tables will now increase dynamically
 
 features:
+- new LNS heuristic called proximity which solves a problem in which a local branching constraint replaces the
+  objective function which in turn is treated as additional constraint
+- added average gap based on primal-dual integral to solution statistics, can be disabled via parameter "misc/calcintegral" 
+- new LP-based rounding heuristic (heur_randround) whose randomized rounding is biased towards the LP solution value. 
+  The heuristic uses the probing mode of SCIP to generate conflict causes on the fractional variables  
+- added breadth first search node selection
 - added new dual presolving for setppc-constraints
 - changed dualfix presolver to propagator such that dual fixing can also be applied during repropagation of the root node
 - added upgrade from varbound constraints to set-packing constraints
@@ -58,6 +68,11 @@ features:
 - new method SCIPapplyProbingVar() in prop_probing.h
 - added first implication detection in cons_linear
 - several new presolvimng steps for linear and knapsack constraints, using gcd information and many more
+- cons_indicator can now try to construct feasible solutions from a cover
+- reader_osil can now read SOS1 and SOS2 constraints
+- reader_lp is now abled to write and constraints in form of their (weak/strict) relaxation
+- reader_mps is now abled to write and constraints in form of their (weak/strict) relaxation
+- added possibility to forbid constraint upgrading
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
@@ -76,6 +91,11 @@ performance improvements:
 - added upgradability for implicit binary variable cases for linear constraints
 
 interface
+- SCIPgetLPBranchCands() can be used to retrieve the number of implicit integer variables with fractional LP solution
+  value via an additional pointer; the corresponding implicit integer variables can be accessed together with their 
+  fractionalities and solution values in the same way as binary and integer variables before; the arrays are sorted such 
+  that binary and integer variables precede the implicit integer variables; the method SCIPbranchcandGetLPCands()
+  has been modified in the same way   
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
   the rank of a cut can be changed (default rank is 0)
 - new methods for the SCIP_QUEUE data structure in pub_misc.h, misc.c SCIPqueueCreate(), SCIPqueueFree(),
@@ -110,8 +130,12 @@ interface
 - SCIPgetConsCopy() now always captures the created constraint
 - SCIPaddCut() has an additional parameter that determines whether the cut to be added is infeasible
 - SCIPwriteMIP() has an additional parameter that allows to write removable rows as lazy constraints
+- added a copy of the GAMS/SCIP interface to interfaces/gams
+- added SCIPconsAddUpgradeLocks() and SCIPconsGetNUpgradeLocks() to either add/decrease the counter on upgrade-locks on
+  a constraint or get the current number of upgrade-locks
 
 parameters:
+- new parameter "misc/calcintegral" (default TRUE) to trigger calculation of primal-dual integral 
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
 - new parameter <separating/gomory/sidetypebasis> to decide whether the sides of ranged rows should be determined from
   the basis status
@@ -138,6 +162,21 @@ parameters:
   which decide whether binaries should be shifted first and the shifting should be stopped when no violations are left
 - new parameters "heuristics/"<heurname>"/lplimfac" for LNS heuristics to limit the number of LPs solved in a subproblem
 - new parameter "reading/cipreader/writefixedvars" for disabling printing of fixed variables in CIP format
+- new parameter "constraints/indicator/trysolfromcover" for trying to construct a feasible solution from a cover
+- new parameter "constraints/linear/checkrelmaxabs" for checking linear constraints with a side of 0.0 relative to
+  the maximum absolute value in the activity instead of 1.0
+- new parameter "heuristics/shiftandpropagate/fixbinlocks" for fixing binary variables with no locks in one direction
+  to the corresponding bound
+- new parameter "reading/lpreader/linearize-and-constraints" to allow and constraints to be linearized when printing in
+  LP format
+- new parameter "reading/lpreader/aggrlinearization-ands" to enable/disable the printing of the weak or strict
+  relaxation of and constraints in LP format
+- new parameter "reading/mpsreader/linearize-and-constraints" to allow and constraints to be linearized when printing in
+  MPS format
+- new parameter "reading/mpsreader/aggrlinearization-ands" to enable/disable the printing of the weak or strict
+  relaxation of and constraints in MPS format
+- new parameter "constraints/logicor/strengthen", should pairwise constraint comparison try to strengthen constraints by
+  removing superflous non-zeros?
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to
@@ -184,6 +223,15 @@ fixed bugs:
 - fixed bug with quadratic constraints not being upgraded
 - fixed bug with storing original solutions
 - fixed bug in cons_and.c when a constraint was not correctly propagated which led to wrong dual-presolve reductions
+- fixed bugs in cons_bivariate.c when the nonlinear function is not differentiable on the boundary of the domain
+- fixed bug in cons_indicator.c:SCIPmakeIndicatorFeasible() with handling fixed variables
+- fixed bug in sepa_zerohalf.c where the maxcuts(root) parameters led to an invalid memory allocation call
+- fixed bug in sepa_closecuts: need to make sure that variable values of separation point satisfy bounds
+- fixed bug in intervalarith.c: bivariate quad. equations may have been solved wrongly if second variable is unbounded
+- fixed bug in cons_integral: need to make sure that all implicit integer variables are integral when a solution is
+  checked
+- fixed bug in cons_abspower: wrong infinity check when propagating bounds
+- fixed bug in sepa_oddcylce: number of arcs have to be adjusted
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
@@ -2574,7 +2622,7 @@ features:
   node or not
 - command shell now understands escape characters ",', and \ which makes it possible to read in files with spaces in the
   name
-- updated XPress interface to XPress-MP 17 (contributed by Michael Perregard)
+- updated XPress interface to XPress-MP 17 (contributed by Michael Perregaard)
 - the EXITSOL callback of the plugins is now called before the LP and the global cut pool are freed
 - possibility of SAT-like restarts after a number of conflict constraints have been found
 - in the root node of the very first run, heuristics with timing AFTERNODELPNODE, AFTERLPPLUNGE, AFTERPSEUDONODE, and

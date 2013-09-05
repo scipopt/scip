@@ -221,7 +221,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    SCIP_Longint          capacity,           /**< capacity of knapsack */
    SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
    SCIP_Bool             usegubs,            /**< should GUB information be used for separation? */
-   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
 

@@ -733,7 +733,7 @@ SCIP_DECL_READERCOPY(readerCopyCip)
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_READERFREE(readerFreePpm)
+SCIP_DECL_READERFREE(readerFreeCip)
 {
    SCIP_READERDATA* readerdata;
 
@@ -1050,9 +1050,6 @@ SCIP_DECL_READERWRITE(readerWriteCip)
 
       for( i = 0; i < nconss; ++i )
       {
-         /* in case the transformed is written only constraint are posted which are enabled in the current node */
-         assert(!transformed || SCIPconsIsEnabled(conss[i]));
-
          SCIP_CALL( SCIPprintCons(scip, conss[i], file) );
          SCIPinfoMessage(scip, file, ";\n");
       }
@@ -1090,7 +1087,7 @@ SCIP_RETCODE SCIPincludeReaderCip(
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCip) );
-   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreePpm) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeCip) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCip) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteCip) );
 

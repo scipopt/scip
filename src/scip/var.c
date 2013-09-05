@@ -1493,8 +1493,10 @@ SCIP_Real adjustedLb(
    SCIP_Real             lb                  /**< lower bound to adjust */
    )
 {
-   if( SCIPsetIsInfinity(set, -lb) )
+   if( lb < 0 && SCIPsetIsInfinity(set, -lb) )
       return -SCIPsetInfinity(set);
+   else if( lb > 0 && SCIPsetIsInfinity(set, lb) )
+      return SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetFeasCeil(set, lb);
    else if( SCIPsetIsZero(set, lb) )
@@ -1511,8 +1513,10 @@ SCIP_Real adjustedUb(
    SCIP_Real             ub                  /**< upper bound to adjust */
    )
 {
-   if( SCIPsetIsInfinity(set, ub) )
+   if( ub > 0 && SCIPsetIsInfinity(set, ub) )
       return SCIPsetInfinity(set);
+   else if( ub < 0 && SCIPsetIsInfinity(set, -ub) )
+      return -SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetFeasFloor(set, ub);
    else if( SCIPsetIsZero(set, ub) )
@@ -1620,6 +1624,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
                      SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), 
                      SCIPimplicsGetBounds(var->implics, varfixing)[i]);
                   SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, varfixing) );
+                  implvar->closestvblpcount = -1;
                   var->closestvblpcount = -1;
                }
             }
@@ -1631,6 +1636,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
                      SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), 
                      SCIPimplicsGetBounds(var->implics, varfixing)[i]);
                   SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, !varfixing) );
+                  implvar->closestvblpcount = -1;
                   var->closestvblpcount = -1;
                }
             }
@@ -1714,6 +1720,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             SCIPdebugMessage("deleting variable upper bound from <%s> involving variable %s\n",
                SCIPvarGetName(implvar), SCIPvarGetName(var));
             SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, FALSE) );
+            implvar->closestvblpcount = -1;
             var->closestvblpcount = -1;
          }
          else if( coef < 0.0 && implvar->vlbs != NULL ) /* implvar may have been aggregated in the mean time */
@@ -1721,6 +1728,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             SCIPdebugMessage("deleting variable lower bound from <%s> involving variable %s\n",
                SCIPvarGetName(implvar), SCIPvarGetName(var));
             SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, TRUE) );
+            implvar->closestvblpcount = -1;
             var->closestvblpcount = -1;
          }
       }
@@ -1806,6 +1814,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             SCIPdebugMessage("deleting variable upper bound from <%s> involving variable %s\n",
                SCIPvarGetName(implvar), SCIPvarGetName(var));
             SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, TRUE) );
+            implvar->closestvblpcount = -1;
             var->closestvblpcount = -1;
          }
          else if( coef > 0.0 && implvar->vlbs != NULL ) /* implvar may have been aggregated in the mean time */
@@ -1813,6 +1822,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             SCIPdebugMessage("deleting variable lower bound from <%s> involving variable %s\n",
                SCIPvarGetName(implvar), SCIPvarGetName(var));
             SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, FALSE) );
+            implvar->closestvblpcount = -1;
             var->closestvblpcount = -1;
          }
       }
@@ -1892,12 +1902,22 @@ SCIP_RETCODE varCreate(
    /* adjust bounds of variable */
    lb = adjustedLb(set, vartype, lb);
    ub = adjustedUb(set, vartype, ub);
-   
-   /* convert [0,1]-integers into binary variables */
-   if( vartype == SCIP_VARTYPE_INTEGER
-      && (SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0))
+
+   /* convert [0,1]-integers into binary variables and check that binary variables have correct bounds */
+   if( (SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0))
       && (SCIPsetIsEQ(set, ub, 0.0) || SCIPsetIsEQ(set, ub, 1.0)) )
-      vartype = SCIP_VARTYPE_BINARY;
+   {
+      if( vartype == SCIP_VARTYPE_INTEGER )
+         vartype = SCIP_VARTYPE_BINARY;
+   }
+   else
+   {
+      if( vartype == SCIP_VARTYPE_BINARY )
+      {
+         SCIPerrorMessage("invalid bounds [%.2g,%.2g] for binary variable <%s>\n", lb, ub, name);
+         return SCIP_INVALIDDATA;
+      }
+   }
 
    assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0));
    assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, ub, 0.0) || SCIPsetIsEQ(set, ub, 1.0));
@@ -10236,7 +10256,7 @@ SCIP_RETCODE SCIPvarAddImplic(
          SCIP_CALL( SCIPvarAddImplic(var->negatedvar, blkmem, set, stat, prob, tree, lp, cliquetable, branchcand, eventqueue,
                !varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
       }
-      /** in case one both variables are not of binary type we have to add the implication as variable bounds */
+      /* in case one both variables are not of binary type we have to add the implication as variable bounds */
       else
       {
          /* if the implied variable is of binary type exchange the variables */
@@ -11388,7 +11408,7 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
       while( !resolved && *var != NULL )
       {
          assert(SCIPvarIsBinary(*var));
-         
+
          switch( SCIPvarGetStatus(*var) )
          {
          case SCIP_VARSTATUS_ORIGINAL:
@@ -11397,7 +11417,7 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
             else
                *var = (*var)->data.original.transvar;
             break;
-            
+
          case SCIP_VARSTATUS_LOOSE:
          case SCIP_VARSTATUS_COLUMN:
          case SCIP_VARSTATUS_FIXED:
@@ -11410,16 +11430,33 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
                assert( (*var)->data.multaggr.vars != NULL );
                assert( (*var)->data.multaggr.scalars != NULL );
                assert( SCIPvarIsBinary((*var)->data.multaggr.vars[0]) );
-               assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) ); /*lint !e835*/
-               assert( EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
-               assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) == EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)); /*lint !e835*/
-               *negated = (*negated != ((*var)->data.multaggr.scalars[0] < 0.0));
-               *var = (*var)->data.multaggr.vars[0];
+
+               /* if not all variables were fully propagated, it might happen that a variable is multi-aggregated to
+                * another variable which needs to be fixed
+                *
+                * e.g. x = y - 1 => (x = 0 && y = 1)
+                * e.g. x = y + 1 => (x = 1 && y = 0)
+                *
+                * is this special case we need to return the muti-aggregation
+                */
+               if( EPSEQ((*var)->data.multaggr.constant, -1.0, 1e-06) || (EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) && EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)) )
+               {
+                  assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06));
+                  resolved = TRUE;
+               }
+               else
+               {
+                  assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) ); /*lint !e835*/
+                  assert( EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+                  assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) == EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)); /*lint !e835*/
+                  *negated = (*negated != ((*var)->data.multaggr.scalars[0] < 0.0));
+                  *var = (*var)->data.multaggr.vars[0];
+               }
             }
             else
                resolved = TRUE;
             break;
-            
+
          case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
             assert((*var)->data.aggregate.var != NULL);
             assert(SCIPvarIsBinary((*var)->data.aggregate.var));
@@ -11429,13 +11466,13 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
             *negated = (*negated != ((*var)->data.aggregate.scalar < 0.0));
             *var = (*var)->data.aggregate.var;
             break;
-            
+
          case SCIP_VARSTATUS_NEGATED:     /* x =  - x' + c'  =>  a*x + c ==   (-a)*x' + (a*c' + c) */
             assert((*var)->negatedvar != NULL);
             *negated = !(*negated);
             *var = (*var)->negatedvar;
             break;
-            
+
          default:
             SCIPerrorMessage("unknown variable status at position %d in variable array\n", v);
             return SCIP_INVALIDDATA;
@@ -11488,12 +11525,28 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
             assert( (*var)->data.multaggr.vars != NULL );
             assert( (*var)->data.multaggr.scalars != NULL );
             assert( SCIPvarIsBinary((*var)->data.multaggr.vars[0]) );
-            assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) ); /*lint !e835*/
-            assert( EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
-            assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) == EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)); /*lint !e835*/
-            *negated = (*negated != ((*var)->data.multaggr.scalars[0] < 0.0));
-            *var = (*var)->data.multaggr.vars[0];
-            break;
+
+            /* if not all variables were fully propagated, it might happen that a variable is multi-aggregated to
+             * another variable which needs to be fixed
+             *
+             * e.g. x = y - 1 => (x = 0 && y = 1)
+             * e.g. x = y + 1 => (x = 1 && y = 0)
+             *
+             * is this special case we need to return the muti-aggregation
+             */
+            if( EPSEQ((*var)->data.multaggr.constant, -1.0, 1e-06) || (EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) && EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)) )
+            {
+               assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06));
+            }
+            else
+            {
+               assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) ); /*lint !e835*/
+               assert( EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+               assert( EPSEQ((*var)->data.multaggr.constant, 0.0, 1e-06) == EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)); /*lint !e835*/
+               *negated = (*negated != ((*var)->data.multaggr.scalars[0] < 0.0));
+               *var = (*var)->data.multaggr.vars[0];
+               break;
+            }
          }
          return SCIP_OKAY;
 
@@ -11700,7 +11753,9 @@ SCIP_RETCODE SCIPvarGetProbvarHole(
 
 /** transforms given variable, scalar and constant to the corresponding active, fixed, or
  *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
- *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"; a multi-aggregation
+ *  with only one active variable (this can happen due to fixings after the multi-aggregation),
+ *  is treated like an aggregation; if the multi-aggregation constant is infinite, "scalar" will be 0.0
  */
 SCIP_RETCODE SCIPvarGetProbvarSum(
    SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */

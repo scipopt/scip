@@ -229,7 +229,7 @@
 #define SCIP_DEFAULT_MISC_PRINTREASON      TRUE /**< should the reason be printed if a given start solution is infeasible? */
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
-
+#define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
 /* Node Selection */
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
                                                  *   'r'oot LP value difference, 'h'brid inference/root LP value difference) */
@@ -1342,6 +1342,12 @@ SCIP_RETCODE SCIPsetCreate(
          "should SCIP try to transfer original solutions to the extended space (after presolving)?",
          &(*set)->misc_transorigsols, FALSE, SCIP_DEFAULT_MISC_TRANSORIGSOLS,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/calcintegral",
+            "should SCIP calculate the primal dual integral value?",
+            &(*set)->misc_calcintegral, FALSE, SCIP_DEFAULT_MISC_CALCINTEGRAL,
+            NULL, NULL) );
+
 
    /* node selection */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
@@ -4306,6 +4312,28 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetIsHugeValue
 #undef SCIPsetGetHugeValue
 
+/** returns value treated as infinity */
+SCIP_Real SCIPsetInfinity(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_infinity;
+}
+
+/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity
+ *  computation)
+ */
+SCIP_Real SCIPsetGetHugeValue(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_hugeval;
+}
+
 /** returns value treated as zero */
 SCIP_Real SCIPsetEpsilon(
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -4422,6 +4450,17 @@ SCIP_Bool SCIPsetIsInfinity(
    return (val >= set->num_infinity);
 }
 
+/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+SCIP_Bool SCIPsetIsHugeValue(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be checked whether it is huge */
+   )
+{
+   assert(set != NULL);
+
+   return (val >= set->num_hugeval);
+}
+
 /** checks, if values are in range of epsilon */
 SCIP_Bool SCIPsetIsEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4480,16 +4519,6 @@ SCIP_Bool SCIPsetIsGE(
    assert(set != NULL);
 
    return EPSGE(val1, val2, set->num_epsilon);
-}
-
-/** returns value treated as infinity */
-SCIP_Real SCIPsetInfinity(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(set != NULL);
-
-   return set->num_infinity;
 }
 
 /** checks, if value is in range epsilon of 0.0 */
@@ -5164,25 +5193,4 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    quotient = ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon);
 
    return quotient >= set->num_recompfac;
-}
-
-/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
-SCIP_Bool SCIPsetIsHugeValue(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             val                 /**< value to be checked whether it is huge */
-   )
-{
-   assert(set != NULL);
-
-   return (val >= set->num_hugeval);
-}
-
-/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity computation) */
-SCIP_Real SCIPsetGetHugeValue(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(set != NULL);
-
-   return set->num_hugeval;
 }

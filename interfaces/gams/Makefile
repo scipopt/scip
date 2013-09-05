@@ -14,43 +14,56 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 #@file    Makefile
-#@brief   Makefile for unit test of SCIPsolveSlack() method
-#@author  Thorsten Koch
-#@author  Tobias Achterberg
-#@author  Marc Pfetsch
-#@author  Ambros Gleixner
+#@brief   Makefile for GAMS interface project
+#@author  Stefan Vigerske
 
 
 #-----------------------------------------------------------------------------
 # paths
 #-----------------------------------------------------------------------------
 
-SCIPDIR         =       ../..
-
+SCIPDIR		=	../..
+GAMSDIR		=	gams
 
 #-----------------------------------------------------------------------------
 # include default project Makefile from SCIP
 #-----------------------------------------------------------------------------
+
 include $(SCIPDIR)/make/make.project
 
+ifneq ($(LINKRPATH),)
+LIBBUILDFLAGS	+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
+endif
 
-
+GAMSIODIR	=	$(GAMSDIR)/apifiles/C/api
 
 #-----------------------------------------------------------------------------
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAME	=	testslack
-MAINOBJ		=	main.o
+MAINNAME	=	gamsscip
+# C sources
+MAINCOBJ	=	reader_gmo.o event_solvetrace.o GamsSolveTrace.o
+MAINCSRC	=	$(addprefix $(SRCDIR)/,$(MAINCOBJ:.o=.c))
+# C++ sources
+MAINCXXOBJ	=	GamsScip.o GamsSolver.o GamsOptions.o
+MAINCXXSRC	=	$(addprefix $(SRCDIR)/,$(MAINCXXOBJ:.o=.cpp))
+# C sources in GAMS I/O directory
+MAINGOBJ	=	gdxcc.o gevmcc.o gmomcc.o optcc.o
+MAINGSRC	=	$(addprefix $(GAMSIODIR)/,$(MAINGOBJ:.o=.c))
+MAINDEP		=	$(SRCDIR)/depend.$(OPT)
 
-MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
-MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
+MAIN		=	lib$(MAINNAME).$(BASE).$(LPS).$(LIBEXT)
+MAINFILE	=	$(LIBDIR)/$(MAIN)
+MAINSHORTLINK	=	$(LIBDIR)/lib$(MAINNAME).$(LIBEXT)
+MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINCOBJ) $(MAINCXXOBJ) $(MAINGOBJ))
 
-MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
-MAINFILE	=	$(BINDIR)/$(MAIN)
-MAINSHORTLINK	=	$(BINDIR)/$(MAINNAME)
-MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
+#-----------------------------------------------------------------------------
+# GMO library
+#-----------------------------------------------------------------------------
 
+# where to find header files for GAMS I/O files
+FLAGS += -I$(GAMSIODIR)
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -63,74 +76,59 @@ endif
 .PHONY: all
 all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 
+.PHONY: install
+install:
+		@./gamsinst.sh "$(GAMSDIR)"
+
 .PHONY: lint
-lint:		$(MAINSRC)
+lint:		$(MAINCSRC) $(MAINCXXSRC)
 		-rm -f lint.out
+		-ln -fs $(SCIPDIR)/lint
 		$(SHELL) -ec 'for i in $^; \
 			do \
 			echo $$i; \
-			$(LINT) $(SCIPDIR)/lint/scip.lnt +os\(lint.out\) -u -zero \
+			$(LINT) lint/scip.lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
-
-.PHONY: scip
-scip:
-		@$(MAKE) -C $(SCIPDIR) libs $^
-
-.PHONY: doc
-doc:
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
-		cd doc; $(DOXY) $(MAINNAME).dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
 
-$(OBJDIR):
+$(OBJDIR):	
 		@-mkdir -p $(OBJDIR)
 
-$(BINDIR):
-		@-mkdir -p $(BINDIR)
-
-.PHONY: test
-test:           $(MAINFILE)
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
-		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND);
+$(LIBDIR):
+		@-mkdir -p $(LIBDIR)
 
 .PHONY: clean
 clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
-		@-(rm -f $(OBJDIR)/*.o && rmdir $(OBJDIR));
-		@echo "-> remove main objective files"
+		-rm -f $(OBJDIR)/*.o
+		-rmdir $(OBJDIR)
 endif
-		@-rm -f $(MAINFILE) $(MAINSHORTLINK)
-		@echo "-> remove binary"
-
-.PHONY: tags
-tags:
-		rm -f TAGS; ctags -e src/*.c src/*.h $(SCIPDIR)/src/scip/*.c $(SCIPDIR)/src/scip/*.h;
+		-rm -f $(MAINFILE)
 
 .PHONY: depend
 depend:		$(SCIPDIR)
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z\_]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINCSRC) $(MAINCXXSRC) \
+		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z\_]*\).cpp|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.cpp|g'\'' \
+		| sed '\''s|$(GAMSIODIR).*h||g'\'' \
 		>$(MAINDEP)'
 
 -include	$(MAINDEP)
 
-$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
+$(MAINFILE):	$(LIBDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-		$(LINKCXX) $(MAINOBJFILES) \
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ \
+		$(MAINOBJFILES) \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+		$(LPSLDFLAGS) $(LDFLAGS)
+ifneq ($(RANLIB),)
+		$(RANLIB) $@
+endif
+
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
@@ -139,5 +137,9 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
+
+$(OBJDIR)/%.o:	$(GAMSIODIR)/%.c
+		@echo "-> compiling $@"
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS:-pedantic=) -Wno-shadow -c $< $(CC_o)$@
 
 #---- EOF --------------------------------------------------------------------

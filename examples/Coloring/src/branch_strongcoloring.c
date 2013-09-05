@@ -220,7 +220,7 @@ SCIP_RETCODE computeBranchingPriorities(
    assert(scip != NULL);
    assert(branchruledata != NULL);
 
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, &nlpcands, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, &nlpcands, NULL, NULL) );
    nnodes = COLORprobGetNNodes(scip);
    graph = COLORconsGetCurrentGraph(scip);
 

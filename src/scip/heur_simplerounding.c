@@ -111,6 +111,8 @@ SCIP_RETCODE performSimpleRounding(
    {
       SCIP_Bool stored;
 
+      SCIP_CALL ( SCIPadjustImplicitSolVals(scip, sol, TRUE) );
+
       if( SCIPallColsInLP(scip) )
       {
          /* check solution for feasibility, and add it to solution store if possible
@@ -163,7 +165,8 @@ SCIP_RETCODE performLPSimpleRounding(
       return SCIP_OKAY;
 
    /* get fractional variables, that should be integral */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL) );
+   /* todo polish fractional implicit integer variables separately before trying the solution */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
 
    /* only call heuristic, if LP solution is fractional; except we are called during pricing, in this case we
     * want to detect a (mixed) integer (LP) solution which is primal feasible */

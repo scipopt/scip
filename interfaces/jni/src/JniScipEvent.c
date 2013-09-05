@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,22 +31,24 @@
 
 #include <string.h>
 
-// /** gets user data of display column */
-// JNIEXPORT
-// jlong JNISCIPEVENT(dispGetData)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jdisp               /**< display column */
-//    )
-// {
-//    SCIP_DISP* disp;
+/** gets user data of display column */
+#if 0
+JNIEXPORT
+jlong JNISCIPEVENT(dispGetData)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jdisp               /**< display column */
+   )
+{
+   SCIP_DISP* disp;
 
-//    /* convert JNI pointer into C pointer */
-//    disp = (SCIP_DISP*) (size_t) jdisp;
-//    assert(disp != NULL);
+   /* convert JNI pointer into C pointer */
+   disp = (SCIP_DISP*) (size_t) jdisp;
+   assert(disp != NULL);
 
-//    return (jlong) (size_t) SCIPdispGetData(disp);
-// }
+   return (jlong) (size_t) SCIPdispGetData(disp);
+}
+#endif
 
 /**
 eventhdlrGetName

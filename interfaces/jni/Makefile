@@ -71,7 +71,7 @@ JNIPACKAGEJAR	=	$(LIBDIR)/$(JNILIBSHORTNAME).jar
 
 JNILIBNAME	=	$(JNILIBSHORTNAME)-$(VERSION)
 
-JNILIBOBJ	=	JniLibraryLoader.java \
+JNILIBOBJ	=	JniScipLibraryLoader.java \
 			JniScipBranchAllfullstrong.java \
 			JniScipBranchFullstrong.java \
 			JniScipBranchInference.java \
@@ -405,10 +405,11 @@ JNILIBSHORTLINK =	$(LIBDIR)/lib$(JNILIBSHORTNAME).$(LIBEXT)
 JNICLASSES	=	$(addprefix $(CLASSDIR)/$(JNIPACKAGEDIR)/jni/,$(JNILIBOBJ:.java=.class))
 JNICLASSES	+=	$(addprefix $(CLASSDIR)/$(JNIPACKAGEDIR)/jni/,$(JNIENUMS:.java=.class))
 
-JARCLASSES	=	$(JNICLASSES)
+JARCLASSES	=	$(addprefix -C $(CLASSDIR) $(JNIPACKAGEDIR)/jni/,$(JNILIBOBJ:.java=.class))
+JARCLASSES	+=	$(addprefix -C $(CLASSDIR) $(JNIPACKAGEDIR)/jni/,$(JNIENUMS:.java=.class))
 JARCLASSES	+=	$(addprefix -C $(CLASSDIR) $(JNIPACKAGEDIR)/,$(NATIVELIBOBJ:.java=.class))
 
-JNILIBRARYLOADER =	$(JAVASRCDIR)/$(JNIPACKAGEDIR)/jni/JniLibraryLoader.java
+JNILIBRARYLOADER =	$(JAVASRCDIR)/$(JNIPACKAGEDIR)/jni/JniScipLibraryLoader.java
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -495,13 +496,13 @@ $(JNILIBRARYLOADER):
 		@echo "package de.zib.jscip.nativ.jni;"            > $(JNILIBRARYLOADER)
 		@echo ""                                           >> $(JNILIBRARYLOADER)
 		@echo "/** AUTOMATED GENERATED FILE */"            >> $(JNILIBRARYLOADER)
-		@echo "public class JniLibraryLoader {"            >> $(JNILIBRARYLOADER)
+		@echo "public class JniScipLibraryLoader {"        >> $(JNILIBRARYLOADER)
 		@echo ""                                           >> $(JNILIBRARYLOADER)
 		@echo "    public static void loadLibrary() {"     >> $(JNILIBRARYLOADER)
 		@echo "        System.loadLibrary(\"$(JNILIB)\");" >> $(JNILIBRARYLOADER)
 		@echo "    }"                                      >> $(JNILIBRARYLOADER)
 		@echo ""                                           >> $(JNILIBRARYLOADER)
-		@echo "    private JniLibraryLoader() {"           >> $(JNILIBRARYLOADER)
+		@echo "    private JniScipLibraryLoader() {"       >> $(JNILIBRARYLOADER)
 		@echo ""                                           >> $(JNILIBRARYLOADER)
 		@echo "    }"                                      >> $(JNILIBRARYLOADER)
 		@echo "}"                                          >> $(JNILIBRARYLOADER)
@@ -517,7 +518,7 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.c $(SRCDIR)/%.h
 
 $(SRCDIR)/%.h:	$(CLASSDIR)/$(JNIPACKAGEDIR)/jni/%.class
 		@echo "-> create C header $@"
-		$(JAVAH) -jni -o $@ -classpath $(CLASSDIR) $(JNIPACKAGENAME).jni.$(notdir $(basename $@))
+		$(JAVAH) -force -jni -o $@ -classpath $(CLASSDIR) $(JNIPACKAGENAME).jni.$(notdir $(basename $@))
 
 $(CLASSDIR)/%.class:	$(JAVASRCDIR)/%.java $(CLASSDIR)
 		@echo "-> compiling $@"

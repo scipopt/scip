@@ -440,19 +440,18 @@ SCIP_Bool checkCons(
    if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vbdvar)) && (!SCIPisFeasLE(scip, solval, consdata->rhs) || !SCIPisFeasGE(scip, solval, consdata->lhs)) )
       return FALSE;
 
+
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
       SCIP_Real sum;
 
-      sum = SCIPgetSolVal(scip, sol, consdata->var);
-      sum += consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
+      sum = solval + consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
 
       return (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasGE(scip, sum, consdata->lhs))
          && (SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasLE(scip, sum, consdata->rhs));
    }
    else
       return TRUE;
-
 }
 
 
@@ -1159,6 +1158,12 @@ SCIP_RETCODE propagateCons(
 
    *cutoff = FALSE;
 
+   /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
+   if( !SCIPinRepropagation(scip) )
+   {
+      SCIP_CALL( SCIPincConsAge(scip, cons) );
+   }
+
    /* check, if constraint is already propagated */
    if( consdata->propagated )
       return SCIP_OKAY;
@@ -1208,6 +1213,8 @@ SCIP_RETCODE propagateCons(
             {
                assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)));
 
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
                /* analyze infeasibility */
                SCIP_CALL( analyzeConflict(scip, cons, consdata->var, newlb, PROPRULE_1, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
                break;
@@ -1217,6 +1224,7 @@ SCIP_RETCODE propagateCons(
             {
                tightenedround = TRUE;
                (*nchgbds)++;
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
             }
             xlb = SCIPvarGetLbLocal(consdata->var);
          }
@@ -1269,6 +1277,8 @@ SCIP_RETCODE propagateCons(
                   {
                      assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
 
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newub, PROPRULE_2, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
                      break;
@@ -1278,6 +1288,7 @@ SCIP_RETCODE propagateCons(
                   {
                      tightenedround = TRUE;
                      (*nchgbds)++;
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   }
                   yub = SCIPvarGetUbLocal(consdata->vbdvar);
                }
@@ -1319,6 +1330,8 @@ SCIP_RETCODE propagateCons(
             {
                assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)));
 
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
                /* analyze infeasibility */
                SCIP_CALL( analyzeConflict(scip, cons, consdata->var, newub, PROPRULE_3, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
                break;
@@ -1328,6 +1341,7 @@ SCIP_RETCODE propagateCons(
             {
                tightenedround = TRUE;
                (*nchgbds)++;
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
             }
             xub = SCIPvarGetUbLocal(consdata->var);
          }
@@ -1353,6 +1367,8 @@ SCIP_RETCODE propagateCons(
                   {
                      assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
 
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newub, PROPRULE_4, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
                      break;
@@ -1362,6 +1378,7 @@ SCIP_RETCODE propagateCons(
                   {
                      tightenedround = TRUE;
                      (*nchgbds)++;
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   }
                   yub = SCIPvarGetUbLocal(consdata->vbdvar);
                }
@@ -1380,6 +1397,8 @@ SCIP_RETCODE propagateCons(
                   {
                      assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
 
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newlb, PROPRULE_4, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
                      break;
@@ -1389,6 +1408,7 @@ SCIP_RETCODE propagateCons(
                   {
                      tightenedround = TRUE;
                      (*nchgbds)++;
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   }
                   ylb = SCIPvarGetLbLocal(consdata->vbdvar);
                }
@@ -1554,10 +1574,10 @@ void checkRedundancySide(
          /* if variable is of integral type make values integral too */
          if( SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS )
          {
-            if( !SCIPisIntegral(scip, valuex1) )
-               valuex1 = SCIPfloor(scip, valuex1);
-            if( !SCIPisIntegral(scip, valuex2) )
-               valuex2 = SCIPceil(scip, valuex2);
+            if( !SCIPisFeasIntegral(scip, valuex1) )
+               valuex1 = SCIPfeasFloor(scip, valuex1);
+            if( !SCIPisFeasIntegral(scip, valuex2) )
+               valuex2 = SCIPfeasCeil(scip, valuex2);
          }
       }
       else
@@ -1570,10 +1590,10 @@ void checkRedundancySide(
          /* if variable is of integral type make values integral too */
          if( SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS )
          {
-            if( !SCIPisIntegral(scip, valuex1) )
-               valuex1 = SCIPceil(scip, valuex1);
-            if( !SCIPisIntegral(scip, valuex2) )
-               valuex2 = SCIPfloor(scip, valuex2);
+            if( !SCIPisFeasIntegral(scip, valuex1) )
+               valuex1 = SCIPfeasCeil(scip, valuex1);
+            if( !SCIPisFeasIntegral(scip, valuex2) )
+               valuex2 = SCIPfeasFloor(scip, valuex2);
          }
       }
 
@@ -1673,10 +1693,10 @@ void checkRedundancySide(
          valuey2 = MAX(boundvaluey2, lbvbdvar);
          valuey2 = MIN(valuey2, ubvbdvar);
 
-         if( !SCIPisIntegral(scip, valuey1) )
-            valuey1 = SCIPfloor(scip, valuey1);
-         if( !SCIPisIntegral(scip, valuey2) )
-            valuey2 = SCIPceil(scip, valuey2);
+         if( !SCIPisFeasIntegral(scip, valuey1) )
+            valuey1 = SCIPfeasFloor(scip, valuey1);
+         if( !SCIPisFeasIntegral(scip, valuey2) )
+            valuey2 = SCIPfeasCeil(scip, valuey2);
       }
       else
       {
@@ -1697,10 +1717,10 @@ void checkRedundancySide(
          valuey2 = MAX(valuey2, lbvbdvar);
 
          /* if variable is of integral type make values integral too */
-         if( !SCIPisIntegral(scip, valuey1) )
-            valuey1 = SCIPceil(scip, valuey1);
-         if( !SCIPisIntegral(scip, valuey2) )
-            valuey2 = SCIPfloor(scip, valuey2);
+         if( !SCIPisFeasIntegral(scip, valuey1) )
+            valuey1 = SCIPfeasCeil(scip, valuey1);
+         if( !SCIPisFeasIntegral(scip, valuey2) )
+            valuey2 = SCIPfeasFloor(scip, valuey2);
       }
 
       /* calculate resulting values of variable x by setting y to valuey1 */
@@ -2202,6 +2222,9 @@ SCIP_RETCODE prettifyConss(
    for( c = nconss - 1; c >= 0; --c )
    {
       assert(conss != NULL);
+
+      if( SCIPconsIsDeleted(conss[c]) )
+         continue;
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
@@ -2784,15 +2807,15 @@ SCIP_RETCODE tightenCoefs(
       && SCIPvarGetType(consdata->vbdvar) <= SCIP_VARTYPE_IMPLINT
       && SCIPisIntegral(scip, consdata->vbdcoef) )
    {
-      if( !SCIPisIntegral(scip, consdata->lhs) )
+      if( !SCIPisFeasIntegral(scip, consdata->lhs) )
       {
-         consdata->lhs = SCIPceil(scip, consdata->lhs);
+         consdata->lhs = SCIPfeasCeil(scip, consdata->lhs);
          ++(*nchgsides);
          consdata->changed = TRUE;
       }
-      if( !SCIPisIntegral(scip, consdata->rhs) )
+      if( !SCIPisFeasIntegral(scip, consdata->rhs) )
       {
-         consdata->rhs = SCIPfloor(scip, consdata->rhs);
+         consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
          ++(*nchgsides);
          consdata->changed = TRUE;
       }
@@ -2862,91 +2885,91 @@ SCIP_RETCODE tightenCoefs(
 
       /* case 1 */
       if( SCIPisIntegral(scip, consdata->lhs) && !SCIPisInfinity(scip, -consdata->lhs) &&
-         (SCIPisInfinity(scip, consdata->rhs) || SCIPisLE(scip, consdata->vbdcoef - SCIPfloor(scip, consdata->vbdcoef), consdata->rhs - SCIPfloor(scip, consdata->rhs))) )
+         (SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasLE(scip, consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef), consdata->rhs - SCIPfeasFloor(scip, consdata->rhs))) )
       {
-         consdata->vbdcoef = SCIPfloor(scip, consdata->vbdcoef);
+         consdata->vbdcoef = SCIPfeasFloor(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
 
-         if( !SCIPisIntegral(scip, consdata->rhs) )
+         if( !SCIPisFeasIntegral(scip, consdata->rhs) )
          {
-            consdata->rhs = SCIPfloor(scip, consdata->rhs);
+            consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
             ++(*nchgsides);
          }
       }
       /* case 2 */
       else if( SCIPisIntegral(scip, consdata->rhs) && !SCIPisInfinity(scip, consdata->rhs) &&
-         (SCIPisInfinity(scip, -consdata->lhs) || SCIPisGE(scip, consdata->vbdcoef - SCIPfloor(scip, consdata->vbdcoef), consdata->lhs - SCIPfloor(scip, consdata->lhs))) )
+         (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasGE(scip, consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef), consdata->lhs - SCIPfeasFloor(scip, consdata->lhs))) )
 
       {
-         consdata->vbdcoef = SCIPceil(scip, consdata->vbdcoef);
+         consdata->vbdcoef = SCIPfeasCeil(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
 
-         if( !SCIPisIntegral(scip, consdata->lhs) )
+         if( !SCIPisFeasIntegral(scip, consdata->lhs) )
          {
-            consdata->lhs = SCIPceil(scip, consdata->lhs);
+            consdata->lhs = SCIPfeasCeil(scip, consdata->lhs);
             ++(*nchgsides);
          }
       }
       /* case 3 */
-      else if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisGE(scip, consdata->vbdcoef - SCIPfloor(scip, consdata->vbdcoef), consdata->lhs - SCIPfloor(scip, consdata->lhs))) && (SCIPisInfinity(scip, consdata->rhs) || SCIPisGT(scip, consdata->vbdcoef - SCIPfloor(scip, consdata->vbdcoef), consdata->rhs - SCIPfloor(scip, consdata->rhs))) )
+      else if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasGE(scip, consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef), consdata->lhs - SCIPfeasFloor(scip, consdata->lhs))) && (SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasGT(scip, consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef), consdata->rhs - SCIPfeasFloor(scip, consdata->rhs))) )
       {
-         consdata->vbdcoef = SCIPceil(scip, consdata->vbdcoef);
+         consdata->vbdcoef = SCIPfeasCeil(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
 
-         if( !SCIPisIntegral(scip, consdata->lhs) )
+         if( !SCIPisFeasIntegral(scip, consdata->lhs) )
          {
-            consdata->lhs = SCIPceil(scip, consdata->lhs);
+            consdata->lhs = SCIPfeasCeil(scip, consdata->lhs);
             ++(*nchgsides);
          }
-         if( !SCIPisIntegral(scip, consdata->rhs) )
+         if( !SCIPisFeasIntegral(scip, consdata->rhs) )
          {
-            consdata->rhs = SCIPfloor(scip, consdata->rhs);
+            consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
             ++(*nchgsides);
          }
       }
       /* case 4 */
-      else if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisLT(scip, consdata->vbdcoef - SCIPfloor(scip, consdata->vbdcoef), consdata->lhs - SCIPfloor(scip, consdata->lhs))) && (SCIPisInfinity(scip, consdata->rhs) || SCIPisLE(scip, consdata->vbdcoef - SCIPfloor(scip, consdata->vbdcoef), consdata->rhs - SCIPfloor(scip, consdata->rhs))) )
+      else if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasLT(scip, consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef), consdata->lhs - SCIPfeasFloor(scip, consdata->lhs))) && (SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasLE(scip, consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef), consdata->rhs - SCIPfeasFloor(scip, consdata->rhs))) )
       {
-         consdata->vbdcoef = SCIPfloor(scip, consdata->vbdcoef);
+         consdata->vbdcoef = SCIPfeasFloor(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
 
-         if( !SCIPisIntegral(scip, consdata->lhs) )
+         if( !SCIPisFeasIntegral(scip, consdata->lhs) )
          {
-            consdata->lhs = SCIPceil(scip, consdata->lhs);
+            consdata->lhs = SCIPfeasCeil(scip, consdata->lhs);
             ++(*nchgsides);
          }
-         if( !SCIPisIntegral(scip, consdata->rhs) )
+         if( !SCIPisFeasIntegral(scip, consdata->rhs) )
          {
-            consdata->rhs = SCIPfloor(scip, consdata->rhs);
+            consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
             ++(*nchgsides);
          }
       }
       /* case 5 */
-      if( !SCIPisIntegral(scip, consdata->lhs) || !SCIPisIntegral(scip, consdata->rhs) )
+      if( !SCIPisFeasIntegral(scip, consdata->lhs) || !SCIPisFeasIntegral(scip, consdata->rhs) )
       {
          if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
-            if( SCIPisLT(scip, consdata->vbdcoef - SCIPfloor(scip, consdata->vbdcoef), consdata->lhs - SCIPfloor(scip, consdata->lhs)) )
+            if( SCIPisFeasLT(scip, consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef), consdata->lhs - SCIPfeasFloor(scip, consdata->lhs)) )
             {
-               consdata->lhs = SCIPceil(scip, consdata->lhs);
+               consdata->lhs = SCIPfeasCeil(scip, consdata->lhs);
                ++(*nchgsides);
             }
-            else if( SCIPisGT(scip, consdata->vbdcoef - SCIPfloor(scip, consdata->vbdcoef), consdata->lhs - SCIPfloor(scip, consdata->lhs)) )
+            else if( SCIPisFeasGT(scip, consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef), consdata->lhs - SCIPfeasFloor(scip, consdata->lhs)) )
             {
-               consdata->lhs = SCIPfloor(scip, consdata->lhs) + (consdata->vbdcoef - SCIPfloor(scip, consdata->vbdcoef));
+               consdata->lhs = SCIPfeasFloor(scip, consdata->lhs) + (consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef));
                ++(*nchgsides);
             }
          }
          if( !SCIPisInfinity(scip, consdata->rhs) )
          {
-            if( SCIPisLT(scip, consdata->vbdcoef - SCIPfloor(scip, consdata->vbdcoef), consdata->rhs - SCIPfloor(scip, consdata->rhs)) )
+            if( SCIPisFeasLT(scip, consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef), consdata->rhs - SCIPfeasFloor(scip, consdata->rhs)) )
             {
-               consdata->rhs = SCIPfloor(scip, consdata->rhs) + (consdata->vbdcoef - SCIPfloor(scip, consdata->vbdcoef));
+               consdata->rhs = SCIPfeasFloor(scip, consdata->rhs) + (consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef));
                ++(*nchgsides);
             }
-            else if( SCIPisGT(scip, consdata->vbdcoef - SCIPfloor(scip, consdata->vbdcoef), consdata->rhs - SCIPfloor(scip, consdata->rhs)) )
+            else if( SCIPisFeasGT(scip, consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef), consdata->rhs - SCIPfeasFloor(scip, consdata->rhs)) )
             {
-               consdata->rhs = SCIPfloor(scip, consdata->rhs);
+               consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
                ++(*nchgsides);
             }
          }
@@ -3610,13 +3633,20 @@ SCIP_DECL_CONSENFOLP(consEnfolpVarbound)
          assert((*result) == SCIP_INFEASIBLE || (*result) == SCIP_FEASIBLE);
          (*result) = SCIP_INFEASIBLE;
 
+         SCIP_CALL( SCIPresetConsAge(scip, conss[i]) );
+
          SCIP_CALL( separateCons(scip, conss[i], conshdlrdata->usebdwidening, NULL, result) );
          assert((*result) != SCIP_FEASIBLE);
 
          if( (*result) != SCIP_INFEASIBLE )
             break;
       }
-   } 
+      else
+      {
+         /* increase age of constraint */
+         SCIP_CALL( SCIPincConsAge(scip, conss[i]) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -3632,13 +3662,20 @@ SCIP_DECL_CONSENFOPS(consEnfopsVarbound)
    {
       if( !checkCons(scip, conss[i], NULL, TRUE) )
       {
+         SCIP_CALL( SCIPresetConsAge(scip, conss[i]) );
+
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
       }
-   } 
+      else
+      {
+         /* increase age of constraint */
+         SCIP_CALL( SCIPincConsAge(scip, conss[i]) );
+      }
+   }
    *result = SCIP_FEASIBLE;
 
-   return SCIP_OKAY;  
+   return SCIP_OKAY;
 }
 
 
@@ -3656,17 +3693,17 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
 
          if( printreason )
          {
-            SCIP_Real sum;
             SCIP_CONSDATA* consdata;
+            SCIP_Real sum;
 
             consdata = SCIPconsGetData(conss[i]);
             assert( consdata != NULL );
 
-            sum = SCIPgetSolVal(scip, sol, consdata->var);
-            sum += consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);   
+            sum = SCIPgetSolVal(scip, sol, consdata->var) + consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
 
             SCIP_CALL( SCIPprintCons(scip, conss[i], NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
+
             if( !SCIPisFeasGE(scip, sum, consdata->lhs) )
             {
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - sum);
@@ -3678,7 +3715,7 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
          }
          return SCIP_OKAY;
       }
-   } 
+   }
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
@@ -3796,7 +3833,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       if( !SCIPconsIsActive(cons) )
          continue;
 
-      /** informs once variable x about a globally valid variable lower or upper bound */
+      /* informs once variable x about a globally valid variable lower or upper bound */
       if( !consdata->varboundsadded )
       {
          SCIP_Bool infeasible;

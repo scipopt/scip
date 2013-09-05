@@ -410,7 +410,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
             SCIPdebugMessage("price column variable <%s> in bounds [%g,%g]\n", 
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
-            /** add variable to pricing storage, if zero is not best bound w.r.t. objective function */
+            /* add variable to pricing storage, if zero is not best bound w.r.t. objective function */
             SCIP_CALL( addBoundViolated(pricestore, blkmem, set, stat, tree, lp, branchcand, eventqueue, var, &added) );
 
             if( added )

@@ -561,7 +561,7 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* get fractional variables, that should be integral */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
    nfrac = nlpcands;
 
    /* only call heuristic, if LP solution is fractional */

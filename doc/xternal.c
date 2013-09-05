@@ -117,7 +117,7 @@
  * - <a class="el" href="AUTHORS.shtml#further">Further developers</a>
  * - <a class="el" href="AUTHORS.shtml#contributors">Contributors</a>
  *
- * @version  3.0.1.3
+ * @version  3.0.1.4
  *
  * \image html scippy.png
  *

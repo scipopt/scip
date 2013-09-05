@@ -19,6 +19,7 @@
  * @author Marc Pfetsch
  * @author Stefan Heinz
  * @author Stefan Vigerske
+ * @author Michael Winkler
  * @author Lars Schewe
  */
 
@@ -39,6 +40,7 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
+#include "scip/cons_and.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 #include "scip/cons_indicator.h"
@@ -51,6 +53,9 @@
 #define READER_DESC             "file reader for MIPs in IBM CPLEX's LP file format"
 #define READER_EXTENSION        "lp"
 
+#define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the lp
+                                              *   file? */
+#define DEFAULT_AGGRLINEARIZATION_ANDS TRUE  /**< should an aggregated linearization for and constraints be used? */
 
 /*
  * Data structures
@@ -62,6 +67,15 @@
 #define LP_MAX_PRINTLEN      561       /**< the maximum length of any line is 560 + '\\0' = 561*/
 #define LP_MAX_NAMELEN       256       /**< the maximum length for any name is 255 + '\\0' = 256 */
 #define LP_PRINTLEN          100
+
+
+/** LP reading data */
+struct SCIP_ReaderData
+{
+   SCIP_Bool             linearizeands;
+   SCIP_Bool             aggrlinearizationands;
+};
+
 
 /** Section in LP File */
 enum LpSection
@@ -498,6 +512,7 @@ SCIP_Bool isNewSection(
    )
 {
    SCIP_Bool iscolon;
+   size_t len;
 
    assert(lpinput != NULL);
 
@@ -508,7 +523,7 @@ SCIP_Bool isNewSection(
    iscolon = FALSE;
    if( getNextToken(scip, lpinput) )
    {
-      iscolon = (strcmp(lpinput->token, ":") == 0);
+      iscolon = (*lpinput->token == ':');
       pushToken(lpinput);
    }
 
@@ -519,167 +534,182 @@ SCIP_Bool isNewSection(
    if( iscolon )
       return FALSE;
 
-   if( strcasecmp(lpinput->token, "MINIMIZE") == 0
-      || strcasecmp(lpinput->token, "MINIMUM") == 0
-      || strcasecmp(lpinput->token, "MIN") == 0 )
-   {
-      SCIPdebugMessage("(line %d) new section: OBJECTIVE\n", lpinput->linenumber);
-      lpinput->section = LP_OBJECTIVE;
-      lpinput->objsense = SCIP_OBJSENSE_MINIMIZE;
-      return TRUE;
-   }
+   len = strlen(lpinput->token);
+   assert(len < LP_MAX_LINELEN);
 
-   if( strcasecmp(lpinput->token, "MAXIMIZE") == 0
-      || strcasecmp(lpinput->token, "MAXIMUM") == 0
-      || strcasecmp(lpinput->token, "MAX") == 0 )
+   /* the section keywords are at least 2 characters up to 8 or exactly 15 characters long */
+   if( len > 1 && (len < 9 || len == 15) )
    {
-      SCIPdebugMessage("(line %d) new section: OBJECTIVE\n", lpinput->linenumber);
-      lpinput->section = LP_OBJECTIVE;
-      lpinput->objsense = SCIP_OBJSENSE_MAXIMIZE;
-      return TRUE;
-   }
+      char token[16];
+      int c = 0;
 
-   if( strcasecmp(lpinput->token, "SUBJECT") == 0 )
-   {
-      /* check if the next token is 'TO' */
-      swapTokenBuffer(lpinput);
-      if( getNextToken(scip, lpinput) )
+      while( lpinput->token[c] != '\0' )
       {
-	 if( strcasecmp(lpinput->token, "TO") == 0 )
-	 {
-	    SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
-	    lpinput->section = LP_CONSTRAINTS;
-	    lpinput->inlazyconstraints = FALSE;
-	    lpinput->inusercuts = FALSE;
-	    return TRUE;
-	 }
-	 else
-	    pushToken(lpinput);
+         token[c] = toupper(lpinput->token[c]); /*lint !e734*/
+         ++c;
+         assert(c < 16);
       }
-      swapTokenBuffer(lpinput);
-   }
+      token[c] = '\0';
 
-   if( strcasecmp(lpinput->token, "SUCH") == 0 )
-   {
-      /* check if the next token is 'THAT' */
-      swapTokenBuffer(lpinput);
-      if( getNextToken(scip, lpinput) )
+      if( (len == 3 && strcmp(token, "MIN") == 0)
+         || (len == 7 && strcmp(token, "MINIMUM") == 0)
+         || (len == 8 && strcmp(token, "MINIMIZE") == 0) )
       {
-	 if( strcasecmp(lpinput->token, "THAT") == 0 )
-	 {
-	    SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
-	    lpinput->section = LP_CONSTRAINTS;
-	    lpinput->inlazyconstraints = FALSE;
-	    lpinput->inusercuts = FALSE;
-	    return TRUE;
-	 }
-	 else
-	    pushToken(lpinput);
+         SCIPdebugMessage("(line %d) new section: OBJECTIVE\n", lpinput->linenumber);
+         lpinput->section = LP_OBJECTIVE;
+         lpinput->objsense = SCIP_OBJSENSE_MINIMIZE;
+         return TRUE;
       }
-      swapTokenBuffer(lpinput);
-   }
 
-   if( strcasecmp(lpinput->token, "ST") == 0
-      || strcasecmp(lpinput->token, "S.T.") == 0
-      || strcasecmp(lpinput->token, "ST.") == 0 )
-   {
-      SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
-      lpinput->section = LP_CONSTRAINTS;
-      lpinput->inlazyconstraints = FALSE;
-      lpinput->inusercuts = FALSE;
-      return TRUE;
-   }
-
-   if( strcasecmp(lpinput->token, "LAZY") == 0 )
-   {
-      /* check if the next token is 'CONSTRAINTS' */
-      swapTokenBuffer(lpinput);
-      if( getNextToken(scip, lpinput) )
+      if( (len == 3 && strcmp(token, "MAX") == 0)
+         || (len == 7 && strcmp(token, "MAXIMUM") == 0)
+         || (len == 8 && strcmp(token, "MAXIMIZE") == 0) )
       {
-	 if( strcasecmp(lpinput->token, "CONSTRAINTS") == 0 )
-	 {
-	    SCIPdebugMessage("(line %d) new section: CONSTRAINTS (lazy)\n", lpinput->linenumber);
-	    lpinput->section = LP_CONSTRAINTS;
-	    lpinput->inlazyconstraints = TRUE;
-	    lpinput->inusercuts = FALSE;
-	    return TRUE;
-	 }
-	 else
-	    pushToken(lpinput);
+         SCIPdebugMessage("(line %d) new section: OBJECTIVE\n", lpinput->linenumber);
+         lpinput->section = LP_OBJECTIVE;
+         lpinput->objsense = SCIP_OBJSENSE_MAXIMIZE;
+         return TRUE;
       }
-      swapTokenBuffer(lpinput);
-   }
 
-   if( strcasecmp(lpinput->token, "USER") == 0 )
-   {
-      /* check if the next token is 'CUTS' */
-      swapTokenBuffer(lpinput);
-      if( getNextToken(scip, lpinput) )
+      if( len == 7 && strcmp(token, "SUBJECT") == 0 )
       {
-	 if( strcasecmp(lpinput->token, "CUTS") == 0 )
-	 {
-	    SCIPdebugMessage("(line %d) new section: CONSTRAINTS (user cuts)\n", lpinput->linenumber);
-	    lpinput->section = LP_CONSTRAINTS;
-	    lpinput->inlazyconstraints = FALSE;
-	    lpinput->inusercuts = TRUE;
-	    return TRUE;
-	 }
-	 else
-	    pushToken(lpinput);
+         /* check if the next token is 'TO' */
+         swapTokenBuffer(lpinput);
+         if( getNextToken(scip, lpinput) )
+         {
+            if( strcasecmp(lpinput->token, "TO") == 0 )
+            {
+               SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
+               lpinput->section = LP_CONSTRAINTS;
+               lpinput->inlazyconstraints = FALSE;
+               lpinput->inusercuts = FALSE;
+               return TRUE;
+            }
+            else
+               pushToken(lpinput);
+         }
+         swapTokenBuffer(lpinput);
       }
-      swapTokenBuffer(lpinput);
-   }
 
-   if( strcasecmp(lpinput->token, "BOUNDS") == 0
-      || strcasecmp(lpinput->token, "BOUND") == 0 )
-   {
-      SCIPdebugMessage("(line %d) new section: BOUNDS\n", lpinput->linenumber);
-      lpinput->section = LP_BOUNDS;
-      return TRUE;
-   }
+      if( len == 4 && strcmp(token, "SUCH") == 0 )
+      {
+         /* check if the next token is 'THAT' */
+         swapTokenBuffer(lpinput);
+         if( getNextToken(scip, lpinput) )
+         {
+            if( strcasecmp(lpinput->token, "THAT") == 0 )
+            {
+               SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
+               lpinput->section = LP_CONSTRAINTS;
+               lpinput->inlazyconstraints = FALSE;
+               lpinput->inusercuts = FALSE;
+               return TRUE;
+            }
+            else
+               pushToken(lpinput);
+         }
+         swapTokenBuffer(lpinput);
+      }
 
-   if( strcasecmp(lpinput->token, "GENERAL") == 0
-      || strcasecmp(lpinput->token, "GENERALS") == 0
-      || strcasecmp(lpinput->token, "GEN") == 0
-      || strcasecmp(lpinput->token, "INTEGER") == 0
-      || strcasecmp(lpinput->token, "INTEGERS") == 0
-      || strcasecmp(lpinput->token, "INT") == 0 )
-   {
-      SCIPdebugMessage("(line %d) new section: GENERALS\n", lpinput->linenumber);
-      lpinput->section = LP_GENERALS;
-      return TRUE;
-   }
+      if( (len == 2 && strcmp(token, "ST") == 0)
+         || (len == 3 && strcmp(token, "ST.") == 0)
+         || (len == 4 && strcmp(token, "S.T.") == 0) )
+      {
+         SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
+         lpinput->section = LP_CONSTRAINTS;
+         lpinput->inlazyconstraints = FALSE;
+         lpinput->inusercuts = FALSE;
+         return TRUE;
+      }
 
-   if( strcasecmp(lpinput->token, "BINARY") == 0
-      || strcasecmp(lpinput->token, "BINARIES") == 0
-      || strcasecmp(lpinput->token, "BIN") == 0 )
-   {
-      SCIPdebugMessage("(line %d) new section: BINARIES\n", lpinput->linenumber);
-      lpinput->section = LP_BINARIES;
-      return TRUE;
-   }
+      if( len == 4 && strcmp(token, "LAZY") == 0 )
+      {
+         /* check if the next token is 'CONSTRAINTS' */
+         swapTokenBuffer(lpinput);
+         if( getNextToken(scip, lpinput) )
+         {
+            if( strcasecmp(lpinput->token, "CONSTRAINTS") == 0 )
+            {
+               SCIPdebugMessage("(line %d) new section: CONSTRAINTS (lazy)\n", lpinput->linenumber);
+               lpinput->section = LP_CONSTRAINTS;
+               lpinput->inlazyconstraints = TRUE;
+               lpinput->inusercuts = FALSE;
+               return TRUE;
+            }
+            else
+               pushToken(lpinput);
+         }
+         swapTokenBuffer(lpinput);
+      }
 
-   if( strcasecmp(lpinput->token, "SEMI-CONTINUOUS") == 0
-      || strcasecmp(lpinput->token, "SEMIS") == 0
-      || strcasecmp(lpinput->token, "SEMI") == 0 )
-   {
-      SCIPdebugMessage("(line %d) new section: SEMICONTINUOUS\n", lpinput->linenumber);
-      lpinput->section = LP_SEMICONTINUOUS;
-      return TRUE;
-   }
+      if( len == 4 && strcmp(token, "USER") == 0 )
+      {
+         /* check if the next token is 'CUTS' */
+         swapTokenBuffer(lpinput);
+         if( getNextToken(scip, lpinput) )
+         {
+            if( strcasecmp(lpinput->token, "CUTS") == 0 )
+            {
+               SCIPdebugMessage("(line %d) new section: CONSTRAINTS (user cuts)\n", lpinput->linenumber);
+               lpinput->section = LP_CONSTRAINTS;
+               lpinput->inlazyconstraints = FALSE;
+               lpinput->inusercuts = TRUE;
+               return TRUE;
+            }
+            else
+               pushToken(lpinput);
+         }
+         swapTokenBuffer(lpinput);
+      }
 
-   if( strcasecmp(lpinput->token, "SOS") == 0 )
-   {
-      SCIPdebugMessage("(line %d) new section: SOS\n", lpinput->linenumber);
-      lpinput->section = LP_SOS;
-      return TRUE;
-   }
+      if( (len == 5 && strcmp(token, "BOUND") == 0)
+         || (len == 6 && strcmp(token, "BOUNDS") == 0) )
+      {
+         SCIPdebugMessage("(line %d) new section: BOUNDS\n", lpinput->linenumber);
+         lpinput->section = LP_BOUNDS;
+         return TRUE;
+      }
 
-   if( strcasecmp(lpinput->token, "END") == 0 )
-   {
-      SCIPdebugMessage("(line %d) new section: END\n", lpinput->linenumber);
-      lpinput->section = LP_END;
-      return TRUE;
+      if( (len == 3 && (strcmp(token, "GEN") == 0 || strcmp(token, "INT") == 0))
+         || (len == 7 && (strcmp(token, "GENERAL") == 0 || strcmp(token, "INTEGER") == 0))
+         || (len == 8 && (strcmp(token, "GENERALS") == 0 || strcmp(token, "INTEGERS") == 0)) )
+      {
+         SCIPdebugMessage("(line %d) new section: GENERALS\n", lpinput->linenumber);
+         lpinput->section = LP_GENERALS;
+         return TRUE;
+      }
+
+      if( (len == 3 && strcmp(token, "BIN") == 0)
+         || (len == 6 && strcmp(token, "BINARY") == 0)
+         || (len == 8 && strcmp(token, "BINARIES") == 0) )
+      {
+         SCIPdebugMessage("(line %d) new section: BINARIES\n", lpinput->linenumber);
+         lpinput->section = LP_BINARIES;
+         return TRUE;
+      }
+
+      if( (len == 4 && strcmp(token, "SEMI") == 0)
+         || (len == 5 && strcmp(token, "SEMIS") == 0)
+         || (len == 15 && strcmp(token, "SEMI-CONTINUOUS") == 0) )
+      {
+         SCIPdebugMessage("(line %d) new section: SEMICONTINUOUS\n", lpinput->linenumber);
+         lpinput->section = LP_SEMICONTINUOUS;
+         return TRUE;
+      }
+
+      if( len == 3 && strcmp(token, "SOS") == 0 )
+      {
+         SCIPdebugMessage("(line %d) new section: SOS\n", lpinput->linenumber);
+         lpinput->section = LP_SOS;
+         return TRUE;
+      }
+
+      if( len == 3 && strcmp(token, "END") == 0 )
+      {
+         SCIPdebugMessage("(line %d) new section: END\n", lpinput->linenumber);
+         lpinput->section = LP_END;
+         return TRUE;
+      }
    }
 
    return FALSE;
@@ -930,7 +960,7 @@ SCIP_RETCODE readCoefficients(
    coefssize = LP_INIT_COEFSSIZE;
    SCIP_CALL( SCIPallocMemoryArray(scip, vars, coefssize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, coefs, coefssize) );
-   
+
    quadcoefssize = LP_INIT_QUADCOEFSSIZE;
    SCIP_CALL( SCIPallocMemoryArray(scip, quadvars1, quadcoefssize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, quadvars2, quadcoefssize) );
@@ -947,21 +977,6 @@ SCIP_RETCODE readCoefficients(
    while( getNextToken(scip, lpinput) )
    {
       SCIP_VAR* var;
-      
-      /* check if we reached a new section */
-      if( isNewSection(scip, lpinput) )
-      {
-         *newsection = TRUE;
-         return SCIP_OKAY;
-      }
-
-      /* check if we reached an equation sense */
-      if( isSense(lpinput, NULL) )
-      {
-         /* put the sense back onto the token stack */
-         pushToken(lpinput);
-         break;
-      }
 
       /* check if we read a sign */
       if( isSign(lpinput, &coefsign) )
@@ -970,9 +985,54 @@ SCIP_RETCODE readCoefficients(
          havesign = TRUE;
          continue;
       }
-      
+
+      /* check if we read a value */
+      if( isValue(scip, lpinput, &coef) )
+      {
+         SCIPdebugMessage("(line %d) read coefficient value: %g with sign %+d\n", lpinput->linenumber, coef, coefsign);
+         if( havevalue )
+         {
+            syntaxError(scip, lpinput, "two consecutive values.");
+            return SCIP_OKAY;
+         }
+         havevalue = TRUE;
+         continue;
+      }
+
+      /* check if we reached an equation sense */
+      if( isSense(lpinput, NULL) )
+      {
+         if( isobjective )
+         {
+            syntaxError(scip, lpinput, "no sense allowed in objective");
+            return SCIP_OKAY;
+         }
+
+         /* put the sense back onto the token stack */
+         pushToken(lpinput);
+         break;
+      }
+
+      /* check if we reached a new section, that will be only allowed when having no current sign and value and if we
+       * are not in the qudratic part
+       */
+      if( (isobjective || (!havevalue && !havesign)) && !inquadpart && isNewSection(scip, lpinput) )
+      {
+         if( havesign && !havevalue )
+         {
+            SCIPwarningMessage(scip, "skipped single sign %c without value or variable in objective\n", coefsign == 1 ? '+' : '-');
+         }
+         else if( isobjective && havevalue && !SCIPisZero(scip, coef) )
+         {
+            SCIPwarningMessage(scip, "constant term %+g in objective is skipped\n", coef * coefsign);
+         }
+
+         *newsection = TRUE;
+         return SCIP_OKAY;
+      }
+
       /* check if we start a quadratic part */
-      if( strcmp(lpinput->token, "[") == 0 )
+      if( *lpinput->token ==  '[' )
       {
          if( inquadpart )
          {
@@ -994,7 +1054,7 @@ SCIP_RETCODE readCoefficients(
          inquadpart = TRUE;
          continue;
       }
-      
+
       /* check if we end a quadratic part */
       if( *lpinput->token == ']' )
       {
@@ -1015,10 +1075,10 @@ SCIP_RETCODE readCoefficients(
             }
             return SCIP_OKAY;
          }
-         
+
          SCIPdebugMessage("(line %d) end quadratic part\n", lpinput->linenumber);
          inquadpart = FALSE;
-         
+
          if( isobjective )
          {
             /* quadratic part in objective has to end with '/2' */
@@ -1031,10 +1091,10 @@ SCIP_RETCODE readCoefficients(
             {
                SCIPdebugMessage("(line %d) saw '/2' after quadratic part in objective\n", lpinput->linenumber);
             }
-            else if( strcmp(lpinput->token, "/") == 0 )
+            else if( *lpinput->token == '/' )
             {
                /* maybe it says '/ 2' */
-               if( !getNextToken(scip, lpinput) || strcmp(lpinput->token, "2") != 0 )
+               if( !getNextToken(scip, lpinput) || *lpinput->token == '2' )
                {
                   syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
                   return SCIP_OKAY;
@@ -1047,12 +1107,12 @@ SCIP_RETCODE readCoefficients(
                return SCIP_OKAY;
             }
          }
-         
+
          continue;
       }
 
       /* check if we are in between two quadratic variables */
-      if( strcmp(lpinput->token, "*") == 0 )
+      if( *lpinput->token == '*' )
       {
          if( !inquadpart )
          {
@@ -1064,24 +1124,24 @@ SCIP_RETCODE readCoefficients(
             syntaxError(scip, lpinput, "cannot have '*' before first variable in quadratic term.");
             return SCIP_OKAY;
          }
-         
+
          continue;
       }
-      
+
       /* all but the first coefficient need a sign */
       if( !inquadpart && *ncoefs > 0 && !havesign )
       {
          syntaxError(scip, lpinput, "expected sign ('+' or '-') or sense ('<' or '>').");
          return SCIP_OKAY;
       }
-      if(  inquadpart && *nquadcoefs > 0 && !havesign )
+      if( inquadpart && *nquadcoefs > 0 && !havesign )
       {
          syntaxError(scip, lpinput, "expected sign ('+' or '-').");
          return SCIP_OKAY;
       }
 
       /* check if the last variable should be squared */
-      if( strcmp(lpinput->token, "^") == 0 )
+      if( *lpinput->token == '^' )
       {
          if( !inquadpart )
          {
@@ -1093,24 +1153,11 @@ SCIP_RETCODE readCoefficients(
             syntaxError(scip, lpinput, "cannot have square '^2' before variable.");
             return SCIP_OKAY;
          }
-         
+
          var = firstquadvar;
       }
       else
       {
-         /* check if we read a value */
-         if( isValue(scip, lpinput, &coef) )
-         {
-            SCIPdebugMessage("(line %d) read coefficient value: %g with sign %+d\n", lpinput->linenumber, coef, coefsign);
-            if( havevalue )
-            {
-               syntaxError(scip, lpinput, "two consecutive values.");
-               return SCIP_OKAY;
-            }
-            havevalue = TRUE;
-            continue;
-         }
-
          /* the token is a variable name: get the corresponding variable (or create a new one) */
          SCIP_CALL( getVariable(scip, lpinput->token, &var, NULL) );
       }
@@ -1145,7 +1192,7 @@ SCIP_RETCODE readCoefficients(
             firstquadvar = var;
             continue;
          }
-         
+
          /* insert the quadratic coefficient */
          SCIPdebugMessage("(line %d) read quadratic coefficient: %+g<%s><%s>\n", lpinput->linenumber, (isobjective ? 0.5 : 1) * coefsign * coef, SCIPvarGetName(firstquadvar), SCIPvarGetName(var));
          if( !SCIPisZero(scip, coef) )
@@ -2917,6 +2964,93 @@ SCIP_RETCODE printSOCCons(
    return SCIP_OKAY;
 }
 
+/**< prints a linearization of an and-constraint into the given file */
+static
+SCIP_RETCODE printAndCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           consname,           /**< name of the constraint */
+   SCIP_CONS*            cons,               /**< and constraint */
+   SCIP_Bool             aggrlinearizationands,/**< print weak or strong realaxation */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_VAR** operands;
+   SCIP_VAR* resultant;
+   SCIP_Real* vals;
+   char rowname[LP_MAX_NAMELEN];
+   int nvars;
+   int v;
+
+   assert(scip != NULL);
+   assert(consname != NULL);
+   assert(cons != NULL);
+
+   nvars = SCIPgetNVarsAnd(scip, cons);
+   operands = SCIPgetVarsAnd(scip, cons);
+   resultant = SCIPgetResultantAnd(scip, cons);
+
+   /* allocate buffer array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars + 1) );
+
+   /* the tight relaxtion, number of and-constraint operands rows */
+   if( !aggrlinearizationands )
+   {
+      vars[0] = resultant;
+      vals[0] = 1.0;
+      vals[1] = -1.0;
+
+      /* print operator rows */
+      for( v = 0; v < nvars; ++v )
+      {
+         (void) SCIPsnprintf(rowname, LP_MAX_NAMELEN, "%s_%d", consname, v);
+         vars[1] = operands[v];
+
+         /* print for each operator a row */
+         SCIP_CALL( printQuadraticCons(scip, file, rowname,
+               vars, vals, 2, NULL, 0, NULL, 0, -SCIPinfinity(scip), 0.0, transformed) );
+      }
+   }
+
+   /* prepare for next row */
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      vars[v] = operands[v];
+      vals[v] = -1.0;
+   }
+
+   vars[nvars] = resultant;
+
+   /* the weak relaxtion, only one constraint */
+   if( aggrlinearizationands )
+   {
+      /* adjust rowname of constraint */
+      (void) SCIPsnprintf(rowname, LP_MAX_NAMELEN, "%s_operators", consname);
+
+      vals[nvars] = (SCIP_Real) nvars;
+
+      /* print aggregated operator row */
+      SCIP_CALL( printQuadraticCons(scip, file, rowname,
+            vars, vals, nvars + 1, NULL, 0, NULL, 0, -SCIPinfinity(scip), 0.0, transformed) );
+   }
+
+   /* create additional linear constraint */
+   (void) SCIPsnprintf(rowname, LP_MAX_NAMELEN, "%s_add", consname);
+
+   vals[nvars] = 1.0;
+
+   SCIP_CALL( printQuadraticCons(scip, file, rowname,
+         vars, vals, nvars + 1, NULL, 0, NULL, 0, -nvars + 1.0, SCIPinfinity(scip), transformed) );
+
+   /* free buffer array */
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /** check whether given variables are aggregated and put them into an array without duplication */
 static
 SCIP_RETCODE collectAggregatedVars(
@@ -3103,10 +3237,23 @@ SCIP_DECL_READERCOPY(readerCopyLp)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderLp(scip) );
- 
+
    return SCIP_OKAY;
 }
 
+/** destructor of reader to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_READERFREE(readerFreeLp)
+{
+   SCIP_READERDATA* readerdata;
+
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+   SCIPfreeMemory(scip, &readerdata);
+
+   return SCIP_OKAY;
+}
 
 /** problem reading method of reader */
 static
@@ -3123,6 +3270,9 @@ SCIP_DECL_READERREAD(readerReadLp)
 static
 SCIP_DECL_READERWRITE(readerWriteLp)
 {  /*lint --e{715}*/
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
    SCIP_CALL( SCIPwriteLp(scip, file, name, transformed, objsense, objscale, objoffset, vars,
          nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
 
@@ -3143,15 +3293,26 @@ SCIP_RETCODE SCIPincludeReaderLp(
    SCIP_READER* reader;
 
    /* create reader data */
-   readerdata = NULL;
+   SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyLp) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeLp) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadLp) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteLp) );
+
+   /* add lp-reader parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/"READER_NAME"/linearize-and-constraints",
+         "should possible \"and\" constraint be linearized when writing the lp file?",
+         &readerdata->linearizeands, TRUE, DEFAULT_LINEARIZE_ANDS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/"READER_NAME"/aggrlinearization-ands",
+         "should an aggregated linearization for and constraints be used?",
+         &readerdata->aggrlinearizationands, TRUE, DEFAULT_AGGRLINEARIZATION_ANDS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -3243,6 +3404,10 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {
+   SCIP_READER* reader;
+   SCIP_READERDATA* readerdata;
+   SCIP_Bool linearizeands;
+   SCIP_Bool aggrlinearizationands;
    int c;
    int v;
 
@@ -3279,7 +3444,7 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_Real lb;
    SCIP_Real ub;
 
-   assert( scip != NULL );
+   assert(scip != NULL);
 
    /* find indicator constraint handler */
    conshdlrInd = SCIPfindConshdlr(scip, "indicator");
@@ -3385,6 +3550,21 @@ SCIP_RETCODE SCIPwriteLp(
 
    /* print "Subject to" section */
    SCIPinfoMessage(scip, file, "Subject to\n");
+
+   reader = SCIPfindReader(scip, READER_NAME);
+   if( reader != NULL )
+   {
+      readerdata = SCIPreaderGetData(reader);
+      assert(readerdata != NULL);
+
+      linearizeands = readerdata->linearizeands;
+      aggrlinearizationands = readerdata->aggrlinearizationands;
+   }
+   else
+   {
+      linearizeands = DEFAULT_LINEARIZE_ANDS;
+      aggrlinearizationands = DEFAULT_AGGRLINEARIZATION_ANDS;
+   }
 
    /* collect SOS, quadratic, and SOC constraints in array for later output */
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS1, nconss) );
@@ -3574,6 +3754,20 @@ SCIP_RETCODE SCIPwriteLp(
          SCIP_CALL( printSOCCons(scip, file, consname, cons) );
 
          consSOC[nConsSOC++] = cons;
+      }
+      else if( strcmp(conshdlrname, "and") == 0 )
+      {
+         if( linearizeands )
+         {
+            SCIP_CALL( printAndCons(scip, file, consname, cons, aggrlinearizationands, transformed) );
+         }
+         else
+         {
+            SCIPwarningMessage(scip, "change parameter \"reading/"READER_NAME"/linearize-and-constraints\" to TRUE to print and-constraints\n");
+            SCIPinfoMessage(scip, file, "\\ ");
+            SCIP_CALL( SCIPprintCons(scip, cons, file) );
+            SCIPinfoMessage(scip, file, ";\n");
+         }
       }
       else
       {

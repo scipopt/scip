@@ -1031,6 +1031,14 @@ SCIP_Real SCIPsetInfinity(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity
+ *  computation)
+ */
+extern
+SCIP_Real SCIPsetGetHugeValue(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** returns value treated as zero */
 extern
 SCIP_Real SCIPsetEpsilon(
@@ -1137,6 +1145,13 @@ extern
 SCIP_Bool SCIPsetIsInfinity(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to be compared against infinity */
+   );
+
+/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+extern
+SCIP_Bool SCIPsetIsHugeValue(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be checked whether it is huge */
    );
 
 /** checks, if value is in range epsilon of 0.0 */
@@ -1508,19 +1523,6 @@ SCIP_Bool SCIPsetIsSumRelGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
-extern
-SCIP_Bool SCIPsetIsHugeValue(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             val                 /**< value to be checked whether it is huge */
-   );
-
-/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity computation) */
-extern
-SCIP_Real SCIPsetGetHugeValue(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   );
-
 
 #ifdef NDEBUG
 
@@ -1529,6 +1531,7 @@ SCIP_Real SCIPsetGetHugeValue(
  */
 
 #define SCIPsetInfinity(set)               ( (set)->num_infinity )
+#define SCIPsetGetHugeValue(set)           ( (set)->num_hugeval )
 #define SCIPsetEpsilon(set)                ( (set)->num_epsilon )
 #define SCIPsetSumepsilon(set)             ( (set)->num_sumepsilon )
 #define SCIPsetFeastol(set)                ( (set)->num_feastol )
@@ -1545,6 +1548,7 @@ SCIP_Real SCIPsetGetHugeValue(
 #define SCIPsetIsGT(set, val1, val2)       ( EPSGT(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsGE(set, val1, val2)       ( EPSGE(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsInfinity(set, val)        ( (val) >= (set)->num_infinity )
+#define SCIPsetIsHugeValue(set, val)       ( (val) >= (set)->num_hugeval )
 #define SCIPsetIsZero(set, val)            ( EPSZ(val, (set)->num_epsilon) )
 #define SCIPsetIsPositive(set, val)        ( EPSP(val, (set)->num_epsilon) )
 #define SCIPsetIsNegative(set, val)        ( EPSN(val, (set)->num_epsilon) )
@@ -1605,8 +1609,6 @@ SCIP_Real SCIPsetGetHugeValue(
 #define SCIPsetIsSumRelGE(set, val1, val2) ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsUpdateUnreliable(set, newvalue, oldvalue) \
    ( (ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon)) >= set->num_recompfac )
-#define SCIPsetIsHugeValue(set, val) ( (val) >= (set)->num_hugeval )
-#define SCIPsetGetHugeValue(set) ( (set)->num_hugeval )
 
 #endif
 

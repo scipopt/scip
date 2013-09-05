@@ -13,18 +13,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
- * @brief  main document page
- * @author Frederic Pythoud
+/**@file   JniLibraryLoader.c
+ * @ingroup PUBLICMETHODS
+ * @brief  JNI SCIP solution callable library
+ * @author Stefan Heinz
+ * @author Alexandra Kraft
  */
 
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Example project using SCIP to solve a general slack problem
- * @version  0.1
- * @author   Frederic Pythoud
- * @author   Ambros Gleixner
- *
- * This example illustrates the use of the superindicator constraint handler to solve a slack problem with groups of
- * constraints.
- */
+#include "JniScipLibraryLoader.h"

@@ -248,6 +248,9 @@ extern
 void SCIPnodeUpdateLowerbound(
    SCIP_NODE*            node,               /**< node to update lower bound for */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    );
 
@@ -257,6 +260,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_NODE*            node,               /**< node to set lower bound for */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_LP*              lp                  /**< LP data */
    );

@@ -4568,6 +4568,15 @@ SCIP_Real SCIPgetTransObjscale(
 
 /** sets limit on objective function, such that only solutions better than this limit are accepted
  *
+ *  @note SCIP will only look for solutions with a strictly better objective value, thus, e.g., prune
+ *        all branch-and-bound nodes with dual bound equal or worse to the objective limit.
+ *        However, SCIP will also collect solutions with objective value worse than the objective limit and
+ *        use them to run improvement heuristics on them.
+ *  @note If SCIP can prove that there exists no solution with a strictly better objective value, the solving status
+ *        will normally be infeasible (the objective limit is interpreted as part of the problem).
+ *        The only exception is that by chance, SCIP found a solution with the same objective value and thus
+ *        proved the optimality of this solution, resulting in solution status optimal.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -6656,7 +6665,9 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
 
 /** transforms given variable, scalar and constant to the corresponding active, fixed, or
  *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
- *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"; a multi-aggregation
+ *  with only one active variable (this can happen due to fixings after the multi-aggregation),
+ *  is treated like an aggregation; if the multi-aggregation constant is infinite, "scalar" will be 0.0
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -10449,7 +10460,9 @@ SCIP_RETCODE SCIPdeactiveCons(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  *
- *  @note If the message handler is set to a NULL pointer nothing will be printed
+ *  @note If the message handler is set to a NULL pointer nothing will be printed.
+ *  @note The file stream will not be flushed directly, this can be achieved by calling SCIPinfoMessage() printing a
+ *        newline character.
  */
 EXTERN
 SCIP_RETCODE SCIPprintCons(
@@ -14106,7 +14119,11 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
 /**@{ */
 
 /** gets branching candidates for LP solution branching (fractional variables) along with solution values,
- *  fractionalities, and number of branching candidates;
+ *  fractionalities, and number of branching candidates; The number of branching candidates does NOT
+ *  account for fractional implicit integer variables which should not be used for branching decisions.
+ *
+ *  Fractional implicit integer variables are stored at the positions *nlpcands - *nlpcands + *nfracimplvars - 1
+ *
  *  branching rules should always select the branching candidate among the first npriolpcands of the candidate
  *  list
  *
@@ -14125,7 +14142,8 @@ SCIP_RETCODE SCIPgetLPBranchCands(
    SCIP_Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*                  nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
-   int*                  npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  npriolpcands,       /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  nfracimplvars       /**< pointer to store the number of implicit fractional variables, or NULL */
    );
 
 /** gets number of branching candidates for LP solution branching (number of fractional variables)
@@ -15365,6 +15383,19 @@ SCIP_Bool SCIPareSolsEqual(
    SCIP_SOL*             sol2                /**< second primal CIP solution */
    );
 
+/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
+ *  deteriorated by this method.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+EXTERN
+SCIP_RETCODE SCIPadjustImplicitSolVals(
+   SCIP*                 scip,               /** SCIP data structure */
+   SCIP_SOL*             sol,                /** primal CIP solution */
+   SCIP_Bool             uselprows           /** should LP row information be considered for none-objective variables */
+   );
+
 /** outputs non-zero variables of solution in original problem space to the given file stream
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -16428,6 +16459,7 @@ SCIP_Longint SCIPgetNLPs(
  *  @return the total number of iterations used so far in primal and dual simplex and barrier algorithm
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
@@ -18000,6 +18032,7 @@ SCIP_Real SCIPgetTotalTime(
  *  @return the current solving time in seconds.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -18215,6 +18248,14 @@ SCIP_Real SCIPinfinity(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity
+ *  computation)
+ */
+EXTERN
+SCIP_Real SCIPgetHugeValue(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** checks, if values are in range of epsilon */
 EXTERN
 SCIP_Bool SCIPisEQ(
@@ -18260,6 +18301,13 @@ EXTERN
 SCIP_Bool SCIPisInfinity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to be compared against infinity */
+   );
+
+/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+EXTERN
+SCIP_Bool SCIPisHugeValue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to be checked whether it is huge */
    );
 
 /** checks, if value is in range epsilon of 0.0 */
@@ -18612,19 +18660,6 @@ SCIP_Bool SCIPisUpdateUnreliable(
    SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
    );
 
-/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
-EXTERN
-SCIP_Bool SCIPisHugeValue(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             val                 /**< value to be checked whether it is huge */
-   );
-
-/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity computation) */
-EXTERN
-SCIP_Real SCIPgetHugeValue(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -18633,6 +18668,8 @@ SCIP_Real SCIPgetHugeValue(
 
 #define SCIPinfinity(scip)                        SCIPsetInfinity((scip)->set)
 #define SCIPisInfinity(scip, val)                 SCIPsetIsInfinity((scip)->set, val)        
+#define SCIPisHugeValue(scip, val)                SCIPsetIsHugeValue((scip)->set, val)
+#define SCIPgetHugeValue(scip)                    SCIPsetGetHugeValue((scip)->set)
 #define SCIPisEQ(scip, val1, val2)                SCIPsetIsEQ((scip)->set, val1, val2)       
 #define SCIPisLT(scip, val1, val2)                SCIPsetIsLT((scip)->set, val1, val2)       
 #define SCIPisLE(scip, val1, val2)                SCIPsetIsLE((scip)->set, val1, val2)       
@@ -18690,8 +18727,6 @@ SCIP_Real SCIPgetHugeValue(
 #define SCIPisSumRelGE(scip, val1, val2)          SCIPsetIsSumRelGE((scip)->set, val1, val2) 
 
 #define SCIPisUpdateUnreliable(scip, newval, oldval) SCIPsetIsUpdateUnreliable((scip)->set, newval, oldval)
-#define SCIPisHugeValue(scip, val) SCIPsetIsHugeValue((scip)->set, val)
-#define SCIPgetHugeValue(scip) SCIPsetGetHugeValue((scip)->set)
 #endif
 
 /** outputs a real number, or "+infinity", or "-infinity" to a file */

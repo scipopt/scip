@@ -1667,8 +1667,8 @@ SCIP_RETCODE getBinVarsRepresentatives(
    {
       for( v = nvars - 1; v >= 0; --v )
       {
-         /** gets a binary variable that is equal to the given binary variable, and that is either active, fixed, or
-          *  multi-aggregated, or the negated variable of an active, fixed, or multi-aggregated variable
+         /* gets a binary variable that is equal to the given binary variable, and that is either active, fixed, or
+          * multi-aggregated, or the negated variable of an active, fixed, or multi-aggregated variable
           */
          SCIP_CALL( SCIPgetBinvarRepresentative( scip, vars[v], &vars[v], &negated) );
       }
@@ -1683,9 +1683,8 @@ SCIP_RETCODE getBinVarsRepresentatives(
          scalar = 1.0;
          constant = 0.0;
 
-         /** retransforms given variable, scalar and constant to the corresponding original variable, scalar and constant,
-          *  if possible;
-          *  if the retransformation is impossible, NULL is returned as variable
+         /* retransforms given variable, scalar and constant to the corresponding original variable, scalar and constant,
+          * if possible; if the retransformation is impossible, NULL is returned as variable
           */
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalar, &constant) );
 

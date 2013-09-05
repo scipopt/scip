@@ -93,6 +93,8 @@
                                            *   comparison round */
 #define DEFAULT_SORTVARS             TRUE /**< should variables be sorted after presolve w.r.t their coefficient absolute for faster
                                            *  propagation? */
+#define DEFAULT_CHECKRELMAXABS      FALSE /**< should the violation for a constraint with side 0.0 be checked relative
+                                           *   to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)? */
 #define DEFAULT_MAXAGGRNORMSCALE      0.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation
                                            *   (0.0: disable constraint aggregation) */
 #define DEFAULT_MAXCARDBOUNDDIST      0.0 /**< maximal relative distance from current node's dual bound to primal bound compared
@@ -105,7 +107,7 @@
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
-#define MAXSCALEDCOEFINTEGER        1e+06 /**< maximal coefficient value after scaling if all variables are of integral
+#define MAXSCALEDCOEFINTEGER        1e+05 /**< maximal coefficient value after scaling if all variables are of integral
                                            *   type
                                            */
 
@@ -138,7 +140,8 @@ enum SCIP_Constype
 typedef enum SCIP_Constype SCIP_CONSTYPE;
 #endif
 
-/* @todo add multi-aggregation of variables that are in exactly two equations (, if not numerically an issue), maybe in fullDualPresolve(), *       see convertLongEquality()
+/* @todo add multi-aggregation of variables that are in exactly two equations (, if not numerically an issue),
+ *       maybe in fullDualPresolve(), see convertLongEquality()
  */
 
 
@@ -207,7 +210,6 @@ struct SCIP_ConsData
    unsigned int          normalized:1;       /**< is the constraint in normalized form? */
    unsigned int          upgradetried:1;     /**< was the constraint already tried to be upgraded? */
    unsigned int          upgraded:1;         /**< is the constraint upgraded and will it be removed after preprocessing? */
-   unsigned int          donotupgrade:1;     /**< should the constraint not be upgraded? */
    unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
    unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
    unsigned int          cliquesadded:1;     /**< were the cliques of the constraint already extracted? */
@@ -250,6 +252,9 @@ struct SCIP_ConshdlrData
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
    SCIP_Bool             sortvars;           /**< should binary variables be sorted for faster propagation? */
+   SCIP_Bool             checkrelmaxabs;     /**< should the violation for a constraint with side 0.0 be checked relative
+                                              *   to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)? */
+
 };
 
 /** linear constraint update method */
@@ -885,7 +890,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->normalized = FALSE;
    (*consdata)->upgradetried = FALSE;
    (*consdata)->upgraded = FALSE;
-   (*consdata)->donotupgrade = FALSE;
    (*consdata)->sorted = (nvars <= 1);
    (*consdata)->merged = (nvars <= 1);
    (*consdata)->cliquesadded = FALSE;
@@ -4170,15 +4174,15 @@ SCIP_RETCODE applyFixings(
             SCIPABORT();
          }
       }
-      
+
       if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->lhs) )
       {
-         /** for large numbers that are relatively equal, substraction can lead to cancellation,
-          *  causing wrong fixings of other variables --> better use a real zero here;
-          *  for small numbers, polishing the difference might lead to wrong results -->
-          *  better use the exact difference in this case
+         /* for large numbers that are relatively equal, substraction can lead to cancellation,
+          * causing wrong fixings of other variables --> better use a real zero here;
+          * for small numbers, polishing the difference might lead to wrong results -->
+          * better use the exact difference in this case
           */
-         if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs) && SCIPisFeasGE(scip, REALABS(lhssubtrahend), 1.0) ) 
+         if( SCIPisEQ(scip, lhssubtrahend, consdata->lhs) && SCIPisFeasGE(scip, REALABS(lhssubtrahend), 1.0) )
          {
             SCIP_CALL( chgLhs(scip, cons, 0.0) );
          }
@@ -4190,12 +4194,12 @@ SCIP_RETCODE applyFixings(
       if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, -consdata->rhs))
       {
 
-         /** for large numbers that are relatively equal, substraction can lead to cancellation,
-          *  causing wrong fixings of other variables --> better use a real zero here;
-          *  for small numbers, polishing the difference might lead to wrong results -->
-          *  better use the exact difference in this case
+         /* for large numbers that are relatively equal, substraction can lead to cancellation,
+          * causing wrong fixings of other variables --> better use a real zero here;
+          * for small numbers, polishing the difference might lead to wrong results -->
+          * better use the exact difference in this case
           */
-         if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) && SCIPisFeasGE(scip, REALABS(rhssubtrahend), 1.0) )
+         if( SCIPisEQ(scip, rhssubtrahend, consdata->rhs ) && SCIPisFeasGE(scip, REALABS(rhssubtrahend), 1.0) )
          {
             SCIP_CALL( chgRhs(scip, cons, 0.0) );
          }
@@ -4777,7 +4781,7 @@ SCIP_RETCODE tightenVarBoundsEasy(
          alpha = val * (ub - lb);
          assert(!SCIPisNegative(scip, alpha));
 
-         if( SCIPisSumGT(scip, alpha, slack) )
+         if( SCIPisSumGT(scip, alpha, slack)  || (force && SCIPisGT(scip, alpha, slack)) )
          {
             SCIP_Real newub;
 
@@ -4826,7 +4830,7 @@ SCIP_RETCODE tightenVarBoundsEasy(
          alpha = val * (ub - lb);
          assert(!SCIPisNegative(scip, alpha));
 
-         if( SCIPisSumGT(scip, alpha, slack) )
+         if( SCIPisSumGT(scip, alpha, slack) || (force && SCIPisGT(scip, alpha, slack)) )
          {
             SCIP_Real newlb;
 
@@ -4874,7 +4878,7 @@ SCIP_RETCODE tightenVarBoundsEasy(
          alpha = val * (lb - ub);
          assert(!SCIPisNegative(scip, alpha));
 
-         if( SCIPisSumGT(scip, alpha, slack) )
+         if( SCIPisSumGT(scip, alpha, slack) || (force && SCIPisGT(scip, alpha, slack)) )
          {
             SCIP_Real newlb;
 
@@ -4922,7 +4926,7 @@ SCIP_RETCODE tightenVarBoundsEasy(
          alpha = val * (lb - ub);
          assert(!SCIPisNegative(scip, alpha));
 
-         if( SCIPisSumGT(scip, alpha, slack) )
+         if( SCIPisSumGT(scip, alpha, slack) || (force && SCIPisGT(scip, alpha, slack)) )
          {
             SCIP_Real newub;
 
@@ -5363,6 +5367,8 @@ SCIP_RETCODE checkCons(
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_SOL*             sol,                /**< solution to be checked, or NULL for current solution */
    SCIP_Bool             checklprows,        /**< has linear constraint to be checked, if it is already in current LP? */
+   SCIP_Bool             checkrelmaxabs,     /**< should the violation for a constraint with side 0.0 be checked relative
+                                              *   to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)? */
    SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
@@ -5397,22 +5403,160 @@ SCIP_RETCODE checkCons(
       activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
       consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
       consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
-   
+
    if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
    {
-      *violated = TRUE;
-
-      /* only reset constraint age if we are in enforcement */
-      if( sol == NULL )
+      /* the "normal" check: one of the two sides is violated */
+      if( !checkrelmaxabs )
       {
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         *violated = TRUE;
+
+         /* only reset constraint age if we are in enforcement */
+         if( sol == NULL )
+         {
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         }
+      }
+      /* the (much) more complicated check: we try to disregard random noise and violations of a 0.0 side which are
+       * small compared to the absolute values occuring in the activity
+       */
+      else
+      {
+         SCIP_Real maxabs;
+         SCIP_Real coef;
+         SCIP_Real absval;
+         SCIP_Real solval;
+         int v;
+
+         maxabs = 1.0;
+
+         /* compute maximum absolute value */
+         for( v = 0; v < consdata->nvars; ++v )
+         {
+            if( consdata->vals != NULL )
+            {
+               coef = consdata->vals[v];
+            }
+            else
+               coef = 1.0;
+
+            solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
+            absval = REALABS( coef * solval );
+            maxabs = MAX( maxabs, absval );
+         }
+
+         /* regard left hand side, first */
+         if( SCIPisFeasLT(scip, activity, consdata->lhs) )
+         {
+            /* check whether violation is random noise */
+            if( (consdata->lhs - activity) <= (1e-15 * maxabs) )
+            {
+               SCIPdebugMessage("  lhs violated due to random noise: violation=%16.9g, maxabs=%16.9g\n",
+                  consdata->lhs - activity, maxabs);
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+
+               /* only increase constraint age if we are in enforcement */
+               if( sol == NULL )
+               {
+                  SCIP_CALL( SCIPincConsAge(scip, cons) );
+               }
+            }
+            /* lhs is violated and lhs is 0.0: use relative tolerance w.r.t. largest absolute value */
+            else if( SCIPisZero(scip, consdata->lhs) )
+            {
+               if( (consdata->lhs - activity) <= (SCIPfeastol(scip) * maxabs) )
+               {
+                  SCIPdebugMessage("  lhs violated absolutely (violation=%16.9g), but feasible when using relative tolerance w.r.t. maximum absolute value (%16.9g)\n",
+                     consdata->lhs - activity, maxabs);
+                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+
+                  /* only increase constraint age if we are in enforcement */
+                  if( sol == NULL )
+                  {
+                     SCIP_CALL( SCIPincConsAge(scip, cons) );
+                  }
+               }
+               else
+               {
+                  *violated = TRUE;
+
+                  /* only reset constraint age if we are in enforcement */
+                  if( sol == NULL )
+                  {
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
+                  }
+               }
+            }
+            else
+            {
+               *violated = TRUE;
+
+               /* only reset constraint age if we are in enforcement */
+               if( sol == NULL )
+               {
+                  SCIP_CALL( SCIPresetConsAge(scip, cons) );
+               }
+            }
+         }
+
+         /* now regard right hand side */
+         if( SCIPisFeasGT(scip, activity, consdata->rhs) )
+         {
+            /* check whether violation is random noise */
+            if( (activity - consdata->rhs) <= (1e-15 * maxabs) )
+            {
+               SCIPdebugMessage("  rhs violated due to random noise: violation=%16.9g, maxabs=%16.9g\n",
+                  activity - consdata->rhs, maxabs);
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+
+               /* only increase constraint age if we are in enforcement */
+               if( sol == NULL )
+               {
+                  SCIP_CALL( SCIPincConsAge(scip, cons) );
+               }
+            }
+            /* rhs is violated and rhs is 0.0, use relative tolerance w.r.t. largest absolute value */
+            else if( SCIPisZero(scip, consdata->rhs) )
+            {
+               if( (activity - consdata->rhs) <= (SCIPfeastol(scip) * maxabs) )
+               {
+                  SCIPdebugMessage("  rhs violated absolutely (violation=%16.9g), but feasible when using relative tolerance w.r.t. maximum absolute value (%16.9g)\n",
+                     activity - consdata->rhs, maxabs);
+                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+
+                  /* only increase constraint age if we are in enforcement */
+                  if( sol == NULL )
+                  {
+                     SCIP_CALL( SCIPincConsAge(scip, cons) );
+                  }
+               }
+               else
+               {
+                  *violated = TRUE;
+
+                  /* only reset constraint age if we are in enforcement */
+                  if( sol == NULL )
+                  {
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
+                  }
+               }
+            }
+            else
+            {
+               *violated = TRUE;
+
+               /* only reset constraint age if we are in enforcement */
+               if( sol == NULL )
+               {
+                  SCIP_CALL( SCIPresetConsAge(scip, cons) );
+               }
+            }
+         }
       }
    }
    else
    {
-      *violated = FALSE;
-
-      /* only increase constraint age if we are in enforcement */
+     /* only increase constraint age if we are in enforcement */
       if( sol == NULL )
       {
          SCIP_CALL( SCIPincConsAge(scip, cons) );
@@ -5486,6 +5630,7 @@ static
 SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool             separatecards,      /**< should knapsack cardinality cuts be generated? */
    SCIP_Bool             separateall,        /**< should all constraints be subject to cardinality cut generation instead of only
@@ -5499,6 +5644,7 @@ SCIP_RETCODE separateCons(
    int oldncuts;
 
    assert(scip != NULL);
+   assert(conshdlrdata != NULL);
    assert(cons != NULL);
    assert(cutoff != NULL);
 
@@ -5509,7 +5655,7 @@ SCIP_RETCODE separateCons(
    oldncuts = *ncuts;
    *cutoff = FALSE;
 
-   SCIP_CALL( checkCons(scip, cons, sol, (sol != NULL), &violated) );
+   SCIP_CALL( checkCons(scip, cons, sol, (sol != NULL), conshdlrdata->checkrelmaxabs, &violated) );
 
    if( violated )
    {
@@ -6545,8 +6691,6 @@ SCIP_RETCODE extractCliques(
                   }
                }
             }
-
-            oldnchgbds = *nchgbds;
          }
 
          /* case d) */
@@ -7553,6 +7697,9 @@ SCIP_RETCODE convertLongEquality(
 
          if( SCIPisInfinity(scip, varub) || SCIPisInfinity(scip, -varlb) )
             slackdomrng = SCIPinfinity(scip);
+         /* we do not want to perform multi-aggregation due to numerics, if the bounds are huge */
+         else if( SCIPisHugeValue(scip, varub) || SCIPisHugeValue(scip, -varlb) )
+            return SCIP_OKAY;
          else
          {
             slackdomrng = (varub - varlb)*absval;
@@ -8955,15 +9102,15 @@ SCIP_RETCODE rangedRowSimplify(
    {
       if( SCIPvarIsBinary(vars[v]) )
       {
-         if( minval > vals[v] || minval == SCIP_INVALID )
+         if( minval > vals[v] || minval == SCIP_INVALID ) /*lint !e777*/
          {
             secondminval = minval;
             minval = vals[v];
          }
-         else if( secondminval > vals[v] || secondminval == SCIP_INVALID )
+         else if( secondminval > vals[v] || secondminval == SCIP_INVALID ) /*lint !e777*/
             secondminval = vals[v];
 
-         if( maxval < vals[v] || maxval == -SCIP_INVALID )
+         if( maxval < vals[v] || maxval == -SCIP_INVALID ) /*lint !e777*/
             maxval = vals[v];
       }
       else
@@ -9302,6 +9449,7 @@ SCIP_RETCODE simplifyInequalities(
       }
 
       siderest = -SCIP_INVALID;
+      allcoefintegral = TRUE;
 
       /* check if some variables always fit into the given constraint */
       for( ; v < nvars - 1; ++v )
@@ -9310,7 +9458,10 @@ SCIP_RETCODE simplifyInequalities(
             break;
 
          if( !SCIPisIntegral(scip, vals[v]) )
+         {
+            allcoefintegral = FALSE;
             break;
+         }
 
          /* calculate greatest common divisor for all general and binary variables */
          gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[v]) + feastol));
@@ -9463,8 +9614,13 @@ SCIP_RETCODE simplifyInequalities(
          }
          else
          {
-            SCIP_CALL( chgLhs(scip, cons, SCIPfeasCeil(scip, consdata->lhs)) );
-            lhs = consdata->lhs;
+            if( SCIPisFeasGT(scip, oldcoef/vals[w], 1.0) )
+            {
+               SCIP_CALL( chgLhs(scip, cons, SCIPfeasCeil(scip, consdata->lhs)) );
+               lhs = consdata->lhs;
+            }
+            else
+               assert(offsetv == -1 || SCIPisEQ(scip, vals[offsetv], consdata->lhs));
          }
          ++(*nchgsides);
 
@@ -9475,6 +9631,15 @@ SCIP_RETCODE simplifyInequalities(
          nvars = consdata->nvars;
          assert(nvars >= 2);
 
+         allcoefintegral = TRUE;
+
+#ifndef NDEBUG
+         /* check integrality */
+         for( w = offsetv + 1; w < nvars; ++w )
+         {
+            assert(SCIPisIntegral(scip, vals[w]));
+         }
+#endif
          SCIPdebugPrintCons(scip, cons, NULL);
       }
 
@@ -9496,7 +9661,10 @@ SCIP_RETCODE simplifyInequalities(
                   break;
 
                if( !SCIPisIntegral(scip, vals[v]) )
+               {
+                  allcoefintegral = FALSE;
                   break;
+               }
 
                oldgcd = gcd;
 
@@ -9532,18 +9700,36 @@ SCIP_RETCODE simplifyInequalities(
             }
             assert(v > offsetv || candpos > offsetv);
          }
+         else
+            candpos = -1;
       }
       else
          candpos = nvars - 1;
 
+      /* check last coefficient for integrality */
+      if( gcd > 1 && allcoefintegral && !redundant )
+      {
+         if( !SCIPisIntegral(scip, vals[nvars - 1]) )
+            allcoefintegral = FALSE;
+      }
+
       /* check for further necessary coefficient adjustments */
-      if( offsetv >= 0 && gcd > 1 )
+      if( offsetv >= 0 && gcd > 1 && allcoefintegral )
       {
          assert(offsetv + 1 < nvars);
+         assert(0 <= candpos && candpos < nvars);
 
-         if( SCIPvarGetType(vars[candpos]) != SCIP_VARTYPE_CONTINUOUS && SCIPisIntegral(scip, vals[candpos]) )
+         if( SCIPvarGetType(vars[candpos]) != SCIP_VARTYPE_CONTINUOUS )
          {
             SCIP_Bool notchangable = FALSE;
+
+#ifndef NDEBUG
+            /* check integrality */
+            for( w = offsetv + 1; w < nvars; ++w )
+            {
+               assert(SCIPisIntegral(scip, vals[w]));
+            }
+#endif
 
             if( vals[candpos] > 0 && SCIPvarIsBinary(vars[candpos]) && SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol)) < gcd )
             {
@@ -9596,7 +9782,7 @@ SCIP_RETCODE simplifyInequalities(
                gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol));
             }
 
-            /* @todo do this for the rhs too */
+            /* correct side and big coefficients */
             if( (!notchangable && hasrhs && ((!SCIPisFeasIntegral(scip, rhs) || SCIPcalcGreComDiv(gcd, (SCIP_Longint)(rhs + feastol)) < gcd) && (SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol)) == gcd))) ||
                ( haslhs && (!SCIPisFeasIntegral(scip, lhs) || SCIPcalcGreComDiv(gcd, (SCIP_Longint)(lhs + feastol)) < gcd) && (SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol)) == gcd)) )
             {
@@ -9669,7 +9855,7 @@ SCIP_RETCODE simplifyInequalities(
     *
     * @todo there are some steps missing ....
     */
-   if( (hasrhs && !SCIPisIntegral(scip, rhs)) || (haslhs && !SCIPisIntegral(scip, lhs)) )
+   if( (hasrhs && !SCIPisFeasIntegral(scip, rhs)) || (haslhs && !SCIPisFeasIntegral(scip, lhs)) )
    {
       SCIP_Real val;
       SCIP_Real newval;
@@ -9903,6 +10089,10 @@ SCIP_RETCODE simplifyInequalities(
    /* @todo following can also work on non integral coefficients, need more investigation */
    /* only check constraints with integral coefficients on all integral variables */
    if( !allcoefintegral )
+      return SCIP_OKAY;
+
+   /* we want to avoid numerical troubles, therefore we do not change non-integral sides */
+   if( (hasrhs && !SCIPisIntegral(scip, rhs)) || (haslhs && !SCIPisIntegral(scip, lhs)) )
       return SCIP_OKAY;
 
    /* maximal absolute value of coefficients in constraint is one, so we cannot tighten it further */
@@ -10271,7 +10461,7 @@ SCIP_RETCODE aggregateConstraints(
    }
 
    /* if better aggregation was found, create new constraint and delete old one */
-   if( bestv != -1 || commonvarlindependent )
+   if( (bestv != -1 || commonvarlindependent) && SCIPconsGetNUpgradeLocks(cons0) == 0 )
    {
       SCIP_CONS* newcons;
       SCIP_CONSDATA* newconsdata;
@@ -10430,7 +10620,6 @@ SCIP_RETCODE aggregateConstraints(
 
       /* copy the upgraded flag from the old cons0 to the new constraint */
       newconsdata->upgraded = consdata0->upgraded;
-      newconsdata->donotupgrade = consdata0->donotupgrade;
 
       /* normalize the new constraint */
       SCIP_CALL( normalizeCons(scip, newcons) );
@@ -12424,9 +12613,6 @@ SCIP_DECL_CONSTRANS(consTransLinear)
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
 
-   /* copy the donotupgrade mark */
-   targetdata->donotupgrade = sourcedata->donotupgrade;
-
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
@@ -12521,7 +12707,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinear)
    for( c = 0; c < nusefulconss && ncuts < maxsepacuts && !cutoff; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      SCIP_CALL( separateCons(scip, conss[c], NULL, separatecards, conshdlrdata->separateall, &ncuts, &cutoff) );
+      SCIP_CALL( separateCons(scip, conss[c], conshdlrdata, NULL, separatecards, conshdlrdata->separateall, &ncuts, &cutoff) );
    }
    
    /* adjust return value */
@@ -12579,7 +12765,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
    for( c = 0; c < nusefulconss && ncuts < maxsepacuts && !cutoff; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, conshdlrdata->separateall, &ncuts, &cutoff) );
+      SCIP_CALL( separateCons(scip, conss[c], conshdlrdata, sol, TRUE, conshdlrdata->separateall, &ncuts, &cutoff) );
    }
 
    /* adjust return value */
@@ -12599,6 +12785,8 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpLinear)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool checkrelmaxabs;
    SCIP_Bool violated;
    SCIP_Bool cutoff;
    int c;
@@ -12607,6 +12795,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   checkrelmaxabs = conshdlrdata->checkrelmaxabs;
 
    /*SCIPdebugMessage("Enfolp method of linear constraints\n");*/
 
@@ -12618,7 +12811,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
    /* check all useful linear constraints for feasibility */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, checkrelmaxabs, &violated) );
 
       if( violated )
       {
@@ -12634,7 +12827,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
    /* check all obsolete linear constraints for feasibility */
    for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, checkrelmaxabs, &violated) );
 
       if( violated )
       {
@@ -12655,6 +12848,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsLinear)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool checkrelmaxabs;
    SCIP_Bool violated;
    int c;
 
@@ -12662,6 +12857,11 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinear)
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   checkrelmaxabs = conshdlrdata->checkrelmaxabs;
 
    /* if the solution is infeasible anyway due to objective value, skip the enforcement */
    if( objinfeasible )
@@ -12674,7 +12874,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinear)
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, TRUE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], NULL, TRUE, checkrelmaxabs, &violated) );
    }
 
    if( violated )
@@ -12690,6 +12890,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinear)
 static
 SCIP_DECL_CONSCHECK(consCheckLinear)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool checkrelmaxabs;
    SCIP_Bool violated;
    int c;
 
@@ -12698,13 +12900,18 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   checkrelmaxabs = conshdlrdata->checkrelmaxabs;
+
    /*debugMessage("Check method of linear constraints\n");*/
 
    /* check all linear constraints for feasibility */
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], sol, checklprows, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], sol, checklprows, checkrelmaxabs, &violated) );
    }
 
    if( violated )
@@ -12713,8 +12920,8 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
 
       if( printreason )
       {
-         SCIP_Real activity;
          SCIP_CONSDATA* consdata;
+         SCIP_Real activity;
 
          consdata = SCIPconsGetData(conss[c-1]);
          assert( consdata != NULL);
@@ -12723,6 +12930,7 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
 
          SCIP_CALL( SCIPprintCons(scip, conss[c-1], NULL ) );
          SCIPinfoMessage(scip, NULL, ";\n");
+
          if( SCIPisFeasLT(scip, activity, consdata->lhs) )
             SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - activity);
 
@@ -13738,7 +13946,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, nbdchginfos, vars, vals, lhs, SCIPinfinity(scip),
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
-      /** try to automatically convert a linear constraint into a more specific and more specialized constraint */
+      /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
       SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
       if( upgdcons != NULL )
       {
@@ -13980,6 +14188,10 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/linear/sortvars", "apply binaries sorting in decr. order of coeff abs value?",
          &conshdlrdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/linear/checkrelmaxabs",
+         "should the violation for a constraint with side 0.0 be checked relative to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)?",
+         &conshdlrdata->checkrelmaxabs, TRUE, DEFAULT_CHECKRELMAXABS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -14858,6 +15070,10 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
 
+   /* check for upgradability */
+   if( SCIPconsGetNUpgradeLocks(cons) > 0 )
+      return SCIP_OKAY;
+
    /* get the constraint handler and check, if it's really a linear constraint */
    conshdlr = SCIPconsGetHdlr(cons);
    if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
@@ -14874,10 +15090,6 @@ SCIP_RETCODE SCIPupgradeConsLinear(
 
    /* check, if the constraint was already upgraded and will be deleted anyway after preprocessing */
    if( consdata->upgraded )
-      return SCIP_OKAY;
-
-   /* do not upgrade marked constraints */
-   if ( consdata->donotupgrade )
       return SCIP_OKAY;
 
    /* check, if the constraint is already stored as LP row */
@@ -15033,79 +15245,5 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    }
 #endif
 
-   return SCIP_OKAY;
-}
-
-
-/** forbids upgrading of constraint */
-SCIP_RETCODE SCIPmarkDoNotUpgradeConsLinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< linear constraint to mark */
-   )
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
-
-   /* get the constraint handler and check, if it's really a linear constraint */
-   conshdlr = SCIPconsGetHdlr(cons);
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not linear\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   /* get data */
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   consdata->donotupgrade = TRUE;
-
-   return SCIP_OKAY;
-}
-
-/** sets upgrading flag of linear constraint 
- *
- *  @note the donotupgrade flag should only be changed from TRUE to FALSE, by the caller who set it to TRUE
- */
-SCIP_RETCODE SCIPsetUpgradeConsLinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< linear constraint to mark */
-   SCIP_Bool             upgradeallowed      /**< allow upgrading? */
-   )
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
-
-   assert(cons != NULL);
-
-   /* get the constraint handler and check, if it's really a linear constraint */
-   conshdlr = SCIPconsGetHdlr(cons);
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not linear\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   /* get data */
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(!consdata->upgraded);
-
-   if( upgradeallowed && consdata->donotupgrade )
-   {
-      consdata->donotupgrade = FALSE;
-
-      /* update the upgrade flag to try again */
-      consdata->upgradetried = FALSE;
-   }
-   else if( !upgradeallowed )
-   {
-      if( consdata->donotupgrade )
-      {
-         /* @todo: change donotupgrade flag to a counter */
-         SCIPwarningMessage(scip, "constraint is already marked not to be upgraded\n");
-      }
-      consdata->donotupgrade = TRUE;
-   }
    return SCIP_OKAY;
 }

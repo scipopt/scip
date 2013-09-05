@@ -313,7 +313,7 @@ SCIP_DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
 
    /* get fractional variables that should be integral */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
 
    /* don't try to dive, if there are no fractional variables */
    if( nlpcands == 0 )
@@ -594,7 +594,7 @@ SCIP_DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
          }
 
          /* get new fractional variables */
-         SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
+         SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
       }
       SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d, lpiterations=%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT"\n",
          lpsolstat, objval, searchbound, nlpcands, heurdata->nlpiterations, maxnlpiterations);

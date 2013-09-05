@@ -814,7 +814,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    SCIPdebugMessage("Execlp method of relpscost branching\n");
    
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);
 
    /* execute branching rule */

@@ -48,6 +48,15 @@
 extern "C" {
 #endif
 
+
+/**
+ * Selects a variable from a set of candidates by strong branching
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ * @note The variables in the lpcands array must have a fractional value in the current LP solution
+ */
 EXTERN
 SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    SCIP*                 scip,               /**< original SCIP data structure                        */

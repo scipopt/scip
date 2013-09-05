@@ -322,6 +322,15 @@ SCIP_RETCODE copyAndSolveComponent(
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
 
+      if( !SCIPisParamFixed(subscip, "limits/solutions") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "limits/solutions", -1) );
+      }
+      if( !SCIPisParamFixed(subscip, "limits/bestsol") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", -1) );
+      }
+
       /* set gap limit to 0 */
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", 0.0) );
 
@@ -1395,11 +1404,11 @@ SCIP_RETCODE SCIPincludePresolComponents(
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
          PRESOL_DELAY, presolExecComponents, presoldata) );
 
-   /** currently, the components presolver is not copied; if a copy callback is added, we need to avoid recursion
-    *  by one of the following means:
-    *  - turn off the components presolver in SCIPsetSubscipsOff()
-    *  - call SCIPsetSubscipsOff() for the component sub-SCIP
-    *  - disable the components presolver in the components sub-SCIP
+   /* currently, the components presolver is not copied; if a copy callback is added, we need to avoid recursion
+    * by one of the following means:
+    * - turn off the components presolver in SCIPsetSubscipsOff()
+    * - call SCIPsetSubscipsOff() for the component sub-SCIP
+    * - disable the components presolver in the components sub-SCIP
     */
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, NULL) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeComponents) );

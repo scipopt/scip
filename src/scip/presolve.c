@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1003,6 +1003,9 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    int w;
    int v;
 
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
    assert(scip != NULL);
    assert(vars != NULL);
    assert(bounds != NULL);
@@ -1018,7 +1021,9 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    assert(scip->transprob != NULL);
    nprobvars = SCIPprobGetNVars(scip->transprob);
 
-   /* @todo need global memory because allocating and clearing can be expensive in presolving */
+   /* @todo need global memory because allocating and clearing can be expensive in presolving, i.e. calloc(memset) is
+    *       too expensive, might also consider other data structures like hashmaps for issetvar and counts
+    */
    /* allocate temporary memory */
    SCIP_ALLOC( BMSallocClearMemoryArray(&issetvar, 2*nprobvars) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&counts, 2*nprobvars) );

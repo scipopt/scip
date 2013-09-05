@@ -43,7 +43,7 @@ include $(SCIPDIR)/make/make.project
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		=	3.0.1.3
+VERSION		=	3.0.1.5
 SOFTLINKS	=
 MAKESOFTLINKS	=	true
 
@@ -105,6 +105,27 @@ LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+SOFTLINKS	+=	$(LIBDIR)/spxinc
+SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
+LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"../../soplex/src\".\n"
+LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"../../soplex/lib/libsoplex.linux.x86.gnu.opt.a\""
+ifeq ($(LPSCHECK),true)
+FLAGS		+=	-DWITH_LPSCHECK -I$(LIBDIR)/cpxinc
+SOFTLINKS	+=	$(LIBDIR)/cpxinc
+SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+LPIINSTMSG	+=	"  -> \"cpxinc\" is the path to the CPLEX \"include\" directory, e.g., \"<CPLEX-path>/include/ilcplex\".\n"
+LPIINSTMSG	+=	" -> \"libcplex.*\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a\""
+endif
+endif
+
+LPSOPTIONS	+=	spx2
+ifeq ($(LPS),spx2)
+LINKER		=	CPP
+FLAGS		+=	-I$(LIBDIR)/spxinc
+LPILIBOBJ	=	scip/lpi_spx2.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx2.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/spxinc
 SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
@@ -325,6 +346,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_proximity.o \
 			scip/heur_pscostdiving.o \
 			scip/heur_rens.o \
+			scip/heur_randrounding.o \
 			scip/heur_rins.o \
 			scip/heur_rootsoldiving.o \
 			scip/heur_rounding.o \
@@ -341,6 +363,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_zirounding.o \
 			scip/message_default.o \
 			scip/nodesel_bfs.o \
+			scip/nodesel_breadthfirst.o \
 			scip/nodesel_dfs.o \
 			scip/nodesel_estimate.o \
 			scip/nodesel_hybridestim.o \
