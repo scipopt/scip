@@ -9534,7 +9534,9 @@ SCIP_RETCODE simplifyInequalities(
       SCIPdebugMessage("stopped at pos %d (of %d), subactivities [%g, %g], redundant = %u, hasrhs = %u, siderest = %g, gcd = %"SCIP_LONGINT_FORMAT", offset position for 'side' coefficients = %d\n", v, nvars, minactsub, maxactsub, redundant, hasrhs, siderest, gcd, offsetv);
 
       /* check if we can remove redundant variables */
-      if( v < nvars && (redundant || (offsetv == -1 && hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd)) || (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd)) )
+      if( v < nvars && (redundant ||
+            (offsetv == -1 && hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd)) ||
+            (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd)) )
       {
          SCIP_Real oldcoef;
 
@@ -9734,7 +9736,8 @@ SCIP_RETCODE simplifyInequalities(
             }
 #endif
 
-            if( vals[candpos] > 0 && SCIPvarIsBinary(vars[candpos]) && SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol)) < gcd )
+            if( vals[candpos] > 0 && SCIPvarIsBinary(vars[candpos]) &&
+               SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol)) < gcd )
             {
                /* determine the remainder of the side and the gcd */
                if( hasrhs )
@@ -9766,12 +9769,18 @@ SCIP_RETCODE simplifyInequalities(
                      newcoef = vals[candpos] - restcoef + gcd;
                }
 
-               /* new coeffcient should never be zero */
-               assert(hasrhs || !SCIPisFeasZero(scip, newcoef));
-               if( SCIPisZero(scip, newcoef) )
+               /* new coeffcient must not be zero if we would loose the implication that a variable needs to be 0 if
+                * another with the big coefficient was set to 1
+                */
+               if( hasrhs && SCIPisZero(scip, newcoef) )
                {
-                  /* we cannot delete the coefficient because if one variable of a big coefficient is set to 1 we loose the implication that this variable needs to be 0 then */
                   notchangable = TRUE;
+               }
+               else if( SCIPisZero(scip, newcoef) )
+               {
+                  /* delete old redundant coefficient */
+                  SCIP_CALL( delCoefPos(scip, cons, candpos) );
+                  ++(*nchgcoefs);
                }
                else
                {
