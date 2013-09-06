@@ -741,7 +741,6 @@ SCIP_RETCODE createCoveringProblem(
          andres = SCIPgetResultantAnd(scip, andcons);
          assert(andres != NULL);
          probindex = SCIPvarGetProbindex(andres);
-         negated = FALSE;
 
          /* if resultant is fixed this constraint can be either linearized or is redundant because all operands can be fixed */
          if( termIsConstant(scip, andres, 1.0, globalbounds) )
