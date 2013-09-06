@@ -2487,6 +2487,7 @@ SCIP_RETCODE separateHeur(
    int nscipbinvars;
    int nscipintvars;
    int nscipimplvars;
+   int nintegral;
    int l;
 
    assert(scip != NULL);
@@ -2494,19 +2495,24 @@ SCIP_RETCODE separateHeur(
    assert(result != NULL);
 
    SCIP_CALL( SCIPgetVarsData(scip, &scipvars, NULL, &nscipbinvars, &nscipintvars, &nscipimplvars, NULL) );
-   assert(scipvars != NULL || (nscipbinvars + nscipintvars + nscipimplvars) == 0);
+   assert(nscipbinvars >= 0);
+   assert(nscipintvars >= 0);
+   assert(nscipimplvars >= 0);
+
+   nintegral = nscipbinvars + nscipintvars + nscipimplvars;
+   assert(scipvars != NULL || nintegral == 0);
 
    /* collect binary variables, including implicit binary */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nscipbinvars + nscipintvars + nscipimplvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nintegral) );
    for (l = 0; l < nscipbinvars; ++l)
-      vars[l] = scipvars[l];
+      vars[l] = scipvars[l]; /*lint !e613*/
 
    nbinvars = (unsigned int) nscipbinvars;
-   for (l = nscipbinvars; l < nscipbinvars + nscipintvars + nscipimplvars; ++l)
+   for (l = nscipbinvars; l < nintegral; ++l)
    {
-      assert( SCIPvarGetType(scipvars[l]) != SCIP_VARTYPE_CONTINUOUS );
-      if ( SCIPvarIsBinary(scipvars[l]) )
-         vars[nbinvars++] = scipvars[l];
+      assert( SCIPvarGetType(scipvars[l]) != SCIP_VARTYPE_CONTINUOUS ); /*lint !e613*/
+      if ( SCIPvarIsBinary(scipvars[l]) ) /*lint !e613*/
+         vars[nbinvars++] = scipvars[l]; /*lint !e613*/
    }
 
    if( nbinvars == 0 )
@@ -2575,12 +2581,12 @@ SCIP_RETCODE separateHeur(
    assert(vars != NULL);
 
    /* create mapping for getting the index of a variable via its probindex to the index in the sorted variable array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &(sepadata->mapping), nscipbinvars + nscipintvars + nscipimplvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(sepadata->mapping), nintegral) );
 
    /* initialize LP value and cut flag for all variables */
    for( i = 0; i < nbinvars; ++i )
    {
-      assert( 0 <= SCIPvarGetProbindex(vars[i]) && SCIPvarGetProbindex(vars[i]) < nscipbinvars + nscipintvars + nscipimplvars);  /* since binary, integer, and implicit variables are first */
+      assert( 0 <= SCIPvarGetProbindex(vars[i]) && SCIPvarGetProbindex(vars[i]) < nintegral);  /* since binary, integer, and implicit variables are first */
       sepadata->mapping[SCIPvarGetProbindex(vars[i])] = i;
       vals[i] = SCIPgetSolVal(scip, sol, vars[i]); /* need to get new values, since they might be corrupted */
    }
@@ -3351,6 +3357,7 @@ SCIP_RETCODE separateGLS(
    int nscipbinvars;
    int nscipintvars;
    int nscipimplvars;
+   int nintegral;
    int k;
 
    assert(scip != NULL);
@@ -3361,19 +3368,24 @@ SCIP_RETCODE separateGLS(
    emptygraph = TRUE;
 
    SCIP_CALL( SCIPgetVarsData(scip, &scipvars, NULL, &nscipbinvars, &nscipintvars, &nscipimplvars, NULL) );
-   assert(scipvars != NULL || (nscipbinvars + nscipintvars + nscipimplvars) == 0);
+   assert(nscipbinvars >= 0);
+   assert(nscipintvars >= 0);
+   assert(nscipimplvars >= 0);
+
+   nintegral = nscipbinvars + nscipintvars + nscipimplvars;
+   assert(scipvars != NULL || nintegral == 0);
 
    /* collect binary variables, including implicit binary */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nscipbinvars + nscipintvars + nscipimplvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nintegral) );
    for (k = 0; k < nscipbinvars; ++k)
-      vars[k] = scipvars[k];
+      vars[k] = scipvars[k]; /*lint !e613*/
 
    nbinvars = (unsigned int) nscipbinvars;
-   for (k = nscipbinvars; k < nscipbinvars + nscipintvars + nscipimplvars; ++k)
+   for (k = nscipbinvars; k < nintegral; ++k)
    {
-      assert( SCIPvarGetType(scipvars[k]) != SCIP_VARTYPE_CONTINUOUS );
-      if ( SCIPvarIsBinary(scipvars[k]) )
-         vars[nbinvars++] = scipvars[k];
+      assert( SCIPvarGetType(scipvars[k]) != SCIP_VARTYPE_CONTINUOUS ); /*lint !e613*/
+      if ( SCIPvarIsBinary(scipvars[k]) ) /*lint !e613*/
+         vars[nbinvars++] = scipvars[k]; /*lint !e613*/
    }
 
    if( nbinvars == 0 )
@@ -3442,14 +3454,14 @@ SCIP_RETCODE separateGLS(
    assert(vars != NULL);
 
    /* create mapping for getting the index of a variable via its probindex to the index in the sorted variable array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &(sepadata->mapping), nscipbinvars + nscipintvars + nscipimplvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(sepadata->mapping), nintegral) );
    SCIP_CALL( SCIPallocBufferArray(scip, &incut, (int) (4 * nbinvars)) );
    BMSclearMemoryArray(incut, 4 * nbinvars);
 
    /* initialize LP value and cut flag for all variables */
    for( i = 0; i < nbinvars; ++i )
    {
-      assert( 0 <= SCIPvarGetProbindex(vars[i]) && SCIPvarGetProbindex(vars[i]) < nscipbinvars + nscipintvars + nscipimplvars);  /* since binary, integer, and implicit variables are first */
+      assert( 0 <= SCIPvarGetProbindex(vars[i]) && SCIPvarGetProbindex(vars[i]) < nintegral);  /* since binary, integer, and implicit variables are first */
       sepadata->mapping[SCIPvarGetProbindex(vars[i])] = i;
       vals[i] = SCIPgetSolVal(scip, sol, vars[i]); /* need to get new values, since they might be corrupted */
    }
