@@ -3242,8 +3242,8 @@ SCIP_RETCODE writeOpbConstraints(
 
 	    for( c = 0; c < npbconss; ++c )
 	    {
-	       assert(pbconss[c] != NULL);
-	       lincons = SCIPgetLinearConsPseudoboolean(scip, pbconss[c]);
+	       assert(pbconss[c] != NULL); /*lint !e613*/
+	       lincons = SCIPgetLinearConsPseudoboolean(scip, pbconss[c]); /*lint !e613*/
 	       assert(lincons != NULL);
 
 	       /* insert constraint into mapping between */
@@ -3264,7 +3264,7 @@ SCIP_RETCODE writeOpbConstraints(
       /* loop over all constraint for printing */
       for( c = 0; c < nconss; ++c )
       {
-	 conshdlr = SCIPconsGetHdlr(conss[c]);
+	 conshdlr = SCIPconsGetHdlr(conss[c]); /*lint !e613*/
 	 assert(conshdlr != NULL);
 
 	 conshdlrname = SCIPconshdlrGetName(conshdlr);
@@ -3278,7 +3278,7 @@ SCIP_RETCODE writeOpbConstraints(
 	       pbhashmapcreated = TRUE;
 	    }
 
-	    lincons = SCIPgetLinearConsPseudoboolean(scip, conss[c]);
+	    lincons = SCIPgetLinearConsPseudoboolean(scip, conss[c]); /*lint !e613*/
 	    assert(lincons != NULL);
 
 	    /* insert constraint into mapping between */
@@ -3293,7 +3293,7 @@ SCIP_RETCODE writeOpbConstraints(
 	       indhashmapcreated = TRUE;
 	    }
 
-	    lincons = SCIPgetLinearConsIndicator(conss[c]);
+	    lincons = SCIPgetLinearConsIndicator(conss[c]); /*lint !e613*/
 	    assert(lincons != NULL);
 
 	    /* insert constraint into mapping between */
