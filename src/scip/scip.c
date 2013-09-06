@@ -12046,10 +12046,6 @@ SCIP_RETCODE freeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Bool stored;
-   int nsols;
-   int s;
-   
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);
@@ -12060,30 +12056,53 @@ SCIP_RETCODE freeTransform(
 
    /* switch stage to FREETRANS */
    scip->set->stage = SCIP_STAGE_FREETRANS;
-   
-   assert(scip->origprimal->nsols == 0);
 
-   nsols = MIN(scip->set->limit_maxorigsol, scip->primal->nsols);
-   stored = TRUE;
-   
-   /* copy best primal solution to original solution candidate list */
-   for( s = 0; s < nsols && stored; ++s )
+   /* copy best primal solutions to original solution candidate list */
+   if( scip->set->limit_maxorigsol > 0 )
    {
-      SCIP_SOL* sol;
+      SCIP_Bool stored;
+      int maxsols;
+      int nsols;
+      int s;
 
-      sol = scip->primal->sols[s];
-      assert(sol != NULL);
-      
-      if( !SCIPsolIsOriginal(sol) )
+      assert(scip->origprimal->nsols == 0);
+
+      nsols = scip->primal->nsols;
+      maxsols = scip->set->limit_maxorigsol;
+      stored = TRUE;
+      s = 0;
+
+      /* iterate over all solutions as long as the original solution candidate store size limit is not reached */
+      while( s < nsols && scip->origprimal->nsols < maxsols )
       {
-         /* retransform solution into the original problem space */
-         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );
+         SCIP_SOL* sol;
+
+         sol = scip->primal->sols[s];
+         assert(sol != NULL);
+
+         if( !SCIPsolIsOriginal(sol) )
+         {
+            /* retransform solution into the original problem space */
+            SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );
+         }
+
+         /* add solution to original candidate solution storage */
+         SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
+         ++s;
       }
-   
-      /* add solution to original candidate solution storage */
-      SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
+
+      if( scip->origprimal->nsols > 1 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+            "stored the %d best primal solutions in the original solution cadidate list\n", scip->origprimal->nsols);
+      }
+      else if( scip->origprimal->nsols == 1 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+            "stored the best primal solution in the original solution cadidate list\n");
+      }
    }
-   
+
    /* free transformed problem data structures */
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
