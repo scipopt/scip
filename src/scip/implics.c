@@ -1843,7 +1843,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &clqvars, vars, size) );
 
    /* get active variables */
-   SCIPvarsGetProbvarBinary(&clqvars, &clqvalues, nvars);
+   SCIP_CALL( SCIPvarsGetProbvarBinary(&clqvars, &clqvalues, nvars) );
 
    /* remove all inactive vars */
    for( v = nvars - 1; v >= 0; --v )
@@ -1884,7 +1884,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
       }
    }
 
-   nbdchgs += nlocalnbdchgs;
+   *nbdchgs += nlocalnbdchgs;
 
    /* did we fix all variables? */
    if( v >= 0 )
@@ -1950,7 +1950,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
       }
    }
 
-   nbdchgs += nlocalnbdchgs;
+   *nbdchgs += nlocalnbdchgs;
 
    /* did we stop early do to a pair of negated variables? */
    if( v > 0 )
