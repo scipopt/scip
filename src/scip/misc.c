@@ -1160,7 +1160,7 @@ SCIP_RETCODE hashtableResize(
       /* remember number of elements */
       nelements = hashtable->nelements;
       /* clear old lists */
-      SCIPhashtableClear(hashtable);
+      SCIPhashtableRemoveAll(hashtable);
       /* free old lists */
       BMSfreeMemoryArray(&(hashtable->lists));
 
@@ -1250,6 +1250,8 @@ void SCIPhashtableFree(
  *
  *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
  *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ *
+ *  @deprecated Please use SCIPhashtableRemoveAll()
  */
 void SCIPhashtableClear(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
@@ -1457,7 +1459,11 @@ SCIP_RETCODE SCIPhashtableRemove(
    return SCIP_OKAY;
 }
 
-/** clears hash table */
+/** removes all elements of the hash table
+ *
+ *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
+ *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ */
 void SCIPhashtableRemoveAll(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    )
