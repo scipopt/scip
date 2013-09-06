@@ -603,9 +603,6 @@ double* SCIPprobdataGetXval(
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
-   if( sol == NULL && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      return NULL;
-
    /*if( probdata->lastlpiters < SCIPgetNLPIterations(scip) )*/
    {
       SCIP_CALL_ABORT( SCIPgetSolVals(scip, sol, probdata->nvars, probdata->vars, probdata->xval) );
