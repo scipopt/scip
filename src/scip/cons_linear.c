@@ -6347,7 +6347,7 @@ SCIP_RETCODE extractCliques(
 
                *nchgbds += nbdchgs;
 
-               cliquenonzerosadded += (j - i);
+               cliquenonzerosadded += j;
                if( cliquenonzerosadded >= MAX_CLIQUE_NONZEROS_PER_CONS )
                   stopped = TRUE;
 
@@ -6815,7 +6815,7 @@ SCIP_RETCODE extractCliques(
 
                *nchgbds += nbdchgs;
 
-               cliquenonzerosadded += (j - i);
+               cliquenonzerosadded += j;
                if( cliquenonzerosadded >= MAX_CLIQUE_NONZEROS_PER_CONS )
                   stopped = TRUE;
 
@@ -6850,10 +6850,7 @@ SCIP_RETCODE extractCliques(
 
                         cliquenonzerosadded += (lastfit - i + 2);
                         if( cliquenonzerosadded >= MAX_CLIQUE_NONZEROS_PER_CONS )
-                        {
-                           stopped = TRUE;
                            break;
-                        }
 
                         ++j;
                      }

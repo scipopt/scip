@@ -359,7 +359,7 @@ void SCIPstatUpdatePrimalDualIntegral(
       dualbound = stat->lastdualbound;
    }
 
-   if( primalbound == SCIP_UNKNOWN || dualbound == SCIP_UNKNOWN )
+   if( primalbound == SCIP_UNKNOWN || dualbound == SCIP_UNKNOWN ) /*lint !e777*/
       currentgap = 100.0;
    /* the gap is 0.0 if the lower bound is greater-equal the upper bound or if primal and dualbound are equal */
    else if( SCIPsetIsGE(set, lowerbound, upperbound) || SCIPsetIsEQ(set, primalbound, dualbound) )
