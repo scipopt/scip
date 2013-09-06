@@ -44,13 +44,15 @@ extern "C" {
 /** solution status after solving LP */
 enum SCIP_LinearConsType
 {
-   SCIP_INVALIDCONS             = -1,    /**< this is no valid linear constraint type */
-   SCIP_LINEAR                  = 0,     /**< this is the common linear constraint */
-   SCIP_LOGICOR                 = 1,     /**< this is a logicor constraint */
-   SCIP_KNAPSACK                = 2,     /**< this is a knapsack constraint */
-   SCIP_SETPPC                  = 3      /**< this is a setppc constraint */
-#if 0
-   SCIP_EQKNAPSACK              = 4      /**< this is a equality knapsack constraint */
+   SCIP_LINEARCONSTYPE_INVALIDCONS = -1,     /**< this is no valid linear constraint type */
+   SCIP_LINEARCONSTYPE_LINEAR      =  0,     /**< this is the common linear constraint */
+   SCIP_LINEARCONSTYPE_LOGICOR     =  1,     /**< this is a logicor constraint */
+   SCIP_LINEARCONSTYPE_KNAPSACK    =  2,     /**< this is a knapsack constraint */
+#ifndef WITHEQKNAPSACK
+   SCIP_LINEARCONSTYPE_SETPPC      =  3      /**< this is a setppc constraint */
+#else
+   SCIP_LINEARCONSTYPE_SETPPC      =  3,     /**< this is a setppc constraint */
+   SCIP_LINEARCONSTYPE_EQKNAPSACK  =  4      /**< this is a equality knapsack constraint */
 #endif
 };
 typedef enum SCIP_LinearConsType SCIP_LINEARCONSTYPE;

@@ -36,7 +36,7 @@
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_and.h"
 #include "scip/cons_indicator.h"
-#if 0
+#ifdef WITHEQKNAPSACK
 #include "scip/cons_eqknapsack.h"
 #endif
 #include "scip/cons_knapsack.h"
@@ -507,20 +507,20 @@ SCIP_RETCODE getLinearConsNVars(
    /* determine for each special linear constrait all variables and coefficients */
    switch( constype )
    {
-   case SCIP_LINEAR:
+   case SCIP_LINEARCONSTYPE_LINEAR:
       *nvars = SCIPgetNVarsLinear(scip, cons);
       break;
-   case SCIP_LOGICOR:
+   case SCIP_LINEARCONSTYPE_LOGICOR:
       *nvars = SCIPgetNVarsLogicor(scip, cons);
       break;
-   case SCIP_KNAPSACK:
+   case SCIP_LINEARCONSTYPE_KNAPSACK:
       *nvars = SCIPgetNVarsKnapsack(scip, cons);
       break;
-   case SCIP_SETPPC:
+   case SCIP_LINEARCONSTYPE_SETPPC:
       *nvars = SCIPgetNVarsSetppc(scip, cons);
       break;
-#if 0
-   case SCIP_EQKNAPSACK:
+#ifdef WITHEQKNAPSACK
+   case SCIP_LINEARCONSTYPE_EQKNAPSACK:
       *nvars = SCIPgetNVarsEQKnapsack(scip, cons);
       break;
 #endif
@@ -547,19 +547,19 @@ SCIP_RETCODE getLinearConsSides(
 
    switch( constype )
    {
-   case SCIP_LINEAR:
+   case SCIP_LINEARCONSTYPE_LINEAR:
       *lhs = SCIPgetLhsLinear(scip, cons);
       *rhs = SCIPgetRhsLinear(scip, cons);
       break;
-   case SCIP_LOGICOR:
+   case SCIP_LINEARCONSTYPE_LOGICOR:
       *lhs = 1.0;
       *rhs = SCIPinfinity(scip);
       break;
-   case SCIP_KNAPSACK:
+   case SCIP_LINEARCONSTYPE_KNAPSACK:
       *lhs = -SCIPinfinity(scip);
       *rhs = SCIPgetCapacityKnapsack(scip, cons);
       break;
-   case SCIP_SETPPC:
+   case SCIP_LINEARCONSTYPE_SETPPC:
       type = SCIPgetTypeSetppc(scip, cons);
 
       switch( type )
@@ -581,8 +581,8 @@ SCIP_RETCODE getLinearConsSides(
          return SCIP_INVALIDDATA;
       }
       break;
-#if 0
-   case SCIP_EQKNAPSACK:
+#ifdef WITHEQKNAPSACK
+   case SCIP_LINEARCONSTYPE_EQKNAPSACK:
       *lhs = SCIPgetCapacityEQKnapsack(scip, cons);
       *rhs = *lhs;
       break;
@@ -617,7 +617,7 @@ SCIP_RETCODE getLinearConsVarsData(
    /* determine for each special linear constrait all variables and coefficients */
    switch( constype )
    {
-   case SCIP_LINEAR:
+   case SCIP_LINEARCONSTYPE_LINEAR:
    {
       SCIP_Real* lincoefs;
 
@@ -642,7 +642,7 @@ SCIP_RETCODE getLinearConsVarsData(
 
       break;
    }
-   case SCIP_LOGICOR:
+   case SCIP_LINEARCONSTYPE_LOGICOR:
       *nvars = SCIPgetNVarsLogicor(scip, cons);
       linvars = SCIPgetVarsLogicor(scip, cons);
 
@@ -661,7 +661,7 @@ SCIP_RETCODE getLinearConsVarsData(
       }
 
       break;
-   case SCIP_KNAPSACK:
+   case SCIP_LINEARCONSTYPE_KNAPSACK:
    {
       SCIP_Longint* weights;
 
@@ -686,7 +686,7 @@ SCIP_RETCODE getLinearConsVarsData(
 
       break;
    }
-   case SCIP_SETPPC:
+   case SCIP_LINEARCONSTYPE_SETPPC:
       *nvars = SCIPgetNVarsSetppc(scip, cons);
       linvars = SCIPgetVarsSetppc(scip, cons);
 
@@ -705,8 +705,8 @@ SCIP_RETCODE getLinearConsVarsData(
       }
 
       break;
-#if 0
-   case SCIP_EQKNAPSACK:
+#ifdef WITHEQKNAPSACK
+   case SCIP_LINEARCONSTYPE_EQKNAPSACK:
    {
       SCIP_Longint* weights;
 
@@ -881,7 +881,7 @@ SCIP_RETCODE consdataCreate(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(consdata != NULL);
-   assert(lincons != NULL && linconstype > SCIP_INVALIDCONS);
+   assert(lincons != NULL && linconstype > SCIP_LINEARCONSTYPE_INVALIDCONS);
    assert(nandconss == 0 || (andconss != NULL && andcoefs != NULL));
    assert(!issoftcons || (!SCIPisZero(scip, weight) && indvar != NULL));
 
@@ -1204,7 +1204,7 @@ SCIP_RETCODE consdataPrint(
    assert(scip != NULL);
    assert(cons != NULL);
 
-#if 0
+#ifdef WITHEQKNAPSACK
    if( SCIPconsIsDeleted(cons) )
       return SCIP_OKAY;
 #endif
@@ -1596,29 +1596,29 @@ SCIP_RETCODE addCoefTerm(
    /* add auxiliary variables to linear constraint */
    switch( consdata->linconstype )
    {
-   case SCIP_LINEAR:
+   case SCIP_LINEARCONSTYPE_LINEAR:
       SCIP_CALL( SCIPaddCoefLinear(scip, consdata->lincons, res, val) );
       break;
-   case SCIP_LOGICOR:
+   case SCIP_LINEARCONSTYPE_LOGICOR:
       if( !SCIPisEQ(scip, val, 1.0) )
          return SCIP_INVALIDDATA;
 
       SCIP_CALL( SCIPaddCoefLogicor(scip, consdata->lincons, res) );
       break;
-   case SCIP_KNAPSACK:
+   case SCIP_LINEARCONSTYPE_KNAPSACK:
       if( !SCIPisIntegral(scip, val) || !SCIPisPositive(scip, val) )
          return SCIP_INVALIDDATA;
 
       SCIP_CALL( SCIPaddCoefKnapsack(scip, consdata->lincons, res, (SCIP_Longint) val) );
       break;
-   case SCIP_SETPPC:
+   case SCIP_LINEARCONSTYPE_SETPPC:
       if( !SCIPisEQ(scip, val, 1.0) )
          return SCIP_INVALIDDATA;
 
       SCIP_CALL( SCIPaddCoefSetppc(scip, consdata->lincons, res) );
       break;
-#if 0
-   case SCIP_EQKNAPSACK:
+#ifdef WITHEQKNAPSACK
+   case SCIP_LINEARCONSTYPE_EQKNAPSACK:
       if( !SCIPisIntegral(scip, val) || !SCIPisPositive(scip, val) )
          return SCIP_INVALIDDATA;
 
@@ -1654,15 +1654,15 @@ SCIP_RETCODE chgLhsLinearCons(
 {
    switch( constype )
    {
-   case SCIP_LINEAR:
+   case SCIP_LINEARCONSTYPE_LINEAR:
       SCIP_CALL( SCIPchgLhsLinear(scip, cons, lhs) );
-   case SCIP_LOGICOR:
-   case SCIP_KNAPSACK:
-   case SCIP_SETPPC:
+   case SCIP_LINEARCONSTYPE_LOGICOR:
+   case SCIP_LINEARCONSTYPE_KNAPSACK:
+   case SCIP_LINEARCONSTYPE_SETPPC:
       SCIPerrorMessage("changing left hand side only allowed on standard lienar constraint \n");
       return SCIP_INVALIDDATA;
-#if 0
-   case SCIP_EQKNAPSACK:
+#ifdef WITHEQKNAPSACK
+   case SCIP_LINEARCONSTYPE_EQKNAPSACK:
 #endif
    default:
       SCIPerrorMessage("unknown linear constraint type\n");
@@ -1683,15 +1683,15 @@ SCIP_RETCODE chgRhsLinearCons(
 {
    switch( constype )
    {
-   case SCIP_LINEAR:
+   case SCIP_LINEARCONSTYPE_LINEAR:
       SCIP_CALL( SCIPchgRhsLinear(scip, cons, rhs) );
-   case SCIP_LOGICOR:
-   case SCIP_KNAPSACK:
-   case SCIP_SETPPC:
+   case SCIP_LINEARCONSTYPE_LOGICOR:
+   case SCIP_LINEARCONSTYPE_KNAPSACK:
+   case SCIP_LINEARCONSTYPE_SETPPC:
       SCIPerrorMessage("changing left hand side only allowed on standard lienar constraint \n");
       return SCIP_INVALIDDATA;
-#if 0
-   case SCIP_EQKNAPSACK:
+#ifdef WITHEQKNAPSACK
+   case SCIP_LINEARCONSTYPE_EQKNAPSACK:
 #endif
    default:
       SCIPerrorMessage("unknown linear constraint type\n");
@@ -2320,7 +2320,7 @@ SCIP_RETCODE createAndAddLinearCons(
                   initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
             created = TRUE;
-            (*linconstype) = SCIP_LOGICOR;
+            (*linconstype) = SCIP_LINEARCONSTYPE_LOGICOR;
 
             /* free temporary memory */
             SCIPfreeBufferArray(scip, &transvars);
@@ -2391,7 +2391,7 @@ SCIP_RETCODE createAndAddLinearCons(
                      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
                created = TRUE;
-               (*linconstype) = SCIP_SETPPC;
+               (*linconstype) = SCIP_LINEARCONSTYPE_SETPPC;
 
                /* release temporary memory */
                SCIPfreeBufferArray(scip, &transvars);
@@ -2440,7 +2440,7 @@ SCIP_RETCODE createAndAddLinearCons(
                      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
                created = TRUE;
-               (*linconstype) = SCIP_SETPPC;
+               (*linconstype) = SCIP_LINEARCONSTYPE_SETPPC;
 
                /* release temporary memory */
                SCIPfreeBufferArray(scip, &transvars);
@@ -2500,7 +2500,7 @@ SCIP_RETCODE createAndAddLinearCons(
                      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
                created = TRUE;
-               (*linconstype) = SCIP_SETPPC;
+               (*linconstype) = SCIP_LINEARCONSTYPE_SETPPC;
 
                /* release temporary memory */
                SCIPfreeBufferArray(scip, &transvars);
@@ -2587,7 +2587,7 @@ SCIP_RETCODE createAndAddLinearCons(
                   initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
             created = TRUE;
-            (*linconstype) = SCIP_KNAPSACK;
+            (*linconstype) = SCIP_LINEARCONSTYPE_KNAPSACK;
 
             /* free temporary memory */
             SCIPfreeBufferArray(scip, &weights);
@@ -2596,7 +2596,7 @@ SCIP_RETCODE createAndAddLinearCons(
 	    *lhs = -SCIPinfinity(scip);
 	    *rhs = capacity;
          }
-#if 0
+#ifdef WITHEQKNAPSACK
 
          upgrconshdlr = SCIPfindConshdlr(scip, "eqknapsack");
 
@@ -2674,7 +2674,7 @@ SCIP_RETCODE createAndAddLinearCons(
                   initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
             created = TRUE;
-            (*linconstype) = SCIP_EQKNAPSACK;
+            (*linconstype) = SCIP_LINEARCONSTYPE_EQKNAPSACK;
 
             /* free temporary memory */
             SCIPfreeBufferArray(scip, &weights);
@@ -2695,7 +2695,7 @@ SCIP_RETCODE createAndAddLinearCons(
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nlinvars, linvars, linvals, *lhs, *rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
-      (*linconstype) = SCIP_LINEAR;
+      (*linconstype) = SCIP_LINEARCONSTYPE_LINEAR;
 
       /* add all and-resultants */
       for( v = 0; v < nandress; ++v )
@@ -2707,7 +2707,7 @@ SCIP_RETCODE createAndAddLinearCons(
       }
    }
 
-   assert(cons != NULL && *linconstype > SCIP_INVALIDCONS);
+   assert(cons != NULL && *linconstype > SCIP_LINEARCONSTYPE_INVALIDCONS);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugPrintCons(scip, cons, NULL);
@@ -2770,7 +2770,7 @@ SCIP_RETCODE checkOrigPbCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->lincons != NULL);
-   assert(consdata->linconstype > SCIP_INVALIDCONS);
+   assert(consdata->linconstype > SCIP_LINEARCONSTYPE_INVALIDCONS);
    assert(SCIPconsIsOriginal(consdata->lincons));
 
    /* gets number of variables in linear constraint */
@@ -3048,24 +3048,24 @@ SCIP_RETCODE copyConsPseudoboolean(
 
       switch( targetlinconstype )
       {
-      case SCIP_LINEAR:
+      case SCIP_LINEARCONSTYPE_LINEAR:
          conshdlrlinear = SCIPfindConshdlr(sourcescip, "linear");
          assert(conshdlrlinear != NULL);
          break;
-      case SCIP_LOGICOR:
+      case SCIP_LINEARCONSTYPE_LOGICOR:
          conshdlrlinear = SCIPfindConshdlr(sourcescip, "logicor");
          assert(conshdlrlinear != NULL);
          break;
-      case SCIP_KNAPSACK:
+      case SCIP_LINEARCONSTYPE_KNAPSACK:
          conshdlrlinear = SCIPfindConshdlr(sourcescip, "knapsack");
          assert(conshdlrlinear != NULL);
          break;
-      case SCIP_SETPPC:
+      case SCIP_LINEARCONSTYPE_SETPPC:
          conshdlrlinear = SCIPfindConshdlr(sourcescip, "setppc");
          assert(conshdlrlinear != NULL);
          break;
-#if 0
-      case SCIP_EQKNAPSACK:
+#ifdef WITHEQKNAPSACK
+      case SCIP_LINEARCONSTYPE_EQKNAPSACK:
          conshdlrlinear = SCIPfindConshdlr(sourcescip, "eqknapsack");
          assert(conshdlrlinear != NULL);
          break;
@@ -3096,7 +3096,7 @@ SCIP_RETCODE copyConsPseudoboolean(
           *        if not copying was not valid
           */
          if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(targetlincons)), "linear") == 0 )
-            targetlinconstype = SCIP_LINEAR;
+            targetlinconstype = SCIP_LINEARCONSTYPE_LINEAR;
       }
 
       targetandconss = NULL;
@@ -3802,7 +3802,7 @@ SCIP_RETCODE addCliques(
    /* check standard pointers and sizes */
    assert(consdata->lincons != NULL);
    assert(SCIPconsIsActive(consdata->lincons));
-   assert(consdata->linconstype > SCIP_INVALIDCONS);
+   assert(consdata->linconstype > SCIP_LINEARCONSTYPE_INVALIDCONS);
    assert(consdata->consanddatas != NULL);
    assert(consdata->nconsanddatas > 0);
    assert(consdata->nconsanddatas <= consdata->sconsanddatas);
@@ -4890,8 +4890,8 @@ SCIP_RETCODE tryUpgradingXor(
    assert(nconsanddatas > 0 && consanddatas != NULL);
 
    assert(consdata->lincons != NULL);
-   assert(consdata->linconstype == SCIP_LINEAR || consdata->linconstype == SCIP_SETPPC);
-   /*assert(consdata->linconstype == SCIP_LINEAR || consdata->linconstype == SCIP_EQKNAPSACK);*/
+   assert(consdata->linconstype == SCIP_LINEARCONSTYPE_LINEAR || consdata->linconstype == SCIP_LINEARCONSTYPE_SETPPC);
+   /*assert(consdata->linconstype == SCIP_LINEARCONSTYPE_LINEAR || consdata->linconstype == SCIP_LINEARCONSTYPE_EQKNAPSACK);*/
 
    /* only equations can be updated */
    if( !SCIPisEQ(scip, consdata->lhs, consdata->rhs) || (!SCIPisEQ(scip, consdata->lhs, 1.0) && !SCIPisZero(scip, consdata->lhs)) )
@@ -5442,7 +5442,7 @@ SCIP_RETCODE tryUpgradingLogicor(
    assert(nconsanddatas > 0 && consanddatas != NULL);
 
    assert(consdata->lincons != NULL);
-   assert(consdata->linconstype == SCIP_LOGICOR);
+   assert(consdata->linconstype == SCIP_LINEARCONSTYPE_LOGICOR);
 
    assert(consanddatas[0] != NULL);
    assert(consanddatas[0]->cons != NULL);
@@ -5959,7 +5959,7 @@ SCIP_RETCODE tryUpgradingSetppc(
    assert(nconsanddatas > 0 && consanddatas != NULL);
 
    assert(consdata->lincons != NULL);
-   assert(consdata->linconstype == SCIP_SETPPC);
+   assert(consdata->linconstype == SCIP_LINEARCONSTYPE_SETPPC);
 
    type = SCIPgetTypeSetppc(scip, consdata->lincons);
 
@@ -6455,23 +6455,23 @@ SCIP_RETCODE tryUpgrading(
 
    switch( consdata->linconstype )
    {
-   case SCIP_LINEAR:
+   case SCIP_LINEARCONSTYPE_LINEAR:
       SCIP_CALL( tryUpgradingXor(scip, cons, conshdlrdata, ndelconss, naddconss, nfixedvars, nchgcoefs, nchgsides, cutoff) );
       break;
-   case SCIP_LOGICOR:
+   case SCIP_LINEARCONSTYPE_LOGICOR:
       SCIP_CALL( tryUpgradingLogicor(scip, cons, conshdlrdata, ndelconss, naddconss, nfixedvars, nchgcoefs, nchgsides, cutoff) );
       break;
-   case SCIP_KNAPSACK:
+   case SCIP_LINEARCONSTYPE_KNAPSACK:
       break;
-   case SCIP_SETPPC:
+   case SCIP_LINEARCONSTYPE_SETPPC:
       SCIP_CALL( tryUpgradingSetppc(scip, cons, conshdlrdata, ndelconss, naddconss, nfixedvars, nchgcoefs, nchgsides, cutoff) );
       if( !SCIPconsIsDeleted(cons) )
       {
 	 SCIP_CALL( tryUpgradingXor(scip, cons, conshdlrdata, ndelconss, naddconss, nfixedvars, nchgcoefs, nchgsides, cutoff) );
       }
       break;
-#if 0
-   case SCIP_EQKNAPSACK:
+#ifdef WITHEQKNAPSACK
+   case SCIP_LINEARCONSTYPE_EQKNAPSACK:
       SCIP_CALL( tryUpgradingXor(scip, cons, conshdlrdata, ndelconss, naddconss, nfixedvars, nchgcoefs, nchgsides, cutoff) );
 #endif
    default:
@@ -6540,7 +6540,7 @@ SCIP_RETCODE findAggregation(
    assert(nconsanddatas == 0 || consanddatas != NULL);
 
    /* we have only one special case for aggregations, a set-partinioning constraint */
-   if( consdata->linconstype != SCIP_SETPPC || SCIPgetTypeSetppc(scip, consdata->lincons) != SCIP_SETPPCTYPE_PARTITIONING )
+   if( consdata->linconstype != SCIP_LINEARCONSTYPE_SETPPC || SCIPgetTypeSetppc(scip, consdata->lincons) != SCIP_SETPPCTYPE_PARTITIONING )
       return SCIP_OKAY;
 
    assert(SCIPisEQ(scip, consdata->rhs, consdata->lhs));
@@ -6977,7 +6977,7 @@ SCIP_RETCODE checkConsConsistency(
    /* check standard pointers and sizes */
    assert(consdata->lincons != NULL);
    assert(!SCIPconsIsDeleted(consdata->lincons));
-   assert(consdata->linconstype > SCIP_INVALIDCONS);
+   assert(consdata->linconstype > SCIP_LINEARCONSTYPE_INVALIDCONS);
    assert(consdata->consanddatas != NULL);
    assert(consdata->nconsanddatas > 0);
    assert(consdata->nconsanddatas <= consdata->sconsanddatas);
@@ -7188,7 +7188,7 @@ SCIP_DECL_CONSINIT(consInitPseudoboolean)
 
       /* if not happend already, get transformed linear constraint */
       assert(consdata->lincons != NULL);
-      assert(consdata->linconstype > SCIP_INVALIDCONS);
+      assert(consdata->linconstype > SCIP_LINEARCONSTYPE_INVALIDCONS);
 
       /* in a restart the linear constraint might already be transformed */
       if( !SCIPconsIsTransformed(consdata->lincons) )
@@ -8529,7 +8529,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(lincons != NULL);
-   assert(linconstype > SCIP_INVALIDCONS);
+   assert(linconstype > SCIP_LINEARCONSTYPE_INVALIDCONS);
    assert(andconss != NULL);
    assert(andcoefs != NULL);
    assert(nandconss >= 1);
@@ -8796,7 +8796,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
          initial, separate, enforce, FALSE/*check*/, propagate, local, modifiable, dynamic, removable, stickingatnode,
          &lincons, &linconstype) );
    assert(lincons != NULL);
-   assert(linconstype > SCIP_INVALIDCONS);
+   assert(linconstype > SCIP_LINEARCONSTYPE_INVALIDCONS);
 
    /* create constraint data */
    /* checking for and-constraints will be FALSE, we check all information in this constraint handler */
@@ -8880,29 +8880,29 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
 
    switch( consdata->linconstype )
    {
-   case SCIP_LINEAR:
+   case SCIP_LINEARCONSTYPE_LINEAR:
       SCIP_CALL( SCIPaddCoefLinear(scip, consdata->lincons, var, val) );
       break;
-   case SCIP_LOGICOR:
+   case SCIP_LINEARCONSTYPE_LOGICOR:
       if( !SCIPisEQ(scip, val, 1.0) )
          return SCIP_INVALIDDATA;
 
       SCIP_CALL( SCIPaddCoefLogicor(scip, consdata->lincons, var) );
       break;
-   case SCIP_KNAPSACK:
+   case SCIP_LINEARCONSTYPE_KNAPSACK:
       if( !SCIPisIntegral(scip, val) || !SCIPisPositive(scip, val) )
          return SCIP_INVALIDDATA;
 
       SCIP_CALL( SCIPaddCoefKnapsack(scip, consdata->lincons, var, (SCIP_Longint) val) );
       break;
-   case SCIP_SETPPC:
+   case SCIP_LINEARCONSTYPE_SETPPC:
       if( !SCIPisEQ(scip, val, 1.0) )
          return SCIP_INVALIDDATA;
 
       SCIP_CALL( SCIPaddCoefSetppc(scip, consdata->lincons, var) );
       break;
-#if 0
-   case SCIP_EQKNAPSACK:
+#ifdef WITHEQKNAPSACK
+   case SCIP_LINEARCONSTYPE_EQKNAPSACK:
       if( !SCIPisIntegral(scip, val) || !SCIPisPositive(scip, val) )
          return SCIP_INVALIDDATA;
 
@@ -9215,16 +9215,16 @@ SCIP_RETCODE SCIPchgLhsPseudoboolean(
 
    switch( consdata->linconstype )
    {
-   case SCIP_LINEAR:
+   case SCIP_LINEARCONSTYPE_LINEAR:
       SCIP_CALL( chgLhs(scip, cons, lhs) );
-   case SCIP_LOGICOR:
-   case SCIP_KNAPSACK:
-   case SCIP_SETPPC:
+   case SCIP_LINEARCONSTYPE_LOGICOR:
+   case SCIP_LINEARCONSTYPE_KNAPSACK:
+   case SCIP_LINEARCONSTYPE_SETPPC:
+#ifdef WITHEQKNAPSACK
+   case SCIP_LINEARCONSTYPE_EQKNAPSACK:
+#endif
       SCIPerrorMessage("changing left hand side only allowed on standard linear constraint \n");
       return SCIP_INVALIDDATA;
-#if 0
-   case SCIP_EQKNAPSACK:
-#endif
    default:
       SCIPerrorMessage("unknown linear constraint type\n");
       return SCIP_INVALIDDATA;
@@ -9260,16 +9260,16 @@ SCIP_RETCODE SCIPchgRhsPseudoboolean(
 
    switch( consdata->linconstype )
    {
-   case SCIP_LINEAR:
+   case SCIP_LINEARCONSTYPE_LINEAR:
       SCIP_CALL( chgRhs(scip, cons, rhs) );
-   case SCIP_LOGICOR:
-   case SCIP_KNAPSACK:
-   case SCIP_SETPPC:
+   case SCIP_LINEARCONSTYPE_LOGICOR:
+   case SCIP_LINEARCONSTYPE_KNAPSACK:
+   case SCIP_LINEARCONSTYPE_SETPPC:
+#ifdef WITHEQKNAPSACK
+   case SCIP_LINEARCONSTYPE_EQKNAPSACK:
+#endif
       SCIPerrorMessage("changing right hand side only allowed on standard linear constraint \n");
       return SCIP_INVALIDDATA;
-#if 0
-   case SCIP_EQKNAPSACK:
-#endif
    default:
       SCIPerrorMessage("unknown linear constraint type\n");
       return SCIP_INVALIDDATA;
