@@ -40,8 +40,11 @@
 #define READER_DESC             "file reader for steiner tree data format"
 #define READER_EXTENSION        "stp"
 
-/**@} */
+#define   DEFAULT_COMPCENTRAL  1
+#define   DEFAULT_EMITGRAPH    FALSE
+#define   DEFAULT_REDUCTION    4
 
+/**@} */
 
 /**@name Callback methods
  *
@@ -95,6 +98,19 @@ SCIP_RETCODE SCIPincludeReaderStp(
    assert(reader != NULL);
 
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadStp) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "stp/compcentral",
+         "Comp. Central Term: 0 disable, 1 max. degree, 2 min. dist. sum to all terminals, 3 min. max. dist., 4 min. dist to all nodes",
+         NULL, FALSE, DEFAULT_COMPCENTRAL, 0, 4, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/reduction",
+         "Reduction: 0 disable, 5 maximum",
+         NULL, FALSE, DEFAULT_REDUCTION, 0, 5, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "stp/emitgraph",
+         "Emit graph",
+         NULL, FALSE, DEFAULT_EMITGRAPH, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }

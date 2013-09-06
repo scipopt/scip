@@ -31,10 +31,6 @@
 #include "grph.h"
 #include "portab.h"
 
-#define   DEFAULT_COMPCENTRAL  1
-#define   DEFAULT_EMITGRAPH    FALSE
-#define   DEFAULT_REDUCTION    4
-
 #define CENTER_OK    0
 #define CENTER_DEG   1
 #define CENTER_SUM   2
@@ -49,9 +45,6 @@
 struct SCIP_ProbData
 {
    GRAPH*                graph;        /**< the graph */
-   int compcentral;
-   int reduction;
-   SCIP_Bool emitgraph;
 
    double* xval;
    SCIP_Longint lastlpiters;
@@ -60,6 +53,7 @@ struct SCIP_ProbData
    int nedges;
    int nlayers;
    int nvars;
+   char modeltype;
 };
 
 #if 0
@@ -386,9 +380,6 @@ SCIP_DECL_PROBTRANS(probtransStp)
    (*targetdata)->nlayers = sourcedata->nlayers;
    (*targetdata)->nedges = sourcedata->nedges;
    (*targetdata)->nvars = sourcedata->nvars;
-   (*targetdata)->compcentral = sourcedata->compcentral;
-   (*targetdata)->reduction = sourcedata->reduction;
-   (*targetdata)->emitgraph = sourcedata->emitgraph;
 
    if( sourcedata->nvars > 0 )
    {
@@ -437,6 +428,8 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_Real offset;
    PRESOL presolinfo;
    GRAPH* graph;
+   int compcentral;
+   int reduction;
 
    assert(scip != NULL);
    presolinfo.fixed = 0;
@@ -456,20 +449,11 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbTrans(scip, probtransStp) );
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransStp) );
 
+   SCIP_CALL( SCIPgetIntParam(scip, "stp/compcentral", &compcentral) );
+   SCIP_CALL( SCIPgetIntParam(scip, "stp/reduction", &reduction) );
+
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
-
-   SCIP_CALL( SCIPaddIntParam(scip, "stp/compcentral",
-         "Comp. Central Term: 0 disable, 1 max. degree, 2 min. dist. sum to all terminals, 3 min. max. dist., 4 min. dist to all nodes",
-         &probdata->compcentral, FALSE, DEFAULT_COMPCENTRAL, 0, 4, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "stp/reduction",
-         "Reduction: 0 disable, 5 maximum",
-         &probdata->reduction, FALSE, DEFAULT_REDUCTION, 0, 5, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "stp/emitgraph",
-         "Emit graph",
-         &probdata->emitgraph, FALSE, DEFAULT_EMITGRAPH, NULL, NULL) );
 
 #if 0
    /* tell SCIP that the objective will be always integral */
@@ -480,10 +464,10 @@ SCIP_RETCODE SCIPprobdataCreate(
    graph_mincut_init(graph);
 
    /* define root node */
-   graph->source[0] = central_terminal(graph, probdata->compcentral);
+   graph->source[0] = central_terminal(graph, compcentral);
 
    /* presolving */
-   offset = reduce(graph, probdata->reduction);
+   offset = reduce(graph, reduction);
 
    probdata->graph = graph_pack(graph);
 
