@@ -523,7 +523,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIP_Real* nval;
    SCIP_Real* xval;
    int* results;
-   SCIP_Bool solcreated;
    SCIP_Real pobj;
    int nvars;
    int layer;
@@ -577,24 +576,22 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
 
    *result = SCIP_DIDNOTFIND;
-   solcreated = FALSE;
 
    /* */
    if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+   {
       sol = NULL;
+      xval = NULL;
+   }
    else
    {
       SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
-      solcreated = TRUE;
 
       /* copy the current LP solution to the working solution */
       SCIP_CALL( SCIPlinkLPSol(scip, sol) );
-   }
 
-   xval = SCIPprobdataGetXval(scip, sol);
+      xval = SCIPprobdataGetXval(scip, sol);
 
-   if( solcreated )
-   {
       SCIPfreeSol(scip, &sol);
    }
 
