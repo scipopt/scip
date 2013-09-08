@@ -80,6 +80,7 @@ SCIP_RETCODE SCIPcreateConsDisjunction(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
+EXTERN
 SCIP_RETCODE SCIPcreateConsBasicDisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

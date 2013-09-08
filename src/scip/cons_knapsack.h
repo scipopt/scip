@@ -196,6 +196,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
  *  method and rounding down the solution; if needed, one can provide arrays to store all selected items and all not
  *  selected items
  */
+EXTERN
 SCIP_RETCODE SCIPsolveKnapsackApproximately(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nitems,             /**< number of available items */
@@ -211,6 +212,7 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    );
 
 /** separates lifted valid inequalities for given knapsack problem */
+EXTERN
 SCIP_RETCODE SCIPseparateKnapsackCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< originating constraint of the knapsack problem, or NULL */
