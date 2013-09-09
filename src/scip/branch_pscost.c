@@ -228,6 +228,13 @@ SCIP_RETCODE updateBestCandidate(
    candbrpoint = SCIPgetBranchingPoint(scip, cand, candsol);
    assert(candbrpoint >= SCIPvarGetLbLocal(cand));
    assert(candbrpoint <= SCIPvarGetUbLocal(cand));
+
+   /* we cannot branch on a huge value, because we simply cannot enumerate such huge integer values in floating point
+    * arithmetics
+    */
+   if( SCIPisHugeValue(scip, candbrpoint) || SCIPisHugeValue(scip, -candbrpoint) )
+      return SCIP_OKAY;
+
    assert(SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS || !SCIPisIntegral(scip, candbrpoint));
 
    if( SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS )
@@ -425,9 +432,19 @@ SCIP_RETCODE selectBranchVar(
       
       /* check if new candidate is better than previous candidate (if any) */
       SCIP_CALL( updateBestCandidate(scip, branchruledata, brvar, brpoint, &bestbranchscore, cand, scoremin, scoremax, scoresum, candsol) );
-      assert(*brvar != NULL);
    }
-   
+
+   /* there were candidates, but no variable was selected; this can only happen if the branching points are huge values
+    * for all variables on which we cannot branch
+    * @todo delay the node?
+    */
+   if( (*brvar) == NULL )
+   {
+      SCIPerrorMessage("no branching could be created: all external candidates have huge bounds\n");
+      SCIPABORT();
+      return SCIP_BRANCHERROR;
+   }
+
    /* free buffer arrays */
    SCIPfreeBufferArray(scip, &candssorted);
    SCIPfreeBufferArray(scip, &candsorigidx);

@@ -50,6 +50,8 @@ fixed bugs:
 - fixed bug that removing reverse implication did not reset closestvblpcount
 - fixed bug that the number aggregated variables were not counted in presol_inttobinary.c
 - fixed bug that duplicate solutions stopped copying of solutions to original solution candidate store
+- forbid branching on variables with huge bounds; such huge values cannot be enumerated with fixed precision
+  floating point arithmetics
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
