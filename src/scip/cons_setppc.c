@@ -2779,7 +2779,7 @@ SCIP_RETCODE presolvePropagateCons(
 	 return SCIP_OKAY;
       }
 
-      SCIPdebugMessage("set partitioning / packing constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("set partitioning / packing constraint <%s> is infeasible, %d variables fixed to one\n", SCIPconsGetName(cons), consdata->nfixedones);
       *cutoff = TRUE;
 
       return SCIP_OKAY;
@@ -6525,6 +6525,12 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       if( !SCIPconsIsActive(cons) )
          continue;
 
+      /* remove fixings found by merging */
+      if( consdata->nfixedzeros > 0 )
+      {
+         SCIP_CALL( applyFixings(scip, cons) );
+      }
+
       /* check if constraint is already redundant or infeasible due to fixings, fix or aggregate left over variables if
        * possible
        */
@@ -6539,6 +6545,12 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       /* if constraint was deleted while propagation, go to the next constraint */
       if( !SCIPconsIsActive(cons) )
          continue;
+
+      /* remove fixings found by presolvePropagateCons() */
+      if( consdata->nfixedzeros > 0 )
+      {
+         SCIP_CALL( applyFixings(scip, cons) );
+      }
 
       /* perform dual reductions */
       if( conshdlrdata->dualpresolving )
