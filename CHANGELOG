@@ -93,6 +93,7 @@ performance improvements:
 - minor presolving performance improvements in cons_logicor.c and cons_knapsack.c
 - added upgradability for implicit binary variable cases for linear constraints
 - improved performance of SCIPcliquelistDel(), SCIPcliquetableAdd(), SCIPcliquetableCleanup()
+- improved merging of constraints in cons_and.c
 
 interface
 - SCIPgetLPBranchCands() can be used to retrieve the number of implicit integer variables with fractional LP solution
