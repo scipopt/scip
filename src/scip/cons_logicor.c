@@ -1125,9 +1125,9 @@ SCIP_RETCODE mergeMultiples(
    SCIP_VAR* var;
    int v;
    int pos;
-   int nintvars;
 #ifndef NDEBUG
    int nbinvars;
+   int nintvars;
    int nimplvars;
 #endif
 
@@ -1157,11 +1157,11 @@ SCIP_RETCODE mergeMultiples(
 
    assert(consdata->vars != NULL && nvars > 0);
 
-   nintvars = SCIPgetNIntVars(scip);
 #ifndef NDEBUG
    nbinvars = SCIPgetNBinVars(scip);
+   nintvars = SCIPgetNIntVars(scip);
    nimplvars = SCIPgetNImplVars(scip);
-   assert(*nentries >= nbinvars + nimplvars);
+   assert(*nentries >= nbinvars + nintvars + nimplvars);
 
    /* all variables should be active or negative active variables, otherwise something went wrong with applyFixings()
     * called before mergeMultiples()
@@ -1191,13 +1191,12 @@ SCIP_RETCODE mergeMultiples(
       pos = SCIPvarGetProbindex(var);
 
       assert(SCIPvarIsActive(var));
+      /* check variable type, either pure binary or an integer/implicit integer variable with 0/1 bounds */
       assert((pos < nbinvars && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY)
-	 || (pos >= (nbinvars + nintvars) && pos < (nbinvars + nintvars + nimplvars)
-	    && SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT && SCIPvarIsBinary(var)));
-
-      /* subtract number of integer variables because we only allocated memory for all binary and implicit variables */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
-	 pos -= nintvars;
+	 || (SCIPvarIsBinary(var) &&
+            ((pos >= nbinvars && pos < nbinvars + nintvars && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER) ||
+               (pos >= nbinvars + nintvars && pos < nbinvars + nintvars + nimplvars &&
+                  SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT))));
 
       /* var is not active yet */
       (*entries)[pos] = 0;
@@ -1210,10 +1209,6 @@ SCIP_RETCODE mergeMultiples(
 
       pos = SCIPvarGetProbindex(var);
 
-      /* subtract number of integer variables because we only allocated memory for all binary and implicit variables */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
-	 pos -= nintvars;
-
       /* if var occurs first time in constraint init entries array */
       if( (*entries)[pos] == 0 )
          (*entries)[pos] = negarray[v] ? 2 : 1;
@@ -1222,6 +1217,9 @@ SCIP_RETCODE mergeMultiples(
       {
          if( negarray[v] )
          {
+            SCIPdebugMessage("logicor constraint <%s> redundant: variable <%s> and its negation are present\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var));
+
             *redundant = TRUE;
             goto TERMINATE;
          }
@@ -1236,6 +1234,9 @@ SCIP_RETCODE mergeMultiples(
       {
          if( !negarray[v] )
          {
+            SCIPdebugMessage("logicor constraint <%s> redundant: variable <%s> and its negation are present\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var));
+
             *redundant = TRUE;
             goto TERMINATE;
          }
@@ -2918,7 +2919,7 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
     */
 
    /* get number of all possible(incl. implcit) binary variables and their negation */
-   nbinvars = SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip);
+   nbinvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    occurlistsize = 2 * nbinvars;
 
    /* allocate memory for the column representation for each variable */
@@ -3083,7 +3084,7 @@ SCIP_RETCODE shortenConss(
 
    assert(conss != NULL);
 
-   nbinprobvars = SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip);
+   nbinprobvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &probvars, nbinprobvars) );
@@ -3258,8 +3259,8 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
    if( SCIPgetNCliques(scip) == conshdlrdata->nlastcliques && SCIPgetNImplications(scip) == conshdlrdata->nlastimpls )
       return SCIP_OKAY;
 
-   /* estimate the maximal number ob variables in a logicor constraint */
-   size = SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip);
+   /* estimate the maximal number of variables in a logicor constraint */
+   size = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    assert(size > 0);
 
    /* temporary memory for active/negation of active variables */
@@ -4303,7 +4304,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   nentries = SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip);
+   nentries = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
    oldnfixedvars = *nfixedvars;
    oldnchgbds = *nchgbds;
