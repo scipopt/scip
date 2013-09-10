@@ -2016,6 +2016,11 @@ SCIP_RETCODE spxSolve(
    assert( rep == SPxSolver::ROW || rep == SPxSolver::COLUMN );
    assert( type == SPxSolver::ENTER || type == SPxSolver::LEAVE );
 
+   int verbosity;
+   /* store and set verbosity */
+   verbosity = Param::verbose();
+   Param::setVerbose(lpi->spx->getLpInfo() ? SOPLEX_VERBLEVEL : 0);
+
    SCIPdebugMessage("calling SoPlex solve(): %d cols, %d rows\n", lpi->spx->numColsReal(), lpi->spx->numRowsReal());
 
    invalidateSolution(lpi);
@@ -2039,6 +2044,9 @@ SCIP_RETCODE spxSolve(
    SPxSolver::Status status = lpi->spx->doSolve();
    SCIPdebugMessage(" -> SoPlex status: %d, basis status: %d\n", lpi->spx->statusReal(), lpi->spx->basisStatusReal());
    lpi->solved = TRUE;
+
+   /* restore verbosity */
+   Param::setVerbose(verbosity);
 
    switch( status )
    {
@@ -2205,6 +2213,11 @@ SCIP_RETCODE lpiStrongbranch(
    bool fromparentbasis;
    bool error;
    int oldItlim;
+   int verbosity;
+
+   /* store and set verbosity */
+   verbosity = Param::verbose();
+   Param::setVerbose(lpi->spx->getLpInfo() ? SOPLEX_VERBLEVEL : 0);
 
    SCIPdebugMessage("calling SCIPlpiStrongbranch() on variable %d (%d iterations)\n", col, itlim);
 
@@ -2393,6 +2406,9 @@ SCIP_RETCODE lpiStrongbranch(
 
    /* reset old iteration limit */
    spx->setIntParam(SoPlex2::ITERLIMIT, oldItlim);
+
+   /* restore verbosity */
+   Param::setVerbose(verbosity);
 
    if( error )
    {
