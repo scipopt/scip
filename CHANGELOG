@@ -49,7 +49,7 @@ features:
 - the XOR constraint handler can add two extended formulations (flow/asymmetric, parameter addextendedform)
 - added the possibility to copy the original problem via SCIPcopyOrig()
 - SCIPgetVarCopy() will now copy the original bounds when called for an original variable
-- added method SCIPcreateSolCopyRemoveInfiniteFixings() which creates a copy of a solution, thereby trying to reduce
+- added method SCIPcreateFiniteSolCopy() which creates a copy of a solution, thereby trying to reduce
   the solution value of variables which were fixed to infinite to the smallest feasible value
 - added propagation method to cons_xor relying on Gaussian elimination, which can also produce feasible solutions
 - new branching rule "cloud branching" that considers several alternative LP optima

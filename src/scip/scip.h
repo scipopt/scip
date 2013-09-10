@@ -14904,7 +14904,7 @@ SCIP_RETCODE SCIPcreateSolCopy(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPcreateSolCopyRemoveInfiniteFixings(
+SCIP_RETCODE SCIPcreateFiniteSolCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
    SCIP_SOL*             sourcesol,          /**< primal CIP solution to copy */
