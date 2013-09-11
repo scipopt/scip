@@ -523,90 +523,6 @@ SCIP_RETCODE computeImpliedLct(
    return SCIP_OKAY;
 }
 
-/** creates the worst case resource profile, that is, all jobs are inserted with the earliest start and latest
- *  completion time
- */
-static
-SCIP_RETCODE createWorstCaseProfile(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROFILE*         profile,            /**< resource profile */
-   int                   nvars,              /**< number of variables (jobs) */
-   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
-   int*                  durations,          /**< array containing corresponding durations */
-   int*                  demands             /**< array containing corresponding demands */
-   )
-{
-   SCIP_VAR* var;
-   SCIP_HASHMAP* addedvars;
-   int* copydemands;
-   int* perm;
-   int duration;
-   int impliedest;
-   int est;
-   int impliedlct;
-   int lct;
-   int v;
-
-   assert(SCIPgetDepth(scip) <= 0);
-
-   /* create hash map for variables which are added, mapping to their duration */
-   SCIP_CALL( SCIPhashmapCreate(&addedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars)) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &copydemands, nvars) );
-
-   /* sort variables  w.r.t. job demands */
-   for( v = 0; v < nvars; ++v )
-   {
-      copydemands[v] = demands[v];
-      perm[v] = v;
-   }
-   SCIPsortDownIntInt(copydemands, perm, nvars);
-
-   /* add each job with its earliest start and latest completion time into the resource profile */
-   for( v = 0; v < nvars; ++v )
-   {
-      int idx;
-
-      idx = perm[v];
-      assert(idx >= 0 && idx < nvars);
-
-      var = vars[idx];
-      assert(var != NULL);
-
-      duration = durations[idx];
-      assert(duration > 0);
-
-      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-      SCIP_CALL( computeImpliedEst(scip, var, addedvars, &impliedest) );
-
-      lct = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration;
-      SCIP_CALL( computeImpliedLct(scip, var, duration, addedvars, &impliedlct) );
-
-      if( impliedest < impliedlct )
-      {
-         SCIP_Bool infeasible;
-         int pos;
-
-         SCIP_CALL( SCIPprofileInsertCore(profile, impliedest, impliedlct, copydemands[v], &pos, &infeasible) );
-         assert(!infeasible);
-         assert(pos == -1);
-      }
-
-      if( est == impliedest && lct == impliedlct )
-      {
-         SCIP_CALL( SCIPhashmapInsert(addedvars, (void*)var, (void*)(size_t)duration) );
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &copydemands);
-   SCIPfreeBufferArray(scip, &perm);
-
-   SCIPhashmapFree(&addedvars);
-
-   return SCIP_OKAY;
-}
-
 /** collects all necessary binary variables to represent the jobs which can be active at time point of interest */
 static
 SCIP_RETCODE collectBinaryVars(
@@ -7179,67 +7095,6 @@ SCIP_RETCODE propagateCons(
    return SCIP_OKAY;
 }
 
-/** computes w.r.t. the given worst case resource profile the first time point where the given capacity can be violated */
-static
-int computeHmin(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROFILE*         profile,            /**< worst case resource profile */
-   int                   capacity            /**< capacity to check */
-   )
-{
-   int* timepoints;
-   int* loads;
-   int ntimepoints;
-   int t;
-
-   ntimepoints = SCIPprofileGetNTimepoints(profile);
-   timepoints = SCIPprofileGetTimepoints(profile);
-   loads = SCIPprofileGetLoads(profile);
-
-   /* find first time point which potentially violates the capacity restriction */
-   for( t = 0; t < ntimepoints - 1; ++t )
-   {
-      /* check if the time point exceed w.r.t. worst case profile the capacity */
-      if( loads[t] > capacity )
-      {
-         assert(t == 0 || loads[t-1] <= capacity);
-         return timepoints[t];
-      }
-   }
-
-   return INT_MAX;
-}
-
-/** computes w.r.t. the given worst case resource profile the first time point where the given capacity is satisfied for sure */
-static
-int computeHmax(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROFILE*         profile,            /**< worst case profile */
-   int                   capacity            /**< capacity to check */
-   )
-{
-   int* timepoints;
-   int* loads;
-   int ntimepoints;
-   int t;
-
-   ntimepoints = SCIPprofileGetNTimepoints(profile);
-   timepoints = SCIPprofileGetTimepoints(profile);
-   loads = SCIPprofileGetLoads(profile);
-
-   /* find last time point which potentially violates the capacity restriction */
-   for( t = ntimepoints - 1; t >= 0; --t )
-   {
-      /* check if at time point t the worst case resource profile  exceeds the capacity */
-      if( loads[t] > capacity )
-      {
-         assert(t == ntimepoints-1 || loads[t+1] <= capacity);
-         return timepoints[t+1];
-      }
-   }
-
-   return INT_MIN;
-}
 /** For each variable we compute an alternative lower and upper bounds. That is, if the variable is not fixed to its
  *  lower or upper bound the next reasonable lower or upper bound would be this alternative bound (implying that certain
  *  values are not of interest). An alternative bound for a particular is only valied if the cumulative constarints are
@@ -7294,10 +7149,10 @@ SCIP_RETCODE computeAlternativeBounds(
          SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
          /* create worst case resource profile */
-         SCIP_CALL( createWorstCaseProfile(scip, profile, consdata->nvars, consdata->vars, consdata->durations, consdata->demands) );
+         SCIP_CALL( SCIPcreateWorstCaseProfile(scip, profile, consdata->nvars, consdata->vars, consdata->durations, consdata->demands) );
 
-         hmin = computeHmin(scip, profile, consdata->capacity);
-         hmax = computeHmax(scip, profile, consdata->capacity);
+         hmin = SCIPcomputeHmin(scip, profile, consdata->capacity);
+         hmax = SCIPcomputeHmax(scip, profile, consdata->capacity);
 
          /* free worst case profile */
          SCIPprofileFree(&profile);
@@ -9284,16 +9139,16 @@ SCIP_RETCODE computeEffectiveHorizonCumulativeCondition(
    SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
    /* create worst case resource profile */
-   SCIP_CALL( createWorstCaseProfile(scip, profile, nvars, vars, durations, demands) );
+   SCIP_CALL( SCIPcreateWorstCaseProfile(scip, profile, nvars, vars, durations, demands) );
 
    /* print resource profile in if SCIP_DEBUG is defined */
    SCIPdebug( SCIPprofilePrint(profile, SCIPgetMessagehdlr(scip), NULL) );
 
    /* computes the first time point where the resource capacity can be violated */
-   (*hmin) = computeHmin(scip, profile, capacity);
+   (*hmin) = SCIPcomputeHmin(scip, profile, capacity);
 
    /* computes the first time point where the resource capacity is satisfied for sure */
-   (*hmax) = computeHmax(scip, profile, capacity);
+   (*hmax) = SCIPcomputeHmax(scip, profile, capacity);
 
    (*split) = (*hmax);
 
@@ -13651,6 +13506,147 @@ SCIP_RETCODE SCIPsolveCumulative(
    }
 
    return SCIP_OKAY;
+}
+
+/** creates the worst case resource profile, that is, all jobs are inserted with the earliest start and latest
+ *  completion time
+ */
+SCIP_RETCODE SCIPcreateWorstCaseProfile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< resource profile */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands             /**< array containing corresponding demands */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_HASHMAP* addedvars;
+   int* copydemands;
+   int* perm;
+   int duration;
+   int impliedest;
+   int est;
+   int impliedlct;
+   int lct;
+   int v;
+
+   /* create hash map for variables which are added, mapping to their duration */
+   SCIP_CALL( SCIPhashmapCreate(&addedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars)) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &copydemands, nvars) );
+
+   /* sort variables  w.r.t. job demands */
+   for( v = 0; v < nvars; ++v )
+   {
+      copydemands[v] = demands[v];
+      perm[v] = v;
+   }
+   SCIPsortDownIntInt(copydemands, perm, nvars);
+
+   /* add each job with its earliest start and latest completion time into the resource profile */
+   for( v = 0; v < nvars; ++v )
+   {
+      int idx;
+
+      idx = perm[v];
+      assert(idx >= 0 && idx < nvars);
+
+      var = vars[idx];
+      assert(var != NULL);
+
+      duration = durations[idx];
+      assert(duration > 0);
+
+      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+      SCIP_CALL( computeImpliedEst(scip, var, addedvars, &impliedest) );
+
+      lct = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration;
+      SCIP_CALL( computeImpliedLct(scip, var, duration, addedvars, &impliedlct) );
+
+      if( impliedest < impliedlct )
+      {
+         SCIP_Bool infeasible;
+         int pos;
+
+         SCIP_CALL( SCIPprofileInsertCore(profile, impliedest, impliedlct, copydemands[v], &pos, &infeasible) );
+         assert(!infeasible);
+         assert(pos == -1);
+      }
+
+      if( est == impliedest && lct == impliedlct )
+      {
+         SCIP_CALL( SCIPhashmapInsert(addedvars, (void*)var, (void*)(size_t)duration) );
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &copydemands);
+   SCIPfreeBufferArray(scip, &perm);
+
+   SCIPhashmapFree(&addedvars);
+
+   return SCIP_OKAY;
+}
+
+/** computes w.r.t. the given worst case resource profile the first time point where the given capacity can be violated */
+int SCIPcomputeHmin(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< worst case resource profile */
+   int                   capacity            /**< capacity to check */
+   )
+{
+   int* timepoints;
+   int* loads;
+   int ntimepoints;
+   int t;
+
+   ntimepoints = SCIPprofileGetNTimepoints(profile);
+   timepoints = SCIPprofileGetTimepoints(profile);
+   loads = SCIPprofileGetLoads(profile);
+
+   /* find first time point which potentially violates the capacity restriction */
+   for( t = 0; t < ntimepoints - 1; ++t )
+   {
+      /* check if the time point exceed w.r.t. worst case profile the capacity */
+      if( loads[t] > capacity )
+      {
+         assert(t == 0 || loads[t-1] <= capacity);
+         return timepoints[t];
+      }
+   }
+
+   return INT_MAX;
+}
+
+/** computes w.r.t. the given worst case resource profile the first time point where the given capacity is satisfied for sure */
+int SCIPcomputeHmax(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< worst case profile */
+   int                   capacity            /**< capacity to check */
+   )
+{
+   int* timepoints;
+   int* loads;
+   int ntimepoints;
+   int t;
+
+   ntimepoints = SCIPprofileGetNTimepoints(profile);
+   timepoints = SCIPprofileGetTimepoints(profile);
+   loads = SCIPprofileGetLoads(profile);
+
+   /* find last time point which potentially violates the capacity restriction */
+   for( t = ntimepoints - 1; t >= 0; --t )
+   {
+      /* check if at time point t the worst case resource profile  exceeds the capacity */
+      if( loads[t] > capacity )
+      {
+         assert(t == ntimepoints-1 || loads[t+1] <= capacity);
+         return timepoints[t+1];
+      }
+   }
+
+   return INT_MIN;
 }
 
 /**@} */

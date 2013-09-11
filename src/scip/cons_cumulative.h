@@ -354,6 +354,35 @@ SCIP_RETCODE SCIPsolveCumulative(
    SCIP_Bool*            error               /**< pointer to store if an error occurred */
    );
 
+/** creates the worst case resource profile, that is, all jobs are inserted with the earliest start and latest
+ *  completion time
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateWorstCaseProfile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< resource profile */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands             /**< array containing corresponding demands */
+   );
+
+/** computes w.r.t. the given worst case resource profile the first time point where the given capacity can be violated */
+EXTERN
+int SCIPcomputeHmin(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< worst case resource profile */
+   int                   capacity            /**< capacity to check */
+   );
+
+/** computes w.r.t. the given worst case resource profile the first time point where the given capacity is satisfied for sure */
+EXTERN
+int SCIPcomputeHmax(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROFILE*         profile,            /**< worst case profile */
+   int                   capacity            /**< capacity to check */
+   );
+
 #ifdef __cplusplus
 }
 #endif
