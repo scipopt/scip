@@ -146,8 +146,8 @@ struct SCIP_ConsData
 
    SCIP_VAR**            sepaquadvars;       /**< variables corresponding to quadvarterms to use in separation, only available in solving stage */
    int*                  sepabilinvar2pos;   /**< position of second variable in bilinear terms to use in separation, only available in solving stage */
-   SCIP_Real             lincoefsmin;        /**< maximal absolute value of coefficients in linear part, only available in solving stage */
-   SCIP_Real             lincoefsmax;        /**< minimal absolute value of coefficients in linear part, only available in solving stage */
+   SCIP_Real             lincoefsmin;        /**< minimal absolute value of coefficients in linear part, only available in solving stage */
+   SCIP_Real             lincoefsmax;        /**< maximal absolute value of coefficients in linear part, only available in solving stage */
 
    SCIP_Real*            factorleft;         /**< coefficients of left factor if constraint function is factorable */
    SCIP_Real*            factorright;        /**< coefficients of right factor if constraint function is factorable */
@@ -6564,27 +6564,19 @@ SCIP_RETCODE generateCut(
       }
       else if( sol != NULL || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
       {
+         int i;
+
          /* generateCutLTI needs reference values also for the linear variables, which we only have if sol is given or LP has been solved */
          SCIP_CALL( generateCutLTI(scip, cons, violside, ref, sol, &lincoefs, coef, &lhs, &rhs, &islocal, &success, cutname) );
 
-         /* recompute the max of lincoefs */
+         /* in case of LTI cuts, we have to recompute the min and max of lincoefs, since they may have been modified */
+         for( i = 0; i < consdata->nlinvars; ++i )
          {
-            int i;
-
-            for( i = 0; i < consdata->nlinvars; ++i )
-            {
-               SCIPdbgMsg("checking linear coefficient %f\n",lincoefs[i]);
-               if( REALABS(lincoefs[i]) > lincoefsmax )
-               {
-                  lincoefsmax = REALABS(lincoefs[i]);
-               }
-               if( REALABS(lincoefs[i]) < lincoefsmin )
-               {
-                  lincoefsmin = REALABS(lincoefs[i]);
-               }
-            }
+            if( REALABS(lincoefs[i]) > lincoefsmax )
+               lincoefsmax = REALABS(lincoefs[i]);
+            if( REALABS(lincoefs[i]) < lincoefsmin )
+               lincoefsmin = REALABS(lincoefs[i]);
          }
-
       }
    }
 
