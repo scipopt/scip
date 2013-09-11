@@ -76,6 +76,8 @@ features:
 - it is now possible to add an offset for the original problem instance, all original solutions will be initialized with
   this value and updated, when the offset is changed
 - added clique presolving for xor constraints
+- added upgrade of continuous variables to implicit variables for linear equations even if the coefficient is unequal to
+  one
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor

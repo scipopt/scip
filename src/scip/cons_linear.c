@@ -8021,18 +8021,68 @@ SCIP_RETCODE convertLongEquality(
       var = vars[contvarpos];
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
-      if( coefsintegral && SCIPisEQ(scip, REALABS(vals[contvarpos]), 1.0) && SCIPisFeasIntegral(scip, consdata->rhs) )
+      if( coefsintegral && SCIPisFeasIntegral(scip, consdata->rhs) )
       {
-         /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
-         SCIPdebugMessage("linear constraint <%s>: converting continuous variable <%s> to implicit integer variable\n",
-            SCIPconsGetName(cons), SCIPvarGetName(var));
-         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
-         if( infeasible )
+         /* upgrade continuous variable to an implicit one, if the absolute value of the coefficient is one */
+         if( SCIPisEQ(scip, REALABS(vals[contvarpos]), 1.0) )
          {
-            SCIPdebugMessage("infeasible upgrade of variable <%s> to integral type, domain is empty\n", SCIPvarGetName(var));
-            *cutoff = TRUE;
+            /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
+            SCIPdebugMessage("linear constraint <%s>: converting continuous variable <%s> to implicit integer variable\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var));
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
+            if( infeasible )
+            {
+               SCIPdebugMessage("infeasible upgrade of variable <%s> to integral type, domain is empty\n", SCIPvarGetName(var));
+               *cutoff = TRUE;
 
-            return SCIP_OKAY;
+               return SCIP_OKAY;
+            }
+         }
+         /* aggregate continuous variable to an implicit one, if the absolute value of the coefficient is unequal to one */
+         /* @todo check if the aggregation coefficient should be in some range(, which is not too big) */
+         else if( !SCIPdoNotAggr(scip) )
+         {
+            SCIP_VAR* newvar;
+            SCIP_Real absval;
+            char newvarname[SCIP_MAXSTRLEN];
+            SCIP_Bool redundant;
+            SCIP_Bool aggregated;
+
+            absval = REALABS(vals[contvarpos]);
+
+            (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "%s_impl", SCIPvarGetName(var));
+
+            /* create new implicit variable for aggregation */
+            SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+                  SCIP_VARTYPE_IMPLINT, SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL, NULL) );
+
+            /* add new variable to problem */
+            SCIP_CALL( SCIPaddVar(scip, newvar) );
+
+            /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
+            SCIPdebugMessage("linear constraint <%s>: aggregating continuous variable <%s> to newly created implicit integer variable <%s>, aggregation factor = %g\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetName(newvar), absval);
+
+            /* aggregate continuous and implicit variable */
+            SCIP_CALL( SCIPaggregateVars(scip, var, newvar, absval, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
+
+            if( infeasible )
+            {
+               SCIPdebugMessage("infeasible aggregation of variable <%s> to implicit variable <%s>, domain is empty\n",
+                  SCIPvarGetName(var), SCIPvarGetName(newvar));
+               *cutoff = TRUE;
+
+               /* release implicit variable */
+               SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
+
+               return SCIP_OKAY;
+            }
+
+            if( aggregated )
+               (*naggrvars)++;
+
+            /* release implicit variable */
+            SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
          }
 
          /* we do not have any event on vartype changes, so we need to manually force this constraint to be presolved
