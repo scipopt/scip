@@ -135,8 +135,11 @@ struct SCIP_ConsData
 
    int                   nglbfixedzeros;     /**< number of binary variable globally fixed to zero */
    int                   nglbfixedones;      /**< number of binary variable globally fixed to one */
+   int                   nfixedzeros;        /**< number of binary variable fixed to zero */
+   int                   nfixedones;         /**< number of binary variable fixed to one */
    int                   est;                /**< used earliest start time for the relaxation */
    int                   lct;                /**< used latest completion time for the relaxation */
+   unsigned int          propagated:1;       /**< is constraint already propagated? */
    unsigned int          relaxadded:1;       /**< was relaxation added? */
    unsigned int          triedsolving:1;     /**< bool to store if it was tried to solve the cumulative sub-problem */
    unsigned int          normalized:1;       /**< is the constraint normalized */
@@ -165,24 +168,36 @@ void checkCounters(
    SCIP_CONSDATA*        consdata            /**< optcumulative constraint data */
    )
 {
+   int nglbfixedones;
+   int nglbfixedzeors;
    int nfixedones;
    int nfixedzeors;
    int v;
 
+   nglbfixedones = 0;
+   nglbfixedzeors = 0;
    nfixedones = 0;
    nfixedzeors = 0;
 
    for( v = 0; v < consdata->nvars; ++v )
    {
       if( SCIPvarGetLbGlobal(consdata->binvars[v]) > 0.5 )
-         nfixedones++;
+         nglbfixedones++;
 
       if( SCIPvarGetUbGlobal(consdata->binvars[v]) < 0.5 )
+         nglbfixedzeors++;
+
+      if( SCIPvarGetLbLocal(consdata->binvars[v]) > 0.5 )
+         nfixedones++;
+
+      if( SCIPvarGetUbLocal(consdata->binvars[v]) < 0.5 )
          nfixedzeors++;
    }
 
-   assert(nfixedones == consdata->nglbfixedones);
-   assert(nfixedzeors == consdata->nglbfixedzeros);
+   assert(nglbfixedones == consdata->nglbfixedones);
+   assert(nglbfixedzeors == consdata->nglbfixedzeros);
+   assert(nfixedones == consdata->nfixedones);
+   assert(nfixedzeors == consdata->nfixedzeros);
 }
 #else
 #define checkCounters(x) /* */
@@ -258,6 +273,9 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->cons = NULL;
    (*consdata)->nglbfixedzeros = 0;
    (*consdata)->nglbfixedones = 0;
+   (*consdata)->nfixedzeros = 0;
+   (*consdata)->nfixedones = 0;
+   (*consdata)->propagated = FALSE;
    (*consdata)->relaxadded = FALSE;
    (*consdata)->triedsolving = FALSE;
    (*consdata)->normalized = FALSE;
@@ -483,23 +501,31 @@ SCIP_RETCODE catchEventBinvar(
 
    /* we are catching the following events for the binary variables:
     *
+    * - SCIP_EVENTTYPE_BOUNDRELAXED: This allows for counting locally fixed variables to one or zero
     * - SCIP_EVENTTYPE_GBDCHANGED: This allows to check if the optcumulative can be converted into an cumulative
     *   constraint
     * - SCIP_EVENTTYPE_BOUNDRELAXED: This allows us to detect the moment when we can retry to solve a local cumulative
     *   constraint again
     */
-   eventtype = SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_BOUNDRELAXED;
+   eventtype = SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_BOUNDRELAXED;
 
    /* catch bound change events on variable */
    SCIP_CALL( SCIPcatchVarEvent(scip, binvar, eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
 
-   /* update the fixed variables counter for this variable */
+   /* update the globally fixed variables counter for this variable */
    if( SCIPvarGetUbGlobal(binvar) < 0.5)
       consdata->nglbfixedzeros++;
    else if( SCIPvarGetLbGlobal(binvar) > 0.5 )
       consdata->nglbfixedones++;
 
+   /* update the locally fixed variables counter for this variable */
+   if( SCIPvarGetUbLocal(binvar) < 0.5)
+      consdata->nfixedzeros++;
+   else if( SCIPvarGetLbLocal(binvar) > 0.5 )
+      consdata->nfixedones++;
+
    assert(consdata->nglbfixedzeros + consdata->nglbfixedones <= consdata->nvars);
+   assert(consdata->nfixedzeros + consdata->nfixedones <= consdata->nvars);
 
    return SCIP_OKAY;
 }
@@ -526,19 +552,27 @@ SCIP_RETCODE dropEventBinvar(
    binvar = consdata->binvars[pos];
    assert(binvar != NULL);
 
-   eventtype = SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_BOUNDRELAXED;
+   eventtype = SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_BOUNDRELAXED;
 
    /* drop events on variable */
    SCIP_CALL( SCIPdropVarEvent(scip, binvar, eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
 
-   /* update the fixed variables counter for this variable */
+   /* update the globally fixed variables counter for this variable */
    if( SCIPvarGetUbGlobal(binvar) < 0.5)
       consdata->nglbfixedzeros--;
    else if( SCIPvarGetLbGlobal(binvar) > 0.5 )
       consdata->nglbfixedones--;
 
+   /* update the locally fixed variables counter for this variable */
+   if( SCIPvarGetUbLocal(binvar) < 0.5)
+      consdata->nfixedzeros--;
+   else if( SCIPvarGetLbLocal(binvar) > 0.5 )
+      consdata->nfixedones--;
+
    assert(consdata->nglbfixedzeros >= 0);
    assert(consdata->nglbfixedones >= 0);
+   assert(consdata->nfixedzeros >= 0);
+   assert(consdata->nfixedones >= 0);
 
    return SCIP_OKAY;
 }
@@ -570,7 +604,7 @@ SCIP_RETCODE catchEventIntvar(
     * - SCIP_EVENTTYPE_GBDCHANGED: This allows to check if the optcumulative can be converted into an cumulative
     *   constraint
     */
-   eventtype = SCIP_EVENTTYPE_GBDCHANGED;
+   eventtype = SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_GBDCHANGED;
 
    /* catch bound change events on variable */
    SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
@@ -600,7 +634,7 @@ SCIP_RETCODE dropEventIntvar(
    var = consdata->vars[pos];
    assert(var != NULL);
 
-   eventtype = SCIP_EVENTTYPE_GBDCHANGED;
+   eventtype = SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_GBDCHANGED;
 
    /* drop events on variable */
    SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
@@ -624,6 +658,8 @@ SCIP_RETCODE catchAllEvents(
    assert(consdata != NULL);
    assert(consdata->nglbfixedones == 0);
    assert(consdata->nglbfixedzeros == 0);
+   assert(consdata->nfixedones == 0);
+   assert(consdata->nfixedzeros == 0);
 
    /* catch event for every single variable */
    for( v = 0; v < consdata->nvars; ++v )
@@ -665,6 +701,8 @@ SCIP_RETCODE dropAllEvents(
    /* check that the internal constraint state is rested */
    assert(consdata->nglbfixedones == 0);
    assert(consdata->nglbfixedzeros == 0);
+   assert(consdata->nfixedones == 0);
+   assert(consdata->nfixedzeros == 0);
 
    return SCIP_OKAY;
 }
@@ -833,7 +871,7 @@ SCIP_RETCODE createRow(
    assert(conshdlrdata != NULL);
 
    *cutoff = FALSE;
-   if( conshdlrdata->rowrelax )
+   if( conshdlrdata->rowrelax || SCIPgetDepth(scip) > 0 )
    {
       SCIP_ROW* row;
       int v;
@@ -854,10 +892,14 @@ SCIP_RETCODE createRow(
 
       assert(!SCIProwIsInLP(row));
 
-      SCIPdebug( SCIPprintRow(scip, row, NULL) );
-      SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
+      if( SCIPgetDepth(scip) == 0 || SCIPisCutEfficacious(scip, NULL, row) )
+      {
+         SCIPdebug( SCIPprintRow(scip, row, NULL) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
+         (*rowadded) = TRUE;
+      }
+
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
-      (*rowadded) = TRUE;
    }
    else
    {
@@ -934,7 +976,7 @@ SCIP_RETCODE addRelaxation(
          SCIP_CALL( SCIPallocBufferArray(scip, &startidxs[j], consdata->nvars) );
       }
 
-      createSortedEventpoints(scip, consdata, starttimes, endtimes, startindices, endindices, FALSE);
+      createSortedEventpoints(scip, consdata, starttimes, endtimes, startindices, endindices, TRUE);
 
       starttime = -INT_MAX;
 
@@ -1015,7 +1057,7 @@ SCIP_RETCODE addRelaxation(
                SCIPconsGetName(cons), starttime, endtime, energy, rowtightness[j][i]);
 
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s[%d,%d]", SCIPconsGetName(cons), starttime, endtime);
-            SCIP_CALL( createRow(scip, conshdlr, name, vars, weights, nvars, energy, SCIPconsIsLocal(cons), rowadded, consadded, cutoff) );
+            SCIP_CALL( createRow(scip, conshdlr, name, vars, weights, nvars, energy, TRUE, rowadded, consadded, cutoff) );
 
             SCIPfreeBufferArray(scip, &weights);
             SCIPfreeBufferArray(scip, &vars);
@@ -1067,10 +1109,10 @@ SCIP_RETCODE addRelaxation(
          maxenergy += weights[v];
 
          /* adjust earlier start time */
-         est = MIN(est, convertBoundToInt(scip, SCIPvarGetLbGlobal(vars[v])));
+         est = MIN(est, convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v])));
 
          /* adjust latest completion */
-         lct = MAX(lct, convertBoundToInt(scip, SCIPvarGetUbGlobal(vars[v]) + durations[v]));
+         lct = MAX(lct, convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v]) + durations[v]));
       }
 
       energy = (lct - est) * consdata->capacity;
@@ -1084,7 +1126,7 @@ SCIP_RETCODE addRelaxation(
          SCIPdebugMessage("create linear relaxation for <%s> (nvars %d) time interval [%d,%d] <= %"SCIP_LONGINT_FORMAT"\n",
             SCIPconsGetName(cons), nvars, est, lct, energy);
 
-         SCIP_CALL( createRow(scip, conshdlr, name, consdata->binvars, weights, nvars, energy, SCIPconsIsLocal(cons), rowadded, consadded, cutoff) );
+         SCIP_CALL( createRow(scip, conshdlr, name, consdata->binvars, weights, nvars, energy, TRUE, rowadded, consadded, cutoff) );
       }
 
       /* free buffer */
@@ -1131,6 +1173,8 @@ void collectActivities(
    {
       if( SCIPvarGetLbLocal(consdata->binvars[v]) > 0.5 )
       {
+         /* binary variable is fixed one */
+
          SCIPdebugMessage("collect variable <%s>[%g,%g](%d)\n",
             SCIPvarGetName(consdata->vars[v]), SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbGlobal(consdata->vars[v]), consdata->durations[v]);
 
@@ -1141,7 +1185,9 @@ void collectActivities(
 
          (*nfixedones)++;
 
-         /* check the locks on the integer start time variable to determine if its a auxiliary variable */
+         /* check the locks on the integer start time variable to determine if its a auxiliary variable (only locked by
+          * this constraint)
+          */
          if( SCIPvarGetNLocksDown(consdata->vars[v]) > (int)consdata->downlocks[v]
             || SCIPvarGetNLocksUp(consdata->vars[v]) > (int)consdata->uplocks[v] )
          {
@@ -1151,6 +1197,9 @@ void collectActivities(
       else if( SCIPvarGetUbLocal(consdata->binvars[v]) < 0.5 )
          (*nfixedzeros)++;
    }
+
+   assert(consdata->nfixedzeros == *nfixedzeros);
+   assert(consdata->nfixedones == *nfixedones);
 }
 
 /** collect all activities which are assigned to that machine in the given solution */
@@ -1164,6 +1213,8 @@ void collectSolActivities(
    int*                  durations,          /**< durations of the activities */
    int*                  demands,            /**< demands of the activities */
    int*                  nvars,              /**< pointer to store number of activities assigned to that machine */
+   int*                  nfixedones,         /**< pointer to store number of binary variables locally fixed to one */
+   int*                  nfixedzeros,        /**< pointer to store number of binary variables locally fixed to zero */
    SCIP_Bool*            auxiliary           /**< pointer to store if the integer start time variables of the assigned
                                               *   activities are auxiliary variables; that is the case if the machine
                                               *   choice constraints is the only one haveing locks on these variables */
@@ -1172,6 +1223,8 @@ void collectSolActivities(
    int v;
 
    (*nvars) = 0;
+   (*nfixedones) = 0;
+   (*nfixedzeros) = 0;
    (*auxiliary) = TRUE;
 
    /* collect all jobs which have to be processed */
@@ -1192,6 +1245,11 @@ void collectSolActivities(
             )
             (*auxiliary) = FALSE;
       }
+
+      if( SCIPvarGetLbLocal(consdata->binvars[v]) > 0.5 )
+         nfixedones++;
+      else if( SCIPvarGetUbLocal(consdata->binvars[v]) < 0.5 )
+         nfixedzeros++;
    }
 }
 
@@ -1274,6 +1332,42 @@ SCIP_RETCODE solveCumulative(
 }
 
 
+/** create a logicor constraint which ensures that the jobs related to binary variables are not assigned in the same
+ *  time to this optional cumulative constraint
+ */
+static
+SCIP_RETCODE createConflictCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< name of conflict constraint */
+   SCIP_VAR**            binvars,            /**< array of binary variables */
+   int                   nvars               /**< number of variables */
+   )
+{
+   SCIP_CONS* cons;
+   SCIP_VAR* negatedvar;
+   int v;
+
+   /* one of the jobs cannot be processed on that resource */
+   SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, name, 0, NULL,
+         TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   for( v = 0; v < nvars; ++v )
+   {
+      if( SCIPvarGetLbGlobal(binvars[v]) > 0.5 )
+         continue;
+
+      SCIP_CALL( SCIPgetNegatedVar(scip, binvars[v], &negatedvar) );
+
+      SCIP_CALL( SCIPaddCoefLogicor(scip, cons, negatedvar) );
+   }
+
+   /* add and release to constraint */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   return SCIP_OKAY;
+}
+
 /** check of the given constraint is redundant */
 static
 SCIP_RETCODE checkRedundancy(
@@ -1284,7 +1378,6 @@ SCIP_RETCODE checkRedundancy(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR** vars;
    SCIP_Bool solved;
    SCIP_Bool infeasible;
    SCIP_Bool unbounded;
@@ -1308,7 +1401,6 @@ SCIP_RETCODE checkRedundancy(
 
    consdata->triedredundant = TRUE;
 
-   vars = consdata->vars;
    nvars = consdata->nvars;
 
    /* check the locks on the integer start time variable to determine if its a auxiliary variable */
@@ -1324,52 +1416,86 @@ SCIP_RETCODE checkRedundancy(
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
 
    /* solve the cumulative condition separately */
-   SCIP_CALL( solveCumulative(scip, nvars, vars, consdata->durations, consdata->demands,
+   SCIP_CALL( solveCumulative(scip, nvars, consdata->vars, consdata->durations, consdata->demands,
          consdata->capacity, consdata->hmin, consdata->hmax, FALSE,
-         lbs, ubs, 1000LL, &solved, &infeasible, &unbounded, &error) );
+         lbs, ubs, 2000LL, &solved, &infeasible, &unbounded, &error) );
    assert(!unbounded);
 
    if( !error )
    {
       if( infeasible )
       {
-#if 1
-         SCIP_CONS* logicor;
-         SCIP_VAR* negatedvar;
+         SCIP_VAR** binvars;
+         SCIP_VAR** vars;
+         int* durations;
+         int* demands;
+         SCIP_Real* weights;
 
-         /* one of the jobs cannot be processed on that resource */
-         SCIP_CALL( SCIPcreateConsLogicor(scip, &logicor, SCIPconsGetName(cons), 0, NULL,
-               TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &binvars, nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &durations, nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &demands, nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &weights, nvars) );
 
          for( v = 0; v < nvars; ++v )
          {
-            if( SCIPvarGetLbGlobal(consdata->binvars[v]) > 0.5 )
-               continue;
+            SCIP_VAR* var;
+            int est;
+            int lst;
 
-            SCIP_CALL( SCIPgetNegatedVar(scip, consdata->binvars[v], &negatedvar) );
+            var = consdata->vars[v];
+            assert(var != NULL);
 
-            SCIP_CALL( SCIPaddCoefLogicor(scip, logicor, negatedvar) );
+            est = convertBoundToInt(scip, SCIPvarGetLbGlobal(var));
+            lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
+            weights[v] = (lst - est) / (consdata->demands[v] * consdata->durations[v]);
+
+            binvars[v] = consdata->binvars[v];
+            vars[v] = var;
+            durations[v] = consdata->durations[v];
+            demands[v] = consdata->demands[v];
+         }
+         SCIPsortRealPtrPtrIntInt(weights, (void*)binvars, (void*)vars, durations, demands, nvars);
+
+         while( nvars > 1 )
+         {
+            SCIP_CALL( solveCumulative(scip, nvars-1, vars, consdata->durations, consdata->demands, consdata->capacity, consdata->hmin, consdata->hmax, TRUE,
+                  lbs, ubs, 2000LL, &solved, &infeasible, &unbounded, &error) );
+
+            if( !infeasible )
+               break;
+
+            nvars--;
          }
 
-         SCIP_CALL( SCIPaddCons(scip, logicor) );
-         SCIP_CALL( SCIPreleaseCons(scip, &logicor) );
-#endif
+         SCIP_CALL( createConflictCons(scip, SCIPconsGetName(cons), binvars,  nvars) );
+
+         SCIPfreeBufferArray(scip, &weights);
+         SCIPfreeBufferArray(scip, &demands);
+         SCIPfreeBufferArray(scip, &durations);
+         SCIPfreeBufferArray(scip, &vars);
+         SCIPfreeBufferArray(scip, &binvars);
       }
       else if( solved )
       {
          for( v = 0; v < nvars; ++v )
          {
+            SCIP_VAR* var;
+
             /* check if variable is fixed */
             assert(lbs[v] + 0.5 > ubs[v]);
 
-            if( SCIPvarGetLbGlobal(vars[v]) + 0.5 < lbs[v] )
+            var = consdata->vars[v];
+            assert(var != NULL);
+
+            if( SCIPvarGetLbGlobal(var) + 0.5 < lbs[v] )
             {
-               SCIP_CALL( SCIPchgVarLbGlobal(scip, vars[v], lbs[v]) );
+               SCIP_CALL( SCIPchgVarLbGlobal(scip, var, lbs[v]) );
             }
 
-            if( SCIPvarGetUbGlobal(vars[v]) - 0.5 > lbs[v] )
+            if( SCIPvarGetUbGlobal(var) - 0.5 > lbs[v] )
             {
-               SCIP_CALL( SCIPchgVarUbGlobal(scip, vars[v], lbs[v]) );
+               SCIP_CALL( SCIPchgVarUbGlobal(scip, var, lbs[v]) );
             }
          }
 
@@ -1434,9 +1560,24 @@ SCIP_RETCODE solveSubproblem(
    {
       if( *cutoff && conflictanalysis )
       {
-         int v;
-#if 1
+         SCIP_Real* weights;
          SCIP_Bool infeasible;
+         int v;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &weights, nvars) );
+
+         for( v = 0; v < nvars; ++v )
+         {
+            int est;
+            int lst;
+
+            est = convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v]));
+            lst = convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v]));
+            weights[v] = (lst - est) / (demands[v] * durations[v]);
+         }
+         SCIPsortRealPtrPtrIntInt(weights, (void*)binvars, (void*)vars, durations, demands, nvars);
+
+         SCIPfreeBufferArray(scip, &weights);
 
          while( nvars > 1 )
          {
@@ -1447,7 +1588,7 @@ SCIP_RETCODE solveSubproblem(
                break;
             nvars--;
          }
-#endif
+
          /**@todo try to shrink the initial explanation */
 
          SCIP_CALL( SCIPinitConflictAnalysis(scip) );
@@ -1544,6 +1685,8 @@ SCIP_RETCODE checkCons(
    SCIP_Bool auxiliary;
    int* demands;
    int* durations;
+   int nfixedones;
+   int nfixedzeros;
    int nvars;
 
    assert(scip != NULL);
@@ -1561,7 +1704,7 @@ SCIP_RETCODE checkCons(
    SCIP_CALL( SCIPallocBufferArray(scip, &demands, consdata->nvars) );
 
    /* collect information of all activities which are assigned to that machine in the given solution */
-   collectSolActivities(scip, consdata, sol, binvars, vars, durations, demands, &nvars, &auxiliary);
+   collectSolActivities(scip, consdata, sol, binvars, vars, durations, demands, &nvars, &nfixedones, &nfixedzeros, &auxiliary);
 
    if( nvars > 0 )
    {
@@ -1575,35 +1718,6 @@ SCIP_RETCODE checkCons(
    SCIPfreeBufferArray(scip, &durations);
    SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &binvars);
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_RETCODE createConflictCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to store the created conflict constraint */
-   const char*           name,               /**< name of conflict constraint */
-   SCIP_VAR**            binvars,            /**< array of binary variables */
-   int                   nvars               /**< number of variables */
-   )
-{
-   SCIP_VAR* negatedvar;
-   int v;
-
-   /* one of the jobs cannot be processed on that resource */
-   SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, 0, NULL,
-         TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-   for( v = 0; v < nvars; ++v )
-   {
-      if( SCIPvarGetLbGlobal(binvars[v]) > 0.5 )
-         continue;
-
-      SCIP_CALL( SCIPgetNegatedVar(scip, binvars[v], &negatedvar) );
-
-      SCIP_CALL( SCIPaddCoefLogicor(scip, *cons, negatedvar) );
-   }
 
    return SCIP_OKAY;
 }
@@ -1627,6 +1741,8 @@ SCIP_RETCODE enfopsCons(
    SCIP_Bool auxiliary;
    int* demands;
    int* durations;
+   int nfixedones;
+   int nfixedzeros;
    int nvars;
 
    assert(scip != NULL);
@@ -1644,7 +1760,9 @@ SCIP_RETCODE enfopsCons(
    SCIP_CALL( SCIPallocBufferArray(scip, &demands, consdata->nvars) );
 
    /* collect information of all activities which are assigned to that machine in the given solution */
-   collectSolActivities(scip, consdata, NULL, binvars, vars, durations, demands, &nvars, &auxiliary);
+   collectSolActivities(scip, consdata, NULL, binvars, vars, durations, demands, &nvars, &nfixedones, &nfixedzeros, &auxiliary);
+
+   (*violated) = FALSE;
 
    if( nvars > 0 )
    {
@@ -1661,27 +1779,59 @@ SCIP_RETCODE enfopsCons(
          SCIP_Bool error;
          SCIP_Bool solved;
 
-         consdata->triedsolving = TRUE;
+         if( nfixedones == nvars )
+            consdata->triedsolving = TRUE;
 
          SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
 
          /* solve the cumulative condition separately */
-         SCIP_CALL( solveCumulative(scip, nvars, vars, durations, demands,
-               consdata->capacity, consdata->hmin, consdata->hmax, FALSE,
-               lbs, ubs, 1000LL, &solved, &infeasible, &unbounded, &error) );
+         SCIP_CALL( solveCumulative(scip, nvars, vars, durations, demands, consdata->capacity, consdata->hmin, consdata->hmax,
+               FALSE, lbs, ubs, 1000LL, &solved, &infeasible, &unbounded, &error) );
          assert(!unbounded);
 
          if( !error )
          {
             if( infeasible )
             {
-               SCIP_CONS* logicor;
+               SCIP_Bool strengthen;
 
-               SCIP_CALL( createConflictCons(scip, &logicor, SCIPconsGetName(cons), binvars,  nvars) );
+               strengthen = FALSE;
 
-               SCIP_CALL( SCIPaddCons(scip, logicor) );
-               SCIP_CALL( SCIPreleaseCons(scip, &logicor) );
+               if( strengthen )
+               {
+                  SCIP_Real* weights;
+                  int v;
+
+                  SCIP_CALL( SCIPallocBufferArray(scip, &weights, nvars) );
+
+                  for( v = 0; v < nvars; ++v )
+                  {
+                     int est;
+                     int lst;
+
+                     est = convertBoundToInt(scip, SCIPvarGetLbGlobal(vars[v]));
+                     lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(vars[v]));
+                     weights[v] = (lst - est) / (consdata->demands[v] * consdata->durations[v]);
+                  }
+                  SCIPsortRealPtrPtrIntInt(weights, (void*)binvars, (void*)vars, durations, demands, nvars);
+
+                  SCIPfreeBufferArray(scip, &weights);
+
+                  while( nvars > 1 && !SCIPisStopped(scip) )
+                  {
+                     SCIP_CALL( solveCumulative(scip, nvars-1, vars, durations, demands, consdata->capacity, consdata->hmin, consdata->hmax,
+                           FALSE, lbs, ubs, 1000LL, &solved, &infeasible, &unbounded, &error) );
+
+                     if( !infeasible )
+                        break;
+
+                     nvars--;
+                  }
+               }
+
+               /* create and adds a conflict constraint (logicor constraint) */
+               SCIP_CALL( createConflictCons(scip, SCIPconsGetName(cons), binvars,  nvars) );
 
                (*solfeasible) = FALSE;
                (*consadded) = TRUE;
@@ -1803,7 +1953,7 @@ SCIP_RETCODE upgradeCons(
    /* (debug) check if the counter of the constraint are correct */
    checkCounters(consdata);
 
-   if( nvars == 0 )
+   if( nvars == 0 && consdata->nfixedzeros == nvars )
    {
       SCIPdebugMessage("delete optcumulative constraint <%s> since it contains no jobs\n", SCIPconsGetName(cons));
       SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -1847,6 +1997,53 @@ SCIP_RETCODE upgradeCons(
 
       assert(!SCIPconsIsDeleted(cons));
       SCIP_CALL( SCIPdelCons(scip, cons) );
+
+      (*nupgdconss)++;
+      (*mustpropagate) = FALSE;
+   }
+   else if( consdata->nfixedones + consdata->nfixedzeros == nvars && consdata->nfixedones > 0 )
+   {
+      SCIP_CONS* cumulativecons;
+
+      SCIP_VAR** binvars;
+      SCIP_VAR** vars;
+      int* durations;
+      int* demands;
+      int nfixedzeros;
+      int nfixedones;
+
+      SCIP_Bool auxiliary;
+
+      char name[SCIP_MAXSTRLEN];
+
+      SCIPdebugMessage("upgrade optcumulative constraint <%s> to cumulative constraint (locally)\n", SCIPconsGetName(cons));
+
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_cumulative", SCIPconsGetName(cons));
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &binvars, consdata->nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &demands, consdata->nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &durations, consdata->nvars) );
+
+      /* collect all activities which are locally assigned to that machine */
+      collectActivities(consdata, binvars, vars, durations, demands, &nfixedones, &nfixedzeros, &auxiliary);
+
+      SCIP_CALL( SCIPcreateConsCumulative(scip, &cumulativecons, name, nfixedones, vars, durations, demands, consdata->capacity,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+            TRUE, SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+      SCIP_CALL( SCIPsetHminCumulative(scip, cumulativecons, consdata->hmin) );
+      SCIP_CALL( SCIPsetHmaxCumulative(scip, cumulativecons, consdata->hmax) );
+      SCIP_CALL( SCIPaddConsLocal(scip, cumulativecons, NULL) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cumulativecons) );
+
+      /* free all buffers */
+      SCIPfreeBufferArray(scip, &durations);
+      SCIPfreeBufferArray(scip, &demands);
+      SCIPfreeBufferArray(scip, &binvars);
+      SCIPfreeBufferArray(scip, &vars);
+
+      assert(!SCIPconsIsDeleted(cons));
+      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
 
       (*nupgdconss)++;
       (*mustpropagate) = FALSE;
@@ -2534,6 +2731,9 @@ SCIP_RETCODE propagateCons(
    /* (debug) check if the counter of the constraint are correct */
    checkCounters(consdata);
 
+   if( consdata->propagated && (consdata->nfixedones + consdata->nfixedzeros < consdata->nvars || consdata->triedsolving) )
+      return SCIP_OKAY;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvars, consdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &demands, consdata->nvars) );
@@ -2543,7 +2743,7 @@ SCIP_RETCODE propagateCons(
    collectActivities(consdata, binvars, vars, durations, demands, &nfixedones, &nfixedzeros, &auxiliary);
 
    /* if more than one variable is assigned to that machine propagate the cumulative condition */
-   if( nfixedones > 1 )
+   if( !consdata->propagated && nfixedones > 1 )
    {
       SCIP_Bool* explanation;
       SCIP_Bool initialized;
@@ -2585,129 +2785,174 @@ SCIP_RETCODE propagateCons(
    {
       if( nfixedzeros + nfixedones == consdata->nvars )
       {
+         /* all binary variables are fixed */
+
          if( auxiliary )
          {
+            /* we have an independent subproblems since all binary variables are fixed and the integer start time
+             * variables belonging to the binary variables which are fixed to one are only locked by this constraint
+             */
             SCIP_CALL( solveSubproblem(scip, cons, conflictanalysis, consdata, binvars, vars, durations, demands,
                   consdata->capacity, nfixedones, nfixedvars, nchgbds, ndelconss, cutoff) );
          }
       }
-      else
+      else if( !consdata->propagated && nfixedones < consdata->nvars )
       {
-         /* check if the not selected variables can be discard from the machine */
-         for( v = 0; v < consdata->nvars && !(*cutoff); ++v )
+         SCIP_PROFILE* profile;
+         int hmin;
+         int est;
+         int lct;
+         int pos;
+
+         /* create empty resource profile with infinity resource capacity */
+         SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
+
+         /* create worst case resource profile */
+         SCIP_CALL( SCIPcreateWorstCaseProfile(scip, profile, nfixedones, vars, durations, demands) );
+
+         hmin = SCIPcomputeHmin(scip, profile, consdata->capacity);
+
+         if( hmin < INT_MAX )
          {
-            SCIP_VAR* binvar;
-            SCIP_VAR* var;
-
-            binvar = consdata->binvars[v];
-            assert(binvar != NULL);
-
-            var = consdata->vars[v];
-            assert(var != NULL);
-
-            /* check if the binary choice variable is not fixed yet */
-            if( SCIPvarGetLbLocal(binvar) + 0.5 < SCIPvarGetUbLocal(binvar) )
+            /* check if the not selected variables can be discard from the machine */
+            for( v = 0; v < consdata->nvars && !(*cutoff) && !SCIPisStopped(scip) ; ++v )
             {
-               SCIP_Real lb;
-               SCIP_Real ub;
-               SCIP_Bool infeasible;
+               SCIP_VAR* binvar;
+               SCIP_VAR* var;
 
-               assert(SCIPvarGetLbLocal(binvar) < 0.5);
-               assert(SCIPvarGetUbLocal(binvar) > 0.5);
+               binvar = consdata->binvars[v];
+               assert(binvar != NULL);
 
-               /* start probing mode */
-               SCIPdebugMessage("start probing\n");
-               SCIP_CALL( SCIPstartProbing(scip) );
+               var = consdata->vars[v];
+               assert(var != NULL);
 
-               SCIP_CALL( SCIPnewProbingNode(scip) );
-
-               SCIPdebugMessage("  fix variables <%s>[%g,%g] to 1.0\n",
-                  SCIPvarGetName(binvar), SCIPvarGetLbLocal(binvar), SCIPvarGetUbLocal(binvar));
-
-               SCIP_CALL( SCIPfixVarProbing(scip, binvar, 1.0) );
-
-               SCIPdebugMessage("  run propagation\n");
-               SCIP_CALL( SCIPpropagateProbing(scip, -1, &infeasible, NULL) );
-
-               lb = SCIPvarGetLbLocal(var);
-               ub = SCIPvarGetUbLocal(var);
-
-               /* end probing mode */
-               SCIP_CALL( SCIPendProbing(scip) );
-               SCIPdebugMessage("end probing\n");
-
-               if( infeasible )
+               /* check if the binary choice variable is not fixed yet */
+               if( SCIPvarGetLbLocal(binvar) + 0.5 < SCIPvarGetUbLocal(binvar) )
                {
-                  SCIP_Bool tightened;
+                  SCIP_Real lb;
+                  SCIP_Real ub;
+                  SCIP_Bool infeasible;
 
-                  /* propagation detected infeasibility, therefore, job cannot be processed by that machine */
-                  SCIPdebugMessage("  probing detect infeasibility\n");
-                  SCIPdebugMessage("  fix variable <%s> to 0.0\n", SCIPvarGetName(binvar));
-#if 0
-                  SCIP_CALL( SCIPinferBinvarCons(scip, binvar, FALSE, cons, 0, &infeasible, &tightened) );
-#endif
-                  SCIP_CALL( SCIPtightenVarUb(scip, binvar, 0.0, FALSE, &infeasible, &tightened) );
+                  assert(SCIPvarGetLbLocal(binvar) < 0.5);
+                  assert(SCIPvarGetUbLocal(binvar) > 0.5);
+
+                  est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+                  lct = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + consdata->durations[v];
+
+                  SCIP_CALL( SCIPprofileInsertCore(profile, est, lct, consdata->demands[v], &pos, &infeasible) );
+                  assert(!infeasible);
+                  assert(pos == -1);
+
+                  hmin = SCIPcomputeHmin(scip, profile, consdata->capacity);
+
+                  SCIP_CALL( SCIPprofileDeleteCore(profile, est, lct, consdata->demands[v]) );
+
+                  if( hmin == INT_MAX )
+                     continue;
+
+                  /* start probing mode */
+                  SCIPdebugMessage("start probing\n");
+                  SCIP_CALL( SCIPstartProbing(scip) );
+
+                  SCIP_CALL( SCIPnewProbingNode(scip) );
+
+                  SCIPdebugMessage("  fix variables <%s>[%g,%g] to 1.0\n",
+                     SCIPvarGetName(binvar), SCIPvarGetLbLocal(binvar), SCIPvarGetUbLocal(binvar));
+
+                  SCIP_CALL( SCIPfixVarProbing(scip, binvar, 1.0) );
+
+                  SCIPdebugMessage("  run propagation\n");
+                  SCIP_CALL( SCIPpropagateProbing(scip, 0, &infeasible, NULL) );
+
+                  lb = SCIPvarGetLbLocal(var);
+                  ub = SCIPvarGetUbLocal(var);
+
+                  /* end probing mode */
+                  SCIP_CALL( SCIPendProbing(scip) );
+                  SCIPdebugMessage("end probing\n");
+
                   if( infeasible )
-                     (*cutoff) = TRUE;
-                  else if( tightened )
                   {
-                     (*nchgbds)++;
+                     SCIP_Bool tightened;
 
-                     /* fix integer start time variable if possible (before calling that method we have to leave the
-                      * probing mode)
+                     /* propagation detected infeasibility, therefore, job cannot be processed by that machine */
+                     SCIPdebugMessage("  probing detect infeasibility\n");
+                     SCIPdebugMessage("  fix variable <%s> to 0.0\n", SCIPvarGetName(binvar));
+
+                     /* since this bound change is dual reduction we have to avoid that this bound change is analyzed
+                      * during the conflict analysis; otherwise all optimal solution might be removed: therefore, we
+                      * SCIPtightenVarUb instead of SCIPinferBinvarCons()
                       */
-                     if( SCIPconsIsChecked(cons) )
+                     SCIP_CALL( SCIPtightenVarUb(scip, binvar, 0.0, FALSE, &infeasible, &tightened) );
+                     if( infeasible )
+                        (*cutoff) = TRUE;
+                     else if( tightened )
                      {
-                        SCIP_CALL( fixIntegerVariable(scip, var, consdata->downlocks[v], consdata->uplocks[v], nchgbds) );
+                        (*nchgbds)++;
+
+                        /* fix integer start time variable if possible (before calling that method we have to leave the
+                         * probing mode)
+                         */
+                        if( SCIPconsIsChecked(cons) )
+                        {
+                           SCIP_CALL( fixIntegerVariable(scip, var, consdata->downlocks[v], consdata->uplocks[v], nchgbds) );
+                        }
+                     }
+                  }
+                  else
+                  {
+                     SCIP_Bool tightened;
+
+                     /* probing was feasible, therefore, we can adjust the bounds of the start time variable for that job */
+                     SCIPdebugMessage("  probing stayed feasible\n");
+
+                     assert(SCIPvarGetNLocksUp(var) >= (int)consdata->uplocks[v]);
+                     if( SCIPvarGetNLocksUp(var) == (int)consdata->uplocks[v] )
+                     {
+                        SCIPdebugMessage("  variable <%s> change lower bound from <%g> to <%g>\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), lb);
+
+                        /* for this bound change there is no inference information needed since no other constraint can
+                         * use this bound change to reason something
+                         */
+                        SCIP_CALL( SCIPtightenVarLb(scip, var, lb, FALSE, &infeasible, &tightened) );
+                        assert(!infeasible);
+
+                        if( tightened )
+                           (*nchgbds)++;
+                     }
+
+                     assert(SCIPvarGetNLocksDown(var) >= (int)consdata->downlocks[v]);
+                     if( SCIPvarGetNLocksDown(var) == (int)consdata->downlocks[v] )
+                     {
+                        SCIPdebugMessage("  variable <%s> change upper bound from <%g> to <%g>\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var), ub);
+
+                        /* for this boound change there is no inference information needed since no other constraint can
+                         * use this bound change to reason something
+                         */
+                        SCIP_CALL( SCIPtightenVarUb(scip, var, ub, FALSE, &infeasible, &tightened) );
+                        assert(!infeasible);
+
+                        if( tightened )
+                           (*nchgbds)++;
                      }
                   }
                }
-               else
+               else if( SCIPvarGetUbLocal(binvar) < 0.5 && SCIPconsIsChecked(cons) )
                {
-                  SCIP_Bool tightened;
-
-                  /* probing was feasible, therefore, we can adjust the bounds of the start time variable for that job */
-                  SCIPdebugMessage("  probing stayed feasible\n");
-
-                  assert(SCIPvarGetNLocksUp(var) >= (int)consdata->uplocks[v]);
-                  if( SCIPvarGetNLocksUp(var) == (int)consdata->uplocks[v] )
-                  {
-                     SCIPdebugMessage("  variable <%s> change lower bound from <%g> to <%g>\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), lb);
-
-                     /* for this bound change there is no inference information needed since no other constraint can
-                      * use this bound change to reason something
-                      */
-                     SCIP_CALL( SCIPtightenVarLb(scip, var, lb, FALSE, &infeasible, &tightened) );
-                     assert(!infeasible);
-
-                     if( tightened )
-                        (*nchgbds)++;
-                  }
-
-                  assert(SCIPvarGetNLocksDown(var) >= (int)consdata->downlocks[v]);
-                  if( SCIPvarGetNLocksDown(var) == (int)consdata->downlocks[v] )
-                  {
-                     SCIPdebugMessage("  variable <%s> change upper bound from <%g> to <%g>\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var), ub);
-
-                     /* for this boound change there is no inference information needed since no other constraint can
-                      * use this bound change to reason something
-                      */
-                     SCIP_CALL( SCIPtightenVarUb(scip, var, ub, FALSE, &infeasible, &tightened) );
-                     assert(!infeasible);
-
-                     if( tightened )
-                        (*nchgbds)++;
-                  }
+                  /* if the binary choice variable is fixed to zero we can try to perform a dual reductions */
+                  SCIP_CALL( fixIntegerVariable(scip, var, consdata->downlocks[v], consdata->uplocks[v], nchgbds) );
                }
             }
-            else if( SCIPvarGetUbLocal(binvar) < 0.5 && SCIPconsIsChecked(cons) )
-            {
-               /* if the binary choice variable is fixed to zero we can try to perform a dual reductions */
-               SCIP_CALL( fixIntegerVariable(scip, var, consdata->downlocks[v], consdata->uplocks[v], nchgbds) );
-            }
          }
+
+         /* free worst case profile */
+         SCIPprofileFree(&profile);
       }
    }
+
+   /* mark constraint to be propagated */
+   if( !SCIPinProbing(scip) )
+      consdata->propagated = TRUE;
 
    /* free all buffers */
    SCIPfreeBufferArray(scip, &durations);
@@ -2896,6 +3141,8 @@ SCIP_DECL_CONSTRANS(consTransOptcumulative)
 
    assert(targetdata->nglbfixedones == 0);
    assert(targetdata->nglbfixedzeros == 0);
+   assert(targetdata->nfixedones == 0);
+   assert(targetdata->nfixedzeros == 0);
 
    /* catch bound change events of variables */
    SCIP_CALL( catchAllEvents(scip, *targetcons, conshdlrdata->eventhdlrbinvars, conshdlrdata->eventhdlrintvars) );
@@ -3004,6 +3251,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOptcumulative)
       SCIP_CALL( SCIPcreateCurrentSol(scip, &trysol, NULL) );
    }
 
+   /* check all constraints even if one is dectected be violated */
    for( c = 0; c < nconss && (!violated || solfeasible); ++c )
    {
       SCIP_CALL( enfopsCons(scip, conss[c], trysol, &consviolated, &consadded, &solfeasible) );
@@ -3673,9 +3921,23 @@ SCIP_DECL_EVENTEXEC(eventExecOptcumulativeBinvars)
    case SCIP_EVENTTYPE_GUBCHANGED:
       consdata->nglbfixedzeros++;
       break;
+   case SCIP_EVENTTYPE_LBTIGHTENED:
+      consdata->nfixedones++;
+      consdata->propagated = FALSE;
+      break;
+   case SCIP_EVENTTYPE_UBTIGHTENED:
+      consdata->nfixedzeros++;
+      break;
    case SCIP_EVENTTYPE_LBRELAXED:
-   case SCIP_EVENTTYPE_UBRELAXED:
+      consdata->nfixedones--;
       consdata->triedsolving = FALSE;
+      break;
+   case SCIP_EVENTTYPE_UBRELAXED:
+      consdata->nfixedzeros--;
+      consdata->triedsolving = FALSE;
+
+      if( !SCIPinProbing(scip) )
+         consdata->propagated = FALSE;
       break;
    default:
       SCIPerrorMessage("invalid event type %x\n", eventtype);
@@ -3688,15 +3950,25 @@ SCIP_DECL_EVENTEXEC(eventExecOptcumulativeBinvars)
 static
 SCIP_DECL_EVENTEXEC(eventExecOptcumulativeIntvars)
 {  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_INTVARS_NAME) == 0);
    assert(event != NULL);
 
-   if( SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING )
-   {
-      SCIP_CALL( SCIPrestartSolve(scip) );
-   }
+   /* collect event information */
+   consdata = (SCIP_CONSDATA*)eventdata;
+   assert(consdata != NULL);
+
+   /* a bound of a start time variable was tightened; therefore we mark to constraint to create a new local linear
+    * relaxation
+    */
+   if( consdata->nfixedzeros + consdata->nfixedones < consdata->nvars )
+      consdata->relaxadded = FALSE;
+
+   if( !SCIPinProbing(scip) )
+      consdata->propagated = FALSE;
 
    return SCIP_OKAY;
 }
