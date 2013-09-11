@@ -7210,7 +7210,9 @@ SCIP_RETCODE SCIPconsActive(
 
    /* call external method */
    if( conshdlr->consactive != NULL )
-   SCIP_CALL( conshdlr->consactive(set->scip, conshdlr, cons) );
+   {
+      SCIP_CALL( conshdlr->consactive(set->scip, conshdlr, cons) );
+   }
 
    return SCIP_OKAY;
 }
@@ -7232,7 +7234,9 @@ SCIP_RETCODE SCIPconsDeactive(
 
    /* call external method */
    if( conshdlr->consdeactive != NULL )
-   SCIP_CALL( conshdlr->consdeactive(set->scip, conshdlr, cons) );
+   {
+      SCIP_CALL( conshdlr->consdeactive(set->scip, conshdlr, cons) );
+   }
 
    return SCIP_OKAY;
 }
