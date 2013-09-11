@@ -339,24 +339,32 @@ void SCIPstatUpdatePrimalDualIntegral(
    {
       /* get value in original space for gap calculation */
       primalbound = SCIPprobExternObjval(transprob, origprob, set, upperbound);
+
+      if( SCIPsetIsZero(set, primalbound) )
+         primalbound = 0.0;
    }
    else
    {
       /* no new upper bound: use stored values from last update */
       upperbound = stat->lastupperbound;
       primalbound = stat->lastprimalbound;
+      assert(SCIPsetIsZero(set, primalbound) == (primalbound == 0.0)); /*lint !e777*/
    }
 
    if( !SCIPsetIsInfinity(set, -lowerbound) ) /*lint !e777*/
    {
       /* get value in original space for gap calculation */
       dualbound = SCIPprobExternObjval(transprob, origprob, set, lowerbound);
+
+      if( SCIPsetIsZero(set, dualbound) )
+         dualbound = 0.0;
    }
    else
    {
       /* no new lower bound: use stored values from last update */
       lowerbound = stat->lastlowerbound;
       dualbound = stat->lastdualbound;
+      assert(SCIPsetIsZero(set, dualbound) == (dualbound == 0.0)); /*lint !e777*/
    }
 
    if( primalbound == SCIP_UNKNOWN || dualbound == SCIP_UNKNOWN ) /*lint !e777*/
@@ -367,7 +375,7 @@ void SCIPstatUpdatePrimalDualIntegral(
       currentgap = 0.0;
    }
    /* the gap is 100.0 if primal and dualbound have different signs */
-   else if( primalbound * dualbound < 0 )
+   else if( primalbound * dualbound < 0 || primalbound == 0.0 || dualbound == 0.0 ) /*lint !e777*/
    {
       currentgap = 100.0;
    }
