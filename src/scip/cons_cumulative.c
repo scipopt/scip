@@ -3140,6 +3140,11 @@ SCIP_RETCODE respropCumulativeCondition(
          /* get the inference peak that the time point which lead to the that propagtion */
          inferpeak = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE)) + inferduration;
          relaxedpeak = convertBoundToInt(scip, relaxedbd) + inferduration;
+
+         /* make sure that the relaxed peak is part of the effective horizon */
+         relaxedpeak = MIN(relaxedpeak, hmax-1);
+         assert(relaxedpeak >= hmin);
+
          assert(relaxedpeak >= inferpeak);
       }
       else
@@ -3153,6 +3158,11 @@ SCIP_RETCODE respropCumulativeCondition(
          /* get the time interval where the job could not be scheduled */
          inferpeak = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE)) - 1;
          relaxedpeak = convertBoundToInt(scip, relaxedbd) - 1;
+
+         /* make sure that the relaxed peak is part of the effective horizon */
+         relaxedpeak = MAX(relaxedpeak, hmin);
+         assert(relaxedpeak < hmax);
+
          assert(relaxedpeak <= inferpeak);
       }
 
