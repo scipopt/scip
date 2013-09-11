@@ -4622,8 +4622,24 @@ SCIP_RETCODE propagateUbTTEF(
    int minavailable;
    int totalenergy;
    int nests;
+   int est;
+   int lct;
    int end;
    int v;
+
+   est = INT_MAX;
+   lct = INT_MIN;
+
+   /* compute earliest start and latest completion time of all jobs */
+   for( v = 0; v < nvars; ++v )
+   {
+      est = MIN(est, convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v])));
+      lct = MAX(lct, convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v])) + durations[v]);
+   }
+
+   /* adjust the effective time horizon */
+   hmin = MAX(hmin, est);
+   hmax = MIN(hmax, lct);
 
    end = hmax + 1;
    coreEnergyAfterEnd = -1;
@@ -4647,7 +4663,6 @@ SCIP_RETCODE propagateUbTTEF(
       int minbegin;
       int lbenergy;
       int lbcand;
-      int lct;
       int i;
 
       lct = lcts[v];
@@ -4717,7 +4732,6 @@ SCIP_RETCODE propagateUbTTEF(
          int demand;
          int begin;
          int idx;
-         int est;
          int lst;
 
          idx = perm[i];
@@ -4956,6 +4970,8 @@ SCIP_RETCODE propagateLbTTEF(
    int totalenergy;
    int nlcts;
    int begin;
+   int minest;
+   int maxlct;
    int v;
 
    if( *cutoff )
@@ -4963,6 +4979,20 @@ SCIP_RETCODE propagateLbTTEF(
 
    begin = hmin - 1;
    coreEnergyAfterStart = -1;
+
+   minest = INT_MAX;
+   maxlct = INT_MIN;
+
+   /* compute earliest start and latest completion time of all jobs */
+   for( v = 0; v < nvars; ++v )
+   {
+      minest = MIN(minest, convertBoundToInt(scip, SCIPvarGetLbLocal(vars[v])));
+      maxlct = MAX(maxlct, convertBoundToInt(scip, SCIPvarGetUbLocal(vars[v])) + durations[v]);
+   }
+
+   /* adjust the effective time horizon */
+   hmin = MAX(hmin, minest);
+   hmax = MIN(hmax, maxlct);
 
    maxavailable = (hmax - hmin) * capacity;
    minavailable = maxavailable;
