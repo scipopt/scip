@@ -47,7 +47,7 @@
 #define DEFAULT_MIP              FALSE  /**< create a MIP formulation */
 #define DEFAULT_INITIAL           TRUE  /**< should model constraints be in initial LP? */
 #define DEFAULT_CIP               TRUE  /**< create a CIP formulation */
-#define DEFAULT_RELAXATION           0  /**< which relaxation should be added to the MIP model (0: none; 1: rectangle; 2: interval */
+#define DEFAULT_RELAXATION           2  /**< which relaxation should be added to the MIP model (0: none; 1: rectangle; 2: interval */
 
 static const char delimchars[] = " \f\n\r\t\v";
 
