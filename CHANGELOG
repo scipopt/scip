@@ -52,6 +52,7 @@ fixed bugs:
 - fixed bug that duplicate solutions stopped copying of solutions to original solution candidate store
 - forbid branching on variables with huge bounds; such huge values cannot be enumerated with fixed precision
   floating point arithmetics
+- fixed bug in backward propagation of linear expressions in expression graph
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
