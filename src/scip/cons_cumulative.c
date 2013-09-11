@@ -1312,9 +1312,6 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScip)
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
-   /* forbid recursive call of heuristics and separators solving subMIPs */
-   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
-
    /* solve single cumulative constraint by branch and bound */
    retcode = SCIPsolve(subscip);
 
@@ -1342,6 +1339,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScip)
          SCIP_Real solval;
 
          sol = SCIPgetBestSol(subscip);
+         assert(sol != NULL);
 
          for( v = 0; v < njobs; ++v )
          {
@@ -1383,7 +1381,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScip)
       SCIP_CALL( SCIPreleaseVar(subscip, &subvars[v]) );
    }
 
-   SCIPfreeMemoryArray(scip, &subvars);
+   SCIPfreeMemoryArray(subscip, &subvars);
 
    SCIP_CALL( SCIPfree(&subscip) );
 
