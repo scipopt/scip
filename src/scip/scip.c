@@ -31392,7 +31392,7 @@ SCIP_RETCODE SCIPaddSol(
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_FREETRANS:
       assert( SCIPsolIsOriginal(sol) );
-      SCIP_CALL( SCIPprimalAddOrigSol(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, sol, stored) );
+      SCIP_CALL( SCIPprimalAddOrigSol(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMED:
@@ -31462,7 +31462,7 @@ SCIP_RETCODE SCIPaddSolFree(
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_FREETRANS:
       assert( SCIPsolIsOriginal(*sol) );
-      SCIP_CALL( SCIPprimalAddOrigSolFree(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, sol, stored) );
+      SCIP_CALL( SCIPprimalAddOrigSolFree(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMED:
