@@ -3825,6 +3825,9 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   conshdlrdata->nlastcliques = 0;
+   conshdlrdata->nlastimpls = 0;
+
    /* catch all variable event for deleted variables, which is only used in presolving */
    for( c = nconss - 1; c >= 0; --c )
    {
