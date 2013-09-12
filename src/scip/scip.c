@@ -12056,6 +12056,8 @@ SCIP_RETCODE presolveRound(
    aborted = FALSE;
    lastranpresol = FALSE;
 
+   SCIPdebugMessage("starting presolving round %d, onlydelayed = %u\n", scip->stat->npresolrounds, onlydelayed);
+
    /* call included presolvers with nonnegative priority */
    for( i = 0, j = 0; !(*unbounded) && !(*infeasible) && !aborted && (i < scip->set->npresols || j < scip->set->nprops);  )
    {
@@ -12446,6 +12448,8 @@ SCIP_RETCODE presolve(
       /* check, if we should abort presolving due to not enough changes in the last round */
       finished = SCIPisPresolveFinished(scip);
 
+      SCIPdebugMessage("presolving round %d (onlydelayed = %u) return with delayed = %u, unbounded = %u, infeasible = %u, finished = %u\n", scip->stat->npresolrounds, FALSE, delayed, *unbounded, *infeasible, finished);
+
       /* check whether problem is infeasible or unbounded */
       finished = finished || *unbounded || *infeasible;
 
@@ -12457,6 +12461,8 @@ SCIP_RETCODE presolve(
 
          /* check again, if we should abort presolving due to not enough changes in the last round */
          finished = SCIPisPresolveFinished(scip);
+
+         SCIPdebugMessage("presolving round %d (onlydelayed = %u) return with delayed = %u, unbounded = %u, infeasible = %u, finished = %u\n", scip->stat->npresolrounds, TRUE, delayed, *unbounded, *infeasible, finished);
 
          /* check whether problem is infeasible or unbounded */
          finished = finished || *unbounded || *infeasible;
