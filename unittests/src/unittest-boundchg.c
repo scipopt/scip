@@ -17,14 +17,24 @@
  * @brief  unit test for checking bound changes
  * @author Marc Pfetsch
  *
- * This test is based on the observation that CPLEX does not allow to make arbitrarily small bound changes.
- * It can be used for debugging.
+ * We perform two tests:
+ * - We change the bounds by a very small value and check whether this has an effect on the LP solver interface.
+ * - We fix a variable to infinity.
+ *
+ * In both cases it is unclear what happens. Also LP-solvers might react differently. CPLEX simply ignores small bound changes.
+ *
+ * For fixing variables to infinity the following variants happen:
+ * - SoPlex allows fixing of variables to infinity.
+ * - Gurobi returns an error.
+ * - CPLEX simply ignores such changes.
+ *
+ * These tests can be used for debugging or checking the behavior of LP-solvers.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <scip/scip.h>
-#include <scip/scipdefplugins.h>
+#include <scip/lpi.h>
 
 
 /** run unittest */
@@ -49,12 +59,12 @@ SCIP_RETCODE runUnittest(void)
    /* add one column */
    SCIP_CALL( SCIPlpiAddCols(lpi, 1, &obj, &lb, &ub, NULL, 0, NULL, NULL, NULL) );
 
-   /* change bound */
+   /* change bound to small value */
    lb = 1e-11;
    ub = 1.0 - 1e-11;
    SCIP_CALL( SCIPlpiChgBounds(lpi, 1, &ind, &lb, &ub) );
 
-   /* get bounds */
+   /* get bounds and compare */
    SCIP_CALL( SCIPlpiGetBounds(lpi, 0, 0, &lbnew, &ubnew) );
 
    if ( fabs(lb - lbnew) > 1e-6 )
@@ -66,6 +76,26 @@ SCIP_RETCODE runUnittest(void)
    if ( fabs(ub - ubnew) > 1e-6 )
    {
       SCIPerrorMessage("Violation of upper bounds: %g != %g\n", ub, ubnew);
+      return SCIP_ERROR;
+   }
+
+   /* fix variables to infinity */
+   lb = SCIPlpiInfinity(lpi);
+   ub = SCIPlpiInfinity(lpi);
+   SCIP_CALL( SCIPlpiChgBounds(lpi, 1, &ind, &lb, &ub) );
+
+   /* get bounds and compare */
+   SCIP_CALL( SCIPlpiGetBounds(lpi, 0, 0, &lbnew, &ubnew) );
+
+   if ( ! SCIPlpiIsInfinity(lpi, ubnew) )
+   {
+      SCIPerrorMessage("Could not set upper bound to infinity.\n");
+      return SCIP_ERROR;
+   }
+
+   if ( ! SCIPlpiIsInfinity(lpi, lbnew) )
+   {
+      SCIPerrorMessage("Could not set lower bound to infinity.\n");
       return SCIP_ERROR;
    }
 
