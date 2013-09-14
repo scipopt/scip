@@ -15405,9 +15405,9 @@ SCIP_Bool SCIPareSolsEqual(
  */
 EXTERN
 SCIP_RETCODE SCIPadjustImplicitSolVals(
-   SCIP*                 scip,               /** SCIP data structure */
-   SCIP_SOL*             sol,                /** primal CIP solution */
-   SCIP_Bool             uselprows           /** should LP row information be considered for none-objective variables */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             uselprows           /**< should LP row information be considered for none-objective variables */
    );
 
 /** outputs non-zero variables of solution in original problem space to the given file stream

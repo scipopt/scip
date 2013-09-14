@@ -1278,11 +1278,11 @@ SCIP_RETCODE consdataFixOperandsOne(
  *
  *  Since the resultant is fixed to zero the AND constraint collapses to linear constraint of the form:
  *
- *  - \sum_{i=0}^{n-1} v_i <= n-1
+ *  - \f$\sum_{i=0}^{n-1} v_i \leq n-1\f$
  *
  *  This can be transformed into a logicor constraint of the form
  *
- *  - \sum_{i=0}^{n-1} ~v_i >= 1
+ *  - \f$\sum_{i=0}^{n-1} ~v_i \geq 1\f$
  */
 static
 SCIP_RETCODE consdataLinearize(

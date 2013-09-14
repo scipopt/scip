@@ -2345,16 +2345,19 @@ SCIP_RETCODE readNonlinearExprs(
 
 
 /** read sos1 and sos2 constraints
- * sos constraints are expected to be given as a node of <instanceData> in the following way:
- *     <specialOrderedSets numberOfSpecialOrderedSets="1">
+ *
+ *  sos constraints are expected to be given as a node of \<instanceData\> in the following way:
+ *    @code
+ *    <specialOrderedSets numberOfSpecialOrderedSets="1">
  *       <sos numberOfVar="2" order="2">
  *           <var idx="1"></var>
  *           <var idx="2"></var>
  *       </sos>
- *   </specialOrderedSets>
- *   Weights are determined by the order in which the variables are given
- * */
-
+ *    </specialOrderedSets>
+ *    @endcode
+ * Weights are determined by the order in which the variables are given
+ *
+ */
 static
 SCIP_RETCODE readSOScons(
    SCIP*                 scip,               /**< SCIP data structure */

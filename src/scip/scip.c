@@ -30718,9 +30718,9 @@ SCIP_Bool SCIPareSolsEqual(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_RETCODE SCIPadjustImplicitSolVals(
-   SCIP*                 scip,               /** SCIP data structure */
-   SCIP_SOL*             sol,                /** primal CIP solution */
-   SCIP_Bool             uselprows           /** should LP row information be considered for none-objective variables */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             uselprows           /**< should LP row information be considered for none-objective variables */
    )
 {
    SCIP_VAR** vars;
