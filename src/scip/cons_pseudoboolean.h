@@ -195,10 +195,13 @@ SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
 
-/** @Note: you can only add a coefficient if the special type of linear constraint won't changed */
-/** @todo: if adding a coefficient would change the type of the special linear constraint, we need to erase it and
- *         create a new linear constraint */
-/** adds linear term pseudo boolean constraint (if it is not zero) */
+/** adds linear term pseudo boolean constraint (if it is not zero)
+ *
+ * @note you can only add a coefficient if the special type of linear constraint won't changed
+ *
+ * @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
+ *       create a new linear constraint
+ */
 EXTERN
 SCIP_RETCODE SCIPaddCoefPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -207,10 +210,13 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
    SCIP_Real const       val                 /**< coefficient of constraint entry */
    );
 
-/** @Note: you can only add a coefficient if the special type of linear constraint won't changed */
-/** @todo: if adding a coefficient would change the type of the special linear constraint, we need to erase it and
- *         create a new linear constraint */
-/** adds nonlinear term to pseudo boolean constraint (if it is not zero) */
+/** adds nonlinear term to pseudo boolean constraint (if it is not zero)
+ *
+ * @note you can only add a coefficient if the special type of linear constraint won't changed
+ *
+ * @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
+ *       create a new linear constraint
+ */
 EXTERN
 SCIP_RETCODE SCIPaddTermPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -277,10 +283,13 @@ int SCIPgetNAndsPseudoboolean(
    SCIP_CONS*const       cons                /**< pseudoboolean constraint */
    );
 
-/** @Note: you can only changed the left hand side if the special type of linear constraint won't changed */
-/** @todo: if changing the left hand side would change the type of the special linear constraint, we need to erase it
- *         and create a new linear constraint */
-/** changes left hand side of pseudoboolean constraint */
+/** changes left hand side of pseudoboolean constraint
+ *
+ * @note you can only change the left hand side if the special type of linear constraint won't changed
+ *
+ * @todo if changing the left hand side would change the type of the special linear constraint, we need to erase it
+ *       and create a new linear constraint
+ */
 EXTERN
 SCIP_RETCODE SCIPchgLhsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -288,10 +297,13 @@ SCIP_RETCODE SCIPchgLhsPseudoboolean(
    SCIP_Real const       lhs                 /**< new left hand side */
    );
 
-/** @Note: you can only changed the right hand side if the special type of linear constraint won't changed */
-/** @todo: if changing the right hand side would change the type of the special linear constraint, we need to erase it
- *         and create a new linear constraint */
-/** changes right hand side of pseudoboolean constraint */
+/** changes right hand side of pseudoboolean constraint
+ *
+ * @note you can only change the right hand side if the special type of linear constraint won't changed
+ *
+ * @todo if changing the right hand side would change the type of the special linear constraint, we need to erase it
+ *       and create a new linear constraint
+ */
 EXTERN
 SCIP_RETCODE SCIPchgRhsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */

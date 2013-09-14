@@ -72,39 +72,39 @@
 #define HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS 131101 /**< minimal size of hash table in and constraint tables */
 
 
-/*       - create special linear(knapsack, setppc, logicor, (eqknapsack)) and and-constraints with check flags FALSE, to
- *         get smaller amount of locks on the term variables, do all presolving ...?! in these constraint handlers
+/* - create special linear(knapsack, setppc, logicor, (eqknapsack)) and and-constraints with check flags FALSE, to
+ *   get smaller amount of locks on the term variables, do all presolving ...?! in these constraint handlers
  *
- *       - do the checking here, lock and-resultants in both directions and all and-variables according to their
- *         coefficients and sides of the constraint, @Note: this only works if the and-resultant has no objective
- *         cofficient, otherwise we need to lock variables also in both directions
+ * - do the checking here, lock and-resultants in both directions and all and-variables according to their
+ *   coefficients and sides of the constraint,
+ *   @note this only works if the and-resultant has no objective cofficient, otherwise we need to lock variables also in both directions
  *
- *       - need to keep and constraint pointer for special propagations like if two ands are due to their variables in
- *         one clique, add this cliques of and-resultants
+ * - need to keep and constraint pointer for special propagations like if two ands are due to their variables in
+ *   one clique, add this cliques of and-resultants
  *
- *       - do special presolving like on instance :
+ * - do special presolving like on instance :
  * check/IP/PseudoBoolean/normalized-PB07/OPT-SMALLINT-NLC/submittedPB07/manquinho/bsg/normalized-bsg_1000_25_1.opb.gz
  *
- *         there exist constraint like:        1 x1 x2 + 1 x1 x3 + 1 x1 x4 + 1 x1 x5 <= 1 ;
- *         which "equals" a linear constraint: 3 x1 + x2 + x3 + x4 + x5 <= 4 ;
+ *  there exist constraint like:        1 x1 x2 + 1 x1 x3 + 1 x1 x4 + 1 x1 x5 <= 1 ;
+ *  which "equals" a linear constraint: 3 x1 + x2 + x3 + x4 + x5 <= 4 ;
  *
- *         in more general terms:                     1 x1 x2 x3 x4 + 1 x1 x2 x5 x6 x7 + 1 x1 x2 x8 x9 <= 1 ;
- *         which "equals" a pseudoboolean constraint: 2 x1 + 2 x2 + 1 x3 x4 + 1 x5 x6 x7 + 1 x8 x9 <= 5 ;
+ *  in more general terms:                     1 x1 x2 x3 x4 + 1 x1 x2 x5 x6 x7 + 1 x1 x2 x8 x9 <= 1 ;
+ *  which "equals" a pseudoboolean constraint: 2 x1 + 2 x2 + 1 x3 x4 + 1 x5 x6 x7 + 1 x8 x9 <= 5 ;
  *
- *         in an even more general terms:             5 x1 x2 x3 x4 + 1 x1 x2 x5 x6 x7 + 1 x1 x2 x8 x9 <= 6 ;
- *                   equals(should the knapsack do)   1 x1 x2 x3 x4 + 1 x1 x2 x5 x6 x7 + 1 x1 x2 x8 x9 <= 2 ;
- *         which "equals" a pseudoboolean constraint: 2 x1 + 2 x2 + 1 x3 x4 + 1 x5 x6 x7 + 1 x8 x9 <= 6 ;
- *         (         without knapsack                 7 x1 + 7 x2 + 5 x3 x4 + 1 x5 x6 x7 + 1 x8 x9 <= 20 ; )
+ *  in an even more general terms:             5 x1 x2 x3 x4 + 1 x1 x2 x5 x6 x7 + 1 x1 x2 x8 x9 <= 6 ;
+ *            equals(should the knapsack do)   1 x1 x2 x3 x4 + 1 x1 x2 x5 x6 x7 + 1 x1 x2 x8 x9 <= 2 ;
+ *  which "equals" a pseudoboolean constraint: 2 x1 + 2 x2 + 1 x3 x4 + 1 x5 x6 x7 + 1 x8 x9 <= 6 ;
+ *  (         without knapsack                 7 x1 + 7 x2 + 5 x3 x4 + 1 x5 x6 x7 + 1 x8 x9 <= 20 ; )
  *
- *         another special case :                     1 x1 x2 x3 + 1 x1 x2 x4 + 1 x5 x6 <= 1 ;
- *         which "equals" a pseudoboolean constraint: 2 x1 + 2 x2 + 1 x3 + 1 x4 + 1 x5 x6 <= 5 ;
- *         which "equals" a pseudoboolean constraint: 4 x1 + 4 x2 + 2 x3 + 2 x4 + 1 x5 + 1 x6 <= 10 ;
+ *  another special case :                     1 x1 x2 x3 + 1 x1 x2 x4 + 1 x5 x6 <= 1 ;
+ *  which "equals" a pseudoboolean constraint: 2 x1 + 2 x2 + 1 x3 + 1 x4 + 1 x5 x6 <= 5 ;
+ *  which "equals" a pseudoboolean constraint: 4 x1 + 4 x2 + 2 x3 + 2 x4 + 1 x5 + 1 x6 <= 10 ;
  *
- *         another special case :                     1 x1 x2 + 1 x1 x3 + 2 x4 x5 <= 3 ;
- *         which "equals" a pseudoboolean constraint: 2 x1 + 1 x2 + 1 x3 + 2 x4 x5 <= 5 ;
- *         which "equals" a pseudoboolean constraint: 2 x1 + 1 x2 + 1 x3 + 1 x4 + 1 x5 <= 5 ;
+ *  another special case :                     1 x1 x2 + 1 x1 x3 + 2 x4 x5 <= 3 ;
+ *  which "equals" a pseudoboolean constraint: 2 x1 + 1 x2 + 1 x3 + 2 x4 x5 <= 5 ;
+ *  which "equals" a pseudoboolean constraint: 2 x1 + 1 x2 + 1 x3 + 1 x4 + 1 x5 <= 5 ;
  */
-/* TODO  - in and-constraint better count nfixed zeros in both directions and maybe nfixedones for better propagation
+/* @todo - in and-constraint better count nfixed zeros in both directions and maybe nfixedones for better propagation
  *
  *       - do better conflict analysis by choosing the earliest fixed variable which led to a conflict instead of maybe
  *         best coefficient or create more conflicts by using all to zero fixed variables one by one
@@ -797,8 +797,8 @@ SCIP_RETCODE getLinVarsAndAndRess(
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->hashmap != NULL);
 
-   /* @Note: it is necessary that the linear constraint is merged (not needed for negated variables) and sorted after
-    *        indices
+   /* @note it is necessary that the linear constraint is merged (not needed for negated variables) and sorted after
+    *       indices
     */
 
 #ifndef NDEBUG
@@ -3107,7 +3107,7 @@ SCIP_RETCODE copyConsPseudoboolean(
       {
          assert(targetlincons != NULL);
          assert(SCIPconsGetHdlr(targetlincons) != NULL);
-         /* @NOTE: due to copying special linear constraints, now leads only to simple linear constraints, we check that
+         /* @note  due to copying special linear constraints, now leads only to simple linear constraints, we check that
           *        our target constraint handler is the same as our source constraint handler of the linear constraint,
           *        if not copying was not valid
           */
@@ -4364,10 +4364,9 @@ SCIP_RETCODE correctConshdlrdata(
 	 looseorcolumn = (varstatus == SCIP_VARSTATUS_LOOSE || varstatus == SCIP_VARSTATUS_COLUMN);
 
 #if 1
-	 /* @note: due to aggregations or fixings the resultant may need to be propagated later on, so we can only
+	 /* @note  due to aggregations or fixings the resultant may need to be propagated later on, so we can only
 	  *        delete the and-constraint if the resultant is of column or loose status
-	  *
-	  *        @todo: and is not an active variable of another (multi-)aggregated/negated variable
+	  *        and is not an active variable of another (multi-)aggregated/negated variable
 	  */
 	 if( looseorcolumn )
 	 {
@@ -4603,10 +4602,9 @@ SCIP_RETCODE updateConsanddataUses(
 	 looseorcolumn = (varstatus == SCIP_VARSTATUS_LOOSE || varstatus == SCIP_VARSTATUS_COLUMN);
 
 #if 1
-	 /* @note: due to aggregations or fixings the resultant may need to be propagated later on, so we can only
+	 /* @note  due to aggregations or fixings the resultant may need to be propagated later on, so we can only
 	  *        delete the and-constraint if the resultant is of column or loose status
-	  *
-	  *        @todo: and is not an active variable of another (multi-)aggregated/negated variable
+          *        and is not an active variable of another (multi-)aggregated/negated variable
 	  */
 	 if( looseorcolumn )
 	 {
@@ -4656,10 +4654,9 @@ SCIP_RETCODE updateConsanddataUses(
 #endif
 
 #if 0
-	 /* @note: due to aggregations or fixings the resultant may need to be propagated later on, so we can only
+	 /* @note  due to aggregations or fixings the resultant may need to be propagated later on, so we can only
 	  *        delete the and-constraint if the resultant is of column or loose status
-	  *
-	  *        @todo: and is not an active variable of another (multi-)aggregated/negated variable
+	  *        and is not an active variable of another (multi-)aggregated/negated variable
 	  */
 	 if( looseorcolumn )
 	 {
@@ -4868,8 +4865,10 @@ SCIP_RETCODE checkSolution(
    return SCIP_OKAY;
 }
 
-/* try upgrading pseudoboolean linear constraint to an XOR constraint and/or remove possible and-constraints */
-/* @note that an XOR(x_1,..,x_n) = 1 <=> XOR(x1,..,~x_j,..,x_n) = 0, for j \in {1,..,n}, which is not yet checked while trying to upgrade */
+/* try upgrading pseudoboolean linear constraint to an XOR constraint and/or remove possible and-constraints
+ *
+ * @note An XOR(x_1,..,x_n) = 1 <=> XOR(x1,..,~x_j,..,x_n) = 0, for j \in {1,..,n}, which is not yet checked while trying to upgrade
+ */
 static
 SCIP_RETCODE tryUpgradingXor(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -8863,10 +8862,13 @@ SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
    return SCIP_OKAY;
 }
 
-/** @Note: you can only add a coefficient if the special type of linear constraint won't changed */
-/** @todo: if adding a coefficient would change the type of the special linear constraint, we need to erase it and
- *         create a new linear constraint */
-/** adds a variable to the pseudo boolean constraint (if it is not zero) */
+/** adds a variable to the pseudo boolean constraint (if it is not zero)
+ *
+ * @note  you can only add a coefficient if the special type of linear constraint won't changed
+ *
+ * @todo  if adding a coefficient would change the type of the special linear constraint, we need to erase it and
+ *         create a new linear constraint
+ */
 SCIP_RETCODE SCIPaddCoefPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< constraint data */
@@ -8937,11 +8939,13 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
    return SCIP_OKAY;
 }
 
-
-/** @Note: you can only add a coefficient if the special type of linear constraint won't changed */
-/** @todo: if adding a coefficient would change the type of the special linear constraint, we need to erase it and
- *         create a new linear constraint */
-/** adds nonlinear term to pseudo boolean constraint (if it is not zero) */
+/** adds nonlinear term to pseudo boolean constraint (if it is not zero)
+ *
+ * @note  you can only add a coefficient if the special type of linear constraint won't changed
+ *
+ * @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
+ *         create a new linear constraint
+ */
 SCIP_RETCODE SCIPaddTermPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< pseudoboolean constraint */
@@ -9210,10 +9214,13 @@ int SCIPgetNAndsPseudoboolean(
    return consdata->nconsanddatas;
 }
 
-/** @Note: you can only changed the left hand side if the special type of linear constraint won't changed */
-/** @todo: if changing the left hand side would change the type of the special linear constraint, we need to erase it
- *         and create a new linear constraint */
-/** changes left hand side of pseudoboolean constraint */
+/** changes left hand side of pseudoboolean constraint
+ *
+ * @note you can only change the left hand side if the special type of linear constraint won't changed
+ *
+ * @todo if changing the left hand side would change the type of the special linear constraint, we need to erase it
+ *       and create a new linear constraint
+ */
 SCIP_RETCODE SCIPchgLhsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< constraint data */
@@ -9260,10 +9267,13 @@ SCIP_RETCODE SCIPchgLhsPseudoboolean(
    return SCIP_OKAY;
 }
 
-/** @Note: you can only changed the right hand side if the special type of linear constraint won't changed */
-/** @todo: if changing the right hand side would change the type of the special linear constraint, we need to erase it
- *         and create a new linear constraint */
-/** changes right hand side of pseudoboolean constraint */
+/** changes right hand side of pseudoboolean constraint
+ *
+ * @note you can only change the right hand side if the special type of linear constraint won't changed
+ *
+ * @todo if changing the right hand side would change the type of the special linear constraint, we need to erase it
+ *       and create a new linear constraint
+ */
 SCIP_RETCODE SCIPchgRhsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< constraint data */
