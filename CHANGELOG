@@ -78,6 +78,7 @@ features:
 - added clique presolving for xor constraints
 - added upgrade of continuous variables to implicit variables for linear equations even if the coefficient is unequal to
   one
+- added presolving using pairs of variable bound constraints that use the same variables
 
 performance improvements:
 - conflict consisting of exactly two binary variables will be handled as set-packing constraint instead of an logicor
