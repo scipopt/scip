@@ -53,6 +53,7 @@ fixed bugs:
 - forbid branching on variables with huge bounds; such huge values cannot be enumerated with fixed precision
   floating point arithmetics
 - fixed bug in backward propagation of linear expressions in expression graph
+- fixed bug that Ipopt's error message was not fully shown due to exiting before the message handler buffer was emptied
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
@@ -70,6 +71,7 @@ interface:
 - remove problematic function cons_indicator:SCIPsetSlackVarIndicator()
 - added methods SCIPmarkColNotRemovableLocal() and SCIPmarkRowNotRemovableLocal() to forbid removal of an column/row
   from the LP in the current node
+- added method SCIPmessageVPrintError()
 
 
 SCIP version 3.0.1
