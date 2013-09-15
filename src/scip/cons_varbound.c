@@ -1902,7 +1902,8 @@ SCIP_RETCODE preprocessConstraintPairs(
          coef = consdata0->vbdcoef;
 
          /* check for propagation in the case: lhs1 <= x + b1*y <= rhs1 and lhs2 <= y + b2*x <= rhs2. */
-         if ( consdata0->var == consdata1->vbdvar && consdata0->vbdvar == consdata1->var )
+         if ( consdata0->var == consdata1->vbdvar && consdata0->vbdvar == consdata1->var &&
+            !SCIPisFeasZero(scip, 1.0 - coef * consdata1->vbdcoef) )
          {
             SCIP_Bool tightened = FALSE;
             SCIP_Real scalar = 0.0;
@@ -1927,7 +1928,7 @@ SCIP_RETCODE preprocessConstraintPairs(
                {
                   assert( SCIPisNegative(scip, coef) );
                   if ( ! SCIPisInfinity(scip, consdata1->lhs) )
-                     bnd = (lhs - consdata1->vbdcoef * consdata1->lhs)/scalar;
+                     bnd = (lhs - coef * consdata1->lhs)/scalar;
                }
 
                if ( bnd != SCIP_UNKNOWN )
