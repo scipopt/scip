@@ -175,6 +175,7 @@ struct SCIP_Tree
    int*                  pathnlprows;        /**< array with number of LP rows for each problem in active path (except
                                               *   newly added rows of the focus node and the current probing node) */
    SCIP_LPISTATE*        probinglpistate;    /**< LP state information before probing started */
+   SCIP_LPINORMS*        probinglpinorms;    /**< LP pricing norms information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
    SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    int                   pendingbdchgssize;  /**< size of pendingbdchgs array */

@@ -1014,6 +1014,31 @@ SCIP_RETCODE SCIPlpFreeState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
+/** stores pricing norms into LP norms object */
+extern
+SCIP_RETCODE SCIPlpGetNorms(
+   SCIP_LP*              lp,                 /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LP pricing norms information */
+   );
+
+/** loads pricing norms from LP norms object into solver */
+extern
+SCIP_RETCODE SCIPlpSetNorms(
+   SCIP_LP*              lp,                 /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPINORMS*        lpinorms            /**< LP pricing norms information */
+   );
+
+/** frees pricing norms information */
+extern
+SCIP_RETCODE SCIPlpFreeNorms(
+   SCIP_LP*              lp,                 /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LP pricing norms information */
+   );
+
 /** sets the upper objective limit of the LP solver */
 extern
 SCIP_RETCODE SCIPlpSetCutoffbound(

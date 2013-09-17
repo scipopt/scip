@@ -11950,6 +11950,65 @@ SCIP_RETCODE SCIPlpFreeState(
    return SCIP_OKAY;
 }
 
+/** stores pricing norms into LP norms object */
+SCIP_RETCODE SCIPlpGetNorms(
+   SCIP_LP*              lp,                 /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LP pricing norms information */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+   assert(blkmem != NULL);
+   assert(lpinorms != NULL);
+
+   /* check whether there is no lp */
+   if( lp->nlpicols == 0 && lp->nlpirows == 0 )
+      *lpinorms = NULL;
+   else
+   {
+      SCIP_CALL( SCIPlpiGetNorms(lp->lpi, blkmem, lpinorms) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** loads pricing norms from LP norms object into solver */
+SCIP_RETCODE SCIPlpSetNorms(
+   SCIP_LP*              lp,                 /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPINORMS*        lpinorms            /**< LP pricing norms information */
+   )
+{
+   assert(lp != NULL);
+   assert(blkmem != NULL);
+   assert(lp->flushed);
+
+   /* set LPI norms in the LP solver */
+   if( lpinorms != NULL )
+   {
+      SCIP_CALL( SCIPlpiSetNorms(lp->lpi, blkmem, lpinorms) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** frees pricing norms information */
+SCIP_RETCODE SCIPlpFreeNorms(
+   SCIP_LP*              lp,                 /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LP pricing norms information */
+   )
+{
+   assert(lp != NULL);
+
+   SCIP_CALL( SCIPlpiFreeNorms(lp->lpi, blkmem, lpinorms) );
+
+   return SCIP_OKAY;
+}
+
 /** sets the upper objective limit of the LP solver */
 SCIP_RETCODE SCIPlpSetCutoffbound(
    SCIP_LP*              lp,                 /**< current LP data */

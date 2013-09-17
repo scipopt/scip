@@ -49,6 +49,7 @@
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
          SCIPmessagePrintWarning((messagehdlr), "LP Error: CPLEX returned %d\n", _restat_); \
+         assert(0);\
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }
@@ -176,6 +177,14 @@ struct SCIP_LPiState
    int                   nrows;              /**< number of LP rows */
    COLPACKET*            packcstat;          /**< column basis status in compressed form */
    ROWPACKET*            packrstat;          /**< row basis status in compressed form */
+};
+
+/** LPi norms stores pricing norms */
+struct SCIP_LPiNorms
+{
+   int                   normlen;            /**< number of rows for which dual norm is stored */
+   double*               norm;               /**< dual norms */
+   int*                  head;               /**< row/column indices corresponding to norms */
 };
 
 
@@ -2571,6 +2580,116 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
+#if 0
+   const char lbound = 'L';
+   const char ubound = 'U';
+   SCIP_Real oldlb;
+   SCIP_Real oldub;
+   SCIP_Real newlb;
+   SCIP_Real newub;
+   double* norm;
+   int* head;
+   int nrows;
+   int objsen;
+   int olditlim;
+   int it;
+   int dnormlen;
+
+   SCIPdebugMessage(" -> strong branching on integral variable %d\n", col);
+
+   assert( !EPSISINT(psol, lpi->feastol) );
+
+   objsen = CPXgetobjsen(lpi->cpxenv, lpi->cpxlp);
+
+   /* results of CPLEX are valid in any case */
+   *downvalid = TRUE;
+   *upvalid = TRUE;
+
+   if( iter != NULL )
+      *iter = 0;
+
+   nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+
+   SCIP_ALLOC( BMSallocMemoryArray(&norm, nrows) );
+   SCIP_ALLOC( BMSallocMemoryArray(&head, nrows) );
+
+   /* save current LP basis and bounds*/
+   SCIP_CALL( getBase(lpi) );
+   CHECK_ZERO( lpi->messagehdlr, CPXgetdnorms(lpi->cpxenv, lpi->cpxlp, norm, head, &dnormlen) );
+   CHECK_ZERO( lpi->messagehdlr, CPXgetlb(lpi->cpxenv, lpi->cpxlp, &oldlb, col, col) );
+   CHECK_ZERO( lpi->messagehdlr, CPXgetub(lpi->cpxenv, lpi->cpxlp, &oldub, col, col) );
+
+   /* save old iteration limit and set iteration limit to strong branching limit */
+   if( itlim > CPX_INT_MAX )
+      itlim = CPX_INT_MAX;
+   olditlim = getIntParam(lpi, CPX_PARAM_ITLIM);
+   setIntParam(lpi, CPX_PARAM_ITLIM, itlim);
+
+   /* down branch */
+   newub = EPSFLOOR(psol, lpi->feastol);
+   if( newub >= oldlb - 0.5 )
+   {
+      CHECK_ZERO( lpi->messagehdlr, CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &ubound, &newub) );
+      SCIP_CALL( SCIPlpiSolveDual(lpi) );
+      if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
+         *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
+      else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
+      {
+         SCIP_CALL( SCIPlpiGetObjval(lpi, down) );
+      }
+      else
+         *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
+      if( iter != NULL )
+      {
+         SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
+         *iter += it;
+      }
+      SCIPdebugMessage(" -> down (x%d <= %g): %g\n", col, newub, *down);
+
+      CHECK_ZERO( lpi->messagehdlr, CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &ubound, &oldub) );
+      SCIP_CALL( setBase(lpi) );
+      CHECK_ZERO( lpi->messagehdlr, CPXcopydnorms(lpi->cpxenv, lpi->cpxlp, norm, head, dnormlen) );
+   }
+   else
+      *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
+
+   /* up branch */
+   newlb = EPSCEIL(psol, lpi->feastol);
+   if( newlb <= oldub + 0.5 )
+   {
+      CHECK_ZERO( lpi->messagehdlr, CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &lbound, &newlb) );
+      SCIP_CALL( SCIPlpiSolveDual(lpi) );
+      if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
+         *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
+      else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
+      {
+         SCIP_CALL( SCIPlpiGetObjval(lpi, up) );
+      }
+      else
+         *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
+      if( iter != NULL )
+      {
+         SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
+         *iter += it;
+      }
+      SCIPdebugMessage(" -> up  (x%d >= %g): %g\n", col, newlb, *up);
+
+      CHECK_ZERO( lpi->messagehdlr, CPXchgbds(lpi->cpxenv, lpi->cpxlp, 1, &col, &lbound, &oldlb) );
+      SCIP_CALL( setBase(lpi) );
+      CHECK_ZERO( lpi->messagehdlr, CPXcopydnorms(lpi->cpxenv, lpi->cpxlp, norm, head, dnormlen) );
+   }
+   else
+      *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
+
+   if( iter != NULL )
+      *iter = -1;
+
+   BMSfreeMemoryArray(&norm);
+   BMSfreeMemoryArray(&head);
+
+   /* reset iteration limit */
+   setIntParam(lpi, CPX_PARAM_ITLIM, olditlim);
+#else
    int retval;
 
    assert(lpi != NULL);
@@ -2611,7 +2730,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    /* CPLEX is not able to return the iteration counts in strong branching */
    if( iter != NULL )
       *iter = -1;
-
+#endif
    return SCIP_OKAY;
 }
 
@@ -3682,6 +3801,131 @@ SCIP_RETCODE SCIPlpiWriteState(
    SCIPdebugMessage("writing LP state to file <%s>\n", fname);
 
    CHECK_ZERO( lpi->messagehdlr, CPXmbasewrite(lpi->cpxenv, lpi->cpxlp, fname) );
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
+ * LP Pricing Norms Methods
+ */
+
+/**@name LP Pricing Norms Methods */
+/**@{ */
+
+/** stores LPi pricing norms information
+ *
+ *  @todo store primal norms as well?
+ */
+SCIP_RETCODE SCIPlpiGetNorms(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   )
+{
+   int nrows;
+   int retval;
+
+   assert(blkmem != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->cpxenv != NULL);
+   assert(lpi->messagehdlr != NULL);
+   assert(lpinorms != NULL);
+
+   /* if there is no basis information available (e.g. after barrier without crossover), norms cannot be saved; if
+    * SCIPlpiClearState() has been called, do not return the state
+    */
+   if( !lpi->solisbasic || lpi->clearstate )
+   {
+      *lpinorms = NULL;
+      return SCIP_OKAY;
+   }
+
+   nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+   assert(nrows >= 0);
+
+   /* allocate lpinorms data */
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, lpinorms) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpinorms)->norm, nrows) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpinorms)->head, nrows) );
+   (*lpinorms)->normlen = 0;
+
+   SCIPdebugMessage("storing CPLEX LPI pricing norms in %p (%d rows)\n", (void *) *lpinorms, nrows);
+
+   /* get dual norms */
+   retval = CPXgetdnorms(lpi->cpxenv, lpi->cpxlp, (*lpinorms)->norm, (*lpinorms)->head, &((*lpinorms)->normlen));
+
+   /* if CPLEX used the primal simplex in the last optimization call, we do not have dual norms (error 1264) */
+   if( retval == 1264 )
+   {
+      /* no norms available, free lpinorms data */
+      BMSfreeBlockMemoryArray(blkmem, &(*lpinorms)->head, nrows);
+      BMSfreeBlockMemoryArray(blkmem, &(*lpinorms)->norm, nrows);
+      BMSfreeBlockMemory(blkmem, lpinorms);
+      assert(*lpinorms == NULL);
+   }
+   else
+   {
+      assert((*lpinorms)->normlen == nrows);
+      CHECK_ZERO( lpi->messagehdlr, retval );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** loads LPi pricing norms into solver; note that the LP might have been extended with additional
+ *  columns and rows since the state was stored with SCIPlpiGetNorms()
+ */
+SCIP_RETCODE SCIPlpiSetNorms(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   )
+{
+   int lpnrows;
+
+   assert(blkmem != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->cpxenv != NULL);
+
+   /* if there was no pricing norms information available, the LPI norms were not stored */
+   if( lpinorms == NULL )
+      return SCIP_OKAY;
+
+   lpnrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+   assert(lpinorms->normlen <= lpnrows);
+
+   SCIPdebugMessage("loading LPI simplex norms %p (%d rows) into CPLEX LP with %d rows\n",
+      (void *) lpinorms, lpinorms->normlen, lpnrows);
+
+   if( lpinorms->normlen == 0 )
+      return SCIP_OKAY;
+
+   /* load pricing norms information into CPLEX */
+   CHECK_ZERO( lpi->messagehdlr, CPXcopydnorms(lpi->cpxenv, lpi->cpxlp, lpinorms->norm, lpinorms->head, lpinorms->normlen) );
+
+   return SCIP_OKAY;
+}
+
+/** frees pricing norms information */
+SCIP_RETCODE SCIPlpiFreeNorms(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpinorms != NULL);
+
+   BMSfreeBlockMemoryArray(blkmem, &(*lpinorms)->head, (*lpinorms)->normlen);
+   BMSfreeBlockMemoryArray(blkmem, &(*lpinorms)->norm, (*lpinorms)->normlen);
+   BMSfreeBlockMemory(blkmem, lpinorms);
 
    return SCIP_OKAY;
 }

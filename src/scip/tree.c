@@ -4355,6 +4355,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->pathnlpcols = NULL;
    (*tree)->pathnlprows = NULL;
    (*tree)->probinglpistate = NULL;
+   (*tree)->probinglpinorms = NULL;
    (*tree)->pendingbdchgs = NULL;
    (*tree)->pendingbdchgssize = 0;
    (*tree)->npendingbdchgs = 0;
@@ -5809,6 +5810,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
 {
    assert(tree != NULL);
    assert(tree->probinglpistate == NULL);
+   assert(tree->probinglpinorms == NULL);
    assert(!SCIPtreeProbing(tree));
    assert(lp != NULL);
 
@@ -5834,6 +5836,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
    if( lp->flushed && lp->solved )
    {
       SCIP_CALL( SCIPlpGetState(lp, blkmem, &tree->probinglpistate) );
+      SCIP_CALL( SCIPlpGetNorms(lp, blkmem, &tree->probinglpinorms) );
    }
 
    /* create temporary probing root node */
@@ -5879,6 +5882,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
    {
       SCIP_NODE* node;
       SCIP_LPISTATE* lpistate;
+      SCIP_LPINORMS* lpinorms;
 
       /* get the current probing node */
       node = SCIPtreeGetCurrentNode(tree);
@@ -5886,6 +5890,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
 
       /* search the last node where an LP state information was attached */
       lpistate = NULL;
+      lpinorms = NULL;
       do
       {
          assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
@@ -5902,12 +5907,21 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
 
       /* if there was no LP information stored in the probing nodes, use the one stored before probing started */
       if( lpistate == NULL )
+      {
          lpistate = tree->probinglpistate;
+         lpinorms = tree->probinglpinorms;
+      }
 
       /* set the LP state */
       if( lpistate != NULL )
       {
          SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpistate) );
+      }
+
+      /* set the LP pricing norms */
+      if( lpinorms != NULL )
+      {
+         SCIP_CALL( SCIPlpSetNorms(lp, blkmem, set, lpinorms) );
       }
 
       /* now we don't need to load the LP state again until the next backtracking */
@@ -6124,6 +6138,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          /* reset the LP state before probing started */
          if( tree->probinglpistate == NULL )
          {
+            assert(tree->probinglpinorms == NULL);
             SCIP_CALL( SCIPlpiClearState(lp->lpi) );
             lp->primalfeasible = (lp->nlpicols == 0 && lp->nlpirows == 0);
             lp->dualfeasible = (lp->nlpicols == 0 && lp->nlpirows == 0);
@@ -6133,6 +6148,13 @@ SCIP_RETCODE SCIPtreeEndProbing(
          {
             SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate) );
             SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
+
+            if( tree->probinglpinorms != NULL )
+            {
+               SCIP_CALL( SCIPlpSetNorms(lp, blkmem, set, tree->probinglpinorms) );
+               SCIP_CALL( SCIPlpFreeNorms(lp, blkmem, &tree->probinglpinorms) );
+               tree->probinglpinorms = NULL;
+            }
          }
          SCIPlpSetIsRelax(lp, tree->probinglpwasrelax);
 

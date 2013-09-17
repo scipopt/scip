@@ -3554,6 +3554,62 @@ SCIP_RETCODE SCIPlpiWriteState(
 
 
 /*
+ * LP Pricing Norms Methods
+ */
+
+/**@name LP Pricing Norms Methods */
+/**@{ */
+
+/** stores LPi pricing norms information
+ *  @todo should we store norm information?
+ */
+SCIP_RETCODE SCIPlpiGetNorms(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   )
+{
+   assert(lpinorms != NULL);
+
+   (*lpinorms) = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** loads LPi pricing norms into solver; note that the LP might have been extended with additional
+ *  columns and rows since the state was stored with SCIPlpiGetNorms()
+ */
+SCIP_RETCODE SCIPlpiSetNorms(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   )
+{
+   assert(lpinorms == NULL);
+
+   /* no work necessary */
+   return SCIP_OKAY;
+}
+
+/** frees pricing norms information */
+SCIP_RETCODE SCIPlpiFreeNorms(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   )
+{
+   assert(lpinorms == NULL);
+
+   /* no work necessary */
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
  * Parameter Methods
  */
 
