@@ -35655,7 +35655,7 @@ SCIP_RETCODE SCIPextendRealarray(
 {
    SCIP_CALL( checkStage(scip, "SCIPextendRealarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPrealarrayExtend(realarray, scip->set, minidx, maxidx) );
+   SCIP_CALL( SCIPrealarrayExtend(realarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, minidx, maxidx) );
 
    return SCIP_OKAY;
 }
@@ -35706,7 +35706,7 @@ SCIP_RETCODE SCIPsetRealarrayVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetRealarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPrealarraySetVal(realarray, scip->set, idx, val) );
+   SCIP_CALL( SCIPrealarraySetVal(realarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, scip->set->num_epsilon, idx, val) );
 
    return SCIP_OKAY;
 }
@@ -35725,7 +35725,7 @@ SCIP_RETCODE SCIPincRealarrayVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPincRealarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPrealarrayIncVal(realarray, scip->set, idx, incval) );
+   SCIP_CALL( SCIPrealarrayIncVal(realarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, scip->set->num_epsilon, idx, incval) );
 
    return SCIP_OKAY;
 }
@@ -35806,7 +35806,7 @@ SCIP_RETCODE SCIPextendIntarray(
 {
    SCIP_CALL( checkStage(scip, "SCIPextendIntarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPintarrayExtend(intarray, scip->set, minidx, maxidx) );
+   SCIP_CALL( SCIPintarrayExtend(intarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, minidx, maxidx) );
 
    return SCIP_OKAY;
 }
@@ -35857,7 +35857,7 @@ SCIP_RETCODE SCIPsetIntarrayVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetIntarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPintarraySetVal(intarray, scip->set, idx, val) );
+   SCIP_CALL( SCIPintarraySetVal(intarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, idx, val) );
 
    return SCIP_OKAY;
 }
@@ -35876,7 +35876,7 @@ SCIP_RETCODE SCIPincIntarrayVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPincIntarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPintarrayIncVal(intarray, scip->set, idx, incval) );
+   SCIP_CALL( SCIPintarrayIncVal(intarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, idx, incval) );
 
    return SCIP_OKAY;
 }
@@ -35957,7 +35957,7 @@ SCIP_RETCODE SCIPextendBoolarray(
 {
    SCIP_CALL( checkStage(scip, "SCIPextendBoolarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPboolarrayExtend(boolarray, scip->set, minidx, maxidx) );
+   SCIP_CALL( SCIPboolarrayExtend(boolarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, minidx, maxidx) );
 
    return SCIP_OKAY;
 }
@@ -36008,7 +36008,7 @@ SCIP_RETCODE SCIPsetBoolarrayVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetBoolarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPboolarraySetVal(boolarray, scip->set, idx, val) );
+   SCIP_CALL( SCIPboolarraySetVal(boolarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, idx, val) );
 
    return SCIP_OKAY;
 }
@@ -36089,7 +36089,7 @@ SCIP_RETCODE SCIPextendPtrarray(
 {
    SCIP_CALL( checkStage(scip, "SCIPextendPtrarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPptrarrayExtend(ptrarray, scip->set, minidx, maxidx) );
+   SCIP_CALL( SCIPptrarrayExtend(ptrarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, minidx, maxidx) );
 
    return SCIP_OKAY;
 }
@@ -36137,7 +36137,7 @@ SCIP_RETCODE SCIPsetPtrarrayVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetPtrarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPptrarraySetVal(ptrarray, scip->set, idx, val) );
+   SCIP_CALL( SCIPptrarraySetVal(ptrarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, idx, val) );
 
    return SCIP_OKAY;
 }

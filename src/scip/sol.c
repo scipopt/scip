@@ -77,10 +77,10 @@ SCIP_RETCODE solSetArrayVal(
    SCIPvarMarkNotDeletable(var);
 
    /* mark the variable valid */
-   SCIP_CALL( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
+   SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
 
    /* set the value in the solution array */
-   SCIP_CALL( SCIPrealarraySetVal(sol->vals, set, idx, val) );
+   SCIP_CALL( SCIPrealarraySetVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, SCIPsetEpsilon(set), idx, val) );
 
    /* store whether the solution has infinite values assigned to variables */
    if( val != SCIP_UNKNOWN ) /*lint !e777*/
@@ -111,15 +111,15 @@ SCIP_RETCODE solIncArrayVal(
    if( !SCIPboolarrayGetVal(sol->valid, idx) )
    {
       /* mark the variable valid */
-      SCIP_CALL( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
+      SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
 
       /* set the value in the solution array */
-      SCIP_CALL( SCIPrealarraySetVal(sol->vals, set, idx, incval) );
+      SCIP_CALL( SCIPrealarraySetVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, SCIPsetEpsilon(set), idx, incval) );
    }
    else
    {
       /* increase the value in the solution array */
-      SCIP_CALL( SCIPrealarrayIncVal(sol->vals, set, idx, incval) );
+      SCIP_CALL( SCIPrealarrayIncVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, SCIPsetEpsilon(set), idx, incval) );
    }
 
    /* store whether the solution has infinite values assigned to variables */

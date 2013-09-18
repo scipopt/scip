@@ -8602,7 +8602,7 @@ SCIP_RETCODE SCIPlpSumRows(
    /**@todo test, if a column based summation is faster */
 
    SCIP_CALL( SCIPrealarrayClear(sumcoef) );
-   SCIP_CALL( SCIPrealarrayExtend(sumcoef, set, 0, prob->nvars-1) );
+   SCIP_CALL( SCIPrealarrayExtend(sumcoef, set->mem_arraygrowinit, set->mem_arraygrowfac, 0, prob->nvars-1) );
    *sumlhs = 0.0;
    *sumrhs = 0.0;
    lhsinfinite = FALSE;
@@ -8627,7 +8627,7 @@ SCIP_RETCODE SCIPlpSumRows(
             assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
             idx = row->cols[i]->var_probindex;
             assert(0 <= idx && idx < prob->nvars);
-            SCIP_CALL( SCIPrealarrayIncVal(sumcoef, set, idx, weights[r] * row->vals[i]) );
+            SCIP_CALL( SCIPrealarrayIncVal(sumcoef, set->mem_arraygrowinit, set->mem_arraygrowfac, SCIPsetEpsilon(set), idx, weights[r] * row->vals[i]) );
          }
          
          /* add the row sides to the sum, depending on the sign of the weight */

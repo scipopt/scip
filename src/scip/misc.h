@@ -64,7 +64,8 @@ SCIP_RETCODE SCIPrealarrayFree(
 extern
 SCIP_RETCODE SCIPrealarrayExtend(
    SCIP_REALARRAY*       realarray,          /**< dynamic real array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   minidx,             /**< smallest index to allocate storage for */
    int                   maxidx              /**< largest index to allocate storage for */
    );
@@ -86,7 +87,9 @@ SCIP_Real SCIPrealarrayGetVal(
 extern
 SCIP_RETCODE SCIPrealarraySetVal(
    SCIP_REALARRAY*       realarray,          /**< dynamic real array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
+   SCIP_Real             eps,                /**< epsilon value */
    int                   idx,                /**< array index to set value for */
    SCIP_Real             val                 /**< value to set array index to */
    );
@@ -95,7 +98,9 @@ SCIP_RETCODE SCIPrealarraySetVal(
 extern
 SCIP_RETCODE SCIPrealarrayIncVal(
    SCIP_REALARRAY*       realarray,          /**< dynamic real array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
+   SCIP_Real             eps,                /**< epsilon value */
    int                   idx,                /**< array index to increase value for */
    SCIP_Real             incval              /**< value to increase array index */
    );
@@ -137,7 +142,8 @@ SCIP_RETCODE SCIPintarrayFree(
 extern
 SCIP_RETCODE SCIPintarrayExtend(
    SCIP_INTARRAY*        intarray,           /**< dynamic int array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   minidx,             /**< smallest index to allocate storage for */
    int                   maxidx              /**< largest index to allocate storage for */
    );
@@ -159,7 +165,8 @@ int SCIPintarrayGetVal(
 extern
 SCIP_RETCODE SCIPintarraySetVal(
    SCIP_INTARRAY*        intarray,           /**< dynamic int array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to set value for */
    int                   val                 /**< value to set array index to */
    );
@@ -168,7 +175,8 @@ SCIP_RETCODE SCIPintarraySetVal(
 extern
 SCIP_RETCODE SCIPintarrayIncVal(
    SCIP_INTARRAY*        intarray,           /**< dynamic int array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to increase value for */
    int                   incval              /**< value to increase array index */
    );
@@ -210,7 +218,8 @@ SCIP_RETCODE SCIPboolarrayFree(
 extern
 SCIP_RETCODE SCIPboolarrayExtend(
    SCIP_BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   minidx,             /**< smallest index to allocate storage for */
    int                   maxidx              /**< largest index to allocate storage for */
    );
@@ -232,7 +241,8 @@ SCIP_Bool SCIPboolarrayGetVal(
 extern
 SCIP_RETCODE SCIPboolarraySetVal(
    SCIP_BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to set value for */
    SCIP_Bool             val                 /**< value to set array index to */
    );
@@ -274,7 +284,8 @@ SCIP_RETCODE SCIPptrarrayFree(
 extern
 SCIP_RETCODE SCIPptrarrayExtend(
    SCIP_PTRARRAY*        ptrarray,           /**< dynamic ptr array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   minidx,             /**< smallest index to allocate storage for */
    int                   maxidx              /**< largest index to allocate storage for */
    );
@@ -296,7 +307,8 @@ void* SCIPptrarrayGetVal(
 extern
 SCIP_RETCODE SCIPptrarraySetVal(
    SCIP_PTRARRAY*        ptrarray,           /**< dynamic ptr array */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to set value for */
    void*                 val                 /**< value to set array index to */
    );
