@@ -4119,7 +4119,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
          /* focus selected node */
          SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, lp,
-               branchcand, conflict, eventfilter, eventqueue, &cutoff) );
+               branchcand, conflict, eventfilter, eventqueue, &cutoff, FALSE) );
          if( cutoff )
             stat->ndelayedcutoffs++;
 
@@ -4353,7 +4353,7 @@ SCIP_RETCODE SCIPsolveCIP(
    {
       focusnode = NULL;
       SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, lp,
-            branchcand, conflict, eventfilter, eventqueue, &cutoff) );
+            branchcand, conflict, eventfilter, eventqueue, &cutoff, FALSE) );
    }
 
    /* check whether we finished solving */

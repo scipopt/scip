@@ -109,7 +109,8 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_Bool*            cutoff              /**< pointer to store whether the given node can be cut off */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the given node can be cut off */
+   SCIP_Bool             exitsolve           /**< are we in exitsolve stage, so we only need to loose the children */
    );
 
 /** cuts off node and whole sub tree from branch and bound tree */
