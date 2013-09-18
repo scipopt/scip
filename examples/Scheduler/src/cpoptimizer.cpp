@@ -23,7 +23,8 @@
 #ifdef WITH_CPOPTIMIZER
 
 #include <ilcp/cp.h>
-#include "scip/cons_cumulative.h"
+
+#include "cpoptimizer.h"
 
 /** solve single cumulative condition using CP Optimizer */
 SCIP_DECL_SOLVECUMULATIVE(cpoptimizer)
@@ -63,17 +64,19 @@ SCIP_DECL_SOLVECUMULATIVE(cpoptimizer)
          /* add job to cumulative constraint  with corresponding demand */
          cumulative += IloPulse(jobs[v], demands[v]);
 
-         costs += IloStartOf(jobs[v]) * objvals[v];
+         if( objvals != NULL )
+            costs += IloStartOf(jobs[v]) * objvals[v];
 
          totaldemand += demands[v];
       }
 
-      if( totaldemand <= capacity )
+
+      if( totaldemand <= capacity && objvals == NULL )
       {
          for( v = 0; v < njobs; ++v )
-         {
             lsts[v] = ests[v];
-         }
+
+         (*solved) = TRUE;
 
          return SCIP_OKAY;
       }
@@ -82,6 +85,7 @@ SCIP_DECL_SOLVECUMULATIVE(cpoptimizer)
       IloObjective objective(env);
       objective.setExpr(costs);
       objective.setSense(IloObjective::Minimize);
+
 
       /* add cumulative constraint to the model */
 
@@ -96,14 +100,19 @@ SCIP_DECL_SOLVECUMULATIVE(cpoptimizer)
 
       IloCP cp(model);
 
+      /* set time limit */
       cp.setParameter(IloCP::TimeLimit, timelimit);
-      cp.setParameter(IloCP::ChoicePointLimit, maxnodes);
-      cp.setParameter(IloCP::LogVerbosity, IloCP::Quiet);
-      // cp.setParameter(IloCP::DefaultInferenceLevel, "extended");
-      // cp.out() << env.getVersion() << std::endl;
-      // cp.out() << cp.getVersion() << std::endl;
 
-      // cp.out() << "Instance \t: " << filename << std::endl;
+      if( maxnodes >= 0 )
+         cp.setParameter(IloCP::ChoicePointLimit, maxnodes);
+
+      cp.setParameter(IloCP::LogVerbosity, IloCP::Quiet);
+
+      cp.setParameter(IloCP::SearchType, IloCP::DepthFirst);
+      cp.setParameter(IloCP::CumulFunctionInferenceLevel, IloCP::Extended);
+      cp.setParameter(IloCP::NoOverlapInferenceLevel, IloCP::Extended);
+      cp.setParameter(IloCP::Workers, 1); // Use only one CPU
+
       cp.solve();
 
       switch( cp.getStatus() )
@@ -116,14 +125,17 @@ SCIP_DECL_SOLVECUMULATIVE(cpoptimizer)
             ests[v] = cp.getStart(jobs[v]);
             lsts[v] = cp.getStart(jobs[v]);
          }
+         (*solved) = TRUE;
          break;
       case IloAlgorithm::InfeasibleOrUnbounded:
          (*infeasible) = TRUE;
          (*unbounded) = TRUE;
+         (*solved) = TRUE;
          abort();
          break;
       case IloAlgorithm::Infeasible:
          (*infeasible) = TRUE;
+         (*solved) = TRUE;
          break;
       case IloAlgorithm::Unbounded:
          (*unbounded) = TRUE;
@@ -136,7 +148,8 @@ SCIP_DECL_SOLVECUMULATIVE(cpoptimizer)
    }
    catch( IloException& e )
    {
-      (*error) = FALSE;
+      SCIPerrorMessage("CP Optimizer Execution <%s>\n",e.getMessage());
+      (*error) = TRUE;
    }
 
    env.end();

@@ -3,7 +3,7 @@
 # run with bash -e makeall.sh to stop on errors
 #
 
-EXAMPLES=(Coloring Binpacking Eventhdlr GMI LOP MIPSolver Queens Scheduler Testslack TSP VRP CallableLibrary)
+EXAMPLES=(Coloring Binpacking Eventhdlr GMI LOP MIPSolver Queens Scheduler TSP VRP CallableLibrary)
 LPSOLVERS=(clp cpx none spx)
 OPTS=(opt dbg)
 

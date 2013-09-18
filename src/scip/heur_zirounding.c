@@ -544,6 +544,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    SCIP_Longint       nlps;
    int                currentlpcands;
    int                nlpcands;
+   int                nimplfracs;
    int                i;
    int                c;
    int                nslacks;
@@ -584,8 +585,8 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    heurdata->lastlp = nlps;
 
    /* get fractional variables */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL) );
-
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, &nimplfracs) );
+   nlpcands = nlpcands + nimplfracs;
    /* make sure that there is at least one fractional variable that should be integral */
    if( nlpcands == 0 )
       return SCIP_OKAY;
@@ -605,13 +606,11 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    assert(rows != NULL);
    assert(nslacks > 0);
 
-
    /* get the working solution from heuristic's local data */
    sol = heurdata->sol;
    assert(sol != NULL);
 
    *result = SCIP_DIDNOTFIND;
-
 
    /* copy the current LP solution to the working solution and allocate memory for local data */
    SCIP_CALL( SCIPlinkLPSol(scip, sol) );

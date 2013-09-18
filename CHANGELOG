@@ -22,6 +22,13 @@ data structures
 - hash tables will now increase dynamically
 
 features:
+- new LNS heuristic called proximity which solves a problem in which a local branching constraint replaces the
+  objective function which in turn is treated as additional constraint
+- added average gap based on primal-dual integral to solution statistics, can be disabled via parameter
+  "misc/calcintegral"
+- new LP-based rounding heuristic (heur_randround) whose randomized rounding is biased towards the LP solution value.
+  The heuristic uses the probing mode of SCIP to generate conflict causes on the fractional variables.
+- added breadth first search node selection
 - added new dual presolving for setppc-constraints
 - changed dualfix presolver to propagator such that dual fixing can also be applied during repropagation of the root node
 - added upgrade from varbound constraints to set-packing constraints
@@ -45,7 +52,7 @@ features:
 - the XOR constraint handler can add two extended formulations (flow/asymmetric, parameter addextendedform)
 - added the possibility to copy the original problem via SCIPcopyOrig()
 - SCIPgetVarCopy() will now copy the original bounds when called for an original variable
-- added method SCIPcreateSolCopyRemoveInfiniteFixings() which creates a copy of a solution, thereby trying to reduce
+- added method SCIPcreateFiniteSolCopy() which creates a copy of a solution, thereby trying to reduce
   the solution value of variables which were fixed to infinite to the smallest feasible value
 - added propagation method to cons_xor relying on Gaussian elimination, which can also produce feasible solutions
 - new branching rule "cloud branching" that considers several alternative LP optima
@@ -69,6 +76,12 @@ features:
 - reader_lp is now abled to write and constraints in form of their (weak/strict) relaxation
 - reader_mps is now abled to write and constraints in form of their (weak/strict) relaxation
 - added possibility to forbid constraint upgrading
+- it is now possible to add an offset for the original problem instance, all original solutions will be initialized with
+  this value and updated, when the offset is changed
+- added clique presolving for xor constraints
+- added upgrade of continuous variables to implicit variables for linear equations even if the coefficient is unequal to
+  one
+- added presolving using pairs of variable bound constraints that use the same variables
 - added strong branching with domain propagation support: in SCIPstartStrongbranch(), support for propagation can
   be enabled (uses the probing mode, some overhead compared to standard strong branching), after that
   SCIPgetVarStrongbranchWithPropagation() can be used to perform strong branching on a variable with previous domain
@@ -92,8 +105,15 @@ performance improvements:
 - improved performance of method SCIPsolRetransform() when called during presolving with many aggregations
 - minor presolving performance improvements in cons_logicor.c and cons_knapsack.c
 - added upgradability for implicit binary variable cases for linear constraints
+- improved performance of SCIPcliquelistDel(), SCIPcliquetableAdd(), SCIPcliquetableCleanup()
+- improved merging of constraints in cons_and.c
 
 interface
+- SCIPgetLPBranchCands() can be used to retrieve the number of implicit integer variables with fractional LP solution
+  value via an additional pointer; the corresponding implicit integer variables can be accessed together with their
+  fractionalities and solution values in the same way as binary and integer variables before; the arrays are sorted such
+  that binary and integer variables precede the implicit integer variables; the method SCIPbranchcandGetLPCands()
+  has been modified in the same way
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
   the rank of a cut can be changed (default rank is 0)
 - new methods for the SCIP_QUEUE data structure in pub_misc.h, misc.c SCIPqueueCreate(), SCIPqueueFree(),
@@ -131,10 +151,13 @@ interface
 - added a copy of the GAMS/SCIP interface to interfaces/gams
 - added SCIPconsAddUpgradeLocks() and SCIPconsGetNUpgradeLocks() to either add/decrease the counter on upgrade-locks on
   a constraint or get the current number of upgrade-locks
+- added new method SCIPaddOrigObjoffset() in scip.{c,h} which adds a value to the offset in original space an updates
+  all orignal solutions correspondingly
 - new methods SCIPlpiGetNorms(), SCIPlpiSetNorms(), and SCIPlpiFreeNorms() for getting the LP pricing norms from the LP
   solver, loading them back into the solver, and freeing the data
 
 parameters:
+- new parameter "misc/calcintegral" (default TRUE) to trigger calculation of primal-dual integral
 - new parameter <lp/disablecutoff> (default FALSE), by which the LP cutoff bound can be disabled (when set to TRUE)
 - new parameter <separating/gomory/sidetypebasis> to decide whether the sides of ranged rows should be determined from
   the basis status
@@ -176,6 +199,8 @@ parameters:
   relaxation of and constraints in MPS format
 - new parameter "constraints/logicor/strengthen", should pairwise constraint comparison try to strengthen constraints by
   removing superflous non-zeros?
+- new parameter constraints/and/upgraderesultant to upgrade resultants of and constraints from binary to implicit binary
+  variables, default is TRUE
 - new parameters "branching/firstsbchild" and "branching/forcebothchildren" to specify the first child node to be
   investigated during strong branching ('u'p,'d'down,'a'uto) and whether always both children should be solved (only for
   strong branching with domain propagation, per default, the second child is not looked at when the first is infeasible)
@@ -231,6 +256,18 @@ fixed bugs:
 - fixed bug in cons_indicator.c:SCIPmakeIndicatorFeasible() with handling fixed variables
 - fixed bug in sepa_zerohalf.c where the maxcuts(root) parameters led to an invalid memory allocation call
 - fixed bug in sepa_closecuts: need to make sure that variable values of separation point satisfy bounds
+- fixed bug in intervalarith.c: bivariate quad. equations may have been solved wrongly if second variable is unbounded
+- fixed bug in cons_integral: need to make sure that all implicit integer variables are integral when a solution is
+  checked
+- fixed bug in cons_abspower: wrong infinity check when propagating bounds
+- fixed bugs in sepa_oddcylce: number of arcs have to be adjusted, handle implicit binary variables,
+  fixed bug in heuristic separation method, fixed asserts
+- fixed bugs with freeing C++ object data for problem and variables
+- fixed wrong bound calculation in sepa_rapidlearning
+- fixed bug with infinite multi-aggregation constants
+- fixed bug that old LP size was not updated for deadend if no LP was solved
+- fixed bug that removing reverse implication did not reset closestvblpcount
+- fixed bug that the number aggregated variables were not counted in the presol_inttobinary.c
 
 features:
 - can now output the solutions in the solution pool in the interactive shell

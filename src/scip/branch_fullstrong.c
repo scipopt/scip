@@ -544,7 +544,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
    assert(branchruledata != NULL);
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, &nlpcands, &npriolpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, &nlpcands, &npriolpcands, NULL) );
    assert(nlpcands > 0);
    assert(npriolpcands > 0);
 

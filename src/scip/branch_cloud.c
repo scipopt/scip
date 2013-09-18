@@ -190,7 +190,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    lprows = SCIPgetLPRows(scip);
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, &npriolpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, &npriolpcands, NULL) );
    nlpcands = SCIPgetNLPBranchCands(scip);
    assert(nlpcands > 0);
 

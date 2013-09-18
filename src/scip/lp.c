@@ -18677,7 +18677,7 @@ void SCIPlpMarkDivingObjChanged(
  *
  *  to compute a relative interior point for the current LP.
  *
- *  Assume the orginal LP looks as follows:
+ *  Assume the original LP looks as follows:
  *  \f[
  *     \begin{array}{rrl}
  *        \min & c^T x &\\

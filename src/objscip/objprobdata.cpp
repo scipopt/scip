@@ -165,10 +165,10 @@ SCIP_DECL_PROBCOPY(probCopyObj)
    {
       assert(*result == SCIP_SUCCESS);
 
-      /* create transformed user problem data */
+      /* create trarget user problem data */
       *targetdata = new SCIP_PROBDATA;
       (*targetdata)->objprobdata = objprobdata; /*lint !e40*/
-      (*targetdata)->deleteobject = sourcedata->deleteobject;
+      (*targetdata)->deleteobject = TRUE; /* always delete object, because we created it */
    }
    else
    {

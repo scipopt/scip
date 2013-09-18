@@ -751,13 +751,12 @@ SCIP_RETCODE SCIPapplyProximity(
    /* use knowledge about integrality of objective to round up lower bound */
    if( SCIPisObjIntegral(scip) )
    {
-      assert(SCIPisFeasIntegral(scip, bestobj));
       SCIPdebugMessage(" Rounding up lower bound: %f --> %f \n", lowerbound, SCIPfeasCeil(scip, lowerbound));
       lowerbound = SCIPfeasCeil(scip, lowerbound);
    }
 
    /* do not trigger heuristic if primal and dual bound are already close together */
-   if( SCIPisFeasEQ(scip, bestobj, lowerbound) || SCIPgetGap(scip) <= heurdata->mingap )
+   if( SCIPisFeasLE(scip, bestobj, lowerbound) || SCIPgetGap(scip) <= heurdata->mingap )
       return SCIP_OKAY;
 
    /* calculate the minimum improvement for a heuristic solution in terms of the distance between incumbent objective

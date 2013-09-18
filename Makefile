@@ -43,7 +43,7 @@ include $(SCIPDIR)/make/make.project
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		=	3.0.1.4
+VERSION		=	3.0.1.5
 SOFTLINKS	=
 MAKESOFTLINKS	=	true
 
@@ -363,6 +363,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_zirounding.o \
 			scip/message_default.o \
 			scip/nodesel_bfs.o \
+			scip/nodesel_breadthfirst.o \
 			scip/nodesel_dfs.o \
 			scip/nodesel_estimate.o \
 			scip/nodesel_hybridestim.o \

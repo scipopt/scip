@@ -106,7 +106,8 @@ extern
 void SCIPstatUpdatePrimalDualIntegral(
    SCIP_STAT*           stat,                /**< problem statistics data */
    SCIP_SET*            set,                 /**< global SCIP settings */
-   SCIP_PROB*           prob,                /**< transformed problem data */
+   SCIP_PROB*           transprob,           /**< transformed problem */
+   SCIP_PROB*           origprob,            /**< original problem */
    SCIP_Real            primalbound,         /**< current primal bound in transformed problem, or infinity */
    SCIP_Real            dualbound            /**< current lower bound in transformed space, or -infinity */
    );

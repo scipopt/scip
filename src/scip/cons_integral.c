@@ -101,8 +101,11 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_Real solval;
+   int nallinteger;
+   int ninteger;
    int nbin;
    int nint;
+   int nimpl;
    int v;
 
    assert(conshdlr != NULL);
@@ -111,16 +114,14 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
 
    SCIPdebugMessage("Check method of integrality constraint (checkintegrality=%u)\n", checkintegrality);
 
-   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, NULL, NULL) );
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, &nimpl, NULL) );
 
    *result = SCIP_FEASIBLE;
 
+   ninteger = nbin + nint;
+
    if( checkintegrality )
    {
-      int ninteger;
-
-      ninteger = nbin + nint;
-
       for( v = 0; v < ninteger; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
@@ -140,13 +141,30 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
 #ifndef NDEBUG
    else
    {
-      for( v = 0; v < nbin + nint; ++v )
+      for( v = 0; v < ninteger; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
          assert(SCIPisFeasIntegral(scip, solval));
       }
    }
 #endif
+
+   nallinteger = ninteger + nimpl;
+   for( v = ninteger; v < nallinteger; ++v )
+   {
+      solval = SCIPgetSolVal(scip, sol, vars[v]);
+      if( !SCIPisFeasIntegral(scip, solval) )
+      {
+         *result = SCIP_INFEASIBLE;
+
+         if( printreason )
+         {
+            SCIPinfoMessage(scip, NULL, "violation: integrality condition of implicit integral variable <%s> = %.15g\n",
+               SCIPvarGetName(vars[v]), solval);
+         }
+         break;
+      }
+   }
 
    return SCIP_OKAY;
 }

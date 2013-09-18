@@ -440,19 +440,18 @@ SCIP_Bool checkCons(
    if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vbdvar)) && (!SCIPisFeasLE(scip, solval, consdata->rhs) || !SCIPisFeasGE(scip, solval, consdata->lhs)) )
       return FALSE;
 
+
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
       SCIP_Real sum;
 
-      sum = SCIPgetSolVal(scip, sol, consdata->var);
-      sum += consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
+      sum = solval + consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
 
       return (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasGE(scip, sum, consdata->lhs))
          && (SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasLE(scip, sum, consdata->rhs));
    }
    else
       return TRUE;
-
 }
 
 
@@ -1159,6 +1158,12 @@ SCIP_RETCODE propagateCons(
 
    *cutoff = FALSE;
 
+   /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
+   if( !SCIPinRepropagation(scip) )
+   {
+      SCIP_CALL( SCIPincConsAge(scip, cons) );
+   }
+
    /* check, if constraint is already propagated */
    if( consdata->propagated )
       return SCIP_OKAY;
@@ -1206,7 +1211,9 @@ SCIP_RETCODE propagateCons(
 
             if( *cutoff )
             {
-               assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)));
+               assert( SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)) );
+
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
                /* analyze infeasibility */
                SCIP_CALL( analyzeConflict(scip, cons, consdata->var, newlb, PROPRULE_1, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
@@ -1217,6 +1224,7 @@ SCIP_RETCODE propagateCons(
             {
                tightenedround = TRUE;
                (*nchgbds)++;
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
             }
             xlb = SCIPvarGetLbLocal(consdata->var);
          }
@@ -1240,7 +1248,7 @@ SCIP_RETCODE propagateCons(
 
                   if( *cutoff )
                   {
-                     assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
+                     assert( SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)) );
 
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newlb, PROPRULE_2, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
@@ -1267,7 +1275,9 @@ SCIP_RETCODE propagateCons(
 
                   if( *cutoff )
                   {
-                     assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
+                     assert( SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)) );
+
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newub, PROPRULE_2, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
@@ -1278,6 +1288,7 @@ SCIP_RETCODE propagateCons(
                   {
                      tightenedround = TRUE;
                      (*nchgbds)++;
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   }
                   yub = SCIPvarGetUbLocal(consdata->vbdvar);
                }
@@ -1317,7 +1328,9 @@ SCIP_RETCODE propagateCons(
 
             if( *cutoff )
             {
-               assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)));
+               assert( SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)) );
+
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
                /* analyze infeasibility */
                SCIP_CALL( analyzeConflict(scip, cons, consdata->var, newub, PROPRULE_3, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
@@ -1328,6 +1341,7 @@ SCIP_RETCODE propagateCons(
             {
                tightenedround = TRUE;
                (*nchgbds)++;
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
             }
             xub = SCIPvarGetUbLocal(consdata->var);
          }
@@ -1353,6 +1367,8 @@ SCIP_RETCODE propagateCons(
                   {
                      assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
 
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newub, PROPRULE_4, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
                      break;
@@ -1362,6 +1378,7 @@ SCIP_RETCODE propagateCons(
                   {
                      tightenedround = TRUE;
                      (*nchgbds)++;
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   }
                   yub = SCIPvarGetUbLocal(consdata->vbdvar);
                }
@@ -1380,6 +1397,8 @@ SCIP_RETCODE propagateCons(
                   {
                      assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
 
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newlb, PROPRULE_4, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
                      break;
@@ -1389,6 +1408,7 @@ SCIP_RETCODE propagateCons(
                   {
                      tightenedround = TRUE;
                      (*nchgbds)++;
+                     SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   }
                   ylb = SCIPvarGetLbLocal(consdata->vbdvar);
                }
@@ -1788,6 +1808,16 @@ void checkRedundancySide(
  *          we calculate possible values for both variables and check which constraint is tighter
  *  else
  *      nothing possible
+ *
+ *  We also try to tighten bounds in the case of two constraints lhs1 <= x + b1*y <= rhs1 and lhs2 <= y + b2*x <= rhs2.
+ *  Eliminiating one variable and inserting into the second yields the following bounds:
+ *  If b2 > 0:
+ *     (1 - b1 * b2) * y >= lhs2 - b2 * rhs1
+ *     (1 - b1 * b2) * y <= rhs2 - b2 * lhs1
+ *  If b2 < 0:
+ *     (1 - b1 * b2) * y >= lhs2 - b2 * lhs1
+ *     (1 - b1 * b2) * y <= rhs2 - b2 * rhs1
+ *  The case of x is similar.
  */
 static
 SCIP_RETCODE preprocessConstraintPairs(
@@ -1867,16 +1897,204 @@ SCIP_RETCODE preprocessConstraintPairs(
          assert(!SCIPisZero(scip, consdata1->vbdcoef));
          assert(!SCIPisInfinity(scip, -consdata1->lhs) || !SCIPisInfinity(scip, consdata1->rhs));
 
+         lhs = consdata0->lhs;
+         rhs = consdata0->rhs;
+         coef = consdata0->vbdcoef;
+
+         /* check for propagation in the case: lhs1 <= x + b1*y <= rhs1 and lhs2 <= y + b2*x <= rhs2. */
+         if ( consdata0->var == consdata1->vbdvar && consdata0->vbdvar == consdata1->var &&
+            !SCIPisFeasZero(scip, 1.0 - coef * consdata1->vbdcoef) )
+         {
+            SCIP_Bool tightened = FALSE;
+            SCIP_Real scalar = 0.0;
+            SCIP_Real bnd = SCIP_UNKNOWN;
+            SCIP_Real newbnd;
+
+            scalar = (1.0 - coef * consdata1->vbdcoef);
+
+            assert( ! SCIPisInfinity(scip, REALABS(scalar)) );
+            assert( ! SCIPisZero(scip, consdata0->vbdcoef) );
+            assert( ! SCIPisZero(scip, consdata1->vbdcoef) );
+
+            /* lower bounds for consdata0->var */
+            if ( ! SCIPisInfinity(scip, -lhs) )
+            {
+               if ( SCIPisPositive(scip, coef) )
+               {
+                  if ( ! SCIPisInfinity(scip, consdata1->rhs) )
+                     bnd = (lhs - coef * consdata1->rhs)/scalar;
+               }
+               else
+               {
+                  assert( SCIPisNegative(scip, coef) );
+                  if ( ! SCIPisInfinity(scip, consdata1->lhs) )
+                     bnd = (lhs - coef * consdata1->lhs)/scalar;
+               }
+
+               if ( bnd != SCIP_UNKNOWN )
+               {
+                  if ( SCIPisFeasPositive(scip, scalar) )
+                  {
+                     newbnd = SCIPadjustedVarLb(scip, consdata0->var, bnd);
+                     SCIP_CALL( SCIPtightenVarLb(scip, consdata0->var, newbnd, FALSE, cutoff, &tightened) );
+                     if ( tightened )
+                     {
+                        SCIPdebugMessage("<%s>, <%s> -> tightened lower bound: <%s> >= %.15g\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1),
+                           SCIPvarGetName(consdata0->var), SCIPvarGetLbGlobal(consdata0->var));
+                        (*nchgbds)++;
+                     }
+                  }
+                  else if ( SCIPisFeasNegative(scip, scalar) )
+                  {
+                     newbnd = SCIPadjustedVarUb(scip, consdata0->var, bnd);
+                     SCIP_CALL( SCIPtightenVarUb(scip, consdata0->var, newbnd, FALSE, cutoff, &tightened) );
+                     if ( tightened )
+                     {
+                        SCIPdebugMessage("<%s>, <%s> -> tightened upper bound: <%s> >= %.15g\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1),
+                           SCIPvarGetName(consdata0->var), SCIPvarGetUbGlobal(consdata0->var));
+                        (*nchgbds)++;
+                     }
+                  }
+               }
+            }
+
+            /* upper bound for consdata0>var */
+            if ( ! SCIPisInfinity(scip, rhs) )
+            {
+               bnd = SCIP_UNKNOWN;
+               if ( SCIPisPositive(scip, coef) )
+               {
+                  if ( ! SCIPisInfinity(scip, consdata1->lhs) )
+                     bnd = (rhs - coef * consdata1->lhs)/scalar;
+               }
+               else
+               {
+                  assert( SCIPisNegative(scip, coef) );
+                  if ( ! SCIPisInfinity(scip, consdata1->rhs) )
+                     bnd = (rhs - coef * consdata1->rhs)/scalar;
+               }
+
+               if ( bnd != SCIP_UNKNOWN )
+               {
+                  if ( SCIPisFeasPositive(scip, scalar) )
+                  {
+                     newbnd = SCIPadjustedVarUb(scip, consdata0->var, bnd);
+                     SCIP_CALL( SCIPtightenVarUb(scip, consdata0->var, newbnd, FALSE, cutoff, &tightened) );
+                     if ( tightened )
+                     {
+                        SCIPdebugMessage("<%s>, <%s> -> tightened upper bound: <%s> >= %.15g\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1),
+                           SCIPvarGetName(consdata0->var), SCIPvarGetUbGlobal(consdata0->var));
+                        (*nchgbds)++;
+                     }
+                  }
+                  else if ( SCIPisFeasNegative(scip, scalar) )
+                  {
+                     newbnd = SCIPadjustedVarLb(scip, consdata0->var, bnd);
+                     SCIP_CALL( SCIPtightenVarLb(scip, consdata0->var, newbnd, FALSE, cutoff, &tightened) );
+                     if ( tightened )
+                     {
+                        SCIPdebugMessage("<%s>, <%s> -> tightened lower bound: <%s> >= %.15g\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1),
+                           SCIPvarGetName(consdata0->var), SCIPvarGetLbGlobal(consdata0->var));
+                        (*nchgbds)++;
+                     }
+                  }
+               }
+            }
+
+
+            /* lower bounds for consdata1->var */
+            if ( ! SCIPisInfinity(scip, -consdata1->lhs) )
+            {
+               bnd = SCIP_UNKNOWN;
+               if ( SCIPisPositive(scip, consdata1->vbdcoef) )
+               {
+                  if ( ! SCIPisInfinity(scip, rhs) )
+                     bnd = (consdata1->lhs - consdata1->vbdcoef * rhs)/scalar;
+               }
+               else
+               {
+                  assert( SCIPisNegative(scip, consdata1->vbdcoef) );
+                  if ( ! SCIPisInfinity(scip, lhs) )
+                     bnd = (consdata1->lhs - consdata1->vbdcoef * lhs)/scalar;
+               }
+
+               if ( bnd != SCIP_UNKNOWN )
+               {
+                  if ( SCIPisFeasPositive(scip, scalar) )
+                  {
+                     newbnd = SCIPadjustedVarLb(scip, consdata1->var, bnd);
+                     SCIP_CALL( SCIPtightenVarLb(scip, consdata1->var, newbnd, FALSE, cutoff, &tightened) );
+                     if ( tightened )
+                     {
+                        SCIPdebugMessage("<%s>, <%s> -> tightened lower bound: <%s> >= %.15g\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1),
+                           SCIPvarGetName(consdata1->var), SCIPvarGetLbGlobal(consdata1->var));
+                        (*nchgbds)++;
+                     }
+                  }
+                  else if ( SCIPisFeasNegative(scip, scalar) )
+                  {
+                     newbnd = SCIPadjustedVarUb(scip, consdata1->var, bnd);
+                     SCIP_CALL( SCIPtightenVarUb(scip, consdata1->var, newbnd, FALSE, cutoff, &tightened) );
+                     if ( tightened )
+                     {
+                        SCIPdebugMessage("<%s>, <%s> -> tightened upper bound: <%s> >= %.15g\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1),
+                           SCIPvarGetName(consdata1->var), SCIPvarGetUbGlobal(consdata1->var));
+                        (*nchgbds)++;
+                     }
+                  }
+               }
+            }
+
+            /* upper bound for consdata1->var */
+            if ( ! SCIPisInfinity(scip, consdata1->rhs) )
+            {
+               bnd = SCIP_UNKNOWN;
+               if ( SCIPisPositive(scip, consdata1->vbdcoef) )
+               {
+                  if ( ! SCIPisInfinity(scip, lhs) )
+                     bnd = (consdata1->lhs - consdata1->vbdcoef * lhs)/scalar;
+               }
+               else
+               {
+                  assert( SCIPisNegative(scip, consdata1->vbdcoef) );
+                  if ( ! SCIPisInfinity(scip, rhs) )
+                     bnd = (consdata1->lhs - consdata1->vbdcoef * rhs)/scalar;
+               }
+
+               if ( bnd != SCIP_UNKNOWN )
+               {
+                  if ( SCIPisFeasPositive(scip, scalar) )
+                  {
+                     newbnd = SCIPadjustedVarUb(scip, consdata1->var, bnd);
+                     SCIP_CALL( SCIPtightenVarUb(scip, consdata1->var, newbnd, FALSE, cutoff, &tightened) );
+                     if ( tightened )
+                     {
+                        SCIPdebugMessage("<%s>, <%s> -> tightened upper bound: <%s> >= %.15g\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1),
+                           SCIPvarGetName(consdata1->var), SCIPvarGetUbGlobal(consdata1->var));
+                        (*nchgbds)++;
+                     }
+                  }
+                  else if ( SCIPisFeasNegative(scip, scalar) )
+                  {
+                     newbnd = SCIPadjustedVarLb(scip, consdata1->var, bnd);
+                     SCIP_CALL( SCIPtightenVarLb(scip, consdata1->var, newbnd, FALSE, cutoff, &tightened) );
+                     if ( tightened )
+                     {
+                        SCIPdebugMessage("<%s>, <%s> -> tightened lower bound: <%s> >= %.15g\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1),
+                           SCIPvarGetName(consdata1->var), SCIPvarGetLbGlobal(consdata1->var));
+                        (*nchgbds)++;
+                     }
+                  }
+               }
+            }
+         }
+
          /* check for equal variables */
          if( consdata0->var != consdata1->var || consdata0->vbdvar != consdata1->vbdvar )
             break;
 
          /* mark constraint1 for deletion if possible */
          deletecons1 = TRUE;
-
-         lhs = consdata0->lhs;
-         rhs = consdata0->rhs;
-         coef = consdata0->vbdcoef;
 
          /* the coefficients of both constraints are equal */
          if( SCIPisEQ(scip, coef, consdata1->vbdcoef) )
@@ -3613,13 +3831,20 @@ SCIP_DECL_CONSENFOLP(consEnfolpVarbound)
          assert((*result) == SCIP_INFEASIBLE || (*result) == SCIP_FEASIBLE);
          (*result) = SCIP_INFEASIBLE;
 
+         SCIP_CALL( SCIPresetConsAge(scip, conss[i]) );
+
          SCIP_CALL( separateCons(scip, conss[i], conshdlrdata->usebdwidening, NULL, result) );
          assert((*result) != SCIP_FEASIBLE);
 
          if( (*result) != SCIP_INFEASIBLE )
             break;
       }
-   } 
+      else
+      {
+         /* increase age of constraint */
+         SCIP_CALL( SCIPincConsAge(scip, conss[i]) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -3635,13 +3860,20 @@ SCIP_DECL_CONSENFOPS(consEnfopsVarbound)
    {
       if( !checkCons(scip, conss[i], NULL, TRUE) )
       {
+         SCIP_CALL( SCIPresetConsAge(scip, conss[i]) );
+
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
       }
-   } 
+      else
+      {
+         /* increase age of constraint */
+         SCIP_CALL( SCIPincConsAge(scip, conss[i]) );
+      }
+   }
    *result = SCIP_FEASIBLE;
 
-   return SCIP_OKAY;  
+   return SCIP_OKAY;
 }
 
 
@@ -3659,17 +3891,17 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
 
          if( printreason )
          {
-            SCIP_Real sum;
             SCIP_CONSDATA* consdata;
+            SCIP_Real sum;
 
             consdata = SCIPconsGetData(conss[i]);
             assert( consdata != NULL );
 
-            sum = SCIPgetSolVal(scip, sol, consdata->var);
-            sum += consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);   
+            sum = SCIPgetSolVal(scip, sol, consdata->var) + consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
 
             SCIP_CALL( SCIPprintCons(scip, conss[i], NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
+
             if( !SCIPisFeasGE(scip, sum, consdata->lhs) )
             {
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - sum);
@@ -3681,7 +3913,7 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
          }
          return SCIP_OKAY;
       }
-   } 
+   }
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;

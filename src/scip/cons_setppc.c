@@ -2233,8 +2233,10 @@ SCIP_Bool checkCons(
    for( v = 0; v < nvars && sum < sumbound; ++v )  /* if sum >= sumbound, the feasibility is clearly decided */
    {
       assert(SCIPvarIsBinary(vars[v]));
+
       solval = SCIPgetSolVal(scip, sol, vars[v]);
       assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
+
       sum += solval;
    }
 
@@ -7306,7 +7308,7 @@ SCIP_RETCODE branchLP(
    assert(varuses != NULL);
 
    /* get fractional variables */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands, NULL, NULL) );
    if( nlpcands == 0 )
       return SCIP_OKAY;
 
@@ -7728,17 +7730,19 @@ SCIP_DECL_CONSCHECK(consCheckSetppc)
 
             if( printreason )
             {
-               int v;
                SCIP_Real sum = 0.0;
+               int v;
 
                SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 
                for( v = 0; v < consdata->nvars; ++v )
                {
                   assert(SCIPvarIsBinary(consdata->vars[v]));
+
                   sum += SCIPgetSolVal(scip, sol, consdata->vars[v]);
                }
-               SCIPinfoMessage(scip, NULL, ";\nviolation: the right hand side is violated by by %.15g\n", ABS(sum - 1));
+               SCIPinfoMessage(scip, NULL, ";\n");
+               SCIPinfoMessage(scip, NULL, "violation: the right hand side is violated by by %.15g\n", ABS(sum - 1));
             }
             return SCIP_OKAY;
          }

@@ -1552,7 +1552,7 @@ SCIP_RETCODE readExpression(
       /* check number of children */
       if( xmlFirstChild(node) == NULL || xmlNextSibl(xmlFirstChild(node)) != NULL )
       {
-         SCIPerrorMessage("Expected exactly one children in <%s> node in nonlinear expression\n", exprname);
+         SCIPerrorMessage("Expected exactly one child in <%s> node in nonlinear expression\n", exprname);
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
@@ -2345,16 +2345,19 @@ SCIP_RETCODE readNonlinearExprs(
 
 
 /** read sos1 and sos2 constraints
- * sos constraints are expected to be given as a node of <instanceData> in the following way:
- *     <specialOrderedSets numberOfSpecialOrderedSets="1">
+ *
+ *  sos constraints are expected to be given as a node of \<instanceData\> in the following way:
+ *    @code
+ *    <specialOrderedSets numberOfSpecialOrderedSets="1">
  *       <sos numberOfVar="2" order="2">
  *           <var idx="1"></var>
  *           <var idx="2"></var>
  *       </sos>
- *   </specialOrderedSets>
- *   Weights are determined by the order in which the variables are given
- * */
-
+ *    </specialOrderedSets>
+ *    @endcode
+ * Weights are determined by the order in which the variables are given
+ *
+ */
 static
 SCIP_RETCODE readSOScons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2518,16 +2521,16 @@ SCIP_RETCODE readSOScons(
              *doingfine = FALSE;
              return SCIP_OKAY;
           }
-          assert(idx > 0);
+          assert(idx >= 0);
 
           /* we now know that we have a variable/weight pair -> add variable*/
           switch( type )
           {
           case 1:
-             SCIP_CALL( SCIPaddVarSOS1(scip, cons, vars[idx], (SCIP_Real) varcount) );
+             SCIP_CALL( SCIPaddVarSOS1(scip, cons, vars[idx], (SCIP_Real) (nsosvars - varcount)) );
              break;
           case 2:
-             SCIP_CALL( SCIPaddVarSOS2(scip, cons, vars[idx], (SCIP_Real) varcount) );
+             SCIP_CALL( SCIPaddVarSOS2(scip, cons, vars[idx], (SCIP_Real) (nsosvars - varcount)) );
              break;
           default:
              SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */

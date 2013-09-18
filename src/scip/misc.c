@@ -36,6 +36,7 @@
 #include "scip/set.h"
 #include "scip/misc.h"
 #include "scip/intervalarith.h"
+#include "scip/pub_misc.h"
 
 #ifndef NDEBUG
 #include "scip/struct_misc.h"
@@ -1159,7 +1160,7 @@ SCIP_RETCODE hashtableResize(
       /* remember number of elements */
       nelements = hashtable->nelements;
       /* clear old lists */
-      SCIPhashtableClear(hashtable);
+      SCIPhashtableRemoveAll(hashtable);
       /* free old lists */
       BMSfreeMemoryArray(&(hashtable->lists));
 
@@ -1240,7 +1241,7 @@ void SCIPhashtableFree(
    for( i = table->nlists - 1; i >= 0; --i )
       hashtablelistFree(&lists[i], blkmem);
 
-   /* free main hast table data structure */
+   /* free main hash table data structure */
    BMSfreeMemoryArray(&table->lists);
    BMSfreeMemory(hashtable);
 }
@@ -1249,6 +1250,8 @@ void SCIPhashtableFree(
  *
  *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
  *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ *
+ *  @deprecated Please use SCIPhashtableRemoveAll()
  */
 void SCIPhashtableClear(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
@@ -1454,6 +1457,31 @@ SCIP_RETCODE SCIPhashtableRemove(
       --(hashtable->nelements);
 
    return SCIP_OKAY;
+}
+
+/** removes all elements of the hash table
+ *
+ *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
+ *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ */
+void SCIPhashtableRemoveAll(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   BMS_BLKMEM* blkmem;
+   SCIP_HASHTABLELIST** lists;
+   int i;
+
+   assert(hashtable != NULL);
+
+   blkmem = hashtable->blkmem;
+   lists = hashtable->lists;
+
+   /* free hash lists */
+   for( i = hashtable->nlists - 1; i >= 0; --i )
+      hashtablelistFree(&lists[i], blkmem);
+
+   hashtable->nelements = 0;
 }
 
 /** returns number of hash table elements */
@@ -3756,6 +3784,16 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortRealPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealPtrPtrIntInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  int
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortRealRealRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealRealBoolPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -4240,6 +4278,16 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortDownRealPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealPtrPtrIntInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortDownRealRealRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealRealRealBoolPtr
@@ -4487,6 +4535,8 @@ void SCIPactivityFree(
 
 /* some simple variable functions implemented as defines */
 
+#ifndef NDEBUG
+
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
@@ -4538,6 +4588,7 @@ int SCIPactivityGetEnergy(
    return activity->duration * activity->demand ;
 }
 
+#endif
 
 /*
  * Resource Profile

@@ -1985,7 +1985,7 @@ SCIP_RETCODE resolvePropagation(
       if( nvars > 0 )
       {
          addedvars = propdata->addedvars;
-         SCIPhashtableClear(addedvars);
+         SCIPhashtableRemoveAll(addedvars);
       }
 
       if( infervar != NULL )

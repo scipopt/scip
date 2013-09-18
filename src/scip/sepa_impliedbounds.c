@@ -321,7 +321,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
       return SCIP_OKAY;
 
    /* get fractional problem variables */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &fracvars, &fracvals, NULL, &nfracs, NULL) );
+   /* todo try out also separating fractional implicit integer variables */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &fracvars, &fracvals, NULL, &nfracs, NULL, NULL) );
    if( nfracs == 0 )
       return SCIP_OKAY;
 

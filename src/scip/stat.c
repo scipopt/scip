@@ -329,7 +329,8 @@ void SCIPstatResetPrimalIntegral(
 void SCIPstatUpdatePrimalDualIntegral(
    SCIP_STAT*           stat,                /**< problem statistics data */
    SCIP_SET*            set,                 /**< global SCIP settings */
-   SCIP_PROB*           prob,                /**< transformed problem data */
+   SCIP_PROB*           transprob,           /**< transformed problem */
+   SCIP_PROB*           origprob,            /**< original problem */
    SCIP_Real            upperbound,          /**< current upper bound in transformed problem, or infinity */
    SCIP_Real            lowerbound           /**< current lower bound in transformed space, or -infinity */
    )
@@ -345,42 +346,47 @@ void SCIPstatUpdatePrimalDualIntegral(
    solvingtime = SCIPclockGetTime(stat->solvingtime);
    assert(solvingtime >= stat->previntegralevaltime);
 
-   if( !SCIPsetIsInfinity(set, upperbound) || stat->lastprimalbound == SCIP_UNKNOWN ) /*lint !e777*/
+   if( !SCIPsetIsInfinity(set, upperbound) ) /*lint !e777*/
    {
       /* get value in original space for gap calculation */
-      primalbound = SCIPprobExternObjval(prob, set, upperbound);
+      primalbound = SCIPprobExternObjval(transprob, origprob, set, upperbound);
+
+      if( SCIPsetIsZero(set, primalbound) )
+         primalbound = 0.0;
    }
    else
    {
       /* no new upper bound: use stored values from last update */
       upperbound = stat->lastupperbound;
       primalbound = stat->lastprimalbound;
+      assert(SCIPsetIsZero(set, primalbound) == (primalbound == 0.0)); /*lint !e777*/
    }
 
-   if( !SCIPsetIsInfinity(set, -lowerbound) || stat->lastdualbound == SCIP_UNKNOWN ) /*lint !e777*/
+   if( !SCIPsetIsInfinity(set, -lowerbound) ) /*lint !e777*/
    {
       /* get value in original space for gap calculation */
-      dualbound = SCIPprobExternObjval(prob, set, lowerbound);
+      dualbound = SCIPprobExternObjval(transprob, origprob, set, lowerbound);
+
+      if( SCIPsetIsZero(set, dualbound) )
+         dualbound = 0.0;
    }
    else
    {
       /* no new lower bound: use stored values from last update */
       lowerbound = stat->lastlowerbound;
       dualbound = stat->lastdualbound;
+      assert(SCIPsetIsZero(set, dualbound) == (dualbound == 0.0)); /*lint !e777*/
    }
 
-   /* the gap is 0.0 if the lower bound is greater-equal the upper bound */
-   if( SCIPsetIsGE(set, lowerbound, upperbound) )
-   {
-      currentgap = 0.0;
-   }
-   /* the gap is 0.0 if primal and dualbound are the same */
-   else if( SCIPsetIsEQ(set, primalbound, dualbound) )
+   if( primalbound == SCIP_UNKNOWN || dualbound == SCIP_UNKNOWN ) /*lint !e777*/
+      currentgap = 100.0;
+   /* the gap is 0.0 if the lower bound is greater-equal the upper bound or if primal and dualbound are equal */
+   else if( SCIPsetIsGE(set, lowerbound, upperbound) || SCIPsetIsEQ(set, primalbound, dualbound) )
    {
       currentgap = 0.0;
    }
    /* the gap is 100.0 if primal and dualbound have different signs */
-   else if( primalbound * dualbound < 0 )
+   else if( primalbound * dualbound < 0 || primalbound == 0.0 || dualbound == 0.0 ) /*lint !e777*/
    {
       currentgap = 100.0;
    }
@@ -400,7 +406,8 @@ void SCIPstatUpdatePrimalDualIntegral(
 
    /* if primal and dual bound have opposite signs, the gap always evaluates to 100.0% */
    assert(currentgap == 0.0 || currentgap == 100.0 || SCIPsetIsGE(set, primalbound * dualbound, 0.0));
-   assert(SCIPsetIsGE(set, stat->previousgap, currentgap));
+   assert(SCIPsetIsGE(set, stat->previousgap, currentgap) || (set->stage == SCIP_STAGE_EXITPRESOLVE
+         && SCIPsetIsFeasGE(set, stat->previousgap, currentgap)));
 
    /* update the integral based on information based on previous information */
    stat->primalintegralval += (solvingtime - stat->previntegralevaltime) * stat->previousgap;

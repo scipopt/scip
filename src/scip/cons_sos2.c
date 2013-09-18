@@ -619,13 +619,14 @@ SCIP_RETCODE presolRoundSOS2(
             return SCIP_OKAY;
          }
 
-         lastFixedNonzero = j;
+         if( lastFixedNonzero == -1)
+            lastFixedNonzero = j;
       }
 
       /* if the variable is fixed to 0 we may delete it from our constraint */
       if( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) )
       {
-         /* all rear variable fixed to 0 can be deleted */
+         /* all rear variables fixed to 0 can be deleted */
          if( j == consdata->nvars - 1 )
          {
             ++(*nremovedvars);
@@ -635,7 +636,7 @@ SCIP_RETCODE presolRoundSOS2(
 
             *success = TRUE;
          }
-         /* remember position of last variable variable for which all up front and this one are fixed to 0 */
+         /* remember position of last variable for which all up front and this one are fixed to 0 */
          else if( lastzero > j + 1 )
             lastzero = j;
       }
@@ -646,7 +647,7 @@ SCIP_RETCODE presolRoundSOS2(
    /* check that our vars array is still correct */
    assert(vars == consdata->vars);
 
-   /* remove first "lastzero" many varaibles, that are already fixed to 0 */
+   /* remove first "lastzero" many variables, that are already fixed to 0 */
    if( lastzero < consdata->nvars )
    {
       assert(lastzero >= 0);
@@ -663,7 +664,7 @@ SCIP_RETCODE presolRoundSOS2(
       *success = TRUE;
    }
 
-   /* check that our vars array is still correct */
+   /* check that our variable array is still correct */
    assert(vars == consdata->vars);
 
    *nremovedvars += localnremovedvars;
@@ -743,7 +744,7 @@ SCIP_RETCODE presolRoundSOS2(
          SCIPisFeasNegative(scip, SCIPvarGetUbGlobal(vars[lastFixedNonzero + 1])));
 
       /* fix all variables before lastFixedNonzero to zero */
-      for( j = 0; j < lastFixedNonzero; ++j )
+      for( j = 0; j < lastFixedNonzero - 1; ++j )
       {
          SCIPdebugMessage("fixing variable <%s> to 0.\n", SCIPvarGetName(vars[j]));
          SCIP_CALL( SCIPfixVar(scip, vars[j], 0.0, &infeasible, &fixed) );
@@ -2053,19 +2054,13 @@ SCIP_DECL_CONSCOPY(consCopySOS2)
 static
 SCIP_DECL_CONSPARSE(consParseSOS2)
 {  /*lint --e{715}*/
-   char varname[SCIP_MAXSTRLEN];
    SCIP_VAR* var;
    SCIP_Real weight;
    const char* s;
    char* t;
-   int k;
 
    *success = TRUE;
    s = str;
-
-   /* skip white space and '<' */
-   while ( (*s != '\0' && isspace((unsigned char)*s)) || *s == '<' )
-      ++s;
 
    /* create empty SOS2 constraint */
    SCIP_CALL( SCIPcreateConsSOS2(scip, cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
@@ -2073,20 +2068,11 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
    /* loop through string */
    do
    {
-      /* find variable name */
-      k = 0;
-      while ( *s != '\0' && ! isspace((unsigned char)*s) && *s != ',' && *s != '(' && *s != '>' )
-         varname[k++] = *s++;
-      varname[k] = '\0';
+      /* parse variable name */
+      SCIP_CALL( SCIPparseVarName(scip, s, &var, &t) );
+      s = t;
 
-      if ( *s == '\0' )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected weight at input: %s\n", s);
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
-
-      /* skip until beginning of weight (in particular, skip type specifier [?]) */
+      /* skip until beginning of weight */
       while ( *s != '\0' && *s != '(' )
          ++s;
 
@@ -2109,18 +2095,9 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
       }
       s = t;
 
-      /* skip white space, ',', '(', and '<' */
-      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' || *s == '<' ) )
+      /* skip white space, ',', and ')' */
+      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' ) )
          ++s;
-
-      /* get variable */
-      var = SCIPfindVar(scip, varname);
-      if ( var == NULL )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
 
       /* add variable */
       SCIP_CALL( SCIPaddVarSOS2(scip, *cons, var, weight) );

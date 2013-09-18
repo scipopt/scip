@@ -297,12 +297,13 @@ SCIP_RETCODE SCIPsolCreate(
    return SCIP_OKAY;
 }
 
-/** creates primal CIP solution in original problem space, initialized to zero */
+/** creates primal CIP solution in original problem space, initialized to the offset in the original problem */
 SCIP_RETCODE SCIPsolCreateOriginal(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -317,7 +318,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
    (*sol)->solorigin = SCIP_SOLORIGIN_ORIGINAL;
-   (*sol)->obj = 0.0;
+   (*sol)->obj = origprob->objoffset;
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
@@ -1241,14 +1242,15 @@ SCIP_Real SCIPsolGetRayVal(
 SCIP_Real SCIPsolGetObj(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob            /**< original problem data */
    )
 {
    assert(sol != NULL);
 
    /* for original solutions, sol->obj contains the external objective value */
    if( SCIPsolIsOriginal(sol) )
-      return SCIPprobInternObjval(prob, set, sol->obj);
+      return SCIPprobInternObjval(transprob, origprob, set, sol->obj);
    else
       return sol->obj;
 }
@@ -1634,7 +1636,7 @@ void SCIPsolRecomputeObj(
    nvars = origprob->nvars;
 
    /* recompute the objective value */
-   sol->obj = 0.0;
+   sol->obj = SCIPprobGetObjoffset(origprob);
    for( v = 0; v < nvars; ++v )
    {
       solval = SCIPsolGetVal(sol, set, stat, vars[v]);
@@ -1677,8 +1679,8 @@ SCIP_Bool SCIPsolsAreEqual(
    /* one solution is original and the other not, so we have to get for both the objective in the transformed problem */
    else
    {
-      obj1 = SCIPsolGetObj(sol1, set, transprob);
-      obj2 = SCIPsolGetObj(sol2, set, transprob);
+      obj1 = SCIPsolGetObj(sol1, set, transprob, origprob);
+      obj2 = SCIPsolGetObj(sol2, set, transprob, origprob);
    }
 
    /* solutions with different objective values cannot be the same */
@@ -1947,6 +1949,7 @@ SCIP_RETCODE SCIPsolPrintRay(
 #undef SCIPsolGetRunnum
 #undef SCIPsolGetDepth
 #undef SCIPsolGetHeur
+#undef SCIPsolOrigAddObjval
 #undef SCIPsolGetPrimalIndex
 #undef SCIPsolSetPrimalIndex
 #undef SCIPsolGetIndex
@@ -1981,6 +1984,18 @@ SCIP_Real SCIPsolGetOrigObj(
    assert(SCIPsolIsOriginal(sol));
 
    return sol->obj;
+}
+
+/** adds value to the objective value of a given original primal CIP solution */
+void SCIPsolOrigAddObjval(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             addval              /**< offset value to add */
+   )
+{
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+
+   sol->obj += addval;
 }
 
 /** gets clock time, when this solution was found */

@@ -175,10 +175,10 @@ int GamsOptions::getInteger(
 #ifndef NDEBUG
    assert(optionshandle != NULL);
 
-   int i, refNum, isDefined, isDefinedRecent, dataType, optType, subType;
+   int i, refNum, isdefined, isDefinedRecent, dataType, optType, subType;
 
    assert(optFindStr(optionshandle, optname, &i, &refNum) > 0);
-   optGetInfoNr(optionshandle, i, &isDefined, &isDefinedRecent, &refNum, &dataType, &optType, &subType);
+   optGetInfoNr(optionshandle, i, &isdefined, &isDefinedRecent, &refNum, &dataType, &optType, &subType);
    assert(dataType == optDataInteger);
 #endif
 
@@ -192,10 +192,10 @@ double GamsOptions::getDouble(
 #ifndef NDEBUG
    assert(optionshandle != NULL);
 
-   int i, refNum, isDefined, isDefinedRecent, dataType, optType, subType;
+   int i, refNum, isdefined, isDefinedRecent, dataType, optType, subType;
 
    assert(optFindStr(optionshandle, optname, &i, &refNum) > 0);
-   optGetInfoNr(optionshandle, i, &isDefined, &isDefinedRecent, &refNum, &dataType, &optType, &subType);
+   optGetInfoNr(optionshandle, i, &isdefined, &isDefinedRecent, &refNum, &dataType, &optType, &subType);
    assert(dataType == optDataDouble);
 #endif
 
@@ -210,10 +210,10 @@ char* GamsOptions::getString(
 #ifndef NDEBUG
    assert(optionshandle != NULL);
 
-   int i, refNum, isDefined, isDefinedRecent, dataType, optType, subType;
+   int i, refNum, isdefined, isDefinedRecent, dataType, optType, subType;
 
    assert(optFindStr(optionshandle, optname, &i, &refNum) > 0);
-   optGetInfoNr(optionshandle, i, &isDefined, &isDefinedRecent, &refNum, &dataType, &optType, &subType);
+   optGetInfoNr(optionshandle, i, &isdefined, &isDefinedRecent, &refNum, &dataType, &optType, &subType);
    assert(dataType == optDataString);
 #endif
 
@@ -228,10 +228,10 @@ void GamsOptions::setInteger(
 #ifndef NDEBUG
    assert(optionshandle != NULL);
 
-   int i, refNum, isDefined, isDefinedRecent, dataType, optType, subType;
+   int i, refNum, isdefined, isDefinedRecent, dataType, optType, subType;
 
    assert(optFindStr(optionshandle, optname, &i, &refNum) > 0);
-   optGetInfoNr(optionshandle, i, &isDefined, &isDefinedRecent, &refNum, &dataType, &optType, &subType);
+   optGetInfoNr(optionshandle, i, &isdefined, &isDefinedRecent, &refNum, &dataType, &optType, &subType);
    assert(dataType == optDataInteger);
 #endif
 
@@ -247,10 +247,10 @@ void GamsOptions::setDouble(
 #ifndef NDEBUG
    assert(optionshandle != NULL);
 
-   int i, refNum, isDefined, isDefinedRecent, dataType, optType, subType;
+   int i, refNum, isdefined, isDefinedRecent, dataType, optType, subType;
 
    assert(optFindStr(optionshandle, optname, &i, &refNum) > 0);
-   optGetInfoNr(optionshandle, i, &isDefined, &isDefinedRecent, &refNum, &dataType, &optType, &subType);
+   optGetInfoNr(optionshandle, i, &isdefined, &isDefinedRecent, &refNum, &dataType, &optType, &subType);
    assert(dataType == optDataDouble);
 #endif
 
@@ -266,10 +266,10 @@ void GamsOptions::setString(
 #ifndef NDEBUG
    assert(optionshandle != NULL);
 
-   int i, refNum, isDefined, isDefinedRecent, dataType, optType, subType;
+   int i, refNum, isdefined, isDefinedRecent, dataType, optType, subType;
 
    assert(optFindStr(optionshandle, optname, &i, &refNum) > 0);
-   optGetInfoNr(optionshandle, i, &isDefined, &isDefinedRecent, &refNum, &dataType, &optType, &subType);
+   optGetInfoNr(optionshandle, i, &isdefined, &isDefinedRecent, &refNum, &dataType, &optType, &subType);
    assert(dataType == optDataString);
 #endif
 

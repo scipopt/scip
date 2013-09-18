@@ -955,7 +955,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    SCIPdebugMessage("Execlp method of relpscost branching\n");
    
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);
 
    /* copy LP banching candidates and solution values, because they will be updated w.r.t. the strong branching LP

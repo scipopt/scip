@@ -227,7 +227,7 @@ public:
    /**< return feastol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
    Real feastol()
    {
-      return rationalParam(FEASTOL);
+      return (Real) rationalParam(FEASTOL);
    }
 
    /**< set feastol and store value in case SoPlex only accepts a larger tolerance */
@@ -235,13 +235,13 @@ public:
       const Real d
       )
    {
-      setRationalParam(FEASTOL, d);
+      setRationalParam(FEASTOL, (Rational) d);
    }
 
    /**< return opttol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
    Real opttol()
    {
-      return rationalParam(OPTTOL);
+      return (Real) rationalParam(OPTTOL);
    }
 
    /**< set opttol and store value in case SoPlex only accepts a larger tolerance */
@@ -249,7 +249,7 @@ public:
       const Real d
       )
    {
-      setRationalParam(OPTTOL, d);
+      setRationalParam(OPTTOL, (Rational) d);
    }
 
    // @todo realize this with a member variable as before
@@ -2236,7 +2236,7 @@ SCIP_RETCODE lpiStrongbranch(
    SoPlex2::ALGORITHM_ENTER : SoPlex2::ALGORITHM_LEAVE);
 
    /* down branch */
-   newub = EPSCEIL(psol-1.0, lpi->spx->rationalParam(SoPlex2::FEASTOL));
+   newub = EPSCEIL(psol-1.0, lpi->spx->feastol());
    if( newub >= oldlb - 0.5 && down != NULL )
    {
       SCIPdebugMessage("strong branching down on x%d (%g) with %d iterations\n", col, psol, itlim);
@@ -3663,12 +3663,10 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->spx->intParam(SoPlex2::SIMPLIFIER) == SoPlex2::SIMPLIFIER_AUTO;
       break;
    case SCIP_LPPAR_PRICING:
-      *ival = (int)lpi->pricing;
+      *ival = (int) lpi->pricing;
       break;
    case SCIP_LPPAR_SCALING:
-      *ival = ((lpi->spx->intParam(SoPlex2::SCALER_BEFORE_SIMPLIFIER) != SoPlex2::SCALER_OFF) ||
-               (lpi->spx->intParam(SoPlex2::SCALER_AFTER_SIMPLIFIER) != SoPlex2::SCALER_OFF));
-      lpi->spx->setIntParam(SoPlex2::SCALER_AFTER_SIMPLIFIER, SoPlex2::SCALER_OFF);
+      *ival = (int) (lpi->spx->intParam(SoPlex2::SCALER) != SoPlex2::SCALER_OFF);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -3736,7 +3734,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       assert(ival == TRUE || ival == FALSE);
-      lpi->spx->setIntParam(SoPlex2::SCALER_BEFORE_SIMPLIFIER, ( ival ? SoPlex2::SCALER_BIEQUI : SoPlex2::SCALER_OFF));
+      lpi->spx->setIntParam(SoPlex2::SCALER, ( ival ? SoPlex2::SCALER_BIEQUI : SoPlex2::SCALER_OFF));
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;

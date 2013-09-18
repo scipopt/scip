@@ -124,6 +124,32 @@ SCIP_VAR* SCIPgetResultantAnd(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** return if the variables of the and-constraint are sorted due to their indices */
+EXTERN
+SCIP_Bool SCIPisAndConsSorted(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< and-constraint */
+   );
+
+/** sort the variables of the and-constraint due to their indices */
+EXTERN
+SCIP_RETCODE SCIPsortAndCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< and-constraint */
+   );
+
+/** when 'upgrading' the given and-constraint, should the check flag for the upgraded constraint be set to TRUE, even if
+ *  the check flag of this and-constraint is set to FALSE?
+ */
+EXTERN
+SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Bool             flag                /**< should an arising constraint from the given and-constraint be checked,
+                                              *   even if the check flag of the and-constraint is set to FALSE
+                                              */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -873,6 +873,7 @@ SCIP_RETCODE checkCons(
          /* sum over all weight times the corresponding solution value */
          for( v = consdata->nvars - 1; v >= 0; --v )
          {
+            assert(SCIPvarIsBinary(consdata->vars[v]));
             sum += consdata->weights[v] * SCIPgetSolVal(scip, sol, consdata->vars[v]);
          }
       }
@@ -883,6 +884,8 @@ SCIP_RETCODE checkCons(
          /* sum over all weight for which the variable has a solution value of 1 in feastol */
          for( v = consdata->nvars - 1; v >= 0; --v )
          {
+            assert(SCIPvarIsBinary(consdata->vars[v]));
+
             if( SCIPgetSolVal(scip, sol, consdata->vars[v]) > 0.5 )
                integralsum += consdata->weights[v];
          }
@@ -907,7 +910,8 @@ SCIP_RETCODE checkCons(
 
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 
-            SCIPinfoMessage(scip, NULL, ";\nviolation: the capacity is violated by %.15g\n", viol);
+            SCIPinfoMessage(scip, NULL, ";\n");
+            SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", viol);
          }
       }
    }
@@ -7122,7 +7126,7 @@ SCIP_RETCODE propagateCons(
    {
       zerosweightsum = 0;
       nvars = consdata->nvars;
-      
+
       minweightsum = 0;
       localminweightsum = 0;
 

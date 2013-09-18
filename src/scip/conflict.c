@@ -2006,7 +2006,8 @@ SCIP_RETCODE conflictAddConflictCons(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -2043,7 +2044,7 @@ SCIP_RETCODE conflictAddConflictCons(
       SCIPclockStart(conflict->dIBclock, set);
 
       /* find global bound changes which can be derived from the new conflict set */
-      SCIP_CALL( detectImpliedBounds(set, prob, conflictset, &nbdchgs, &nredvars, &redundant) );
+      SCIP_CALL( detectImpliedBounds(set, transprob, conflictset, &nbdchgs, &nredvars, &redundant) );
 
       /* debug check for reduced conflict set */
       if( nredvars > 0 )
@@ -2098,7 +2099,7 @@ SCIP_RETCODE conflictAddConflictCons(
       SCIPdebugMessage(" -> apply global bound change: <%s> %s %g\n",
          SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bound);
 
-      SCIP_CALL( SCIPnodeAddBoundchg(tree->path[conflictset->validdepth], blkmem, set, stat, prob, tree, lp, branchcand,
+      SCIP_CALL( SCIPnodeAddBoundchg(tree->path[conflictset->validdepth], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
             eventqueue, var, bound, boundtype, FALSE) );
 
       *success = TRUE;
@@ -2140,7 +2141,8 @@ SCIP_RETCODE SCIPconflictFlushConss(
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -2150,7 +2152,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
    assert(conflict != NULL);
    assert(set != NULL);
    assert(stat != NULL);
-   assert(prob != NULL);
+   assert(transprob != NULL);
    assert(tree != NULL);
 
    /* is there anything to do? */
@@ -2170,7 +2172,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
 
       /* calculate the maximal number of conflict sets to accept, and the maximal size of each accepted conflict set */
       maxconflictsets = (set->conf_maxconss == -1 ? INT_MAX : set->conf_maxconss);
-      maxsize = conflictCalcMaxsize(set, prob);
+      maxsize = conflictCalcMaxsize(set, transprob);
 
       focusdepth = SCIPtreeGetFocusDepth(tree);
 #ifndef NDEBUG
@@ -2239,7 +2241,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
             SCIP_Bool success;
 
             /* call conflict handlers to create a conflict constraint */
-            SCIP_CALL( conflictAddConflictCons(conflict, blkmem, set, stat, prob,
+            SCIP_CALL( conflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob,
                   tree, lp, branchcand, eventqueue, conflictset, conflictset->insertdepth, &success) );
 
             if( success )
@@ -2274,7 +2276,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
             assert(repropconflictset->repropagate);
             assert(repropconflictset->repropdepth == repropdepth);
 
-            SCIP_CALL( conflictAddConflictCons(conflict, blkmem, set, stat, prob,
+            SCIP_CALL( conflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob,
                   tree, lp, branchcand, eventqueue, repropconflictset, repropdepth, &success) );
 #ifdef SCIP_DEBUG
             if( success )
@@ -5471,7 +5473,8 @@ SCIP_RETCODE conflictAnalyzeLP(
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -5503,9 +5506,9 @@ SCIP_RETCODE conflictAnalyzeLP(
    assert(conflict != NULL);
    assert(conflict->nconflictsets == 0);
    assert(set != NULL);
-   assert(SCIPprobAllColsInLP(prob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
+   assert(SCIPprobAllColsInLP(transprob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
    assert(stat != NULL);
-   assert(prob != NULL);
+   assert(transprob != NULL);
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
@@ -5616,8 +5619,8 @@ SCIP_RETCODE conflictAnalyzeLP(
 #endif
 
    /* get active problem variables */
-   vars = prob->vars;
-   nvars = prob->nvars;
+   vars = transprob->vars;
+   nvars = transprob->nvars;
 
    /* get temporary memory for remembering variables' current bounds and corresponding bound change information
     * positions in variable's bound change information arrays
@@ -5697,19 +5700,19 @@ SCIP_RETCODE conflictAnalyzeLP(
       currentdepth = SCIPtreeGetCurrentDepth(tree);
       if( SCIPlpiIsPrimalInfeasible(lpi) )
       {
-         SCIP_CALL( undoBdchgsDualfarkas(set, prob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
-               oldlpbdchgs, relaxedlpbdchgs, &valid, &resolve) );
+         SCIP_CALL( undoBdchgsDualfarkas(set, transprob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs,
+               ubchginfoposs, oldlpbdchgs, relaxedlpbdchgs, &valid, &resolve) );
       }
       else
       {
          assert(SCIPlpiIsDualFeasible(lpi) || SCIPlpiIsObjlimExc(lpi));
-         SCIP_CALL( undoBdchgsDualsol(set, prob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
+         SCIP_CALL( undoBdchgsDualsol(set, transprob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
                oldlpbdchgs, relaxedlpbdchgs, &valid, &resolve) );
       }
    }
 
    /* check if we want to solve the LP */
-   assert(SCIPprobAllColsInLP(prob, set, lp));
+   assert(SCIPprobAllColsInLP(transprob, set, lp));
    solvelp = (set->conf_maxlploops != 0 && set->conf_lpiterations != 0);
 
    if( valid && resolve && solvelp )
@@ -5844,13 +5847,13 @@ SCIP_RETCODE conflictAnalyzeLP(
             /* undo additional bound changes */
             if( SCIPlpiIsPrimalInfeasible(lpi) )
             {
-               SCIP_CALL( undoBdchgsDualfarkas(set, prob, lp, currentdepth, curvarlbs, curvarubs,
+               SCIP_CALL( undoBdchgsDualfarkas(set, transprob, lp, currentdepth, curvarlbs, curvarubs,
                      lbchginfoposs, ubchginfoposs,  oldlpbdchgs, relaxedlpbdchgs, &valid, &resolve) );
             }
             else
             {
                assert(SCIPlpiIsDualFeasible(lpi) || SCIPlpiIsObjlimExc(lpi));
-               SCIP_CALL( undoBdchgsDualsol(set, prob, lp, currentdepth, curvarlbs, curvarubs,
+               SCIP_CALL( undoBdchgsDualsol(set, transprob, lp, currentdepth, curvarlbs, curvarubs,
                      lbchginfoposs, ubchginfoposs, oldlpbdchgs, relaxedlpbdchgs, &valid, &resolve) );
             }
          }
@@ -5907,7 +5910,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    /* analyze the conflict starting with remaining bound changes */
    if( valid )
    {
-      SCIP_CALL( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, prob, tree, diving,
+      SCIP_CALL( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, transprob, tree, diving,
             lbchginfoposs, ubchginfoposs, nconss, nliterals, nreconvconss, nreconvliterals) );
    }
 
@@ -5920,7 +5923,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    SCIPsetFreeBufferArray(set, &curvarlbs);
 
    /* flush conflict set storage */
-   SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue) );
+   SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue) );
 
    return SCIP_OKAY;
 }
@@ -5936,7 +5939,8 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -5953,7 +5957,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    assert(conflict != NULL);
    assert(set != NULL);
    assert(lp != NULL);
-   assert(SCIPprobAllColsInLP(prob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
+   assert(SCIPprobAllColsInLP(transprob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
 
    if( success != NULL )
       *success = FALSE;
@@ -5974,8 +5978,8 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    conflict->ninflpcalls++;
 
    /* perform conflict analysis */
-   SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, SCIPlpDiving(lp),
-         &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
+   SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
+         SCIPlpDiving(lp), &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
    conflict->ninflpsuccess += (nconss > 0 ? 1 : 0);
    conflict->ninflpiterations += iterations;
    conflict->ninflpconfconss += nconss;
@@ -6003,7 +6007,8 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -6021,7 +6026,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    assert(set != NULL);
    assert(lp != NULL);
    assert(!SCIPlpDivingObjChanged(lp));
-   assert(SCIPprobAllColsInLP(prob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
+   assert(SCIPprobAllColsInLP(transprob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
 
    if( success != NULL )
       *success = FALSE;
@@ -6042,8 +6047,8 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    conflict->nboundlpcalls++;
 
    /* perform conflict analysis */
-   SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, SCIPlpDiving(lp),
-         &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
+   SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
+         SCIPlpDiving(lp), &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
    conflict->nboundlpsuccess += (nconss > 0 ? 1 : 0);
    conflict->nboundlpiterations += iterations;
    conflict->nboundlpconfconss += nconss;
@@ -6071,7 +6076,8 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -6086,7 +6092,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    int r;
 
    /* LP conflict analysis is only valid, if all variables are known */
-   assert( SCIPprobAllColsInLP(prob, set, lp) );
+   assert( SCIPprobAllColsInLP(transprob, set, lp) );
    assert( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT
       || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff) );
 
@@ -6134,11 +6140,11 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    /* check, if the LP was infeasible or bound exceeding */
    if( SCIPlpiIsPrimalInfeasible(SCIPlpGetLPI(lp)) )
    {
-      SCIP_CALL( conflictAnalyzeInfeasibleLP(conflict, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, success) );
+      SCIP_CALL( conflictAnalyzeInfeasibleLP(conflict, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, success) );
    }
    else
    {
-      SCIP_CALL( conflictAnalyzeBoundexceedingLP(conflict, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, success) );
+      SCIP_CALL( conflictAnalyzeBoundexceedingLP(conflict, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, success) );
    }
 
    /* possibly restore solution values */
@@ -6359,7 +6365,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -6389,7 +6396,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
-   assert(SCIPprobAllColsInLP(prob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
+   assert(SCIPprobAllColsInLP(transprob, set, lp)); /* LP conflict analysis is only valid, if all variables are known */
    assert(col != NULL);
    assert((col->sbdownvalid && SCIPsetIsGE(set, col->sbdown, lp->cutoffbound)
          && SCIPsetFeasCeil(set, col->primsol-1.0) >= col->lb - 0.5)
@@ -6467,8 +6474,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
             SCIPdebugMessage(" -> resolved downwards strong branching LP in %d iterations\n", iter);
 
             /* perform conflict analysis on infeasible LP; last parameter guarantees status 'solved' on return */
-            SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, TRUE,
-                  &iter, &nconss, &nliterals, &nreconvconss, &nreconvliterals, FALSE) );
+            SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
+                  eventqueue, TRUE, &iter, &nconss, &nliterals, &nreconvconss, &nreconvliterals, FALSE) );
             conflict->nsbsuccess += (nconss > 0 ? 1 : 0);
             conflict->nsbiterations += iter;
             conflict->nsbconfconss += nconss;
@@ -6529,8 +6536,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
             SCIPdebugMessage(" -> resolved upwards strong branching LP in %d iterations\n", iter);
 
             /* perform conflict analysis on infeasible LP; last parameter guarantees status 'solved' on return */
-            SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, TRUE,
-                  &iter, &nconss, &nliterals, &nreconvconss, &nreconvliterals, FALSE) );
+            SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
+                  eventqueue, TRUE, &iter, &nconss, &nliterals, &nreconvconss, &nreconvliterals, FALSE) );
             conflict->nsbsuccess += (nconss > 0 ? 1 : 0);
             conflict->nsbiterations += iter;
             conflict->nsbconfconss += nconss;
@@ -6679,7 +6686,8 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -6703,9 +6711,9 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    assert(conflict->nconflictsets == 0);
    assert(set != NULL);
    assert(stat != NULL);
-   assert(prob != NULL);
+   assert(transprob != NULL);
    assert(lp != NULL);
-   assert(!SCIPsetIsInfinity(set, -SCIPlpGetPseudoObjval(lp, set, prob)));
+   assert(!SCIPsetIsInfinity(set, -SCIPlpGetPseudoObjval(lp, set, transprob)));
    assert(!SCIPsetIsInfinity(set, lp->cutoffbound));
 
    if( success != NULL )
@@ -6720,14 +6728,14 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       return SCIP_OKAY;
 
    SCIPdebugMessage("analyzing pseudo solution (obj: %g) that exceeds objective limit (%g)\n",
-      SCIPlpGetPseudoObjval(lp, set, prob), lp->cutoffbound);
+      SCIPlpGetPseudoObjval(lp, set, transprob), lp->cutoffbound);
 
    /* start timing */
    SCIPclockStart(conflict->pseudoanalyzetime, set);
    conflict->npseudocalls++;
 
-   vars = prob->vars;
-   nvars = prob->nvars;
+   vars = transprob->vars;
+   nvars = transprob->nvars;
    assert(nvars == 0 || vars != NULL);
 
    /* The current primal bound c* gives an upper bound for the current pseudo objective value:
@@ -6769,7 +6777,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       lbchginfoposs[v] = var->nlbchginfos-1;
       ubchginfoposs[v] = var->nubchginfos-1;
    }
-   assert(SCIPsetIsFeasEQ(set, pseudoact, -SCIPlpGetPseudoObjval(lp, set, prob)));
+   assert(SCIPsetIsFeasEQ(set, pseudoact, -SCIPlpGetPseudoObjval(lp, set, transprob)));
    SCIPdebugMessage("  -> recalculated pseudo infeasibility proof:  %g <= %g\n", pseudolhs, pseudoact);
 
    /* check, if the pseudo row is still violated (after recalculation of pseudo activity) */
@@ -6781,11 +6789,11 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       int nreconvliterals;
 
       /* undo bound changes without destroying the infeasibility proof */
-      SCIP_CALL( undoBdchgsProof(set, prob, SCIPtreeGetCurrentDepth(tree), pseudocoefs, pseudolhs, pseudoact,
+      SCIP_CALL( undoBdchgsProof(set, transprob, SCIPtreeGetCurrentDepth(tree), pseudocoefs, pseudolhs, pseudoact,
             curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, NULL, NULL, NULL) );
 
       /* analyze conflict on remaining bound changes */
-      SCIP_CALL( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, prob, tree, FALSE,
+      SCIP_CALL( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, transprob, tree, FALSE,
             lbchginfoposs, ubchginfoposs, &nconss, &nliterals, &nreconvconss, &nreconvliterals) );
       conflict->npseudosuccess += (nconss > 0 ? 1 : 0);
       conflict->npseudoconfconss += nconss;
@@ -6804,7 +6812,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIPsetFreeBufferArray(set, &lbchginfoposs);
 
    /* flush conflict set storage */
-   SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue) );
+   SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue) );
 
    /* stop timing */
    SCIPclockStop(conflict->pseudoanalyzetime, set);

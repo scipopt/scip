@@ -20,7 +20,10 @@
  *
  * Randomized LP rounding uses a random variable from a uniform distribution
  * over [0,1] to determine whether the fractional LP value x should be rounded
- * up with probability x - floor(x) or down with probability ceil(x) - x
+ * up with probability x - floor(x) or down with probability ceil(x) - x.
+ *
+ * This implementation uses domain propagation techniques to tighten the variable domains after every
+ * rounding step.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -66,7 +69,8 @@ struct SCIP_HeurData
  */
 
 /** perform randomized rounding of the given solution. Domain propagation is optionally applied after every rounding
- *  step */
+ *  step
+ */
 static
 SCIP_RETCODE performRandRounding(
    SCIP*                 scip,               /**< SCIP main data structure */
@@ -149,7 +153,7 @@ SCIP_RETCODE performRandRounding(
          assert(SCIPisFeasLE(scip,lb, floorval));
          newsolval = floorval;
       }
-      else if( !heurdata->usesimplerounding || !(mayroundup && mayrounddown) )
+      else if( !heurdata->usesimplerounding || !(mayroundup || mayrounddown) )
       {
          /* the standard randomized rounding */
          SCIP_Real randnumber;
@@ -280,7 +284,7 @@ SCIP_RETCODE performLPRandRounding(
       return SCIP_OKAY;
 
    /* get fractional variables, that should be integral */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands, NULL, NULL) );
 
    /* only call heuristic, if LP solution is fractional; except we are called during pricing, in this case we
     * want to detect a (mixed) integer (LP) solution which is primal feasible */

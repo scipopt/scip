@@ -131,10 +131,11 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
             *result = SCIP_CUTOFF;
             break;
          }
-            
+
          assert(redundant);
          assert(aggregated);
          (*nchgvartypes)++;
+         ++(*naggrvars);
          *result = SCIP_SUCCESS;
       }
    }
