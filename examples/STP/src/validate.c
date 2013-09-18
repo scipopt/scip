@@ -97,10 +97,19 @@ static void trail(
 {
    int k;
 
-   if ((++connected[i] < 2) && (hop < max_hops))
-      for(k = g->outbeg[i]; k != EAT_LAST; k = g->oeat[k])
-         if ((g->head[k] != tail) && (xval[k] + EPSILON > 1.0))
-            trail(g, g->head[k], xval, i, connected, hop + 1, max_hops);
+   assert(connected[i] >= 0);
+
+   if( connected[i] < 2 )
+   {
+      ++(connected[i]);
+
+      if ((connected[i] < 2) && (hop < max_hops))
+      {
+         for(k = g->outbeg[i]; k != EAT_LAST; k = g->oeat[k])
+            if ((g->head[k] != tail) && (xval[k] + EPSILON > 1.0))
+               trail(g, g->head[k], xval, i, connected, hop + 1, max_hops);
+      }
+   }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -136,18 +145,23 @@ int validate(
          memset(connected, 0, (size_t)g->knots * sizeof(char)),
          0, 1000000000);
 
-
       for(i = 0; i < g->knots; i++)
       {
          /* Etwa ein Kreis ?
           */
          if (connected[i] >= 2)
+         {
             ret = FALSE;
+            break;
+         }
 
          /* Jemand noch einsam
           */
          if ((g->grad[i] > 0) && (g->term[i] == layer) && !connected[i])
+         {
             ret = FALSE;
+            break;
+         }
       }
    }
    free(connected);
