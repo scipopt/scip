@@ -519,6 +519,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIP_HEURDATA* heurdata;
    SCIP_SOL* sol;
    GRAPH* graph;
+   SCIP_VAR** vars;
    SCIP_Real* cost;
    SCIP_Real* nval;
    SCIP_Real* xval;
@@ -569,6 +570,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
    SCIPinfoMessage(scip, NULL, "Heuristic Start\n");
 
+   vars = SCIPprobdataGetVars(scip);
    nvars = SCIPprobdataGetNVars(scip);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, graph->edges) );
@@ -606,11 +608,18 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       }
       else
       {
-         /* swap costs */
+         /* swap costs; set a high cost if the variable is fixed to 0 */
          for( e = 0; e < graph->edges; e += 2)
          {
-            cost[e]     = ((1.0 - xval[layer * graph->edges + e + 1]) * graph->cost[e + 1]);
-            cost[e + 1] = ((1.0 - xval[layer * graph->edges + e    ]) * graph->cost[e]);
+            if( SCIPvarGetUbLocal(vars[layer * graph->edges + e + 1]) < 0.5 )
+               cost[e] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+            else
+               cost[e] = ((1.0 - xval[layer * graph->edges + e + 1]) * graph->cost[e + 1]);
+
+            if( SCIPvarGetUbLocal(vars[layer * graph->edges + e]) < 0.5 )
+               cost[e + 1] = 1e+10; /* ???? why does FARAWAY/2 not work? */
+            else
+               cost[e + 1] = ((1.0 - xval[layer * graph->edges + e]) * graph->cost[e]);
          }
       }
       /* can we connect the network */
@@ -637,7 +646,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
    if( validate(graph, nval) )
    {
-      SCIP_VAR** vars;
       SCIP_Bool success;
 
       SCIPinfoMessage(scip, NULL, "Is Valid\n");
@@ -650,9 +658,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       SCIPinfoMessage(scip, NULL, "pobj=%.12e\n", pobj);
 
       SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
-
-      vars = SCIPprobdataGetVars(scip);
-      assert(vars != NULL);
 
       /* store new solution value and decrease fractionality counter */
       SCIP_CALL( SCIPsetSolVals(scip, sol, nvars, vars, nval) );
