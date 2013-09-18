@@ -169,6 +169,10 @@ int validate(
    if (ret)
       ret = nail(g, xval);
 
+/* SCIP-Heuristiken können (z.B. durch Runden) Lösungen konstruieren, die einen Kreis aus Steiner-Knoten enthalten, der
+ * nicht zum Baum gehört
+ */
+#if 0
 #ifndef NDEBUG
    /* Test ob alle Kanten nur in eine Richtung benutzt werden.
     */
@@ -181,6 +185,7 @@ int validate(
             /* CONSTCOND */
             assert(FALSE);
    }
+#endif
 #endif
    return(ret);
 }
