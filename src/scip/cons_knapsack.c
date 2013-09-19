@@ -10172,7 +10172,19 @@ SCIP_RETCODE tightenWeightsLift(
  *      - change coefficients:
  *          wi'       := weightsum - capacity
  *          capacity' := capacity - (wi - wi')
- *  (2) let W(C) be the maximal weight of clique C,
+ *  (2) increase weights from front to back(sortation is necessary) if there is no space left for another weight
+ *      - determine the four(can be adjusted) minimal weightsums of the knapsack, i.e. in increasing order
+ *        weights[nvars - 1], weights[nvars - 2], MIN(weights[nvars - 3], weights[nvars - 1] + weights[nvars - 2]),
+ *        MIN(MAX(weights[nvars - 3], weights[nvars - 1] + weights[nvars - 2]), weights[nvars - 4]), note that there
+ *        can be multiple times the same weight, this can be improved
+ *      - check if summing up a minimal weightsum with a big weight exceeds the capacity, then we can increase the big
+ *        weight, to capacity - lastmininmalweightsum, e.g. :
+ *        19x1 + 15x2 + 10x3 + 5x4 + 5x5 <= 19
+ *         ->  minimal weightsums: 5, 5, 10, 10
+ *         ->  15 + 5 > 19 => increase 15 to 19 - 0 = 19
+ *         ->  10 + 10 > 19 => increase 10 to 19 - 5 = 14, resulting in
+ *        19x1 + 19x2 + 14x3 + 5x4 + 5x5  <= 19
+ *  (3) let W(C) be the maximal weight of clique C,
  *          cliqueweightsum := sum(W(C))
  *      if cliqueweightsum - W(C) < capacity:
  *      - not using any item of C would make the knapsack constraint redundant
@@ -10184,7 +10196,7 @@ SCIP_RETCODE tightenWeightsLift(
  *          capacity' := capacity - delta
  *      This rule has to add the used cliques in order to ensure they are enforced - otherwise, the reduction might
  *      introduce infeasible solutions.
- *  (3) for a clique C let C(xi == v) := C \ {j: xi == v -> xj == 0}),
+ *  (4) for a clique C let C(xi == v) := C \ {j: xi == v -> xj == 0}),
  *      let cliqueweightsum(xi == v) := sum(W(C(xi == v)))
  *      if cliqueweightsum(xi == v) < capacity:
  *      - fixing variable xi to v would make the knapsack constraint redundant
@@ -10192,7 +10204,7 @@ SCIP_RETCODE tightenWeightsLift(
  *        redundancy effect:
  *          wi'       := capacity - cliqueweightsum(xi == v)
  *      This rule can also be applied to binary variables not in the knapsack!
- *  (4) if min{w} + wi > capacity:
+ *  (5) if min{w} + wi > capacity:
  *      - using item i would force to fix other items to zero
  *      - wi can be increased to the capacity
  */
@@ -10209,8 +10221,18 @@ SCIP_RETCODE tightenWeights(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_Longint* weights;
+   SCIP_Longint sumcoef;
+   SCIP_Longint capacity;
+   SCIP_Longint newweight;
+   SCIP_Longint maxweight;
    SCIP_Longint minweight;
+   SCIP_Bool sumcoefcase = FALSE;
+   int startpos;
+   int backpos;
+   int nvars;
    int pos;
+   int k;
    int i;
 
    assert(nchgcoefs != NULL);
@@ -10246,8 +10268,6 @@ SCIP_RETCODE tightenWeights(
          weight = consdata->weights[i];
          if( consdata->weightsum - weight < consdata->capacity )
          {
-            SCIP_Longint newweight;
-
             newweight = consdata->weightsum - consdata->capacity;
             consdataChgWeight(consdata, i, newweight);
             consdata->capacity -= (weight - newweight);
@@ -10272,8 +10292,127 @@ SCIP_RETCODE tightenWeights(
    while( pos < consdata->nvars && consdata->weights[pos] == consdata->capacity )
       ++pos;
 
+   sumcoef = 0;
+   weights = consdata->weights;
+   nvars = consdata->nvars;
+   capacity = consdata->capacity;
+
+   if( pos < nvars && weights[pos] + weights[pos + 1] > capacity )
+   {
+      /* further reductions using the next possible coefficient sum
+       *
+       * e.g. 19x1 + 15x2 + 10x3 + 5x4 + 5x5 <= 19  <=>  19x1 + 19x2 + 14x3 + 5x4 + 5x5  <= 19
+       */
+      /* @todo loop for "k" can be extended, same coefficient when determine next sumcoef can be left out */
+      for( k = 0; k < 4; ++k )
+      {
+         newweight = capacity - sumcoef;
+
+         /* determine next minimal coefficient sum */
+         switch( k )
+         {
+         case 0:
+            sumcoef = weights[nvars - 1];
+            backpos = nvars - 1;
+            break;
+         case 1:
+            sumcoef = weights[nvars - 2];
+            backpos = nvars - 2;
+            break;
+         case 2:
+            if( weights[nvars - 3] < weights[nvars - 1] + weights[nvars - 2] )
+            {
+               sumcoefcase = TRUE;
+               sumcoef = weights[nvars - 3];
+               backpos = nvars - 3;
+            }
+            else
+            {
+               sumcoefcase = FALSE;
+               sumcoef = weights[nvars - 1] + weights[nvars - 2];
+               backpos = nvars - 2;
+            }
+            break;
+         case 3:
+            if( sumcoefcase )
+            {
+               if( weights[nvars - 4] < weights[nvars - 1] + weights[nvars - 2] )
+               {
+                  sumcoef = weights[nvars - 4];
+                  backpos = nvars - 4;
+               }
+               else
+               {
+                  sumcoef = weights[nvars - 1] + weights[nvars - 2];
+                  backpos = nvars - 2;
+               }
+            }
+            else
+            {
+               sumcoef = weights[nvars - 3];
+               backpos = nvars - 3;
+            }
+            break;
+         default:
+            return SCIP_ERROR;
+         }
+
+         if( backpos <= pos )
+            break;
+
+         /* tighten next coefficients that, paired with the current small coefficient, exceed the capacity */
+         maxweight = weights[pos];
+         startpos = pos;
+         while( 2 * maxweight > capacity && maxweight + sumcoef > capacity )
+         {
+            assert(newweight > weights[pos]);
+
+            SCIPdebugMessage("in constraint <%s> changing weight %lld to %lld\n", SCIPconsGetName(cons), maxweight, newweight);
+            consdataChgWeight(consdata, pos, newweight);
+
+            ++pos;
+            assert(pos < nvars);
+
+            maxweight = weights[pos];
+
+            if( backpos <= pos )
+               break;
+         }
+         (*nchgcoefs) += (pos - startpos);
+
+         /* skip unchangable weights */
+         while( pos < nvars && weights[pos] + sumcoef == capacity )
+            ++pos;
+
+         /* check special case were there is only one weight left to tighten
+          *
+          * e.g.  95x1 + 59x2 + 37x3 + 36x4 <= 95 (37 > 36)
+          *
+          *   =>  95x1 + 59x2 + 59x3 + 36x4 <= 95
+          *
+          *       197x1 + 120x2 + 77x3 + 10x4 <= 207 (here we cannot tighten the coefficient further)
+          */
+         if( pos + 1 == backpos && weights[pos] > sumcoef &&
+            ((k == 0) || (k == 1 && weights[nvars - 1] + sumcoef + weights[pos] > capacity)) )
+         {
+            newweight = capacity - sumcoef;
+            assert(newweight > weights[pos]);
+
+            SCIPdebugMessage("in constraint <%s> changing weight %lld to %lld\n", SCIPconsGetName(cons), maxweight, newweight);
+            consdataChgWeight(consdata, pos, newweight);
+
+            break;
+         }
+
+         if( backpos <= pos )
+            break;
+      }
+   }
+
    /* apply rule (2) (don't apply, if the knapsack has too many items for applying this costly method) */
-   if( conshdlrdata->disaggregation && consdata->nvars - pos <= MAX_USECLIQUES_SIZE && consdata->nvars >= 2 && pos > 0 && (SCIP_Longint)consdata->nvars - pos <= consdata->capacity && consdata->weights[pos - 1] == consdata->capacity && (pos == consdata->nvars || consdata->weights[pos] == 1) )
+   if( conshdlrdata->disaggregation && consdata->nvars - pos <= MAX_USECLIQUES_SIZE && consdata->nvars >= 2 &&
+      pos > 0 && (SCIP_Longint)consdata->nvars - pos <= consdata->capacity &&
+      consdata->weights[pos - 1] == consdata->capacity && (pos == consdata->nvars || consdata->weights[pos] == 1) )
    {
       SCIP_VAR** clqvars;
       SCIP_CONS* cliquecons;
@@ -10446,8 +10585,6 @@ SCIP_RETCODE tightenWeights(
                {
                   if( consdata->cliquepartition[j] == i )
                   {
-                     SCIP_Longint newweight;
-
                      newweight = consdata->weights[j] - delta;
                      newweight = MAX(newweight, 0);
 
@@ -10491,8 +10628,6 @@ SCIP_RETCODE tightenWeights(
                /* check if we really want to apply the change */
                if( conshdlrdata->disaggregation || !forceclique )
                {
-                  int k;
-
                   SCIPdebugMessage(" -> change capacity from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT" (forceclique:%u)\n",
                      consdata->capacity, newcapacity, forceclique);
                   consdata->capacity = newcapacity;
