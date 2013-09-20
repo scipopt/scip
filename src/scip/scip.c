@@ -12909,6 +12909,11 @@ SCIP_RETCODE freeTransform(
       /* reset statistics to the point before the problem was transformed */
       SCIPstatReset(scip->stat, scip->set);
    }
+   else
+   {
+      /* even if statistics are not completely reset, a partial integral reset is necessary */
+      SCIPstatResetPrimalIntegral(scip->stat, scip->set, TRUE);
+   }
 
    /* switch stage to PROBLEM */
    scip->set->stage = SCIP_STAGE_PROBLEM;
