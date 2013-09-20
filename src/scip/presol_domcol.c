@@ -75,6 +75,8 @@ struct ConstraintMatrix
    int                   ncols;              /**< complete number of columns */
    SCIP_Real*            lb;                 /**< lower bound per variable */
    SCIP_Real*            ub;                 /**< upper bound per variable */
+   int*                  nuplocks;           /**< number of up locks per variable */
+   int*                  ndownlocks;         /**< number of down locks per variable */
 
    SCIP_VAR**            vars;               /**< variables pointer */
 
@@ -136,6 +138,7 @@ SCIP_RETCODE getActiveVariables(
 /** add one row to the constraint matrix */
 static
 SCIP_RETCODE addRow(
+   SCIP*                 scip,               /**< current scip instance */
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix */
 #ifdef SCIP_DEBUG
    const char*           name,               /**< name of constraint corresponding to row */
@@ -150,6 +153,8 @@ SCIP_RETCODE addRow(
    int j;
    int probindex;
    int rowidx;
+   SCIP_Bool lhsfinite;
+   SCIP_Bool rhsfinite;
 
    assert(vars != NULL);
    assert(vals != NULL);
@@ -162,6 +167,9 @@ SCIP_RETCODE addRow(
    matrix->rowname[rowidx] = name;
 #endif
 
+   lhsfinite = !SCIPisInfinity(scip, -lhs);
+   rhsfinite = !SCIPisInfinity(scip, rhs);
+
    matrix->rowmatbeg[rowidx] = matrix->nnonzs;
 
    for( j = 0; j < nvars; j++ )
@@ -173,6 +181,22 @@ SCIP_RETCODE addRow(
       assert(0 <= probindex && probindex < matrix->ncols);
       matrix->rowmatind[matrix->nnonzs] = probindex;
       matrix->nnonzs = matrix->nnonzs + 1;
+
+      /* count locks of the variable */
+      if( lhsfinite )
+      {
+         if( vals[j] > 0 )
+            matrix->ndownlocks[probindex]++;
+         else
+            matrix->nuplocks[probindex]++;
+      }
+      if( rhsfinite )
+      {
+         if( vals[j] < 0 )
+            matrix->ndownlocks[probindex]++;
+         else
+            matrix->nuplocks[probindex]++;
+      }
    }
 
    matrix->rowmatcnt[rowidx] = matrix->nnonzs - matrix->rowmatbeg[rowidx];
@@ -248,9 +272,9 @@ SCIP_RETCODE addConstraint(
    if( nactivevars > 0 )
    {
 #ifdef SCIP_DEBUG
-      SCIP_CALL( addRow(matrix, name, activevars, activevals, nactivevars, lhs, rhs) );
+      SCIP_CALL( addRow(scip, matrix, name, activevars, activevals, nactivevars, lhs, rhs) );
 #else
-      SCIP_CALL( addRow(matrix, activevars, activevals, nactivevars, lhs, rhs) );
+      SCIP_CALL( addRow(scip, matrix, activevars, activevals, nactivevars, lhs, rhs) );
 #endif
    }
 
@@ -510,6 +534,11 @@ SCIP_RETCODE initMatrix(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatcnt, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->lb, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->ub, matrix->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->nuplocks, matrix->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->ndownlocks, matrix->ncols) );
+
+   BMSclearMemoryArray(matrix->nuplocks, matrix->ncols);
+   BMSclearMemoryArray(matrix->ndownlocks, matrix->ncols);
 
    for( v = 0; v < matrix->ncols; v++ )
    {
@@ -745,6 +774,8 @@ void freeMatrix(
       assert((*matrix)->colmatcnt != NULL);
       assert((*matrix)->lb != NULL);
       assert((*matrix)->ub != NULL);
+      assert((*matrix)->nuplocks != NULL);
+      assert((*matrix)->ndownlocks != NULL);
 
       assert((*matrix)->rowmatval != NULL);
       assert((*matrix)->rowmatind != NULL);
@@ -773,6 +804,8 @@ void freeMatrix(
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatind));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatval));
 
+      SCIPfreeBufferArray(scip, &((*matrix)->ndownlocks));
+      SCIPfreeBufferArray(scip, &((*matrix)->nuplocks));
       SCIPfreeBufferArray(scip, &((*matrix)->ub));
       SCIPfreeBufferArray(scip, &((*matrix)->lb));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatcnt));
@@ -2050,6 +2083,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
             SCIP_Bool infeasible;
             SCIP_Bool fixed;
             SCIP_VAR* var;
+
+            if( SCIPvarGetNLocksUp(matrix->vars[v]) != matrix->nuplocks[v] ||
+               SCIPvarGetNLocksDown(matrix->vars[v]) != matrix->ndownlocks[v] )
+            {
+               /* no fixing, maybe countsols constraint handler did additional locks */
+               continue;
+            }
 
             if( varstofix[v] == FIXATLB )
             {
