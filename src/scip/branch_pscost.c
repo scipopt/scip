@@ -294,7 +294,7 @@ SCIP_RETCODE updateBestCandidate(
       branchscore = SCIPgetBranchScore(scip, cand, pscostdown, pscostup);
       assert(!SCIPisNegative(scip, branchscore));
    }
-   SCIPdebugMessage("branching score variable <%s>[%g,%g] = %g; score = %g; type=%d bestbrscore=%g\n",
+   SCIPdebugMessage("branching score variable <%s>[%g,%g] = %g; wscore = %g; type=%d bestbrscore=%g\n",
       SCIPvarGetName(cand), SCIPvarGetLbLocal(cand), SCIPvarGetUbLocal(cand), branchscore, WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum),
       SCIPvarGetType(cand), *bestscore);
 
@@ -317,6 +317,7 @@ SCIP_RETCODE updateBestCandidate(
          /* if both variables are unbounded but one of them is bounded on one side, take the one with the larger bound on this side (hope that this avoids branching on always the same variable) */
          if( SCIPvarGetUbLocal(cand) > SCIPvarGetUbLocal(*bestvar) || SCIPvarGetLbLocal(cand) < SCIPvarGetLbLocal(*bestvar) )
          {
+            (*bestscore)   = branchscore;
             (*bestvar)     = cand;
             (*bestbrpoint) = candbrpoint;
          }
@@ -326,6 +327,7 @@ SCIP_RETCODE updateBestCandidate(
          /* if both have the same type, take the one with larger diameter */
          if( SCIPvarGetUbLocal(*bestvar) - SCIPvarGetLbLocal(*bestvar) < SCIPvarGetUbLocal(cand) - SCIPvarGetLbLocal(cand) )
          {
+            (*bestscore)   = branchscore;
             (*bestvar)     = cand;
             (*bestbrpoint) = candbrpoint;
          }
@@ -333,6 +335,7 @@ SCIP_RETCODE updateBestCandidate(
       else if( SCIPvarGetType(*bestvar) > SCIPvarGetType(cand) )
       { 
          /* take the one with better type ("more discrete") */
+         (*bestscore)   = branchscore;
          (*bestvar)     = cand;
          (*bestbrpoint) = candbrpoint;
       }
