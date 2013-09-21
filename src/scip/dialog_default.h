@@ -63,6 +63,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecConflictgraph);
 
+/** dialog execution method for the cliquegraph command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecCliquegraph);
+
 /** dialog execution method for the display branching command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching);

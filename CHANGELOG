@@ -145,6 +145,7 @@ interface
   all orignal solutions correspondingly
 - added method SCIPgmlWriteNodeWeight() to write node weights
 - function SCIPwriteCliqueGraph() now allows to write a graph with node weights for fractional variables
+- allow dialog option to write clique graph
 
 parameters:
 - new parameter "misc/calcintegral" (default TRUE) to trigger calculation of primal-dual integral 
