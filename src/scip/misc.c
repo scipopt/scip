@@ -105,6 +105,56 @@ void SCIPgmlWriteNode(
    fprintf(file, "  ]\n");
 }
 
+/** writes a node section including weight to the given graph file */
+void SCIPgmlWriteNodeWeight(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          id,                 /**< id of the node */
+   const char*           label,              /**< label of the node */
+   const char*           nodetype,           /**< type of the node, or NULL */
+   const char*           fillcolor,          /**< color of the node's interior, or NULL */
+   const char*           bordercolor,        /**< color of the node's border, or NULL */
+   SCIP_Real             weight              /**< weight of node */
+   )
+{
+   assert(file != NULL);
+   assert(label != NULL);
+
+   fprintf(file, "  node\n");
+   fprintf(file, "  [\n");
+   fprintf(file, "    id      %u\n", id);
+   fprintf(file, "    label   \"%s\"\n", label);
+   fprintf(file, "    weight  %g\n", weight);
+   fprintf(file, "    graphics\n");
+   fprintf(file, "    [\n");
+   fprintf(file, "      w       %g\n", GMLNODEWIDTH);
+   fprintf(file, "      h       %g\n", GMLNODEHEIGTH);
+
+   if( nodetype != NULL )
+      fprintf(file, "      type    \"%s\"\n", nodetype);
+   else
+      fprintf(file, "      type    \"%s\"\n", GMLNODETYPE);
+
+   if( fillcolor != NULL )
+      fprintf(file, "      fill    \"%s\"\n", fillcolor);
+   else
+      fprintf(file, "      fill    \"%s\"\n", GMLNODEFILLCOLOR);
+
+   if( bordercolor != NULL )
+      fprintf(file, "      outline \"%s\"\n", bordercolor);
+   else
+      fprintf(file, "      outline \"%s\"\n", GMLNODEBORDERCOLOR);
+
+   fprintf(file, "    ]\n");
+   fprintf(file, "    LabelGraphics\n");
+   fprintf(file, "    [\n");
+   fprintf(file, "      text      \"%s\"\n", label);
+   fprintf(file, "      fontSize  %d\n", GMLFONTSIZE);
+   fprintf(file, "      fontName  \"Dialog\"\n");
+   fprintf(file, "      anchor    \"c\"\n");
+   fprintf(file, "    ]\n");
+   fprintf(file, "  ]\n");
+}
+
 /** writes an edge section to the given graph file */
 void SCIPgmlWriteEdge(
    FILE*                 file,               /**< file to write to */

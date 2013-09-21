@@ -143,6 +143,7 @@ interface
   a constraint or get the current number of upgrade-locks
 - added new method SCIPaddOrigObjoffset() in scip.{c,h} which adds a value to the offset in original space an updates
   all orignal solutions correspondingly
+- added method SCIPgmlWriteNodeWeight() to write node weights
 
 parameters:
 - new parameter "misc/calcintegral" (default TRUE) to trigger calculation of primal-dual integral 
