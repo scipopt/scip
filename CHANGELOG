@@ -156,6 +156,7 @@ interface
 - added method SCIPgmlWriteNodeWeight() to write node weights
 - function SCIPwriteCliqueGraph() now allows to write a graph with node weights for fractional variables
 - allow dialog option to write clique graph
+- SCIPstartStrongbranch() has a new parameter "propagate" to enable or disable propagation support for strong branching
 - new methods SCIPlpiGetNorms(), SCIPlpiSetNorms(), and SCIPlpiFreeNorms() for getting the LP pricing norms from the LP
   solver, loading them back into the solver, and freeing the data
 
