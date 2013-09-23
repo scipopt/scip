@@ -69,6 +69,18 @@ void SCIPgmlWriteNode(
    const char*           bordercolor         /**< color of the node's border, or NULL */
    );
 
+/** writes a node section including weight to the given graph file */
+EXTERN
+void SCIPgmlWriteNodeWeight(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          id,                 /**< id of the node */
+   const char*           label,              /**< label of the node */
+   const char*           nodetype,           /**< type of the node, or NULL */
+   const char*           fillcolor,          /**< color of the node's interior, or NULL */
+   const char*           bordercolor,        /**< color of the node's border, or NULL */
+   SCIP_Real             weight              /**< weight of node */
+   );
+
 /** writes an edge section to the given graph file */
 EXTERN
 void SCIPgmlWriteEdge(

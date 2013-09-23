@@ -3672,6 +3672,20 @@ SCIP_RETCODE separateGLS(
    /* graph is now prepared for Dijkstra methods */
    assert( dijkstraGraphIsValid(&graph) );
 
+#ifdef SCIP_ODDCYCLE_WRITEGRAPH
+   {
+      char probname [SCIP_MAXSTRLEN];
+      char filename [SCIP_MAXSTRLEN];
+      char* name;
+
+      (void)  SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s", SCIPgetProbName(scip));
+      SCIPsplitFilename(probname, NULL, &name, NULL, NULL);
+      (void)  SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s_%d.gml", name, SCIPgetNLPs(scip));
+      SCIP_CALL( SCIPwriteCliqueGraph(scip, filename, TRUE, TRUE) );
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Wrote clique/implication graph to <%s>.\n", filename);
+   }
+#endif
+
    /* determine the number of start nodes */
    maxstarts = (unsigned int) SCIPceil(scip, sepadata->offsettestvars + (0.02 * nbinvars * sepadata->percenttestvars));
    startcounter = 0;

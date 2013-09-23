@@ -271,7 +271,7 @@ void SCIPstatReset(
 
    SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat);
-   SCIPstatResetPrimalIntegral(stat, set);
+   SCIPstatResetPrimalIntegral(stat, set, FALSE);
 }
 
 /** reset implication counter */
@@ -306,21 +306,28 @@ void SCIPstatResetPresolving(
    SCIPstatResetCurrentRun(stat);
 }
 
-/* reset primal integral */
+/** reset primal integral */
 void SCIPstatResetPrimalIntegral(
    SCIP_STAT*           stat,                /**< problem statistics data */
-   SCIP_SET*            set                  /**< global SCIP settings */
+   SCIP_SET*            set,                 /**< global SCIP settings */
+   SCIP_Bool            partialreset         /**< should time and integral value be kept? (in combination with no statistical
+                                                  *  reset, integrals are added for each problem to be solved) */
    )
 {
    assert(stat != NULL);
 
-   stat->primalintegralval = 0.0;
    stat->previousgap = 100.0;
-   stat->previntegralevaltime = 0.0;
    stat->lastprimalbound = SCIP_UNKNOWN;
    stat->lastdualbound = SCIP_UNKNOWN;
    stat->lastlowerbound = -SCIPsetInfinity(set);
    stat->lastupperbound = SCIPsetInfinity(set);
+
+   /* partial resets keep the integral value and previous evaluation time */
+   if( !partialreset )
+   {
+      stat->previntegralevaltime = 0.0;
+      stat->primalintegralval = 0.0;
+   }
 }
 
 /** update the primal dual integral statistic. method accepts + and - SCIPsetInfinity() as values for

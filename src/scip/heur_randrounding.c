@@ -304,6 +304,8 @@ SCIP_RETCODE performLPRandRounding(
       return SCIP_OKAY;
    heurdata->lastlp = nlps;
 
+   *result = SCIP_DIDNOTFIND;
+
    /* perform random rounding */
    SCIPdebugMessage("executing rand LP-rounding heuristic: %d fractionals\n", nlpcands);
    SCIP_CALL( performRandRounding(scip, heurdata, sol, lpcands, nlpcands, propagate, result) );
@@ -440,8 +442,6 @@ SCIP_DECL_HEUREXEC(heurExecRandrounding) /*lint --e{715}*/
    /* don't call heuristic, if we have already processed the current LP solution but no relaxation solution is available */
    if ( SCIPgetNLPs(scip) == heurdata->lastlp && ! SCIPisRelaxSolValid(scip) )
       return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
 
    propagate = !heurdata->propagateonlyroot || SCIPgetDepth(scip) == 0;
 

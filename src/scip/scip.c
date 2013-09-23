@@ -12790,7 +12790,7 @@ SCIP_RETCODE freeSolve(
 
       SCIP_CALL( SCIPnodeFocus(&node, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->transprob,
             scip->origprob, scip->primal, scip->tree, scip->lp, scip->branchcand, scip->conflict, scip->eventfilter,
-            scip->eventqueue, &cutoff) );
+            scip->eventqueue, &cutoff, TRUE) );
       assert(!cutoff);
    }
 
@@ -12911,6 +12911,11 @@ SCIP_RETCODE freeTransform(
    {
       /* reset statistics to the point before the problem was transformed */
       SCIPstatReset(scip->stat, scip->set);
+   }
+   else
+   {
+      /* even if statistics are not completely reset, a partial integral reset is necessary */
+      SCIPstatResetPrimalIntegral(scip->stat, scip->set, TRUE);
    }
 
    /* switch stage to PROBLEM */
@@ -19653,11 +19658,15 @@ SCIP_Bool SCIPhaveVarsCommonClique(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *
  *  @note there can be duplicated arcs in the output file
+ *
+ *  If @writenodeweights is true, only nodes corresponding to variables that have a fractional value and only edges
+ *  between such nodes are written.
  */
 SCIP_RETCODE SCIPwriteCliqueGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           fname,              /**< name of file */
-   SCIP_Bool             writeimplications   /**< should we write the binary implications */
+   SCIP_Bool             writeimplications,  /**< should we write the binary implications? */
+   SCIP_Bool             writenodeweights    /**< should we write weights of nodes? */
    )
 {
    FILE* gmlfile;
@@ -19737,8 +19746,16 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 
 	    (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v1]));
 
-	    /* write new gml node for new variable */
-	    SCIPgmlWriteNode(gmlfile, id1, nodename, NULL, NULL, NULL);
+            /* write new gml node for new variable */
+            if ( writenodeweights )
+            {
+               if ( ! SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, clqvars[v1])) )
+                  SCIPgmlWriteNodeWeight(gmlfile, id1, nodename, NULL, NULL, NULL, SCIPgetSolVal(scip, NULL, clqvars[v1]));
+            }
+            else
+            {
+               SCIPgmlWriteNode(gmlfile, id1, nodename, NULL, NULL, NULL);
+            }
 	 }
 
 	 for( v2 = SCIPcliqueGetNVars(cliques[c]) - 1; v2 >= 0; --v2 )
@@ -19756,11 +19773,20 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 	       (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
 
 	       /* write new gml node for new variable */
-	       SCIPgmlWriteNode(gmlfile, id2, nodename, NULL, NULL, NULL);
-	    }
+               if ( writenodeweights )
+               {
+                  if ( ! SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, clqvars[v2])) )
+                     SCIPgmlWriteNodeWeight(gmlfile, id2, nodename, NULL, NULL, NULL, SCIPgetSolVal(scip, NULL, clqvars[v2]));
+               }
+               else
+               {
+                  SCIPgmlWriteNode(gmlfile, id2, nodename, NULL, NULL, NULL);
+               }
+            }
 
 	    /* write gml arc between resultant and operand */
-	    SCIPgmlWriteArc(gmlfile, id1, id2, NULL, NULL);
+            if ( ! writenodeweights || ! SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, clqvars[v2])) )
+               SCIPgmlWriteArc(gmlfile, id1, id2, NULL, NULL);
 	 }
       }
    }
@@ -19797,7 +19823,15 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 		  (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(var));
 
 		  /* write new gml node for new variable */
-		  SCIPgmlWriteNode(gmlfile, id1, nodename, NULL, NULL, NULL);
+                  if ( writenodeweights )
+                  {
+                     if ( ! SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, var)) )
+                        SCIPgmlWriteNodeWeight(gmlfile, id1, nodename, NULL, NULL, NULL, SCIPgetSolVal(scip, NULL, var));
+                  }
+                  else
+                  {
+                     SCIPgmlWriteNode(gmlfile, id1, nodename, NULL, NULL, NULL);
+                  }
 	       }
 
 	       /* write arcs for all cliques */
@@ -19813,11 +19847,20 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 		     (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
 
 		     /* write new gml node for new variable */
-		     SCIPgmlWriteNode(gmlfile, id2, nodename, NULL, NULL, NULL);
+                     if ( writenodeweights )
+                     {
+                        if ( ! SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, clqvars[v2])) )
+                           SCIPgmlWriteNodeWeight(gmlfile, id2, nodename, NULL, NULL, NULL, SCIPgetSolVal(scip, NULL, clqvars[v2]));
+                     }
+                     else
+                     {
+                        SCIPgmlWriteNode(gmlfile, id2, nodename, NULL, NULL, NULL);
+                     }
 		  }
 
 		  /* write gml arc between resultant and operand */
-		  SCIPgmlWriteArc(gmlfile, id1, id2, NULL, NULL);
+                  if ( ! writenodeweights || ( ! SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, var)) &&  ! SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, clqvars[v2])) ) )
+                     SCIPgmlWriteArc(gmlfile, id1, id2, NULL, NULL);
 	       }
 	    }
 	 }

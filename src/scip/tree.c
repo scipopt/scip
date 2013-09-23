@@ -3972,7 +3972,8 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_Bool*            cutoff              /**< pointer to store whether the given node can be cut off */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the given node can be cut off */
+   SCIP_Bool             exitsolve           /**< are we in exitsolve stage, so we only need to loose the children */
    )
 {
    SCIP_NODE* oldfocusnode;
@@ -4050,6 +4051,18 @@ SCIP_RETCODE SCIPnodeFocus(
    /* if the LP state fork changed, the lpcount information for the new LP state fork is unknown */
    if( lpstatefork != tree->focuslpstatefork )
       tree->focuslpstateforklpcount = -1;
+
+   /* in exitsolve we only need to take care of open children
+    *
+    * @note because we might do a 'newstart' and converted cuts to constraints might have rendered the LP in the current
+    *       focusnode unsolved the latter code would have resolved the LP unnecessarily
+    */
+   if( exitsolve && tree->nchildren > 0 )
+   {
+      SCIPdebugMessage(" -> deleting the %d children (in exitsolve) of the old focus node\n", tree->nchildren);
+      SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, eventqueue, lp, tree->children, &tree->nchildren, NULL, SCIP_REAL_MIN) );
+      assert(tree->nchildren == 0);
+   }
 
    /* if the old focus node was cut off, we can delete its children;
     * if the old focus node's parent was cut off, we can also delete the focus node's siblings
@@ -4574,8 +4587,8 @@ SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
    assert(tree->root != NULL);
 
    /* install the temporary root node as focus node */
-   SCIP_CALL( SCIPnodeFocus(&tree->root, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, lp, branchcand, conflict,
-         eventfilter, eventqueue, &cutoff) );
+   SCIP_CALL( SCIPnodeFocus(&tree->root, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, lp, branchcand,
+         conflict, eventfilter, eventqueue, &cutoff, FALSE) );
    assert(!cutoff);
 
    return SCIP_OKAY;
@@ -4608,8 +4621,8 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
 
    /* unfocus the temporary root node */
    node = NULL;
-   SCIP_CALL( SCIPnodeFocus(&node, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, lp, branchcand, conflict,
-         eventfilter, eventqueue, &cutoff) );
+   SCIP_CALL( SCIPnodeFocus(&node, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, lp, branchcand,
+         conflict, eventfilter, eventqueue, &cutoff, FALSE) );
    assert(!cutoff);
    assert(tree->root == NULL);
    assert(tree->focusnode == NULL);
