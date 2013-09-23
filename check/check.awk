@@ -725,7 +725,7 @@ BEGIN {
                timeouts++;
             }
             else {
-               if( db == -infty || ((abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol) ) {
+               if( (db == -infty || (abs(pb - db) <= max(abstol, reltol))) && abs(pb - sol[prob]) <= reltol ) {
                   status = "ok";
                   pass++;
                }
