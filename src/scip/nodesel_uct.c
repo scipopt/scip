@@ -31,87 +31,82 @@
 #define NODESEL_DESC            "node selector which balances exploration and exploitation "
 #define NODESEL_STDPRIORITY     10
 #define NODESEL_MEMSAVEPRIORITY 0
-#define DEFAULT_WEIGHT          0.1
-#define DEFAULT_NODELIMIT       31
 #define EVENTHDLR_NAME          "event_uct"
 #define EVENTHDLR_EVENTTYPE     SCIP_EVENTTYPE_NODEFOCUSED
 
+/** default values for user parameters */
+#define DEFAULT_WEIGHT          0.1 /**< weight of node visits in UCT score */
+#define DEFAULT_NODELIMIT       31  /**< limit of node selections after which UCT node selection is turned off */
+#define DEFAULT_USEESTIMATE     FALSE /**< should the estimate (TRUE) or the lower bound of a node be used for UCT score? */
+#define DEFAULT_INITIALCAPACITY 16 /**< initial capacity of node visits array (increased dynamically if required) */
 /*
  * Data structures
  */
-
-/* TODO: fill in the necessary node selector data */
 
 /** node selector data */
 /* todo: extra int for array length because nodelimit is a user parameter */
 struct SCIP_NodeselData
 {
-   int*  nodevisits;
-   int   nodelimit;
-   int   nselections;
-   SCIP_Real weight;
-   SCIP_NODE* lastfocusnode;
+   int*                  nodevisits;         /**< array to store the number of node visits so far for every node */
+   int                   nodelimit;          /**< limit of node selections after which UCT node selection is turned off */
+   int                   visitscapacity;     /**< the capacity of the visits array */
+   int                   nselections;        /**< counter for the number of node selections */
+   SCIP_Real             weight;             /**< weight of node visits in UCT score */
+   SCIP_Bool             useestimate;        /**< should the estimate (TRUE) or the lower bound of a node be used for UCT score? */
 };
 
-#if 0
-struct SCIP_EventhdlrData
-{
-   SCIP_NODESEL* nodesel;
-};
-#endif
 /*
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
+/** get the number times \p node has been visited so far */
 static
 int nodeGetVisits(
-   SCIP_NODESEL* nodesel,
-   SCIP_NODE*   node
+   SCIP_NODESELDATA*     nodeseldata,        /**< node selector data */
+   SCIP_NODE*            node                /**< the node in question */
    )
 {
-   SCIP_NODESELDATA* nodeseldata;
-
-   nodeseldata = SCIPnodeselGetData(nodesel);
-   if( SCIPnodeGetNumber(node) >= nodeseldata->nodelimit )
+   if( SCIPnodeGetNumber(node) >= nodeseldata->visitscapacity )
       return 0;
    else
       return nodeseldata->nodevisits[(int)SCIPnodeGetNumber(node)];
 }
 
+/** increases the visits counter along the path from \p node to the root node */
 static
 void backpropagateVisits(
-   SCIP_NODESELDATA* nodeseldata
+   SCIP_NODESELDATA*     nodeseldata,        /**< node selector data */
+   SCIP_NODE*            node                /**< leaf node of path along which the visits are backpropagated */
    )
 {
-   SCIP_NODE* pathnode;
    int* visits;
-   int visitcount;
 
    assert(nodeseldata != NULL);
    visits = nodeseldata->nodevisits;
    assert(visits != NULL);
 
-   pathnode = nodeseldata->lastfocusnode;
-   assert(pathnode != NULL);
-   visitcount = 0;
+   assert(node != NULL);
+
+   /* increase visits counter of all nodes along the path until root node is reached (which has NULL as parent)*/
    do
    {
       SCIP_Longint nodenumber;
 
-      nodenumber = SCIPnodeGetNumber(pathnode);
-      if( nodenumber < nodeseldata->nodelimit )
-         visits[(int)nodenumber] += (++visitcount);
+      nodenumber = SCIPnodeGetNumber(node);
+      if( nodenumber < nodeseldata->visitscapacity )
+         ++(visits[(int)nodenumber]);
 
-      pathnode = SCIPnodeGetParent(pathnode);
+      assert(SCIPnodeGetParent(node) == NULL || SCIPnodeGetDepth(node) >= 1);
+      node = SCIPnodeGetParent(node);
    }
-   while( pathnode != NULL );
+   while( node != NULL );
 }
 
+/** switches to a different node selection rule by assigning the lowest priority of all node selectors to uct */
 static
 SCIP_RETCODE turnoffNodeSelector(
-   SCIP*                scip,
-   SCIP_NODESEL*        nodesel
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel             /**< the node selector to be turned off */
    )
 {
    SCIP_NODESEL** nodesels;
@@ -122,123 +117,176 @@ SCIP_RETCODE turnoffNodeSelector(
    nodesels = SCIPgetNodesels(scip);
    nnodesels = SCIPgetNNodesels(scip);
    newpriority = SCIPnodeselGetStdPriority(nodesel);
+
+   /* loop over node selectors to find minimum priority */
    for( n = 0; n < nnodesels; ++n )
    {
       newpriority = MIN(newpriority, SCIPnodeselGetStdPriority(nodesels[n]));
    }
-   SCIPdebugMessage("Reached node limit of UCT node selection rule -> switching to default\n");
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Reached node limit of UCT node selection rule -> switching to default\n");
    SCIP_CALL( SCIPsetNodeselStdPriority(scip, nodesel, newpriority - 1) );
 
    return SCIP_OKAY;
 }
 
+/** returns UCT score of \p node; the UCT score is a mixture of the node's lower bound or estimate and the number of times
+ *  it has been visited so far in relation with the number of times its parent has been visited so far
+ */
 static
-int compareNodes(
-   SCIP*            scip,
-   SCIP_NODESEL*    nodesel,
-   SCIP_NODE*       node1,
-   SCIP_NODE*       node2,
-   SCIP_Real        weight
+SCIP_Real nodeGetUctScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< the node for which score is requested */
+   SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
    )
 {
-   SCIP_NODE* parent1;
-   SCIP_NODE* parent2;
-   SCIP_NODE* curr1;
-   SCIP_NODE* curr2;
-
-   SCIP_Real curr1score;
-   SCIP_Real curr2score;
+   SCIP_NODE* parent;
    SCIP_Real rootlowerbound;
-   int curr1visits;
-   int curr2visits;
+   SCIP_Real score;
+
    int parentvisits;
+
+   rootlowerbound = SCIPgetLowerboundRoot(scip);
+   assert(!SCIPisInfinity(scip, -rootlowerbound));
+
+   /* the objective part of the UCT score uses the (negative) gap between node estimate and root lower bound */
+   score = nodeseldata->useestimate ? SCIPnodeGetEstimate(node) : SCIPnodeGetLowerbound(node);
+   assert(SCIPisGE(scip, score, rootlowerbound));
+
+   if( !SCIPisEQ(scip, score, rootlowerbound) )
+      score = (score - rootlowerbound) /MIN(ABS(score), ABS(rootlowerbound));
+   else
+      score = 0.0;
+
+   /* the visits part of the UCT score function */
+   parent = SCIPnodeGetParent(node);
+   assert(parent != NULL);
+   parentvisits = nodeGetVisits(nodeseldata, parent);
+   if( parentvisits > 0 )
+   {
+      int visits;
+
+      visits = nodeGetVisits(nodeseldata, node);
+      score += nodeseldata->weight * parentvisits / (SCIP_Real)(1 + visits);
+   }
+
+   return score;
+}
+
+/** compares two leaf nodes by comparing the UCT scores of the two children of their deepest common ancestor */
+static
+int compareNodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESELDATA*     nodeseldata,        /**< node selector data */
+   SCIP_NODE*            node1,              /**< first node for comparison */
+   SCIP_NODE*            node2               /**< second node for comparisons */
+   )
+{
+   SCIP_Real score1;
+   SCIP_Real score2;
 
    assert(node1 != node2);
 
-   if( node1 == NULL )
-      return 1;
-   if( node2 == NULL )
-      return -1;
-
-   parent1 = node1;
-   parent2 = node2;
-   do
+   /* go back in the tree to find the two shallowest ancestors of node1 and node2 which share the same parent */
+   while( SCIPnodeGetParent(node1) != SCIPnodeGetParent(node2) )
    {
-      curr1 = parent1;
-      curr2 = parent2;
-      assert(curr1 != NULL);
-      assert(curr2 != NULL);
-      if( SCIPnodeGetDepth(curr1) >= SCIPnodeGetDepth(curr2) )
-         parent1 = SCIPnodeGetParent(curr1);
-      if( SCIPnodeGetDepth(curr1) <= SCIPnodeGetDepth(curr2) )
-         parent2 = SCIPnodeGetParent(curr2);
-   }
-   while( parent1 != parent2 );
+      /* if the nodes have the same depth but not the same parent both pointers can be updated, otherwise only the deeper
+       * node pointer is moved
+       */
+      if( SCIPnodeGetDepth(node1) == SCIPnodeGetDepth(node2) )
+      {
+         node1 = SCIPnodeGetParent(node1);
+         node2 = SCIPnodeGetParent(node2);
+      }
+      else if( SCIPnodeGetDepth(node1) > SCIPnodeGetDepth(node2) )
+         node1 = SCIPnodeGetParent(node1);
+      else if( SCIPnodeGetDepth(node1) < SCIPnodeGetDepth(node2) )
+         node2 = SCIPnodeGetParent(node2);
 
-   assert(curr1 != NULL);
-   assert(curr2 != NULL);
-   assert(parent1 != NULL);
+      assert(node1 != NULL);
+      assert(node2 != NULL);
+   }
 
-   rootlowerbound = SCIPgetLowerboundRoot(scip);
-   if( SCIPisZero(scip, rootlowerbound) )
-   {
-      curr1score = SCIPnodeGetLowerbound(curr1);
-      curr2score = SCIPnodeGetLowerbound(curr2);
-   }
-   else
-   {
-      curr1score = SCIPnodeGetLowerbound(curr1) / rootlowerbound;
-      curr2score = SCIPnodeGetLowerbound(curr2) / rootlowerbound;
-   }
-   curr1visits = nodeGetVisits(nodesel, node1);
-   curr2visits = nodeGetVisits(nodesel, node2);
+   /* get UCT scores for both nodes */
+   score1 = nodeGetUctScore(scip, node1, nodeseldata);
+   score2 = nodeGetUctScore(scip, node2, nodeseldata);
 
-   parentvisits = nodeGetVisits(nodesel, parent1);
-   if( parentvisits > 0 )
-   {
-      curr1score -= weight * parentvisits / (SCIP_Real)(1 + curr1visits);
-      curr2score -= weight * parentvisits /(SCIP_Real)(1 + curr2visits);
-   }
-   if( (SCIPisInfinity(scip, curr1score) && SCIPisInfinity(scip, curr2score)) ||
-         (SCIPisInfinity(scip, -curr1score) && SCIPisInfinity(scip, -curr2score))
-         || SCIPisEQ(scip, curr1score, curr2score) )
+   if( (SCIPisInfinity(scip, score1) && SCIPisInfinity(scip, score2)) ||
+         (SCIPisInfinity(scip, -score1) && SCIPisInfinity(scip, -score2))
+         || SCIPisEQ(scip, score1, score2) )
    {
       return 0;
    }
-   if( SCIPisLT(scip, curr1score, curr2score) )
+   if( SCIPisLT(scip, score1, score2) )
       return -1;
    else
    {
-      assert(SCIPisGT(scip, curr1score, curr2score));
+      assert(SCIPisGT(scip, score1, score2));
       return 1;
    }
 }
 
+/** selects the best node among \p nodes with respect to UCT score */
 static
 void selectBestNode(
-   SCIP* scip,
-   SCIP_NODE** selnode,
-   SCIP_NODESEL* nodesel,
-   SCIP_NODE** nodes,
-   SCIP_Real   weight,
-   int         nnodes
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE**           selnode,            /**< pointer to store the selected node, needs not be empty */
+   SCIP_NODESELDATA*     nodeseldata,        /**< node selector data */
+   SCIP_NODE**           nodes,              /**< array of nodes to select from */
+   int                   nnodes              /**< size of the nodes array */
    )
 {
    int n;
 
    assert(nnodes == 0 || nodes != NULL);
    assert(nnodes >= 0);
+   assert(selnode != NULL);
 
    if( nnodes == 0 )
       return;
 
-
+   /* loop over nodes, always keeping reference to the best found node so far */
    for( n = 0; n < nnodes; ++n )
    {
       assert(nodes[n] != NULL);
-      if( *selnode == NULL || compareNodes(scip, nodesel, *selnode, nodes[n], weight) > 0 )
+      /* update the selected node if the current node has a higher score */
+      if( *selnode == NULL || compareNodes(scip, nodeseldata, *selnode, nodes[n]) < 0 )
          *selnode = nodes[n];
    }
+}
+
+/** keeps visits array large enough to save visits for all nodes in the branch and bound tree */
+static
+SCIP_RETCODE ensureMemorySize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
+   )
+{
+   assert(nodeseldata != NULL);
+
+   /* if array has not been allocated yet, do this now with default initial capacity */
+   if( nodeseldata->nodevisits == NULL )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nodeseldata->nodevisits, DEFAULT_INITIALCAPACITY) );
+      nodeseldata->visitscapacity = DEFAULT_INITIALCAPACITY;
+      BMSclearMemoryArray(nodeseldata->nodevisits, nodeseldata->visitscapacity);
+   }
+
+   /* if user node limit has not been reached yet, resize the visits array if necessary */
+   if( nodeseldata->visitscapacity < 2 * nodeseldata->nodelimit && nodeseldata->visitscapacity < (int)(2 * SCIPgetNNodes(scip)))
+   {
+      int newcapacity;
+      newcapacity = MIN(2 * nodeseldata->visitscapacity, 2 * nodeseldata->nodelimit);
+
+      SCIPdebugMessage("Resizing node visits array, old capacity: %d new capacity : %d\n", nodeseldata->visitscapacity, newcapacity);
+      assert(newcapacity > nodeseldata->visitscapacity);
+
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &nodeseldata->nodevisits, nodeseldata->visitscapacity, newcapacity) );
+      BMSclearMemoryArray(&nodeseldata->nodevisits[nodeseldata->visitscapacity], newcapacity - nodeseldata->visitscapacity);
+
+      nodeseldata->visitscapacity = newcapacity;
+   }
+
+   return SCIP_OKAY;
 }
 
 /*
@@ -255,6 +303,7 @@ SCIP_DECL_NODESELCOPY(nodeselCopyUct)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_NODESELINITSOL(nodeselInitsolUct)
 {
@@ -265,17 +314,36 @@ SCIP_DECL_NODESELINITSOL(nodeselInitsolUct)
    nodeseldata = SCIPnodeselGetData(nodesel);
 
    assert(nodeseldata != NULL);
-   if( nodeseldata->nodevisits == NULL )
+   nodeseldata->nselections = 0;
+   nodeseldata->visitscapacity = 0;
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of node selector (called when branch and bound process data gets freed) */
+static
+SCIP_DECL_NODESELEXITSOL(nodeselExitsolUct)
+{
+   SCIP_NODESELDATA* nodeseldata;
+   assert(scip != NULL);
+   assert(nodesel != NULL);
+
+   nodeseldata = SCIPnodeselGetData(nodesel);
+
+   assert(nodeseldata != NULL);
+
+   if( nodeseldata->visitscapacity > 0 )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(nodeseldata->nodevisits), 2 * nodeseldata->nodelimit) );
+      assert(nodeseldata->nodevisits != NULL);
+      SCIPfreeBlockMemoryArray(scip, &nodeseldata->nodevisits, nodeseldata->visitscapacity);
    }
-   BMSclearMemoryArray(nodeseldata->nodevisits, 2 * nodeseldata->nodelimit);
-   nodeseldata->lastfocusnode = NULL;
+   nodeseldata->visitscapacity = 0;
    nodeseldata->nselections = 0;
 
    return SCIP_OKAY;
 }
 
+/** destructor of node selector to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_NODESELFREE(nodeselFreeUct)
 {
@@ -284,9 +352,10 @@ SCIP_DECL_NODESELFREE(nodeselFreeUct)
    assert(nodesel != NULL);
 
    nodeseldata = SCIPnodeselGetData(nodesel);
-   if( nodeseldata->nodevisits != NULL )
+   if( nodeseldata->visitscapacity > 0 )
    {
-      SCIPfreeMemoryArray(scip, &nodeseldata->nodevisits);
+      assert(nodeseldata->nodevisits != NULL);
+      SCIPfreeBlockMemoryArray(scip, &nodeseldata->nodevisits, nodeseldata->visitscapacity);
    }
    SCIPfreeBlockMemory(scip, &nodeseldata);
 
@@ -294,8 +363,6 @@ SCIP_DECL_NODESELFREE(nodeselFreeUct)
 
    return SCIP_OKAY;
 }
-
-
 
 /** node selection method of node selector */
 static
@@ -317,18 +384,26 @@ SCIP_DECL_NODESELSELECT(nodeselSelectUct)
 
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
+
+   /* collect leaves, children and siblings data */
    SCIPgetOpenNodesData(scip, &leaves, &children, &siblings, &nleaves, &nchildren, &nsiblings);
+
+   /* make sure that UCT node selection data is large enough to store node visits */
+   if( SCIPgetNNodesLeft(scip) > 0 )
+   {
+      SCIP_CALL( ensureMemorySize(scip, nodeseldata) );
+   }
 
    /* select next node as best node with respect to UCT-based comparison method */
    *selnode = NULL;
-   selectBestNode(scip, selnode, nodesel, children, nodeseldata->weight, nchildren);
-   selectBestNode(scip, selnode, nodesel, siblings, nodeseldata->weight, nsiblings);
-   selectBestNode(scip, selnode, nodesel, leaves, nodeseldata->weight, nleaves);
+   selectBestNode(scip, selnode, nodeseldata, children, nchildren);
+   selectBestNode(scip, selnode, nodeseldata, siblings, nsiblings);
+   selectBestNode(scip, selnode, nodeseldata, leaves, nleaves);
 
    if(*selnode == NULL)
       return SCIP_OKAY;
 
-   /* count the number of selections */
+   /* increase the number of selections */
    ++nodeseldata->nselections;
 
    /* switch back to default node selection rule if the node limit is exceeded */
@@ -336,79 +411,19 @@ SCIP_DECL_NODESELSELECT(nodeselSelectUct)
    {
       SCIP_CALL( turnoffNodeSelector(scip, nodesel) );
    }
-   else if( SCIPnodeGetType(*selnode) != SCIP_NODETYPE_CHILD && nodeseldata->lastfocusnode != NULL )
+   else
    {
       /* trigger backpropagation of visits upwards from last focus node if the newly selected node is not a child node
        * of the focus node
        */
-      SCIPdebugMessage("Backpropagating node visits from node number %"SCIP_LONGINT_FORMAT"\n", SCIPnodeGetNumber(nodeseldata->lastfocusnode));
-      backpropagateVisits(nodeseldata);
+      SCIPdebugMessage("Backpropagating node visits from node number %"SCIP_LONGINT_FORMAT"\n", SCIPnodeGetNumber(*selnode));
+      backpropagateVisits(nodeseldata, *selnode);
    }
-
-   /* keep selected node as last focus node for next time */
-   nodeseldata->lastfocusnode = *selnode;
 
    return SCIP_OKAY;
 }
 
-#if 0
-/** node comparison method of node selector */
-static
-SCIP_DECL_NODESELCOMP(nodeselCompUct)
-{  /*lint --e{715}*/
-   SCIP_NODESELDATA* nodeseldata;
-   SCIP_NODE* parent1;
-   SCIP_NODE* parent2;
-   SCIP_Real score1;
-   SCIP_Real score2;
-   int nodevisits1;
-   int nodevisits2;
-   int parentvisits1;
-   int parentvisits2;
-
-   assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
-   assert(scip != NULL);
-
-   nodeseldata = SCIPnodeselGetData(nodesel);
-   assert(nodeseldata != NULL);
-
-   score1 = SCIPnodeGetLowerbound(node1) / SCIPgetLowerboundRoot(scip);
-   score2 = SCIPnodeGetLowerbound(node2) / SCIPgetLowerboundRoot(scip);
-
-   nodevisits1 = nodeGetVisits(nodesel, node1);
-   nodevisits2 = nodeGetVisits(nodesel, node2);
-
-   parent1 = SCIPnodeGetParent(node1);
-   parent2 = SCIPnodeGetParent(node2);
-
-   assert(parent1 != NULL && parent2 != NULL);
-
-   parentvisits1 = nodeGetVisits(nodesel, parent1);
-   parentvisits2 = nodeGetVisits(nodesel, parent2);
-   SCIPdebugMessage("Comparing nodes: %10.2g %d %d -- %10.2g %d %d (lower bound, visits, parent visits)\n",
-         SCIPnodeGetLowerbound(node1), nodevisits1, parentvisits1, SCIPnodeGetLowerbound(node2), nodevisits2, parentvisits2 );
-   if( parentvisits1 > 0 || parentvisits2 > 0 )
-   {
-      score1 -= nodeseldata->weight * parentvisits1 / (SCIP_Real)(1 + nodevisits1);
-      score2 -= nodeseldata->weight * parentvisits2 /(SCIP_Real)(1 + nodevisits2);
-   }
-   if( (SCIPisInfinity(scip, score1) && SCIPisInfinity(scip, score2)) ||
-         (SCIPisInfinity(scip, -score1) && SCIPisInfinity(scip, -score2))
-         || SCIPisEQ(scip, score1, score2) )
-   {
-      return 0;
-   }
-   if( SCIPisLT(scip, score1, score2) )
-      return -1;
-   else
-   {
-      assert(SCIPisGT(scip, score1, score2));
-      return 1;
-   }
-}
-#endif
-
+/** node comparison method of UCT node selector */
 static
 SCIP_DECL_NODESELCOMP(nodeselCompUct)
 {
@@ -443,6 +458,8 @@ SCIP_RETCODE SCIPincludeNodeselUct(
 
    nodesel = NULL;
    nodeseldata->nodevisits = NULL;
+   nodeseldata->nselections = 0;
+   nodeseldata->visitscapacity = 0;
    /* use SCIPincludeNodeselBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
@@ -455,11 +472,15 @@ SCIP_RETCODE SCIPincludeNodeselUct(
    SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyUct) );
    SCIP_CALL( SCIPsetNodeselInitsol(scip, nodesel, nodeselInitsolUct) );
    SCIP_CALL( SCIPsetNodeselFree(scip, nodesel, nodeselFreeUct) );
+   SCIP_CALL( SCIPsetNodeselExitsol(scip, nodesel, nodeselExitsolUct) );
 
    /* add uct node selector parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "nodeselection/"NODESEL_NAME"/nodelimit", "maximum number of nodes before switching to default rule",
          &nodeseldata->nodelimit, TRUE, DEFAULT_NODELIMIT, 0, 1000000, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "nodeselection/"NODESEL_NAME"/weight", "weight for visit quotient of node selection rule",
          &nodeseldata->weight, TRUE, DEFAULT_WEIGHT, 0.0, 1.0, NULL, NULL) );
+   SCIPaddBoolParam(scip, "nodeselection/"NODESEL_NAME"/useestimate",
+         "/**< should the estimate (TRUE) or lower bound of a node be used for UCT score? */",
+         &nodeseldata->useestimate, TRUE, DEFAULT_USEESTIMATE, NULL, NULL);
    return SCIP_OKAY;
 }
