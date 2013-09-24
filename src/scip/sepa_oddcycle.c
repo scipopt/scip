@@ -74,6 +74,7 @@
 #define DEFAULT_SORTROOTNEIGHBORS  TRUE      /**< sort neighbors of the root in the level graph */
 #define DEFAULT_MAXCUTSLEVEL         50      /**< maximal number of cuts produced per level */
 #define DEFAULT_MAXUNSUCESSFULL       3      /**< maximal number of unsuccessful calls at each node */
+#define DEFAULT_CUTTHRESHOLD         -1      /**< maximal number of other cuts s.t. separation is applied (-1 for direct call) */
 
 
 /*
@@ -183,6 +184,7 @@ struct SCIP_SepaData
    int                   maxnlevels;         /**< maximal number of levels in level graph */
    int                   maxunsucessfull;    /**< maximal number of unsuccessful calls at each node */
    int                   nunsucessfull;      /**< number of unsuccessful calls at current node */
+   int                   cutthreshold;       /**< maximal number of other cuts s.t. separation is applied (-1 for direct call) */
    SCIP_Longint          lastnode;           /**< number of last node */
 };
 
@@ -3952,6 +3954,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
       return SCIP_OKAY;
    }
 
+   /* only run if number of cuts already found is small enough */
+   if ( SCIPgetNCutsFoundRound(scip) >= sepadata->cutthreshold )
+      return SCIP_OKAY;
+
    /* store node number and reset number of unsuccessful calls */
    if ( sepadata->lastnode != SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) )
    {
@@ -4114,6 +4120,9 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/maxunsucessfull",
          "number of unsuccessful calls at current node",
          &sepadata->maxunsucessfull, TRUE, DEFAULT_MAXUNSUCESSFULL, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/cutthreshold",
+         "maximal number of other cuts s.t. separation is applied (-1 for direct call)",
+         &sepadata->cutthreshold, TRUE, DEFAULT_CUTTHRESHOLD, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
