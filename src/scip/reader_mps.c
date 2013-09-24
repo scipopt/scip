@@ -1311,7 +1311,7 @@ SCIP_RETCODE readBounds(
                   break;
             }
 
-            /* the bound name?! is be missing */
+            /* the bound name?! is missing */
             if( l < 0 )
             {
                SCIPwarningMessage(scip, "in bound section a name for value <%s> might be missing\n", mpsinputField3(mpsi));
@@ -1322,7 +1322,7 @@ SCIP_RETCODE readBounds(
             /* the bound is be missing */
             else
             {
-               SCIPwarningMessage(scip, "in bound section a value for column <%s> is be missing, assuming 0.0\n", mpsinputField3(mpsi));
+               SCIPwarningMessage(scip, "in bound section a value for column <%s> is missing, assuming 0.0\n", mpsinputField3(mpsi));
 
                mpsinputInsertField4(mpsi, "0.0");
                shifted = TRUE;
