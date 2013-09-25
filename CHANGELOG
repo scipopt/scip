@@ -17,6 +17,7 @@ data structures
 
 features:
 - added breadth first search node selection
+- new node selection rule UCT which balances exploration and exploitation by considering node visits
 - added new dual presolving for setppc-constraints
 - changed dualfix presolver to propagator such that dual fixing can also be applied during repropagation of the root node
 - added upgrade from varbound constraints to set-packing constraints

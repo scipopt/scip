@@ -16251,20 +16251,20 @@ SCIP_NODE* SCIPgetBestboundNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** access to all data of open nodes including leaves, children, and siblings
+/** access to all data of open nodes (leaves, children, and siblings)
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
-void SCIPgetOpenNodesData(
+SCIP_RETCODE SCIPgetOpenNodesData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NODE***          leaves,
-   SCIP_NODE***          children,
-   SCIP_NODE***          siblings,
-   int*                  nleaves,
-   int*                  nchildren,
-   int*                  nsiblings
+   SCIP_NODE***          leaves,             /**< pointer to store the leaves, or NULL if not needed */
+   SCIP_NODE***          children,           /**< pointer to store the children, or NULL if not needed */
+   SCIP_NODE***          siblings,           /**< pointer to store the siblings, or NULL if not needed */
+   int*                  nleaves,            /**< pointer to store the number of leaves, or NULL */
+   int*                  nchildren,          /**< pointer to store the number of children, or NULL */
+   int*                  nsiblings           /**< pointer to store the number of siblings, or NULL */
    );
 
 /** cuts off node and whole sub tree from branch and bound tree
