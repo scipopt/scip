@@ -3955,7 +3955,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
    }
 
    /* only run if number of cuts already found is small enough */
-   if ( SCIPgetNCutsFoundRound(scip) >= sepadata->cutthreshold )
+   if ( sepadata->cutthreshold >= 0 && SCIPgetNCutsFoundRound(scip) >= sepadata->cutthreshold )
       return SCIP_OKAY;
 
    /* store node number and reset number of unsuccessful calls */
