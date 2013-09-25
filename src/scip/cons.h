@@ -618,6 +618,7 @@ SCIP_RETCODE SCIPconsCreate(
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
  */
+extern
 SCIP_RETCODE SCIPconsCopy(
    SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
    SCIP_SET*             set,                /**< global SCIP settings of the target SCIP */

@@ -2144,7 +2144,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    else
    {
       /* if no point is suggested and the value in LP solution is not too big, try the LP or pseudo LP solution
-       * otherwise, if the value in the LP or pseudosolution is large (here 1e+10), use 0.0
+       * otherwise, if the value in the LP or pseudosolution is large (here 1e+12), use 0.0
        * in both cases, project onto bounds of course
        */
       branchpoint = SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(tree));
@@ -2269,12 +2269,12 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    else
    {
       /* discrete variables */
-      if( branchpoint < lb + 0.5 )
+      if( branchpoint <= lb + 0.5 )
       {
          /* if branchpoint is on lower bound, create one branch with x = lb and one with x >= lb+1 */
          return lb + 0.5;
       }
-      else if( branchpoint > ub - 0.5 )
+      else if( branchpoint >= ub - 0.5 )
       {
          /* if branchpoint is on upper bound, create one branch with x = ub and one with x <= ub-1 */
          return ub - 0.5;

@@ -103,8 +103,8 @@ struct ConstraintMatrix
    int                   ncols;              /**< complete number of columns */
    SCIP_Real*            lb;                 /**< lower bound per variable */
    SCIP_Real*            ub;                 /**< upper bound per variable */
-   int*                  nuplocks;           /**< number uplocks per variable */
-   int*                  ndownlocks;         /**< number downlocks per variable */
+   int*                  nuplocks;           /**< number of up locks per variable */
+   int*                  ndownlocks;         /**< number of down locks per variable */
 
    SCIP_VAR**            vars;               /**< variables pointer */
 

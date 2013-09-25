@@ -15547,13 +15547,12 @@ SCIP_RETCODE SCIPprintRay(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
-/** gets number of feasible primal solutions stored in the solution storage in case the problem is transformed; in case
- *  if the problem stage is SCIP_STAGE_PROBLEM, it returns the number solution in the original solution candidate
- *  storage
+/** gets number of feasible primal solutions stored in the solution storage in case the problem is transformed;
+ *  in case the problem stage is SCIP_STAGE_PROBLEM, the number of solution in the original solution candidate
+ *  storage is returned
  *
- *  @return number of feasible primal solutions stored in the solution storage in case the problem is transformed; in case
- *          if the problem stage is SCIP_STAGE_PROBLEM, it returns the number solution in the original solution candidate
- *          storage
+ *  @return number of feasible primal solutions stored in the solution storage in case the problem is transformed; or
+ *          number of solution in the original solution candidate storage if the problem stage is SCIP_STAGE_PROBLEM
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -19385,39 +19384,39 @@ int SCIPgetPtrarrayMaxIdx(
 
 #define SCIPcreateRealarray(scip, realarray)                    SCIPrealarrayCreate(realarray, SCIPblkmem(scip))
 #define SCIPfreeRealarray(scip, realarray)                      SCIPrealarrayFree(realarray)
-#define SCIPextendRealarray(scip, realarray, minidx, maxidx)    SCIPrealarrayExtend(realarray, (scip)->set, minidx, maxidx)
+#define SCIPextendRealarray(scip, realarray, minidx, maxidx)    SCIPrealarrayExtend(realarray, (scip)->set->mem_arraygrowinit, (scip)->set->mem_arraygrowfac, minidx, maxidx)
 #define SCIPclearRealarray(scip, realarray)                     SCIPrealarrayClear(realarray)
 #define SCIPgetRealarrayVal(scip, realarray, idx)               SCIPrealarrayGetVal(realarray, idx)
-#define SCIPsetRealarrayVal(scip, realarray, idx, val)          SCIPrealarraySetVal(realarray, (scip)->set, idx, val)
-#define SCIPincRealarrayVal(scip, realarray, idx, incval)       SCIPrealarrayIncVal(realarray, scip->set, idx, incval)
+#define SCIPsetRealarrayVal(scip, realarray, idx, val)          SCIPrealarraySetVal(realarray, (scip)->set->mem_arraygrowinit, (scip)->set->mem_arraygrowfac, idx, val)
+#define SCIPincRealarrayVal(scip, realarray, idx, incval)       SCIPrealarrayIncVal(realarray, (scip)->set->mem_arraygrowinit, (scip)->set->mem_arraygrowfac, idx, incval)
 #define SCIPgetRealarrayMinIdx(scip, realarray)                 SCIPrealarrayGetMinIdx(realarray)
 #define SCIPgetRealarrayMaxIdx(scip, realarray)                 SCIPrealarrayGetMaxIdx(realarray)
 
 #define SCIPcreateIntarray(scip, intarray)                      SCIPintarrayCreate(intarray, SCIPblkmem(scip))
 #define SCIPfreeIntarray(scip, intarray)                        SCIPintarrayFree(intarray)
-#define SCIPextendIntarray(scip, intarray, minidx, maxidx)      SCIPintarrayExtend(intarray, (scip)->set, minidx, maxidx)
+#define SCIPextendIntarray(scip, intarray, minidx, maxidx)      SCIPintarrayExtend(intarray, (scip)->set->mem_arraygrowinit, (scip)->set->mem_arraygrowfac, minidx, maxidx)
 #define SCIPclearIntarray(scip, intarray)                       SCIPintarrayClear(intarray)
 #define SCIPgetIntarrayVal(scip, intarray, idx)                 SCIPintarrayGetVal(intarray, idx)
-#define SCIPsetIntarrayVal(scip, intarray, idx, val)            SCIPintarraySetVal(intarray, (scip)->set, idx, val)
-#define SCIPincIntarrayVal(scip, intarray, idx, incval)         SCIPintarrayIncVal(intarray, scip->set, idx, incval)
+#define SCIPsetIntarrayVal(scip, intarray, idx, val)            SCIPintarraySetVal(intarray, (scip)->set->mem_arraygrowinit, (scip)->set->mem_arraygrowfac, idx, val)
+#define SCIPincIntarrayVal(scip, intarray, idx, incval)         SCIPintarrayIncVal(intarray, (scip)->set->mem_arraygrowinit, (scip)->set->mem_arraygrowfac, idx, incval)
 #define SCIPgetIntarrayMinIdx(scip, intarray)                   SCIPintarrayGetMinIdx(intarray)
 #define SCIPgetIntarrayMaxIdx(scip, intarray)                   SCIPintarrayGetMaxIdx(intarray)
 
 #define SCIPcreateBoolarray(scip, boolarray)                    SCIPboolarrayCreate(boolarray, SCIPblkmem(scip))
 #define SCIPfreeBoolarray(scip, boolarray)                      SCIPboolarrayFree(boolarray)
-#define SCIPextendBoolarray(scip, boolarray, minidx, maxidx)    SCIPboolarrayExtend(boolarray, (scip)->set, minidx, maxidx)
+#define SCIPextendBoolarray(scip, boolarray, minidx, maxidx)    SCIPboolarrayExtend(boolarray, (scip)->set->mem_arraygrowinit, (scip)->set->mem_arraygrowfac, minidx, maxidx)
 #define SCIPclearBoolarray(scip, boolarray)                     SCIPboolarrayClear(boolarray)
 #define SCIPgetBoolarrayVal(scip, boolarray, idx)               SCIPboolarrayGetVal(boolarray, idx)
-#define SCIPsetBoolarrayVal(scip, boolarray, idx, val)          SCIPboolarraySetVal(boolarray, (scip)->set, idx, val)
+#define SCIPsetBoolarrayVal(scip, boolarray, idx, val)          SCIPboolarraySetVal(boolarray, (scip)->set->mem_arraygrowinit, (scip)->set->mem_arraygrowfac, idx, val)
 #define SCIPgetBoolarrayMinIdx(scip, boolarray)                 SCIPboolarrayGetMinIdx(boolarray)
 #define SCIPgetBoolarrayMaxIdx(scip, boolarray)                 SCIPboolarrayGetMaxIdx(boolarray)
 
 #define SCIPcreatePtrarray(scip, ptrarray)                      SCIPptrarrayCreate(ptrarray, SCIPblkmem(scip))
 #define SCIPfreePtrarray(scip, ptrarray)                        SCIPptrarrayFree(ptrarray)
-#define SCIPextendPtrarray(scip, ptrarray, minidx, maxidx)      SCIPptrarrayExtend(ptrarray, (scip)->set, minidx, maxidx)
+#define SCIPextendPtrarray(scip, ptrarray, minidx, maxidx)      SCIPptrarrayExtend(ptrarray, (scip)->set->mem_arraygrowinit, (scip)->set->mem_arraygrowfac, minidx, maxidx)
 #define SCIPclearPtrarray(scip, ptrarray)                       SCIPptrarrayClear(ptrarray)
 #define SCIPgetPtrarrayVal(scip, ptrarray, idx)                 SCIPptrarrayGetVal(ptrarray, idx)
-#define SCIPsetPtrarrayVal(scip, ptrarray, idx, val)            SCIPptrarraySetVal(ptrarray, (scip)->set, idx, val)
+#define SCIPsetPtrarrayVal(scip, ptrarray, idx, val)            SCIPptrarraySetVal(ptrarray, (scip)->set->mem_arraygrowinit, (scip)->set->mem_arraygrowfac, idx, val)
 #define SCIPgetPtrarrayMinIdx(scip, ptrarray)                   SCIPptrarrayGetMinIdx(ptrarray)
 #define SCIPgetPtrarrayMaxIdx(scip, ptrarray)                   SCIPptrarrayGetMaxIdx(ptrarray)
 

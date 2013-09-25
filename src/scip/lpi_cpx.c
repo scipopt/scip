@@ -120,22 +120,22 @@ static const double dblparammin[NUMDBLPARAM] =
 };
 
 /** CPLEX parameter settings */
-struct CPXParam
+struct SCIP_CPXParam
 {
    int                   intparval[NUMINTPARAM]; /**< integer parameter values */
    double                dblparval[NUMDBLPARAM]; /**< double parameter values */
 };
-typedef struct CPXParam CPXPARAM;
+typedef struct SCIP_CPXParam SCIP_CPXPARAM;
 
 /** LP interface */
 struct SCIP_LPi
 {
    CPXENVptr             cpxenv;             /**< CPLEX environment */
-   CPXPARAM              defparam;           /**< default CPLEX parameters */
-   CPXPARAM              curparam;           /**< current CPLEX parameters in the environment */
+   SCIP_CPXPARAM         defparam;           /**< default CPLEX parameters */
+   SCIP_CPXPARAM         curparam;           /**< current CPLEX parameters in the environment */
    CPXLPptr              cpxlp;              /**< CPLEX LP pointer */
    int                   solstat;            /**< solution status of last optimization call */
-   CPXPARAM              cpxparam;           /**< current parameter values for this LP */
+   SCIP_CPXPARAM         cpxparam;           /**< current parameter values for this LP */
    char*                 larray;             /**< array with 'L' entries for changing lower bounds */
    char*                 uarray;             /**< array with 'U' entries for changing upper bounds */
    char*                 senarray;           /**< array for storing row senses */
@@ -467,7 +467,7 @@ void lpistateFree(
 static
 SCIP_RETCODE getParameterValues(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   CPXPARAM*             cpxparam            /**< current parameter values for this LP */
+   SCIP_CPXPARAM*        cpxparam            /**< current parameter values for this LP */
    )
 {
    int i;
@@ -496,7 +496,7 @@ SCIP_RETCODE checkParameterValues(
    )
 {
 #ifndef NDEBUG
-   CPXPARAM par;
+   SCIP_CPXPARAM par;
    int i;
 
    assert(lpi != NULL);
@@ -517,7 +517,7 @@ SCIP_RETCODE checkParameterValues(
 static
 SCIP_RETCODE setParameterValues(
    SCIP_LPI*const        lpi,                /**< LP interface structure */
-   CPXPARAM*const        cpxparam            /**< current parameter values for this LP */
+   SCIP_CPXPARAM*const   cpxparam            /**< current parameter values for this LP */
    )
 {
    int i;
@@ -557,8 +557,8 @@ SCIP_RETCODE setParameterValues(
 /** copies CPLEX parameters from source to dest */
 static
 void copyParameterValues(
-   CPXPARAM*             dest,               /**< CPLEX parameters to copy to */
-   CPXPARAM*const        source              /**< CPLEX parameters which will be copied */
+   SCIP_CPXPARAM*        dest,               /**< CPLEX parameters to copy to */
+   SCIP_CPXPARAM*const   source              /**< CPLEX parameters which will be copied */
    )
 {
    int i;

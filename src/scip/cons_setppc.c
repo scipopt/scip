@@ -3114,7 +3114,7 @@ SCIP_RETCODE presolvePropagateCons(
    {
       if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
-	 SCIPdebugMessage("empty set-partition/-covering constraint found -> cutoff\n");
+	 SCIPdebugMessage("empty set-partition/-covering constraint <%s> found -> cutoff\n", SCIPconsGetName(cons));
 	 *cutoff = TRUE;
 
 	 return SCIP_OKAY;
@@ -3190,7 +3190,7 @@ SCIP_RETCODE presolvePropagateCons(
       if( !SCIPconsIsModifiable(cons) || consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
 	 /* delete constraint */
-	 SCIPdebugMessage(" -> deleting constraint <%s>, all variable are fixed\n", SCIPconsGetName(cons));
+	 SCIPdebugMessage(" -> deleting constraint <%s>, all variables are fixed\n", SCIPconsGetName(cons));
 	 assert(SCIPconsIsActive(cons));
 	 SCIP_CALL( SCIPdelCons(scip, cons) );
 	 ++(*ndelconss);
@@ -3223,7 +3223,7 @@ SCIP_RETCODE presolvePropagateCons(
       }
 
       /* delete constraint */
-      SCIPdebugMessage(" -> deleting set-packing constraint <%s>, all variable are fixed to zero\n", SCIPconsGetName(cons));
+      SCIPdebugMessage(" -> deleting set-packing constraint <%s>, all variables are fixed to zero\n", SCIPconsGetName(cons));
       assert(SCIPconsIsActive(cons));
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
@@ -3270,7 +3270,7 @@ SCIP_RETCODE presolvePropagateCons(
       }
 
       /* delete constraint */
-      SCIPdebugMessage(" -> deleting constraint <%s>, all variable are fixed\n", SCIPconsGetName(cons));
+      SCIPdebugMessage(" -> deleting constraint <%s>, all %svariables are fixed\n", SCIPconsGetName(cons), consdata->setppctype == SCIP_SETPPCTYPE_PACKING ? "but one " : "");
       assert(SCIPconsIsActive(cons));
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
@@ -3342,7 +3342,7 @@ SCIP_RETCODE presolvePropagateCons(
 		  if( redundant )
 		  {
 		     /* delete constraint */
-		     SCIPdebugMessage(" -> deleting constraint <%s>, all variable are fixed\n", SCIPconsGetName(cons));
+		     SCIPdebugMessage(" -> deleting constraint <%s>, all variables are fixed\n", SCIPconsGetName(cons));
 		     assert(SCIPconsIsActive(cons));
 		     SCIP_CALL( SCIPdelCons(scip, cons) );
 		     ++(*ndelconss);
@@ -3378,7 +3378,7 @@ SCIP_RETCODE presolvePropagateCons(
 		  if( !SCIPdoNotAggr(scip) )
 		  {
 		     /* delete constraint */
-		     SCIPdebugMessage(" -> deleting constraint <%s>, all variable are fixed\n", SCIPconsGetName(cons));
+		     SCIPdebugMessage(" -> deleting constraint <%s>, all variables are fixed\n", SCIPconsGetName(cons));
 		     assert(SCIPconsIsActive(cons));
 		     SCIP_CALL( SCIPdelCons(scip, cons) );
 		     ++(*ndelconss);
@@ -3672,7 +3672,7 @@ SCIP_RETCODE checkForOverlapping(
 	     * fixed to one, it's infeasible */
 	    if( consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->nfixedzeros == nvars1 && consdata1->nfixedones != 1 ) /*lint !e641*/
 	    {
-	       SCIPdebugMessage("all variable in the set-partitioning constraint <%s> are fixed to zero, this leads to a cutoff\n", SCIPconsGetName(cons1));
+	       SCIPdebugMessage("all variables in the set-partitioning constraint <%s> are fixed to zero, this leads to a cutoff\n", SCIPconsGetName(cons1));
 	       *cutoff = TRUE;
 
 	       return SCIP_OKAY;
@@ -3838,7 +3838,7 @@ SCIP_RETCODE checkForOverlapping(
 	     * fixed to one, it's infeasible */
 	    if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata->nfixedzeros == nvars && consdata->nfixedones != 1 ) /*lint !e641*/
 	    {
-	       SCIPdebugMessage("all variable in the set-partitioning constraint <%s> are fixed to zero, this leads to a cutoff\n", SCIPconsGetName(cons1));
+	       SCIPdebugMessage("all variables in the set-partitioning constraint <%s> are fixed to zero, this leads to a cutoff\n", SCIPconsGetName(cons1));
 	       *cutoff = TRUE;
 
 	       return SCIP_OKAY;

@@ -272,7 +272,15 @@ fixed bugs:
 - fixed bug with infinite multi-aggregation constants
 - fixed bug that old LP size was not updated for deadend if no LP was solved
 - fixed bug that removing reverse implication did not reset closestvblpcount
-- fixed bug that the number aggregated variables were not counted in the presol_inttobinary.c
+- fixed bug that the number aggregated variables were not counted in presol_inttobinary.c
+- fixed bug that duplicate solutions stopped copying of solutions to original solution candidate store
+- forbid branching on variables with huge bounds; such huge values cannot be enumerated with fixed precision
+  floating point arithmetics
+- fixed bug in backward propagation of linear expressions in expression graph
+- fixed bug that Ipopt's error message was not fully shown due to exiting before the message handler buffer was emptied
+- fixed 'bug' when reading a mps formated file with a missing bound in the bound section
+- unlinking a solution now copies solution values smaller than SCIPepsilon() avoiding some feasible solution in the
+  transformed problem to be infeasible in the original problem
 
 features:
 - can now output the solutions in the solution pool in the interactive shell
@@ -290,6 +298,7 @@ interface:
 - remove problematic function cons_indicator:SCIPsetSlackVarIndicator()
 - added methods SCIPmarkColNotRemovableLocal() and SCIPmarkRowNotRemovableLocal() to forbid removal of an column/row
   from the LP in the current node
+- added method SCIPmessageVPrintError()
 
 
 SCIP version 3.0.1

@@ -4574,6 +4574,53 @@ SCIP_Bool isConvexLocal(
    }  /*lint !e788*/
 }
 
+#ifdef SCIP_DEBUG
+static
+void printEstimator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SIDETYPE         side,               /**< violated side of constraint */
+   SCIP_ROW*             row                 /**< row */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   const char* varnames[2] = {"x", "y"};
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(row  != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   x = SCIPexprtreeGetVars(consdata->f)[0];
+   y = SCIPexprtreeGetVars(consdata->f)[1];
+
+   SCIPinfoMessage(scip, NULL, "splot [%g:%g] [%g:%g] ", SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y));
+   SCIPexprtreePrint(consdata->f, SCIPgetMessagehdlr(scip), NULL, varnames, NULL);
+   SCIPinfoMessage(scip, NULL, "%+g", side == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
+
+   SCIPinfoMessage(scip, NULL, ", %g", SCIPisInfinity(scip, SCIProwGetRhs(row)) ? -SCIProwGetLhs(row) : -SCIProwGetRhs(row));
+   for( i = 0; i < SCIProwGetNNonz(row); ++i )
+   {
+      SCIP_VAR* var;
+
+      var = SCIPcolGetVar(SCIProwGetCols(row)[i]);
+      if( var != x && var != y )
+         continue;
+
+      SCIPinfoMessage(scip, NULL, "%+g * %s", SCIProwGetVals(row)[i], var == x ? "x" : "y");
+   }
+
+   SCIPinfoMessage(scip, NULL, ", \"< echo '%g %g %g'\" with circles", SCIPgetSolVal(scip, sol, x), SCIPgetSolVal(scip, sol, y), consdata->activity);
+
+   SCIPinfoMessage(scip, NULL, "\n");
+}
+#endif
+
 /** tries to separate solution or LP solution by a linear cut
  *
  *  assumes that constraint violations have been computed
@@ -4648,6 +4695,8 @@ SCIP_RETCODE separatePoint(
             efficacy = -feasibility / norm;
          else
             efficacy = -feasibility;
+
+         SCIPdebug( printEstimator(scip, sol, conss[c], violside, row) );
 
          /* if cut is strong enough or it's weak but we separate on a convex function and accept weak cuts there, add cut to SCIP */
          if( SCIPisGT(scip, efficacy, minefficacy) ||
@@ -4815,7 +4864,7 @@ SCIP_RETCODE registerBranchingVariables(
             /* regarding left hand side, we are concave in x and convex in y, so branch on x, if not fixed */
             if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) )
             {
-               SCIPdebugMessage("register variable x = <%s> in convex-concave <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+               SCIPdebugMessage("register variable x = <%s>[%g,%g] in convex-concave <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
                SCIP_CALL( SCIPaddExternBranchCand(scip, xy[0], consdata->lhsviol, SCIP_INVALID) );
                ++*nnotify;
             }
@@ -4825,7 +4874,7 @@ SCIP_RETCODE registerBranchingVariables(
             /* regarding right hand side, we are convex in x and concave in y, so branch on y, if not fixed */
             if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1])) )
             {
-               SCIPdebugMessage("register variable y = <%s> in convex-concave <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+               SCIPdebugMessage("register variable y = <%s>[%g,%g] in convex-concave <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
                SCIP_CALL( SCIPaddExternBranchCand(scip, xy[1], consdata->lhsviol, SCIP_INVALID) );
                ++*nnotify;
             }
@@ -4842,14 +4891,14 @@ SCIP_RETCODE registerBranchingVariables(
          /* register both variables, if not fixed */
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) )
          {
-            SCIPdebugMessage("register variable x = <%s> in <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+            SCIPdebugMessage("register variable x = <%s>[%g,%g] in 1-convex <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
             SCIP_CALL( SCIPaddExternBranchCand(scip, xy[0], consdata->lhsviol, SCIP_INVALID) );
             ++*nnotify;
          }
 
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1])) )
          {
-            SCIPdebugMessage("register variable y = <%s> in <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+            SCIPdebugMessage("register variable y = <%s>[%g,%g] in 1-convex <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
             SCIP_CALL( SCIPaddExternBranchCand(scip, xy[1], consdata->lhsviol, SCIP_INVALID) );
             ++*nnotify;
          }
@@ -4868,14 +4917,14 @@ SCIP_RETCODE registerBranchingVariables(
          /* register both variables, if not fixed */
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) )
          {
-            SCIPdebugMessage("register variable x = <%s> in <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+            SCIPdebugMessage("register variable x = <%s>[%g,%g] in allconvex <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
             SCIP_CALL( SCIPaddExternBranchCand(scip, xy[0], consdata->lhsviol, SCIP_INVALID) );
             ++*nnotify;
          }
 
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1])) )
          {
-            SCIPdebugMessage("register variable y = <%s> in <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+            SCIPdebugMessage("register variable y = <%s>[%g,%g] in allconvex <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
             SCIP_CALL( SCIPaddExternBranchCand(scip, xy[1], consdata->lhsviol, SCIP_INVALID) );
             ++*nnotify;
          }

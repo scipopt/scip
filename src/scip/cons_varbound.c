@@ -1204,13 +1204,11 @@ SCIP_RETCODE propagateCons(
                   newlb = -SCIPinfinity(scip);
             }
 
-            SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
-               SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
-            SCIP_CALL( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, (int)PROPRULE_1, yub < ylb + 0.5,
-                  cutoff, &tightened) );
+            SCIP_CALL( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, (int)PROPRULE_1, yub < ylb + 0.5, cutoff, &tightened) );
 
             if( *cutoff )
             {
+               SCIPdebugMessage("cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
                assert( SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)) );
 
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1222,6 +1220,7 @@ SCIP_RETCODE propagateCons(
 
             if( tightened )
             {
+               SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
                tightenedround = TRUE;
                (*nchgbds)++;
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1241,13 +1240,11 @@ SCIP_RETCODE propagateCons(
                newlb = SCIPadjustedVarLb(scip, consdata->vbdvar, (consdata->lhs - xub)/consdata->vbdcoef);
                if( newlb > ylb + 0.5 )
                {
-                  SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
-                     SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-                  SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_2, FALSE,
-                        cutoff, &tightened) );
+                  SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_2, FALSE, cutoff, &tightened) );
 
                   if( *cutoff )
                   {
+                     SCIPdebugMessage("cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
                      assert( SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)) );
 
                      /* analyze infeasibility */
@@ -1257,6 +1254,7 @@ SCIP_RETCODE propagateCons(
 
                   if( tightened )
                   {
+                     SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
                      tightenedround = TRUE;
                      (*nchgbds)++;
                   }
@@ -1268,13 +1266,11 @@ SCIP_RETCODE propagateCons(
                newub = SCIPadjustedVarUb(scip, consdata->vbdvar, (consdata->lhs - xub)/consdata->vbdcoef);
                if( newub < yub - 0.5 )
                {
-                  SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
-                     SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-                  SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_2, FALSE,
-                        cutoff, &tightened) );
+                  SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_2, FALSE, cutoff, &tightened) );
 
                   if( *cutoff )
                   {
+                     SCIPdebugMessage("cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
                      assert( SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)) );
 
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1286,6 +1282,7 @@ SCIP_RETCODE propagateCons(
 
                   if( tightened )
                   {
+                     SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
                      tightenedround = TRUE;
                      (*nchgbds)++;
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1321,13 +1318,11 @@ SCIP_RETCODE propagateCons(
                   newub = SCIPinfinity(scip);
             }
 
-            SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
-               SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
-            SCIP_CALL( SCIPinferVarUbCons(scip, consdata->var, newub, cons, (int)PROPRULE_3, yub < ylb + 0.5,
-                  cutoff, &tightened) );
+            SCIP_CALL( SCIPinferVarUbCons(scip, consdata->var, newub, cons, (int)PROPRULE_3, yub < ylb + 0.5, cutoff, &tightened) );
 
             if( *cutoff )
             {
+               SCIPdebugMessage("cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
                assert( SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)) );
 
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1339,6 +1334,7 @@ SCIP_RETCODE propagateCons(
 
             if( tightened )
             {
+               SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
                tightenedround = TRUE;
                (*nchgbds)++;
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1358,13 +1354,11 @@ SCIP_RETCODE propagateCons(
                newub = SCIPadjustedVarUb(scip, consdata->vbdvar, (consdata->rhs - xlb)/consdata->vbdcoef);
                if( newub < yub - 0.5 )
                {
-                  SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
-                     SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-                  SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_4, FALSE,
-                        cutoff, &tightened) );
+                  SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_4, FALSE, cutoff, &tightened) );
 
                   if( *cutoff )
                   {
+                     SCIPdebugMessage("cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
                      assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
 
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1376,6 +1370,7 @@ SCIP_RETCODE propagateCons(
 
                   if( tightened )
                   {
+                     SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
                      tightenedround = TRUE;
                      (*nchgbds)++;
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1388,13 +1383,11 @@ SCIP_RETCODE propagateCons(
                newlb = SCIPadjustedVarLb(scip, consdata->vbdvar, (consdata->rhs - xlb)/consdata->vbdcoef);
                if( newlb > ylb + 0.5 )
                {
-                  SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
-                     SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-                  SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_4, FALSE,
-                        cutoff, &tightened) );
+                  SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_4, FALSE, cutoff, &tightened) );
 
                   if( *cutoff )
                   {
+                     SCIPdebugMessage("cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
                      assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
 
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1406,6 +1399,7 @@ SCIP_RETCODE propagateCons(
 
                   if( tightened )
                   {
+                     SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
                      tightenedround = TRUE;
                      (*nchgbds)++;
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );

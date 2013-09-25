@@ -287,6 +287,15 @@ SCIP_RETCODE createSubSCIP(
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", 0) );
 
+   /* reset some limits to default values, in case users changed them in main scip (SCIPcopy copies parameter values :-() */
+   SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/absgap") );
+   SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/bestsol") );
+   SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/gap") );
+   SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/restarts") );
+   SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/solutions") );
+   SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/time") );
+   SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/totalnodes") );
+
    /* disable conflict analysis and separation 
     * keep normal presolving, but disable probing and restarts
     * disable LP solve
@@ -1095,6 +1104,13 @@ SCIP_RETCODE solveSubNLP(
    {
    case SCIP_STATUS_NODELIMIT:
       break; /* this is the status that is most likely happening */
+   case SCIP_STATUS_TOTALNODELIMIT:
+   case SCIP_STATUS_STALLNODELIMIT:
+   case SCIP_STATUS_GAPLIMIT:
+   case SCIP_STATUS_SOLLIMIT:
+   case SCIP_STATUS_BESTSOLLIMIT:
+      /* these should not happen, but if one does, it's save to go to CLEANUP */
+      SCIPABORT();
    case SCIP_STATUS_OPTIMAL: 
    case SCIP_STATUS_INFEASIBLE: 
    case SCIP_STATUS_USERINTERRUPT:

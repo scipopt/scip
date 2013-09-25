@@ -12854,10 +12854,6 @@ SCIP_RETCODE freeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Bool stored;
-   int nsols;
-   int s;
-   
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);
@@ -12868,30 +12864,53 @@ SCIP_RETCODE freeTransform(
 
    /* switch stage to FREETRANS */
    scip->set->stage = SCIP_STAGE_FREETRANS;
-   
-   assert(scip->origprimal->nsols == 0);
 
-   nsols = MIN(scip->set->limit_maxorigsol, scip->primal->nsols);
-   stored = TRUE;
-   
-   /* copy best primal solution to original solution candidate list */
-   for( s = 0; s < nsols && stored; ++s )
+   /* copy best primal solutions to original solution candidate list */
+   if( scip->set->limit_maxorigsol > 0 )
    {
-      SCIP_SOL* sol;
+      SCIP_Bool stored;
+      int maxsols;
+      int nsols;
+      int s;
 
-      sol = scip->primal->sols[s];
-      assert(sol != NULL);
-      
-      if( !SCIPsolIsOriginal(sol) )
+      assert(scip->origprimal->nsols == 0);
+
+      nsols = scip->primal->nsols;
+      maxsols = scip->set->limit_maxorigsol;
+      stored = TRUE;
+      s = 0;
+
+      /* iterate over all solutions as long as the original solution candidate store size limit is not reached */
+      while( s < nsols && scip->origprimal->nsols < maxsols )
       {
-         /* retransform solution into the original problem space */
-         SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
+         SCIP_SOL* sol;
+
+         sol = scip->primal->sols[s];
+         assert(sol != NULL);
+
+         if( !SCIPsolIsOriginal(sol) )
+         {
+            /* retransform solution into the original problem space */
+            SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob) );
+         }
+
+         /* add solution to original candidate solution storage */
+         SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
+         ++s;
       }
-   
-      /* add solution to original candidate solution storage */
-      SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
+
+      if( scip->origprimal->nsols > 1 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+            "stored the %d best primal solutions in the original solution cadidate list\n", scip->origprimal->nsols);
+      }
+      else if( scip->origprimal->nsols == 1 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+            "stored the best primal solution in the original solution cadidate list\n");
+      }
    }
-   
+
    /* free transformed problem data structures */
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
@@ -31747,13 +31766,12 @@ SCIP_RETCODE SCIPprintRay(
    return SCIP_OKAY;
 }
 
-/** gets number of feasible primal solutions stored in the solution storage in case the problem is transformed; in case
- *  if the problem stage is SCIP_STAGE_PROBLEM, it returns the number solution in the original solution candidate
- *  storage
+/** gets number of feasible primal solutions stored in the solution storage in case the problem is transformed;
+ *  in case the problem stage is SCIP_STAGE_PROBLEM, the number of solution in the original solution candidate
+ *  storage is returned
  *
- *  @return number of feasible primal solutions stored in the solution storage in case the problem is transformed; in case
- *          if the problem stage is SCIP_STAGE_PROBLEM, it returns the number solution in the original solution candidate
- *          storage
+ *  @return number of feasible primal solutions stored in the solution storage in case the problem is transformed; or
+ *          number of solution in the original solution candidate storage if the problem stage is SCIP_STAGE_PROBLEM
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -38328,7 +38346,7 @@ SCIP_RETCODE SCIPextendRealarray(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPrealarrayExtend(realarray, scip->set, minidx, maxidx) );
+   SCIP_CALL( SCIPrealarrayExtend(realarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, minidx, maxidx) );
 
    return SCIP_OKAY;
 }
@@ -38379,7 +38397,7 @@ SCIP_RETCODE SCIPsetRealarrayVal(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPrealarraySetVal(realarray, scip->set, idx, val) );
+   SCIP_CALL( SCIPrealarraySetVal(realarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, idx, val) );
 
    return SCIP_OKAY;
 }
@@ -38398,7 +38416,7 @@ SCIP_RETCODE SCIPincRealarrayVal(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPrealarrayIncVal(realarray, scip->set, idx, incval) );
+   SCIP_CALL( SCIPrealarrayIncVal(realarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, idx, incval) );
 
    return SCIP_OKAY;
 }
@@ -38479,7 +38497,7 @@ SCIP_RETCODE SCIPextendIntarray(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPintarrayExtend(intarray, scip->set, minidx, maxidx) );
+   SCIP_CALL( SCIPintarrayExtend(intarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, minidx, maxidx) );
 
    return SCIP_OKAY;
 }
@@ -38530,7 +38548,7 @@ SCIP_RETCODE SCIPsetIntarrayVal(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPintarraySetVal(intarray, scip->set, idx, val) );
+   SCIP_CALL( SCIPintarraySetVal(intarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, idx, val) );
 
    return SCIP_OKAY;
 }
@@ -38549,7 +38567,7 @@ SCIP_RETCODE SCIPincIntarrayVal(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPintarrayIncVal(intarray, scip->set, idx, incval) );
+   SCIP_CALL( SCIPintarrayIncVal(intarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, idx, incval) );
 
    return SCIP_OKAY;
 }
@@ -38630,7 +38648,7 @@ SCIP_RETCODE SCIPextendBoolarray(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPboolarrayExtend(boolarray, scip->set, minidx, maxidx) );
+   SCIP_CALL( SCIPboolarrayExtend(boolarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, minidx, maxidx) );
 
    return SCIP_OKAY;
 }
@@ -38681,7 +38699,7 @@ SCIP_RETCODE SCIPsetBoolarrayVal(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPboolarraySetVal(boolarray, scip->set, idx, val) );
+   SCIP_CALL( SCIPboolarraySetVal(boolarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, idx, val) );
 
    return SCIP_OKAY;
 }
@@ -38762,7 +38780,7 @@ SCIP_RETCODE SCIPextendPtrarray(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPptrarrayExtend(ptrarray, scip->set, minidx, maxidx) );
+   SCIP_CALL( SCIPptrarrayExtend(ptrarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, minidx, maxidx) );
 
    return SCIP_OKAY;
 }
@@ -38810,7 +38828,7 @@ SCIP_RETCODE SCIPsetPtrarrayVal(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPptrarraySetVal(ptrarray, scip->set, idx, val) );
+   SCIP_CALL( SCIPptrarraySetVal(ptrarray, scip->set->mem_arraygrowinit, scip->set->mem_arraygrowfac, idx, val) );
 
    return SCIP_OKAY;
 }
