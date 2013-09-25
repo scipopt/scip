@@ -450,12 +450,14 @@ SCIP_RETCODE calcActivityBounds(
 
          /* get variable coefficient */
          val = *valpnt;
+         assert(!SCIPisZero(scip, val));
 
          assert(matrix->ncols > col);
 
          assert(!SCIPisInfinity(scip, matrix->lb[col]));
          assert(!SCIPisInfinity(scip, -matrix->ub[col]));
 
+         /* positive coefficient */
          if( val > 0.0 )
          {
             if( SCIPisInfinity(scip, matrix->ub[col]) )
@@ -468,7 +470,8 @@ SCIP_RETCODE calcActivityBounds(
             else
                matrix->minactivity[row] += val * matrix->lb[col];
          }
-         else if( val < 0.0 )
+         /* negative coefficient */
+         else
          {
             if( SCIPisInfinity(scip, -matrix->lb[col]) )
                matrix->maxactivityneginf[row]++;
