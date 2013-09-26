@@ -47,6 +47,7 @@ CMAINOBJ	=	cmain.o \
 			heur_rs.o \
 			probdata_stp.o \
 			reader_stp.o \
+			pricer_stp.o \
 			reduce.o \
 			sdtest.o \
 			validate.o

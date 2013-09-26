@@ -106,7 +106,7 @@ SCIP_RETCODE do_heuristic(
    assert(path      != NULL);
    assert(layer >= 0 && layer < g->layers);
 
-   SCIPinfoMessage(scip, NULL, "Heuristic: Start=%5d ", start);
+   SCIPdebugMessage("Heuristic: Start=%5d ", start);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cluster, g->knots) );
 
@@ -182,8 +182,8 @@ SCIP_RETCODE do_heuristic(
       assert(!connected[newval]);
       assert(connected[old]);
 
-      fputc('R', stdout);
-      fflush(stdout);
+      SCIPdebug(fputc('R', stdout));
+      SCIPdebug(fflush(stdout));
 
       /*    printf("Connecting Knot %d-%d dist=%d\n", newval, old, path[newval][old].dist);
        */
@@ -203,6 +203,7 @@ SCIP_RETCODE do_heuristic(
          }
       }
    }
+
    SCIPfreeBufferArray(scip, &cluster);
 
    fputc('M', stdout);
@@ -380,7 +381,7 @@ SCIP_RETCODE do_layer(
          for( e = 0; e < graph->edges; e++)
             obj += (result[e] > -1) ? graph->cost[e] : 0.0;
 
-         SCIPinfoMessage(scip, NULL, " Obj=%.12e\n", obj);
+         SCIPdebugMessage(" Obj=%.12e\n", obj);
 
          if( LT(obj, min) )
          {
@@ -393,8 +394,6 @@ SCIP_RETCODE do_layer(
          }
       }
    }
-
-   SCIPinfoMessage(scip, NULL, "Freeing Memory\n");
 
    for( k = 0; k < graph->knots; k++ )
    {
@@ -423,9 +422,11 @@ SCIP_DECL_HEURCOPY(heurCopyTM)
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
+   /* @todo copy heuristic? (probdata needs to be copied as well) */
+#if 0
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurTM(scip) );
-
+#endif
    return SCIP_OKAY;
 }
 
@@ -515,11 +516,11 @@ SCIP_DECL_HEUREXITSOL(heurExitsolTM)
 static
 SCIP_DECL_HEUREXEC(heurExecTM)
 {  /*lint --e{715}*/
+   SCIP_VAR** vars;
    SCIP_PROBDATA* probdata;
    SCIP_HEURDATA* heurdata;
    SCIP_SOL* sol;
    GRAPH* graph;
-   SCIP_VAR** vars;
    SCIP_Real* cost;
    SCIP_Real* nval;
    SCIP_Real* xval;
@@ -568,10 +569,10 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    if( runs == 0 )
       return SCIP_OKAY;
 
-   SCIPinfoMessage(scip, NULL, "Heuristic Start\n");
+   SCIPdebugMessage("Heuristic Start\n");
 
-   vars = SCIPprobdataGetVars(scip);
    nvars = SCIPprobdataGetNVars(scip);
+   vars = SCIPprobdataGetVars(scip);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, graph->edges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &results, graph->edges) );
@@ -642,31 +643,22 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    for( v = 0; v < nvars; v++ )
       nval[v] = (results[v % graph->edges] == (v / graph->edges)) ? 1.0 : 0.0;
 
-   SCIPinfoMessage(scip, NULL, "Validation\n");
-
    if( validate(graph, nval) )
    {
-      SCIP_Bool success;
-
-      SCIPinfoMessage(scip, NULL, "Is Valid\n");
-
       pobj = 0.0;
 
       for( v = 0; v < nvars; v++ )
          pobj += graph->cost[v % graph->edges] * nval[v];
 
-      SCIPinfoMessage(scip, NULL, "pobj=%.12e\n", pobj);
+      if( SCIPisLT(scip, pobj, SCIPgetPrimalbound(scip)) )
+      {
+         SCIP_Bool success;
 
-      SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
+         SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
 
-      /* store new solution value and decrease fractionality counter */
-      SCIP_CALL( SCIPsetSolVals(scip, sol, nvars, vars, nval) );
-
-      /* try to add new solution to scip and free it immediately */
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &success) );
-
-      if( success )
-         *result = SCIP_FOUNDSOL;
+         if( success )
+            *result = SCIP_FOUNDSOL;
+      }
    }
 
    SCIPfreeBufferArray(scip, &nval);

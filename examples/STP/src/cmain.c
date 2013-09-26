@@ -32,6 +32,7 @@
 #include "cons_stp.h"
 #include "heur_tm.h"
 #include "heur_rs.h"
+#include "pricer_stp.h"
 
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
  *  and frees the SCIP instance
@@ -52,6 +53,9 @@ SCIP_RETCODE runShell(
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
+    /* include stp pricer */
+   SCIP_CALL( SCIPincludePricerStp(scip) );
+
    /* include steiner tree reader */
    SCIP_CALL( SCIPincludeReaderStp(scip) );
 
@@ -62,10 +66,14 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPincludeConshdlrStp(scip) );
 
    /* include Takahashi Matsuyama heuristic */
+
    SCIP_CALL( SCIPincludeHeurTM(scip) );
 
+#if 0
    /* include Rayward-Smith heuristic */
-   SCIP_CALL( SCIPincludeHeurRS(scip) );
+    SCIP_CALL( SCIPincludeHeurRS(scip) );
+#endif
+
 
    /* for column generation instances, disable restarts */
    SCIP_CALL( SCIPsetIntParam(scip,"presolving/maxrestarts",0) );
