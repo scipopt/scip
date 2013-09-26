@@ -13379,6 +13379,27 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 	 if( !cutoff && SCIPconsIsActive(cons) )
 	 {
             SCIP_CALL( extractCliques(scip, cons, conshdlrdata->sortvars, nfixedvars, nchgbds, &cutoff) );
+
+            /* check if the constraint got redundant or infeasible */
+            if( !cutoff && SCIPconsIsActive(cons) && consdata->nvars == 0 )
+            {
+               if( SCIPisFeasGT(scip, consdata->lhs, consdata->rhs) )
+               {
+                  SCIPdebugMessage("empty linear constraint <%s> is infeasible: sides=[%.15g,%.15g]\n",
+                     SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+                  cutoff = TRUE;
+               }
+               else
+               {
+                  SCIPdebugMessage("empty linear constraint <%s> is redundant: sides=[%.15g,%.15g]\n",
+                     SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+                  SCIP_CALL( SCIPdelCons(scip, cons) );
+                  assert(!SCIPconsIsActive(cons));
+
+                  if( !consdata->upgraded )
+                     (*ndelconss)++;
+               }
+            }
          }
 
 	 /* convert special equalities */
