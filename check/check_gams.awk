@@ -442,7 +442,7 @@ END {
          pavprob = substr(pavprob, length(pavprob)-24,25);
        #InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime
        #NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables
-       printf("%s,MINLP,%s_%s,%d,%d,%d,%g,%g,%g,", pavprob, solver, settings, maxobj[m] ? 1 : 0, modelstat, solverstat, pb, db, time[m]) > PAVFILE;
+       printf("%s,MINLP,%s_%s,%d,%d,%d,%.8g,%.8g,%g,", pavprob, solver, settings, maxobj[m] ? 1 : 0, modelstat, solverstat, pb, db, time[m]) > PAVFILE;
        printf("%d,%d,%d,%d\n", nodes[m], iters[m], cons[m], vars[m]) > PAVFILE;
      }
    }
