@@ -859,7 +859,7 @@
  *  - Open the <code>Makefile</code>  via
  *    \verbatim
  > kate Makefile
- *    \endverbatim
+     \endverbatim
  *
  *    and edit the following variables at the top to have a compilable code:
  *
@@ -869,6 +869,7 @@
  *
  * - Once you have edited the makefile, you can use all the flags that can be used in SCIP to
  *   compile your code, see \ref MAKE.
+ *   Note that you need to udpate the dependency files before compiling your project via <code>make depend</code>.
  *
  *
  *
