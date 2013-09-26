@@ -323,6 +323,9 @@
 #define SCIP_DEFAULT_READ_DYNAMICCONSS     TRUE /**< should model constraints be subject to aging? */
 #define SCIP_DEFAULT_READ_DYNAMICCOLS     FALSE /**< should columns be added and removed dynamically to the LP? */
 #define SCIP_DEFAULT_READ_DYNAMICROWS     FALSE /**< should rows be added and removed dynamically to the LP? */
+#define SCIP_DEFAULT_WRITE_GENNAMES_OFFSET    0 /**< when writing the problem with generic names, we start with index
+                                                 *   0; using this parameter we can change the starting index to be
+                                                 *   different */
 
 /* Writing */
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
@@ -1693,6 +1696,11 @@ SCIP_RETCODE SCIPsetCreate(
          "write/allconss",
          "should all constraints be written (including the redundant constraints)?",
          &(*set)->write_allconss, FALSE, SCIP_DEFAULT_WRITE_ALLCONSS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "write/genericnamesoffset",
+         "when writing a generic problem the index for the first variable should start with?",
+         &(*set)->write_genoffset, FALSE, SCIP_DEFAULT_WRITE_GENNAMES_OFFSET, 0, INT_MAX/2,
          NULL, NULL) );
 
    return SCIP_OKAY;

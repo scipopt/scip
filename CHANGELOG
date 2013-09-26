@@ -212,6 +212,8 @@ parameters:
 - new parameters "branching/checksol" and "branching/heursbsol" to specify whether the strong branching LP solution
   should be checked for feasibility and whether fast heuristics should be run on this solution
 - new parameter "separating/oddcycle/cutthreshold" to run odd cycle separation if not enough cuts have been found
+- new parameter "write/genericnamesoffset" when writing a generic problem now it is possible to define an offset on the
+  variable name, that normally starts with "0"
 
 core:
 - added presolve.{c,h} which should be used for all preprocessing mechanisms executed from within SCIP, corresponding to

@@ -351,7 +351,7 @@ SCIP_RETCODE SCIPreaderWrite(
             varnames[i] = SCIPvarGetName(var);
             
             SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
-            (void) SCIPsnprintf(name, size, "x%d", i);
+            (void) SCIPsnprintf(name, size, "x%d", i + set->write_genoffset);
             SCIPvarSetNamePointer(var, name);
          }  
 
