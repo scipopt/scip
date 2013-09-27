@@ -40,6 +40,7 @@
 #include "scip/cons_xor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
+#include "scip/heur_trysol.h"
 
 
 /* constraint handler properties */
@@ -2286,10 +2287,21 @@ SCIP_RETCODE checkSystemGF2(
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
 
             /* check feasibility of new solution and pass it to trysol heuristic */
-            SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, &success) );
-            assert( sol == NULL );
-            /* the solution might not be feasible, because of additional constraints */
-            SCIPdebugMessage("Creating solution was%s successful.\n", success ? "" : " not");
+            SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, TRUE, TRUE, &success) );
+            if ( success )
+            {
+               SCIP_CALL( SCIPheurPassSolAddSol(scip, heurtrysol, sol) );
+               SCIP_CALL( SCIPfreeSol(scip, &sol) );
+               assert( sol == NULL );
+               SCIPdebugMessage("Creating solution was successful.\n");
+            }
+#ifdef SCIP_DEBUG
+            else
+            {
+               /* the solution might not be feasible, because of additional constraints */
+               SCIPdebugMessage("Creating solution was not successful.\n");
+            }
+#endif
          }
       }
       else
