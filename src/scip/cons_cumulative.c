@@ -7739,8 +7739,6 @@ SCIP_RETCODE computeAlternativeBounds(
       }
    }
 
-   nvars = SCIPgetNVars(scip);
-
    return SCIP_OKAY;
 }
 
