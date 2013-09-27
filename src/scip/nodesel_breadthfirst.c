@@ -36,6 +36,44 @@
 #define NODESEL_STDPRIORITY        -10000
 #define NODESEL_MEMSAVEPRIORITY  -1000000
 
+/** node selector data */
+struct SCIP_NodeselData
+{
+   SCIP_Longint          nodelimit;          /**< limit of node selections after which node selection is turned off */
+};
+
+
+/** switches to a different node selection rule by assigning the lowest priority of all node selectors to bfs */
+static
+SCIP_RETCODE turnoffNodeSelector(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel             /**< the node selector to be turned off */
+   )
+{
+   SCIP_NODESEL** nodesels;
+   int nnodesels;
+   int newpriority;
+   int prio;
+   int n;
+
+   nodesels = SCIPgetNodesels(scip);
+   nnodesels = SCIPgetNNodesels(scip);
+   newpriority = SCIPnodeselGetStdPriority(nodesel);
+
+   /* loop over node selectors to find minimum priority */
+   for( n = 0; n < nnodesels; ++n )
+   {
+      prio = SCIPnodeselGetStdPriority(nodesels[n]);
+      newpriority = MIN(newpriority, prio);
+   }
+   newpriority = MAX(newpriority, INT_MIN + 1);
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Reached node limit of %s node selection rule -> switching to default\n",
+         SCIPnodeselGetName(nodesel));
+   SCIP_CALL( SCIPsetNodeselStdPriority(scip, nodesel, newpriority - 1) );
+
+   return SCIP_OKAY;
+}
 /*
  * Callback methods
  */
@@ -54,15 +92,37 @@ SCIP_DECL_NODESELCOPY(nodeselCopyBreadthfirst)
    return SCIP_OKAY;
 }
 
+/** destructor of node selector to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_NODESELFREE(nodeselFreeBreadthfirst)
+{  /*lint --e{715}*/
+   SCIP_NODESELDATA* nodeseldata;
+
+   assert(nodesel != NULL);
+   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+   assert(scip != NULL);
+
+   /* free user data of node selector */
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   assert(nodeseldata != NULL);
+   SCIPfreeMemory(scip, &nodeseldata);
+   SCIPnodeselSetData(nodesel, nodeseldata);
+
+   return SCIP_OKAY;
+}
+
 /** node selection method of node selector */
 static
 SCIP_DECL_NODESELSELECT(nodeselSelectBreadthfirst)
 {  /*lint --e{715}*/
+
+   SCIP_NODESELDATA* nodeseldata;
    assert(nodesel != NULL);
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
    assert(selnode != NULL);
 
+   nodeseldata = SCIPnodeselGetData(nodesel);
    /* siblings come before leaves at the same level. Sometimes it can occur that no leaves are left except for children */
    *selnode = SCIPgetBestSibling(scip);
    if( *selnode == NULL )
@@ -74,6 +134,11 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBreadthfirst)
    if( *selnode != NULL )
    {
       SCIPdebugMessage("Selecting next node number %"SCIP_LONGINT_FORMAT" at depth %d\n", SCIPnodeGetNumber(*selnode), SCIPnodeGetDepth(*selnode));
+   }
+
+   if( nodeseldata->nodelimit > -1 && SCIPgetNNodes(scip) >= nodeseldata->nodelimit )
+   {
+      SCIP_CALL( turnoffNodeSelector(scip, nodesel) );
    }
 
    return SCIP_OKAY;
@@ -132,6 +197,7 @@ SCIP_RETCODE SCIPincludeNodeselBreadthfirst(
    /* create breadthfirst node selector data */
    nodeseldata = NULL;
 
+   SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
    /* include node selector */
    SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
          nodeselSelectBreadthfirst, nodeselCompBreadthfirst, nodeseldata) );
@@ -140,6 +206,11 @@ SCIP_RETCODE SCIPincludeNodeselBreadthfirst(
 
    /* set non-fundamental callback functions via setter functions */
    SCIP_CALL ( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyBreadthfirst) );
+   SCIP_CALL ( SCIPsetNodeselFree(scip, nodesel, nodeselFreeBreadthfirst) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip, "nodeselection/"NODESEL_NAME"/nodelimit",
+         "maximum number of nodes before switching to default rule (-1 for no limit)",
+         &nodeseldata->nodelimit, TRUE, -1, -1, SCIP_LONGINT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

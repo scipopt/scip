@@ -51,8 +51,41 @@ struct SCIP_NodeselData
                                               *   (-1 for dynamic setting) */
    int                   maxplungedepth;     /**< maximal plunging depth, before new best node is forced to be selected
                                               *   (-1 for dynamic setting) */
+   SCIP_Longint          nodelimit;          /**< limit of node selections after which UCT node selection is turned off */
 };
 
+
+/** switches to a different node selection rule by assigning the lowest priority of all node selectors to bfs */
+static
+SCIP_RETCODE turnoffNodeSelector(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel             /**< the node selector to be turned off */
+   )
+{
+   SCIP_NODESEL** nodesels;
+   int nnodesels;
+   int newpriority;
+   int prio;
+   int n;
+
+   nodesels = SCIPgetNodesels(scip);
+   nnodesels = SCIPgetNNodesels(scip);
+   newpriority = SCIPnodeselGetStdPriority(nodesel);
+
+   /* loop over node selectors to find minimum priority */
+   for( n = 0; n < nnodesels; ++n )
+   {
+      prio = SCIPnodeselGetStdPriority(nodesels[n]);
+      newpriority = MIN(newpriority, prio);
+   }
+   newpriority = MAX(newpriority, INT_MIN + 1);
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Reached node limit of %s node selection rule -> switching to default\n",
+         SCIPnodeselGetName(nodesel));
+   SCIP_CALL( SCIPsetNodeselStdPriority(scip, nodesel, newpriority - 1) );
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods
@@ -131,7 +164,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
 
    /* check, if we exceeded the maximal plunging depth */
    plungedepth = SCIPgetPlungeDepth(scip);
-   if( plungedepth > maxplungedepth )
+   if( plungedepth >= maxplungedepth )
    {
       /* we don't want to plunge again: select best node from the tree */
       SCIPdebugMessage("plungedepth: [%d,%d], cur: %d -> abort plunging\n", minplungedepth, maxplungedepth, plungedepth);
@@ -214,6 +247,12 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
             }
          }
       }
+   }
+
+   /* turn off node selector if parameter limit is set */
+   if( nodeseldata->nodelimit > -1 && SCIPgetNNodes(scip) >= nodeseldata->nodelimit )
+   {
+      SCIP_CALL( turnoffNodeSelector(scip, nodesel) );
    }
 
    return SCIP_OKAY;
@@ -323,7 +362,10 @@ SCIP_RETCODE SCIPincludeNodeselBfs(
          "nodeselection/bfs/maxplungequot",
          "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where plunging is performed",
          &nodeseldata->maxplungequot, TRUE, MAXPLUNGEQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   
+   SCIP_CALL( SCIPaddLongintParam(scip, "nodeselection/"NODESEL_NAME"/nodelimit",
+            "maximum number of nodes before switching to default rule (-1 for no limit)",
+            &nodeseldata->nodelimit, TRUE, -1, -1, SCIP_LONGINT_MAX, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
