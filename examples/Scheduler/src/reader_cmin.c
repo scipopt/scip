@@ -47,7 +47,7 @@
 #define DEFAULT_MIP              FALSE  /**< create a MIP formulation */
 #define DEFAULT_INITIAL           TRUE  /**< should model constraints be in initial LP? */
 #define DEFAULT_CIP               TRUE  /**< create a CIP formulation */
-#define DEFAULT_RELAXATION           2  /**< which relaxation should be added to the MIP model (0: none; 1: rectangle; 2: interval */
+#define DEFAULT_RELAXATION           3  /**< which relaxation should be added to the maseter (0: none; 1: single; 2: edge-finding; 3: energetic-reasoning */
 
 static const char delimchars[] = " \f\n\r\t\v";
 
@@ -385,6 +385,7 @@ int removeRedundantRows(
 static
 SCIP_RETCODE createIntervalRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
+   int                   relaxation,         /**< a linear relaxation base on edge-finding idea or energetic-reasoning idea */
    int                   resource,           /**< resource id */
    SCIP_VAR**            vars,               /**< assignment variables */
    int*                  durations,          /**< durations */
@@ -505,10 +506,24 @@ SCIP_RETCODE createIntervalRelaxation(
 
          for( v = 0; v < njobs; ++v)
          {
-            if( releasedates[v] >= starttime && deadlinedates[v] <= endtime )
+            int overlap;
+            int duration;
+
+            duration = durations[v];
+            overlap = MIN(endtime - starttime, duration);
+            assert(overlap > 0);
+            overlap = MIN3(overlap, releasedates[v] + duration - starttime, endtime - deadlinedates[v] + duration);
+
+            /* check for edge-finding idea */
+            if( relaxation == 2 &&  releasedates[v] >= starttime && deadlinedates[v] <= endtime )
             {
-               assert(vars[v] != NULL);
-               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[v], (SCIP_Longint)(durations[v] * demands[v])) );
+               assert(duration == overlap);
+               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[v], (SCIP_Longint)(duration * demands[v])) );
+            }
+            else if( relaxation == 3 && overlap > 0 )
+            {
+               assert(overlap <= duration);
+               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[v], (SCIP_Longint)(overlap * demands[v])) );
             }
          }
 
@@ -738,12 +753,12 @@ SCIP_RETCODE createMipFormulation(
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
    }
-   else if( relaxation == 2 )
+   else if( relaxation >= 2 )
    {
       /* create for each optimal resource a singe constraint relaxation */
       for( i = 0; i < nmachines; ++i )
       {
-         SCIP_CALL( createIntervalRelaxation(scip, i, vars[i], durations[i], demands[i], capacities[i], releasedates, deadlinedates, njobs) );
+         SCIP_CALL( createIntervalRelaxation(scip, relaxation, i, vars[i], durations[i], demands[i], capacities[i], releasedates, deadlinedates, njobs) );
       }
    }
 
@@ -1393,8 +1408,8 @@ SCIP_RETCODE SCIPincludeReaderCmin(
          NULL, FALSE, DEFAULT_CIP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "reading/"READER_NAME"/relaxation", "which relaxation should be added to the MIP model (0: none; 1: rectangle; 2: interval",
-         NULL, FALSE, DEFAULT_RELAXATION, 0, 2, NULL, NULL) );
+         "reading/"READER_NAME"/relaxation", "which relaxation should be added to the maseter (0: none; 1: single; 2: edge-finding; 3: energetic-reasoning",
+         NULL, FALSE, DEFAULT_RELAXATION, 0, 3, NULL, NULL) );
 
    return SCIP_OKAY;
 }
