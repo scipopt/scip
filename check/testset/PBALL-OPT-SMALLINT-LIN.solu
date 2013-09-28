@@ -98,6 +98,7 @@
 =opt=	normalized-aim-200-6_0-yes1-2	200
 =opt=	normalized-aim-200-6_0-yes1-3	200
 =opt=	normalized-aim-200-6_0-yes1-4	200
+=opt=   normalized-aim-50-1_6-yes1-1    50
 =opt=	normalized-alu2.b		60
 =opt=	normalized-alu4.b		50
 =opt=	normalized-apex4.a		776
@@ -131,6 +132,8 @@
 =opt=	normalized-bogr_8		34
 =opt=	normalized-bogr_9		44
 =opt=	normalized-bw.b			24
+=opt=   normalized-b1                   128
+=opt=   normalized-C17                  260
 =opt=	normalized-C432			4822
 =opt=	normalized-C499.a		64
 =best=	normalized-C499.b		44
@@ -299,6 +302,10 @@
 =unkn=	normalized-g125.17
 =unkn=	normalized-g125.18
 =opt=	normalized-g15x15		53
+=opt=   normalized-g2x2                 2
+=opt=   normalized-g4x4                 4
+=opt=   normalized-g7x7                 12
+=opt=   normalized-g9x3                 7
 =best=	normalized-g250.15		3750
 =unkn=	normalized-g250.29
 =opt=	normalized-g9x9			20
@@ -309,7 +316,7 @@
 =best=	normalized-ii16a2		1164
 =best=	normalized-ii16b1		1382
 =opt=	normalized-ii16b2		1031
-=best=	normalized-ii16c1		1235
+=best=	normalized-ii16c1		1217
 =opt=	normalized-ii16c2		861
 =best=	normalized-ii16d1		945
 =opt=	normalized-ii16d2		785
@@ -325,7 +332,7 @@
 =opt=	normalized-ii32c3		261
 =opt=	normalized-ii32c4		736
 =opt=	normalized-ii32d1		285
-=best=	normalized-ii32d2		372
+=opt=	normalized-ii32d2		372
 =best=	normalized-ii32d3		802
 =opt=	normalized-ii32e1		162
 =opt=	normalized-ii32e2		235
@@ -349,9 +356,11 @@
 =opt=	normalized-iis-pima-cov		33
 =opt=	normalized-j1201_2.std		109
 =best=	normalized-j12013_5.std		93
+=opt=   normalized-j12015_5.std         87
 =best=	normalized-j12016_10.std	240
 =best=	normalized-j12016_2.std		265
 =best=	normalized-j12017_7.std		158
+=unkn=  normalized-j12018_6.std
 =best=	normalized-j12019_2.std		85
 =best=	normalized-j12019_5.std		109
 =opt=	normalized-j12020_5.std		69
@@ -361,29 +370,60 @@
 =opt=	normalized-j12025_2.std		108
 =opt=	normalized-j12025_6.std		92
 =opt=	normalized-j12025_7.std		92
+=unkn=  normalized-j12026_4.std
 =best=	normalized-j12026_6.std		196
 =opt=	normalized-j1202_7.std		90
 =opt=	normalized-j12030_10.std	86
 =best=	normalized-j12036_6.std		260
 =best=	normalized-j12036_9.std		252
+=unkn=	normalized-j12037_6.std
 =best=	normalized-j12037_10.std	143
+=unkn=	normalized-j12038_4.std
 =opt=	normalized-j12039_5.std		106
+=opt=   normalized-j1204_10.std         77
+=opt=   normalized-j1204_1.std          74
 =best=	normalized-j12040_1.std		82
 =opt=	normalized-j12040_4.std		112
+=unkn=	normalized-j12041_1.std
+=opt=   normalized-j12044_1.std         100
+=opt=   normalized-j12044_8.std         108
 =best=	normalized-j12046_3.std		183
 =best=	normalized-j12047_2.std		134
 =opt=	normalized-j12048_10.std	111
 =best=	normalized-j12048_7.std		107
 =opt=	normalized-j12049_10.std	97
+=opt=   normalized-j1205_7              84
+=unkn=	normalized-j12051_6.std
 =best=	normalized-j12052_10.std	160
 =best=	normalized-j12052_2.std		201
 =best=	normalized-j12053_3.std		116
+=unkn=	normalized-j12053_6.std
+=best=	normalized-j12055_4.std         96
 =best=	normalized-j12057_1.std		204
 =best=	normalized-j12058_7.std		160
 =best=	normalized-j12060_5.std		108
+=best=	normalized-j12060_6.std         120
+=opt=   normalized-j1205_7.std          84
 =best=	normalized-j1206_4.std		158
+=unkn=	normalized-j1207_10.std
+=unkn=	normalized-j1207_6.std
 =opt=	normalized-j1209_1.std		88
 =opt=	normalized-j1209_3.std		87
+=opt=	normalized-j3010_3.std          62
+=opt=	normalized-j301_8.std           53
+=opt=	normalized-j3020_9.std          41
+=opt=	normalized-j3021_10.std         69
+=opt=	normalized-j3029_1.std          85
+=opt=	normalized-j3037_10.std         81
+=opt=	normalized-j3039_1.std          55
+=opt=	normalized-j3040_5.std          65
+=opt=	normalized-j3044_1.std          50
+=opt=	normalized-j3046_5.std          57
+=opt=	normalized-j3047_1.std          58
+=opt=	normalized-j305_3.std           76
+=opt=	normalized-j307_6.std           35
+=opt=	normalized-j308_4.std           48
+=opt=	normalized-j309_7.std           63
 =opt=	normalized-j3010_10.std		41
 =opt=	normalized-j3010_4.std		58
 =opt=	normalized-j3016_8.std		44
@@ -398,6 +438,21 @@
 =opt=	normalized-j3045_1.std		82
 =opt=	normalized-j304_5.std		59
 =opt=	normalized-j309_3.std		68
+=opt=	normalized-j6012_9.std          59
+=unkn=	normalized-j6013_4.std
+=opt=	normalized-j6019_2.std          83
+=best=	normalized-j6021_5.std          300
+=opt=	normalized-j602_4.std           78
+=opt=	normalized-j6026_2.std          66
+=opt=	normalized-j6027_6.std          64
+=unkn=	normalized-j6029_8.std
+=opt=	normalized-j6031_6.std          72
+=opt=	normalized-j603_6.std           57
+=opt=	normalized-j603_9.std           67
+=opt=	normalized-j6043_1.std          108
+=opt=	normalized-j6044_1.std          84
+=opt=	normalized-j606_1.std           60
+=best=	normalized-j609_6.std           300
 =opt=	normalized-j6012_3.std		75
 =opt=	normalized-j6020_6.std		97
 =opt=	normalized-j6030_8.std		63
@@ -406,6 +461,17 @@
 =opt=	normalized-j6046_1.std		79
 =opt=	normalized-j605_7.std		75
 =opt=	normalized-j607_3.std		62
+=opt=	normalized-j9010_6.std          92
+=unkn=	normalized-j9013_1.std
+=opt=	normalized-j9016_1.std          85
+=opt=	normalized-j9019_6.std          136
+=opt=	normalized-j9022_8.std          97
+=opt=	normalized-j9027_6.std          87
+=opt=	normalized-j9033_3.std          108
+=opt=	normalized-j9036_4.std          79
+=opt=	normalized-j9038_7.std          85
+=unkn=	normalized-j9041_1.std
+=best=	normalized-j909_4.std           300
 =opt=	normalized-j901_1.std		73
 =best=	normalized-j9013_9.std		132
 =opt=	normalized-j9014_2.std		79
@@ -503,7 +569,7 @@
 =opt=	normalized-max1024.pi		259
 =opt=	normalized-max1024.r		245
 =opt=	normalized-max512.r		113
-=best=	normalized-methanosarcina	2781
+=best=	normalized-methanosarcina	2769
 =opt=	normalized-mlp4.r		109
 =opt=	normalized-mps-v2-20-10-10teams	904
 =opt=	normalized-mps-v2-20-10-bm23	34
@@ -536,11 +602,14 @@
 =best=	normalized-mps-v2-20-10-protfold	-26
 =opt=	normalized-mps-v2-20-10-sentoy	-7772
 =best=	normalized-mps-v2-20-10-seymour	424
+=opt=	normalized-mps-v2-20-10-stein15	9
+=opt=	normalized-mps-v2-20-10-stein27	18
 =opt=	normalized-mps-v2-20-10-stein45	30
+=opt=	normalized-mps-v2-20-10-stein9	5
 =unkn=	normalized-mspp16
 =best=	normalized-mul_8_11_shg		72
-=best=	normalized-mul_8_13_shg		66
-=best=	normalized-mul_8_14_shg		60
+=best=	normalized-mul_8_13_shg		62
+=best=	normalized-mul_8_14_shg		58
 =opt=	normalized-mul_8_3_shg		36
 =best=	normalized-mul_8_9_shg		42
 =opt=	normalized-mux			872
@@ -593,13 +662,13 @@
 =opt=	normalized-opt-market-split_4_30_2	1
 =opt=	normalized-opt-market-split_4_30_3	2
 =opt=	normalized-opt-market-split_4_30_4	1
-=best=	normalized-opt-market-split_5_40_1	1
+=opt=	normalized-opt-market-split_5_40_1	0
 =best=	normalized-opt-market-split_5_40_2	1
 =opt=	normalized-opt-market-split_5_40_3	0
 =best=	normalized-opt-market-split_5_40_4	1
 =best=	normalized-opt-market-split_6_50_1	2
 =best=	normalized-opt-market-split_6_50_2	3
-=best=	normalized-opt-market-split_6_50_3	4
+=best=	normalized-opt-market-split_6_50_3	1
 =best=	normalized-opt-market-split_6_50_4 	2
 =best=	normalized-opt-market-split_7_60_1	8
 =best=	normalized-opt-market-split_7_60_2	8
@@ -607,7 +676,7 @@
 =best=	normalized-opt-market-split_7_60_4	7
 =best=	normalized-opt-market-split_8_70_1 	10
 =best= 	normalized-opt-market-split_8_70_2 	12
-=best=	normalized-opt-market-split_8_70_3 	12
+=best=	normalized-opt-market-split_8_70_3 	11
 =best=	normalized-opt-market-split_8_70_4 	15
 =opt=	normalized-opus.r		5
 =best=	normalized-p6b			-63
@@ -631,6 +700,13 @@
 =unkn=	normalized-par32-4-c
 =best=	normalized-par32-5		3176
 =unkn=	normalized-par32-5-c
+=opt= normalized-par8-1-c               64
+=opt= normalized-par8-2                 350
+=opt= normalized-s3-3-3-1pb             36
+=opt= normalized-s3-3-3-2pb             36
+=opt= normalized-s3-3-3-3pb             36
+=opt= normalized-s3-3-3-4pb             36
+=opt= normalized-s3-3-3-5pb             34
 =opt=	normalized-pb-simp-nonunif	42
 =opt=	normalized-pdc.r		94
 =opt=	normalized-prom2.pi		287
@@ -1033,3 +1109,93 @@
 =opt=   normalized-ped2.B.recomb1-0.01-3        6
 =opt=   normalized-ped2.B.recomb1-0.01-4        7
 =opt=   normalized-ped2.B.recomb1-0.01-5        7
+=opt=   normalized-factor-size=9-P=101-Q=379    101
+=opt=   normalized-factor-size=9-P=113-Q=233    113
+=opt=   normalized-factor-size=9-P=11-Q=53      11
+=opt=   normalized-factor-size=9-P=131-Q=137    131
+=opt=   normalized-factor-size=9-P=167-Q=179    167
+=opt=   normalized-factor-size=9-P=167-Q=347    167
+=opt=   normalized-factor-size=9-P=197-Q=479    197
+=opt=   normalized-factor-size=9-P=223-Q=307    223
+=opt=   normalized-factor-size=9-P=223-Q=347    223
+=opt=   normalized-factor-size=9-P=23-Q=293     23
+=inf=   normalized-factor-size=9-P=23-Q=521
+=opt=   normalized-factor-size=9-P=251-Q=307    251
+=opt=   normalized-factor-size=9-P=257-Q=331    257
+=opt=   normalized-factor-size=9-P=269-Q=431    269
+=inf=   normalized-factor-size=9-P=29-Q=521
+=opt=   normalized-factor-size=9-P=307-Q=347    307
+=opt=   normalized-factor-size=9-P=331-Q=347    331
+=opt=   normalized-factor-size=9-P=347-Q=379    347
+=opt=   normalized-factor-size=9-P=409-Q=499    409
+=opt=   normalized-factor-size=9-P=47-Q=197     47
+=opt=   normalized-factor-size=9-P=47-Q=487     47
+=opt=   normalized-factor-size=9-P=53-Q=127     53
+=opt=   normalized-factor-size=9-P=59-Q=419     59
+=opt=   normalized-factor-size=9-P=61-Q=163     61
+=opt=   normalized-factor-size=9-P=67-Q=191     67
+=opt=   normalized-factor-size=9-P=79-Q=257     79
+=opt=   normalized-factor-size=9-P=7-Q=31       1
+=opt=   normalized-factor-size=9-P=83-Q=449     83
+=opt=   normalized-factor-size=9-P=83-Q=89      83
+=opt=   normalized-factor-size=9-P=89-Q=317     89
+=best=  normalized-BA_RDC4.dot_fibo_0null0mast_rapportOE2.0_TMAX180_K67_cod2    -172552
+=opt=  normalized-BA_RDC4.dot_fibo_10null10mast_rapportOE1.0_TMAX120_K67_cod2  -245980
+=best=  normalized-BA_RDC4.dot_fibo_20null0mast_rapportOE1.0_TMAX180_K67_cod2   -196418
+=opt=   normalized-BA_RDC4.dot_fibo_20null10mast_rapportOE2.0_TMAX15_K67_cod2   -22879
+=best=  normalized-BA_RDC4.dot_fibo_50null0mast_rapportOE1.0_TMAX120_K67_cod2   -169358
+=opt=   normalized-BA_RDC4.dot_luby_0null0mast_rapportOE1.0_TMAX15_K67_cod1     -192
+=opt=   normalized-BA_RDC4.dot_luby_10null10mast_rapportOE2.0_TMAX15_K67_cod1   -80
+=best=  normalized-BA_RDC4.dot_luby_0null0mast_rapportOE2.0_TMAX120_K67_cod1    -600
+=opt=  normalized-BA_RDC4.dot_luby_0null10mast_rapportOE1.0_TMAX120_K67_cod3   -5256
+=opt=   normalized-BA_RDC4.dot_luby_0null20mast_rapportOE2.0_TMAX120_K67_cod2   -2832
+=opt=   normalized-BA_RDC4.dot_luby_0null20mast_rapportOE2.0_TMAX300_K67_cod2   -7364
+=best=  normalized-BA_RDC4.dot_luby_10null0mast_rapportOE1.0_TMAX120_K67_cod1   -718
+=best=  normalized-BA_RDC4.dot_luby_10null0mast_rapportOE1.0_TMAX60_K67_cod1    -464
+=best=  normalized-BA_RDC4.dot_luby_10null0mast_rapportOE2.0_TMAX60_K67_cod1    -368
+=opt=  normalized-BA_RDC4.dot_luby_10null10mast_rapportOE2.0_TMAX120_K67_cod1   -2624
+=opt=   normalized-BA_RDC4.dot_luby_10null10mast_rapportOE2.0_TMAX15_K67_cod1   -80
+=opt=   normalized-BA_RDC4.dot_luby_10null10mast_rapportOE2.0_TMAX60_K67_cod3   -1296
+=best=  normalized-BA_RDC4.dot_luby_20null0mast_rapportOE1.0_TMAX60_K67_cod2    -496
+=best=  normalized-BA_RDC4.dot_luby_20null0mast_rapportOE2.0_TMAX180_K67_cod1   -648
+=best=  normalized-BA_RDC4.dot_luby_20null0mast_rapportOE2.0_TMAX300_K67_cod2   -656
+=best=  normalized-BA_RDC4.dot_luby_20null10mast_rapportOE1.0_TMAX180_K67_cod1  -7432
+=opt=  normalized-BA_RDC4.dot_luby_20null10mast_rapportOE1.0_TMAX60_K67_cod3    -2372
+=best=  normalized-BA_RDC4.dot_luby_50null0mast_rapportOE1.0_TMAX300_K67_cod2   -651
+=opt=   normalized-BA_RDC4.dot_luby_50null50mast_rapportOE1.0_TMAX300_K67_cod1  -57
+=opt=   normalized-BA_RDC4.dot_luby_50null50mast_rapportOE2.0_TMAX120_K67_cod2  -11
+=best=  normalized-BA_RDC4.dot_unif_10null10mast_rapportOE1.0_TMAX60_K67_cod2   -23930
+=best=  normalized-BA_RDC4.dot_unif_20null0mast_rapportOE1.0_TMAX180_K67_cod2   -53220
+=best=  normalized-BA_RDC4.dot_unif_20null10mast_rapportOE2.0_TMAX180_K67_cod2  -46251
+=best=  normalized-BA_RDC4.dot_unif_50null0mast_rapportOE1.0_TMAX180_K67_cod2   -54697
+=opt=   normalized-BA_RDC4.dot_unif_50null50mast_rapportOE2.0_TMAX15_K67_cod1   0
+=unkn=  normalized-NG.dot_fibo_50null0mast_rapportOE2.0_TMAX120_K192_cod2
+=unkn=  normalized-NG.dot_fibo_50null50mast_rapportOE2.0_TMAX120_K192_cod2
+=unkn=  normalized-NG.dot_luby_10null0mast_rapportOE1.0_TMAX60_K192_cod2
+=unkn=  normalized-NG.dot_luby_10null10mast_rapportOE1.0_TMAX15_K192_cod2
+=unkn=  normalized-NG.dot_luby_10null10mast_rapportOE1.0_TMAX300_K192_cod2
+=unkn=  normalized-NG.dot_luby_10null10mast_rapportOE2.0_TMAX180_K192_cod2
+=unkn=  normalized-NG.dot_luby_10null20mast_rapportOE1.0_TMAX180_K192_cod2
+=unkn=  normalized-NG.dot_luby_10null20mast_rapportOE1.0_TMAX300_K192_cod2
+=unkn=  normalized-NG.dot_luby_10null20mast_rapportOE1.0_TMAX60_K192_cod2
+=unkn=  normalized-NG.dot_luby_20null0mast_rapportOE2.0_TMAX300_K192_cod2
+=unkn=  normalized-NG.dot_luby_20null10mast_rapportOE1.0_TMAX180_K192_cod2
+=unkn=  normalized-NG.dot_luby_20null50mast_rapportOE1.0_TMAX15_K192_cod2
+=unkn=  normalized-NG.dot_luby_50null0mast_rapportOE1.0_TMAX15_K192_cod2
+=unkn=  normalized-NG.dot_luby_50null20mast_rapportOE2.0_TMAX60_K192_cod2
+=unkn=  normalized-NG.dot_luby_50null50mast_rapportOE1.0_TMAX180_K192_cod2
+=unkn=  normalized-NG.dot_luby_50null50mast_rapportOE1.0_TMAX300_K192_cod2
+=unkn=  normalized-NG.dot_luby_50null50mast_rapportOE2.0_TMAX120_K192_cod2
+=unkn=  normalized-NG.dot_unif_0null10mast_rapportOE1.0_TMAX60_K192_cod2
+=unkn=  normalized-NG.dot_unif_10null0mast_rapportOE2.0_TMAX15_K192_cod2
+=unkn=  normalized-NG.dot_unif_10null20mast_rapportOE1.0_TMAX300_K192_cod2
+=unkn=  normalized-NG.dot_unif_10null20mast_rapportOE2.0_TMAX60_K192_cod2
+=unkn=  normalized-NG.dot_unif_20null0mast_rapportOE1.0_TMAX300_K192_cod2
+=unkn=  normalized-NG.dot_unif_20null0mast_rapportOE2.0_TMAX180_K192_cod2
+=unkn=  normalized-NG.dot_unif_20null20mast_rapportOE1.0_TMAX120_K192_cod2
+=unkn=  normalized-NG.dot_unif_20null20mast_rapportOE2.0_TMAX15_K192_cod2
+=unkn=  normalized-NG.dot_unif_20null20mast_rapportOE2.0_TMAX300_K192_cod2
+=unkn=  normalized-NG.dot_unif_50null0mast_rapportOE2.0_TMAX60_K192_cod2
+=unkn=  normalized-NG.dot_unif_50null20mast_rapportOE1.0_TMAX15_K192_cod2
+=unkn=  normalized-NG.dot_unif_50null20mast_rapportOE2.0_TMAX120_K192_cod2
+=unkn=  normalized-NG.dot_unif_50null50mast_rapportOE1.0_TMAX180_K192_cod2
