@@ -108,6 +108,9 @@ struct SCIP_ConsData
    unsigned int          checkwhenupgr:1;    /**< if and constraint is upgraded to an logicor constraint or the and-
                                               *   constraint is linearized, should the check flag be set to true, even
                                               *   if the and-constraint has a check flag set to false? */
+   unsigned int          notremovablewhenupgr:1;/**< if and constraint is upgraded to an logicor constraint or the and-
+                                              *   constraint is linearized, should the removable flag be set to false,
+                                              *   even if the and-constraint has a removable flag set to true? */
 };
 
 /** constraint handler data */
@@ -409,7 +412,10 @@ SCIP_RETCODE consdataCreate(
    int                   nvars,              /**< number of variables in the and operation */
    SCIP_VAR**            vars,               /**< variables in and operation */
    SCIP_VAR*             resvar,             /**< resultant variable */
-   SCIP_Bool             checkwhenupgr       /**< should an upgraded constraint be checked despite the fact that this
+   SCIP_Bool             checkwhenupgr,      /**< should an upgraded constraint be checked despite the fact that this
+                                              *   and-constraint will not be checked
+                                              */
+   SCIP_Bool             notremovablewhenupgr/**< should an upgraded constraint be  despite the fact that this
                                               *   and-constraint will not be checked
                                               */
    )
@@ -439,6 +445,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->changed = TRUE;
    (*consdata)->merged = FALSE;
    (*consdata)->checkwhenupgr = checkwhenupgr;
+   (*consdata)->notremovablewhenupgr = notremovablewhenupgr;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -1346,9 +1353,10 @@ SCIP_RETCODE consdataLinearize(
       {
          /* create, add, and release the setppc constraint */
          SCIP_CALL( SCIPcreateConsSetpack(scip, &lincons, SCIPconsGetName(cons), nvars, vars,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), consdata->checkwhenupgr | SCIPconsIsChecked(cons),
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               consdata->checkwhenupgr || SCIPconsIsChecked(cons),
                SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
-               SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+               !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
          conscreated = TRUE;
       }
@@ -1365,9 +1373,10 @@ SCIP_RETCODE consdataLinearize(
 
       /* create, add, and release the logicor constraint */
       SCIP_CALL( SCIPcreateConsLogicor(scip, &lincons, SCIPconsGetName(cons), nvars, vars,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), consdata->checkwhenupgr | SCIPconsIsChecked(cons),
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            consdata->checkwhenupgr || SCIPconsIsChecked(cons),
             SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
-            SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+            !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
       conscreated = TRUE;
    }
@@ -2667,9 +2676,9 @@ SCIP_RETCODE cliquePresolve(
 
 	    SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, name, 2, consvars,
 		  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-		  consdata->checkwhenupgr | SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-		  SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-		  SCIPconsIsStickingAtNode(cons)) );
+		  consdata->checkwhenupgr || SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+		  SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
+                  !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 	    SCIPdebugMessage(" -> adding clique constraint: ");
 	    SCIPdebugPrintCons(scip, cliquecons, NULL);
 	    SCIP_CALL( SCIPaddCons(scip, cliquecons) );
@@ -2818,9 +2827,9 @@ SCIP_RETCODE cliquePresolve(
 
                   SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, name, 2, consvars,
                         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-                        consdata->checkwhenupgr | SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-                        SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-                        SCIPconsIsStickingAtNode(cons)) );
+                        consdata->checkwhenupgr || SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+                        SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
+                        !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
                   SCIPdebugMessage(" -> adding clique constraint: ");
                   SCIPdebugPrintCons(scip, cliquecons, NULL);
                   SCIP_CALL( SCIPaddCons(scip, cliquecons) );
@@ -3079,9 +3088,9 @@ SCIP_RETCODE cliquePresolve(
 
 	 SCIP_CALL( SCIPcreateConsSetpart(scip, &cliquecons, name, nvars + 1, newvars,
 	       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-	       consdata->checkwhenupgr | SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-	       SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-	       SCIPconsIsStickingAtNode(cons)) );
+	       consdata->checkwhenupgr || SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+	       SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
+               !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 	 SCIPdebugMessage(" -> upgrading and-constraint <%s> with use of clique information to a set-partitioning constraint: \n", SCIPconsGetName(cons));
 	 SCIPdebugPrintCons(scip, cliquecons, NULL);
 	 SCIP_CALL( SCIPaddCons(scip, cliquecons) );
@@ -3273,7 +3282,8 @@ SCIP_RETCODE detectRedundantConstraints(
          if( redundant )
          {
 	    /* also take the check when upgrade flag over if necessary */
-	    consdata1->checkwhenupgr |= consdata0->checkwhenupgr;
+	    consdata1->checkwhenupgr = consdata1->checkwhenupgr || consdata0->checkwhenupgr;
+	    consdata1->notremovablewhenupgr = consdata1->notremovablewhenupgr || consdata0->notremovablewhenupgr;
 
             SCIP_CALL( SCIPdelCons(scip, cons0) );
             (*ndelconss)++;
@@ -3456,7 +3466,8 @@ SCIP_RETCODE preprocessConstraintPairs(
 	       SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
 
 	       /* also take the check when upgrade flag over if necessary */
-	       consdata0->checkwhenupgr |= consdata1->checkwhenupgr;
+               consdata0->checkwhenupgr = consdata1->checkwhenupgr || consdata0->checkwhenupgr;
+               consdata0->notremovablewhenupgr = consdata1->notremovablewhenupgr || consdata0->notremovablewhenupgr;
 
                /* delete constraint */
                SCIP_CALL( SCIPdelCons(scip, cons1) );
@@ -3722,9 +3733,9 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 
                SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, 2, vars, vals, -SCIPinfinity(scip), 0.0,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-                     consdata->checkwhenupgr | SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-                     SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-                     SCIPconsIsStickingAtNode(cons)) );
+                     consdata->checkwhenupgr || SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+                     SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
+                     !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
 
                /* add constraint */
@@ -3754,9 +3765,9 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 
             SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, nvars + 1, vars, vals, -SCIPinfinity(scip), 0.0,
                   SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-                  consdata->checkwhenupgr | SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-                  SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-                  SCIPconsIsStickingAtNode(cons)) );
+                  consdata->checkwhenupgr || SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+                  SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
+                  !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
             /* add constraint */
             SCIP_CALL( SCIPaddCons(scip, newcons) );
@@ -3770,9 +3781,9 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 
          SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, nvars + 1, vars, vals, -nvars + 1.0, SCIPinfinity(scip),
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-               consdata->checkwhenupgr | SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-               SCIPconsIsStickingAtNode(cons)) );
+               consdata->checkwhenupgr || SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
+               !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
          /* add constraint */
          SCIP_CALL( SCIPaddCons(scip, newcons) );
@@ -3994,13 +4005,14 @@ SCIP_DECL_CONSTRANS(consTransAnd)
 
    /* create target constraint data */
    SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
-         sourcedata->nvars, sourcedata->vars, sourcedata->resvar, sourcedata->checkwhenupgr) );
+         sourcedata->nvars, sourcedata->vars, sourcedata->resvar, sourcedata->checkwhenupgr,
+         sourcedata->notremovablewhenupgr) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
    return SCIP_OKAY;
@@ -4845,7 +4857,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
    }
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, resvar, FALSE) );
+   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, resvar, FALSE, FALSE) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -5024,6 +5036,37 @@ SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
    assert(consdata != NULL);
 
    consdata->checkwhenupgr = flag;
+
+   return SCIP_OKAY;
+}
+
+/** when 'upgrading' the given and-constraint, should the removable flag for the upgraded constraint be set to FALSE,
+ *  even if the removable flag of this and-constraint is set to TRUE?
+ */
+SCIP_RETCODE SCIPchgAndConsRemovableFlagWhenUpgr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Bool             flag                /**< should an arising constraint from the given and-constraint be not
+                                              *   removable, even if the removable flag of the and-constraint is set to
+                                              *   TRUE
+                                              */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not an and constraint\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   consdata->notremovablewhenupgr = flag;
 
    return SCIP_OKAY;
 }

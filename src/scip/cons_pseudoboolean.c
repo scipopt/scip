@@ -1505,8 +1505,9 @@ SCIP_RETCODE createAndAddAndCons(
       SCIP_CALL( SCIPaddCons(scip, newcons) );
       SCIPdebugPrintCons(scip, newcons, NULL);
 
-      /* force all deriving constraint from this and constraint to be checked */
+      /* force all deriving constraint from this and constraint to be checked and not removale */
       SCIP_CALL( SCIPchgAndConsCheckFlagWhenUpgr(scip, newcons, TRUE) );
+      SCIP_CALL( SCIPchgAndConsRemovableFlagWhenUpgr(scip, newcons, TRUE) );
 
       *andcons = newcons;
       assert(*andcons != NULL);

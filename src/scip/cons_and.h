@@ -150,6 +150,19 @@ SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
                                               */
    );
 
+/** when 'upgrading' the given and-constraint, should the removable flag for the upgraded constraint be set to FALSE,
+ *  even if the removable flag of this and-constraint is set to TRUE?
+ */
+EXTERN
+SCIP_RETCODE SCIPchgAndConsRemovableFlagWhenUpgr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Bool             flag                /**< should an arising constraint from the given and-constraint be not
+                                              *   removable, even if the removable flag of the and-constraint is set to
+                                              *   TRUE
+                                              */
+   );
+
 #ifdef __cplusplus
 }
 #endif
