@@ -4574,9 +4574,10 @@ SCIP_RETCODE updateConsanddataUses(
       if( consanddata->nuses == 0 )
       {
          SCIP_VAR** tmpvars;
-         int v;
-	 SCIP_Bool looseorcolumn;
+         SCIP_VAR* resvar;
 	 SCIP_VARSTATUS varstatus;
+	 SCIP_Bool looseorcolumn;
+         int v;
 
          tmpvars = consanddata->vars;
 
@@ -4599,7 +4600,10 @@ SCIP_RETCODE updateConsanddataUses(
          SCIPfreeBlockMemoryArrayNull(scip, &(consanddata->vars), consanddata->svars);
          SCIPfreeBlockMemoryArrayNull(scip, &(consanddata->newvars), consanddata->snewvars);
 
-	 varstatus = SCIPvarGetStatus(SCIPgetResultantAnd(scip, consanddata->cons));
+         resvar = SCIPgetResultantAnd(scip, consanddata->cons);
+         assert(resvar != NULL);
+
+	 varstatus = SCIPvarGetStatus(resvar);
 	 looseorcolumn = (varstatus == SCIP_VARSTATUS_LOOSE || varstatus == SCIP_VARSTATUS_COLUMN);
 
 #if 1
@@ -4609,7 +4613,8 @@ SCIP_RETCODE updateConsanddataUses(
 	  */
 	 if( looseorcolumn )
 	 {
-	    SCIP_Bool delete = TRUE;
+	    SCIP_Bool delcons = TRUE;
+#if 0
 	    const int nfixedvars = SCIPgetNFixedVars(scip);
 
 	    if( nfixedvars > 0 )
@@ -4640,15 +4645,28 @@ SCIP_RETCODE updateConsanddataUses(
 	       SCIPsortPtr((void**)fixedvars, SCIPvarComp, nfixedvars);
 
                if( foundmultiaggrvar )
-		  delete = FALSE;
-	       else if( SCIPsortedvecFindPtr((void**)fixedvars, SCIPvarComp, SCIPgetResultantAnd(scip, consanddata->cons), nfixedvars, &pos) )
-		  delete = FALSE;
+		  delcons = FALSE;
+	       else if( SCIPsortedvecFindPtr((void**)fixedvars, SCIPvarComp, resvar, nfixedvars, &pos) )
+		  delcons = FALSE;
 
 	       SCIPfreeBufferArray(scip, &fixedvars);
 	    }
-
-	    if( delete )
+#endif
+            /* we can only delete and constraints if the resultant is an artificial variable and also active, because
+             * then the assigned value is not of interest and the artificial and constraint does not need to be
+             * fulfilled
+             *
+             * if this variable is not such an artificial variable we need the IRRELEVANT vartype which should be the
+             * correct way to fix this
+             */
+	    if( delcons
+#if 0
+               && strlen(SCIPvarGetName(resvar)) > strlen(ARTIFICIALVARNAMEPREFIX) &&
+               strncmp(SCIPvarGetName(resvar)+2, ARTIFICIALVARNAMEPREFIX, strlen(ARTIFICIALVARNAMEPREFIX)) == 0
+#endif
+               )
 	    {
+               assert(!SCIPconsIsChecked(consanddata->cons));
 	       SCIP_CALL( SCIPdelCons(scip, consanddata->cons) );
 	    }
 	 }
