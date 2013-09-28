@@ -1042,6 +1042,7 @@ SCIP_RETCODE addCoef(
    }
 
    consdata->merged = FALSE;
+   consdata->cliqueadded = FALSE;
 
    return SCIP_OKAY;
 }
@@ -4819,6 +4820,8 @@ SCIP_RETCODE preprocessCliques(
    int const             nconss,             /**< number of constraints in constraint set */
    int const             nrounds,            /**< actual presolving round */
    int*const             firstchange,        /**< pointer to store first changed constraint */
+   int*const             firstclique,        /**< pointer to store first constraint to start adding clique again */
+   int*const             lastclique,         /**< pointer to store last constraint to add cliques again */
    int*const             nfixedvars,         /**< pointer to count number of deleted variables */
    int*const             naggrvars,          /**< pointer to count number of aggregated variables */
    int*const             ndelconss,          /**< pointer to count number of deleted constraints */
@@ -4860,6 +4863,8 @@ SCIP_RETCODE preprocessCliques(
    assert(conshdlrdata != NULL);
    assert(conss != NULL || nconss == 0);
    assert(firstchange != NULL);
+   assert(firstclique != NULL);
+   assert(lastclique != NULL);
    assert(nfixedvars != NULL);
    assert(naggrvars != NULL);
    assert(ndelconss != NULL);
@@ -5148,8 +5153,8 @@ SCIP_RETCODE preprocessCliques(
       chgcons0 = FALSE;
 
       /* try to lift variables to cons0 */
-      SCIP_CALL( liftCliqueVariables(scip, cons0, c, usefulvars, &nusefulvars, v1, &cliquevalues, vartoindex, varnconss, maxnvarconsidx,
-	    varconsidxs, &maxnvars, &nadded, &chgcons0, nfixedvars, ndelconss, cutoff) );
+      SCIP_CALL( liftCliqueVariables(scip, cons0, c, usefulvars, &nusefulvars, v1, &cliquevalues, vartoindex, varnconss,
+            maxnvarconsidx, varconsidxs, &maxnvars, &nadded, &chgcons0, nfixedvars, ndelconss, cutoff) );
 
       if( *cutoff )
 	 break;
@@ -5161,6 +5166,10 @@ SCIP_RETCODE preprocessCliques(
       if( chgcons0 )
       {
          int i;
+
+         *firstchange = MIN(*firstchange, c);
+         *firstclique = MIN(*firstclique, c);
+         *lastclique = MAX(*lastclique, c);
 
 	 /* variables array has changed due to lifting variables, so get new values */
 	 assert(consdata == SCIPconsGetData(cons0));
@@ -5249,6 +5258,76 @@ SCIP_RETCODE preprocessCliques(
 
    if( *ndelconss < 0 )
       *ndelconss = 0;
+
+   return SCIP_OKAY;
+}
+
+
+/**< add cliques to SCIP */
+static
+SCIP_RETCODE addCliques(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraint set */
+   int                   nconss,             /**< number of constraints in constraint set */
+   int                   firstclique,        /**< first constraint to start to add cliques */
+   int                   lastclique,         /**< last constraint to start to add cliques */
+   int*                  nchgbds,            /**< pointer to count number of chnaged bounds */
+   SCIP_Bool*            cutoff              /**< pointer to store if the problem is infeasible due to a fixing */
+   )
+{
+   SCIP_CONS* cons;
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool infeasible;
+   int nlocalbdchgs;
+   int c;
+
+   assert(scip != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(lastclique <= nconss);
+
+   /* add clique and implication information */
+   for( c = firstclique; c < lastclique; ++c )
+   {
+      cons = conss[c];
+      assert(cons != NULL);
+
+      /* ignore deleted constraints */
+      if( !SCIPconsIsActive(cons) )
+         continue;
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      if( !consdata->cliqueadded && consdata->nvars >= 2 )
+      {
+         /* add a set partitioning / packing constraint as clique */
+         if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+         {
+            SCIP_CALL( SCIPaddClique(scip, consdata->vars, NULL, consdata->nvars, &infeasible, &nlocalbdchgs) );
+            *nchgbds += nlocalbdchgs;
+
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               return SCIP_OKAY;
+            }
+         }
+         else if( consdata->nvars == 2 && !SCIPconsIsModifiable(cons) )
+         {
+            /* a two-variable set covering constraint x + y >= 1 yields the implication x == 0 -> y == 1 */
+            SCIP_CALL( SCIPaddVarImplication(scip, consdata->vars[0], FALSE, consdata->vars[1],
+                  SCIP_BOUNDTYPE_LOWER, 1.0, &infeasible, &nlocalbdchgs) );
+            *nchgbds += nlocalbdchgs;
+
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               return SCIP_OKAY;
+            }
+         }
+         consdata->cliqueadded = TRUE;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -7999,9 +8078,22 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    /* clique lifting */
    if( conshdlrdata->cliquelifting && conshdlrdata->enablecliquelifting )
    {
-      if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *ndelconss == oldndelconss && *nchgcoefs == oldnchgcoefs && SCIPisPresolveFinished(scip) )
+      if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *ndelconss == oldndelconss &&
+         *nchgcoefs == oldnchgcoefs && SCIPisPresolveFinished(scip) )
       {
-	 SCIP_CALL( preprocessCliques(scip, conshdlrdata, conss, nconss, nrounds, &firstchange, nfixedvars, naggrvars, ndelconss, nchgcoefs, &cutoff) );
+         /* add cliques first before lifting variables */
+         SCIP_CALL( addCliques(scip, conss, nconss, firstclique, lastclique, nchgbds, &cutoff) );
+	 if( cutoff )
+	 {
+	    *result = SCIP_CUTOFF;
+	    return SCIP_OKAY;
+	 }
+         firstclique = nconss;
+         lastclique = -1;
+
+         /* lift variables and check for fixings due to clique infomation */
+	 SCIP_CALL( preprocessCliques(scip, conshdlrdata, conss, nconss, nrounds, &firstchange, &firstclique,
+               &lastclique, nfixedvars, naggrvars, ndelconss, nchgcoefs, &cutoff) );
 	 ++(conshdlrdata->nclqpresolve);
 
 	 if( cutoff )
@@ -8058,58 +8150,10 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       }
    }
 
-   /* add clique and implication information */
-   for( c = firstclique; c < lastclique && !SCIPisStopped(scip); ++c )
-   {
-      SCIP_CONS* cons;
-      SCIP_CONSDATA* consdata;
-
-      assert(*result != SCIP_CUTOFF);
-
-      cons = conss[c];
-      assert(cons != NULL);
-
-      /* ignore deleted constraints */
-      if( !SCIPconsIsActive(cons) )
-         continue;
-
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
-
-      if( !consdata->cliqueadded && consdata->nvars >= 2 )
-      {
-         /* add a set partitioning / packing constraint as clique */
-         if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
-         {
-            SCIP_Bool infeasible;
-            int ncliquebdchgs;
-
-            SCIP_CALL( SCIPaddClique(scip, consdata->vars, NULL, consdata->nvars, &infeasible, &ncliquebdchgs) );
-            *nchgbds += ncliquebdchgs;
-            if( infeasible )
-            {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-         }
-         else if( consdata->nvars == 2 && !SCIPconsIsModifiable(cons) )
-         {
-            SCIP_Bool infeasible;
-            int nimplbdchgs;
-
-            /* a two-variable set covering constraint x + y >= 1 yields the implication x == 0 -> y == 1 */
-            SCIP_CALL( SCIPaddVarImplication(scip, consdata->vars[0], FALSE, consdata->vars[1],
-                  SCIP_BOUNDTYPE_LOWER, 1.0, &infeasible, &nimplbdchgs) );
-            *nchgbds += nimplbdchgs;
-            if( infeasible )
-            {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-         }
-         consdata->cliqueadded = TRUE;
-      }
-   }
+   /* add cliques first before lifting variables */
+   SCIP_CALL( addCliques(scip, conss, nconss, firstclique, lastclique, nchgbds, &cutoff) );
+   if( cutoff )
+      *result = SCIP_CUTOFF;
 
    conshdlrdata->enablecliquelifting = FALSE;
    conshdlrdata->noldupgrs = nconss - (*ndelconss - startdelconss);
