@@ -2291,8 +2291,6 @@ SCIP_RETCODE checkSystemGF2(
             if ( success )
             {
                SCIP_CALL( SCIPheurPassSolAddSol(scip, heurtrysol, sol) );
-               SCIP_CALL( SCIPfreeSol(scip, &sol) );
-               assert( sol == NULL );
                SCIPdebugMessage("Creating solution was successful.\n");
             }
 #ifdef SCIP_DEBUG
@@ -2302,6 +2300,7 @@ SCIP_RETCODE checkSystemGF2(
                SCIPdebugMessage("Creating solution was not successful.\n");
             }
 #endif
+            SCIP_CALL( SCIPfreeSol(scip, &sol) );
          }
       }
       else
