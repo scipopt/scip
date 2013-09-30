@@ -9752,6 +9752,7 @@ SCIP_RETCODE presolveConsEst(
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
    int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_Bool*            downlocks,          /**< array to store if the variable has a down lock, or NULL */
    SCIP_Bool*            uplocks,            /**< array to store if the variable has an up lock, or NULL */
    SCIP_CONS*            cons,               /**< underlying constraint, or NULL */
@@ -9847,6 +9848,7 @@ SCIP_RETCODE presolveConsEst(
 
       /* compute potential alternative lower bound (step (4) and (5)) */
       alternativelb = MAX(hmin+1, minect);
+      alternativelb = MIN(alternativelb, hmax);
 
       if( lct <= hmin )
       {
@@ -10023,6 +10025,7 @@ SCIP_RETCODE presolveConsLct(
    int                   nvars,              /**< number of start time variables (activities) */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  durations,          /**< array of durations */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_Bool*            downlocks,          /**< array to store if the variable has a down lock, or NULL */
    SCIP_Bool*            uplocks,            /**< array to store if the variable has an up lock, or NULL */
@@ -10117,6 +10120,7 @@ SCIP_RETCODE presolveConsLct(
 
       /* compute potential alternative upper bound (step (4) and (5)) */
       alternativeub = MIN(hmax - 1, maxlst)  - duration;
+      alternativeub = MAX(alternativeub, hmin);
 
       if( est >= hmax )
       {
@@ -10290,12 +10294,12 @@ SCIP_RETCODE presolveConsEffectiveHorizon(
 
    /* presolve constraint form the earlier start time point of view */
    SCIP_CALL( presolveConsEst(scip, nvars, consdata->vars, consdata->durations,
-         consdata->hmin, consdata->downlocks, consdata->uplocks, cons,
+         consdata->hmin, consdata->hmax, consdata->downlocks, consdata->uplocks, cons,
          irrelevants, nfixedvars, naggrvars, nchgbds, nchgsides, cutoff) );
 
    /* presolve constraint form the latest completion time point of view */
    SCIP_CALL( presolveConsLct(scip, nvars, consdata->vars, consdata->durations,
-         consdata->hmax, consdata->downlocks, consdata->uplocks, cons,
+         consdata->hmin, consdata->hmax, consdata->downlocks, consdata->uplocks, cons,
          irrelevants, nfixedvars, naggrvars, nchgbds, nchgsides, cutoff) );
 
    /* remove variables from the cumulative constraint which are marked to be deleted; we need to that in the reverse
@@ -13879,11 +13883,11 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
       return SCIP_OKAY;
 
    /* presolve constraint form the earlier start time point of view */
-   SCIP_CALL( presolveConsEst(scip, nvars, vars, durations, hmin, downlocks, uplocks, cons,
+   SCIP_CALL( presolveConsEst(scip, nvars, vars, durations, hmin, hmax, downlocks, uplocks, cons,
          irrelevants, nfixedvars, naggrvars, nchgbds, nchgsides, cutoff) );
 
    /* presolve constraint form the latest completion time point of view */
-   SCIP_CALL( presolveConsLct(scip, nvars, vars, durations, hmax, downlocks, uplocks, cons,
+   SCIP_CALL( presolveConsLct(scip, nvars, vars, durations, hmin, hmax, downlocks, uplocks, cons,
          irrelevants, nfixedvars, naggrvars, nchgbds, nchgsides, cutoff) );
 
    return SCIP_OKAY;
