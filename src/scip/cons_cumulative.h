@@ -272,7 +272,10 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
    SCIP_CONS*            cons,               /**< constraint which gets propagated, or NULL */
    SCIP_Bool*            delvars,            /**< array storing the variable which can be deleted from the constraint */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
-   int*                  nchgsides           /**< pointer to store the number of changed sides */
+   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
+   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
+   int*                  nchgsides,          /**< pointer to store the number of changed sides */
+   SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    );
 
 /** propagate the given cumulative condition */

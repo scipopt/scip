@@ -2304,8 +2304,11 @@ SCIP_RETCODE presolveCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be checked */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
+   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
+   int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
    int*                  nchgcoefs,          /**< pointer to store the number of changed coefficients */
-   int*                  nchgsides           /**< pointer to store the number of side changes */
+   int*                  nchgsides,          /**< pointer to store the number of changed sides */
+   SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -2324,8 +2327,8 @@ SCIP_RETCODE presolveCumulativeCondition(
 
    /* use presolving of cumulative constraint handler to process cumulative condition */
    SCIP_CALL( SCIPpresolveCumulativeCondition(scip, nvars, consdata->vars, consdata->durations,
-         consdata->hmin, consdata->hmax, consdata->downlocks, consdata->uplocks,
-         cons, irrelevants, nfixedvars, nchgsides) );
+         consdata->hmin, consdata->hmax, consdata->downlocks, consdata->uplocks, cons,
+         irrelevants, nfixedvars, naggrvars, nchgbds, nchgsides, cutoff) );
 
    /* remove all variable which are irrelevant; note we have to iterate backwards do to the functionality of of
     * consdataDeletePos()
@@ -3611,10 +3614,12 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
          }
 
          /* presolve cumulative condition w.r.t. effective horizon by detecting irrelevant variables */
-         SCIP_CALL( presolveCumulativeCondition(scip, cons, nfixedvars, nchgcoefs, nchgsides) );
+         SCIP_CALL( presolveCumulativeCondition(scip, cons, nfixedvars, naggrvars, nchgbds, nchgcoefs, nchgsides, &cutoff) );
 
+#if 0
          /* detect implications */
          SCIP_CALL( detectImplications(scip, cons, nchgcoefs, naddconss) );
+#endif
 
          /* try to upgrade optcumulative to cumulative constraint which is possible if all remaining binary variables
           * are fixed to one; in case the constraint has no variable left it is removed
