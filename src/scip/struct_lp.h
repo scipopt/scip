@@ -339,6 +339,7 @@ struct SCIP_Lp
    SCIP_Bool             installing;         /**< whether the solution process is in stalling */
    SCIP_Bool             strongbranching;    /**< whether the lp is used for strong branching */
    SCIP_Bool             probing;            /**< are we currently in probing mode? */
+   SCIP_Bool             strongbranchprobing;/**< are we currently in probing mode for strong branching? */
    SCIP_Bool             diving;             /**< LP is used for diving: col bounds and obj don't correspond to variables */
    SCIP_Bool             divingobjchg;       /**< objective values were changed in diving: LP objective is invalid */
    SCIP_Bool             divinglazyapplied;  /**< lazy bounds were applied to the LP during diving */

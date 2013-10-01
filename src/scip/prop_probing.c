@@ -42,6 +42,12 @@
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 
 
+/* @todo probing should also consider implicit binary variables; especially test this on pseudo-boolean instances, as
+ *       one special instance also use the instance of bug 546
+ *
+ * @todo check for restricting the maximal number of implications that can be added by probing
+ */
+
 /* sorting of probing variables, two different variants are implemeneted */
 /*#define VARIANT_B*/
 
@@ -1024,7 +1030,8 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    propdata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    /* get (number of) fractional variables that should be integral */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &vars, NULL, NULL, &nvars, NULL) );
+   /* todo check if integrating fractional implicit integer variables is beneficial for probing */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &vars, NULL, NULL, &nvars, NULL, NULL) );
    nbinvars = 0;
 
    /* alloc array for fractional binary variables */

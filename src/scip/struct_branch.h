@@ -47,6 +47,7 @@ struct SCIP_BranchCand
    int                   nlpcands;           /**< number of candidates for branching on LP solution */
    int                   npriolpcands;       /**< number of LP candidates with largest branch priority value */
    int                   npriolpbins;        /**< number of binary LP candidates with largest branch priority value */
+   int                   nimpllpfracs;       /**< number of implicit variables with fractional LP solution value */
    int                   lpmaxpriority;      /**< maximal branch priority of all LP candidates */
    int                   externcandssize;    /**< number of available slots in externcands array */
    int                   nexterncands;       /**< number of external candidates for branching */

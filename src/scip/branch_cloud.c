@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -190,7 +190,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    lprows = SCIPgetLPRows(scip);
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, &npriolpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, &npriolpcands, NULL) );
    nlpcands = SCIPgetNLPBranchCands(scip);
    assert(nlpcands > 0);
 
@@ -263,11 +263,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       dualsol = SCIProwGetDualsol(lprows[i]);
       if( !SCIPisZero(scip, dualsol) )
       {
-         if( dualsol > 0 && SCIPisFeasEQ(scip,SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
+         if( dualsol > 0 && SCIPisFeasEQ(scip, SCIProwGetLhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
          {
             SCIP_CALL( SCIPchgRowRhsDive(scip, lprows[i], SCIProwGetLhs(lprows[i])) );
          }
-         else if( dualsol < 0 && SCIPisFeasEQ(scip,SCIProwGetRhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
+         else if( dualsol < 0 && SCIPisFeasEQ(scip, SCIProwGetRhs(lprows[i]), SCIPgetRowActivity(scip,lprows[i])) )
          {
             SCIP_CALL( SCIPchgRowLhsDive(scip, lprows[i], SCIProwGetRhs(lprows[i])) );
          }
@@ -301,7 +301,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 #endif
 
       /* apply feasibility pump objective function to fractional variables */
-      for( i = 0; i < nlpcands; ++i)
+      for( i = 0; i < nlpcands; ++i )
       {
          SCIP_Real frac;
          frac = SCIPfrac(scip, SCIPgetSolVal(scip, NULL, lpcandscopy[i]));
@@ -472,7 +472,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
    /* the second counter should maybe be replaced at some point */
    SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, branchruledata->skipdown, branchruledata->skipup, counter, counter,
-         ncomplete, &branchruledata->lastcand, allowaddcons,
+         ncomplete, &branchruledata->lastcand, allowaddcons, 0, FALSE,
          &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    if( branchruledata->lastcand <= ncomplete )

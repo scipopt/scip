@@ -1174,7 +1174,7 @@ SCIP_RETCODE SCIPdebugCheckConflictFrontier(
    if( bdchginfo != NULL )
    {
       printBdchginfo(set, bdchginfo, SCIPbdchginfoGetNewbound(bdchginfo));
-      printf("\n");
+      printf(" ");
    }
 
    /* print bound changes which are already part of the conflict set */

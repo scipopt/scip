@@ -702,7 +702,7 @@ BEGIN {
          abstol = 1e-4;
 
 	 # objsense = 1 -> minimize; objsense = -1 -> maximize
-         if( ( objsense == 1 && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( objsense == -1 && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
+         if( ( objsense == 1 && ((db > -infty && db-sol[prob] > reltol) || sol[prob]-pb > reltol) ) || ( objsense == -1 && ((db > -infty && sol[prob]-db > reltol) || pb-sol[prob] > reltol) ) ) {
             status = "fail";
             failtime += tottime;
             fail++;
@@ -725,7 +725,7 @@ BEGIN {
                timeouts++;
             }
             else {
-               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol ) {
+               if( (db == -infty || (abs(pb - db) <= max(abstol, reltol))) && abs(pb - sol[prob]) <= reltol ) {
                   status = "ok";
                   pass++;
                }
@@ -943,7 +943,7 @@ BEGIN {
             gamsprobtype = "MIP";
          #InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime
          #NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables
-         printf("%s,%s,SCIP_%s,%d,%d,%d,%g,%g,%g,", pavprob, gamsprobtype, settings, objsense == 1 ? 0 : 1, modelstat, solverstat, pb, db, tottime+pavshift) > PAVFILE;
+         printf("%s,%s,SCIP_%s,%d,%d,%d,%.8g,%.8g,%g,", pavprob, gamsprobtype, settings, objsense == 1 ? 0 : 1, modelstat, solverstat, pb, db, tottime+pavshift) > PAVFILE;
          printf("%d,%d,%d,%d\n", bbnodes, simpiters, cons, vars) > PAVFILE;
       }
    }

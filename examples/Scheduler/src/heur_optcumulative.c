@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,7 +32,7 @@
 #define HEUR_DESC             "problem specific heuristic of cumulative scheduling problems with optional jobs"
 #define HEUR_DISPCHAR         'q'
 #define HEUR_PRIORITY         -1106000
-#define HEUR_FREQ             10
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
@@ -454,17 +454,49 @@ SCIP_RETCODE applyOptcumulative(
          }
          else
          {
+            SCIP_Real* objvals;
+            SCIP_Real timelimit;
+            SCIP_Real memorylimit;
             SCIP_Bool solved;
             SCIP_Bool error;
             int v;
 
             SCIPdebugMessage("check machine %d (variables %d)\n", m, nvars);
 
+            SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nvars) );
+
+            for( v = 0; v < nvars; ++v )
+            {
+               SCIP_VAR* var;
+
+               var = vars[v];
+               assert(var != NULL);
+
+               lbs[v] = SCIPvarGetLbLocal(var);
+               ubs[v] = SCIPvarGetUbLocal(var);
+               objvals[v] = SCIPvarGetObj(var);
+            }
+
+            /* check whether there is enough time and memory left */
+            SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+            if( !SCIPisInfinity(scip, timelimit) )
+               timelimit -= SCIPgetSolvingTime(scip);
+            SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+            /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+            if( !SCIPisInfinity(scip, memorylimit) )
+            {
+               memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+               memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+            }
+
             /* solve the cumulative condition separately */
-            SCIP_CALL( SCIPsolveCumulative(scip, nvars, vars, durations, demands, heurdata->capacities[m], 0, INT_MAX, TRUE,
-                  lbs, ubs, heurdata->maxnodes, &solved, &infeasible, &unbounded, &error) );
+            SCIP_CALL( SCIPsolveCumulative(scip, nvars, lbs, ubs, objvals, durations, demands, heurdata->capacities[m], 0, INT_MAX,
+                  timelimit, memorylimit, heurdata->maxnodes, &solved, &infeasible, &unbounded, &error) );
             assert(!unbounded);
             assert(!error);
+
+            SCIPfreeBufferArray(scip, &objvals);
 
             machineassignment->feasibles[pos] = !infeasible;
 
@@ -497,7 +529,7 @@ SCIP_RETCODE applyOptcumulative(
       {
          SCIP_Bool stored;
 
-         SCIPdebugMessage("************ try solution\n");
+         SCIPdebugMessage("************ try solution <%g>\n", SCIPgetSolOrigObj(scip, sol));
 
          SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, TRUE, &stored) );
 

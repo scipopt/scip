@@ -381,7 +381,14 @@ protected:
       const char*             str            /**< message to print */
       )
    {
-      SCIPmessagePrintInfo(messagehdlr, str);
+      if( level == J_ERROR )
+      {
+         SCIPmessagePrintError(str);
+      }
+      else
+      {
+         SCIPmessagePrintInfo(messagehdlr, str);
+      }
    }
 
    void PrintfImpl(
@@ -391,7 +398,14 @@ protected:
       va_list                 ap             /**< arguments of message */
       )
    {
-      SCIPmessageVPrintInfo(messagehdlr, pformat, ap);
+      if( level == J_ERROR )
+      {
+         SCIPmessageVPrintError(pformat, ap);
+      }
+      else
+      {
+         SCIPmessageVPrintInfo(messagehdlr, pformat, ap);
+      }
    }
 
    void FlushBufferImpl() { }

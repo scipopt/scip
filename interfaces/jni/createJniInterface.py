@@ -515,7 +515,7 @@ def createEnums(filename):
                 jnifile.write(detaileddescription)
 
             jnifile.write("    */\n")
-            jnifile.write("   final public static int " + enumname + " = " + initializer + ";\n");
+            jnifile.write("   final public static int " + enumname + " = " + initializer.rsplit(' ')[-1] + ";\n");
             jnifile.write("\n")
 
         jnifile.write("}\n")

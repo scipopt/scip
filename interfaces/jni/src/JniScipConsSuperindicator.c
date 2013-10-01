@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -86,26 +86,28 @@ jlong JNISCIPCONSSUPERINDICATOR(getSlackConsSuperindicator)(
 /** transforms the current problem into a MinUC problem (minimizing the number of unsatisfied constraints),
  *  a CIP generalization of the MinULR (min. unsatisfied linear relations) problem
  */
-// JNIEXPORT
-// void JNISCIPCONSSUPERINDICATOR(transformMinUC)(
-//    JNIEnv*               env,                /**< JNI environment variable */
-//    jobject               jobj,               /**< JNI class pointer */
-//    jlong                 jscip,              /**< SCIP data structure */
-//    jbooleanArray         jsuccess            /**< could all constraints be transformed? */
-//    )
-// {
-//    SCIP* scip;
-//    SCIP_Bool* success;
+#if 0
+JNIEXPORT
+void JNISCIPCONSSUPERINDICATOR(transformMinUC)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jscip,              /**< SCIP data structure */
+   jbooleanArray         jsuccess            /**< could all constraints be transformed? */
+   )
+{
+   SCIP* scip;
+   SCIP_Bool* success;
 
-//    /* convert JNI pointer into C pointer */
-//    scip = (SCIP*) (size_t) jscip;
-//    assert(scip != NULL);
+   /* convert JNI pointer into C pointer */
+   scip = (SCIP*) (size_t) jscip;
+   assert(scip != NULL);
 
-//    JNISCIP_CALL( SCIPallocBufferArray(scip, &success, ?length?) );
+   JNISCIP_CALL( SCIPallocBufferArray(scip, &success, ?length?) );
 
-//    (*env)->GetBooleanArrayRegion(env, jsuccess, 0, ?length?, (jdouble*)success);
+   (*env)->GetBooleanArrayRegion(env, jsuccess, 0, ?length?, (jdouble*)success);
 
-//    JNISCIP_CALL( SCIPtransformMinUC(scip, success) );
+   JNISCIP_CALL( SCIPtransformMinUC(scip, success) );
 
-//    SCIPfreeBufferArray(scip, &success);
-// }
+   SCIPfreeBufferArray(scip, &success);
+}
+#endif

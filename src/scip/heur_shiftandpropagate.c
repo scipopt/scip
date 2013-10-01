@@ -47,10 +47,12 @@
 #define DEFAULT_SORTKEY            'v'  /**< the default key for variable sorting */
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
 #define DEFAULT_COLLECTSTATS     TRUE   /**< should variable statistics be collected during probing? */
-#define DEFAULT_STOPAFTERFEASIBLE TRUE   /**< Should the heuristic stop calculating optimal shift values when no more rows are violated? */
-#define DEFAULT_PREFERBINARIES   FALSE   /**< Should binary variables be shifted first? */
+#define DEFAULT_STOPAFTERFEASIBLE TRUE  /**< Should the heuristic stop calculating optimal shift values when no more rows are violated? */
+#define DEFAULT_PREFERBINARIES   FALSE  /**< Should binary variables be shifted first? */
 #define SORTKEYS                 "nrtuv"/**< options sorting key: (n)orms down, norms (u)p, (v)iolated rows decreasing,
-                                        viola(t)ed rows increasing, or (r)andom */
+                                         *   viola(t)ed rows increasing, or (r)andom */
+#define DEFAULT_NOZEROFIXING      FALSE /**< should variables with a zero shifting value be delayed instead of being fixed? */
+#define DEFAULT_FIXBINLOCKS       FALSE /**< should binary variables with no locks in one direction be fixed to that direction? */
 
 #define EVENTHDLR_NAME         "eventhdlrshiftandpropagate"
 #define EVENTHDLR_DESC         "event handler to catch bound changes"
@@ -80,7 +82,8 @@ struct SCIP_HeurData
    SCIP_Bool             stopafterfeasible;  /**< Should the heuristic stop calculating optimal shift values when no
                                               *   more rows are violated? */
    SCIP_Bool             preferbinaries;     /**< Should binary variables be shifted first? */
-
+   SCIP_Bool             nozerofixing;       /**< should variables with a zero shifting value be delayed instead of being fixed? */
+   SCIP_Bool             fixbinlocks;        /**< should binary variables with no locks in one direction be fixed to that direction? */
    SCIPstatistic(
       SCIP_LPSOLSTAT     lpsolstat;          /**< the probing status after probing */
       SCIP_Longint       ntotaldomredsfound; /**< the total number of domain reductions during heuristic */
@@ -812,7 +815,7 @@ SCIP_Real retransformVariable(
    {
       assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
 
-      return solvalue += matrix->transformshiftvals[varindex];
+      return solvalue + matrix->transformshiftvals[varindex];
    }
    else if( status == TRANSFORMSTATUS_NEG )
    {
@@ -1088,6 +1091,8 @@ void updateTransformation(
          *transformshiftval = lb;
          if( !SCIPisInfinity(scip, ub) )
             matrix->upperbounds[varindex] = ub - lb;
+         else
+            matrix->upperbounds[varindex] = SCIPinfinity(scip);
       }
    }
 
@@ -1712,7 +1717,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       TRANSFORMSTATUS status;
       int nviolations;
       int permutedvarindex;
-
+      SCIP_Bool marksuspicious;
+      
       permutedvarindex = permutation[c];
       optimalshiftvalue = 0.0;
       nviolations = 0;
@@ -1750,43 +1756,63 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
          continue;
       }
+      
+      marksuspicious = FALSE;
 
-      /* only apply the computationally expensive best shift selection, if there is a violated row left */
-      if( !heurdata->stopafterfeasible || nviolatedrows > 0 )
+      /* check whether the variable is binary and has no locks in one direction, so that we want to fix it to the
+       * respective bound (only enabled by parameter)
+       */
+      if( heurdata->fixbinlocks && SCIPvarIsBinary(var) && (SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0) )
       {
-         /* compute optimal shift value for variable */
-         SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, 1, rowweights, steps, violationchange,
-               &optimalshiftvalue, &nviolations) );
-         assert(SCIPisFeasGE(scip, optimalshiftvalue, 0.0));
-
-         /* Variables with FREE transform have to be dealt with twice */
-         if( matrix->transformstatus[permutedvarindex] == TRANSFORMSTATUS_FREE )
+         if( SCIPvarGetNLocksUp(var) == 0 )
+            origsolval = SCIPvarGetUbLocal(var);
+         else
          {
-            SCIP_Real downshiftvalue;
-            int ndownviolations;
-
-            downshiftvalue = 0.0;
-            ndownviolations = 0;
-            SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, -1, rowweights, steps, violationchange,
-                  &downshiftvalue, &ndownviolations) );
-
-            assert(SCIPisLE(scip, downshiftvalue, 0.0));
-
-            /* compare to positive direction and select the direction which makes more rows feasible */
-            if( ndownviolations < nviolations )
-            {
-               optimalshiftvalue = downshiftvalue;
-            }
+            assert(SCIPvarGetNLocksDown(var) == 0);
+            origsolval = SCIPvarGetLbLocal(var);
          }
       }
       else
-         optimalshiftvalue = 0.0;
+      {
+         /* only apply the computationally expensive best shift selection, if there is a violated row left */
+         if( !heurdata->stopafterfeasible || nviolatedrows > 0 )
+         {
+            /* compute optimal shift value for variable */
+            SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, 1, rowweights, steps, violationchange,
+                  &optimalshiftvalue, &nviolations) );
+            assert(SCIPisFeasGE(scip, optimalshiftvalue, 0.0));
 
-      /* retransform the solution value from the heuristic transformation space */
-      origsolval = retransformVariable(scip, matrix, var, permutedvarindex, optimalshiftvalue);
+            /* Variables with FREE transform have to be dealt with twice */
+            if( matrix->transformstatus[permutedvarindex] == TRANSFORMSTATUS_FREE )
+            {
+               SCIP_Real downshiftvalue;
+               int ndownviolations;
+
+               downshiftvalue = 0.0;
+               ndownviolations = 0;
+               SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, -1, rowweights, steps, violationchange,
+                     &downshiftvalue, &ndownviolations) );
+
+               assert(SCIPisLE(scip, downshiftvalue, 0.0));
+
+               /* compare to positive direction and select the direction which makes more rows feasible */
+               if( ndownviolations < nviolations )
+               {
+                  optimalshiftvalue = downshiftvalue;
+               }
+            }
+         }
+         else
+            optimalshiftvalue = 0.0;
+
+         /* if zero optimal shift values are forbidden by the user parameter, delay the variable by marking it suspicious */
+         if( heurdata->nozerofixing && nviolations > 0 && SCIPisFeasZero(scip, optimalshiftvalue) )
+            marksuspicious = TRUE;
+
+         /* retransform the solution value from the heuristic transformation space */
+         origsolval = retransformVariable(scip, matrix, var, permutedvarindex, optimalshiftvalue);
+      }
       assert(SCIPisFeasGE(scip, origsolval, lb) && SCIPisFeasLE(scip, origsolval, ub));
-
-      SCIPdebugMessage("  Shift %g(%g originally) is optimal, propagate solution\n", optimalshiftvalue, origsolval);
 
       /* check if propagation should still be performed */
       if( nprobings > DEFAULT_PROPBREAKER )
@@ -1795,12 +1821,13 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       /* if propagation is enabled, fix the variable to the new solution value and propagate the fixation
        * (to fix other variables and to find out early whether solution is already infeasible)
        */
-      if( probing )
+      if( !marksuspicious && probing )
       {
          SCIP_CALL( SCIPnewProbingNode(scip) );
          SCIP_CALL( SCIPfixVarProbing(scip, var, origsolval) );
          ndomredsfound = 0;
 
+         SCIPdebugMessage("  Shift %g(%g originally) is optimal, propagate solution\n", optimalshiftvalue, origsolval);
          SCIP_CALL( SCIPpropagateProbing(scip, heurdata->nproprounds, &cutoff, &ndomredsfound) );
 
          ++nprobings;
@@ -1826,7 +1853,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          /* backtrack to the parent of the current node */
          assert(SCIPgetProbingDepth(scip) >= 1);
          SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
-
+         marksuspicious = TRUE;
 
          /* if the variable were to be set to one of its bounds, repropagate by tightening this bound by 1.0
           * into the direction of the other bound, if possible */
@@ -1863,7 +1890,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             if( cutoff )
                break;
          }
-
+      }
+      
+      if( marksuspicious )
+      {
          /* mark the variable as suspicious */
          assert(permutedvarindex == permutation[c]);
 
@@ -1909,7 +1939,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          /* get the column position of the variable */
          permutedvarindex = permutation[v];
          var = SCIPcolGetVar(heurdata->lpcols[permutedvarindex]);
-
          assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
          /* update the transformation of the variable, since the bound might have changed after the last update. */
@@ -2176,5 +2205,9 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          &heurdata->stopafterfeasible, TRUE, DEFAULT_STOPAFTERFEASIBLE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/preferbinaries", "Should binary variables be shifted first?",
          &heurdata->preferbinaries, TRUE, DEFAULT_PREFERBINARIES, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/nozerofixing", "should variables with a zero shifting value be delayed instead of being fixed?",
+            &heurdata->nozerofixing, TRUE, DEFAULT_NOZEROFIXING, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/fixbinlocks", "should binary variables with no locks in one direction be fixed to that direction?",
+            &heurdata->fixbinlocks, TRUE, DEFAULT_FIXBINLOCKS, NULL, NULL) );
    return SCIP_OKAY;
 }

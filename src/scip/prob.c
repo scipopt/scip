@@ -563,7 +563,7 @@ SCIP_RETCODE SCIPprobTransform(
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
     * cutoff bound if primal solution is already known 
     */
-   SCIP_CALL( SCIPprobCheckObjIntegral(*target, blkmem, set, stat, primal, tree, lp, eventqueue) );
+   SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, lp, eventqueue) );
 
    return SCIP_OKAY;
 }
@@ -1412,7 +1412,8 @@ void SCIPprobSetObjIntegral(
  *  integral objective value and also updates the cutoff bound if primal solution is already known
  */
 SCIP_RETCODE SCIPprobCheckObjIntegral(
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -1425,10 +1426,11 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_Real obj;
    int v;
 
-   assert(prob != NULL);
+   assert(transprob != NULL);
+   assert(origprob != NULL);
 
    /* if we know already, that the objective value is integral, nothing has to be done */
-   if( prob->objisintegral )
+   if( transprob->objisintegral )
       return SCIP_OKAY;
 
    /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
@@ -1436,14 +1438,14 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
       return SCIP_OKAY;
 
    /* if the objective value offset is fractional, the value itself is possibly fractional */
-   if( !SCIPsetIsIntegral(set, prob->objoffset) )
+   if( !SCIPsetIsIntegral(set, transprob->objoffset) )
       return SCIP_OKAY;
 
    /* scan through the variables */
-   for( v = 0; v < prob->nvars; ++v )
+   for( v = 0; v < transprob->nvars; ++v )
    {
       /* get objective value of variable */
-      obj = SCIPvarGetObj(prob->vars[v]);
+      obj = SCIPvarGetObj(transprob->vars[v]);
 
       /* check, if objective value is non-zero */
       if( !SCIPsetIsZero(set, obj) )
@@ -1453,18 +1455,18 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
             break;
 
          /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
-         if( SCIPvarGetType(prob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarGetType(transprob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
             break;
       }
    }
 
    /* objective value is integral, if the variable loop scanned all variables */
-   if( v == prob->nvars )
+   if( v == transprob->nvars )
    {
-      prob->objisintegral = TRUE;
+      transprob->objisintegral = TRUE;
 
       /* update upper bound and cutoff bound in primal data structure due to new internality information */
-      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, prob, tree, lp) );
+      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, lp) );
    }
 
    return SCIP_OKAY;
@@ -1516,7 +1518,8 @@ void SCIPprobUpdateDualbound(
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */
 SCIP_RETCODE SCIPprobScaleObj(
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -1529,28 +1532,28 @@ SCIP_RETCODE SCIPprobScaleObj(
    int v;
    int nints;
 
-   assert(prob != NULL);
+   assert(transprob != NULL);
    assert(set != NULL);
 
    /* do not change objective if there are pricers involved */
    if( set->nactivepricers != 0 )
       return SCIP_OKAY;
 
-   nints = prob->nvars - prob->ncontvars;
+   nints = transprob->nvars - transprob->ncontvars;
 
    /* scan through the continuous variables */
-   for( v = nints; v < prob->nvars; ++v )
+   for( v = nints; v < transprob->nvars; ++v )
    {
       SCIP_Real obj;
 
       /* get objective value of variable; it it is non-zero, no scaling can be applied */
-      obj = SCIPvarGetObj(prob->vars[v]);
+      obj = SCIPvarGetObj(transprob->vars[v]);
       if( !SCIPsetIsZero(set, obj) )
          break;
    }
 
    /* only continue if all continuous variables have obj = 0 */
-   if( v == prob->nvars )
+   if( v == transprob->nvars )
    {
       SCIP_Real* objvals;
       SCIP_Real intscalar;
@@ -1561,7 +1564,7 @@ SCIP_RETCODE SCIPprobScaleObj(
 
       /* get objective values of integer variables */
       for( v = 0; v < nints; ++v )
-         objvals[v] = SCIPvarGetObj(prob->vars[v]);
+         objvals[v] = SCIPvarGetObj(transprob->vars[v]);
 
       /* calculate integral scalar */
       SCIP_CALL( SCIPcalcIntegralScalar(objvals, nints, -SCIPsetEpsilon(set), +SCIPsetEpsilon(set), OBJSCALE_MAXDNOM, OBJSCALE_MAXSCALE,
@@ -1603,7 +1606,7 @@ SCIP_RETCODE SCIPprobScaleObj(
                   SCIP_Real newobj;
                   
                   /* check if new obj is really integral */
-                  newobj = intscalar * SCIPvarGetObj(prob->vars[v]);
+                  newobj = intscalar * SCIPvarGetObj(transprob->vars[v]);
                   if( !SCIPsetIsFeasIntegral(set, newobj) )
                      break;
                   objvals[v] = SCIPsetFeasFloor(set, newobj);
@@ -1614,16 +1617,16 @@ SCIP_RETCODE SCIPprobScaleObj(
                {
                   for( v = 0; v < nints; ++v )
                   {
-                     SCIPdebugMessage(" -> var <%s>: newobj = %.6f\n", SCIPvarGetName(prob->vars[v]), objvals[v]);
-                     SCIP_CALL( SCIPvarChgObj(prob->vars[v], blkmem, set, prob, primal, lp, eventqueue, objvals[v]) );
+                     SCIPdebugMessage(" -> var <%s>: newobj = %.6f\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
+                     SCIP_CALL( SCIPvarChgObj(transprob->vars[v], blkmem, set, transprob, primal, lp, eventqueue, objvals[v]) );
                   }
-                  prob->objoffset *= intscalar;
-                  prob->objscale /= intscalar;
-                  prob->objisintegral = TRUE;
-                  SCIPdebugMessage("integral objective scalar: objscale=%g\n", prob->objscale);
+                  transprob->objoffset *= intscalar;
+                  transprob->objscale /= intscalar;
+                  transprob->objisintegral = TRUE;
+                  SCIPdebugMessage("integral objective scalar: objscale=%g\n", transprob->objscale);
 
                   /* update upperbound and cutoffbound in primal data structure */
-                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, prob, tree, lp) );
+                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, lp) );
                }
             }
          }
@@ -1931,40 +1934,46 @@ int SCIPprobGetNObjVars(
 
 /** returns the external value of the given internal objective value */
 SCIP_Real SCIPprobExternObjval(
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             objval              /**< internal objective value */
    )
 {
-   assert(prob != NULL);
-   assert(prob->transformed);
-   assert(prob->objscale > 0.0);
+   assert(set != NULL);
+   assert(origprob != NULL);
+   assert(transprob != NULL);
+   assert(transprob->transformed);
+   assert(transprob->objscale > 0.0);
 
    if( SCIPsetIsInfinity(set, objval) )
-      return (SCIP_Real)prob->objsense * SCIPsetInfinity(set);
+      return (SCIP_Real)transprob->objsense * SCIPsetInfinity(set);
    else if( SCIPsetIsInfinity(set, -objval) )
-      return -(SCIP_Real)prob->objsense * SCIPsetInfinity(set);
+      return -(SCIP_Real)transprob->objsense * SCIPsetInfinity(set);
    else
-      return (SCIP_Real)prob->objsense * prob->objscale * (objval + prob->objoffset);
+      return (SCIP_Real)transprob->objsense * transprob->objscale * (objval + transprob->objoffset) + origprob->objoffset;
 }
 
 /** returns the internal value of the given external objective value */
 SCIP_Real SCIPprobInternObjval(
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             objval              /**< external objective value */
    )
 {
-   assert(prob != NULL);
-   assert(prob->transformed);
-   assert(prob->objscale > 0.0);
+   assert(set != NULL);
+   assert(origprob != NULL);
+   assert(transprob != NULL);
+   assert(transprob->transformed);
+   assert(transprob->objscale > 0.0);
 
    if( SCIPsetIsInfinity(set, objval) )
-      return (SCIP_Real)prob->objsense * SCIPsetInfinity(set);
+      return (SCIP_Real)transprob->objsense * SCIPsetInfinity(set);
    else if( SCIPsetIsInfinity(set, -objval) )
-      return -(SCIP_Real)prob->objsense * SCIPsetInfinity(set);
+      return -(SCIP_Real)transprob->objsense * SCIPsetInfinity(set);
    else
-      return (SCIP_Real)prob->objsense * objval/prob->objscale - prob->objoffset;
+      return (SCIP_Real)transprob->objsense * (objval - origprob->objoffset)/transprob->objscale - transprob->objoffset;
 }
 
 /** returns variable of the problem with given name */
@@ -2044,6 +2053,7 @@ void SCIPprobPrintStatistics(
       SCIPmessageFPrintInfo(messagehdlr, file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
 }
 
+#ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
@@ -2063,6 +2073,7 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNImplVars
 #undef SCIPprobGetNContVars
 #undef SCIPprobGetVars
+#undef SCIPprobGetObjoffset
 
 /** is the problem data transformed */
 SCIP_Bool SCIPprobIsTransformed(
@@ -2182,3 +2193,14 @@ SCIP_VAR** SCIPprobGetVars(
    assert(prob != NULL);
    return prob->vars;
 }
+
+/** gets the objective offset */
+SCIP_Real SCIPprobGetObjoffset(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->objoffset;
+}
+
+#endif

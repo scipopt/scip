@@ -2102,6 +2102,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->storedpropconss = NULL;
    (*conshdlr)->storedpropconsssize = 0;
    (*conshdlr)->storednmarkedpropconss = 0;
+   (*conshdlr)->storedpropdomchgcount = 0;
 
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -2109,6 +2110,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->enfolptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->enfopstime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*conshdlr)->sbproptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->checktime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->resproptime, SCIP_CLOCKTYPE_DEFAULT) );
 
@@ -2230,13 +2232,14 @@ SCIP_RETCODE SCIPconshdlrFree(
       SCIP_CALL( (*conshdlr)->consfree(set->scip, *conshdlr) );
    }
 
-   SCIPclockFree(&(*conshdlr)->presoltime);
-   SCIPclockFree(&(*conshdlr)->sepatime);
-   SCIPclockFree(&(*conshdlr)->enfolptime);
-   SCIPclockFree(&(*conshdlr)->enfopstime);
-   SCIPclockFree(&(*conshdlr)->proptime);
-   SCIPclockFree(&(*conshdlr)->checktime);
    SCIPclockFree(&(*conshdlr)->resproptime);
+   SCIPclockFree(&(*conshdlr)->checktime);
+   SCIPclockFree(&(*conshdlr)->sbproptime);
+   SCIPclockFree(&(*conshdlr)->proptime);
+   SCIPclockFree(&(*conshdlr)->enfopstime);
+   SCIPclockFree(&(*conshdlr)->enfolptime);
+   SCIPclockFree(&(*conshdlr)->sepatime);
+   SCIPclockFree(&(*conshdlr)->presoltime);
    SCIPclockFree(&(*conshdlr)->setuptime);
 
    BMSfreeMemoryArray(&(*conshdlr)->name);
@@ -2279,6 +2282,7 @@ SCIP_RETCODE SCIPconshdlrInit(
       SCIPclockReset(conshdlr->enfolptime);
       SCIPclockReset(conshdlr->enfopstime);
       SCIPclockReset(conshdlr->proptime);
+      SCIPclockReset(conshdlr->sbproptime);
       SCIPclockReset(conshdlr->checktime);
       SCIPclockReset(conshdlr->resproptime);
 
@@ -3281,9 +3285,6 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          /* perform the cached constraint updates */
          SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
-         /* remember the result of the enforcement call */
-         conshdlr->lastenfopsresult = *result;
-
          /* update statistics */
          if( *result != SCIP_DIDNOTRUN )
             conshdlr->nenfopscalls++;
@@ -3291,10 +3292,19 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          {
             SCIPerrorMessage("enforcing method of constraint handler <%s> for pseudo solutions was skipped, even though the solution was not objective-infeasible\n", 
                conshdlr->name);
+            conshdlr->lastenfopsresult = *result;
+
             return SCIP_INVALIDRESULT;
          }
+         /* A constraint handler might return SCIP_DIDNOTRUN and not check any constraints in case objinfeasible was
+          * TRUE; we change the result pointer to SCIP_INFEASIBLE in this case.
+          */
+         else
+            *result = SCIP_INFEASIBLE;
+
          if( *result == SCIP_CUTOFF )
             conshdlr->ncutoffs++;
+
          if( *result != SCIP_BRANCHED )
          {
             assert(tree->nchildren == 0);
@@ -3306,6 +3316,9 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          }
          else
             conshdlr->nchildren += tree->nchildren;
+
+         /* remember the result of the enforcement call */
+         conshdlr->lastenfopsresult = *result;
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -3406,6 +3419,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
    int                   depth,              /**< depth of current node */
    SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
    SCIP_Bool             execdelayed,        /**< execute propagation method even if it is marked to be delayed */
+   SCIP_Bool             instrongbranching,  /**< are we currently doing strong branching? */
    SCIP_PROPTIMING       proptiming,         /**< current point in the node solving process */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -3497,14 +3511,20 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             conshdlrDelayUpdates(conshdlr);
 
             /* start timing */
-            SCIPclockStart(conshdlr->proptime, set);
+            if( instrongbranching )
+               SCIPclockStart(conshdlr->sbproptime, set);
+            else
+               SCIPclockStart(conshdlr->proptime, set);
 
             /* call external method */
             SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, nmarkedpropconss, proptiming, result) );
             SCIPdebugMessage(" -> propagation returned result <%d>\n", *result);
 
             /* stop timing */
-            SCIPclockStop(conshdlr->proptime, set);
+            if( instrongbranching )
+               SCIPclockStop(conshdlr->sbproptime, set);
+            else
+               SCIPclockStop(conshdlr->proptime, set);
 
             /* perform the cached constraint updates */
             SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -3696,6 +3716,8 @@ SCIP_RETCODE SCIPconshdlrPresolve(
          SCIPdebugMessage("presolving method of constraint handler <%s> was delayed\n", conshdlr->name);
          *result = SCIP_DELAYED;
       }
+
+      SCIPdebugMessage("after presolving %d constraints left of handler <%s>\n", conshdlr->nactiveconss, conshdlr->name);
 
       /* remember whether presolving method was delayed */
       conshdlr->presolwasdelayed = (*result == SCIP_DELAYED);
@@ -4243,6 +4265,16 @@ SCIP_Real SCIPconshdlrGetPropTime(
    assert(conshdlr != NULL);
 
    return SCIPclockGetTime(conshdlr->proptime);
+}
+
+/** gets time in seconds used for propagation in this constraint handler during strong branching */
+SCIP_Real SCIPconshdlrGetStrongBranchPropTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPclockGetTime(conshdlr->sbproptime);
 }
 
 /** gets time in seconds used for feasibility checking in this constraint handler */
@@ -5333,11 +5365,12 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->propconsspos = -1;
    (*cons)->activedepth = -2;
    (*cons)->validdepth = (local ? -1 : 0);
-   (*cons)->nuses = 0;
    (*cons)->age = 0.0;
    (*cons)->nlockspos = 0;
    (*cons)->nlocksneg = 0;
    (*cons)->markedprop = FALSE;
+   (*cons)->nuses = 0;
+   (*cons)->nupgradelocks = 0;
    (*cons)->initial = initial;
    (*cons)->separate = separate;
    (*cons)->enforce = enforce;
@@ -5906,6 +5939,9 @@ SCIP_RETCODE SCIPconsTransform(
       /* link original and transformed constraint */
       origcons->transorigcons = *transcons;
       (*transcons)->transorigcons = origcons;
+
+      /* copy the number of upgradelocks */
+      (*transcons)->nupgradelocks = origcons->nupgradelocks;
    }
    assert(*transcons != NULL);
 
@@ -7195,7 +7231,9 @@ SCIP_RETCODE SCIPconsActive(
 
    /* call external method */
    if( conshdlr->consactive != NULL )
-   SCIP_CALL( conshdlr->consactive(set->scip, conshdlr, cons) );
+   {
+      SCIP_CALL( conshdlr->consactive(set->scip, conshdlr, cons) );
+   }
 
    return SCIP_OKAY;
 }
@@ -7217,7 +7255,9 @@ SCIP_RETCODE SCIPconsDeactive(
 
    /* call external method */
    if( conshdlr->consdeactive != NULL )
-   SCIP_CALL( conshdlr->consdeactive(set->scip, conshdlr, cons) );
+   {
+      SCIP_CALL( conshdlr->consdeactive(set->scip, conshdlr, cons) );
+   }
 
    return SCIP_OKAY;
 }
@@ -7294,6 +7334,7 @@ SCIP_RETCODE SCIPconshdlrsStorePropagationStatus(
          BMScopyMemoryArray(conshdlr->storedpropconss, conshdlr->propconss, conshdlr->nmarkedpropconss);
 
          conshdlr->storednmarkedpropconss = conshdlr->nmarkedpropconss;
+         conshdlr->storedpropdomchgcount = conshdlr->lastpropdomchgcount;
 
          for( v = conshdlr->storednmarkedpropconss - 1; v >= 0; --v )
          {
@@ -7334,8 +7375,6 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #endif
          int v;
 
-         assert(conshdlr->storednmarkedpropconss <= conshdlr->npropconss);
-
          /* mark all previously marked constraint, which were marked before probing */
          for( v = conshdlr->storednmarkedpropconss - 1; v >= 0; --v )
          {
@@ -7352,8 +7391,10 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #endif
             SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
          }
+         assert(conshdlr->storednmarkedpropconss - ndisabled <= conshdlr->npropconss);
          assert(conshdlr->nmarkedpropconss + ndisabled >= conshdlr->storednmarkedpropconss || (conshdlrAreUpdatesDelayed(conshdlr) && conshdlr->nupdateconss + ndisabled >= conshdlr->storednmarkedpropconss));
 
+         conshdlr->lastpropdomchgcount = conshdlr->storedpropdomchgcount;
          conshdlr->storednmarkedpropconss = 0;
       }
    }
@@ -7406,6 +7447,7 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #undef SCIPconsGetNLocksPos
 #undef SCIPconsGetNLocksNeg
 #undef SCIPconsIsAdded
+#undef SCIPconsGetNUpgradeLocks
 
 /** returns the name of the constraint */
 const char* SCIPconsGetName(
@@ -7764,4 +7806,26 @@ SCIP_Bool SCIPconsIsAdded(
    assert(cons != NULL);
 
    return (cons->addarraypos >= 0);
+}
+
+/** adds locks to (dis-)allow upgrading of constraint */
+void SCIPconsAddUpgradeLocks(
+   SCIP_CONS*            cons,               /**< constraint to add locks */
+   int                   nlocks              /**< number of locks to add */
+   )
+{
+   assert(cons != NULL);
+
+   assert(cons->nupgradelocks < (1 << 29) - nlocks); /*lint !e574*/
+   cons->nupgradelocks += nlocks;
+}
+
+/** gets number of locks against upgrading the constraint, 0 means this constraint can be upgraded */
+int SCIPconsGetNUpgradeLocks(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->nupgradelocks;
 }

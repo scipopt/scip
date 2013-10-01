@@ -31,6 +31,7 @@
 
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/pub_misc.h"
 
@@ -742,7 +743,7 @@ void consdataChgWeight(
 
    if( SCIPvarGetLbLocal(consdata->vars[item]) > 0.5 )
       consdata->onesweightsum += (newweight - oldweight);
-      
+
    if( consdata->eventdatas != NULL )
    {
       assert(consdata->eventdatas[item] != NULL);
@@ -850,7 +851,9 @@ SCIP_RETCODE checkCons(
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
       SCIP_Real sum;
-      int i;
+      SCIP_Longint integralsum;
+      SCIP_Bool ishuge;
+      int v;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
        * enforcement
@@ -861,12 +864,34 @@ SCIP_RETCODE checkCons(
       }
 
       sum = 0.0;
-      for( i = 0; i < consdata->nvars; ++i )
+      integralsum = 0;
+      /* we perform an more exact comparison if the capacity does not exceed the huge value */
+      if( SCIPisHugeValue(scip, (SCIP_Real) consdata->capacity) )
       {
-         sum += consdata->weights[i] * SCIPgetSolVal(scip, sol, consdata->vars[i]);
+         ishuge = TRUE;
+
+         /* sum over all weight times the corresponding solution value */
+         for( v = consdata->nvars - 1; v >= 0; --v )
+         {
+            assert(SCIPvarIsBinary(consdata->vars[v]));
+            sum += consdata->weights[v] * SCIPgetSolVal(scip, sol, consdata->vars[v]);
+         }
+      }
+      else
+      {
+         ishuge = FALSE;
+
+         /* sum over all weight for which the variable has a solution value of 1 in feastol */
+         for( v = consdata->nvars - 1; v >= 0; --v )
+         {
+            assert(SCIPvarIsBinary(consdata->vars[v]));
+
+            if( SCIPgetSolVal(scip, sol, consdata->vars[v]) > 0.5 )
+               integralsum += consdata->weights[v];
+         }
       }
 
-      if( SCIPisFeasGT(scip, sum, (SCIP_Real)consdata->capacity) )
+      if( (!ishuge && integralsum > consdata->capacity) || (ishuge && SCIPisFeasGT(scip, sum, (SCIP_Real)consdata->capacity)) )
       {
          *violated = TRUE;
 
@@ -878,14 +903,15 @@ SCIP_RETCODE checkCons(
 
          if( printreason )
          {
+            SCIP_Real viol = ishuge ? sum : (SCIP_Real)integralsum;
+
+            viol -= consdata->capacity;
+            assert(viol > 0);
+
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 
-            /* complete the activity computation to discover the violation */
-            for( ; i < consdata->nvars; ++i )
-            {
-               sum += consdata->weights[i] * SCIPgetSolVal(scip, sol, consdata->vars[i]);
-            }
-            SCIPinfoMessage(scip, NULL, ";\nviolation: the capacity is violated by %.15g\n", sum - consdata->capacity);
+            SCIPinfoMessage(scip, NULL, ";\n");
+            SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", viol);
          }
       }
    }
@@ -4167,7 +4193,7 @@ SCIP_RETCODE sequentialUpAndDownLiftingGUB(
          }
          ngubconsGNC1--;
 
-         /** computes minweights table by combining unfished and fished tables */
+         /* computes minweights table by combining unfished and fished tables */
          computeMinweightsGUB(minweights, finished, unfinished, minweightslen);
          assert(minweights[0] == 0);
       }
@@ -4735,7 +4761,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
    int                   nnonmincovervars,   /**< number of nonmincover variables */
    SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
    SCIP_GUBSET*          gubset,             /**< GUB set data structure, NULL if no GUB information should be used */
-   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
@@ -6258,7 +6284,7 @@ SCIP_RETCODE delCoefPos(
    if( SCIPconsIsTransformed(cons) )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
-      
+
       conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
       assert(conshdlrdata != NULL);
       SCIP_CALL( SCIPdropVarEvent(scip, var,
@@ -6286,7 +6312,7 @@ SCIP_RETCODE delCoefPos(
 
    consdata->propagated = FALSE;
    consdata->presolved = FALSE;
-   consdata->sorted = FALSE;
+   consdata->sorted = (consdata->sorted && pos == consdata->nvars - 1);
 
    /* try to use old clique partitions */
    if( consdata->cliquepartitioned )
@@ -6297,10 +6323,10 @@ SCIP_RETCODE delCoefPos(
       if( consdata->cliquepartition[consdata->nvars - 1] != consdata->nvars - 1 )
       {
          int oldcliqenum;
-         
+
          oldcliqenum = consdata->cliquepartition[pos];
          consdata->cliquepartition[pos] = consdata->cliquepartition[consdata->nvars-1];
-         
+
          /* the following if and else cases assure that we have increasing clique numbers */
          if( consdata->cliquepartition[pos] > pos )
             consdata->cliquepartitioned = FALSE; /* recalculate the clique partition after a coefficient was removed */
@@ -6361,10 +6387,10 @@ SCIP_RETCODE delCoefPos(
       if( consdata->negcliquepartition[consdata->nvars-1] != consdata->nvars - 1 )
       {
          int oldcliqenum;
-         
+
          oldcliqenum = consdata->negcliquepartition[pos];
          consdata->negcliquepartition[pos] = consdata->negcliquepartition[consdata->nvars-1];
-         
+
          /* the following if and else cases assure that we have increasing clique numbers */
          if( consdata->negcliquepartition[pos] > pos )
             consdata->negcliquepartitioned = FALSE; /* recalculate the clique partition after a coefficient was removed */
@@ -6536,10 +6562,10 @@ SCIP_RETCODE mergeMultiples(
       SCIP_VAR* var2;
       SCIP_Bool negated1;
       SCIP_Bool negated2;
-      
+
       negated1 = FALSE;
       negated2 = FALSE;
-      
+
       var1 = consdata->vars[v];
       assert(SCIPvarIsBinary(var1));
       assert(SCIPvarIsActive(var1) || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED);
@@ -6549,7 +6575,7 @@ SCIP_RETCODE mergeMultiples(
          negated1 = TRUE;
       }
       assert(var1 != NULL);
-      
+
       var2 = consdata->vars[prev];
       assert(SCIPvarIsBinary(var2));
       assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED);
@@ -6559,7 +6585,7 @@ SCIP_RETCODE mergeMultiples(
          negated2 = TRUE;
       }
       assert(var2 != NULL);
-      
+
       if( var1 == var2 )
       {
          /* both variables are either active or negated */
@@ -7100,7 +7126,7 @@ SCIP_RETCODE propagateCons(
    {
       zerosweightsum = 0;
       nvars = consdata->nvars;
-      
+
       minweightsum = 0;
       localminweightsum = 0;
 
@@ -7476,7 +7502,72 @@ SCIP_RETCODE propagateCons(
    return SCIP_OKAY;
 }
 
-/* delete redundant variables
+/** all but one variable fit into the knapsack constraint, so we can upgrade this constraint to an logicor constraint
+ *  containing all negated variables of this knapsack constraint
+ */
+static
+SCIP_RETCODE upgradeCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   int*                  ndelconss,          /**< pointer to store the amount of deleted constraints */
+   int*                  naddconss           /**< pointer to count number of added constraints */
+   )
+{
+   SCIP_CONS* newcons;
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(ndelconss != NULL);
+   assert(naddconss != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->nvars > 1);
+
+   /* if the knapsack constraint consists only of two variables, we can upgrade it to a set-packing constraint */
+   if( consdata->nvars == 2 )
+   {
+      SCIPdebugMessage("upgrading knapsack constraint <%s> to a set-packing constraint", SCIPconsGetName(cons));
+
+      SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, SCIPconsGetName(cons), consdata->nvars, consdata->vars,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+            SCIPconsIsStickingAtNode(cons)) );
+   }
+   /* if the knapsack constraint consists of at least three variables, we can upgrade it to a logicor constraint
+    * containing all negated variables of the knapsack
+    */
+   else
+   {
+      SCIP_VAR** consvars;
+
+      SCIPdebugMessage("upgrading knapsack constraint <%s> to a logicor constraint", SCIPconsGetName(cons));
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, consdata->nvars) );
+      SCIP_CALL( SCIPgetNegatedVars(scip, consdata->nvars, consdata->vars, consvars) );
+
+      SCIP_CALL( SCIPcreateConsLogicor(scip, &newcons, SCIPconsGetName(cons), consdata->nvars, consvars,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+            SCIPconsIsStickingAtNode(cons)) );
+
+      SCIPfreeBufferArray(scip, &consvars);
+   }
+
+   SCIP_CALL( SCIPaddCons(scip, newcons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+   ++(*naddconss);
+
+   SCIP_CALL( SCIPdelCons(scip, cons) );
+   ++(*ndelconss);
+
+   return SCIP_OKAY;
+}
+
+/** delete redundant variables
  *
  * i.e. 5x1 + 5x2 + 5x3 + 2x4 + 1x5 <= 13   =>   x4, x5 always fits into the knapsack, so we can delete them
  *
@@ -7515,6 +7606,9 @@ SCIP_RETCODE deleteRedundantVars(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(0 < frontsum && frontsum < consdata->weightsum);
+   assert(0 < splitpos && splitpos < consdata->nvars);
+   assert(consdata->sorted);
 
    conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
    assert(conshdlrdata != NULL);
@@ -7525,55 +7619,63 @@ SCIP_RETCODE deleteRedundantVars(
    capacity = consdata->capacity;
 
    /* if there are no variables rear to splitpos, the constraint has no redundant variables */
-   if( consdata->nvars - 1 >= splitpos )
+   if( consdata->nvars - 1 == splitpos )
       return SCIP_OKAY;
+
+   assert(frontsum + weights[splitpos] > capacity);
 
    /* detect redundant variables */
    if( consdata->weightsum - weights[splitpos] <= capacity )
    {
-      /* all rear items are redundant, if the frontsum of them is smaller than the weight before, so delete them and update the capacity */
-      if( consdata->weightsum - frontsum < 2 * weights[splitpos] )
+      /* all rear items are redundant, because leaving one item in front and incl. of splitpos out the rear itmes always
+       * fit
+       */
+      SCIPdebugMessage("Found redundant variables in constraint <%s>.\n", SCIPconsGetName(cons));
+
+      /* delete items and update capacity */
+      for( w = nvars - 1; w > splitpos; --w )
       {
-         SCIPdebugMessage("Found redundant variables in constraint <%s>.\n", SCIPconsGetName(cons));
-
-         /* delete items and update capacity */
-         for( w = nvars - 1; w > splitpos; --w )
-         {
-            consdata->capacity -= weights[w];
-            SCIP_CALL( delCoefPos(scip, cons, w) );
-            ++(*nchgcoefs);
-            ++(*nchgsides);
-         }
-         assert(w == splitpos);
-
-         weights = consdata->weights;
-
-         /* division by greatest common divisor */
-         gcd = weights[w];
-         for( ; w >= 0 && gcd > 1; --w )
-         {
-            gcd = SCIPcalcGreComDiv(gcd, weights[w]);
-         }
-
-         /* normalize if possible */
-         if( gcd > 1 )
-         {
-            for( w = splitpos; w >= 0; --w )
-            {
-               consdataChgWeight(consdata, w, weights[w]/gcd);
-            }
-            (*nchgcoefs) += nvars;
-
-            consdata->capacity /= gcd;
-            ++(*nchgsides);
-         }
+         consdata->capacity -= weights[w];
+         SCIP_CALL( delCoefPos(scip, cons, w) );
       }
+      assert(w == splitpos);
+
+      ++(*nchgsides);
+      *nchgcoefs += (nvars - splitpos);
+
+      /* division by greatest common divisor */
+      gcd = weights[w];
+      for( ; w >= 0 && gcd > 1; --w )
+      {
+         gcd = SCIPcalcGreComDiv(gcd, weights[w]);
+      }
+
+      /* normalize if possible */
+      if( gcd > 1 )
+      {
+         for( w = splitpos; w >= 0; --w )
+         {
+            consdataChgWeight(consdata, w, weights[w]/gcd);
+         }
+         (*nchgcoefs) += nvars;
+
+         consdata->capacity /= gcd;
+         ++(*nchgsides);
+      }
+
+      /* weight should be still sorted, because the reduction preserves this */
+#ifndef NDEBUG
+      for( w = consdata->nvars - 1; w > 0; --w )
+         assert(weights[w] <= weights[w - 1]);
+#endif
+
+      consdata->sorted = TRUE;
    }
    /* rear items can only be redundant, when the sum is smaller to the weight at splitpos and all rear items would
     * always fit into the knapsack, therefor the item directly after splitpos needs to be smaller than the one at
     * splitpos and needs to fit into the knapsack
     */
-   else if( conshdlrdata->disaggregation && weights[splitpos] > weights[splitpos + 1] && frontsum + weights[splitpos + 1] <= capacity )
+   else if( conshdlrdata->disaggregation && frontsum + weights[splitpos + 1] <= capacity )
    {
       int* clqpart;
       int nclq;
@@ -7589,34 +7691,33 @@ SCIP_RETCODE deleteRedundantVars(
       /* check if we found at least one clique */
       if( nclq < len )
       {
-         SCIP_Bool* used;
          SCIP_Longint maxactduetoclq;
+         int cliquenum;
 
          maxactduetoclq = 0;
-
-         /* allocate temporary memory */
-         SCIP_CALL( SCIPallocBufferArray(scip, &used, len) );
-         BMSclearMemoryArray(used, len);
+         cliquenum = 0;
 
          /* calculate maximum activity due to cliques */
          for( w = 0; w < len; ++w )
          {
-            assert(clqpart[w] >= 0 && clqpart[w] < len - 1);
-            if( !used[clqpart[w]] )
+            assert(clqpart[w] >= 0 && clqpart[w] <= w);
+            if( clqpart[w] == cliquenum )
             {
                maxactduetoclq += weights[w + splitpos + 1];
-               used[clqpart[w]] = TRUE;
+               ++cliquenum;
             }
          }
 
          /* all rear items are redundant due to clique information, if maxactduetoclq is smaller than the weight before,
           * so delete them and create for all clique the corresponding clique constraints and update the capacity
           */
-         if( maxactduetoclq < weights[splitpos] && frontsum + maxactduetoclq <= capacity )
+         if( frontsum + maxactduetoclq <= capacity )
          {
             SCIP_VAR** clqvars;
             int nclqvars;
             int c;
+
+            assert(maxactduetoclq < weights[splitpos]);
 
             SCIPdebugMessage("Found redundant variables in constraint <%s> due to clique information.\n", SCIPconsGetName(cons));
 
@@ -7662,6 +7763,7 @@ SCIP_RETCODE deleteRedundantVars(
                ++(*nchgcoefs);
             }
             consdata->capacity -= maxactduetoclq;
+            assert(frontsum <= consdata->capacity);
             ++(*nchgsides);
 
             assert(w == splitpos);
@@ -7691,10 +7793,14 @@ SCIP_RETCODE deleteRedundantVars(
 
             /* free temporary memory */
             SCIPfreeBufferArray(scip, &clqvars);
-         }
 
-         /* free temporary memory */
-         SCIPfreeBufferArray(scip, &used);
+            /* weight should be still sorted, because the reduction preserves this */
+#ifndef NDEBUG
+            for( w = consdata->nvars - 1; w > 0; --w )
+               assert(weights[w] <= weights[w - 1]);
+#endif
+            consdata->sorted = TRUE;
+         }
       }
 
       /* free temporary memory */
@@ -7704,7 +7810,7 @@ SCIP_RETCODE deleteRedundantVars(
    return SCIP_OKAY;
 }
 
-/* detect redundant variables which always fits into the knapsack 
+/* detect redundant variables which always fits into the knapsack
  *
  * i.e. 5x1 + 5x2 + 5x3 + 2x4 + 1x5 <= 13   =>   x4, x5 always fits into the knapsack, so we can delete them
  *
@@ -7718,7 +7824,6 @@ static
 SCIP_RETCODE detectRedundantVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
-   int*                  nfixedvars,         /**< pointer to store the amount of fixed variables */
    int*                  ndelconss,          /**< pointer to store the amount of deleted constraints */
    int*                  nchgcoefs,          /**< pointer to store the amount of changed coefficients */
    int*                  nchgsides,          /**< pointer to store the amount of changed sides */
@@ -7730,90 +7835,42 @@ SCIP_RETCODE detectRedundantVars(
    SCIP_Longint* weights;
    SCIP_Longint capacity;
    SCIP_Longint sum;
+   int noldchgcoefs;
    int nvars;
    int v;
    int w;
-   SCIP_Bool infeasible;
-   int noldchgcoefs;
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(nfixedvars != NULL);
    assert(ndelconss != NULL);
    assert(nchgcoefs != NULL);
    assert(nchgsides != NULL);
    assert(naddconss != NULL);
 
    consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
-
-   /* no variables left, then delete constraint */
-   if( consdata->nvars == 0 )
-   {
-      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-      ++(*ndelconss);
-      return SCIP_OKAY;
-   }
-
-   /* sort items */
-   sortItems(consdata);
+   assert(consdata != NULL);
+   assert(consdata->nvars >= 2);
+   assert(consdata->weightsum > consdata->capacity);
 
    noldchgcoefs = *nchgcoefs;
-
    vars = consdata->vars;
    weights = consdata->weights;
    nvars = consdata->nvars;
    capacity = consdata->capacity;
-
-   /* check for weights bigger than the capacity */
-   for( v = 0; v < nvars; ++v )
-      if( weights[v] > capacity )
-      {
-         SCIP_CALL( SCIPtightenVarUb(scip, vars[v], 0.0, FALSE, &infeasible, NULL) );
-         assert(!infeasible);
-         ++(*nfixedvars);
-      }
-      else
-         break;
-
-   /* if we fixed at least one variable we need to delete them from the constraint */
-   if( v > 0 )
-   {
-      if( v == nvars )
-      {
-         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-         ++(*ndelconss);
-         return SCIP_OKAY;
-      }
-
-      /* delete all position from back to front */
-      for( --v; v >= 0; --v )
-      {
-         SCIP_CALL( delCoefPos(scip, cons, v) );
-         ++(*nchgcoefs);
-      }
-
-      /* sort items again because of deletion */
-      sortItems(consdata);
-
-      vars = consdata->vars;
-      weights = consdata->weights;
-      nvars = consdata->nvars;
-   }
-   assert(consdata->sorted);
-   assert(weights[0] <= capacity);
-
    sum = 0;
 
    /* search for maximal fitting items */
    for( v = 0; v < nvars && sum + weights[v] <= capacity; ++v )
       sum += weights[v];
 
-   if( v == nvars )
+   assert(v < nvars);
+
+   /* all but one variable fit into the knapsack, so we can upgrade this constraint to a logicor */
+   if( v == nvars - 1 )
    {
-      assert(consdata->capacity >= 0);
-      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-      ++(*ndelconss);
+      SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
+      assert(SCIPconsIsDeleted(cons));
+
       return SCIP_OKAY;
    }
 
@@ -7821,6 +7878,16 @@ SCIP_RETCODE detectRedundantVars(
    {
       /* try to delete variables */
       SCIP_CALL( deleteRedundantVars(scip, cons, sum, v, nchgcoefs, nchgsides, naddconss) );
+      assert(consdata->nvars > 1);
+
+      /* all but one variable fit into the knapsack, so we can upgrade this constraint to a logicor */
+      if( v == consdata->nvars - 1 )
+      {
+         SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
+         assert(SCIPconsIsDeleted(cons));
+      }
+
+      return SCIP_OKAY;
    }
 
    /* if we already found some redundant variables, stop here */
@@ -7839,10 +7906,10 @@ SCIP_RETCODE detectRedundantVars(
    if( consdata->cliquepartition[v] < v )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
-      SCIP_Bool* used;
       SCIP_Longint sumfront;
       SCIP_Longint maxactduetoclqfront;
       int* clqpart;
+      int cliquenum;
 
       conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
       assert(conshdlrdata != NULL);
@@ -7850,22 +7917,19 @@ SCIP_RETCODE detectRedundantVars(
       sumfront = 0;
       maxactduetoclqfront = 0;
 
-      /* allocate temporary memory */
-      SCIP_CALL( SCIPallocBufferArray(scip, &used, nvars) );
-      BMSclearMemoryArray(used, nvars);
-
       clqpart = consdata->cliquepartition;
+      cliquenum = 0;
 
       /* calculate maximal activity due to cliques */
       for( w = 0; w < nvars; ++w )
       {
-         assert(clqpart[w] >= 0 && clqpart[w] < nvars - 1);
-         if( !used[clqpart[w]] )
+         assert(clqpart[w] >= 0 && clqpart[w] <= w);
+         if( clqpart[w] == cliquenum )
          {
             if( maxactduetoclqfront + weights[w] <= capacity )
             {
                maxactduetoclqfront += weights[w];
-               used[clqpart[w]] = TRUE;
+               ++cliquenum;
             }
             else
                break;
@@ -7930,7 +7994,6 @@ SCIP_RETCODE detectRedundantVars(
          ++(*ndelconss);
 
          SCIPfreeBufferArray(scip, &clqvars);
-         SCIPfreeBufferArray(scip, &used);
 
          return SCIP_OKAY;
       }
@@ -7940,20 +8003,1040 @@ SCIP_RETCODE detectRedundantVars(
          /* try to delete variables */
          SCIP_CALL( deleteRedundantVars(scip, cons, sumfront, w, nchgcoefs, nchgsides, naddconss) );
       }
-      SCIPfreeBufferArray(scip, &used);
    }
 
    return SCIP_OKAY;
 }
 
-/*  tries to simplify weights and delete variables in knapsack a^Tx <= rhs in case there is only one binary variable
- *  with an odd weight and the capacity is odd too, then:
- *    - if the odd weight is equal to 1, delete the variable and decrease capacity by 1
- *    - otherwise, decrease the weight and the capacity by 1
- *  Afterwards we use the normalize method to further simplify the inequality. 
- *  @todo if all variables with odd weights are in one (not negated!) clique we can decrease all weights and the capacity
- *        by 1 but we need to enforce this clique information (because we maybe loose this information by reducing 
- *        the weights) by creating a setppc constraint, but this seems to be expensive?!
+/** divides weights by their greatest common divisor and divides capacity by the same value, rounding down the result */
+static
+void normalizeWeights(
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
+   int*                  nchgsides           /**< pointer to count number of side changes */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Longint gcd;
+   int i;
+
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
+   assert(!SCIPconsIsModifiable(cons));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->row == NULL); /* we are in presolve, so no LP row exists */
+   assert(consdata->onesweightsum == 0); /* all fixed variables should have been removed */
+   assert(consdata->weightsum > consdata->capacity); /* otherwise, the constraint is redundant */
+   assert(consdata->nvars >= 1);
+
+   /* sort items, because we can stop earlier if the smaller weights are evaluated first */
+   sortItems(consdata);
+
+   gcd = consdata->weights[consdata->nvars-1];
+   for( i = consdata->nvars-2; i >= 0 && gcd >= 2; --i )
+   {
+      assert(SCIPvarGetLbLocal(consdata->vars[i]) < 0.5);
+      assert(SCIPvarGetUbLocal(consdata->vars[i]) > 0.5); /* all fixed variables should have been removed */
+
+      gcd = SCIPcalcGreComDiv(gcd, consdata->weights[i]);
+   }
+
+   if( gcd >= 2 )
+   {
+      SCIPdebugMessage("knapsack constraint <%s>: dividing weights by %"SCIP_LONGINT_FORMAT"\n", SCIPconsGetName(cons), gcd);
+
+      for( i = 0; i < consdata->nvars; ++i )
+         consdataChgWeight(consdata, i, consdata->weights[i]/gcd);
+      consdata->capacity /= gcd;
+      (*nchgcoefs) += consdata->nvars;
+      (*nchgsides)++;
+
+      /* weight should be still sorted, because the reduction preserves this */
+#ifndef NDEBUG
+      for( i = consdata->nvars - 1; i > 0; --i )
+         assert(consdata->weights[i] <= consdata->weights[i - 1]);
+#endif
+      consdata->sorted = TRUE;
+   }
+}
+
+/** dual weights tightening for knapsack constraints
+ *
+ *  1. a) check if all two pairs exceed the capacity, then we can upgrade this constraint to a set-packing constraint
+ *     b) check if all but the smallest weight fit into the knapsack,  then we can upgrade this constraint to a logicor
+ *        constraint
+ *
+ *  2. check if besides big coefficients, that fit only by itself, for a certain amount of variables all combination of
+ *     these are a minimal cover, then might reduce the weights and the capacity, e.g.
+ *
+ *     +219y1 + 180y2 + 74x1 + 70x2 + 63x3 + 62x4 + 53x5 <= 219  <=>  3y1 + 3y2 + x1 + x2 + x3 + x4 + x5 <= 3
+ *
+ *  3. use the duality between a^Tx <= capacity   <=>   a^T~x >= weightsum - capacity to tighten weights, e.g.
+ *
+ *     11x1 + 10x2 + 7x3 + 7x4 + 5x5 <= 27    <=>   10~x1 + 10~x2 + 7~x3 + 7~x4 + 5~x5 >= 13
+ *
+ *     the above constraint can be changed to       8~x1 + 8~x2 + 6.5~x3 + 6.5~x4 + 5~x5 >= 13
+ *
+ *     16~x1 + 16~x2 + 13~x3 + 13~x4 + 10~x5 >= 26   <=>   16x1 + 16x2 + 13x3 + 13x4 + 10x5 <= 42
+ */
+static
+SCIP_RETCODE dualWeightsTightening(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   int*                  ndelconss,          /**< pointer to store the amount of deleted constraints */
+   int*                  nchgcoefs,          /**< pointer to store the amount of changed coefficients */
+   int*                  nchgsides,          /**< pointer to store the amount of changed sides */
+   int*                  naddconss           /**< pointer to count number of added constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Longint* weights;
+   SCIP_Longint dualcapacity;
+   SCIP_Longint reductionsum;
+   SCIP_Longint capacity;
+   SCIP_Longint exceedsum;
+   int oldnchgcoefs;
+   int nvars;
+   int vbig;
+   int v;
+   int w;
+#ifndef NDEBUG
+   int oldnchgsides = *nchgsides;
+#endif
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
+   assert(naddconss != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->weightsum > consdata->capacity);
+   assert(consdata->nvars >= 2);
+   assert(consdata->sorted);
+
+   /* constraint should be merged */
+   assert(consdata->merged);
+
+   nvars = consdata->nvars;
+   weights = consdata->weights;
+   capacity = consdata->capacity;
+
+   oldnchgcoefs = *nchgcoefs;
+
+   /* case 1. */
+   if( weights[nvars - 1] + weights[nvars - 2] > capacity )
+   {
+      SCIP_CONS* newcons;
+
+      /* two variable are enough to exceed the constraint, so we can update it to a set-packing
+       *
+       * e.g. 5x1 + 4x2 + 3x3 <= 5   <=>    x1 + x2 + x3 <= 1
+       */
+      SCIPdebugMessage("upgrading knapsack constraint <%s> to a set-packing constraint", SCIPconsGetName(cons));
+
+      SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, SCIPconsGetName(cons), consdata->nvars, consdata->vars,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+            SCIPconsIsStickingAtNode(cons)) );
+
+      SCIP_CALL( SCIPaddCons(scip, newcons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      ++(*naddconss);
+
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+
+      return SCIP_OKAY;
+   }
+
+   /* all but one variable fit into the knapsack, so we can upgrade this constraint to a logicor */
+   if( consdata->weightsum - weights[nvars - 1] <= consdata->capacity )
+   {
+      SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
+      assert(SCIPconsIsDeleted(cons));
+
+      return SCIP_OKAY;
+   }
+
+   /* early termination, if the pair with biggest coeffcients together does not exceed the dualcapacity */
+   /* @todo might be changed/removed when improving the coeffcients tightening */
+   if( consdata->weightsum - capacity > weights[0] + weights[1] )
+      return SCIP_OKAY;
+
+   /* case 2. */
+
+   v = 0;
+
+   /* @todo generalize the following algorithm for several parts of the knapsack
+    *
+    * the following is done without looking at the dualcapacity; it is enough to check whether for a certain amount of
+    * variables each combination is a minimal cover, some examples
+    *
+    * +74x1 + 70x2 + 63x3 + 62x4 + 53x5 <= 219     <=>    74~x1 + 70~x2 + 63~x3 + 62~x4 + 53~x5 >= 103
+    *                                              <=>      ~x1 +   ~x2 +   ~x3 +   ~x4 +   ~x5 >= 2
+    *                                              <=>       x1 +    x2 +    x3 +    x4 +    x5 <= 3
+    *
+    * +219y1 + 180y_2 +74x1 + 70x2 + 63x3 + 62x4 + 53x5 <= 219  <=>  3y1 + 3y2 + x1 + x2 + x3 + x4 + x5 <= 3
+    *
+    */
+
+   /* determine big weights that fit only by itself */
+   while( v < nvars && weights[v] + weights[nvars - 1] > capacity )
+      ++v;
+
+   vbig = v;
+   assert(vbig < nvars - 1);
+   exceedsum = 0;
+
+   /* determine the amount needed to exceed the capacity */
+   while( v < nvars && exceedsum <= capacity )
+   {
+      exceedsum += weights[v];
+      ++v;
+   }
+
+   /* if we exceeded the capacity we might reduce the weights */
+   if( exceedsum > capacity )
+   {
+      assert(vbig > 0 || v < nvars);
+
+      /* all small weights were needed to exceed the capacity */
+      if( v == nvars )
+      {
+         SCIP_Longint newweight = (SCIP_Longint)nvars - vbig - 1;
+         assert(newweight > 0);
+
+         /* reduce big weights */
+         for( v = 0; v < vbig; ++v )
+         {
+            if( weights[v] > newweight )
+            {
+               consdataChgWeight(consdata, v, newweight);
+               ++(*nchgcoefs);
+            }
+         }
+
+         /* reduce small weights */
+         for( ; v < nvars; ++v )
+         {
+            if( weights[v] > 1 )
+            {
+               consdataChgWeight(consdata, v, 1LL);
+               ++(*nchgcoefs);
+            }
+         }
+
+         consdata->capacity = newweight;
+
+         /* weight should be still sorted, because the reduction preserves this */
+#ifndef NDEBUG
+         for( v = nvars - 1; v > 0; --v )
+            assert(weights[v] <= weights[v-1]);
+#endif
+         consdata->sorted = TRUE;
+
+         return SCIP_OKAY;
+      }
+      /* a certain amount of small variables exceed the capacity, so check if this holds for all combinations of the
+       * small weights
+       */
+      else
+      {
+         SCIP_Longint exceedsumback = 0;
+         int nexceed = v - vbig;
+
+         assert(nexceed > 1);
+
+         /* determine weightsum of the same amount as before but of the smallest weight */
+         for( w = nvars - 1; w >= nvars - nexceed; --w )
+            exceedsumback += weights[w];
+
+         assert(w >= 0);
+
+         /* if the same amount but with the smallest possible weights also exceed the capacity, it holds for all
+          * combinations of all small weights
+          */
+         if( exceedsumback > capacity )
+         {
+            SCIP_Longint newweight = nexceed - 1;
+
+            /* taking out the smallest element needs to fit */
+            assert(exceedsumback - weights[nvars - 1] <= capacity);
+
+            /* reduce big weights */
+            for( v = 0; v < vbig; ++v )
+            {
+               if( weights[v] > newweight )
+               {
+                  consdataChgWeight(consdata, v, newweight);
+                  ++(*nchgcoefs);
+               }
+            }
+
+            /* reduce small weights */
+            for( ; v < nvars; ++v )
+            {
+               if( weights[v] > 1 )
+               {
+                  consdataChgWeight(consdata, v, 1LL);
+                  ++(*nchgcoefs);
+               }
+            }
+
+            consdata->capacity = newweight;
+
+            /* weight should be still sorted, because the reduction preserves this */
+#ifndef NDEBUG
+            for( v = nvars - 1; v > 0; --v )
+               assert(weights[v] <= weights[v-1]);
+#endif
+            consdata->sorted = TRUE;
+
+            return SCIP_OKAY;
+         }
+      }
+   }
+   else
+   {
+      /* if the follwoing assert fails we have either a redundant constraint or a set-packing constraint, this should
+       * not happen here
+       */
+      assert(vbig > 0 && vbig < nvars);
+
+      /* either choose a big coefficients or all other variables
+       *
+       * 973x1 + 189x2 + 189x3 + 145x4 + 110x5 + 104x6 + 93x7 + 71x8 + 68x9 + 10x10 <= 979
+       *
+       * either choose x1, or all other variables (weightsum of x2 to x10 is 979 above), so we can tighten this
+       * constraint to
+       *
+       * 9x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 <= 9
+       */
+
+      if( weights[vbig - 1] > (SCIP_Longint)nvars - vbig || weights[vbig] > 1 )
+      {
+         SCIP_Longint newweight = (SCIP_Longint)nvars - vbig;
+#ifndef NDEBUG
+         SCIP_Longint resweightsum = consdata->weightsum;
+
+         for( v = 0; v < vbig; ++v )
+            resweightsum -= weights[v];
+
+         assert(exceedsum == resweightsum);
+#endif
+         assert(newweight > 0);
+
+         /* reduce big weights */
+         for( v = 0; v < vbig; ++v )
+         {
+            if( weights[v] > newweight )
+            {
+               consdataChgWeight(consdata, v, newweight);
+               ++(*nchgcoefs);
+            }
+         }
+
+         /* reduce small weights */
+         for( ; v < nvars; ++v )
+         {
+            if( weights[v] > 1 )
+            {
+               consdataChgWeight(consdata, v, 1LL);
+               ++(*nchgcoefs);
+            }
+         }
+
+         consdata->capacity = newweight;
+
+         /* weight should be still sorted, because the reduction preserves this */
+#ifndef NDEBUG
+         for( v = nvars - 1; v > 0; --v )
+            assert(weights[v] <= weights[v-1]);
+#endif
+         consdata->sorted = TRUE;
+
+         return SCIP_OKAY;
+      }
+   }
+
+   /* case 3. */
+
+   dualcapacity = consdata->weightsum - capacity;
+   reductionsum = 0;
+   v = 0;
+
+   /* reduce big weights
+    *
+    * e.g. 11x0 + 11x1 + 10x2 + 10x3 <= 32   <=>    11~x0 + 11~x1 + 10~x2 + 10~x3 >= 10
+    *                                        <=>    10~x0 + 10~x1 + 10~x2 + 10~x3 >= 10
+    *                                        <=>       x0 +    x1 +    x2 +    x3 <= 3
+    */
+   while( weights[v] > dualcapacity )
+   {
+      reductionsum += (weights[v] - dualcapacity);
+      consdataChgWeight(consdata, v, dualcapacity);
+      ++v;
+      assert(v < nvars);
+   }
+   (*nchgcoefs) += v;
+
+   /* skip weights equal to the dualcapacity, because we cannot change them  */
+   while( v < nvars && weights[v] == dualcapacity )
+      ++v;
+
+   /* one negated variable is enough to fulfill the constraint, so we can update it to a logicor
+    *
+    * e.g. 10x1 + 10x2 + 10x3 <= 20   <=>    10~x1 + 10~x2 + 10~x3 >= 10  <=>   ~x1 + ~x2 + ~x3 >= 1
+    */
+   if( v == nvars )
+   {
+      SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
+      assert(SCIPconsIsDeleted(cons));
+
+      return SCIP_OKAY;
+   }
+   else if( v < nvars - 1 )
+   {
+      /* @todo generalize the following algorithm for more than two variables */
+
+      if( weights[nvars - 1] + weights[nvars - 2] >= dualcapacity )
+      {
+         /* we have a dual-knapsack constraint were we either need to choose one variable out of a subset (big
+          * coefficients) of all or two variables of the rest
+          *
+          * e.g. 9x1 + 9x2 + 6x3 + 4x4 <= 19   <=>    9~x1 + 9~x2 + 6~x3 + 4~x4 >= 9
+          *                                    <=>    2~x1 + 2~x2 +  ~x3 +  ~x4 >= 2
+          *                                    <=>    2x1  +  2x2 +   x3 +   x4 <= 4
+          *
+          *      3x1 + 3x2 + 2x3 + 2x4 + 2x5 + 2x6 + x7 <= 12   <=>   3~x1 + 3~x2 + 2~x3 + 2~x4 + 2~x5 + 2~x6 + ~x7 >= 3
+          *                                                     <=>   2~x1 + 2~x2 +  ~x3 +  ~x4 +  ~x5 +  ~x6 + ~x7 >= 2
+          *                                                     <=>   2 x1 + 2 x2 +   x3 +   x4 +   x5 +   x6 +  x7 <= 7
+          *
+          */
+         if( v > 0 && weights[nvars - 2] > 1 )
+         {
+            int ncoefchg = 0;
+
+            /* reduce all bigger weights */
+            for( w = 0; w < v; ++w )
+            {
+               if( weights[w] > 2 )
+               {
+                  consdataChgWeight(consdata, w, 2LL);
+                  ++ncoefchg;
+               }
+               else
+               {
+                  assert(weights[0] == 2);
+                  assert(weights[v - 1] == 2);
+                  break;
+               }
+            }
+
+            /* reduce all smaller weights */
+            for( w = v; w < nvars; ++w )
+            {
+               if( weights[w] > 1 )
+               {
+                  consdataChgWeight(consdata, w, 1LL);
+                  ++ncoefchg;
+               }
+            }
+            assert(ncoefchg > 0);
+
+            (*nchgcoefs) += ncoefchg;
+
+            /* correct the capacity */
+            consdata->capacity = (-2 + v * 2 + nvars - v); /*lint !e647*/
+            assert(consdata->capacity > 0);
+            assert(weights[0] <= consdata->capacity);
+            assert(consdata->weightsum > consdata->capacity);
+            /* reset the reductionsum */
+            reductionsum = 0;
+         }
+         else if( v == 0 )
+         {
+            assert(weights[nvars - 2] == 1);
+         }
+      }
+      else
+      {
+         SCIP_Longint minweight = weights[nvars - 1];
+         SCIP_Longint newweight = dualcapacity - minweight;
+         SCIP_Longint restsumweights = 0;
+         SCIP_Longint sumcoef;
+         SCIP_Bool sumcoefcase = FALSE;
+         int startv = v;
+         int end;
+         int k;
+
+         assert(weights[nvars - 1] + weights[nvars - 2] <= capacity);
+
+         /* reduce big weights of pairs that exceed the dualcapacity
+          *
+          * e.g. 9x1 + 9x2 + 6x3 + 4x4 + 4x5 + 4x6 <= 27   <=>    9~x1 + 9~x2 + 6~x3 + 4~x4 + 4~x5 + 4~x6 >= 9
+          *                                                <=>    9~x1 + 9~x2 + 5~x3 + 4~x4 + 4~x5 + 4~x6 >= 9
+          *                                                <=>    9x1  + 9x2  + 5x3  + 4x4  + 4x5  + 4x6  <= 27
+          */
+         while( weights[v] > newweight )
+         {
+            reductionsum += (weights[v] - newweight);
+            consdataChgWeight(consdata, v, newweight);
+            ++v;
+            assert(v < nvars);
+         }
+         (*nchgcoefs) += (v - startv);
+
+         /* skip equal weights */
+         while( weights[v] == newweight )
+            ++v;
+
+         if( v > 0 )
+         {
+            for( w = v; w < nvars; ++w )
+               restsumweights += weights[w];
+         }
+         else
+            restsumweights = consdata->weightsum;
+
+         if( restsumweights < dualcapacity )
+         {
+            /* we found redundant variables, which does not influence the feasibility of any integral solution, e.g.
+             *
+             * +61x1  + 61x2  + 61x3  + 61x4  + 61x5  + 61x6  + 35x7  + 10x8 <= 350  <=>
+             * +61~x1 + 61~x2 + 61~x3 + 61~x4 + 61~x5 + 61~x6 + 35~x7 + 10~x8 >= 61
+             */
+            if( startv == v )
+            {
+               /* remove redundant variables */
+               for( w = nvars - 1; w >= v; --w )
+               {
+                  SCIP_CALL( delCoefPos(scip, cons, v) );
+                  ++(*nchgcoefs);
+               }
+
+#ifndef NDEBUG
+               /* each coefficients should exceed the dualcapacity by itself */
+               for( ; w >= 0; --w )
+                  assert(weights[w] == dualcapacity);
+#endif
+               /* for performance reasons we do not update the capacity(, i.e. reduce it by reductionsum) and directly
+                * upgrade this constraint
+                */
+               SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
+               assert(SCIPconsIsDeleted(cons));
+
+               return SCIP_OKAY;
+            }
+
+            /* special case where we have three different coefficient types
+             *
+             * e.g. 9x1 + 9x2 + 6x3 + 6x4 + 4x5 + 4x6 <= 29   <=>    9~x1 + 9~x2 + 6~x3 + 6~x4 + 4~x5 + 4~x6 >= 9
+             *                                                <=>    9~x1 + 9~x2 + 5~x3 + 5~x4 + 4~x5 + 4~x6 >= 9
+             *                                                <=>    3~x1 + 3~x2 + 2~x3 + 2~x4 +  ~x5 +  ~x6 >= 3
+             *                                                <=>    3x1  + 3x2  + 2x3  + 2x4  +   x5 +   x6 <= 9
+             */
+            if( weights[v] > 1 || (weights[startv] > (SCIP_Longint)nvars - v) || (startv > 0 && weights[0] == (SCIP_Longint)nvars - v + 1) )
+            {
+               SCIP_Longint newcap;
+
+               /* adjust smallest coefficients, which all together do not exceed the dualcapacity */
+               for( w = nvars - 1; w >= v; --w )
+               {
+                  if( weights[w] > 1 )
+                  {
+                     consdataChgWeight(consdata, w, 1LL);
+                     ++(*nchgcoefs);
+                  }
+               }
+
+               /* adjust middle sized coefficients, which when choosing also one small coefficients exceed the
+                * dualcapacity
+                */
+               newweight = (SCIP_Longint)nvars - v;
+               assert(newweight > 1);
+               for( ; w >= startv; --w )
+               {
+                  if( weights[w] > newweight )
+                  {
+                     consdataChgWeight(consdata, w, newweight);
+                     ++(*nchgcoefs);
+                  }
+                  else
+                     assert(weights[w] == newweight);
+               }
+
+               /* adjust big sized coefficients, where each of them exceeds the dualcapacity by itself */
+               ++newweight;
+               assert(newweight > 2);
+               for( ; w >= 0; --w )
+               {
+                  if( weights[w] > newweight )
+                  {
+                     consdataChgWeight(consdata, w, newweight);
+                     ++(*nchgcoefs);
+                  }
+                  else
+                     assert(weights[w] == newweight);
+               }
+
+               /* update the capacity */
+               newcap = ((SCIP_Longint)startv - 1) * newweight + ((SCIP_Longint)v - startv) * (newweight - 1)  + ((SCIP_Longint)nvars - v);
+               if( consdata->capacity > newcap )
+               {
+                  consdata->capacity = newcap;
+                  ++(*nchgsides);
+               }
+               else
+                  assert(consdata->capacity == newcap);
+            }
+            assert(weights[v] == 1 && (weights[startv] == (SCIP_Longint)nvars - v) && (startv == 0 || weights[0] == (SCIP_Longint)nvars - v + 1));
+
+            /* the new dualcapacity should still be equal to the (nvars - v + 1) */
+            assert(consdata->weightsum - consdata->capacity == (SCIP_Longint)nvars - v + 1);
+
+            /* weight should be still sorted, because the reduction preserves this */
+#ifndef NDEBUG
+            for( w = nvars - 1; w > 0; --w )
+               assert(weights[w] <= weights[w - 1]);
+#endif
+            consdata->sorted = TRUE;
+
+            return SCIP_OKAY;
+         }
+
+         /* check if all rear items have the same weight as the last one, so we cannot tighten the constraint further */
+         end = nvars - 2;
+         while( end >= 0 && weights[end] == weights[end + 1] )
+         {
+            assert(end >= v);
+            --end;
+         }
+
+         if( v >= end )
+            goto TERMINATE;
+
+         end = nvars - 2;
+
+         /* can we stop early, another special reduction case might exist */
+         if( 2 * weights[end] > dualcapacity )
+         {
+            restsumweights = 0;
+
+            /* determine capacity of the small items */
+            for( w = end + 1; w < nvars; ++w )
+               restsumweights += weights[w];
+
+            if( restsumweights * 2 <= dualcapacity )
+            {
+               /* check for further posssible reductions in the middle */
+               while( v < end && restsumweights + weights[v] >= dualcapacity )
+                  ++v;
+
+               if( v >= end )
+                  goto TERMINATE;
+
+               /* dualcapacity is even, we can set the middle weights to dualcapacity/2 */
+               if( (dualcapacity & 1) == 0 )
+               {
+                  newweight = dualcapacity / 2;
+                  startv = v;
+
+                  /* set all middle coefficients */
+                  for( ; v <= end; ++v )
+                  {
+                     if( weights[v] > newweight )
+                     {
+                        reductionsum += (weights[v] - newweight);
+                        consdataChgWeight(consdata, v, newweight);
+                        ++(*nchgcoefs);
+                     }
+                  }
+               }
+               /* dualcapacity is odd, we can set the middle weights to dualcapacity but therefor need to multiply all
+                * other coefficients by 2
+                */
+               else
+               {
+                  /* correct the reductionsum */
+                  reductionsum *= 2;
+
+                  /* multiply big coefficients by 2 */
+                  for( w = 0; w < v; ++w )
+                  {
+                     consdataChgWeight(consdata, w, weights[w] * 2);
+                  }
+
+                  newweight = dualcapacity;
+                  /* set all middle coefficients */
+                  for( ; v <= end; ++v )
+                  {
+                     reductionsum += (2 * weights[v] - newweight);
+                     consdataChgWeight(consdata, v, newweight);
+                  }
+
+                  /* multiply small coefficients by 2 */
+                  for( w = end + 1; w < nvars; ++w )
+                  {
+                     consdataChgWeight(consdata, w, weights[w] * 2);
+                  }
+                  (*nchgcoefs) += nvars;
+
+                  dualcapacity *= 2;
+                  consdata->capacity *= 2;
+                  ++(*nchgsides);
+               }
+            }
+
+            goto TERMINATE;
+         }
+
+         /* further reductions using the next possible coefficient sum
+          *
+          * e.g. 9x1 + 8x2 + 7x3 + 3x4 + x5 <= 19   <=>    9~x1 + 8~x2 + 7~x3 + 3~x4 + ~x5 >= 9
+          *                                         <=>    9~x1 + 8~x2 + 6~x3 + 3~x4 + ~x5 >= 9
+          *                                         <=>    9x1  + 8x2  + 6x3  + 3x4  + x5  <= 18
+          */
+         /* @todo loop for "k" can be extended, same coefficient when determine next sumcoef can be left out */
+         for( k = 0; k < 4; ++k )
+         {
+            /* determine next minimal coefficient sum */
+            switch( k )
+            {
+            case 0:
+               sumcoef = weights[nvars - 1] + weights[nvars - 2];
+               break;
+            case 1:
+               assert(nvars >= 3);
+               sumcoef = weights[nvars - 1] + weights[nvars - 3];
+               break;
+            case 2:
+               assert(nvars >= 4);
+               if( weights[nvars - 1] + weights[nvars - 4] < weights[nvars - 2] + weights[nvars - 3] )
+               {
+                  sumcoefcase = TRUE;
+                  sumcoef = weights[nvars - 1] + weights[nvars - 4];
+               }
+               else
+               {
+                  sumcoefcase = FALSE;
+                  sumcoef = weights[nvars - 2] + weights[nvars - 3];
+               }
+               break;
+            case 3:
+               assert(nvars >= 5);
+               if( sumcoefcase )
+               {
+                  sumcoef = MIN(weights[nvars - 1] + weights[nvars - 5], weights[nvars - 2] + weights[nvars - 3]);
+               }
+               else
+               {
+                  sumcoef = MIN(weights[nvars - 1] + weights[nvars - 4], weights[nvars - 1] + weights[nvars - 2] + weights[nvars - 3]);
+               }
+               break;
+            default:
+               return SCIP_ERROR;
+            }
+
+            /* tighten next coefficients that, pair with the current small coefficient, exceed the dualcapacity */
+            minweight = weights[end];
+            while( minweight <= sumcoef )
+            {
+               newweight = dualcapacity - minweight;
+               startv = v;
+
+               /* @todo check for further reductions, when two times the minweight exceeds the dualcapacity */
+               /* shrink big coefficients */
+               while( weights[v] + minweight > dualcapacity && 2 * minweight <= dualcapacity )
+               {
+                  reductionsum += (weights[v] - newweight);
+                  consdataChgWeight(consdata, v, newweight);
+                  ++v;
+                  assert(v < nvars);
+               }
+               (*nchgcoefs) += (v - startv);
+
+               /* skip unchangable weights */
+               while( weights[v] + minweight == dualcapacity )
+                  ++v;
+
+               --end;
+
+               if( end <= 0 )
+                  goto TERMINATE;
+
+               minweight = weights[end];
+            }
+
+            if( v >= end )
+               goto TERMINATE;
+
+            /* now check if a combination of small coefficients allows us to tighten big coefficients further */
+            if( sumcoef < minweight )
+            {
+               minweight = sumcoef;
+               newweight = dualcapacity - minweight;
+               startv = v;
+
+               /* shrink big coefficients */
+               while( weights[v] + minweight > dualcapacity && 2 * minweight <= dualcapacity )
+               {
+                  reductionsum += (weights[v] - newweight);
+                  consdataChgWeight(consdata, v, newweight);
+                  ++v;
+                  assert(v < nvars);
+               }
+               (*nchgcoefs) += (v - startv);
+
+               /* skip unchangable weights */
+               while( weights[v] + minweight == dualcapacity )
+                  ++v;
+            }
+
+            if( v >= end )
+               goto TERMINATE;
+
+            /* can we stop early, another special reduction case might exist */
+            if( 2 * weights[end] > dualcapacity )
+            {
+               restsumweights = 0;
+
+               /* determine capacity of the small items */
+               for( w = end + 1; w < nvars; ++w )
+                  restsumweights += weights[w];
+
+               if( restsumweights * 2 <= dualcapacity )
+               {
+                  /* check for further posssible reductions in the middle */
+                  while( v < end && restsumweights + weights[v] >= dualcapacity )
+                     ++v;
+
+                  if( v >= end )
+                     goto TERMINATE;
+
+                  /* dualcapacity is even, we can set the middle weights to dualcapacity/2 */
+                  if( (dualcapacity & 1) == 0 )
+                  {
+                     newweight = dualcapacity / 2;
+                     startv = v;
+
+                     /* set all middle coefficients */
+                     for( ; v <= end; ++v )
+                     {
+                        if( weights[v] > newweight )
+                        {
+                           reductionsum += (weights[v] - newweight);
+                           consdataChgWeight(consdata, v, newweight);
+                           ++(*nchgcoefs);
+                        }
+                     }
+                  }
+                  /* dualcapacity is odd, we can set the middle weights to dualcapacity but therefor need to multiply all
+                   * other coefficients by 2
+                   */
+                  else
+                  {
+                     /* correct the reductionsum */
+                     reductionsum *= 2;
+
+                     /* multiply big coefficients by 2 */
+                     for( w = 0; w < v; ++w )
+                     {
+                        consdataChgWeight(consdata, w, weights[w] * 2);
+                     }
+
+                     newweight = dualcapacity;
+                     /* set all middle coefficients */
+                     for( ; v <= end; ++v )
+                     {
+                        reductionsum += (2 * weights[v] - newweight);
+                        consdataChgWeight(consdata, v, newweight);
+                     }
+
+                     /* multiply small coefficients by 2 */
+                     for( w = end + 1; w < nvars; ++w )
+                     {
+                        consdataChgWeight(consdata, w, weights[w] * 2);
+                     }
+                     (*nchgcoefs) += nvars;
+
+                     dualcapacity *= 2;
+                     consdata->capacity *= 2;
+                     ++(*nchgsides);
+                  }
+               }
+
+               goto TERMINATE;
+            }
+
+            /* cannot tighten any further */
+            if( 2 * sumcoef > dualcapacity )
+               goto TERMINATE;
+         }
+      }
+   }
+
+
+ TERMINATE:
+   /* correct capacity */
+   if( reductionsum > 0 )
+   {
+      assert(v > 0);
+
+      consdata->capacity -= reductionsum;
+      ++(*nchgsides);
+
+      assert(consdata->weightsum - dualcapacity == consdata->capacity);
+   }
+   assert(weights[0] <= consdata->capacity);
+
+   /* weight should be still sorted, because the reduction preserves this */
+#ifndef NDEBUG
+   for( w = nvars - 1; w > 0; --w )
+      assert(weights[w] <= weights[w - 1]);
+#endif
+   consdata->sorted = TRUE;
+
+   if( oldnchgcoefs < *nchgcoefs )
+   {
+      assert(!SCIPconsIsDeleted(cons));
+
+      /* it might be that we can divide the weights by their greatest common divisor */
+      normalizeWeights(cons, nchgcoefs, nchgsides);
+   }
+   else
+   {
+      assert(oldnchgcoefs == *nchgcoefs);
+      assert(oldnchgsides == *nchgsides);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** fixes variables with weights bigger than the capacity and delete redundant constraints, also sort weights */
+static
+SCIP_RETCODE prepareCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   int*                  nfixedvars,         /**< pointer to store the amount of fixed variables */
+   int*                  ndelconss,          /**< pointer to store the amount of deleted constraints */
+   int*                  nchgcoefs           /**< pointer to store the amount of changed coefficients */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_CONSDATA* consdata;
+   SCIP_Longint* weights;
+   SCIP_Longint capacity;
+   SCIP_Bool infeasible;
+   SCIP_Bool fixed;
+   int nvars;
+   int v;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nfixedvars != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgcoefs != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   nvars = consdata->nvars;
+
+   /* no variables left, then delete constraint */
+   if( nvars == 0 )
+   {
+      assert(consdata->capacity >= 0);
+
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+
+      return SCIP_OKAY;
+   }
+
+   /* sort items */
+   sortItems(consdata);
+
+   vars = consdata->vars;
+   weights = consdata->weights;
+   capacity = consdata->capacity;
+   v = 0;
+
+   /* check for weights bigger than the capacity */
+   while( weights[v] > capacity )
+   {
+      SCIP_CALL( SCIPfixVar(scip, vars[v], 0.0, &infeasible, &fixed) );
+      assert(!infeasible);
+
+      if( fixed )
+         ++(*nfixedvars);
+
+      ++v;
+   }
+
+   /* if we fixed at least one variable we need to delete them from the constraint */
+   if( v > 0 )
+   {
+      if( v == nvars )
+      {
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+
+         return SCIP_OKAY;
+      }
+
+      /* delete all position from back to front */
+      for( --v; v >= 0; --v )
+      {
+         SCIP_CALL( delCoefPos(scip, cons, v) );
+         ++(*nchgcoefs);
+      }
+
+      /* sort items again because of deletion */
+      sortItems(consdata);
+      assert(vars == consdata->vars);
+      assert(weights == consdata->weights);
+   }
+   assert(consdata->sorted);
+   assert(weights[0] <= capacity);
+
+   if( !SCIPisHugeValue(scip, (SCIP_Real) capacity) && consdata->weightsum <= capacity )
+   {
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** tries to simplify weights and delete redundant variables in knapsack a^Tx <= capacity
+ *
+ *  1. use the duality between a^Tx <= capacity   <=>   -a^T~x <= capacity - weightsum to tighten weights, e.g.
+ *
+ *     11x1 + 10x2 + 7x3 + 5x4 + 5x5 <= 25    <=>   -10~x1 - 10~x2 - 7~x3 - 5~x4 - 5~x5 <= -13
+ *
+ *     the above constraint can be changed to
+ *
+ *     -8~x1 - 8~x2 - 7~x3 - 5~x4 - 5~x5 <= -12   <=>   8x1 + 8x2 + 7x3 + 5x4 + 5x5 <= 20
+ *
+ *  2. if variables in a constraint do not affect the (in-)feasibility of the constraint, we can delte them, e.g.
+ *
+ *     7x1 + 6x2 + 5x3 + 5x4 + x5 + x6 <= 20 => x5 and x6 are redundant and can be removed
+ *
+ *  3. Tries to use gcd information an all but one weight to change this not-included weight and normalize the
+ *     constraint further, e.g.
+ *
+ *     9x1 + 6x2 + 6x3 + 5x4 <= 13   =>   9x1 + 6x2 + 6x3 + 6x4 <= 12   =>   3x1 + 2x2 + 2x3 + 2x4 <= 4   =>   4x1 + 2x2 + 2x3 + 2x4 <= 4
+ *                                                                                                        =>   2x1 + x2 + x3 + x4 <= 2
+ *     9x1 + 6x2 + 6x3 + 7x4 <= 13   =>   9x1 + 6x2 + 6x3 + 6x4 <= 12   =>   see above
  */
 static
 SCIP_RETCODE simplifyInequalities(
@@ -7967,34 +9050,38 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
-   SCIP_CONSDATA* consdata;
-   SCIP_Bool success;
-   int v;
-   int nvars;
    SCIP_VAR** vars;
+   SCIP_CONSDATA* consdata;
    SCIP_Longint* weights;
-   SCIP_Longint oddbinval;
-   SCIP_Longint capacity;
+   SCIP_Longint restweight;
+   SCIP_Longint newweight;
+   SCIP_Longint weight;
+   SCIP_Longint oldgcd;
+   SCIP_Longint rest;
    SCIP_Longint gcd;
+   int oldnchgcoefs;
+   int oldnchgsides;
+   int candpos;
+   int candpos2;
+   int nvars;
+   int v;
 
-   SCIP_VAR* oddbinvar;
-   int noddvals;
-   int pos;
-
-   assert( scip != NULL );
-   assert( cons != NULL );
-   assert( nfixedvars != NULL );
-   assert( ndelconss != NULL );
-   assert( nchgcoefs != NULL );
-   assert( nchgsides != NULL );
-   assert( naddconss != NULL );
-   assert( cutoff != NULL );
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nfixedvars != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
+   assert(naddconss != NULL);
+   assert(cutoff != NULL);
+   assert(!SCIPconsIsModifiable(cons));
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
    *cutoff = FALSE;
 
+   /* remove double enties and also combinations of active and negated variables */
    SCIP_CALL( mergeMultiples(scip, cons, cutoff) );
    assert(consdata->merged);
    if( *cutoff )
@@ -8002,117 +9089,203 @@ SCIP_RETCODE simplifyInequalities(
 
    assert(consdata->capacity >= 0);
 
-   /* delete redundant variables */
-   SCIP_CALL( detectRedundantVars(scip, cons, nfixedvars, ndelconss, nchgcoefs, nchgsides, naddconss) );
-   if( *cutoff )
+   /* fix variables with big coefficients and remove redundant constraints, sort weights */
+   SCIP_CALL( prepareCons(scip, cons, nfixedvars, ndelconss, nchgcoefs) );
+
+   if( SCIPconsIsDeleted(cons) )
       return SCIP_OKAY;
 
-   /* check if capacity is odd */
-   if( !(consdata->capacity % 2) )
-      return SCIP_OKAY;
+   if( !SCIPisHugeValue(scip, (SCIP_Real) consdata->capacity) )
+   {
+      /* 1. dual weights tightening */
+      SCIP_CALL( dualWeightsTightening(scip, cons, ndelconss, nchgcoefs, nchgsides, naddconss) );
 
-   /* try to delete variables and simplify constraint */
+      if( SCIPconsIsDeleted(cons) )
+         return SCIP_OKAY;
+
+      /* 2. delete redundant variables */
+      SCIP_CALL( detectRedundantVars(scip, cons, ndelconss, nchgcoefs, nchgsides, naddconss) );
+
+      if( SCIPconsIsDeleted(cons) )
+         return SCIP_OKAY;
+   }
+
+   assert(consdata->sorted);
+
+   vars = consdata->vars;
+   weights = consdata->weights;
+   nvars = consdata->nvars;
+
+   /* determine greatest common divisor */
+   gcd = weights[nvars - 1];
+   for( v = nvars - 2; v >= 0 && gcd > 1; --v )
+   {
+      gcd = SCIPcalcGreComDiv(gcd, weights[v]);
+   }
+
+   /* divide the constraint by their greatest common divisor */
+   if( gcd >= 2 )
+   {
+      for( v = nvars - 1; v >= 0; --v )
+      {
+         consdataChgWeight(consdata, v, weights[v]/gcd);
+      }
+      (*nchgcoefs) += nvars;
+
+      consdata->capacity /= gcd;
+      (*nchgsides)++;
+
+      consdata->sorted = TRUE;
+   }
+   assert(consdata->nvars == nvars);
+   assert(consdata->sorted);
+
+   /* 3. start gcd procedure for all variables */
    do
    {
-      success = FALSE;
-      noddvals = 0;
-      pos = 0;
+      oldnchgcoefs = *nchgcoefs;
+      oldnchgsides = *nchgsides;
 
-      capacity = consdata->capacity;
       vars = consdata->vars;
       weights = consdata->weights;
       nvars = consdata->nvars;
 
-      assert(nvars > 0);
+      /* stop if we have two coefficients which are one in absolute value */
+      if( weights[nvars - 1] == 1 && weights[nvars - 2] == 1 )
+         return SCIP_OKAY;
 
-      oddbinvar = NULL;
-      oddbinval = 0;
+      gcd = -1;
+      candpos = -1;
+      candpos2 = -1;
 
-      /* search for binary variables with an odd coefficient */
-      for( v = 0; v < nvars; ++v )
+      /* calculate greatest common divisor over all integer and binary variables and determine the candidate where we might
+       * change the coefficient
+       */
+      for( v = nvars - 1; v >= 0; --v )
       {
-         /* check if the coefficient is odd */
-         if( weights[v] % 2 )
+         weight = weights[v];
+         assert(weight >= 1);
+
+         oldgcd = gcd;
+
+         if( gcd == -1 )
          {
-            oddbinvar = vars[v];
-            oddbinval = weights[v];
-            pos = v;
-            noddvals++;
-            if( noddvals >= 2 )
-               return SCIP_OKAY;
-         }
-      }
-
-      /* now we found exactly one binary variables with an odd coefficient and all other variables have even
-       * coefficients and are not of continuous type; furthermore, only one side is odd */
-      if( noddvals )
-      {
-         assert(noddvals == 1);
-         assert(oddbinvar != NULL);
-
-         oddbinval--;
-         SCIPdebugMessage("knapsack constraint <%s>: decreasing coefficient for variable <%s> to <%lld> and rhs to <%lld>\n", 
-            SCIPconsGetName(cons), SCIPvarGetName(oddbinvar), oddbinval , capacity - 1);
-
-         if( consdata->capacity == 0 )
-         {
-            *cutoff = TRUE;
-            return SCIP_OKAY;
-         }
-
-         --(consdata->capacity);
-
-         if( oddbinval == 0 )
-         {
-            SCIP_CALL( delCoefPos( scip, cons, pos ) );
-            /* if the last variable was erased delete the constraint too */
-            if( nvars == 1 )
-            {
-               assert(consdata->capacity >= 0);
-               SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-               ++(*ndelconss);
-               return SCIP_OKAY;
-            }
+            gcd = weights[v];
+            assert(gcd >= 1);
          }
          else
          {
-            consdataChgWeight(consdata, pos, oddbinval);
+            /* calculate greatest common divisor for all variables */
+            gcd = SCIPcalcGreComDiv(gcd, weight);
          }
 
-         ++(*nchgcoefs);
-         ++(*nchgsides);
-
-         capacity = consdata->capacity;
-         vars = consdata->vars;
-         weights = consdata->weights;
-         nvars = consdata->nvars;
-
-         /*
-          * division by greatest common divisor
+         /* if the greatest commmon divisor has become 1, we might have found the possible coefficient to change or we
+          * can terminate
           */
-         gcd = weights[nvars - 1];
-         for( v = nvars - 2; v >= 0 && gcd > 1; --v )
+         if( gcd == 1 )
          {
-            gcd = SCIPcalcGreComDiv(gcd, weights[v]);
+            /* found candidate */
+            if( candpos == -1 )
+            {
+               gcd = oldgcd;
+               candpos = v;
+
+               /* if both first coefficients have a gcd of 1, both are candidates for the coefficient change */
+               if( v == nvars - 2 )
+                  candpos2 = v + 1;
+            }
+            /* two different variables lead to a gcd of one, so we cannot change a coefficient */
+            else
+            {
+               if( candpos == v + 1 && candpos2 == v + 2 )
+               {
+                  assert(candpos2 == nvars - 1);
+
+                  /* take new candidates */
+                  candpos = candpos2;
+
+                  /* recalculate gcd from scratch */
+                  gcd = weights[v+1];
+                  assert(gcd >= 1);
+
+                  /* calculate greatest common divisor for variables */
+                  gcd = SCIPcalcGreComDiv(gcd, weights[v]);
+                  if( gcd == 1 )
+                     return SCIP_OKAY;
+               }
+               else
+                  /* cannot determine a possible coefficient for reduction */
+                  return SCIP_OKAY;
+            }
          }
-
-         assert(gcd >= 2);
-
-         for( v = nvars - 1; v >= 0; --v )
-         {
-            consdataChgWeight(consdata, v, weights[v]/gcd);
-         }
-         (*nchgcoefs) += nvars;
-
-         consdata->capacity /= gcd;
-         (*nchgsides)++;
-
-         /* capacity still odd, try to simplify again */
-         if( consdata->capacity % 2 )
-            success = TRUE;
       }
+      assert(gcd >= 2);
+
+      /* we should have found one coefficient, that led to a gcd of 1, otherwise we could normalize the constraint
+       * further
+       */
+      assert(candpos >= 0 && candpos < nvars);
+
+      /* determine the remainder of the capacity and the gcd */
+      rest = consdata->capacity % gcd;
+      assert(rest >= 0);
+      assert(rest < gcd);
+
+      /* determine the remainder of the coefficient candidate and the gcd */
+      restweight = weights[candpos] % gcd;
+      assert(restweight >= 1);
+      assert(restweight < gcd);
+
+      if( rest > 0 )
+      {
+         /* replace old with new capacity */
+         consdata->capacity -= rest;
+         ++(*nchgsides);
+      }
+
+      /* calculate new coefficient */
+      if( restweight > rest )
+         newweight = weights[candpos] - restweight + gcd;
+      else
+         newweight = weights[candpos] - restweight;
+
+      assert(newweight == 0 || SCIPcalcGreComDiv(gcd, newweight) == gcd);
+
+      SCIPdebugMessage("gcd = %"SCIP_LONGINT_FORMAT", rest = %"SCIP_LONGINT_FORMAT", restweight = %"SCIP_LONGINT_FORMAT"; changing weight of variable <%s> to %"SCIP_LONGINT_FORMAT" and reduced capacity by %"SCIP_LONGINT_FORMAT"\n", gcd, rest, restweight, SCIPvarGetName(vars[candpos]), newweight, rest);
+
+      if( newweight == 0 )
+      {
+         /* delete redundant coefficient */
+         SCIP_CALL( delCoefPos(scip, cons, candpos) );
+         assert(consdata->nvars == nvars - 1);
+         --nvars;
+      }
+      else
+      {
+         /* replace old with new coefficient */
+         consdataChgWeight(consdata, candpos, newweight);
+      }
+      ++(*nchgcoefs);
+
+      assert(consdata->vars == vars);
+      assert(consdata->nvars == nvars);
+      assert(consdata->weights == weights);
+
+      /* now constraint can be normalized, dividing it by the gcd */
+      for( v = nvars - 1; v >= 0; --v )
+      {
+         consdataChgWeight(consdata, v, weights[v]/gcd);
+      }
+      (*nchgcoefs) += nvars;
+
+      consdata->capacity /= gcd;
+      ++(*nchgsides);
+
+      SCIPdebugPrintCons(scip, cons, NULL);
+
+      SCIPdebugMessage("we did %d coefficient changes and %d side changes on constraint %s when applying one round of the gcd algorithm\n", *nchgcoefs - oldnchgcoefs, *nchgsides - oldnchgsides, SCIPconsGetName(cons));
    }
-   while( success );
+   while( nvars >= 2 );
 
    return SCIP_OKAY;
 }
@@ -8322,53 +9495,6 @@ SCIP_RETCODE applyFixings(
    }
 
    return SCIP_OKAY;
-}
-
-/** divides weights by their greatest common divisor and divides capacity by the same value, rounding down the result */
-static
-void normalizeWeights(
-   SCIP_CONS*            cons,               /**< knapsack constraint */
-   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
-   int*                  nchgsides           /**< pointer to count number of side changes */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_Longint gcd;
-   int i;
-
-   assert(nchgcoefs != NULL);
-   assert(nchgsides != NULL);
-   assert(!SCIPconsIsModifiable(cons));
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->row == NULL); /* we are in presolve, so no LP row exists */
-   assert(consdata->onesweightsum == 0); /* all fixed variables should have been removed */
-   assert(consdata->weightsum > consdata->capacity); /* otherwise, the constraint is redundant */
-   assert(consdata->nvars >= 1);
-
-   /* sort items, because we can stop earlier if the smaller weights are evaluated first */
-   sortItems(consdata);
-
-   gcd = (SCIP_Longint)consdata->weights[consdata->nvars-1];
-   for( i = consdata->nvars-2; i >= 0 && gcd >= 2; --i )
-   {
-      assert(SCIPvarGetLbLocal(consdata->vars[i]) < 0.5);
-      assert(SCIPvarGetUbLocal(consdata->vars[i]) > 0.5); /* all fixed variables should have been removed */
-
-      gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)consdata->weights[i]);
-   }
-
-   if( gcd >= 2 )
-   {
-      SCIPdebugMessage("knapsack constraint <%s>: dividing weights by %"SCIP_LONGINT_FORMAT"\n", SCIPconsGetName(cons), gcd);
-
-      for( i = 0; i < consdata->nvars; ++i )
-         consdataChgWeight(consdata, i, consdata->weights[i]/gcd);
-      consdata->capacity /= gcd;
-      (*nchgcoefs) += consdata->nvars;
-      (*nchgsides)++;
-   }
 }
 
 /** inserts an element into the list of binary zero implications */
@@ -9046,7 +10172,19 @@ SCIP_RETCODE tightenWeightsLift(
  *      - change coefficients:
  *          wi'       := weightsum - capacity
  *          capacity' := capacity - (wi - wi')
- *  (2) let W(C) be the maximal weight of clique C,
+ *  (2) increase weights from front to back(sortation is necessary) if there is no space left for another weight
+ *      - determine the four(can be adjusted) minimal weightsums of the knapsack, i.e. in increasing order
+ *        weights[nvars - 1], weights[nvars - 2], MIN(weights[nvars - 3], weights[nvars - 1] + weights[nvars - 2]),
+ *        MIN(MAX(weights[nvars - 3], weights[nvars - 1] + weights[nvars - 2]), weights[nvars - 4]), note that there
+ *        can be multiple times the same weight, this can be improved
+ *      - check if summing up a minimal weightsum with a big weight exceeds the capacity, then we can increase the big
+ *        weight, to capacity - lastmininmalweightsum, e.g. :
+ *        19x1 + 15x2 + 10x3 + 5x4 + 5x5 <= 19
+ *         ->  minimal weightsums: 5, 5, 10, 10
+ *         ->  15 + 5 > 19 => increase 15 to 19 - 0 = 19
+ *         ->  10 + 10 > 19 => increase 10 to 19 - 5 = 14, resulting in
+ *        19x1 + 19x2 + 14x3 + 5x4 + 5x5  <= 19
+ *  (3) let W(C) be the maximal weight of clique C,
  *          cliqueweightsum := sum(W(C))
  *      if cliqueweightsum - W(C) < capacity:
  *      - not using any item of C would make the knapsack constraint redundant
@@ -9058,7 +10196,7 @@ SCIP_RETCODE tightenWeightsLift(
  *          capacity' := capacity - delta
  *      This rule has to add the used cliques in order to ensure they are enforced - otherwise, the reduction might
  *      introduce infeasible solutions.
- *  (3) for a clique C let C(xi == v) := C \ {j: xi == v -> xj == 0}),
+ *  (4) for a clique C let C(xi == v) := C \ {j: xi == v -> xj == 0}),
  *      let cliqueweightsum(xi == v) := sum(W(C(xi == v)))
  *      if cliqueweightsum(xi == v) < capacity:
  *      - fixing variable xi to v would make the knapsack constraint redundant
@@ -9066,7 +10204,7 @@ SCIP_RETCODE tightenWeightsLift(
  *        redundancy effect:
  *          wi'       := capacity - cliqueweightsum(xi == v)
  *      This rule can also be applied to binary variables not in the knapsack!
- *  (4) if min{w} + wi > capacity:
+ *  (5) if min{w} + wi > capacity:
  *      - using item i would force to fix other items to zero
  *      - wi can be increased to the capacity
  */
@@ -9077,12 +10215,24 @@ SCIP_RETCODE tightenWeights(
    int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
    int*                  nchgsides,          /**< pointer to count number of side changes */
    int*                  naddconss,          /**< pointer to count number of added constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_Longint* weights;
+   SCIP_Longint sumcoef;
+   SCIP_Longint capacity;
+   SCIP_Longint newweight;
+   SCIP_Longint maxweight;
    SCIP_Longint minweight;
+   SCIP_Bool sumcoefcase = FALSE;
+   int startpos;
+   int backpos;
+   int nvars;
+   int pos;
+   int k;
    int i;
 
    assert(nchgcoefs != NULL);
@@ -9118,8 +10268,6 @@ SCIP_RETCODE tightenWeights(
          weight = consdata->weights[i];
          if( consdata->weightsum - weight < consdata->capacity )
          {
-            SCIP_Longint newweight;
-
             newweight = consdata->weightsum - consdata->capacity;
             consdataChgWeight(consdata, i, newweight);
             consdata->capacity -= (weight - newweight);
@@ -9140,8 +10288,218 @@ SCIP_RETCODE tightenWeights(
    if( consdata->weightsum <= consdata->capacity )
       return SCIP_OKAY;
 
+   pos = 0;
+   while( pos < consdata->nvars && consdata->weights[pos] == consdata->capacity )
+      ++pos;
+
+   sumcoef = 0;
+   weights = consdata->weights;
+   nvars = consdata->nvars;
+   capacity = consdata->capacity;
+
+   if( pos < nvars && weights[pos] + weights[pos + 1] > capacity )
+   {
+      /* further reductions using the next possible coefficient sum
+       *
+       * e.g. 19x1 + 15x2 + 10x3 + 5x4 + 5x5 <= 19  <=>  19x1 + 19x2 + 14x3 + 5x4 + 5x5  <= 19
+       */
+      /* @todo loop for "k" can be extended, same coefficient when determine next sumcoef can be left out */
+      for( k = 0; k < 4; ++k )
+      {
+         newweight = capacity - sumcoef;
+
+         /* determine next minimal coefficient sum */
+         switch( k )
+         {
+         case 0:
+            sumcoef = weights[nvars - 1];
+            backpos = nvars - 1;
+            break;
+         case 1:
+            sumcoef = weights[nvars - 2];
+            backpos = nvars - 2;
+            break;
+         case 2:
+            if( weights[nvars - 3] < weights[nvars - 1] + weights[nvars - 2] )
+            {
+               sumcoefcase = TRUE;
+               sumcoef = weights[nvars - 3];
+               backpos = nvars - 3;
+            }
+            else
+            {
+               sumcoefcase = FALSE;
+               sumcoef = weights[nvars - 1] + weights[nvars - 2];
+               backpos = nvars - 2;
+            }
+            break;
+         case 3:
+            if( sumcoefcase )
+            {
+               if( weights[nvars - 4] < weights[nvars - 1] + weights[nvars - 2] )
+               {
+                  sumcoef = weights[nvars - 4];
+                  backpos = nvars - 4;
+               }
+               else
+               {
+                  sumcoef = weights[nvars - 1] + weights[nvars - 2];
+                  backpos = nvars - 2;
+               }
+            }
+            else
+            {
+               sumcoef = weights[nvars - 3];
+               backpos = nvars - 3;
+            }
+            break;
+         default:
+            return SCIP_ERROR;
+         }
+
+         if( backpos <= pos )
+            break;
+
+         /* tighten next coefficients that, paired with the current small coefficient, exceed the capacity */
+         maxweight = weights[pos];
+         startpos = pos;
+         while( 2 * maxweight > capacity && maxweight + sumcoef > capacity )
+         {
+            assert(newweight > weights[pos]);
+
+            SCIPdebugMessage("in constraint <%s> changing weight %lld to %lld\n", SCIPconsGetName(cons), maxweight, newweight);
+            consdataChgWeight(consdata, pos, newweight);
+
+            ++pos;
+            assert(pos < nvars);
+
+            maxweight = weights[pos];
+
+            if( backpos <= pos )
+               break;
+         }
+         (*nchgcoefs) += (pos - startpos);
+
+         /* skip unchangable weights */
+         while( pos < nvars && weights[pos] + sumcoef == capacity )
+            ++pos;
+
+         /* check special case were there is only one weight left to tighten
+          *
+          * e.g.  95x1 + 59x2 + 37x3 + 36x4 <= 95 (37 > 36)
+          *
+          *   =>  95x1 + 59x2 + 59x3 + 36x4 <= 95
+          *
+          *       197x1 + 120x2 + 77x3 + 10x4 <= 207 (here we cannot tighten the coefficient further)
+          */
+         if( pos + 1 == backpos && weights[pos] > sumcoef &&
+            ((k == 0) || (k == 1 && weights[nvars - 1] + sumcoef + weights[pos] > capacity)) )
+         {
+            newweight = capacity - sumcoef;
+            assert(newweight > weights[pos]);
+
+            SCIPdebugMessage("in constraint <%s> changing weight %lld to %lld\n", SCIPconsGetName(cons), maxweight, newweight);
+            consdataChgWeight(consdata, pos, newweight);
+
+            break;
+         }
+
+         if( backpos <= pos )
+            break;
+      }
+   }
+
    /* apply rule (2) (don't apply, if the knapsack has too many items for applying this costly method) */
-   if( consdata->nvars <= MAX_USECLIQUES_SIZE || (consdata->cliquepartitioned && consdata->ncliques <= MAX_USECLIQUES_SIZE) ) 
+   if( conshdlrdata->disaggregation && consdata->nvars - pos <= MAX_USECLIQUES_SIZE && consdata->nvars >= 2 &&
+      pos > 0 && (SCIP_Longint)consdata->nvars - pos <= consdata->capacity &&
+      consdata->weights[pos - 1] == consdata->capacity && (pos == consdata->nvars || consdata->weights[pos] == 1) )
+   {
+      SCIP_VAR** clqvars;
+      SCIP_CONS* cliquecons;
+      char name[SCIP_MAXSTRLEN];
+      int* clqpart;
+      int nclqvars;
+      int nclq;
+      int len;
+      int c;
+      int w;
+
+      assert(!SCIPconsIsDeleted(cons));
+
+      if( pos == consdata->nvars )
+      {
+         SCIPdebugMessage("upgrading knapsack constraint <%s> to a set-packing constraint", SCIPconsGetName(cons));
+
+         SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, SCIPconsGetName(cons), pos, consdata->vars,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+               SCIPconsIsStickingAtNode(cons)) );
+
+         SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+         ++(*naddconss);
+
+         /* delete old constraint */
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+
+         return SCIP_OKAY;
+      }
+
+      len = consdata->nvars - pos;
+
+      /* allocate temporary memory */
+      SCIP_CALL( SCIPallocBufferArray(scip, &clqpart, len) );
+
+      /* calculate clique partition */
+      SCIP_CALL( SCIPcalcCliquePartition(scip, &(consdata->vars[pos]), len, clqpart, &nclq) );
+
+      SCIPdebugMessage("Disaggregating knapsack constraint <%s> due to clique information.\n", SCIPconsGetName(cons));
+
+      /* allocate temporary memory */
+      SCIP_CALL( SCIPallocBufferArray(scip, &clqvars, len - nclq + 2) );
+
+      for( w = pos - 1; w >= 0; --w )
+         clqvars[w] = consdata->vars[w];
+
+      for( c = 0; c < nclq; ++c )
+      {
+         nclqvars = pos;
+         for( w = 0; w < len; ++w )
+         {
+            if( clqpart[w] == c )
+            {
+               clqvars[nclqvars] = consdata->vars[w + pos];
+               ++nclqvars;
+            }
+         }
+
+         assert(nclqvars > 1);
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clq_%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons), consdata->capacity, c);
+         SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, name, nclqvars, clqvars,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+               SCIPconsIsStickingAtNode(cons)) );
+         SCIPdebugMessage(" -> adding clique constraint: ");
+         SCIPdebugPrintCons(scip, cliquecons, NULL);
+         SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+         ++(*naddconss);
+      }
+
+      /* delete old constraint */
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+
+      SCIPfreeBufferArray(scip, &clqvars);
+      SCIPfreeBufferArray(scip, &clqpart);
+
+      return SCIP_OKAY;
+   }
+   else if( consdata->nvars <= MAX_USECLIQUES_SIZE || (consdata->cliquepartitioned && consdata->ncliques <= MAX_USECLIQUES_SIZE) )
    {
       SCIP_Longint* maxcliqueweights;
       SCIP_Longint* newweightvals;
@@ -9227,8 +10585,6 @@ SCIP_RETCODE tightenWeights(
                {
                   if( consdata->cliquepartition[j] == i )
                   {
-                     SCIP_Longint newweight;
-
                      newweight = consdata->weights[j] - delta;
                      newweight = MAX(newweight, 0);
 
@@ -9272,8 +10628,6 @@ SCIP_RETCODE tightenWeights(
                /* check if we really want to apply the change */
                if( conshdlrdata->disaggregation || !forceclique )
                {
-                  int k;
-
                   SCIPdebugMessage(" -> change capacity from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT" (forceclique:%u)\n",
                      consdata->capacity, newcapacity, forceclique);
                   consdata->capacity = newcapacity;
@@ -11028,6 +12382,9 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
             if( cutoff )
                break;
 
+            if( SCIPconsIsDeleted(cons) )
+               continue;
+
 	    /* remove again all fixed variables, if further fixings were found */
 	    if( *nfixedvars > thisnfixedvars )
 	    {
@@ -11038,7 +12395,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          }
 
          /* tighten capacity and weights */
-         SCIP_CALL( tightenWeights(scip, cons, nchgcoefs, nchgsides, naddconss, &cutoff) );
+         SCIP_CALL( tightenWeights(scip, cons, nchgcoefs, nchgsides, naddconss, ndelconss, &cutoff) );
          if( cutoff )
             break;
 

@@ -66,7 +66,11 @@
                                                  *   bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
-
+#define SCIP_DEFAULT_BRANCH_FORCEBOTH     FALSE /**< should both strong branching children be regarded even if the first
+                                                 *   one is detected to be infeasible? (only with propagation) */
+#define SCIP_DEFAULT_BRANCH_FIRSTSBCHILD    'u' /**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
+#define SCIP_DEFAULT_BRANCH_CHECKSBSOL     TRUE /**< should LP solutions during strong branching with propagation be checked for feasibility? */
+#define SCIP_DEFAULT_BRANCH_HEURSBSOL      TRUE /**< should fast heuristics be called for LP solutions during strong branching with propagation? (only when checksbsol=TRUE) */
 
 /* Conflict Analysis */
 
@@ -229,7 +233,7 @@
 #define SCIP_DEFAULT_MISC_PRINTREASON      TRUE /**< should the reason be printed if a given start solution is infeasible? */
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
-
+#define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
 /* Node Selection */
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
                                                  *   'r'oot LP value difference, 'h'brid inference/root LP value difference) */
@@ -319,6 +323,9 @@
 #define SCIP_DEFAULT_READ_DYNAMICCONSS     TRUE /**< should model constraints be subject to aging? */
 #define SCIP_DEFAULT_READ_DYNAMICCOLS     FALSE /**< should columns be added and removed dynamically to the LP? */
 #define SCIP_DEFAULT_READ_DYNAMICROWS     FALSE /**< should rows be added and removed dynamically to the LP? */
+#define SCIP_DEFAULT_WRITE_GENNAMES_OFFSET    0 /**< when writing the problem with generic names, we start with index
+                                                 *   0; using this parameter we can change the starting index to be
+                                                 *   different */
 
 /* Writing */
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
@@ -799,6 +806,26 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/delaypscostupdate",
          "should updating pseudo costs for continuous variables be delayed to the time after separation?",
          &(*set)->branch_delaypscost, FALSE, SCIP_DEFAULT_BRANCH_DELAYPSCOST,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/forcebothchildren",
+         "should both strong branching children be regarded even if the first one is detected to be infeasible? (only with propagation)",
+         &(*set)->branch_forceboth, TRUE, SCIP_DEFAULT_BRANCH_FORCEBOTH,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
+         "branching/firstsbchild",
+         "child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic",
+         &(*set)->branch_firstsbchild, TRUE, SCIP_DEFAULT_BRANCH_FIRSTSBCHILD, "adu",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/checksol",
+         "should LP solutions during strong branching with propagation be checked for feasibility?",
+         &(*set)->branch_checksbsol, TRUE, SCIP_DEFAULT_BRANCH_CHECKSBSOL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/heursbsol",
+         "should fast heuristics be called for LP solutions during strong branching with propagation? (only when checksbsol=TRUE)",
+         &(*set)->branch_heursbsol, TRUE, SCIP_DEFAULT_BRANCH_HEURSBSOL,
          NULL, NULL) );
 
    /* conflict analysis parameters */
@@ -1342,6 +1369,12 @@ SCIP_RETCODE SCIPsetCreate(
          "should SCIP try to transfer original solutions to the extended space (after presolving)?",
          &(*set)->misc_transorigsols, FALSE, SCIP_DEFAULT_MISC_TRANSORIGSOLS,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/calcintegral",
+            "should SCIP calculate the primal dual integral value?",
+            &(*set)->misc_calcintegral, FALSE, SCIP_DEFAULT_MISC_CALCINTEGRAL,
+            NULL, NULL) );
+
 
    /* node selection */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
@@ -1663,6 +1696,11 @@ SCIP_RETCODE SCIPsetCreate(
          "write/allconss",
          "should all constraints be written (including the redundant constraints)?",
          &(*set)->write_allconss, FALSE, SCIP_DEFAULT_WRITE_ALLCONSS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "write/genericnamesoffset",
+         "when writing a generic problem the index for the first variable should start with?",
+         &(*set)->write_genoffset, FALSE, SCIP_DEFAULT_WRITE_GENNAMES_OFFSET, 0, INT_MAX/2,
          NULL, NULL) );
 
    return SCIP_OKAY;
@@ -4306,6 +4344,28 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetIsHugeValue
 #undef SCIPsetGetHugeValue
 
+/** returns value treated as infinity */
+SCIP_Real SCIPsetInfinity(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_infinity;
+}
+
+/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity
+ *  computation)
+ */
+SCIP_Real SCIPsetGetHugeValue(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_hugeval;
+}
+
 /** returns value treated as zero */
 SCIP_Real SCIPsetEpsilon(
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -4422,6 +4482,17 @@ SCIP_Bool SCIPsetIsInfinity(
    return (val >= set->num_infinity);
 }
 
+/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+SCIP_Bool SCIPsetIsHugeValue(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be checked whether it is huge */
+   )
+{
+   assert(set != NULL);
+
+   return (val >= set->num_hugeval);
+}
+
 /** checks, if values are in range of epsilon */
 SCIP_Bool SCIPsetIsEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4480,16 +4551,6 @@ SCIP_Bool SCIPsetIsGE(
    assert(set != NULL);
 
    return EPSGE(val1, val2, set->num_epsilon);
-}
-
-/** returns value treated as infinity */
-SCIP_Real SCIPsetInfinity(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(set != NULL);
-
-   return set->num_infinity;
 }
 
 /** checks, if value is in range epsilon of 0.0 */
@@ -5164,25 +5225,4 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    quotient = ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon);
 
    return quotient >= set->num_recompfac;
-}
-
-/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
-SCIP_Bool SCIPsetIsHugeValue(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             val                 /**< value to be checked whether it is huge */
-   )
-{
-   assert(set != NULL);
-
-   return (val >= set->num_hugeval);
-}
-
-/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity computation) */
-SCIP_Real SCIPsetGetHugeValue(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(set != NULL);
-
-   return set->num_hugeval;
 }

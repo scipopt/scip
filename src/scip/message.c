@@ -777,11 +777,24 @@ void SCIPmessagePrintError(
    ...                                       /**< format arguments line in printf() function */
    )
 {
-   char msg[SCIP_MAXSTRLEN];
-   int n;
    va_list ap;
 
-   va_start(ap, formatstr);  /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e826*/
+   SCIPmessageVPrintError(formatstr, ap);
+   va_end(ap);
+}
+
+/** prints an error message, acting like the vprintf() command using the static message handler */
+void SCIPmessageVPrintError(
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
+   )
+{
+   char msg[SCIP_MAXSTRLEN];
+   int n;
+   va_list aq;
+
+   va_copy(aq, ap);
 
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    if( n < 0 )
@@ -795,24 +808,24 @@ void SCIPmessagePrintError(
 
       if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
       {
-         va_end(ap);
+         va_end(aq);
          return;
       }
 
 #ifndef NDEBUG
-      m = vsnprintf(bigmsg, (size_t) n+1, formatstr, ap);
+      m = vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #else
-      vsnprintf(bigmsg, (size_t) n+1, formatstr, ap);
+      vsnprintf(bigmsg, (size_t) n+1, formatstr, aq);
 #endif
       assert(m == n);
-      va_end(ap);
+      va_end(aq);
       messagePrintError(bigmsg);
       BMSfreeMemory(&bigmsg);
       return;
    }
 
    messagePrintError(msg);
-   va_end(ap);
+   va_end(aq);
 }
 
 /** Method to set the error printing method. Setting the error printing method to NULL will suspend all error methods.

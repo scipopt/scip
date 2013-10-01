@@ -14,8 +14,8 @@
 =opt= fiball                          138
 =best= germanrr                47366588.8
 =opt= haprp                    3673280.68
-=best= leo1                     423217182
-=best= leo2                     433495824
+=best= leo1                     421359487
+=best= leo2                     425958116
 =opt= lrn                      44481892.1
 =opt= mcf2                     65.6666667
 =opt= mcsched                      211913
@@ -102,9 +102,9 @@
 =best= neos-1460246                   2606
 =opt= neos-1460265                  13400
 =best= neos-1460543                  14600
-=best= neos-1460641                  88034
+=best= neos-1460641                  88030
 =inf= neos-1461051      
-=best= neos-1464762               88028.25
+=best= neos-1464762               88024.75
 =opt= neos-1467067                   -103
 =best= neos-1467371                 1786.5
 =best= neos-1467467                1793.5
@@ -157,8 +157,8 @@
 =opt= neos-555424                 1286800
 =opt= neos-555694                    18.4
 =opt= neos-555771                    18.6
-=best= neos-555884                1247000
-=best= neos-555927                 690000
+=opt= neos-555884                 1232700
+=opt= neos-555927                  690000
 =best= neos-565672    	       96847.6569
 =opt= neos-565815                      14
 =opt= neos-570431                       9
@@ -170,7 +170,7 @@
 =opt= neos-584851                     -11
 =best= neos-584866                    -29
 =opt= neos-585192              461.179717
-=opt= neos-585467              399.373918
+=opt= neos-585467              399.373918 #399.287493
 =opt= neos-593853          1.17146287e+09
 =opt= neos-595904                64829.59
 =opt= neos-595905                26304.25
@@ -185,7 +185,7 @@
 =opt= neos-619167              2.14159294
 =best= neos-631164              11280613.7
 =best= neos-631517             11490700.7
-=best= neos-631694                      50
+=opt= neos-631694                      50
 =opt= neos-631709                     106
 =best= neos-631710                    203
 =opt= neos-631784                      50
@@ -201,7 +201,7 @@
 =best= neos-702280                      12
 =opt= neos-709469                  493.16
 =opt= neos-717614              12250223.9
-=unkn= neos-738098       
+=opt= neos-738098                   -1099
 =opt= neos-775946                    15.7
 =opt= neos-780889                 3421500
 =opt= neos-785899                     101
@@ -219,7 +219,7 @@
 =opt= neos-807639                   454.2
 =opt= neos-807705                   342.4
 =opt= neos-808072                      24
-=best= neos-808214                       5
+=opt= neos-808214                       5
 =opt= neos-810286                    2877
 =opt= neos-810326                  -44378
 =unkn= neos-820146       
@@ -263,7 +263,7 @@
 =opt= neos-880324                  108.67
 =opt= neos-881765                       0
 =opt= neos-885086                    -243
-=best= neos-885524               12361.695
+=best= neos-885524               12335.272
 =opt= neos-886822                   28755
 =opt= neos-892255                      14
 =opt= neos-905856                      -6
@@ -281,13 +281,13 @@
 =opt= neos-931538                    1283
 =opt= neos-932721                   52030
 =opt= neos-932816                   15376
-=best= neos-933364                     766
+=opt= neos-933364                     766
 =opt= neos-933550                       0
 =best= neos-933562                      18
 =opt= neos-933638                     276
 =opt= neos-933815                     766
 =opt= neos-933966                     318
-=best= neos-934184                     766
+=opt= neos-934184                     766
 =opt= neos-934278                     260
 =best= neos-934441                    2432
 =opt= neos-934531                       6

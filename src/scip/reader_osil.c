@@ -16,6 +16,7 @@
 /**@file   reader_osil.c
  * @brief  OS instance language (OSiL) format file reader
  * @author Stefan Vigerske
+ * @author Ingmar Vierhaus
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -30,6 +31,8 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_nonlinear.h"
+#include "scip/cons_sos1.h"
+#include "scip/cons_sos2.h"
 #include "xml/xml.h"
 
 
@@ -1549,7 +1552,7 @@ SCIP_RETCODE readExpression(
       /* check number of children */
       if( xmlFirstChild(node) == NULL || xmlNextSibl(xmlFirstChild(node)) != NULL )
       {
-         SCIPerrorMessage("Expected exactly one children in <%s> node in nonlinear expression\n", exprname);
+         SCIPerrorMessage("Expected exactly one child in <%s> node in nonlinear expression\n", exprname);
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
@@ -2340,7 +2343,209 @@ SCIP_RETCODE readNonlinearExprs(
    return SCIP_OKAY;
 }
 
-/*
+
+/** read sos1 and sos2 constraints
+ *
+ *  sos constraints are expected to be given as a node of \<instanceData\> in the following way:
+ *    @code
+ *    <specialOrderedSets numberOfSpecialOrderedSets="1">
+ *       <sos numberOfVar="2" order="2">
+ *           <var idx="1"></var>
+ *           <var idx="2"></var>
+ *       </sos>
+ *    </specialOrderedSets>
+ *    @endcode
+ * Weights are determined by the order in which the variables are given
+ *
+ */
+static
+SCIP_RETCODE readSOScons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const XML_NODE*       datanode,           /**< XML root node for instance data */
+   SCIP_VAR**            vars,               /**< variables in order of OSiL indices */
+   int                   nvars,              /**< number of variables */
+   SCIP_Bool             initialconss,       /**< should model constraints be marked as initial? */
+   SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamicrows,        /**< should rows be added and removed dynamically to the LP? */
+   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
+   )
+{
+   const XML_NODE* soscons;
+   const XML_NODE* sosvar;
+   const char* attrval;
+   int nsoscons;
+   int nsosvars;
+   int sosorder;
+   int type;
+   int count;
+   int varcount;
+   int idx;
+   SCIP_Bool initial;
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool local;
+   SCIP_Bool modifiable;
+   SCIP_Bool dynamic;
+   SCIP_Bool removable;
+   char name[SCIP_MAXSTRLEN];
+
+   /* standard settings for SOS constraints: */
+   initial = initialconss;
+   separate = FALSE;
+   enforce = TRUE;
+   check = TRUE;
+   propagate = TRUE;
+   local = FALSE;
+   modifiable = FALSE;
+   dynamic = dynamicconss;
+   removable = dynamicrows;
+
+   soscons= xmlFindNodeMaxdepth(datanode, "specialOrderedSets", 0, 1);
+
+   if( soscons== NULL )
+      return SCIP_OKAY;
+
+   /* get number of sos constraints */
+   attrval = xmlGetAttrval(soscons, "numberOfSOS");
+   if( attrval == NULL )
+   {
+      SCIPerrorMessage("Attribute \"numberOfSOS in <specialOrderedSets> node not found.\n");
+      *doingfine = FALSE;
+      return SCIP_OKAY;
+   }
+
+   nsoscons = (int)strtol(attrval, (char**)&attrval, 10);
+   if( *attrval != '\0' || nsoscons < 0 )
+   {
+      SCIPerrorMessage("Invalid value '%s' for \"numberOfSOS\" attribute in <specialOrderedSets>.\n", xmlGetAttrval(soscons, "numberOfSOS"));
+      *doingfine = FALSE;
+      return SCIP_OKAY;
+   }
+   assert(nsoscons >= 0);
+
+   /* read sos constraints and create corresponding constraint */
+   count = 0;
+   for( soscons = xmlFirstChild(soscons); soscons != NULL; soscons = xmlNextSibl(soscons), ++count )
+   {
+      SCIP_CONS* cons;
+
+      /* Make sure we get a sos node and not more then announced*/
+      if( strcmp(xmlGetName(soscons), "sos") != 0 )
+      {
+         SCIPerrorMessage("Expected <sos> node under <specialOrderedSet> node, but got '%s'.\n", xmlGetName(soscons));
+         *doingfine = FALSE;
+         break;
+      }
+
+      if( count >= nsoscons)
+      {
+         SCIPerrorMessage("Too many sos under <specialOrderedSets> node, expected %d many, but got at least %d.\n", nsoscons, count + 1);
+         *doingfine = FALSE;
+         break;
+      }
+
+      /* get number of variables in this sos constraint */
+      attrval = xmlGetAttrval(soscons, "numberOfVar");
+      if( attrval == NULL )
+      {
+         SCIPerrorMessage("Attribute \"numberOfVar in <sos> node not found.\n");
+         *doingfine = FALSE;
+         return SCIP_OKAY;
+      }
+
+      nsosvars = (int)strtol(attrval, (char**)&attrval, 10);
+      if( *attrval != '\0' || nsosvars < 0 )
+      {
+         SCIPerrorMessage("Invalid value '%s' for \"numberOfVar\" attribute in <sos>.\n", xmlGetAttrval(soscons, "numberOfVar"));
+         *doingfine = FALSE;
+         return SCIP_OKAY;
+      }
+      assert(nsosvars >= 0);
+
+      /* get order of this sos constraint */
+      attrval = xmlGetAttrval(soscons, "type");
+      if( attrval == NULL )
+      {
+         SCIPerrorMessage("Attribute \"order\" in <sos> node not found.\n");
+         *doingfine = FALSE;
+         return SCIP_OKAY;
+      }
+
+      sosorder = (int)strtol(attrval, (char**)&attrval, 10);
+      if( *attrval != '\0' || sosorder < 0 || sosorder > 2 )
+      {
+         SCIPerrorMessage("Invalid/unsupported value '%s' for \"order\" attribute in <sos>.\n", xmlGetAttrval(soscons, "order"));
+         *doingfine = FALSE;
+         return SCIP_OKAY;
+      }
+      assert(sosorder == 1 || sosorder == 2);
+      type = sosorder;
+
+      /* set artificial name for sos constraint*/
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SOS%d_%d", type, count);
+
+      /* Create sos constraint */
+      switch( type )
+      {
+      case 1:
+         SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
+            local, modifiable, dynamic, removable) );
+         break;
+      case 2:
+         SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
+            local, modifiable, dynamic, removable) );
+         break;
+      default:
+         SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
+         SCIPABORT();
+      }
+
+      varcount = 0;
+      for( sosvar = xmlFirstChild(soscons); sosvar!= NULL; sosvar = xmlNextSibl(sosvar), ++varcount )
+      {
+         /* get variable id*/
+          attrval = xmlGetAttrval(sosvar, "idx");
+          if( attrval == NULL )
+          {
+             SCIPerrorMessage("Attribute \"idx\" in <var> node below <specialOrderedSets> node not found.\n");
+             *doingfine = FALSE;
+             return SCIP_OKAY;
+          }
+
+          idx = (int)strtol(attrval, (char**)&attrval, 10);
+          if( *attrval != '\0' || idx < 0  || idx > nvars - 1 )
+          {
+             SCIPerrorMessage("Invalid value '%s' for \"idx\" attribute in <var>.\n", xmlGetAttrval(sosvar, "idx"));
+             *doingfine = FALSE;
+             return SCIP_OKAY;
+          }
+          assert(idx >= 0);
+
+          /* we now know that we have a variable/weight pair -> add variable*/
+          switch( type )
+          {
+          case 1:
+             SCIP_CALL( SCIPaddVarSOS1(scip, cons, vars[idx], (SCIP_Real) (nsosvars - varcount)) );
+             break;
+          case 2:
+             SCIP_CALL( SCIPaddVarSOS2(scip, cons, vars[idx], (SCIP_Real) (nsosvars - varcount)) );
+             break;
+          default:
+             SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
+             SCIPABORT();
+          }
+      } /* Close loop over variables in sos constraint */
+
+      /* add the SOS constraint */
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+ /*
  * Callback methods of reader
  */
 
@@ -2483,6 +2688,12 @@ SCIP_DECL_READERREAD(readerReadOsil)
    {
       SCIP_CALL( SCIPaddCons(scip, objcons) );
    }
+
+   /* read sos2 constraints  and add to problem*/
+   SCIP_CALL( readSOScons(scip, data, vars, nvars, initialconss, dynamicconss, dynamicrows, &doingfine) );
+   if( !doingfine )
+      goto CLEANUP;
+
 
    *result = SCIP_SUCCESS;
    retcode = SCIP_OKAY;

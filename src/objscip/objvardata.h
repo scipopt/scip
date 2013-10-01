@@ -120,16 +120,16 @@ public:
    /** copies variable data of source SCIP variable for the target SCIP variable
     *
     *  This method should copy the variable data of the source SCIP and create a target variable data for target
-    *  variable. This callback is optimal. If the copying process was successful the target variable gets this variable
-    *  data assigned. In case the result pointer is set to SCIP_DIDNOTRUN the target variable will have no variable data at
+    *  variable. This callback is optional. If the copying process was successful, the target variable gets this variable
+    *  data assigned. In case the result pointer is set to SCIP_DIDNOTRUN, the target variable will have no variable data at
     *  all.
     *
     *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
     *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target
-    *  SCIP. You should be very carefully in using these two methods since they could lead to infinity loop.
-    *  
+    *  SCIP. You should be very carefully in using these two methods since they could lead to infinite loop.
+    *
     *  possible return values for *result:
-    *  - SCIP_DIDNOTRUN  : the copying process was not performed 
+    *  - SCIP_DIDNOTRUN  : the copying process was not performed
     *  - SCIP_SUCCESS    : the copying process was successfully performed
     */
    virtual SCIP_RETCODE scip_copy(

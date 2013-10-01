@@ -74,7 +74,7 @@ struct SCIP_PresolData
 
    SCIP_Bool             predbndstr;         /**< flag indicating if predictive bound strengthening should be applied */
    SCIP_Bool             singcolstuffing;    /**< flag indicating if singleton columns stuffing should be applied */
-#ifdef DOMCOL_STATISTIC
+#ifdef SCIP_STATISTIC
    int                   nfixingsstuffing;   /**< number of fixings done by singleton columns stuffing */
    int                   nfixingsdomcol;     /**< number of fixings only from dominated columns */
 #endif
@@ -103,8 +103,8 @@ struct ConstraintMatrix
    int                   ncols;              /**< complete number of columns */
    SCIP_Real*            lb;                 /**< lower bound per variable */
    SCIP_Real*            ub;                 /**< upper bound per variable */
-   int*                  nuplocks;           /**< number uplocks per variable */
-   int*                  ndownlocks;         /**< number downlocks per variable */
+   int*                  nuplocks;           /**< number of up locks per variable */
+   int*                  ndownlocks;         /**< number of down locks per variable */
 
    SCIP_VAR**            vars;               /**< variables pointer */
 
@@ -247,11 +247,11 @@ SCIP_RETCODE addRow(
          assert(matrix->vars[probindex] == vars[j]);
 
          if( matrix->rowmatval[matrix->nnonzs] > 0 )
-            matrix->nuplocks[probindex]++;
+            matrix->ndownlocks[probindex]++;
          else
          {
             assert(matrix->rowmatval[matrix->nnonzs] < 0);
-            matrix->ndownlocks[probindex]++;
+            matrix->nuplocks[probindex]++;
          }
 
          assert(0 <= probindex && probindex < matrix->ncols);
@@ -450,12 +450,14 @@ SCIP_RETCODE calcActivityBounds(
 
          /* get variable coefficient */
          val = *valpnt;
+         assert(!SCIPisZero(scip, val));
 
          assert(matrix->ncols > col);
 
          assert(!SCIPisInfinity(scip, matrix->lb[col]));
          assert(!SCIPisInfinity(scip, -matrix->ub[col]));
 
+         /* positive coefficient */
          if( val > 0.0 )
          {
             if( SCIPisInfinity(scip, matrix->ub[col]) )
@@ -468,7 +470,8 @@ SCIP_RETCODE calcActivityBounds(
             else
                matrix->minactivity[row] += val * matrix->lb[col];
          }
-         else if( val < 0.0 )
+         /* negative coefficient */
+         else
          {
             if( SCIPisInfinity(scip, -matrix->lb[col]) )
                matrix->maxactivityneginf[row]++;
@@ -2429,7 +2432,7 @@ SCIP_RETCODE findDominancePairs(
             if( *nfixings == oldnfixings )
             {
                /* not enough fixings found, decrement number of comparisons */
-               presoldata->numcurrentpairs >>= 1;
+               presoldata->numcurrentpairs >>= 1; /*lint !e702*/
                if( presoldata->numcurrentpairs < presoldata->numminpairs )
                   presoldata->numcurrentpairs = presoldata->numminpairs;
 
@@ -2440,7 +2443,7 @@ SCIP_RETCODE findDominancePairs(
             paircnt = 0;
 
             /* increment number of comparisons */
-            presoldata->numcurrentpairs <<= 1;
+            presoldata->numcurrentpairs <<= 1; /*lint !e701*/
             if( presoldata->numcurrentpairs > presoldata->nummaxpairs )
                presoldata->numcurrentpairs = presoldata->nummaxpairs;
          }
@@ -3003,7 +3006,7 @@ SCIP_RETCODE singletonColumnStuffing(
  * Callback methods of presolver
  */
 
-#ifdef DOMCOL_STATISTIC
+#ifdef SCIP_STATISTIC
 /** presolving deinitialization method of presolver (called after presolving has been finished) */
 static
 SCIP_DECL_PRESOLEXITPRE(presolExitpreDomcol)
@@ -3156,7 +3159,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       if( presoldata->singcolstuffing )
       {
          SCIP_CALL( singletonColumnStuffing(scip, matrix, varsprocessed, varstofix, &nfixingsstuffing) );
-#ifdef DOMCOL_STATISTIC
+#ifdef SCIP_STATISTIC
          presoldata->nfixingsstuffing += nfixingsstuffing;
 #endif
       }
@@ -3360,7 +3363,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       }
 
 
-#ifdef DOMCOL_STATISTIC
+#ifdef SCIP_STATISTIC
       presoldata->nfixingsdomcol += nfixings;
 #endif
 
@@ -3507,7 +3510,7 @@ SCIP_RETCODE SCIPincludePresolDomcol(
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyDomcol) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeDomcol) );
 
-#ifdef DOMCOL_STATISTIC
+#ifdef SCIP_STATISTIC
    presoldata->nfixingsstuffing = 0;
    presoldata->nfixingsdomcol = 0;
    SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreDomcol) );

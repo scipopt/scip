@@ -59,6 +59,7 @@
 #define DEFAULT_BINVARQUOT    0.1        /* default threshold for percentage of binary variables required to start     */
 #define DEFAULT_RESTART       TRUE       /* should the heuristic immediately run again on its newly found solution? */
 #define DEFAULT_USEFINALLP    TRUE       /* should the heuristic solve a final LP in case of continuous objective variables? */
+#define DEFAULT_LPITERSQUOT   0.2        /* default quotient of sub-MIP LP iterations with respect to LP iterations so far */
 
 /*
  * Data structures
@@ -75,6 +76,7 @@ struct SCIP_HeurData
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes          */
    SCIP_Longint          usednodes;          /**< nodes already used by proximity in earlier calls                    */
    SCIP_Longint          waitingnodes;       /**< waiting nodes since last incumbent before heuristic is executed     */
+   SCIP_Real             lpitersquot;        /**< quotient of sub-MIP LP iterations with respect to LP iterations so far */
    SCIP_Real             minimprove;         /**< factor by which proximity should at least improve the incumbent     */
    SCIP_Real             mingap;             /**< minimum primal-dual gap for which the heuristic is executed         */
    SCIP_Real             nodesquot;          /**< quotient of sub-MIP nodes with respect to number of processed nodes */
@@ -593,7 +595,7 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    nnodes -= heurdata->usednodes;
    nnodes = MIN(nnodes, heurdata->maxnodes);
 
-   nlpiters = 2 * SCIPgetNLPIterations(scip);
+   nlpiters = (SCIP_Longint) heurdata->lpitersquot * SCIPgetNRootFirstLPIterations(scip);
    nlpiters = MIN(nlpiters, heurdata->maxlpiters);
 
    /* check whether we have enough nodes left to call subproblem solving */
@@ -749,13 +751,12 @@ SCIP_RETCODE SCIPapplyProximity(
    /* use knowledge about integrality of objective to round up lower bound */
    if( SCIPisObjIntegral(scip) )
    {
-      assert(SCIPisFeasIntegral(scip, bestobj));
       SCIPdebugMessage(" Rounding up lower bound: %f --> %f \n", lowerbound, SCIPfeasCeil(scip, lowerbound));
       lowerbound = SCIPfeasCeil(scip, lowerbound);
    }
 
    /* do not trigger heuristic if primal and dual bound are already close together */
-   if( SCIPisFeasEQ(scip, bestobj, lowerbound) || SCIPgetGap(scip) <= heurdata->mingap )
+   if( SCIPisFeasLE(scip, bestobj, lowerbound) || SCIPgetGap(scip) <= heurdata->mingap )
       return SCIP_OKAY;
 
    /* calculate the minimum improvement for a heuristic solution in terms of the distance between incumbent objective
@@ -945,7 +946,7 @@ SCIP_RETCODE SCIPapplyProximity(
 
    /* restrict LP iterations */
    /*todo set iterations limit depending on the number of iterations of the original problem root */
-   iterlim = nlpiters / 2;
+   iterlim = nlpiters;
    SCIP_CALL( SCIPsetLongintParam(subscip, "lp/iterlim", MAX(1, iterlim / MIN(10, nnodes))) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "lp/rootiterlim", iterlim) );
 
@@ -1098,6 +1099,10 @@ SCIP_RETCODE SCIPincludeHeurProximity(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/binvarquot",
          "threshold for percentage of binary variables required to start",
          &heurdata->binvarquot, TRUE, DEFAULT_BINVARQUOT, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/lpitersquot",
+            "quotient of sub-MIP LP iterations with respect to LP iterations so far",
+            &heurdata->lpitersquot, TRUE, DEFAULT_LPITERSQUOT, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/mingap",
          "minimum primal-dual gap for which the heuristic is executed",

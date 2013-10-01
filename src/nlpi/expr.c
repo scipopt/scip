@@ -9261,8 +9261,27 @@ void exprgraphNodePropagateBounds(
 
       for( i = 0; i < node->nchildren && !*cutoff; ++i )
       {
+         SCIP_INTERVAL ac;
+
          if( coefs[i] == 0.0 )
             continue;
+
+         /* contribution of child i to activity (coefs[i] * node->children[i]->bounds) */
+         SCIPintervalSet(&ac, 0.0);
+         if( coefs[i] >= 0.0 )
+         {
+            if( node->children[i]->bounds.inf > -infinity )
+               ac.inf = coefs[i] * node->children[i]->bounds.inf;
+            if( node->children[i]->bounds.sup < infinity )
+               ac.sup = SCIPintervalNegateReal(SCIPintervalNegateReal(coefs[i]) * node->children[i]->bounds.sup);
+         }
+         else
+         {
+            if( node->children[i]->bounds.sup < infinity )
+               ac.inf = coefs[i] * node->children[i]->bounds.sup;
+            if( node->children[i]->bounds.inf > -infinity )
+               ac.sup = -SCIPintervalNegateReal(coefs[i] * node->children[i]->bounds.inf);
+         }
 
          SCIPintervalSetEntire(infinity, &childbounds);
          if( coefs[i] > 0.0 )
@@ -9281,7 +9300,7 @@ void exprgraphNodePropagateBounds(
                }
                else if( minlinactivityinf == 0 )
                {
-                  childbounds.sup = SCIPintervalNegateReal((minlinactivity - node->bounds.sup)/coefs[i] - node->children[i]->bounds.inf);
+                  childbounds.sup = SCIPintervalNegateReal((minlinactivity - ac.inf - node->bounds.sup)/coefs[i]);
                }
             }
 
@@ -9298,7 +9317,7 @@ void exprgraphNodePropagateBounds(
                }
                else if( maxlinactivityinf == 0 )
                {
-                  childbounds.inf = (node->bounds.inf - maxlinactivity)/coefs[i] + node->children[i]->bounds.sup;
+                  childbounds.inf = (node->bounds.inf - maxlinactivity + ac.sup)/coefs[i];
                }
             }
          }
@@ -9320,7 +9339,7 @@ void exprgraphNodePropagateBounds(
                }
                else if( minlinactivityinf == 0 )
                {
-                  childbounds.inf = (minlinactivity - node->bounds.sup)/SCIPintervalNegateReal(coefs[i]) + node->children[i]->bounds.sup;
+                  childbounds.inf = (minlinactivity - ac.inf - node->bounds.sup)/SCIPintervalNegateReal(coefs[i]);
                }
             }
 
@@ -9338,7 +9357,7 @@ void exprgraphNodePropagateBounds(
                }
                else if( maxlinactivityinf == 0 )
                {
-                  childbounds.sup = SCIPintervalNegateReal((node->bounds.inf - maxlinactivity)/SCIPintervalNegateReal(coefs[i]) - node->children[i]->bounds.inf);
+                  childbounds.sup = SCIPintervalNegateReal((node->bounds.inf - maxlinactivity + ac.sup)/SCIPintervalNegateReal(coefs[i]));
                }
             }
          }

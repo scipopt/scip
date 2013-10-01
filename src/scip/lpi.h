@@ -843,6 +843,43 @@ SCIP_RETCODE SCIPlpiWriteState(
 /**@} */
 
 
+/*
+ * LPi Pricing Norms Methods
+ */
+
+/**@name LPi Pricing Norms Methods */
+/**@{ */
+
+/** stores LPi pricing norms into lpinorms object */
+extern
+SCIP_RETCODE SCIPlpiGetNorms(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   );
+
+/** loads LPi pricing norms into solver; note that the LP might have been extended with additional
+ *  columns and rows since the norms were stored with SCIPlpiGetNorms()
+ */
+extern
+SCIP_RETCODE SCIPlpiSetNorms(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   );
+
+/** frees LPi pricing norms information */
+extern
+SCIP_RETCODE SCIPlpiFreeNorms(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   );
+
+
+/**@} */
+
+
 
 
 /*

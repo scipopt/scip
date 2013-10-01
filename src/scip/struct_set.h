@@ -135,12 +135,17 @@ struct SCIP_Set
 
    /* branching settings */
    char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct) */
+   char                  branch_firstsbchild;/**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
    SCIP_Real             branch_scorefac;    /**< branching score factor to weigh downward and upward gain prediction
                                               *   in sum score function */
    SCIP_Bool             branch_preferbinary;/**< should branching on binary variables be preferred? */
    SCIP_Real             branch_clamp;       /**< minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
    char                  branch_lpgainnorm;  /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
    SCIP_Bool             branch_delaypscost; /**< whether to delay pseudo costs updates for continuous variables to after separation */
+   SCIP_Bool             branch_forceboth;   /**< should both strong branching children be regarded even if the first
+                                              *   one is detected to be infeasible? (only with propagation) */
+   SCIP_Bool             branch_checksbsol;  /**< should LP solutions during strong branching with propagation be checked for feasibility? */
+   SCIP_Bool             branch_heursbsol;   /**< should fast heuristics be called for LP solutions during strong branching with propagation? (only when checksbsol=TRUE) */
 
    /* conflict analysis settings */
    SCIP_Real             conf_maxvarsfac;    /**< maximal fraction of variables involved in a conflict constraint */
@@ -301,6 +306,8 @@ struct SCIP_Set
    SCIP_Bool             misc_printreason;   /**< should the reason be printed if a given start solution is infeasible? */
    SCIP_Bool             misc_estimexternmem;/**< should the usage of external memory be estimated? */
    SCIP_Bool             misc_transorigsols; /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
+   SCIP_Bool             misc_calcintegral;  /**< should SCIP calculate the primal dual integral value which may require
+                                              *   a large number of additional clock calls (and decrease the performance)? */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
@@ -396,6 +403,9 @@ struct SCIP_Set
 
    /* Writing */
    SCIP_Bool             write_allconss;     /**< should all constraints be written (including the redundant constraints)? */
+   int                   write_genoffset;    /**< when writing the problem with generic names, we start with index
+                                              *   0; using this parameter we can change the starting index to be
+                                              *   different */
 };
 
 #ifdef __cplusplus

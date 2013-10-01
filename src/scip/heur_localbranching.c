@@ -47,7 +47,7 @@
 #define DEFAULT_NODESQUOT     0.05      /* contingent of sub problem nodes in relation to original nodes            */
 #define DEFAULT_LPLIMFAC      1.5       /* factor by which the limit on the number of LP depends on the node limit  */
 #define DEFAULT_NWAITINGNODES 200       /* number of nodes without incumbent change that heuristic should wait      */
-#define DEFAULT_USELPROWS    FALSE      /* should subproblem be created out of the rows in the LP rows,
+#define DEFAULT_USELPROWS     FALSE     /* should subproblem be created out of the rows in the LP rows,
                                          * otherwise, the copy constructors of the constraints handlers are used    */
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip
@@ -489,7 +489,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       /* get name of the original problem and add the string "_localbranchsub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_localbranchsub", SCIPgetProbName(scip));
 
-         /* create the subproblem */
+      /* create the subproblem */
       SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
       /* copy all variables */
@@ -501,7 +501,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
       if( heurdata->copycuts )
       {
-         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
       }
 

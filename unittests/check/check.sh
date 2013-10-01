@@ -129,7 +129,9 @@ then
    VALGRINDCMD="valgrind --log-fd=1 --leak-check=full"
 fi
 
-if test "$TSTNAME" = "NOTEST"
+echo
+
+if test "$TSTNAME" = "nofile"
 then
     for i in 1 DONE
     do
@@ -139,22 +141,25 @@ then
             break
 	fi
 
-	echo @01 RUNNING SINGLE EXECUTABLE ===========
-        echo @01 RUNNING SINGLE EXECUTABLE ===========                >> $ERRFILE
-        date
+	echo running single executable $BINNAME
+	echo @01 RUNNING SINGLE EXECUTABLE $BINNAME ===========                >> $OUTFILE
+        echo @01 RUNNING SINGLE EXECUTABLE $BINNAME ===========                >> $ERRFILE
+        date >>$OUTFILE
         date >>$ERRFILE
-        echo -----------------------------
-        date +"@03 %s"
-        bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; $VALGRINDCMD ../$BINNAME " 2>>$ERRFILE
-        date +"@04 %s"
-        echo -----------------------------
-        date
+
+        echo ----------------------------- >>$OUTFILE
+        date +"@03 %s" >>$OUTFILE
+        bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; $VALGRINDCMD ../$BINNAME " 1>>$OUTFILE 2>>$ERRFILE
+        date +"@04 %s" >>$OUTFILE
+        echo ----------------------------- >>$OUTFILE
+        date >>$OUTFILE
         date >>$ERRFILE
-        echo -----------------------------
-        echo
-        echo =ready=
-    done | tee -a $OUTFILE
+        echo ----------------------------- >>$OUTFILE
+        echo >>$OUTFILE
+        echo =ready= >>$OUTFILE
+    done
 else
+    echo running $BINNAME ...
     for i in `cat testset/$TSTNAME.test` DONE
     do
 	if test "$i" = "DONE"
@@ -168,7 +173,8 @@ else
             LASTPROB=""
             if test -f $i
             then
-		echo @01 $i ===========
+		echo instance: $i
+		echo @01 $i ===========                >> $OUTFILE
 		echo @01 $i ===========                >> $ERRFILE
 		echo > $TMPFILE
 		if test "$SETNAME" != "default"
@@ -200,21 +206,21 @@ else
 #               echo display solution                  >> $TMPFILE
 		echo checksol                          >> $TMPFILE
 		echo quit                              >> $TMPFILE
-		echo -----------------------------
-		date
+		date >>$OUTFILE
 		date >>$ERRFILE
-		echo -----------------------------
-		date +"@03 %s"
-		bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; $VALGRINDCMD ../$BINNAME < $TMPFILE" 2>>$ERRFILE
-		date +"@04 %s"
-		echo -----------------------------
-		date
+		echo ----------------------------- >>$OUTFILE
+		date +"@03 %s" >>$OUTFILE
+		bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; $VALGRINDCMD ../$BINNAME < $TMPFILE" 1>>$OUTFILE 2>>$ERRFILE
+		date +"@04 %s" >>$OUTFILE
+		echo ----------------------------- >>$OUTFILE
+		date >>$OUTFILE
 		date >>$ERRFILE
-		echo -----------------------------
-		echo
-		echo =ready=
+		echo ----------------------------- >>$OUTFILE
+		echo >>$OUTFILE
+		echo =ready= >>$OUTFILE
             else
-		echo @02 FILE NOT FOUND: $i ===========
+		echo @02 FILE NOT FOUND: $i
+		echo @02 FILE NOT FOUND: $i =========== >>$OUTFILE
 		echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
             fi
 	else
@@ -224,14 +230,17 @@ else
 		LASTPROB=""
             fi
 	fi
-    done | tee -a $OUTFILE
+    done
 fi
 
 rm -f $TMPFILE
-rm -f cipreadparsetest.cip
+# rm -f cipreadparsetest.cip
 
 date >>$OUTFILE
 date >>$ERRFILE
+
+echo
+echo Summary:
 
 if test -e $DONEFILE
 then

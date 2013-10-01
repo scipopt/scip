@@ -56,6 +56,7 @@ struct SCIP_Stat
    SCIP_Longint          nnodelpiterations;  /**< number of iterations for totally solving node relaxations */
    SCIP_Longint          ninitlpiterations;  /**< number of iterations for solving nodes' initial relaxations */
    SCIP_Longint          ndivinglpiterations;/**< number of iterations in diving and probing */
+   SCIP_Longint          nsbdivinglpiterations;/**< number of iterations in probing mode for strong branching */
    SCIP_Longint          nsblpiterations;    /**< number of simplex iterations used in strong branching */
    SCIP_Longint          nrootsblpiterations;/**< number of simplex iterations used in strong branching at the root node */
    SCIP_Longint          nconflictlpiterations;/**< number of simplex iterations used in conflict analysis */
@@ -74,6 +75,7 @@ struct SCIP_Stat
    SCIP_Longint          nrepropcutoffs;     /**< number of times, a repropagated node was cut off */
    SCIP_Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
    SCIP_Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
+   SCIP_Longint          nsbsolsfound;       /**< number of CIP-feasible solutions found during strong branching so far */
    SCIP_Longint          lastdispnode;       /**< last node for which an information line was displayed */
    SCIP_Longint          lastdivenode;       /**< last node where LP diving was applied */
    SCIP_Longint          lastconflictnode;   /**< last node where conflict analysis was applied */
@@ -83,6 +85,8 @@ struct SCIP_Stat
    SCIP_Longint          nholechgs;          /**< total number of hole changes generated in the tree */
    SCIP_Longint          nprobboundchgs;     /**< total number of bound changes generated in the tree during probing */
    SCIP_Longint          nprobholechgs;      /**< total number of hole changes generated in the tree  during probing */
+   SCIP_Longint          nsbdowndomchgs;     /**< total number of domain changes generated at down children during strong branching */
+   SCIP_Longint          nsbupdomchgs;       /**< total number of domain changes generated at up children during strong branching */
    SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */   
    SCIP_Real             firstlpdualbound;   /**< dual bound of root node computed by first LP solve (without cuts) */
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
@@ -98,6 +102,13 @@ struct SCIP_Stat
    SCIP_Real             mincopytime;        /**< minimal time needed for copying a problem */
    SCIP_Real             firstlptime;        /**< time needed to solve the very first LP in the root node */
    SCIP_Real             lastbranchvalue;    /**< domain value of the last branching */
+   SCIP_Real             primalintegralval;  /**< current primal-dual integral value */
+   SCIP_Real             previousgap;        /**< primal dual gap preceding the current gap */
+   SCIP_Real             previntegralevaltime;/**< last time of primal-dual integral evaluation */
+   SCIP_Real             lastprimalbound;    /**< last (non-infinite) primal bound (in transformed space) for integral evaluation */
+   SCIP_Real             lastdualbound;      /**< last (non-infinite) dual bound (in transformed space) for integral evaluation */
+   SCIP_Real             lastlowerbound;     /**< last lower bound (in transformed space) for integral evaluation */
+   SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    SCIP_CLOCK*           primallptime;       /**< primal LP solution time */
@@ -109,9 +120,11 @@ struct SCIP_Stat
    SCIP_CLOCK*           conflictlptime;     /**< conflict analysis LP solution time */
    SCIP_CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    SCIP_CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
+   SCIP_CLOCK*           sbsoltime;          /**< time needed for searching and storing feasible strong branching solutions */
    SCIP_CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
    SCIP_CLOCK*           nlpsoltime;         /**< time needed for solving NLPs */
    SCIP_CLOCK*           copyclock;          /**< time needed for copying problems */
+   SCIP_CLOCK*           strongpropclock;    /**< time needed for propagation during strong branching */
    SCIP_HISTORY*         glbhistory;         /**< global history information over all variables */
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */
@@ -135,6 +148,7 @@ struct SCIP_Stat
    SCIP_Longint          nnodelps;           /**< number of LPs solved for node relaxations */
    SCIP_Longint          ninitlps;           /**< number of LPs solved for nodes' initial relaxations */
    SCIP_Longint          ndivinglps;         /**< number of LPs solved during diving and probing */
+   SCIP_Longint          nsbdivinglps;       /**< number of LPs solved during strong branching probing mode */
    SCIP_Longint          nstrongbranchs;     /**< number of strong branching calls */
    SCIP_Longint          nrootstrongbranchs; /**< number of strong branching calls at the root node */
    SCIP_Longint          nconflictlps;       /**< number of LPs solved during conflict analysis */

@@ -2321,6 +2321,26 @@ SCIP_RETCODE cutGenerationHeuristic(
    return SCIP_OKAY;
 }
 
+/** comparison method for scores of lp rows */
+static
+SCIP_DECL_SORTINDCOMP(rowScoreComp)
+{  /*lint --e{715}*/
+   SCIP_Real* rowscores = (SCIP_Real*)dataptr;
+   SCIP_Real tmp;
+
+   assert(rowscores != NULL);
+   assert(0 <= ind1 && 0 <= ind2);
+
+   tmp = rowscores[ind1] - rowscores[ind2];
+
+   if( tmp < 0 )
+      return 1;
+   else if( tmp > 0 )
+      return -1;
+   else
+      return 0;
+}
+
 /** search and add flowcover cuts that separate the given primal solution */
 static
 SCIP_RETCODE separateCuts(
@@ -2457,7 +2477,6 @@ SCIP_RETCODE separateCuts(
    for( r = 0; r < nrows; r++ )
    {
       int nnonz;
-      int i;
 
       assert(SCIProwGetLPPos(rows[r]) == r);
 
@@ -2513,11 +2532,15 @@ SCIP_RETCODE separateCuts(
             rowrhsscores[r] = 0.0;
       }
       rowscores[r] = MAX(rowlhsscores[r], rowrhsscores[r]);
-      for( i = r; i > 0 && rowscores[r] > rowscores[roworder[i-1]]; --i )
-         roworder[i] = roworder[i-1];
-      assert(0 <= i && i <= r);
-      roworder[i] = r;
+
+      roworder[r] = r;
    }
+
+   SCIPsortInd(roworder, rowScoreComp, (void*) rowscores, nrows);
+#ifndef NDEBUG
+   for( r = nrows - 1; r > 0; --r )
+      assert(rowscores[roworder[r]] <= rowscores[roworder[r - 1]]);
+#endif
 
    /* initialize weights of rows for aggregation for c-mir routine */
    BMSclearMemoryArray(rowweights, nrows);

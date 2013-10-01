@@ -1392,10 +1392,10 @@ SCIP_DECL_CONSINIT(consInitCountsols)
    assert(conshdlrdata != NULL );
 
    /* reset counting variables */
-   conshdlrdata->feasST = 0;             /** number of non trivial unrestricted subtrees */
-   conshdlrdata->nDiscardSols = 0;       /** number of discard solutions */
-   conshdlrdata->nNonSparseSols = 0;     /** number of non sparse solutions */
-   setInt(&conshdlrdata->nsols, 0LL);    /** number of solutions */
+   conshdlrdata->feasST = 0;             /* number of non trivial unrestricted subtrees */
+   conshdlrdata->nDiscardSols = 0;       /* number of discard solutions */
+   conshdlrdata->nNonSparseSols = 0;     /* number of non sparse solutions */
+   setInt(&conshdlrdata->nsols, 0LL);    /* number of solutions */
 
    conshdlrdata->solutions = NULL;
    conshdlrdata->nsolutions = 0;
@@ -2267,7 +2267,7 @@ SCIP_RETCODE createCountDialog(
    SCIP_DIALOG* setmenu;
    SCIP_DIALOG* submenu;
 
-   /** includes or updates the default dialog menus in SCIP */
+   /* includes or updates the default dialog menus in SCIP */
    SCIP_CALL( SCIPincludeDialogDefault(scip) );
 
    root = SCIPgetRootDialog(scip);

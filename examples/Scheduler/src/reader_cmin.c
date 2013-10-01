@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -42,12 +42,12 @@
 #define READER_EXTENSION        "cmin"
 
 #define DEFAULT_FILENAME           "-"  /**< name of the file including best known solutions */
-#define DEFAULT_DYNAMICCONSS     FALSE  /**< should model constraints be subject to aging? */
 #define DEFAULT_DUALREDUCTION     TRUE  /**< add locks to avoid dual reductions */
 #define DEFAULT_BRANCHPRIORITY       1  /**< branching priority for the binary choice variables */
 #define DEFAULT_MIP              FALSE  /**< create a MIP formulation */
 #define DEFAULT_INITIAL           TRUE  /**< should model constraints be in initial LP? */
 #define DEFAULT_CIP               TRUE  /**< create a CIP formulation */
+#define DEFAULT_RELAXATION           3  /**< which relaxation should be added to the maseter (0: none; 1: single; 2: edge-finding; 3: energetic-reasoning */
 
 static const char delimchars[] = " \f\n\r\t\v";
 
@@ -289,6 +289,270 @@ void displayInputData(
 }
 #endif
 
+/** initialize the sorted event point arrays */
+static
+void createSortedEventpoints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  releasedates,       /**< release dates */
+   int*                  deadlinedates,      /**< deadline dates */
+   int*                  starttimes,         /**< array to store sorted start events */
+   int*                  endtimes,           /**< array to store sorted end events */
+   int*                  startindices,       /**< permutation with rspect to the start times */
+   int*                  endindices,         /**< permutation with rspect to the end times */
+   int                   njobs               /**< number of jobs */
+   )
+{
+   int j;
+
+   /* assign variables, start and endpoints to arrays */
+   for ( j = 0; j < njobs; ++j )
+   {
+      starttimes[j] = releasedates[j];
+      startindices[j] = j;
+
+      endtimes[j] = deadlinedates[j];
+      endindices[j] = j;
+   }
+
+   /* sort the arrays not-decreasing according to startsolvalues and endsolvalues (and sort the indices in the same way) */
+   SCIPsortIntInt(starttimes, startindices, njobs);
+   SCIPsortIntInt(endtimes, endindices, njobs);
+}
+
+/** computes the maximum energy for all variables which correspond to jobs which start between the given start time and
+ *  end time
+ *
+ *  @return Maximum energy for the given time window
+ */
+static
+SCIP_Longint computeMaxEnergy(
+   int                   njobs,              /**< number of jobs */
+   int*                  durations,          /**< durations */
+   int*                  demands,            /**< demands */
+   int*                  releasedates,       /**< release dates */
+   int*                  deadlinedates,      /**< deadline dates */
+   int                   starttime,          /**< start time */
+   int                   endtime             /**< end time */
+   )
+{
+   SCIP_Longint maxenergy;
+   int v;
+
+   assert(starttime < endtime);
+   maxenergy = 0LL;
+
+   for( v = 0; v < njobs; ++v )
+   {
+      /* collect jobs which run between the start and end time */
+      if( deadlinedates[v] <= endtime && releasedates[v] >= starttime)
+         maxenergy += (SCIP_Longint)(durations[v] * demands[v]);
+   }
+
+   return maxenergy;
+}
+
+/** remove row which have a tightness which is smaller or equal to the given one
+ *
+ *  @return The number of remaining rows
+ */
+static
+int removeRedundantRows(
+   SCIP_Longint*         rowtightness,       /**< array containing the tightness for the previously selected rows */
+   int*                  startidxs,          /**< array containing for each row the index for the start event */
+   int                   nrows,              /**< current number of rows */
+   SCIP_Longint          tightness           /**< tightness to use to detect redundant rows */
+   )
+{
+   int keptrows;
+   int j;
+
+   keptrows = 0;
+
+   for( j = 0; j < nrows; ++j )
+   {
+      rowtightness[keptrows] = rowtightness[j];
+      startidxs[keptrows] = startidxs[j];
+
+      /* only keep this row if the tightness is better as the (current) given one */
+      if( rowtightness[j] > tightness )
+         keptrows++;
+   }
+
+   return keptrows;
+}
+
+/** create interval relaxation for given sub-problem */
+static
+SCIP_RETCODE createIntervalRelaxation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   relaxation,         /**< a linear relaxation base on edge-finding idea or energetic-reasoning idea */
+   int                   resource,           /**< resource id */
+   SCIP_VAR**            vars,               /**< assignment variables */
+   int*                  durations,          /**< durations */
+   int*                  demands,            /**< demands */
+   int                   capacity,           /**< machine capacity */
+   int*                  releasedates,       /**< release dates */
+   int*                  deadlinedates,      /**< deadline dates */
+   int                   njobs               /**< number of jobs */
+   )
+{
+   SCIP_Longint** rowtightness;
+   int** startidxs;
+   int* nrows;
+   int* starttimes;
+   int* endtimes;
+   int* startindices;
+   int* endindices;
+   int starttime;
+   int endtime;
+   int i;
+   int j;
+
+   int naddedcons;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &starttimes, njobs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &startindices, njobs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &endtimes, njobs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &endindices, njobs) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nrows, njobs) );
+   BMSclearMemoryArray(nrows, njobs);
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowtightness, njobs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &startidxs, njobs) );
+   for( j = 0; j < njobs; ++j )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &rowtightness[j], njobs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &startidxs[j], njobs) );
+   }
+
+   createSortedEventpoints(scip, releasedates, deadlinedates, starttimes, endtimes, startindices, endindices, njobs);
+
+   starttime = -INT_MAX;
+
+   /* check each startpoint of a job whether the capacity is kept or not */
+   for( j = 0; j < njobs; ++j )
+   {
+      SCIP_Longint besttightness;
+
+      assert(starttime <= starttimes[j]);
+
+      /* if we hit the same start time again we skip the loop */
+      if( starttime == starttimes[j])
+         continue;
+
+      starttime = starttimes[j];
+      endtime = -INT_MAX;
+      besttightness = 0LL;
+
+      for( i = 0; i < njobs; ++i )
+      {
+         SCIP_Longint energy;
+         SCIP_Longint maxenergy;
+         SCIP_Longint tightness;
+
+         assert(endtime <= endtimes[i]);
+
+         /* if we hit the same end time again we skip the loop */
+         if( endtime == endtimes[i] )
+            continue;
+
+         endtime = endtimes[i];
+
+         /* skip all end times which are smaller than the start time */
+         if( endtime <= starttime )
+            continue;
+
+         maxenergy = computeMaxEnergy(njobs, durations, demands, releasedates, deadlinedates, starttime, endtime);
+
+         energy = (endtime - starttime) * capacity;
+         tightness = maxenergy - energy;
+
+         /* check if the linear constraint is not trivially redundant */
+         if( tightness > besttightness )
+         {
+            besttightness = tightness;
+
+            nrows[i] = removeRedundantRows(rowtightness[i], startidxs[i], nrows[i], tightness);
+
+            /* add row information */
+            rowtightness[i][nrows[i]] = tightness;
+            startidxs[i][nrows[i]] = j;
+            nrows[i]++;
+         }
+      }
+   }
+
+   naddedcons = 0;
+
+   for( j = njobs-1; j >= 0; --j )
+   {
+      for( i = 0; i < nrows[j]; ++i )
+      {
+         SCIP_CONS* cons;
+         SCIP_Longint energy;
+         char name[SCIP_MAXSTRLEN];
+         int v;
+
+         starttime = starttimes[startidxs[j][i]];
+         endtime = endtimes[j];
+
+         energy = (endtime - starttime) * capacity;
+
+         SCIPdebugMessage("create linear relaxation for time interval [%d,%d] <= %"SCIP_LONGINT_FORMAT" (tightness %"SCIP_LONGINT_FORMAT")\n",
+            starttime, endtime, energy, rowtightness[j][i]);
+
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "relax_%d_start_%d_end_%d", resource, starttime, endtime);
+         SCIP_CALL( SCIPcreateConsBasicKnapsack(scip, &cons, name, 0, NULL, NULL, energy) );
+
+         for( v = 0; v < njobs; ++v)
+         {
+            int overlap;
+            int duration;
+
+            duration = durations[v];
+            overlap = MIN(endtime - starttime, duration);
+            assert(overlap > 0);
+            overlap = MIN3(overlap, releasedates[v] + duration - starttime, endtime - deadlinedates[v] + duration);
+
+            /* check for edge-finding idea */
+            if( relaxation == 2 &&  releasedates[v] >= starttime && deadlinedates[v] <= endtime )
+            {
+               assert(duration == overlap);
+               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[v], (SCIP_Longint)(duration * demands[v])) );
+            }
+            else if( relaxation == 3 && overlap > 0 )
+            {
+               assert(overlap <= duration);
+               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[v], (SCIP_Longint)(overlap * demands[v])) );
+            }
+         }
+
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+         naddedcons++;
+      }
+   }
+
+   SCIPinfoMessage(scip, NULL, "add %d constraint as relaxation\n", naddedcons);
+
+   /* free buffers */
+   for( j = njobs-1; j >= 0; --j )
+   {
+      SCIPfreeBufferArray(scip, &startidxs[j]);
+      SCIPfreeBufferArray(scip, &rowtightness[j]);
+   }
+   SCIPfreeBufferArray(scip, &startidxs);
+   SCIPfreeBufferArray(scip, &rowtightness);
+   SCIPfreeBufferArray(scip, &nrows);
+
+   SCIPfreeBufferArray(scip, &endindices);
+   SCIPfreeBufferArray(scip, &endtimes);
+   SCIPfreeBufferArray(scip, &startindices);
+   SCIPfreeBufferArray(scip, &starttimes);
+
+   return SCIP_OKAY;
+}
+
 /** create MIP formulation and CP constraints */
 static
 SCIP_RETCODE createMipFormulation(
@@ -303,16 +567,19 @@ SCIP_RETCODE createMipFormulation(
    int                   nmachines           /**< number of machines */
    )
 {
+   SCIP_VAR*** vars;
    SCIP_CONS*** conss;
    SCIP_CONS* cons;
-   SCIP_VAR* var;
 
    char name[SCIP_MAXSTRLEN];
 
+   int relaxation;
    int maxtime;
    int i;
    int j;
    int t;
+
+   SCIP_CALL( SCIPgetIntParam(scip, "reading/"READER_NAME"/relaxation", &relaxation) );
 
    /* compute maximum time */
    maxtime = 0;
@@ -323,6 +590,54 @@ SCIP_RETCODE createMipFormulation(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &conss, nmachines) );
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nmachines) );
+
+   /* create master problem  */
+   for( i = 0; i < nmachines; ++i )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], njobs) );
+
+      for( j = 0; j < njobs; ++j )
+      {
+         SCIP_VAR* var;
+         SCIP_Real objval;
+         SCIP_Real ub;
+
+         objval = (SCIP_Real)costs[i][j];
+
+         /* construct variable name */
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_machine_%d", j, i);
+
+         if( releasedates[j] > deadlinedates[j] - durations[i][j] || demands[i][j] > capacities[i] )
+            ub   = 0.0;
+         else
+            ub = 1.0;
+
+         /* create binary variable */
+         SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, ub, objval, SCIP_VARTYPE_BINARY) );
+         vars[i][j] = var;
+
+         /* add and release binary variable */
+         SCIP_CALL( SCIPaddVar(scip, var) );
+         SCIP_CALL( SCIPreleaseVar(scip, &var) );
+      }
+   }
+
+   for( j = 0; j < njobs; ++j )
+   {
+      /* construct constraint name */
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_to_one_machine", j);
+      SCIP_CALL( SCIPcreateConsBasicSetpart(scip, &cons, name, 0, NULL) );
+
+      for( i = 0; i < nmachines; ++i )
+      {
+         SCIP_CALL( SCIPaddCoefSetppc(scip, cons, vars[i][j]) );
+      }
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
    /* create for each machines and time point a knapsack constraint */
    for( i = 0; i < nmachines; ++i )
    {
@@ -331,10 +646,9 @@ SCIP_RETCODE createMipFormulation(
       for( t = 0; t < maxtime; ++t )
       {
          /* construct constraint name */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "machines(%d,%d)", i, t);
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "machines_%d_time_%d", i, t);
 
-         SCIP_CALL( SCIPcreateConsKnapsack(scip, &cons, name, 0, NULL, NULL, (SCIP_Longint)capacities[i],
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPcreateConsBasicKnapsack(scip, &cons, name, 0, NULL, NULL, (SCIP_Longint)capacities[i]) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          conss[i][t] = cons;
@@ -350,32 +664,32 @@ SCIP_RETCODE createMipFormulation(
 
       est = releasedates[j];
 
-      /* construct constraint name */
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d", j);
-
-      SCIP_CALL( SCIPcreateConsSetpart(scip, &cons, name, 0, NULL,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
       for( i = 0; i < nmachines; ++i )
       {
          int lst;
 
          lst = deadlinedates[j] - durations[i][j];
 
+         /* construct constraint name */
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_machine_%d", j, i);
+
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 0, NULL, NULL, 0.0, 0.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[i][j], -1.0) );
+
          for( t = est; t <= lst; ++t )
          {
+            SCIP_VAR* var;
             int h;
 
             /* construct variable name */
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%d,%d,%d", j, i, t);
+            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_machine_%d_time_%d", j, i, t);
 
-            SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, (SCIP_Real)costs[i][j], SCIP_VARTYPE_BINARY,
-                  TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
 
             SCIP_CALL( SCIPaddVar(scip, var) );
 
-            /* add variable to set partitioning constraint */
-            SCIP_CALL( SCIPaddCoefSetppc(scip, cons, var) );
+            /* add variable to linear constraint */
+            SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, 1.0) );
 
             for( h = t ; h < MIN(t + durations[i][j], maxtime); ++h )
             {
@@ -384,17 +698,75 @@ SCIP_RETCODE createMipFormulation(
 
             SCIP_CALL( SCIPreleaseVar(scip, &var) );
          }
-      }
 
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      }
    }
 
+   /* free constraint buffers */
    for( i = nmachines - 1; i >= 0; --i )
    {
       SCIPfreeBufferArray(scip, &conss[i]);
    }
    SCIPfreeBufferArray(scip, &conss);
+
+   if( relaxation == 1 )
+   {
+      /* create for each optimal resource a singe constraint relaxation */
+      for( i = 0; i < nmachines; ++i )
+      {
+         SCIP_Longint capacity;
+         int est;
+         int lct;
+
+         est = INT_MAX;
+         lct = INT_MIN;
+
+         /* compute earliest start end latest completion time */
+         for( j = 0; j < njobs; ++j )
+         {
+            if( demands[i][j] > 0 )
+            {
+               est = MIN(est, releasedates[j]);
+               lct = MAX(lct, deadlinedates[j]);
+            }
+         }
+
+         /* construct constraint name */
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "relax_%d", i);
+
+         capacity = capacities[i] * (lct - est);
+
+         SCIP_CALL( SCIPcreateConsBasicKnapsack(scip, &cons, name, 0, NULL, NULL, capacity) );
+
+         for( j = 0; j < njobs; ++j )
+         {
+            if( demands[i][j] > 0 )
+            {
+               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[i][j], (SCIP_Longint)(durations[i][j] * demands[i][j]) ) );
+            }
+         }
+
+         /* add the constraint to the problem and release it (locally) */
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      }
+   }
+   else if( relaxation >= 2 )
+   {
+      /* create for each optimal resource a singe constraint relaxation */
+      for( i = 0; i < nmachines; ++i )
+      {
+         SCIP_CALL( createIntervalRelaxation(scip, relaxation, i, vars[i], durations[i], demands[i], capacities[i], releasedates, deadlinedates, njobs) );
+      }
+   }
+
+   for( i = nmachines-1; i >= 0; --i )
+   {
+      SCIPfreeBufferArray(scip, &vars[i]);
+   }
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -453,7 +825,7 @@ SCIP_RETCODE createMipCpFormulation(
       for( t = 0; t < maxtime; ++t )
       {
          /* construct constraint name */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "machines(%d,%d)", i, t);
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "machines_%d_time_%d", i, t);
 
          SCIP_CALL( SCIPcreateConsKnapsack(scip, &cons, name, 0, NULL, NULL, (SCIP_Longint)capacities[i],
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -478,7 +850,7 @@ SCIP_RETCODE createMipCpFormulation(
       est = releasedates[j];
 
       /* construct constraint name */
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d", j);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d", j);
 
       SCIP_CALL( SCIPcreateConsSetpart(scip, &cons, name, 0, NULL,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -498,13 +870,13 @@ SCIP_RETCODE createMipCpFormulation(
          nnvars[i]++;
 
          /* construct constraint name */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job(%d,%d)", j, i);
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_machine_%d", j, i);
 
          SCIP_CALL( SCIPcreateConsSetpart(scip, &maccons, name, 0, NULL,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          /* construct variable name */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d_choose%d", j, i);
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_choose_%d", j, i);
 
          SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
                TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
@@ -520,7 +892,7 @@ SCIP_RETCODE createMipCpFormulation(
          SCIP_CALL( SCIPaddCoefSetppc(scip, cons, binvars[i][idx]) );
 
          /* construct variable name */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d_starts%d", idx, i);
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_starts_%d", idx, i);
 
          SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, (SCIP_Real)lst, 0.0, SCIP_VARTYPE_IMPLINT,
                TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
@@ -531,7 +903,7 @@ SCIP_RETCODE createMipCpFormulation(
          SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
          /* construct constraint name */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job(%d,%d)", idx, i);
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_machine_%d", idx, i);
 
          SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, 0, NULL, NULL, 0.0, 0.0,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -546,7 +918,7 @@ SCIP_RETCODE createMipCpFormulation(
             int h;
 
             /* construct variable name */
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%d,%d,%d", j, i, t);
+            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_machine_%d_time_%d", j, i, t);
 
             SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, (SCIP_Real)costs[i][j], SCIP_VARTYPE_BINARY,
                   TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
@@ -584,7 +956,7 @@ SCIP_RETCODE createMipCpFormulation(
    for( i = 0; i < nmachines; ++i )
    {
       /* construct constraint name */
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "machine%d", i);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "machine_%d", i);
 
       /* create machine choice constraint */
       SCIP_CALL( SCIPcreateConsOptcumulative(scip, &cons, name, nnvars[i], vars[i], binvars[i], localdurations[i], localdemands[i], capacities[i],
@@ -629,7 +1001,6 @@ SCIP_RETCODE createCipFormulation(
 {
    SCIP_CONS** conss;
    SCIP_CONS* cons;
-   SCIP_Bool dynamicconss;
    SCIP_VAR*** vars;
    SCIP_VAR*** binvars;
    SCIP_VAR* var;
@@ -641,10 +1012,11 @@ SCIP_RETCODE createCipFormulation(
    SCIP_Real objval;
    SCIP_Bool dualreduction;
 
+   int relaxation;
    int i;
    int j;
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetIntParam(scip, "reading/"READER_NAME"/relaxation", &relaxation) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dualreduction", &dualreduction) );
    SCIP_CALL( SCIPgetIntParam(scip, "reading/"READER_NAME"/branchpriority", &branchpriority) );
 
@@ -654,7 +1026,7 @@ SCIP_RETCODE createCipFormulation(
    for( j = 0; j < njobs; ++j )
    {
       /* construct constraint name */
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d", j);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d", j);
 
       SCIP_CALL( SCIPcreateConsBasicSetpart(scip, &cons, name, 0, NULL) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -685,7 +1057,7 @@ SCIP_RETCODE createCipFormulation(
             continue;
 
          /* construct variable name */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d_choose%d", j, i);
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_choose_%d", j, i);
 
          SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, 1.0, (SCIP_Real)costs[i][j], SCIP_VARTYPE_BINARY) );
          SCIP_CALL( SCIPaddVar(scip, var) );
@@ -694,7 +1066,7 @@ SCIP_RETCODE createCipFormulation(
          SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
          /* construct variable name */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d_starts%d", j, i);
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_starts_%d", j, i);
 
          SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, (SCIP_Real)releasedates[j], (SCIP_Real)(deadlinedates[j] - durations[i][j]), 0.0, SCIP_VARTYPE_INTEGER) );
          SCIP_CALL( SCIPaddVar(scip, var) );
@@ -720,12 +1092,26 @@ SCIP_RETCODE createCipFormulation(
 
       if( nvars > 0 )
       {
+         SCIP_Bool initial;
+         SCIP_Bool separate;
+
+         if( relaxation == 0 )
+         {
+            initial = FALSE;
+            separate = FALSE;
+         }
+         else
+         {
+            initial = TRUE;
+            separate = TRUE;
+         }
+
          /* construct constraint name */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "machine%d", i);
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "machine_%d", i);
 
          /* create machine choice constraint */
          SCIP_CALL( SCIPcreateConsOptcumulative(scip, &cons, name, nvars, vars[i], binvars[i], durations[i], demands[i], capacities[i],
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, FALSE, FALSE) );
+               initial, separate, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
@@ -1002,10 +1388,6 @@ SCIP_RETCODE SCIPincludeReaderCmin(
          NULL, FALSE, DEFAULT_FILENAME, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamicconss", "should model constraints be subject to aging?",
-         NULL, FALSE, DEFAULT_DYNAMICCONSS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/"READER_NAME"/dualreduction", "add locks to avoid dual reductions?",
          NULL, FALSE, DEFAULT_DUALREDUCTION, NULL, NULL) );
 
@@ -1023,7 +1405,11 @@ SCIP_RETCODE SCIPincludeReaderCmin(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/"READER_NAME"/cip", "create a CIP formulation?",
-         NULL, TRUE, DEFAULT_CIP, NULL, NULL) );
+         NULL, FALSE, DEFAULT_CIP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "reading/"READER_NAME"/relaxation", "which relaxation should be added to the maseter (0: none; 1: single; 2: edge-finding; 3: energetic-reasoning",
+         NULL, FALSE, DEFAULT_RELAXATION, 0, 3, NULL, NULL) );
 
    return SCIP_OKAY;
 }

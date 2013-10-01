@@ -77,6 +77,10 @@ SCIP_RETCODE runUnittest(void)
    SCIP* scip = NULL;
    SCIP_RETCODE retcode;
 
+   /* output stuff for automatic unittest evaluation */
+   printf("@01 unittest-depthlevel ===========\n");
+   printf("=opt=  unittest-depthlevel 0\n\n");
+
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
@@ -92,6 +96,8 @@ SCIP_RETCODE runUnittest(void)
    /* use DFS */
    SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/dfs/stdpriority", 10000000) );
 
+   SCIP_CALL( SCIPsetIntParam(scip, "display/freq", 10000) );
+
    /* solve */
    retcode = SCIPsolve(scip);
 
@@ -101,7 +107,7 @@ SCIP_RETCODE runUnittest(void)
    }
 
    /* print statistics */
-   SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+   /* SCIP_CALL( SCIPprintStatistics(scip, NULL) ); */
 
    /* free transformed problem */
    SCIP_CALL( SCIPfreeTransform(scip) );
@@ -111,6 +117,15 @@ SCIP_RETCODE runUnittest(void)
 
    /* check for memory leaks */
    BMScheckEmptyMemory();
+
+   /* for automatic testing output the following */
+   printf("Test passed.\n\n");
+   printf("Ignore the following:\n");
+   printf("SCIP Status        : problem is solved [optimal solution found]\n");
+   printf("Solving Time (sec) : 0.00\n");
+   printf("Solving Nodes      : 0\n");
+   printf("Primal Bound       : 0.0 (1 solutions)\n");
+   printf("Dual Bound         : 0.0\n");
 
    return SCIP_OKAY;
 }

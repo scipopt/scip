@@ -26,6 +26,7 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
+#include "scip/type_prob.h"
 #include "scip/type_retcode.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
@@ -75,7 +76,8 @@ void SCIPstatMark(
 /** reset statistics to the data before solving started */
 extern
 void SCIPstatReset(
-   SCIP_STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** reset implication counter */
@@ -90,6 +92,27 @@ void SCIPstatResetPresolving(
    SCIP_STAT*            stat                /**< problem statistics data */
    );
 
+/* reset primal integral */
+extern
+void SCIPstatResetPrimalIntegral(
+   SCIP_STAT*           stat,                /**< problem statistics data */
+   SCIP_SET*            set,                 /**< global SCIP settings */
+   SCIP_Bool            partialreset         /**< should time and integral value be kept? (in combination with no statistical
+                                               *  reset, integrals are added for each problem to be solved) */
+   );
+
+/** update the primal dual integral statistic. method accepts + and - SCIPsetInfinity() as values for
+ *  upper and lower bound, respectively
+ */
+extern
+void SCIPstatUpdatePrimalDualIntegral(
+   SCIP_STAT*           stat,                /**< problem statistics data */
+   SCIP_SET*            set,                 /**< global SCIP settings */
+   SCIP_PROB*           transprob,           /**< transformed problem */
+   SCIP_PROB*           origprob,            /**< original problem */
+   SCIP_Real            primalbound,         /**< current primal bound in transformed problem, or infinity */
+   SCIP_Real            dualbound            /**< current lower bound in transformed space, or -infinity */
+   );
 /** reset current branch and bound run specific statistics */
 extern
 void SCIPstatResetCurrentRun(
