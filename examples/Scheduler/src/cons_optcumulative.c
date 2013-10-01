@@ -3616,10 +3616,8 @@ SCIP_DECL_CONSPRESOL(consPresolOptcumulative)
          /* presolve cumulative condition w.r.t. effective horizon by detecting irrelevant variables */
          SCIP_CALL( presolveCumulativeCondition(scip, cons, nfixedvars, naggrvars, nchgbds, nchgcoefs, nchgsides, &cutoff) );
 
-#if 0
          /* detect implications */
          SCIP_CALL( detectImplications(scip, cons, nchgcoefs, naddconss) );
-#endif
 
          /* try to upgrade optcumulative to cumulative constraint which is possible if all remaining binary variables
           * are fixed to one; in case the constraint has no variable left it is removed
