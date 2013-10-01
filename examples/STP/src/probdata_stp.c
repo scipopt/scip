@@ -413,7 +413,7 @@ SCIP_RETCODE createConstraints(
          {
 	    (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "EdgeConstraint%d_%d", t, e);
             SCIP_CALL( SCIPcreateConsLinear ( scip, &( probdata->edgecons[t * nedges + e] ), consname, 0, NULL, NULL,
-	          -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+	          -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, probdata->mode == MODE_PRICE, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPaddCons(scip, probdata->edgecons[t * nedges + e]) );
          }
       }
@@ -427,7 +427,7 @@ SCIP_RETCODE createConstraints(
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "EdgeConstraintT%d", e);
          SCIP_CALL( SCIPcreateConsLinear ( scip, &( probdata->edgecons[e] ), consname,
                0, NULL, NULL, -SCIPinfinity(scip), 0.0,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, probdata->mode == MODE_PRICE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, probdata->edgecons[e]) );
       }
    }
@@ -494,33 +494,30 @@ SCIP_RETCODE createConstraints(
 	 for( k = 0; k < nnodes; ++k )
          {
             /* if node k is not the root */
-            if( k !=  graph->source[0])
+            if( k != graph->source[0])
 	    {
 	       /* if node k is not a terminal, set RHS = 0 */
 	       if( graph->term[k] != 0 )
 	       {
                   (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PathConstraintT%d", k2 + 1);
-                  SCIP_CALL( SCIPcreateConsLinear(scip, &( probdata->pathcons[t * (nnodes - 1) + k2] ), consname,
+                  SCIP_CALL( SCIPcreateConsLinear(scip, &( probdata->pathcons[k2] ), consname,
                         0, NULL, NULL, 0.0, 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-                  SCIP_CALL( SCIPaddCons(scip, probdata->pathcons[t * (nnodes - 1) + k2]) );
+                  SCIP_CALL( SCIPaddCons(scip, probdata->pathcons[k2]) );
 	       }
 	       /* if node k is a terminal, set RHS = 1 */
 	       else
 	       {
                   (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PathConstraintT%d", k2 + 1);
-                  SCIP_CALL( SCIPcreateConsLinear(scip, &( probdata->pathcons[t * (nnodes - 1) + k2] ), consname,
+                  SCIP_CALL( SCIPcreateConsLinear(scip, &( probdata->pathcons[k2] ), consname,
                         0, NULL, NULL, 1.0, 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-                  SCIP_CALL( SCIPaddCons(scip, probdata->pathcons[t * (nnodes - 1) + k2]) );
+                  SCIP_CALL( SCIPaddCons(scip, probdata->pathcons[k2]) );
 	       }
 	       k2 += 1;
 	    }
          }
       }
-
-
-
-
    }
+
    return SCIP_OKAY;
 }
 
@@ -564,7 +561,10 @@ SCIP_RETCODE createVariables(
       nvars = probdata->nvars;
       nlayers = probdata->nlayers;
       realnterms = probdata->realnterms;
+      root = graph->source[0];
+      nnodes = graph->knots;
       objint = SCIPisIntegral(scip, offset);
+
       SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->xval, nvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->edgevars, nvars) );
 
@@ -584,9 +584,6 @@ SCIP_RETCODE createVariables(
       /* Price or Flow mode */
       else
       {
-         root = graph->source[0];
-         nnodes = graph->knots;
-
          /* create and add the edge variables */
          for( e = 0; e < nedges; ++e )
          {

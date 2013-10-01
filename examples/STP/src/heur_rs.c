@@ -401,7 +401,6 @@ static
 SCIP_DECL_HEUREXEC(heurExecRS)
 {  /*lint --e{715}*/
    SCIP_PROBDATA* probdata;
-   SCIP_HEURDATA* heurdata;
    SCIP_SOL* sol;
    GRAPH* graph;
    PATH* path;
@@ -427,10 +426,6 @@ SCIP_DECL_HEUREXEC(heurExecRS)
 
    *result = SCIP_DELAYED;
    *result = SCIP_DIDNOTRUN;
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
 
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
