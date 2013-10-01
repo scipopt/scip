@@ -10214,7 +10214,7 @@ SCIP_RETCODE presolveConsLct(
          /* check if the cumulative constraint is the only one looking this variable down and if the objective function
           * is in favor of rounding the variable down
           */
-         if( SCIPvarGetNLocksDown(var) == (int)(uplocks[v]) && varMayRoundUp(scip, var) )
+         if( SCIPvarGetNLocksUp(var) == (int)(uplocks[v]) && varMayRoundUp(scip, var) )
          {
             if( alternativeub < est )
             {
