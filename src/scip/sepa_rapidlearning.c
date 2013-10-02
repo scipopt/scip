@@ -220,7 +220,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    *result = SCIP_DIDNOTRUN;
    
-   ndiscvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)+SCIPgetNImplVars(scip);
+   ndiscvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
 
    /* only run when still not fixed binary variables exists */
    if( ndiscvars == 0 )
@@ -243,7 +243,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       return SCIP_OKAY;
 
    /* if the separator should be exclusive to the root node, this prevents multiple calls due to restarts */
-   if(  SCIPsepaGetFreq(sepa) == 0 && SCIPsepaGetNCalls(sepa) > 0)
+   if( SCIPsepaGetFreq(sepa) == 0 && SCIPsepaGetNCalls(sepa) > 0 )
       return SCIP_OKAY;
 
    /* call separator at most once per node */
@@ -277,7 +277,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    }
 
    for( i = 0; i < nvars; i++ )
+   {
       subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+
+      /* change implicit integer variables to integer type */
+      if( SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT )
+      {
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
+         assert(!infeasible);
+      }
+   }
    
    SCIPhashmapFree(&varmapfw);
    
